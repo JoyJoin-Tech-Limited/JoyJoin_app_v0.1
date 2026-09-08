@@ -34,6 +34,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Calendar, Plus, Edit, Trash2, Clock, TrendingUp, Users } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 import { useToast } from "@/hooks/ui/use-toast";
 
 interface EventTemplate {
@@ -97,7 +98,7 @@ export default function AdminEventTemplatesPage() {
 
   const { toast } = useToast();
 
-  const { data: templates = [], isLoading } = useQuery<EventTemplate[]>({
+  const { data: templates = [], isLoading, isError, error, refetch } = useQuery<EventTemplate[]>({
     queryKey: ["/api/admin/event-templates"],
   });
 
@@ -355,6 +356,12 @@ export default function AdminEventTemplatesPage() {
             </Card>
           ))}
         </div>
+      ) : isError ? (
+        <AdminQueryError
+          title="活动模板加载失败"
+          error={error}
+          onRetry={() => refetch()}
+        />
       ) : filteredTemplates.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">

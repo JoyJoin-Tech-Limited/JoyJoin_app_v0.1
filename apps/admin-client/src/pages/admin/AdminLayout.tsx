@@ -5,16 +5,11 @@ import { Redirect, Route, Switch, useLocation, Link } from "wouter";
 import { lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { usePageTitle, getPageTitle } from "@/hooks/admin/usePageTitle";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Compass } from "lucide-react";
 
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+const AdminWarRoomPage = lazy(() => import("@/pages/admin/AdminWarRoomPage"));
 const AdminUsersPage = lazy(() => import("@/pages/admin/AdminUsersPage"));
 const AdminSubscriptionsPage = lazy(() => import("@/pages/admin/AdminSubscriptionsPage"));
 const AdminCouponsPage = lazy(() => import("@/pages/admin/AdminCouponsPage"));
@@ -31,7 +26,6 @@ const AdminModerationPage = lazy(() => import("@/pages/admin/AdminModerationPage
 const AdminContentFilterLogsPage = lazy(() => import("@/pages/admin/AdminContentFilterLogsPage"));
 const AdminMatchingLabPage = lazy(() => import("@/pages/admin/AdminMatchingLabPage"));
 const AdminNotificationsPage = lazy(() => import("@/pages/admin/AdminNotificationsPage"));
-const AdminReportsPage = lazy(() => import("@/pages/admin/AdminReportsPage"));
 const AdminInteractionLogsPage = lazy(() => import("@/pages/admin/AdminInteractionLogsPage"));
 const AdminFeedbackPage = lazy(() => import("@/pages/admin/AdminFeedbackPage"));
 const AdminMatchingConfigPage = lazy(() => import("@/pages/admin/AdminMatchingConfigPage"));
@@ -43,6 +37,26 @@ const AdminAccountsPage = lazy(() => import("@/pages/admin/AdminAccountsPage"));
 const AdminAuditLogsPage = lazy(() => import("@/pages/admin/AdminAuditLogsPage"));
 const AdminFeatureFlagsPage = lazy(() => import("@/pages/admin/AdminFeatureFlagsPage"));
 const AdminFlashPage = lazy(() => import("@/pages/admin/AdminFlashPage"));
+const AdminReferralsPage = lazy(() => import("@/pages/admin/AdminReferralsPage"));
+const AdminDuoInvitesPage = lazy(() => import("@/pages/admin/AdminDuoInvitesPage"));
+const AdminBannersPage = lazy(() => import("@/pages/admin/AdminBannersPage"));
+
+function AdminNotFound() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+      <Compass className="h-10 w-10 text-muted-foreground/50" />
+      <div>
+        <h2 className="text-lg font-semibold">页面不存在</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          您访问的页面不存在或已被移动。
+        </p>
+      </div>
+      <Button asChild variant="default" data-testid="button-back-dashboard">
+        <Link href="/admin/dashboard">返回数据看板</Link>
+      </Button>
+    </div>
+  );
+}
 
 export default function AdminLayout() {
   const { user } = useAuth();
@@ -72,28 +86,14 @@ export default function AdminLayout() {
               </span>
             </div>
           </header>
-          <div className="min-w-0 overflow-hidden border-b bg-background px-4 py-2 md:px-6">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link href="/admin/dashboard">管理后台</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
           <main className="min-w-0 flex-1 overflow-auto bg-muted/30">
             <Suspense fallback={<div className="flex h-full items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
               <Switch>
-                <Route path="/admin" component={AdminDashboard} />
+                <Route path="/admin"><Redirect to="/admin/dashboard" /></Route>
                 <Route path="/admin/dashboard" component={AdminDashboard} />
+                <Route path="/admin/war-room" component={AdminWarRoomPage} />
                 <Route path="/admin/users" component={AdminUsersPage} />
-                <Route path="/admin/subscription" component={AdminSubscriptionsPage} />
+                <Route path="/admin/subscription"><Redirect to="/admin/subscriptions" /></Route>
                 <Route path="/admin/subscriptions" component={AdminSubscriptionsPage} />
                 <Route path="/admin/pricing" component={AdminPricingPage} />
                 <Route path="/admin/coupons" component={AdminCouponsPage} />
@@ -103,6 +103,9 @@ export default function AdminLayout() {
                 <Route path="/admin/event-pools" component={AdminEventPoolsPage} />
                 <Route path="/admin/flash-ops"><Redirect to="/admin/alang" /></Route>
                 <Route path="/admin/finance" component={AdminFinancePage} />
+                <Route path="/admin/referrals" component={AdminReferralsPage} />
+                <Route path="/admin/duo-invites" component={AdminDuoInvitesPage} />
+                <Route path="/admin/banners" component={AdminBannersPage} />
                 <Route path="/admin/insights" component={AdminDataInsightsPage} />
                 <Route path="/admin/outcome-analytics" component={AdminOutcomeAnalyticsPage} />
                 <Route path="/admin/icebreaker-ai-feedback" component={AdminIcebreakerAiFeedbackPage} />
@@ -111,7 +114,7 @@ export default function AdminLayout() {
                 <Route path="/admin/notifications" component={AdminNotificationsPage} />
                 <Route path="/admin/moderation" component={AdminModerationPage} />
                 <Route path="/admin/content-filter" component={AdminContentFilterLogsPage} />
-                <Route path="/admin/reports" component={AdminReportsPage} />
+                <Route path="/admin/reports"><Redirect to="/admin/moderation?tab=chat" /></Route>
                 <Route path="/admin/interaction-logs" component={AdminInteractionLogsPage} />
                 <Route path="/admin/matching" component={AdminMatchingLabPage} />
                 <Route path="/admin/matching-config" component={AdminMatchingConfigPage} />
@@ -122,6 +125,7 @@ export default function AdminLayout() {
                 <Route path="/admin/audit-logs" component={AdminAuditLogsPage} />
                 <Route path="/admin/feature-flags" component={AdminFeatureFlagsPage} />
                 <Route path="/admin/alang" component={AdminFlashPage} />
+                <Route component={AdminNotFound} />
               </Switch>
             </Suspense>
           </main>

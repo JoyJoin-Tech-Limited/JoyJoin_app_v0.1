@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Brain, Zap, MessageSquare, TrendingUp, Target, Sparkles, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 import { useToast } from "@/hooks/ui/use-toast";
 
 interface EvolutionOverview {
@@ -216,27 +217,27 @@ export default function AdminEvolutionPage() {
   const [newDialogueCategory, setNewDialogueCategory] = useState("");
   const [selectedShadowPoolId, setSelectedShadowPoolId] = useState("");
 
-  const { data: overview, isLoading: overviewLoading } = useQuery<EvolutionOverview>({
+  const { data: overview, isLoading: overviewLoading, isError: overviewError, error: overviewErrorDetail, refetch: refetchOverview } = useQuery<EvolutionOverview>({
     queryKey: ["/api/admin/evolution/overview"],
   });
 
-  const { data: weightsData, isLoading: weightsLoading } = useQuery<WeightsData>({
+  const { data: weightsData, isLoading: weightsLoading, isError: weightsError, error: weightsErrorDetail, refetch: refetchWeights } = useQuery<WeightsData>({
     queryKey: ["/api/admin/evolution/weights"],
   });
 
-  const { data: shadowRecommendationData, isLoading: shadowRecommendationsLoading } = useQuery<ShadowRecommendationData>({
+  const { data: shadowRecommendationData, isLoading: shadowRecommendationsLoading, isError: shadowRecommendationsError, error: shadowRecommendationsErrorDetail, refetch: refetchShadowRecommendations } = useQuery<ShadowRecommendationData>({
     queryKey: ["/api/admin/evolution/weight-recommendations"],
   });
 
-  const { data: predictiveRerankStatus, isLoading: predictiveRerankStatusLoading } = useQuery<PredictiveRerankStatus>({
+  const { data: predictiveRerankStatus, isLoading: predictiveRerankStatusLoading, isError: predictiveRerankStatusError, error: predictiveRerankStatusErrorDetail, refetch: refetchPredictiveRerankStatus } = useQuery<PredictiveRerankStatus>({
     queryKey: ["/api/admin/predictive-rerank-status"],
   });
 
-  const { data: triggersData, isLoading: triggersLoading } = useQuery<{ all: TriggerStats[]; topPerforming: TriggerStats[]; underperforming: TriggerStats[] }>({
+  const { data: triggersData, isLoading: triggersLoading, isError: triggersError, error: triggersErrorDetail, refetch: refetchTriggers } = useQuery<{ all: TriggerStats[]; topPerforming: TriggerStats[]; underperforming: TriggerStats[] }>({
     queryKey: ["/api/admin/evolution/triggers"],
   });
 
-  const { data: dialoguesData, isLoading: dialoguesLoading } = useQuery<{ dialogues: GoldenDialogue[]; stats: any }>({
+  const { data: dialoguesData, isLoading: dialoguesLoading, isError: dialoguesError, error: dialoguesErrorDetail, refetch: refetchDialogues } = useQuery<{ dialogues: GoldenDialogue[]; stats: any }>({
     queryKey: ["/api/admin/evolution/golden-dialogues"],
   });
 
@@ -244,7 +245,7 @@ export default function AdminEvolutionPage() {
     queryKey: ["/api/admin/event-pools"],
   });
 
-  const { data: shadowExperiments, isLoading: shadowLoading } = useQuery<ShadowExperiment[]>({
+  const { data: shadowExperiments, isLoading: shadowLoading, isError: shadowError, error: shadowErrorDetail, refetch: refetchShadowExperiments } = useQuery<ShadowExperiment[]>({
     queryKey: [
       "/api/admin/matching-shadow-experiments",
       { poolId: selectedShadowPoolId || null, limit: 10 },
@@ -403,6 +404,12 @@ export default function AdminEvolutionPage() {
             </Card>
           ))}
         </div>
+      ) : overviewError ? (
+        <AdminQueryError
+          title="进化概览加载失败"
+          error={overviewErrorDetail}
+          onRetry={() => refetchOverview()}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card data-testid="card-total-matches">
@@ -485,6 +492,12 @@ export default function AdminEvolutionPage() {
                     <div key={i} className="animate-pulse h-8 bg-muted rounded" />
                   ))}
                 </div>
+              ) : weightsError ? (
+                <AdminQueryError
+                  title="权重数据加载失败"
+                  error={weightsErrorDetail}
+                  onRetry={() => refetchWeights()}
+                />
               ) : weightsData?.weights ? (
                 <div className="space-y-4">
                   {weightDefinitions.map(({ key, label, color }) => {
@@ -531,6 +544,12 @@ export default function AdminEvolutionPage() {
                           <div key={i} className="animate-pulse h-10 bg-muted rounded" />
                         ))}
                       </div>
+                    ) : shadowRecommendationsError ? (
+                      <AdminQueryError
+                        title="影子推荐加载失败"
+                        error={shadowRecommendationsErrorDetail}
+                        onRetry={() => refetchShadowRecommendations()}
+                      />
                     ) : latestShadowRecommendation?.shadowMetadata ? (
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -644,6 +663,12 @@ export default function AdminEvolutionPage() {
                     <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
                   ))}
                 </div>
+              ) : predictiveRerankStatusError ? (
+                <AdminQueryError
+                  title="线上重排状态加载失败"
+                  error={predictiveRerankStatusErrorDetail}
+                  onRetry={() => refetchPredictiveRerankStatus()}
+                />
               ) : (
                 <>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -789,6 +814,12 @@ export default function AdminEvolutionPage() {
                 </Card>
               ))}
             </div>
+          ) : shadowError ? (
+            <AdminQueryError
+              title="影子实验记录加载失败"
+              error={shadowErrorDetail}
+              onRetry={() => refetchShadowExperiments()}
+            />
           ) : latestShadowExperiment ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -947,6 +978,13 @@ export default function AdminEvolutionPage() {
         </TabsContent>
 
         <TabsContent value="triggers" className="space-y-4">
+          {triggersError ? (
+            <AdminQueryError
+              title="触发器数据加载失败"
+              error={triggersErrorDetail}
+              onRetry={() => refetchTriggers()}
+            />
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
@@ -1028,6 +1066,7 @@ export default function AdminEvolutionPage() {
               </CardContent>
             </Card>
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="dialogues" className="space-y-4">
@@ -1078,6 +1117,12 @@ export default function AdminEvolutionPage() {
                     <div key={i} className="animate-pulse h-20 bg-muted rounded" />
                   ))}
                 </div>
+              ) : dialoguesError ? (
+                <AdminQueryError
+                  title="话术库加载失败"
+                  error={dialoguesErrorDetail}
+                  onRetry={() => refetchDialogues()}
+                />
               ) : dialoguesData?.dialogues?.length ? (
                 <div className="space-y-3">
                   {dialoguesData.dialogues.slice(0, 10).map((dialogue) => (

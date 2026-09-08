@@ -85,7 +85,7 @@ function maybeRedirectExpiredAdminSession(res: Response) {
   const isAdminPath = pathname.startsWith("/admin");
   const isLoginPath = pathname === "/admin/login" || pathname === "/login";
 
-  if (isAdminPath && !isLoginPath && (res.status === 401 || res.status === 403)) {
+  if (isAdminPath && !isLoginPath && res.status === 401) {
     window.location.href = "/admin/login";
   }
 }
@@ -124,7 +124,7 @@ export const getQueryFn: <T>(options: {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && (res.status === 401 || res.status === 403)) {
+    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
 
@@ -135,10 +135,14 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "returnNull" }),
+      // Throw on 401 so session expiry redirects via throwIfResNotOk instead
+      // of silently returning null (which crashed pages destructuring data).
+      queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      // Operational data must not lie: bounded staleness so remounts refetch,
+      // while mutations still invalidate explicitly for instant updates.
+      staleTime: 30_000,
       retry: false,
     },
     mutations: {

@@ -44,7 +44,6 @@ export default function AdminFeatureFlagsPage() {
       return { key, value };
     },
     onSuccess: ({ key }) => {
-      toast({ title: "配置已更新", description: `${flagLabels[key] ?? key} 已保存并生效` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-flags"] });
       setLocalOverrides((prev) => {
         const next = { ...prev };
@@ -52,18 +51,8 @@ export default function AdminFeatureFlagsPage() {
         return next;
       });
     },
-    onError: (err: Error, { key }) => {
-      toast({
-        title: `${flagLabels[key] ?? key} 更新失败`,
-        description: err.message,
-        variant: "destructive",
-      });
-      // Revert local override on error
-      setLocalOverrides((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
+    onError: (_err, _vars) => {
+      // Keep the local override so failed keys stay marked 已修改 and can be retried.
     },
     onSettled: (_data, _err, { key }) => {
       setSavingKeys((prev) => {
@@ -114,9 +103,26 @@ export default function AdminFeatureFlagsPage() {
 
     setSavingKeys(new Set(entries.map(([k]) => k)));
 
-    // Sequential saves to avoid race conditions on the same row
+    // Sequential saves to avoid race conditions on the same row.
+    // Collect per-key results so one failure does not abort the remaining saves.
+    const failed: string[] = [];
     for (const [key, value] of entries) {
-      await updateMutation.mutateAsync({ key, value });
+      try {
+        await updateMutation.mutateAsync({ key, value });
+      } catch {
+        failed.push(key);
+      }
+    }
+
+    const succeeded = entries.length - failed.length;
+    if (failed.length === 0) {
+      toast({ title: `${succeeded}/${entries.length} 项保存成功` });
+    } else {
+      toast({
+        title: `${succeeded}/${entries.length} 项保存成功`,
+        description: `${failed.length} 项保存失败（${failed.map((k) => flagLabels[k] ?? k).join("、")}），仍标记为已修改，可重试`,
+        variant: "destructive",
+      });
     }
   };
 

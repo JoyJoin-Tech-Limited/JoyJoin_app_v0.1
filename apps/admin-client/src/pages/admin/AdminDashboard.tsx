@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCircle, RefreshCw, Star, MapPin, UserCog, Trophy, Coins, Flame, Bell, AlertTriangle, Clock, UsersRound, Activity } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCircle, RefreshCw, Star, MapPin, UserCog, Trophy, Coins, Flame, Bell, AlertTriangle, Clock, UsersRound, Activity, Brain } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
 import { useMemo } from "react";
 import type { WeakUser, AdminStats } from "./types";
+import AdminQueryError from "@/components/admin/AdminQueryError";
+import { safeFormat } from "@/lib/dateUtils";
+import { filterPoolsClosingWithin24h, type WarRoomPool } from "./warRoomUtils";
 
 interface TodayEvent {
   id: string;
@@ -33,7 +36,8 @@ interface OpsDashboard {
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
-  const { data: stats, isLoading, isError, error, refetch } = useQuery<AdminStats>({
+  const queryClient = useQueryClient();
+  const { data: stats, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
     retry: 2,
   });
@@ -42,6 +46,43 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/ops-dashboard"],
     retry: 2,
   });
+
+  const refundsQuery = useQuery<Array<{ status: string }>>({
+    queryKey: ["/api/admin/refund-attempts"],
+    retry: 2,
+  });
+
+  const unassignedQuery = useQuery<unknown[]>({
+    queryKey: ["/api/admin/venue-assignment/unassigned"],
+    retry: 2,
+  });
+
+  const poolsQuery = useQuery<WarRoomPool[]>({
+    queryKey: ["/api/admin/event-pools"],
+    retry: 2,
+  });
+
+  const failedRefundCount = useMemo(
+    () => (refundsQuery.data ?? []).filter((attempt) => attempt.status === "failed").length,
+    [refundsQuery.data],
+  );
+  const unassignedVenueCount = unassignedQuery.data?.length ?? 0;
+  const lowFillPools = useMemo(
+    () => filterPoolsClosingWithin24h(poolsQuery.data).filter((pool) => pool.isLowFill),
+    [poolsQuery.data],
+  );
+
+  const handleManualRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/ops-dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/refund-attempts"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/venue-assignment/unassigned"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
+  };
+
+  const lastUpdatedLabel = dataUpdatedAt
+    ? safeFormat(new Date(dataUpdatedAt), "HH:mm:ss", { fallback: "—" })
+    : "—";
   
   // Render star rating display
   const renderStars = (rating: number) => {
@@ -60,36 +101,42 @@ export default function AdminDashboard() {
       value: stats?.totalUsers?.toString() || "0",
       icon: Users,
       description: "注册用户",
+      href: "/admin/users",
     },
     {
       title: "订阅会员",
       value: stats?.subscribedUsers?.toString() || "0",
       icon: CreditCard,
       description: "活跃会员数",
+      href: "/admin/subscriptions",
     },
     {
       title: "本月活动",
       value: stats?.eventsThisMonth?.toString() || "0",
       icon: Calendar,
       description: "已发布活动",
+      href: "/admin/events",
     },
     {
       title: "本月收入",
       value: `¥${stats?.monthlyRevenue || 0}`,
       icon: DollarSign,
       description: "订阅 + 单次付费",
+      href: null,
     },
     {
       title: "新增用户",
       value: stats?.newUsersThisWeek?.toString() || "0",
       icon: UserPlus,
       description: "本周新用户",
+      href: null,
     },
     {
       title: "用户增长",
       value: `${stats?.userGrowth || 0}%`,
       icon: TrendingUp,
       description: "相比上周",
+      href: null,
     },
   ], [stats]);
 
@@ -164,9 +211,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">数据看板</h2>
-        <p className="text-muted-foreground">核心业务指标概览</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">数据看板</h2>
+          <p className="text-muted-foreground">核心业务指标概览</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground" data-testid="text-last-updated">
+            数据更新于 {lastUpdatedLabel}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleManualRefresh}
+            data-testid="button-manual-refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       {/* 今日待办 Alerts */}
@@ -227,12 +289,87 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-center gap-1.5 text-blue-700">
                     <UsersRound className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">用户卡壳在 onboarding</span>
+                    <span className="text-xs font-medium">用户停留在注册流程</span>
                   </div>
                   <div className="mt-1 text-lg font-bold text-blue-700">{ops.alerts.usersStuckInOnboarding} 人</div>
                 </button>
               )}
-              {Object.values(ops.alerts).every((v) => v === 0) && (
+              {(refundsQuery.isError || failedRefundCount > 0) && (
+                <div
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2"
+                  data-testid="alert-failed-refunds"
+                >
+                  {refundsQuery.isError ? (
+                    <AdminQueryError
+                      title="退款数据加载失败"
+                      error={refundsQuery.error}
+                      onRetry={() => refundsQuery.refetch()}
+                      className="border-0 bg-transparent py-2"
+                    />
+                  ) : (
+                    <button onClick={() => setLocation("/admin/finance")} className="w-full text-left hover:bg-red-100 transition-colors rounded">
+                      <div className="flex items-center gap-1.5 text-red-700">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">失败退款</span>
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-red-700">{failedRefundCount} 笔</div>
+                    </button>
+                  )}
+                </div>
+              )}
+              {(unassignedQuery.isError || unassignedVenueCount > 0) && (
+                <div
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
+                  data-testid="alert-venue-tbd"
+                >
+                  {unassignedQuery.isError ? (
+                    <AdminQueryError
+                      title="场地数据加载失败"
+                      error={unassignedQuery.error}
+                      onRetry={() => unassignedQuery.refetch()}
+                      className="border-0 bg-transparent py-2"
+                    />
+                  ) : (
+                    <button onClick={() => setLocation("/admin/venues")} className="w-full text-left hover:bg-amber-100 transition-colors rounded">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">场地待定</span>
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-amber-700">{unassignedVenueCount} 组</div>
+                    </button>
+                  )}
+                </div>
+              )}
+              {(poolsQuery.isError || lowFillPools.length > 0) && (
+                <div
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
+                  data-testid="alert-low-fill-pools"
+                >
+                  {poolsQuery.isError ? (
+                    <AdminQueryError
+                      title="活动池数据加载失败"
+                      error={poolsQuery.error}
+                      onRetry={() => poolsQuery.refetch()}
+                      className="border-0 bg-transparent py-2"
+                    />
+                  ) : (
+                    <button onClick={() => setLocation("/admin/event-pools")} className="w-full text-left hover:bg-amber-100 transition-colors rounded">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">低填充池 · 24h 内截止</span>
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-amber-700">{lowFillPools.length} 个</div>
+                    </button>
+                  )}
+                </div>
+              )}
+              {Object.values(ops.alerts).every((v) => v === 0) &&
+                failedRefundCount === 0 &&
+                unassignedVenueCount === 0 &&
+                lowFillPools.length === 0 &&
+                !refundsQuery.isError &&
+                !unassignedQuery.isError &&
+                !poolsQuery.isError && (
                 <div className="col-span-full rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-center" data-testid="alert-all-clear">
                   <div className="flex items-center justify-center gap-1.5 text-green-700">
                     <Activity className="h-3.5 w-3.5" />
@@ -300,7 +437,8 @@ export default function AdminDashboard() {
         <Card className="mb-6" data-testid="card-ops-scorecard">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              🏥 运营健康记分卡
+              <Activity className="h-4 w-4" />
+              运营健康记分卡
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -309,10 +447,10 @@ export default function AdminDashboard() {
               {(() => {
                 const v = stats.userGrowth ?? 0;
                 const color = v > 5 ? "text-green-700 bg-green-50" : v >= 0 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
-                const dot = v > 5 ? "🟢" : v >= 0 ? "🟡" : "🔴";
+                const dotClass = v > 5 ? "bg-green-500" : v >= 0 ? "bg-amber-500" : "bg-red-500";
                 return (
                   <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-user-growth">
-                    <div className="text-lg">{dot}</div>
+                    <div className="flex justify-center"><span className={`inline-block h-3 w-3 rounded-full ${dotClass}`} /></div>
                     <div className="text-xs font-medium mt-0.5">用户增长健康度</div>
                     <div className="text-sm font-bold">{v}%</div>
                   </div>
@@ -322,10 +460,10 @@ export default function AdminDashboard() {
               {(() => {
                 const v = stats.weeklyMatchingSatisfaction ?? 0;
                 const color = v >= 80 ? "text-green-700 bg-green-50" : v >= 70 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
-                const dot = v >= 80 ? "🟢" : v >= 70 ? "🟡" : "🔴";
+                const dotClass = v >= 80 ? "bg-green-500" : v >= 70 ? "bg-amber-500" : "bg-red-500";
                 return (
                   <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-matching-satisfaction">
-                    <div className="text-lg">{dot}</div>
+                    <div className="flex justify-center"><span className={`inline-block h-3 w-3 rounded-full ${dotClass}`} /></div>
                     <div className="text-xs font-medium mt-0.5">匹配满意度</div>
                     <div className="text-sm font-bold">{v}%</div>
                   </div>
@@ -335,10 +473,10 @@ export default function AdminDashboard() {
               {(() => {
                 const v = stats.lowScoringMatches ?? 0;
                 const color = v === 0 ? "text-green-700 bg-green-50" : v <= 3 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
-                const dot = v === 0 ? "🟢" : v <= 3 ? "🟡" : "🔴";
+                const dotClass = v === 0 ? "bg-green-500" : v <= 3 ? "bg-amber-500" : "bg-red-500";
                 return (
                   <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-low-matches">
-                    <div className="text-lg">{dot}</div>
+                    <div className="flex justify-center"><span className={`inline-block h-3 w-3 rounded-full ${dotClass}`} /></div>
                     <div className="text-xs font-medium mt-0.5">低分匹配数</div>
                     <div className="text-sm font-bold">{v} 个</div>
                   </div>
@@ -348,10 +486,10 @@ export default function AdminDashboard() {
               {(() => {
                 const ratio = stats.totalUsers > 0 ? (stats.subscribedUsers / stats.totalUsers) * 100 : 0;
                 const color = ratio > 15 ? "text-green-700 bg-green-50" : ratio >= 5 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
-                const dot = ratio > 15 ? "🟢" : ratio >= 5 ? "🟡" : "🔴";
+                const dotClass = ratio > 15 ? "bg-green-500" : ratio >= 5 ? "bg-amber-500" : "bg-red-500";
                 return (
                   <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-conversion-rate">
-                    <div className="text-lg">{dot}</div>
+                    <div className="flex justify-center"><span className={`inline-block h-3 w-3 rounded-full ${dotClass}`} /></div>
                     <div className="text-xs font-medium mt-0.5">活跃会员转化率</div>
                     <div className="text-sm font-bold">{ratio.toFixed(1)}%</div>
                   </div>
@@ -364,10 +502,10 @@ export default function AdminDashboard() {
                 const totalWithData = cs ? (cs.star1 + cs.star2 + cs.star3 + cs.star4 + cs.star5) : 0;
                 const ratio = totalWithData > 0 ? (highQualityUsers / totalWithData) * 100 : 0;
                 const color = ratio > 50 ? "text-green-700 bg-green-50" : ratio >= 30 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
-                const dot = ratio > 50 ? "🟢" : ratio >= 30 ? "🟡" : "🔴";
+                const dotClass = ratio > 50 ? "bg-green-500" : ratio >= 30 ? "bg-amber-500" : "bg-red-500";
                 return (
                   <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-profile-richness">
-                    <div className="text-lg">{dot}</div>
+                    <div className="flex justify-center"><span className={`inline-block h-3 w-3 rounded-full ${dotClass}`} /></div>
                     <div className="text-xs font-medium mt-0.5">资料完整度</div>
                     <div className="text-sm font-bold">{ratio.toFixed(0)}%</div>
                   </div>
@@ -377,10 +515,10 @@ export default function AdminDashboard() {
               {(() => {
                 const v = stats.eventsThisMonth ?? 0;
                 const color = v >= 10 ? "text-green-700 bg-green-50" : v >= 5 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
-                const dot = v >= 10 ? "🟢" : v >= 5 ? "🟡" : "🔴";
+                const dotClass = v >= 10 ? "bg-green-500" : v >= 5 ? "bg-amber-500" : "bg-red-500";
                 return (
                   <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-event-density">
-                    <div className="text-lg">{dot}</div>
+                    <div className="flex justify-center"><span className={`inline-block h-3 w-3 rounded-full ${dotClass}`} /></div>
                     <div className="text-xs font-medium mt-0.5">本月活动密度</div>
                     <div className="text-sm font-bold">{v} 场</div>
                   </div>
@@ -395,7 +533,8 @@ export default function AdminDashboard() {
         <Card className="mb-6" data-testid="card-semantic-matching-metrics">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              🧠 语义匹配观测
+              <Brain className="h-4 w-4" />
+              语义匹配观测
               <Badge variant={stats.matchingMetrics.semanticFeatureEnabled ? "default" : "secondary"}>
                 {stats.matchingMetrics.semanticFeatureEnabled ? "已启用" : "未启用"}
               </Badge>
@@ -436,24 +575,33 @@ export default function AdminDashboard() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-card-${stat.title}`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid={`stat-value-${stat.title}`}>
-                {stat.value}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stat.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {statCards.map((stat) => {
+          const card = (
+            <Card data-testid={`stat-card-${stat.title}`} className={stat.href ? "h-full hover:bg-muted/40 transition-colors" : "h-full"}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {stat.title}
+                </CardTitle>
+                <stat.icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid={`stat-value-${stat.title}`}>
+                  {stat.value}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {stat.description}
+                </p>
+              </CardContent>
+            </Card>
+          );
+          return stat.href ? (
+            <Link key={stat.title} href={stat.href}>
+              {card}
+            </Link>
+          ) : (
+            <div key={stat.title}>{card}</div>
+          );
+        })}
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -468,7 +616,10 @@ export default function AdminDashboard() {
             </div>
             <p className="text-xs text-muted-foreground">用户反馈评分</p>
             {stats?.weeklyMatchingSatisfaction && stats.weeklyMatchingSatisfaction < 70 && (
-              <p className="text-xs text-orange-600 mt-1">⚠️ 需关注</p>
+              <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                需关注
+              </p>
             )}
           </CardContent>
         </Card>

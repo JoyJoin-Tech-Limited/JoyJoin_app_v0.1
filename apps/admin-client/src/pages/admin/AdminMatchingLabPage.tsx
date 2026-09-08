@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Sliders, TestTube2, Zap, Play, Users, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -133,7 +134,7 @@ export default function AdminMatchingLabPage() {
   const { toast } = useToast();
 
   // 加载当前配置
-  const { data: currentConfig, isLoading: configLoading } = useQuery<MatchingConfig>({
+  const { data: currentConfig, isLoading: configLoading, isError: configError, error: configErrorDetail, refetch: refetchConfig } = useQuery<MatchingConfig>({
     queryKey: ["/api/matching/config"],
   });
 
@@ -145,7 +146,7 @@ export default function AdminMatchingLabPage() {
   }, [currentConfig]);
 
   // 加载所有用户（用于测试场景）- 请求更多用户以确保有足够archetype用户
-  const { data: usersResponse, isLoading: usersLoading } = useQuery<UsersResponse>({
+  const { data: usersResponse, isLoading: usersLoading, isError: usersError, error: usersErrorDetail, refetch: refetchUsers } = useQuery<UsersResponse>({
     queryKey: ["/api/admin/users?limit=200"],
   });
 
@@ -212,7 +213,7 @@ export default function AdminMatchingLabPage() {
     setSelectedUserIds(shuffled.slice(0, count).map(u => u.id));
   };
 
-  const { data: activePairModel } = useQuery<ActivePairScoreModel>({
+  const { data: activePairModel, isError: pairModelError, error: pairModelErrorDetail, refetch: refetchPairModel } = useQuery<ActivePairScoreModel>({
     queryKey: ["/api/admin/matching/active-pair-model"],
     queryFn: async () => {
       const res = await fetch("/api/admin/matching/active-pair-model");
@@ -223,7 +224,7 @@ export default function AdminMatchingLabPage() {
     },
   });
 
-  const { data: chemistryCalibrationData, isLoading: chemistryCalibrationLoading, isFetching: chemistryCalibrationFetching } = useQuery<ChemistryCalibrationResponse>({
+  const { data: chemistryCalibrationData, isLoading: chemistryCalibrationLoading, isFetching: chemistryCalibrationFetching, isError: chemistryCalibrationError, error: chemistryCalibrationErrorDetail, refetch: refetchChemistryCalibration } = useQuery<ChemistryCalibrationResponse>({
     queryKey: ["/api/admin/matching/chemistry-calibration"],
     queryFn: async () => {
       const res = await fetch("/api/admin/matching/chemistry-calibration", {
@@ -265,6 +266,18 @@ export default function AdminMatchingLabPage() {
     );
   }
 
+  if (configError) {
+    return (
+      <div className="p-8">
+        <AdminQueryError
+          title="匹配配置加载失败"
+          error={configErrorDetail}
+          onRetry={() => refetchConfig()}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 space-y-6">
       <div>
@@ -288,6 +301,14 @@ export default function AdminMatchingLabPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {pairModelError ? (
+            <AdminQueryError
+              title="配对因子结构加载失败"
+              error={pairModelErrorDetail}
+              onRetry={() => refetchPairModel()}
+            />
+          ) : (
+          <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Chemistry */}
             <div className="rounded-lg border p-3 space-y-1">
@@ -368,6 +389,8 @@ export default function AdminMatchingLabPage() {
               <p className="mt-1">groupDiversity 维度：行业 + 性别 + 原型 + 人生阶段（均为多样性信号）</p>
             </div>
           </div>
+          </>
+          )}
         </CardContent>
       </Card>
 
@@ -401,6 +424,15 @@ export default function AdminMatchingLabPage() {
           </div>
 
           <ScrollArea className="h-[280px] rounded-md border">
+            {chemistryCalibrationError ? (
+              <div className="p-4">
+                <AdminQueryError
+                  title="经验校准数据加载失败"
+                  error={chemistryCalibrationErrorDetail}
+                  onRetry={() => refetchChemistryCalibration()}
+                />
+              </div>
+            ) : (
             <div className="min-w-[760px]">
               <div className="grid grid-cols-[160px_90px_90px_90px_90px_90px_90px_120px] gap-3 border-b bg-muted/40 px-4 py-3 text-xs font-medium text-muted-foreground">
                 <div>原型配对</div>
@@ -440,6 +472,7 @@ export default function AdminMatchingLabPage() {
                 ))
               )}
             </div>
+            )}
           </ScrollArea>
         </CardContent>
       </Card>
@@ -493,7 +526,7 @@ export default function AdminMatchingLabPage() {
                   data-testid="slider-personality-weight"
                 />
                 <p className="text-xs text-muted-foreground">
-                  基于14种社交原型的兼容性评分
+                  基于12种社交原型的兼容性评分
                 </p>
               </div>
 
@@ -640,6 +673,12 @@ export default function AdminMatchingLabPage() {
               <ScrollArea className="h-[300px] rounded-md border p-4">
                 {usersLoading ? (
                   <div className="text-sm text-muted-foreground">加载用户列表...</div>
+                ) : usersError ? (
+                  <AdminQueryError
+                    title="用户列表加载失败"
+                    error={usersErrorDetail}
+                    onRetry={() => refetchUsers()}
+                  />
                 ) : allUsers.filter(u => u.archetype).length === 0 ? (
                   <div className="text-sm text-muted-foreground">暂无可用用户</div>
                 ) : (

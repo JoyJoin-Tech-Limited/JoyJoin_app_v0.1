@@ -67,8 +67,10 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
   refunded: { label: "已退款", variant: "outline" },
 };
 
+const EVENT_PAYMENT_TYPES = ["event", "event_bundle", "event_pack"] as const;
+
 const PAYMENT_TYPE_MAP: Record<string, { label: string; variant: "default" | "outline" }> = {
-  subscription: { label: "会员", variant: "default" },
+  subscription: { label: "权益", variant: "default" },
   event: { label: "活动", variant: "outline" },
   event_bundle: { label: "活动套餐", variant: "outline" },
   event_pack: { label: "活动套餐", variant: "outline" },
@@ -155,6 +157,11 @@ export default function AdminFinancePage() {
       if (paymentFilter === "all") {
         return rows;
       }
+      if (paymentFilter === "event") {
+        return rows.filter((payment) =>
+          (EVENT_PAYMENT_TYPES as readonly string[]).includes(payment.payment_type),
+        );
+      }
       return rows.filter((payment) => payment.payment_type === paymentFilter);
     },
   });
@@ -210,8 +217,7 @@ export default function AdminFinancePage() {
   const formatDateTime = (dateTimeStr: string) =>
     safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { fallback: dateTimeStr });
 
-  const getUserName = (payment: Payment) => {
-    const firstName = payment.user_first_name || "";
+  const getUserName = (payment: Payment) => {    const firstName = payment.user_first_name || "";
     const lastName = payment.user_last_name || "";
     const fullName = `${firstName} ${lastName}`.trim();
     return fullName || "未知用户";
@@ -259,14 +265,14 @@ export default function AdminFinancePage() {
 
         <Card data-testid="card-metric-subscription-revenue">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">会员收入</CardTitle>
+            <CardTitle className="text-sm font-medium">权益收入</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="text-subscription-revenue">
               {formatCurrency(stats?.subscriptionRevenue || 0)}
             </div>
-            <p className="text-xs text-muted-foreground">会员订阅收入</p>
+            <p className="text-xs text-muted-foreground">权益订阅收入</p>
           </CardContent>
         </Card>
 
@@ -335,7 +341,7 @@ export default function AdminFinancePage() {
                       全部
                     </TabsTrigger>
                     <TabsTrigger value="subscription" data-testid="filter-subscription">
-                      会员
+                      权益
                     </TabsTrigger>
                     <TabsTrigger value="event" data-testid="filter-event">
                       活动

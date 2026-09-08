@@ -62,10 +62,11 @@ export default function AdminLoginPage() {
       }
     },
     onError: (error: Error) => {
-      setError(error.message);
+      const message = error.message.replace(/^\d{3}:\s*/, "");
+      setError(message);
       toast({
         title: "登录失败",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     },

@@ -21,10 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Ticket, Plus, Edit, TrendingUp, Users, DollarSign } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { Ticket, Plus, Edit, TrendingUp, Users } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, isPast, isFuture } from "date-fns";
 import { useToast } from "@/hooks/ui/use-toast";
+import AdminQueryError from "@/components/admin/AdminQueryError";
+import EmptyState from "@/components/admin/EmptyState";
 
 interface Coupon {
   id: string;
@@ -56,23 +58,26 @@ export default function AdminCouponsPage() {
 
   const { toast } = useToast();
 
-  const { data: coupons = [], isLoading } = useQuery<Coupon[]>({
+  const {
+    data: coupons = [],
+    isLoading,
+    isError,
+    error: couponsError,
+    refetch: refetchCoupons,
+  } = useQuery<Coupon[]>({
     queryKey: ["/api/admin/coupons"],
   });
 
-  const { data: usageStats = [] } = useQuery<any[]>({
+  const { data: usageStats = [], isLoading: usageLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/coupons", selectedCoupon?.id, "usage"],
     enabled: !!selectedCoupon && showUsageDialog,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch("/api/admin/coupons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      }).then((r) => r.json()),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/admin/coupons", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/coupons"] });
       setShowCreateDialog(false);
@@ -82,23 +87,20 @@ export default function AdminCouponsPage() {
         description: "优惠券已成功创建",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "创建失败",
-        description: "无法创建优惠券，请重试",
+        description: error.message || "无法创建优惠券，请重试",
         variant: "destructive",
       });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      fetch(`/api/admin/coupons/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      }).then((r) => r.json()),
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PATCH", `/api/admin/coupons/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/coupons"] });
       setShowEditDialog(false);
@@ -106,6 +108,13 @@ export default function AdminCouponsPage() {
       toast({
         title: "更新成功",
         description: "优惠券已更新",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "更新失败",
+        description: error.message || "无法更新优惠券，请重试",
+        variant: "destructive",
       });
     },
   });
@@ -221,7 +230,7 @@ export default function AdminCouponsPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">活跃优惠券</CardTitle>
@@ -254,20 +263,15 @@ export default function AdminCouponsPage() {
             <p className="text-xs text-muted-foreground">累计使用次数</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">优惠总额</CardTitle>
-            <DollarSign className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">--</div>
-            <p className="text-xs text-muted-foreground">待统计</p>
-          </CardContent>
-        </Card>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <AdminQueryError
+          title="优惠券数据加载失败"
+          error={couponsError}
+          onRetry={() => refetchCoupons()}
+        />
+      ) : isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
@@ -286,8 +290,8 @@ export default function AdminCouponsPage() {
         </div>
       ) : coupons.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            暂无优惠券记录
+          <CardContent className="p-0">
+            <EmptyState title="暂无优惠券记录" />
           </CardContent>
         </Card>
       ) : (
@@ -374,7 +378,7 @@ export default function AdminCouponsPage() {
               <Label htmlFor="code">优惠码 *</Label>
               <Input
                 id="code"
-                placeholder="SUMMER2024"
+                placeholder="JOY2026"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                 data-testid="input-code"
@@ -545,7 +549,18 @@ export default function AdminCouponsPage() {
           </DialogHeader>
 
           <div className="py-4">
-            {usageStats.length === 0 ? (
+            {usageLoading ? (
+              <div className="space-y-2 py-2" data-testid="loading-usage">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="py-3 space-y-2">
+                      <div className="h-4 bg-muted rounded w-1/3" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : usageStats.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">暂无使用记录</p>
             ) : (
               <div className="space-y-2 max-h-96 overflow-y-auto">

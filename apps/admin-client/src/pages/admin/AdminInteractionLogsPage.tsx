@@ -18,7 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertCircle, RefreshCw, FileText, AlertTriangle, Info, XCircle } from "lucide-react";
+import { RefreshCw, FileText, AlertTriangle, Info, XCircle } from "lucide-react";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 import { format } from "date-fns";
 
 interface InteractionLog {
@@ -76,30 +77,12 @@ export default function AdminInteractionLogsPage() {
 
   if (isError) {
     return (
-      <div className="flex h-full items-center justify-center p-8">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="space-y-4 text-center">
-              <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
-              <div>
-                <h3 className="text-lg font-semibold">加载失败</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {error instanceof Error && error.message.includes("401") 
-                    ? "您没有访问权限"
-                    : "无法加载日志数据，请稍后重试"}
-                </p>
-              </div>
-              <Button 
-                onClick={() => refetch()} 
-                variant="default"
-                data-testid="button-retry-logs"
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                重试
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6">
+        <AdminQueryError
+          title="连接日志加载失败"
+          error={error}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

@@ -15,6 +15,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DollarSign, Edit, Star, Clock, Package, AlertCircle, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
@@ -38,6 +48,7 @@ interface PricingSetting {
 export default function AdminPricingPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedSetting, setSelectedSetting] = useState<PricingSetting | null>(null);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   
   const [formData, setFormData] = useState({
     displayName: "",
@@ -102,8 +113,15 @@ export default function AdminPricingPage() {
     setShowEditDialog(true);
   };
 
+  const parsedPriceInCents = Number.parseInt(formData.priceInCents, 10);
+  const isPriceValid =
+    formData.priceInCents.trim() !== "" &&
+    /^\d+$/.test(formData.priceInCents.trim()) &&
+    Number.isInteger(parsedPriceInCents) &&
+    parsedPriceInCents > 0;
+
   const handleUpdate = () => {
-    if (!selectedSetting) return;
+    if (!selectedSetting || !isPriceValid) return;
 
     updateMutation.mutate({
       id: selectedSetting.id,
@@ -111,7 +129,7 @@ export default function AdminPricingPage() {
         displayName: formData.displayName,
         displayNameEn: formData.displayNameEn || null,
         description: formData.description || null,
-        priceInCents: parseInt(formData.priceInCents) || 0,
+        priceInCents: parsedPriceInCents,
         originalPriceInCents: formData.originalPriceInCents ? parseInt(formData.originalPriceInCents) : null,
         durationDays: formData.durationDays ? parseInt(formData.durationDays) : null,
         sortOrder: formData.sortOrder ? parseInt(formData.sortOrder) : null,
@@ -327,14 +345,21 @@ export default function AdminPricingPage() {
                 <Input
                   id="priceInCents"
                   type="number"
+                  min="1"
+                  step="1"
                   value={formData.priceInCents}
                   onChange={(e) => setFormData({ ...formData, priceInCents: e.target.value })}
                   placeholder="8800 = ¥88"
                   data-testid="input-price"
                 />
-                {formData.priceInCents && (
+                {formData.priceInCents && !isPriceValid && (
+                  <p className="text-xs text-destructive" data-testid="text-price-error">
+                    请输入大于 0 的整数（单位：分）
+                  </p>
+                )}
+                {isPriceValid && (
                   <p className="text-xs text-muted-foreground">
-                    = {formatPrice(parseInt(formData.priceInCents) || 0)}
+                    = {formatPrice(parsedPriceInCents)}
                   </p>
                 )}
               </div>
@@ -414,8 +439,8 @@ export default function AdminPricingPage() {
               取消
             </Button>
             <Button 
-              onClick={handleUpdate} 
-              disabled={updateMutation.isPending}
+              onClick={() => setShowSaveConfirm(true)} 
+              disabled={updateMutation.isPending || !isPriceValid}
               data-testid="button-save"
             >
               {updateMutation.isPending ? "保存中..." : "保存"}
@@ -423,6 +448,37 @@ export default function AdminPricingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认修改价格</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedSetting && isPriceValid ? (
+                <>
+                  「{selectedSetting.display_name}」价格将从{" "}
+                  <strong>{formatPrice(selectedSetting.price_in_cents)}</strong> 改为{" "}
+                  <strong>{formatPrice(parsedPriceInCents)}</strong>，立即对所有用户生效。
+                </>
+              ) : (
+                "价格修改将立即对所有用户生效。"
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-save-confirm">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowSaveConfirm(false);
+                handleUpdate();
+              }}
+              data-testid="button-confirm-save-price"
+            >
+              确认保存
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +10,17 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +35,10 @@ import {
   UserX,
   UserCheck,
   Trash2,
+  Ban,
 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/ui/use-toast";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { AdminUserStarRating } from "@/components/admin/AdminUserStarRating";
 import {
@@ -37,7 +53,7 @@ import {
 import { fmtDate, fmtDateTimeShort } from "@/lib/dateUtils";
 import { TRAIT_DISPLAY_CONFIG } from "@shared/personality/traitDisplayConfig";
 import { getArchetypeBadgeStyle, getStuckStatus } from "./adminUserBadges";
-import type { UserDetail } from "./types";
+import type { UserDetail, UserPoolRegistration } from "./types";
 
 interface AdminUserDetailSheetProps {
   selectedUser: string | null;
@@ -50,6 +66,7 @@ interface AdminUserDetailSheetProps {
   banPending: boolean;
   unbanPending: boolean;
   deletePending: boolean;
+  canMutate?: boolean;
 }
 
 function OnboardingStep({ done, label }: { done: boolean; label: string }) {
@@ -63,6 +80,25 @@ function OnboardingStep({ done, label }: { done: boolean; label: string }) {
   );
 }
 
+const NEXT_STEP_LABELS: Record<string, string> = {
+  onboarding: "新手引导",
+  setup: "基础设置",
+  "personality-test": "性格测试",
+  "essential-data": "基础资料",
+  extended: "扩展资料",
+  "extended-data": "扩展资料",
+  review: "资料确认",
+  "profile-review": "资料确认",
+  discover: "已完成",
+  complete: "已完成",
+};
+
+function getNextStepLabel(nextStep: string | null | undefined): { label: string; isKnown: boolean } {
+  if (!nextStep) return { label: "—", isKnown: true };
+  const mapped = NEXT_STEP_LABELS[nextStep];
+  return mapped ? { label: mapped, isKnown: true } : { label: nextStep, isKnown: false };
+}
+
 function ReadinessCheck({ ok, label }: { ok: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-sm py-1">
@@ -72,6 +108,13 @@ function ReadinessCheck({ ok, label }: { ok: boolean; label: string }) {
       <span className={ok ? "" : "text-destructive"}>{label}</span>
     </div>
   );
+}
+
+const INACTIVE_MATCH_STATUSES = new Set(["cancelled", "refunded"]);
+
+function isRegistrationCancellable(reg: UserPoolRegistration): boolean {
+  if (reg.cancelPolicy) return true;
+  return !INACTIVE_MATCH_STATUSES.has(reg.matchStatus ?? "");
 }
 
 export function AdminUserDetailSheet({
@@ -85,7 +128,54 @@ export function AdminUserDetailSheet({
   banPending,
   unbanPending,
   deletePending,
+  canMutate = true,
 }: AdminUserDetailSheetProps) {
+  const { toast } = useToast();
+  const [cancelTarget, setCancelTarget] = useState<UserPoolRegistration | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const cancelMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const res = await apiRequest("POST", `/api/admin/pool-registrations/${id}/cancel`, { reason });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setCancelTarget(null);
+      setCancelReason("");
+      toast({
+        title: "已代客取消报名",
+        description: "该活动池报名已取消，退款/顺延按当前政策自动处理",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "取消失败",
+        description: error.message.replace(/^\d{3}:\s*/, "") || "无法取消该报名，请重试",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openCancelDialog = (reg: UserPoolRegistration) => {
+    setCancelReason("");
+    setCancelTarget(reg);
+  };
+
+  const confirmCancel = () => {
+    if (!cancelTarget) return;
+    const reason = cancelReason.trim();
+    if (reason.length < 5) {
+      toast({
+        title: "请填写取消原因",
+        description: "原因至少 5 个字符，将记录到审计日志",
+        variant: "destructive",
+      });
+      return;
+    }
+    cancelMutation.mutate({ id: cancelTarget.id, reason });
+  };
+
   return (
     <Sheet open={!!selectedUser} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-2xl overflow-hidden flex flex-col p-0">
@@ -217,7 +307,10 @@ export function AdminUserDetailSheet({
                       </span>
                       <Badge variant="outline" className="text-xs font-normal">
                         <Clock className="h-3 w-3 mr-1" />
-                        {userDetail.onboarding.nextStep}
+                        {(() => {
+                          const { label, isKnown } = getNextStepLabel(userDetail.onboarding.nextStep);
+                          return isKnown ? label : <span className="text-muted-foreground">{label}</span>;
+                        })()}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
@@ -229,7 +322,7 @@ export function AdminUserDetailSheet({
                   </CardContent>
                 </Card>
 
-                {!userDetail.user.isAdmin && (
+                {!userDetail.user.isAdmin && canMutate && (
                   <div className="flex gap-2">
                     <Button
                       variant={userDetail.user.isBanned ? "default" : "destructive"}
@@ -382,7 +475,7 @@ export function AdminUserDetailSheet({
                       )}
                       {userDetail.user.industryNicheLabel && (
                         <div>
-                          <p className="text-xs text-muted-foreground">行业 niche</p>
+                          <p className="text-xs text-muted-foreground">细分行业</p>
                           <p className="font-medium">{userDetail.user.industryNicheLabel}</p>
                         </div>
                       )}
@@ -543,6 +636,20 @@ export function AdminUserDetailSheet({
                             <p className="text-xs text-muted-foreground mt-1">
                               {fmtDateTimeShort(reg.registeredAt)}
                             </p>
+                            {canMutate && isRegistrationCancellable(reg) && (
+                              <div className="mt-2 flex justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                                  onClick={() => openCancelDialog(reg)}
+                                  data-testid={`button-cancel-registration-${reg.id}`}
+                                >
+                                  <Ban className="h-3 w-3 mr-1" />
+                                  代客取消
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -685,6 +792,52 @@ export function AdminUserDetailSheet({
             </ScrollArea>
           </Tabs>
         ) : null}
+
+        <AlertDialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>代客取消活动池报名</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2">
+                  <p>
+                    将为该用户取消活动池报名（Pool: {cancelTarget?.poolId?.slice(0, 8)}…）。
+                    该操作将记录审计日志。
+                  </p>
+                  {cancelTarget?.cancelPolicy && (
+                    <p className="text-amber-600 dark:text-amber-500">
+                      当前取消政策：{cancelTarget.cancelPolicy}
+                    </p>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2 py-2">
+              <label htmlFor="admin-cancel-reason" className="text-sm font-medium">
+                取消原因（至少 5 个字符）
+              </label>
+              <Textarea
+                id="admin-cancel-reason"
+                placeholder="例如：用户来电申请取消本期报名"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                data-testid="input-cancel-reason"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-dialog-close">返回</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  confirmCancel();
+                }}
+                disabled={cancelMutation.isPending}
+                data-testid="button-confirm-cancel-registration"
+              >
+                {cancelMutation.isPending ? "取消中..." : "确认代客取消"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SheetContent>
     </Sheet>
   );

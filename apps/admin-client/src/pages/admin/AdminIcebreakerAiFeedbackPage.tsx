@@ -26,6 +26,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 
 interface SummaryResponse {
   days: number;
@@ -66,7 +67,7 @@ export default function AdminIcebreakerAiFeedbackPage() {
   const [activeTab, setActiveTab] = useState("feedback");
   const [days, setDays] = useState("30");
 
-  const { data, isLoading, error } = useQuery<SummaryResponse>({
+  const { data, isLoading, error, refetch } = useQuery<SummaryResponse>({
     queryKey: ["/api/admin/icebreaker-ai-feedback/summary", days],
     queryFn: async () => {
       const res = await fetch(`/api/admin/icebreaker-ai-feedback/summary?days=${days}`, {
@@ -80,7 +81,7 @@ export default function AdminIcebreakerAiFeedbackPage() {
     enabled: activeTab === "feedback",
   });
 
-  const { data: sessionsData, isLoading: sessionsLoading } = useQuery<{ sessions: IcebreakerSession[] }>({
+  const { data: sessionsData, isLoading: sessionsLoading, isError: sessionsError, error: sessionsErrorDetail, refetch: refetchSessions } = useQuery<{ sessions: IcebreakerSession[] }>({
     queryKey: ["/api/admin/icebreaker-sessions"],
     queryFn: async () => {
       const res = await fetch("/api/admin/icebreaker-sessions", { credentials: "include" });
@@ -133,12 +134,11 @@ export default function AdminIcebreakerAiFeedbackPage() {
           </div>
 
           {error ? (
-            <Card className="border-destructive">
-              <CardHeader>
-                <CardTitle>加载失败</CardTitle>
-                <CardDescription>{String(error)}</CardDescription>
-              </CardHeader>
-            </Card>
+            <AdminQueryError
+              title="AI 反馈数据加载失败"
+              error={error}
+              onRetry={() => refetch()}
+            />
           ) : null}
 
           {isLoading ? (
@@ -219,6 +219,12 @@ export default function AdminIcebreakerAiFeedbackPage() {
         <TabsContent value="monitor" className="space-y-6">
           {sessionsLoading ? (
             <Skeleton className="h-40 w-full" />
+          ) : sessionsError ? (
+            <AdminQueryError
+              title="会话监控加载失败"
+              error={sessionsErrorDetail}
+              onRetry={() => refetchSessions()}
+            />
           ) : !sessionsData?.sessions || sessionsData.sessions.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">

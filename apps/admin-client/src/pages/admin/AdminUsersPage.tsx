@@ -39,6 +39,7 @@ import { exportAdminUsersCsv } from "@/lib/adminUserCsvExport";
 import { AdminUserStarRating } from "@/components/admin/AdminUserStarRating";
 import { AdminUserDetailSheet } from "./AdminUserDetailSheet";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { getCanonicalDisplayName } from "@/lib/userFieldMappings";
 import { fmtDate } from "@/lib/dateUtils";
 import { useLocation, useSearch } from "wouter";
@@ -60,6 +61,8 @@ export default function AdminUsersPage() {
   const [archetypeFilter, setArchetypeFilter] = useState<string>("");
   const [maxCompleteness, setMaxCompleteness] = useState<string>("");
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
+  const canMutate = authUser?.adminRole !== "viewer";
   const [showFilters, setShowFilters] = useState(false);
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [banReason, setBanReason] = useState("");
@@ -469,6 +472,7 @@ export default function AdminUsersPage() {
         banPending={banMutation.isPending}
         unbanPending={unbanMutation.isPending}
         deletePending={deleteMutation.isPending}
+        canMutate={canMutate}
       />
 
       <AlertDialog open={showBanDialog} onOpenChange={setShowBanDialog}>
@@ -525,7 +529,7 @@ export default function AdminUsersPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-black" />
+              <Trash2 className="h-5 w-5 text-destructive" />
               确认删除用户数据
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
@@ -558,7 +562,7 @@ export default function AdminUsersPage() {
                 }
               }}
               disabled={deleteMutation.isPending}
-              className="bg-black text-white hover:bg-black/80"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete-user-data"
             >
               {deleteMutation.isPending ? "删除中..." : "确认永久删除"}

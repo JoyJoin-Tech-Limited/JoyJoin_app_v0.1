@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/ui/use-toast";
 import { Loader2, Save, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 
 const MAX_PREDICTIVE_RERANK_SHIFT = 2;
 
@@ -36,37 +37,26 @@ interface MatchingThresholds {
 
 export default function AdminMatchingConfigPage() {
   const { toast } = useToast();
-  const [formData, setFormData] = useState<MatchingThresholds>({
-    highCompatibilityThreshold: 85,
-    mediumCompatibilityThreshold: 70,
-    lowCompatibilityThreshold: 55,
-    timeDecayEnabled: true,
-    timeDecayRate: 5,
-    minThresholdAfterDecay: 50,
-    minGroupSizeForMatch: 4,
-    optimalGroupSize: 6,
-    scanIntervalMinutes: 60,
-    predictiveRerankEnabled: false,
-    predictiveRerankExposurePercent: 50,
-    predictiveRerankMaxPositionShift: 2,
-    predictiveRerankConfidenceThreshold: 70,
-    predictiveRerankAutoDisableEnabled: true,
-    predictiveRerankMinShadowExperiments: 10,
-    predictiveRerankAutoDisabledAt: null,
-    predictiveRerankAutoDisabledReason: null,
-    notes: "",
-  });
+  const [formData, setFormData] = useState<MatchingThresholds | null>(null);
 
   // Fetch current config
-  const { data: config, isLoading } = useQuery<MatchingThresholds>({
+  const { data: config, isLoading, isError, error, refetch } = useQuery<MatchingThresholds>({
     queryKey: ["/api/admin/matching-thresholds"],
   });
 
   useEffect(() => {
     if (config) {
-      setFormData(config);
+      setFormData((prev) => {
+        // Don't clobber unsaved edits if a background refetch lands while dirty
+        const dirty = prev !== null && JSON.stringify(prev) !== JSON.stringify(config);
+        return dirty ? prev : config;
+      });
     }
   }, [config]);
+
+  const isDirty = Boolean(
+    formData && config && JSON.stringify(formData) !== JSON.stringify(config)
+  );
 
   // Update config mutation
   const updateConfigMutation = useMutation({
@@ -91,6 +81,7 @@ export default function AdminMatchingConfigPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData) return;
     updateConfigMutation.mutate(formData);
   };
 
@@ -104,6 +95,24 @@ export default function AdminMatchingConfigPage() {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (isError || !formData) {
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">实时匹配配置</h1>
+          <p className="text-muted-foreground">
+            调整匹配阈值和时间衰减参数，优化盲盒活动的匹配效果
+          </p>
+        </div>
+        <AdminQueryError
+          title="匹配配置加载失败"
+          error={error}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
@@ -141,7 +150,7 @@ export default function AdminMatchingConfigPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      highCompatibilityThreshold: parseInt(e.target.value),
+                      highCompatibilityThreshold: parseInt(e.target.value, 10) || 0,
                     })
                   }
                   data-testid="input-high-threshold"
@@ -164,7 +173,7 @@ export default function AdminMatchingConfigPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      mediumCompatibilityThreshold: parseInt(e.target.value),
+                      mediumCompatibilityThreshold: parseInt(e.target.value, 10) || 0,
                     })
                   }
                   data-testid="input-medium-threshold"
@@ -187,7 +196,7 @@ export default function AdminMatchingConfigPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      lowCompatibilityThreshold: parseInt(e.target.value),
+                      lowCompatibilityThreshold: parseInt(e.target.value, 10) || 0,
                     })
                   }
                   data-testid="input-low-threshold"
@@ -240,7 +249,7 @@ export default function AdminMatchingConfigPage() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          timeDecayRate: parseInt(e.target.value),
+                          timeDecayRate: parseInt(e.target.value, 10) || 0,
                         })
                       }
                       data-testid="input-decay-rate"
@@ -263,7 +272,7 @@ export default function AdminMatchingConfigPage() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          minThresholdAfterDecay: parseInt(e.target.value),
+                          minThresholdAfterDecay: parseInt(e.target.value, 10) || 0,
                         })
                       }
                       data-testid="input-min-threshold"
@@ -299,7 +308,7 @@ export default function AdminMatchingConfigPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      minGroupSizeForMatch: parseInt(e.target.value),
+                      minGroupSizeForMatch: parseInt(e.target.value, 10) || 0,
                     })
                   }
                   data-testid="input-min-group-size"
@@ -319,7 +328,7 @@ export default function AdminMatchingConfigPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      optimalGroupSize: parseInt(e.target.value),
+                      optimalGroupSize: parseInt(e.target.value, 10) || 0,
                     })
                   }
                   data-testid="input-optimal-group-size"
@@ -350,7 +359,7 @@ export default function AdminMatchingConfigPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      scanIntervalMinutes: parseInt(e.target.value),
+                      scanIntervalMinutes: parseInt(e.target.value, 10) || 0,
                     })
                   }
                   data-testid="input-scan-interval"
@@ -400,7 +409,7 @@ export default function AdminMatchingConfigPage() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        predictiveRerankExposurePercent: parseInt(e.target.value),
+                        predictiveRerankExposurePercent: parseInt(e.target.value, 10) || 0,
                       })
                     }
                     data-testid="input-predictive-exposure"
@@ -418,7 +427,7 @@ export default function AdminMatchingConfigPage() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        predictiveRerankMaxPositionShift: parseInt(e.target.value),
+                        predictiveRerankMaxPositionShift: parseInt(e.target.value, 10) || 0,
                       })
                     }
                     data-testid="input-predictive-max-shift"
@@ -439,7 +448,7 @@ export default function AdminMatchingConfigPage() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        predictiveRerankConfidenceThreshold: parseInt(e.target.value),
+                        predictiveRerankConfidenceThreshold: parseInt(e.target.value, 10) || 0,
                       })
                     }
                     data-testid="input-predictive-confidence"
@@ -457,7 +466,7 @@ export default function AdminMatchingConfigPage() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        predictiveRerankMinShadowExperiments: parseInt(e.target.value),
+                        predictiveRerankMinShadowExperiments: parseInt(e.target.value, 10) || 0,
                       })
                     }
                     data-testid="input-predictive-shadow-gate"
@@ -519,7 +528,7 @@ export default function AdminMatchingConfigPage() {
               type="button"
               variant="outline"
               onClick={handleReset}
-              disabled={updateConfigMutation.isPending}
+              disabled={updateConfigMutation.isPending || !isDirty}
               data-testid="button-reset"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -527,7 +536,7 @@ export default function AdminMatchingConfigPage() {
             </Button>
             <Button
               type="submit"
-              disabled={updateConfigMutation.isPending}
+              disabled={updateConfigMutation.isPending || !isDirty}
               data-testid="button-save"
             >
               {updateConfigMutation.isPending ? (

@@ -22,6 +22,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import AdminQueryError from "@/components/admin/AdminQueryError";
+import { fmtDateTimeShort } from "@/lib/dateUtils";
 
 type User = {
   id: string;
@@ -30,6 +32,21 @@ type User = {
   phoneNumber: string;
   archetype: string | null;
 };
+
+type EventPoolOption = {
+  id: string;
+  title: string;
+  dateTime: string | null;
+  city: string | null;
+};
+
+type AdminEventOption = {
+  id: string;
+  title: string;
+  dateTime: string | null;
+};
+
+type RecipientFilter = "all" | "selected" | "pool" | "event";
 
 type NotificationHistory = {
   id: string;
@@ -49,7 +66,9 @@ export default function AdminNotificationsPage() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [recipientFilter, setRecipientFilter] = useState<"all" | "selected">("all");
+  const [recipientFilter, setRecipientFilter] = useState<RecipientFilter>("all");
+  const [selectedPoolId, setSelectedPoolId] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState("");
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
 
   const { data: usersData, isLoading: usersLoading } = useQuery({
@@ -62,7 +81,13 @@ export default function AdminNotificationsPage() {
     },
   });
 
-  const { data: notificationsData, isLoading: notificationsLoading } = useQuery({
+  const {
+    data: notificationsData,
+    isLoading: notificationsLoading,
+    isError: notificationsError,
+    error: notificationsQueryError,
+    refetch: refetchNotifications,
+  } = useQuery({
     queryKey: ["/api/admin/notifications"],
     queryFn: async () => {
       const res = await fetch("/api/admin/notifications");
@@ -72,14 +97,55 @@ export default function AdminNotificationsPage() {
     },
   });
 
+  const { data: poolsData = [] } = useQuery<EventPoolOption[]>({
+    queryKey: ["/api/admin/event-pools", "notification-broadcast"],
+    enabled: recipientFilter === "pool",
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/event-pools");
+      const data = await res.json();
+      return Array.isArray(data) ? data : data?.pools ?? [];
+    },
+  });
+
+  const { data: poolRegistrations = [], isLoading: poolRegistrationsLoading } = useQuery<{ userId: string }[]>({
+    queryKey: ["/api/admin/event-pools", selectedPoolId, "registrations", "notification-broadcast"],
+    enabled: recipientFilter === "pool" && !!selectedPoolId,
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/admin/event-pools/${selectedPoolId}/registrations`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: eventsData = [] } = useQuery<AdminEventOption[]>({
+    queryKey: ["/api/admin/events", "notification-broadcast"],
+    enabled: recipientFilter === "event",
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/events");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: eventAttendance = [], isLoading: eventAttendanceLoading } = useQuery<{ userId: string }[]>({
+    queryKey: ["/api/admin/events", selectedEventId, "attendance-summary", "notification-broadcast"],
+    enabled: recipientFilter === "event" && !!selectedEventId,
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/admin/events/${selectedEventId}/attendance-summary`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
   const sendNotificationMutation = useMutation({
     mutationFn: async (data: { userIds: string[]; category: string; type: string; title: string; message: string }) => {
-      return apiRequest("POST", "/api/admin/notifications/broadcast", data);
+      const res = await apiRequest("POST", "/api/admin/notifications/broadcast", data);
+      return (await res.json()) as { success: boolean; sent?: number };
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({
         title: "通知发送成功",
-        description: `成功发送给 ${data.sent} 位用户`,
+        description: `成功发送给 ${data.sent ?? 0} 位用户`,
       });
       setTitle("");
       setMessage("");
@@ -95,6 +161,23 @@ export default function AdminNotificationsPage() {
     },
   });
 
+  const computeRecipientIds = (): string[] => {
+    if (recipientFilter === "all") {
+      return (usersData || []).map((u: User) => u.id);
+    }
+    if (recipientFilter === "pool") {
+      return [...new Set(poolRegistrations.map((r) => r.userId).filter(Boolean))];
+    }
+    if (recipientFilter === "event") {
+      return [...new Set(eventAttendance.map((r) => r.userId).filter(Boolean))];
+    }
+    return selectedUserIds;
+  };
+
+  const segmentLoading =
+    (recipientFilter === "pool" && poolRegistrationsLoading) ||
+    (recipientFilter === "event" && eventAttendanceLoading);
+
   const handleSend = () => {
     if (!title.trim()) {
       toast({
@@ -104,12 +187,16 @@ export default function AdminNotificationsPage() {
       return;
     }
 
-    let userIds: string[] = [];
-    if (recipientFilter === "all") {
-      userIds = (usersData || []).map((u: User) => u.id);
-    } else {
-      userIds = selectedUserIds;
+    if (recipientFilter === "pool" && !selectedPoolId) {
+      toast({ title: "请选择活动池", variant: "destructive" });
+      return;
     }
+    if (recipientFilter === "event" && !selectedEventId) {
+      toast({ title: "请选择活动", variant: "destructive" });
+      return;
+    }
+
+    const userIds = computeRecipientIds();
 
     if (userIds.length === 0) {
       toast({
@@ -123,12 +210,7 @@ export default function AdminNotificationsPage() {
   };
 
   const confirmSend = () => {
-    let userIds: string[] = [];
-    if (recipientFilter === "all") {
-      userIds = (usersData || []).map((u: User) => u.id);
-    } else {
-      userIds = selectedUserIds;
-    }
+    const userIds = computeRecipientIds();
     sendNotificationMutation.mutate({ userIds, category, type, title, message });
     setShowPreviewDialog(false);
   };
@@ -151,6 +233,18 @@ export default function AdminNotificationsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">加载中...</p>
+      </div>
+    );
+  }
+
+  if (notificationsError) {
+    return (
+      <div className="container mx-auto p-6">
+        <AdminQueryError
+          title="通知数据加载失败"
+          error={notificationsQueryError}
+          onRetry={() => refetchNotifications()}
+        />
       </div>
     );
   }
@@ -231,15 +325,15 @@ export default function AdminNotificationsPage() {
               </div>
 
               <div className="space-y-4">
-                <Label>接收对象</Label>
-                <div className="flex gap-4">
+                <Label>发送对象</Label>
+                <div className="flex gap-4 flex-wrap">
                   <Button
                     variant={recipientFilter === "all" ? "default" : "outline"}
                     onClick={() => setRecipientFilter("all")}
                     data-testid="button-select-all-users"
                   >
                     <Users className="mr-2 h-4 w-4" />
-                    所有用户 ({users.length})
+                    全部用户 ({users.length})
                   </Button>
                   <Button
                     variant={recipientFilter === "selected" ? "default" : "outline"}
@@ -248,7 +342,79 @@ export default function AdminNotificationsPage() {
                   >
                     指定用户 ({selectedUserIds.length})
                   </Button>
+                  <Button
+                    variant={recipientFilter === "pool" ? "default" : "outline"}
+                    onClick={() => setRecipientFilter("pool")}
+                    data-testid="button-select-pool"
+                  >
+                    按活动池
+                  </Button>
+                  <Button
+                    variant={recipientFilter === "event" ? "default" : "outline"}
+                    onClick={() => setRecipientFilter("event")}
+                    data-testid="button-select-event"
+                  >
+                    按活动
+                  </Button>
                 </div>
+
+                {recipientFilter === "pool" && (
+                  <div className="space-y-2">
+                    <Label>选择活动池</Label>
+                    <Select value={selectedPoolId} onValueChange={setSelectedPoolId}>
+                      <SelectTrigger data-testid="select-pool">
+                        <SelectValue placeholder="选择活动池" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {poolsData.map((pool) => (
+                          <SelectItem key={pool.id} value={pool.id}>
+                            {pool.title}
+                            {pool.dateTime ? ` · ${fmtDateTimeShort(pool.dateTime)}` : ""}
+                          </SelectItem>
+                        ))}
+                        {poolsData.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">暂无活动池</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {selectedPoolId && (
+                      <p className="text-sm text-muted-foreground" data-testid="text-pool-recipient-count">
+                        {poolRegistrationsLoading
+                          ? "正在统计报名用户..."
+                          : `该活动池报名用户 ${computeRecipientIds().length} 人`}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {recipientFilter === "event" && (
+                  <div className="space-y-2">
+                    <Label>选择活动</Label>
+                    <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                      <SelectTrigger data-testid="select-event">
+                        <SelectValue placeholder="选择活动" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {eventsData.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title}
+                            {event.dateTime ? ` · ${fmtDateTimeShort(event.dateTime)}` : ""}
+                          </SelectItem>
+                        ))}
+                        {eventsData.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">暂无活动</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {selectedEventId && (
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-recipient-count">
+                        {eventAttendanceLoading
+                          ? "正在统计出席用户..."
+                          : `该活动出席名单 ${computeRecipientIds().length} 人`}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {recipientFilter === "selected" && (
                   <Card>
@@ -298,7 +464,7 @@ export default function AdminNotificationsPage() {
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   onClick={handleSend}
-                  disabled={sendNotificationMutation.isPending}
+                  disabled={sendNotificationMutation.isPending || segmentLoading}
                   data-testid="button-send-notification"
                 >
                   <Send className="mr-2 h-4 w-4" />
@@ -391,8 +557,8 @@ export default function AdminNotificationsPage() {
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">接收人数</span>
-                  <p className="font-semibold">
-                    {recipientFilter === "all" ? (usersData || []).length : selectedUserIds.length} 人
+                  <p className="font-semibold" data-testid="text-preview-recipient-count">
+                    {computeRecipientIds().length} 人
                   </p>
                 </div>
               </div>

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -34,14 +34,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin, Map, Check, Loader2 } from "lucide-react";
+import { Store, Plus, Edit, Trash2, Building, Building2, Calendar, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, Tag, Check, Loader2, Search } from "lucide-react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
-import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterById } from "@shared/districts";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/auth/useAuth";
 import MapPicker from "@/components/discover/MapPicker";
-import type { VenueFormData } from "./venueConstants";
+import AdminQueryError from "@/components/admin/AdminQueryError";
+import { fmtDate } from "@/lib/dateUtils";
+import {
+  DAYS_OF_WEEK,
+  type Venue,
+  type AllTimeSlot,
+  type VenueFormData,
+} from "./venueConstants";
 import VenueCreateDialog from "./VenueCreateDialog";
 import VenueEditDialog from "./VenueEditDialog";
 import VenueDealsManager from "./VenueDealsManager";
@@ -49,69 +55,6 @@ import VenueTimeSlotsManager from "./VenueTimeSlotsManager";
 
 
 
-interface VenueTimeSlot {
-  id: string;
-  venueId: string;
-  dayOfWeek: number | null;
-  specificDate: string | null;
-  startTime: string;
-  endTime: string;
-  maxConcurrentEvents: number;
-  isActive: boolean;
-  notes: string | null;
-  createdAt: string;
-}
-
-const DAYS_OF_WEEK = [
-  { value: 0, label: "周日", short: "日" },
-  { value: 1, label: "周一", short: "一" },
-  { value: 2, label: "周二", short: "二" },
-  { value: 3, label: "周三", short: "三" },
-  { value: 4, label: "周四", short: "四" },
-  { value: 5, label: "周五", short: "五" },
-  { value: 6, label: "周六", short: "六" },
-];
-
-interface Venue {
-  id: string;
-  name: string;
-  brandName?: string | null;
-  type: string;
-  address: string;
-  city: string;
-  district: string;
-  clusterId: string | null;
-  districtId: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  contactName: string | null;
-  contactPhone: string | null;
-  commissionRate: number;
-  tags: string[] | null;
-  cuisines: string[] | null;
-  decorStyle: string[] | null;
-  priceRange: string | null;
-  budgetCategories: string[] | null;
-  maxConcurrentEvents: number;
-  seatingCapacity: number;
-  isActive: boolean;
-  notes: string | null;
-  createdAt: string;
-  bookingCount?: number;
-  totalCommission?: number;
-  // 酒吧特有字段
-  barThemes: string[] | null;
-  alcoholOptions: string[] | null;
-  vibeDescriptor: string | null;
-  // Partner onboarding fields (optional)
-  partnerCompanyName?: string | null;
-  businessLicenseNo?: string | null;
-  partnerEmail?: string | null;
-  bankAccountInfo?: string | null;
-  contractStartDate?: string | null;
-  contractEndDate?: string | null;
-  onboardingStatus?: 'draft' | 'pending_review' | 'active' | 'suspended' | null;
-}
 const optionalString = (value?: string | null) => value?.trim() || undefined;
 const optionalArray = (value?: string[] | null) => (value && value.length > 0 ? value : undefined);
 
@@ -177,107 +120,33 @@ const CITIES = [
   { value: "香港", label: "香港" },
 ];
 
-// 餐厅价格范围（人均）
-const RESTAURANT_PRICE_RANGES = [
-  { value: "150以下", label: "¥150以下/人" },
-  { value: "150-200", label: "¥150-200/人" },
-  { value: "200-300", label: "¥200-300/人" },
-  { value: "300-500", label: "¥300-500/人" },
-];
+const ONBOARDING_STATUS_CONFIG: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className: string }
+> = {
+  draft: { label: "草稿", variant: "secondary", className: "text-muted-foreground" },
+  pending_review: { label: "待审核", variant: "outline", className: "border-amber-400 text-amber-700" },
+  suspended: { label: "已暂停", variant: "destructive", className: "" },
+};
 
-// 酒吧价格范围（每杯）
-const BAR_PRICE_RANGES = [
-  { value: "80以下", label: "¥80以下/杯" },
-  { value: "80-150", label: "¥80-150/杯" },
-];
-
-// 兼容旧数据
-const PRICE_RANGES = RESTAURANT_PRICE_RANGES;
-
-const TAGS = ["cozy", "lively", "upscale", "casual"];
-// 餐厅专属菜系 - 与用户表单对齐
-const CUISINES = ["中餐", "川菜", "粤菜", "火锅", "烧烤", "西餐", "日料"];
-const DECOR_STYLES = ["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"];
-
-// 酒吧特有选项 - 与用户表单对齐
-const BAR_THEMES = ["精酿", "清吧", "私密调酒·Homebar"];
-// 口味偏好选项（餐厅）
-const TASTE_INTENSITY_OPTIONS = ["爱吃辣", "不辣清淡为主"];
-const ALCOHOL_OPTIONS = ["可以喝酒", "微醺就好", "无酒精饮品"];
-
-interface AllTimeSlot extends VenueTimeSlot {
-  venueName: string;
-  venueCity: string;
-  venueDistrict: string;
-}
-
-interface ActiveBooking {
-  id: string;
-  venue_id: string;
-  event_id: string;
-  booking_date: string;
-  booking_time: string;
-  participant_count: number;
-  event_title?: string;
-}
-
-interface VenueAlternative {
-  venue: Venue;
-  matchScore: number;
-  reasons: string[];
-}
-
-interface VenueDeal {
-  id: string;
-  venueId: string;
-  title: string;
-  discountType: "percentage" | "fixed" | "gift";
-  discountValue: number | null;
-  description: string | null;
-  redemptionMethod: "show_page" | "code" | "qr_code";
-  redemptionCode: string | null;
-  minSpend: number | null;
-  maxDiscount: number | null;
-  perPersonLimit: boolean;
-  validFrom: string | null;
-  validUntil: string | null;
-  terms: string | null;
-  excludedDates: string[] | null;
-  isActive: boolean;
-  usageCount: number;
-  createdAt: string;
-}
-
-const DISCOUNT_TYPES = [
-  { value: "percentage", label: "折扣", icon: Percent },
-  { value: "fixed", label: "立减", icon: CircleDollarSign },
-  { value: "gift", label: "赠品", icon: Gift },
-];
-
-const REDEMPTION_METHODS = [
-  { value: "show_page", label: "出示本页面" },
-  { value: "code", label: "报暗号" },
-  { value: "qr_code", label: "扫码核销" },
-];
+const shortDayLabel = (day: number) =>
+  DAYS_OF_WEEK.find((d) => d.value === day)?.label.replace("周", "") ?? "";
 
 export default function AdminVenuesPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTimeSlotsDialog, setShowTimeSlotsDialog] = useState(false);
-  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [showDealsDialog, setShowDealsDialog] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [filterType, setFilterType] = useState<"all" | "restaurant" | "bar">("all");
   const [filterOnboardingStatus, setFilterOnboardingStatus] = useState<"all" | "draft" | "pending_review" | "active" | "suspended">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCity, setFilterCity] = useState<"all" | "深圳" | "香港">("all");
   const [viewMode, setViewMode] = useState<"venues" | "calendar">("venues");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  
-  // Time slot form state
-  
-  // Venue deals state
-  
+
   // Map picker state
   const [showMapPicker, setShowMapPicker] = useState(false);
   
@@ -319,13 +188,27 @@ export default function AdminVenuesPage() {
   });
 
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canMutate = user?.adminRole !== "viewer";
 
-  const { data: venues = [], isLoading } = useQuery<Venue[]>({
+  const {
+    data: venues = [],
+    isLoading,
+    isError: isVenuesError,
+    error: venuesError,
+    refetch: refetchVenues,
+  } = useQuery<Venue[]>({
     queryKey: ["/api/admin/venues"],
   });
 
   // Query for all time slots (always fetch for card summaries + calendar view)
-  const { data: allTimeSlots = [], isLoading: allTimeSlotsLoading } = useQuery<AllTimeSlot[]>({
+  const {
+    data: allTimeSlots = [],
+    isLoading: allTimeSlotsLoading,
+    isError: isTimeSlotsError,
+    error: timeSlotsError,
+    refetch: refetchTimeSlots,
+  } = useQuery<AllTimeSlot[]>({
     queryKey: ["/api/admin/time-slots/all"],
   });
 
@@ -427,56 +310,12 @@ export default function AdminVenuesPage() {
     },
   });
 
-  // Time slots query - only fetch when dialog is open and venue is selected
-
-  // Create time slot batch mutation
-
-  // Create single time slot mutation
-
-  // Delete time slot mutation
-
-  // Toggle time slot active status mutation
-
-  // Active bookings query for migration
-
-  // Alternative venues query for migration
-
-  // Migration mutation
-
-  const handleMigration = (venue: Venue) => {
-    setSelectedVenue(venue);
-    setShowMigrationDialog(true);
-  };
-
-
-  // ============ VENUE DEALS ============
-  
-  // Query venue deals
-
-  // Filter deals by status
-
-  // Create deal mutation
-
-  // Update deal mutation
-
-  // Delete deal mutation
-
-  // Toggle deal active status
-
-
   const handleManageDeals = (venue: Venue) => {
     setSelectedVenue(venue);
     setShowDealsDialog(true);
   };
 
-
-
-
-
-
-
-  const resetForm = () => {
-    setFormData({
+  const resetForm = () => {setFormData({
       name: "",
       brandName: "",
       type: "restaurant",
@@ -534,42 +373,6 @@ export default function AdminVenuesPage() {
     // i have build it in the very top so dont need to build again 
     createMutation.mutate(buildVenuePayload(formData));
   };
-  //   createMutation.mutate({
-  //     name: formData.name,
-  //     brandName: formData.brandName || undefined,
-  //     type: formData.type,
-  //     address: formData.address,
-  //     city: formData.city,
-  //     district: formData.district,
-  //     clusterId: formData.clusterId || undefined,
-  //     districtId: formData.districtId || undefined,
-  //     contactName: formData.contactName || undefined,
-  //     contactPhone: formData.contactPhone || undefined,
-  //     commissionRate: parseInt(formData.commissionRate),
-  //     priceRange: formData.priceRange || undefined,
-  //     budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : undefined,
-  //     maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
-  //     seatingCapacity: parseInt(formData.seatingCapacity),
-  //     tags: formData.tags.length > 0 ? formData.tags : undefined,
-  //     cuisines: formData.cuisines.length > 0 ? formData.cuisines : undefined,
-  //     decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : undefined,
-  //     tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : undefined,
-  //     notes: formData.notes || undefined,
-  //     latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-  //     longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-  //     // 酒吧特有字段
-  //     barThemes: formData.barThemes.length > 0 ? formData.barThemes : undefined,
-  //     alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : undefined,
-  //     vibeDescriptor: formData.vibeDescriptor || undefined,
-  //     partnerCompanyName: formData.partnerCompanyName || undefined,
-  //     businessLicenseNo: formData.businessLicenseNo || undefined,
-  //     partnerEmail: formData.partnerEmail || undefined,
-  //     bankAccountInfo: formData.bankAccountInfo || undefined,
-  //     contractStartDate: formData.contractStartDate || undefined,
-  //     contractEndDate: formData.contractEndDate || undefined,
-  //     onboardingStatus: formData.onboardingStatus || undefined,
-  //   });
-  // };
 
   const handleEdit = (venue: Venue) => {
     setSelectedVenue(venue);
@@ -626,43 +429,6 @@ export default function AdminVenuesPage() {
       id: selectedVenue.id,
       data: buildVenuePayload(formData, { includeOnboardingStatus: false }),
     });
-    // updateMutation.mutate({
-    //   id: selectedVenue.id,
-    //   data: {
-    //     name: formData.name,
-    //     brandName: formData.brandName || null,
-    //     type: formData.type,
-    //     address: formData.address,
-    //     city: formData.city,
-    //     district: formData.district,
-    //     clusterId: formData.clusterId || null,
-    //     districtId: formData.districtId || null,
-    //     contactName: formData.contactName || null,
-    //     contactPhone: formData.contactPhone || null,
-    //     commissionRate: parseInt(formData.commissionRate),
-    //     priceRange: formData.priceRange || null,
-    //     budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : null,
-    //     maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
-    //     seatingCapacity: parseInt(formData.seatingCapacity),
-    //     tags: formData.tags.length > 0 ? formData.tags : null,
-    //     cuisines: formData.cuisines.length > 0 ? formData.cuisines : null,
-    //     decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : null,
-    //     tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : null,
-    //     notes: formData.notes || null,
-    //     latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-    //     longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-    //     // 酒吧特有字段
-    //     barThemes: formData.barThemes.length > 0 ? formData.barThemes : null,
-    //     alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : null,
-    //     vibeDescriptor: formData.vibeDescriptor || null,
-    //     partnerCompanyName: formData.partnerCompanyName || null,
-    //     businessLicenseNo: formData.businessLicenseNo || null,
-    //     partnerEmail: formData.partnerEmail || null,
-    //     bankAccountInfo: formData.bankAccountInfo || null,
-    //     contractStartDate: formData.contractStartDate || null,
-    //     contractEndDate: formData.contractEndDate || null,
-    //   },
-    // });
   };
 
   const handleDelete = (venue: Venue) => {
@@ -723,67 +489,10 @@ export default function AdminVenuesPage() {
     }
   };
 
-  const toggleTag = (tag: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag]
-    }));
-  };
-
-  const toggleCuisine = (cuisine: string) => {
-    setFormData(prev => ({
-      ...prev,
-      cuisines: prev.cuisines.includes(cuisine)
-        ? prev.cuisines.filter(c => c !== cuisine)
-        : [...prev.cuisines, cuisine]
-    }));
-  };
-
-  const toggleTasteIntensity = (taste: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tasteIntensity: prev.tasteIntensity.includes(taste)
-        ? prev.tasteIntensity.filter(t => t !== taste)
-        : [...prev.tasteIntensity, taste]
-    }));
-  };
-
-  const toggleDecorStyle = (style: string) => {
-    setFormData(prev => ({
-      ...prev,
-      decorStyle: prev.decorStyle.includes(style)
-        ? prev.decorStyle.filter(s => s !== style)
-        : [...prev.decorStyle, style]
-    }));
-  };
-
-  const toggleBarTheme = (theme: string) => {
-    setFormData(prev => ({
-      ...prev,
-      barThemes: prev.barThemes.includes(theme)
-        ? prev.barThemes.filter(t => t !== theme)
-        : [...prev.barThemes, theme]
-    }));
-  };
-
-  const toggleAlcoholOption = (option: string) => {
-    setFormData(prev => ({
-      ...prev,
-      alcoholOptions: prev.alcoholOptions.includes(option)
-        ? prev.alcoholOptions.filter(o => o !== option)
-        : [...prev.alcoholOptions, option]
-    }));
-  };
-
   const handleManageTimeSlots = (venue: Venue) => {
     setSelectedVenue(venue);
     setShowTimeSlotsDialog(true);
   };
-
-
-
 
   const getTypeLabel = (type: string) => {
     return VENUE_TYPES.find(t => t.value === type)?.label || type;
@@ -815,7 +524,7 @@ export default function AdminVenuesPage() {
         const last = DAYS_OF_WEEK.find(dd => dd.value === uniqueDays[uniqueDays.length - 1])?.label || "";
         dayText = `${first}~${last}`;
       } else {
-        dayText = uniqueDays.map(d => DAYS_OF_WEEK.find(dd => dd.value === d)?.short || "").filter(Boolean).join("、");
+        dayText = uniqueDays.map(d => shortDayLabel(d)).filter(Boolean).join("、");
       }
     }
 
@@ -831,8 +540,19 @@ export default function AdminVenuesPage() {
     if (filterOnboardingStatus !== "all") {
       result = result.filter(v => v.onboardingStatus === filterOnboardingStatus);
     }
+    if (filterCity !== "all") {
+      result = result.filter(v => v.city === filterCity);
+    }
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      result = result.filter(v =>
+        (v.name || "").toLowerCase().includes(query) ||
+        (v.brandName || "").toLowerCase().includes(query) ||
+        (v.address || "").toLowerCase().includes(query),
+      );
+    }
     return result;
-  }, [venues, filterType, filterOnboardingStatus]);
+  }, [venues, filterType, filterOnboardingStatus, filterCity, searchQuery]);
 
   const activeVenues = venues.filter(v => v.isActive).length;
   const pendingReviewCount = venues.filter(v => v.onboardingStatus === "pending_review").length;
@@ -846,10 +566,12 @@ export default function AdminVenuesPage() {
           <h1 className="text-3xl font-bold">场地管理</h1>
           <p className="text-muted-foreground mt-1">管理活动场地和合作商户</p>
         </div>
-        <Button onClick={() => { resetForm(); setShowCreateDialog(true); }} data-testid="button-create-venue">
-          <Plus className="h-4 w-4 mr-2" />
-          添加场地
-        </Button>
+        {canMutate && (
+          <Button onClick={() => { resetForm(); setShowCreateDialog(true); }} data-testid="button-create-venue">
+            <Plus className="h-4 w-4 mr-2" />
+            添加场地
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -899,7 +621,33 @@ export default function AdminVenuesPage() {
       </div>
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索名称 / 地址"
+              className="h-9 w-[200px] pl-8 text-sm"
+              data-testid="input-search-venue"
+            />
+          </div>
+          <Select
+            value={filterCity}
+            onValueChange={(v) => setFilterCity(v as "all" | "深圳" | "香港")}
+          >
+            <SelectTrigger className="h-9 w-[120px] text-sm" data-testid="select-filter-city">
+              <SelectValue placeholder="全部城市" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部城市</SelectItem>
+              {CITIES.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
             <TabsList>
               <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
@@ -956,7 +704,13 @@ export default function AdminVenuesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {allTimeSlotsLoading ? (
+            {isTimeSlotsError ? (
+              <AdminQueryError
+                title="时间段数据加载失败"
+                error={timeSlotsError}
+                onRetry={() => refetchTimeSlots()}
+              />
+            ) : allTimeSlotsLoading ? (
               <div className="text-center py-8 text-muted-foreground">加载中...</div>
             ) : allTimeSlots.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">暂无时间段数据，请先在各场地添加时间段</div>
@@ -999,6 +753,12 @@ export default function AdminVenuesPage() {
             )}
           </CardContent>
         </Card>
+      ) : isVenuesError ? (
+        <AdminQueryError
+          title="场地列表加载失败"
+          error={venuesError}
+          onRetry={() => refetchVenues()}
+        />
       ) : isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -1019,22 +779,20 @@ export default function AdminVenuesPage() {
       ) : filteredVenues.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            {filterType === "all" ? "暂无场地记录" : `暂无${getTypeLabel(filterType)}记录`}
+            {searchQuery.trim() || filterCity !== "all"
+              ? "暂无符合搜索条件的场地"
+              : filterType === "all"
+                ? "暂无场地记录"
+                : `暂无${getTypeLabel(filterType)}记录`}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredVenues.map((venue) => {
-            //const onboardingStatus = (venue as any).onboardingStatus || (venue as any).onboarding_status;
             const onboardingStatus = (venue as any).onboardingStatus ?? (venue as any).onboarding_status ?? "draft";
             const canSuspend = onboardingStatus === "active";
             const canReactivate = onboardingStatus === "suspended";
-            const onboardingStatusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
-              draft: { label: "草稿", variant: "secondary", className: "text-muted-foreground" },
-              pending_review: { label: "待审核", variant: "outline", className: "border-amber-400 text-amber-700" },
-              suspended: { label: "已暂停", variant: "destructive", className: "" },
-            };
-            const statusConfig = onboardingStatus && onboardingStatus !== 'active' ? onboardingStatusConfig[onboardingStatus] : null;
+            const statusConfig = onboardingStatus && onboardingStatus !== 'active' ? ONBOARDING_STATUS_CONFIG[onboardingStatus] : null;
             return (
             <Card key={venue.id} data-testid={`card-venue-${venue.id}`}>
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
@@ -1107,12 +865,15 @@ export default function AdminVenuesPage() {
 
                 {/* Partner info if available */}
                 {((venue as any).partnerCompanyName || (venue as any).partner_company_name || (venue as any).contractEndDate || (venue as any).contract_end_date) && (
-                  <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
+                  <div className="text-xs text-muted-foreground mt-1 pt-1 border-t space-y-1">
                     {((venue as any).partnerCompanyName || (venue as any).partner_company_name) && (
-                      <div>🏢 {(venue as any).partnerCompanyName || (venue as any).partner_company_name}</div>
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="h-3 w-3 shrink-0" />
+                        <span>{(venue as any).partnerCompanyName || (venue as any).partner_company_name}</span>
+                      </div>
                     )}
                     {((venue as any).contractEndDate || (venue as any).contract_end_date) && (
-                      <div>合同到期: {(venue as any).contractEndDate || (venue as any).contract_end_date}</div>
+                      <div>合同到期: {fmtDate((venue as any).contractEndDate || (venue as any).contract_end_date)}</div>
                     )}
                   </div>
                 )}
@@ -1134,7 +895,7 @@ export default function AdminVenuesPage() {
                 )}
 
                 {/* Onboarding action buttons */}
-                {onboardingStatus && (
+                {onboardingStatus && canMutate && (
                   <div className="flex flex-wrap gap-1 pt-2">
                     {onboardingStatus === 'draft' && (
                       <Button size="sm" variant="outline" className="text-amber-600 border-amber-300 hover:bg-amber-50 text-xs h-7" onClick={() => handleTransition(venue, 'submit-for-review')} disabled={transitionMutation.isPending} data-testid={`button-submit-review-${venue.id}`}>
@@ -1224,6 +985,7 @@ export default function AdminVenuesPage() {
                     <Switch
                       checked={venue.isActive}
                       onCheckedChange={() => toggleActive(venue)}
+                      disabled={!canMutate}
                       data-testid={`toggle-active-${venue.id}`}
                     />
                     <span className="text-xs text-muted-foreground">
@@ -1250,32 +1012,26 @@ export default function AdminVenuesPage() {
                     >
                       <Tag className="h-3 w-3" />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleMigration(venue)}
-                      data-testid={`button-migrate-${venue.id}`}
-                      title="应急迁移"
-                      className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                    >
-                      <ArrowRightLeft className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(venue)}
-                      data-testid={`button-edit-${venue.id}`}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(venue)}
-                      data-testid={`button-delete-${venue.id}`}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    {canMutate && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(venue)}
+                          data-testid={`button-edit-${venue.id}`}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(venue)}
+                          data-testid={`button-delete-${venue.id}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>

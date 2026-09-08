@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 
 type ReadinessStatus = "ready" | "watch" | "needs_data";
 type WarningLevel = "healthy" | "watch" | "critical";
@@ -111,9 +112,9 @@ interface OutcomeAnalyticsResponse {
 }
 
 const STATUS_LABELS: Record<ReadinessStatus, { label: string; className: string }> = {
-  ready: { label: "Ready", className: "bg-emerald-100 text-emerald-700" },
-  watch: { label: "Watch", className: "bg-amber-100 text-amber-700" },
-  needs_data: { label: "Gap", className: "bg-rose-100 text-rose-700" },
+  ready: { label: "就绪", className: "bg-emerald-100 text-emerald-700" },
+  watch: { label: "观察", className: "bg-amber-100 text-amber-700" },
+  needs_data: { label: "缺口", className: "bg-rose-100 text-rose-700" },
 };
 
 const WARNING_LABELS: Record<WarningLevel, { label: string; className: string }> = {
@@ -304,7 +305,7 @@ export default function AdminOutcomeAnalyticsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Outcome analytics 加载失败
+              成行分析加载失败
             </CardTitle>
             <CardDescription>请稍后重试或检查后台接口状态。</CardDescription>
           </CardHeader>
@@ -319,10 +320,10 @@ export default function AdminOutcomeAnalyticsPage() {
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold">
             <Database className="h-7 w-7 text-primary" />
-            Outcome / AI Readiness
+            成行分析 / AI 就绪度
           </h1>
           <p className="mt-1 text-muted-foreground">
-            监控 outcome schema 使用、满意度标签覆盖，以及城市 / 活动 / archetype cohort 的建模准备度。
+            监控成行数据使用、满意度标签覆盖，以及城市 / 活动类型 / 原型分群的建模准备度。
           </p>
         </div>
         <Button
@@ -386,7 +387,7 @@ export default function AdminOutcomeAnalyticsPage() {
                     {data.overview.cityCount} / {data.overview.archetypeCount}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    城市 / archetype 维度已落样
+                    城市 / 原型维度已落样
                   </p>
                 </CardContent>
               </Card>
@@ -417,9 +418,15 @@ export default function AdminOutcomeAnalyticsPage() {
           <div className="grid gap-4 lg:grid-cols-4">
             <Card className="lg:col-span-3">
               <CardHeader>
-                <CardTitle>分群筛选</CardTitle>
+                <CardTitle className="flex items-center gap-1.5">
+                  分群筛选
+                  <FieldInfoTooltip
+                    title="什么是分群（cohort）"
+                    description="按「城市 × 活动类型 × 社交原型」切分的一组用户样本。每个分群独立统计报名量、反馈覆盖和完整度，用来判断哪类人群的数据已经足够支撑模型训练。"
+                  />
+                </CardTitle>
                 <CardDescription>
-                  过滤 cohort 视图，查看城市 / 活动类型 / archetype 的数据充足度。
+                  按城市 / 活动类型 / 原型筛选分群数据，查看各分群的数据充足度。
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-3">
@@ -453,10 +460,10 @@ export default function AdminOutcomeAnalyticsPage() {
 
                 <Select value={archetypeFilter} onValueChange={setArchetypeFilter}>
                   <SelectTrigger data-testid="filter-archetype">
-                    <SelectValue placeholder="全部 archetype" />
+                    <SelectValue placeholder="全部原型" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部 archetype</SelectItem>
+                    <SelectItem value="all">全部原型</SelectItem>
                     {data.coverage.archetypes.map((archetype) => (
                       <SelectItem key={archetype} value={archetype}>
                         {archetype}
@@ -476,7 +483,7 @@ export default function AdminOutcomeAnalyticsPage() {
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">cohort 数</span>
+                  <span className="text-muted-foreground">分群数</span>
                   <span className="font-medium">{filteredCohorts.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -486,7 +493,7 @@ export default function AdminOutcomeAnalyticsPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">预警 cohort</span>
+                  <span className="text-muted-foreground">预警分群</span>
                   <span className="font-medium">
                     {filteredCohorts.filter((cohort) => cohort.warningLevel !== "healthy").length}
                   </span>
@@ -539,7 +546,13 @@ export default function AdminOutcomeAnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Top archetype 样本</CardTitle>
+                <CardTitle className="flex items-center gap-1.5">
+                  Top 原型样本
+                  <FieldInfoTooltip
+                    title="什么是原型（archetype）"
+                    description="用户在性格测试中获得的 12 种社交原型之一（如开心柯基、太阳鸡）。这里展示样本量最多的原型，用于观察各类型的数据积累情况。"
+                  />
+                </CardTitle>
               </CardHeader>
               <CardContent className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -581,7 +594,7 @@ export default function AdminOutcomeAnalyticsPage() {
 
                 <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">事件 outcome 摘要覆盖</span>
+                    <span className="text-muted-foreground">活动成行摘要覆盖</span>
                     <span className="font-medium">{data.modelReadiness.outcomeSummaryCount}</span>
                   </div>
                 </div>
@@ -590,8 +603,8 @@ export default function AdminOutcomeAnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>模型 / 标签 readiness</CardTitle>
-                <CardDescription>用于判断 AI matching 训练样本是否进入稳定迭代区间。</CardDescription>
+                <CardTitle>模型 / 标签就绪度</CardTitle>
+                <CardDescription>用于判断智能排桌训练样本是否进入稳定迭代区间。</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.readinessMetrics.map((metric) => (
@@ -616,8 +629,14 @@ export default function AdminOutcomeAnalyticsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Under-instrumented cohorts</CardTitle>
-              <CardDescription>优先补采反馈或补齐前置字段的 cohort。</CardDescription>
+              <CardTitle className="flex items-center gap-1.5">
+                数据不足的分群
+                <FieldInfoTooltip
+                  title="什么是数据不足（Under-instrumented）"
+                  description="这些分群的报名量、反馈覆盖率或字段完整度低于建模门槛，暂时无法用于模型训练。优先针对这些分群补采活动后反馈或引导用户补齐资料。"
+                />
+              </CardTitle>
+              <CardDescription>优先补采反馈或补齐前置字段的分群。</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {filteredCohorts
@@ -660,7 +679,7 @@ export default function AdminOutcomeAnalyticsPage() {
 
               {!filteredCohorts.filter((cohort) => cohort.warningLevel !== "healthy").length && (
                 <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  当前筛选下暂无预警 cohort。
+                  当前筛选下暂无预警分群。
                 </div>
               )}
             </CardContent>

@@ -1,41 +1,16 @@
 import { useAuth } from "@/hooks/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle, Home, RefreshCw } from "lucide-react";
+import { AlertCircle, LogIn } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-
-/** Routes accessible only to super_admin */
-const SUPER_ADMIN_ROUTES: string[] = [
-  "/admin/matching",
-  "/admin/matching-config",
-  "/admin/matching-logs",
-  "/admin/interaction-logs",
-  "/admin/insights",
-  "/admin/outcome-analytics",
-  "/admin/content",
-  "/admin/notifications",
-  "/admin/subscription",
-  "/admin/subscriptions",
-  "/admin/pricing",
-  "/admin/coupons",
-  "/admin/evolution",
-  "/admin/accounts",
-  "/admin/feature-flags",
-];
-
-function isRouteAllowed(path: string, role?: string): boolean {
-  if (role === "super_admin") return true;
-  // Exact match
-  if (SUPER_ADMIN_ROUTES.includes(path)) return false;
-  // Prefix match (e.g. /admin/matching/123)
-  if (SUPER_ADMIN_ROUTES.some((r) => path.startsWith(r + "/"))) return false;
-  return true;
-}
+import { useToast } from "@/hooks/ui/use-toast";
+import { canAccessAdminPath } from "@/lib/adminNavConfig";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -50,12 +25,18 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, user, setLocation]);
 
-  // Route-level role guard
+  // Route-level role guard — derived from the shared nav config so the
+  // sidebar and this guard can never drift apart.
   useEffect(() => {
-    if (!isLoading && user && user.isAdmin && !isRouteAllowed(location, user.adminRole)) {
+    if (!isLoading && user && user.isAdmin && !canAccessAdminPath(location, user.adminRole)) {
+      toast({
+        title: "无权访问该页面",
+        description: "你的角色无法访问该页面，已返回数据看板。",
+        variant: "destructive",
+      });
       setLocation("/admin/dashboard");
     }
-  }, [isLoading, user, location, setLocation]);
+  }, [isLoading, user, location, setLocation, toast]);
 
   if (isLoading) {
     return (
@@ -85,16 +66,16 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
                   您没有访问管理后台的权限
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  即将自动跳转至首页...
+                  即将自动跳转至登录页...
                 </p>
               </div>
-              <Button 
-                onClick={() => setLocation("/")} 
+              <Button
+                onClick={() => setLocation("/admin/login")}
                 variant="default"
-                data-testid="button-goto-home"
+                data-testid="button-goto-login"
               >
-                <Home className="mr-2 h-4 w-4" />
-                返回首页
+                <LogIn className="mr-2 h-4 w-4" />
+                返回登录页
               </Button>
             </div>
           </CardContent>

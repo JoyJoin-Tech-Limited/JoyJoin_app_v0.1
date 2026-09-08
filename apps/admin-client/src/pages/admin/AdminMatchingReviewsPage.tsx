@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -23,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/ui/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Check, X, Users, Eye } from "lucide-react";
 import { safeFormat } from "@/lib/dateUtils";
@@ -89,10 +100,11 @@ export default function AdminMatchingReviewsPage() {
   const [status, setStatus] = useState<ReviewStatus>("pending");
   const [viewPoolId, setViewPoolId] = useState<string | null>(null);
   const [rejectPoolId, setRejectPoolId] = useState<string | null>(null);
+  const [approvePoolId, setApprovePoolId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [announcement, setAnnouncement] = useState("");
 
-  const { data, isLoading, error } = useQuery<ReviewPoolListResponse | null>({
+  const { data, isLoading, error, refetch } = useQuery<ReviewPoolListResponse | null>({
     queryKey: [`/api/admin/matching-reviews/pools?status=${status}&limit=50&offset=0`],
   });
 
@@ -111,6 +123,7 @@ export default function AdminMatchingReviewsPage() {
       toast({ title: "已通过", description: "匹配结果已审核通过，用户将收到匹配通知" });
       setAnnouncement("已通过：匹配结果已审核通过，用户将收到匹配通知");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-reviews/pools"] });
+      setApprovePoolId(null);
       setViewPoolId(null);
     },
     onError: (err: Error) => {
@@ -142,7 +155,12 @@ export default function AdminMatchingReviewsPage() {
   const selectedPool = pools.find((p) => p.id === viewPoolId);
 
   const handleApprove = (poolId: string) => {
-    approveMutation.mutate(poolId);
+    setApprovePoolId(poolId);
+  };
+
+  const confirmApprove = () => {
+    if (!approvePoolId) return;
+    approveMutation.mutate(approvePoolId);
   };
 
   const handleReject = () => {
@@ -191,7 +209,11 @@ export default function AdminMatchingReviewsPage() {
               <Skeleton className="h-8 w-full" />
             </div>
           ) : error ? (
-            <div className="text-destructive" data-testid="matching-reviews-error">加载失败: {error.message}</div>
+            <AdminQueryError
+              title="匹配审核列表加载失败"
+              error={error}
+              onRetry={() => refetch()}
+            />
           ) : pools.length === 0 ? (
             <div className="text-muted-foreground py-8 text-center" data-testid="matching-reviews-empty">
               暂无{status === "all" ? "" : statusBadge[status]?.label ?? status}的活动池
@@ -383,6 +405,34 @@ export default function AdminMatchingReviewsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog
+        open={Boolean(approvePoolId)}
+        onOpenChange={(open) => !open && setApprovePoolId(null)}
+      >
+        <AlertDialogContent data-testid="matching-review-approve-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>通过匹配结果</AlertDialogTitle>
+            <AlertDialogDescription>
+              确认通过该匹配结果？用户将收到排桌通知。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="matching-review-approve-cancel">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmApprove}
+              disabled={approveMutation.isPending}
+              data-testid="matching-review-approve-confirm"
+            >
+              {approveMutation.isPending && (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              )}
+              确认通过
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reject Dialog */}
       <Dialog

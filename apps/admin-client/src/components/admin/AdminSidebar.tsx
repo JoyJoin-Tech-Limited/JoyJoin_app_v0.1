@@ -1,30 +1,5 @@
 import { useState, useEffect, useCallback, useId } from "react";
-import {
-  LayoutDashboard,
-  Users,
-  CreditCard,
-  MapPin,
-  Layers,
-  DollarSign,
-  BarChart3,
-  FileText,
-  Bell,
-  Flag,
-  FlaskConical,
-  MessageSquare,
-  Settings,
-  ToggleLeft,
-  ScrollText,
-  Brain,
-  CalendarDays,
-  Tag,
-  ReceiptText,
-  ShieldCheck,
-  Database,
-  Sparkles,
-  ChevronDown,
-  ClipboardCheck,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -38,87 +13,18 @@ import {
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { cn } from "@/lib/utils";
+import {
+  ADMIN_NAV_GROUPS,
+  DAILY_OPS_ITEMS,
+  filterNavByRole,
+  type AdminNavItem,
+  type AdminNavGroup,
+} from "@/lib/adminNavConfig";
 
-type AdminRole = "super_admin" | "operator" | "viewer";
-
-interface NavItem {
-  title: string;
-  url: string;
-  icon: React.ComponentType<{ className?: string }>;
-  roles?: AdminRole[];
-}
-
-const ALL_ROLES: AdminRole[] = ["super_admin", "operator", "viewer"];
-const SUPER_ONLY: AdminRole[] = ["super_admin"];
-const SUPER_OPERATOR: AdminRole[] = ["super_admin", "operator"];
-
-/** ═══════════════════════════════════════════════════════════
- *  TIER 1: Daily Ops — pinned dock, always visible
- *  ═══════════════════════════════════════════════════════════ */
-const dailyOpsItems: NavItem[] = [
-  { title: "数据看板", url: "/admin/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
-  { title: "街头盲盒运营", url: "/admin/alang", icon: Sparkles, roles: ALL_ROLES },
-  { title: "活动池管理", url: "/admin/event-pools", icon: Layers, roles: ALL_ROLES },
-  { title: "用户管理", url: "/admin/users", icon: Users, roles: ALL_ROLES },
-  { title: "场地管理", url: "/admin/venues", icon: MapPin, roles: ALL_ROLES },
-];
-
-/** ═══════════════════════════════════════════════════════════
- *  TIER 2: Review & Tune — weekly rituals, collapsed by default
- *  ═══════════════════════════════════════════════════════════ */
-const reviewTuneItems: NavItem[] = [
-  { title: "匹配审核", url: "/admin/matching-reviews", icon: ClipboardCheck, roles: SUPER_OPERATOR },
-  { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare, roles: SUPER_OPERATOR },
-  { title: "用户举报", url: "/admin/moderation", icon: Flag, roles: SUPER_OPERATOR },
-  { title: "内容审核日志", url: "/admin/content-filter", icon: ShieldCheck, roles: SUPER_OPERATOR },
-  { title: "聊天举报", url: "/admin/reports", icon: ReceiptText, roles: SUPER_OPERATOR },
-  { title: "匹配实验室", url: "/admin/matching", icon: FlaskConical, roles: SUPER_ONLY },
-  { title: "匹配配置", url: "/admin/matching-config", icon: Settings, roles: SUPER_ONLY },
-  { title: "数据洞察", url: "/admin/insights", icon: BarChart3, roles: SUPER_ONLY },
-];
-
-/** ═══════════════════════════════════════════════════════════
- *  TIER 3: Config & System — set-it-and-forget-it, collapsed by default
- *  ═══════════════════════════════════════════════════════════ */
-const configSystemItems: NavItem[] = [
-  { title: "活动模板", url: "/admin/templates", icon: CalendarDays, roles: SUPER_OPERATOR },
-  { title: "活动管理", url: "/admin/events", icon: CalendarDays, roles: SUPER_OPERATOR },
-  { title: "通知推送", url: "/admin/notifications", icon: Bell, roles: SUPER_ONLY },
-  { title: "内容管理", url: "/admin/content", icon: FileText, roles: SUPER_ONLY },
-  { title: "订阅管理", url: "/admin/subscriptions", icon: CreditCard, roles: SUPER_ONLY },
-  { title: "定价管理", url: "/admin/pricing", icon: DollarSign, roles: SUPER_ONLY },
-  { title: "优惠券", url: "/admin/coupons", icon: Tag, roles: SUPER_ONLY },
-  { title: "财务管理", url: "/admin/finance", icon: DollarSign, roles: SUPER_OPERATOR },
-  { title: "匹配日志", url: "/admin/matching-logs", icon: ScrollText, roles: SUPER_ONLY },
-  { title: "管理员账号", url: "/admin/accounts", icon: ShieldCheck, roles: SUPER_ONLY },
-  { title: "审计日志", url: "/admin/audit-logs", icon: ScrollText, roles: SUPER_ONLY },
-  { title: "功能开关", url: "/admin/feature-flags", icon: ToggleLeft, roles: SUPER_ONLY },
-];
-
-/** ═══════════════════════════════════════════════════════════
- *  TIER 4: Labs — experimental / rare, super_admin only, collapsed by default
- *  ═══════════════════════════════════════════════════════════ */
-const labItems: NavItem[] = [
-  { title: "悦仔进化", url: "/admin/evolution", icon: Brain, roles: SUPER_ONLY },
-  { title: "Outcome 分析", url: "/admin/outcome-analytics", icon: Database, roles: SUPER_ONLY },
-  { title: "连接日志", url: "/admin/interaction-logs", icon: FileText, roles: SUPER_ONLY },
-  { title: "破冰 AI 反馈", url: "/admin/icebreaker-ai-feedback", icon: Sparkles, roles: SUPER_OPERATOR },
-];
-
-function filterByRole(items: NavItem[], role?: string): NavItem[] {
-  return items.filter((item) => {
-    if (!item.roles) return true;
-    if (!role) return false;
-    return item.roles.includes(role as AdminRole);
-  });
-}
+type NavItem = AdminNavItem;
+type NavGroup = AdminNavGroup;
 
 const STORAGE_KEY = "jj-admin-nav-expanded";
-
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-}
 
 /* ───────────────────────────────────────────────────────────
    DailyOpsDock — pinned primary section above the fold
@@ -240,11 +146,7 @@ export function AdminSidebar() {
       } catch {
         // localStorage unavailable or corrupt — fall back to defaults
       }
-      return {
-        "审核与调优": false,
-        "配置与系统": false,
-        "实验室": false,
-      };
+      return Object.fromEntries(ADMIN_NAV_GROUPS.map((g) => [g.label, false]));
     }
   );
 
@@ -260,13 +162,12 @@ export function AdminSidebar() {
     setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   }, []);
 
-  const filteredDailyOps = filterByRole(dailyOpsItems, role);
+  const filteredDailyOps = filterNavByRole(DAILY_OPS_ITEMS, role);
 
-  const groups: NavGroup[] = [
-    { label: "审核与调优", items: filterByRole(reviewTuneItems, role) },
-    { label: "配置与系统", items: filterByRole(configSystemItems, role) },
-    { label: "实验室", items: filterByRole(labItems, role) },
-  ].filter((g) => g.items.length > 0);
+  const groups: NavGroup[] = ADMIN_NAV_GROUPS.map((group) => ({
+    ...group,
+    items: filterNavByRole(group.items, role),
+  })).filter((g) => g.items.length > 0);
 
   return (
     <Sidebar>

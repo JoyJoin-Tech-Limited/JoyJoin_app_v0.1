@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Clock, Users, TrendingUp, AlertCircle, CheckCircle, HourglassIcon } from "lucide-react";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
@@ -49,7 +50,7 @@ export default function AdminMatchingLogsPage() {
   const [scanTypeFilter, setScanTypeFilter] = useState<string>("all");
   const [decisionFilter, setDecisionFilter] = useState<string>("all");
 
-  const { data: logs, isLoading } = useQuery<MatchingLog[]>({
+  const { data: logs, isLoading, isError, error, refetch } = useQuery<MatchingLog[]>({
     queryKey: ["/api/admin/matching-logs", { scanType: scanTypeFilter !== "all" ? scanTypeFilter : undefined, decision: decisionFilter !== "all" ? decisionFilter : undefined }],
   });
 
@@ -57,6 +58,18 @@ export default function AdminMatchingLogsPage() {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <AdminQueryError
+          title="匹配扫描日志加载失败"
+          error={error}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

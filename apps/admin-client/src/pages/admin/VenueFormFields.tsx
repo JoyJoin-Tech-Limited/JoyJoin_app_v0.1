@@ -67,53 +67,15 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
   const prefix = mode === "edit" ? "edit-" : "";
   const testIdPrefix = mode === "edit" ? "edit-" : "";
 
-  const toggleTag = (tag: string) => {
+  const toggleArrayValue = (
+    field: "tags" | "cuisines" | "tasteIntensity" | "decorStyle" | "barThemes" | "alcoholOptions",
+    value: string,
+  ) => {
     setFormData(prev => ({
       ...prev,
-      tags: prev.tags.includes(tag) ? prev.tags.filter(t => t !== tag) : [...prev.tags, tag],
-    }));
-  };
-
-  const toggleCuisine = (cuisine: string) => {
-    setFormData(prev => ({
-      ...prev,
-      cuisines: prev.cuisines.includes(cuisine) ? prev.cuisines.filter(c => c !== cuisine) : [...prev.cuisines, cuisine],
-    }));
-  };
-
-  const toggleTasteIntensity = (taste: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tasteIntensity: prev.tasteIntensity.includes(taste)
-        ? prev.tasteIntensity.filter(t => t !== taste)
-        : [...prev.tasteIntensity, taste],
-    }));
-  };
-
-  const toggleDecorStyle = (style: string) => {
-    setFormData(prev => ({
-      ...prev,
-      decorStyle: prev.decorStyle.includes(style)
-        ? prev.decorStyle.filter(s => s !== style)
-        : [...prev.decorStyle, style],
-    }));
-  };
-
-  const toggleBarTheme = (theme: string) => {
-    setFormData(prev => ({
-      ...prev,
-      barThemes: prev.barThemes.includes(theme)
-        ? prev.barThemes.filter(t => t !== theme)
-        : [...prev.barThemes, theme],
-    }));
-  };
-
-  const toggleAlcoholOption = (option: string) => {
-    setFormData(prev => ({
-      ...prev,
-      alcoholOptions: prev.alcoholOptions.includes(option)
-        ? prev.alcoholOptions.filter(o => o !== option)
-        : [...prev.alcoholOptions, option],
+      [field]: prev[field].includes(value)
+        ? prev[field].filter(v => v !== value)
+        : [...prev[field], value],
     }));
   };
 
@@ -261,7 +223,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
         <Label>氛围标签</Label>
         <div className="flex flex-wrap gap-2">
           {TAGS.map(tag => (
-            <Badge key={tag} variant={formData.tags.includes(tag) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTag(tag)} data-testid={`tag-${tag}`}>{tag}</Badge>
+            <Badge key={tag} variant={formData.tags.includes(tag) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayValue("tags", tag)} data-testid={`tag-${tag}`}>{tag}</Badge>
           ))}
         </div>
       </div>
@@ -272,7 +234,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
             <Label>菜系类型</Label>
             <div className="flex flex-wrap gap-2">
               {CUISINES.map(c => (
-                <Badge key={c} variant={formData.cuisines.includes(c) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleCuisine(c)} data-testid={`cuisine-${c}`}>{c}</Badge>
+                <Badge key={c} variant={formData.cuisines.includes(c) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayValue("cuisines", c)} data-testid={`cuisine-${c}`}>{c}</Badge>
               ))}
             </div>
           </div>
@@ -280,7 +242,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
             <Label>支持的口味偏好</Label>
             <div className="flex flex-wrap gap-2">
               {TASTE_INTENSITY_OPTIONS.map(t => (
-                <Badge key={t} variant={formData.tasteIntensity.includes(t) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTasteIntensity(t)} data-testid={`taste-${t}`}>{t}</Badge>
+                <Badge key={t} variant={formData.tasteIntensity.includes(t) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayValue("tasteIntensity", t)} data-testid={`taste-${t}`}>{t}</Badge>
               ))}
             </div>
           </div>
@@ -291,7 +253,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
         <Label>装修风格</Label>
         <div className="flex flex-wrap gap-2">
           {DECOR_STYLES.map(s => (
-            <Badge key={s} variant={formData.decorStyle.includes(s) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleDecorStyle(s)} data-testid={`decorStyle-${s}`}>{s}</Badge>
+            <Badge key={s} variant={formData.decorStyle.includes(s) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayValue("decorStyle", s)} data-testid={`decorStyle-${s}`}>{s}</Badge>
           ))}
         </div>
       </div>
@@ -302,7 +264,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
             <Label>酒吧主题</Label>
             <div className="flex flex-wrap gap-2">
               {BAR_THEMES.map(t => (
-                <Badge key={t} variant={formData.barThemes.includes(t) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleBarTheme(t)} data-testid={`barTheme-${t}`}>{t}</Badge>
+                <Badge key={t} variant={formData.barThemes.includes(t) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayValue("barThemes", t)} data-testid={`barTheme-${t}`}>{t}</Badge>
               ))}
             </div>
           </div>
@@ -310,7 +272,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
             <Label>支持的饮酒选项</Label>
             <div className="flex flex-wrap gap-2">
               {ALCOHOL_OPTIONS.map(o => (
-                <Badge key={o} variant={formData.alcoholOptions.includes(o) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleAlcoholOption(o)} data-testid={`alcoholOption-${o}`}>{o}</Badge>
+                <Badge key={o} variant={formData.alcoholOptions.includes(o) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleArrayValue("alcoholOptions", o)} data-testid={`alcoholOption-${o}`}>{o}</Badge>
               ))}
             </div>
           </div>

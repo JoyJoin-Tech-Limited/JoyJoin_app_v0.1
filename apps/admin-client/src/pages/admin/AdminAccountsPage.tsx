@@ -29,8 +29,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/ui/use-toast";
 import { Shield, Plus, Key, ToggleLeft, ToggleRight } from "lucide-react";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 
 interface AdminAccount {
   id: string;
@@ -61,8 +72,16 @@ export default function AdminAccountsPage() {
   const [resetOpen, setResetOpen] = useState<string | null>(null);
   const [newAccount, setNewAccount] = useState({ username: "", password: "", role: "operator", displayName: "" });
   const [newPassword, setNewPassword] = useState("");
+  const [pendingRoleChange, setPendingRoleChange] = useState<{ account: AdminAccount; newRole: string } | null>(null);
+  const [pendingStatusToggle, setPendingStatusToggle] = useState<AdminAccount | null>(null);
 
-  const { data: accounts = [], isLoading } = useQuery<AdminAccount[]>({
+  const {
+    data: accounts = [],
+    isLoading,
+    isError,
+    error: accountsError,
+    refetch: refetchAccounts,
+  } = useQuery<AdminAccount[]>({
     queryKey: ["/api/admin/accounts"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/accounts");
@@ -108,6 +127,36 @@ export default function AdminAccountsPage() {
     },
     onError: (e: Error) => toast({ title: "重置失败", description: e.message, variant: "destructive" }),
   });
+
+  const handleRoleChange = (account: AdminAccount, newRole: string) => {
+    if (newRole === account.role) return;
+    if (account.role === "super_admin" || newRole === "super_admin") {
+      setPendingRoleChange({ account, newRole });
+      return;
+    }
+    updateMutation.mutate(
+      { id: account.id, updates: { role: newRole } },
+      {
+        onSuccess: () =>
+          toast({
+            title: "角色已更新",
+            description: `${account.username} 已调整为「${ROLE_LABELS[newRole] || newRole}」`,
+          }),
+      },
+    );
+  };
+
+  const handleCreateAccount = () => {
+    if (newAccount.password.length < 8) {
+      toast({
+        title: "密码不符合要求",
+        description: "初始密码至少需要 8 个字符",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate(newAccount);
+  };
 
   if (user?.adminRole !== 'super_admin') {
     return (
@@ -188,12 +237,17 @@ export default function AdminAccountsPage() {
               </div>
               <Button
                 className="w-full"
-                onClick={() => createMutation.mutate(newAccount)}
-                disabled={createMutation.isPending}
+                onClick={handleCreateAccount}
+                disabled={createMutation.isPending || newAccount.password.length < 8}
                 data-testid="button-confirm-create-admin"
               >
                 {createMutation.isPending ? "创建中..." : "创建账号"}
               </Button>
+              {newAccount.password.length > 0 && newAccount.password.length < 8 && (
+                <p className="text-xs text-destructive" data-testid="text-password-error">
+                  密码至少需要 8 个字符
+                </p>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -204,7 +258,15 @@ export default function AdminAccountsPage() {
           <CardTitle className="text-base">账号列表</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
+          {isError ? (
+            <div className="p-4">
+              <AdminQueryError
+                title="管理员账号加载失败"
+                error={accountsError}
+                onRetry={() => refetchAccounts()}
+              />
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center h-32 text-muted-foreground">加载中...</div>
           ) : (
             <Table>
@@ -226,9 +288,7 @@ export default function AdminAccountsPage() {
                     <TableCell>
                       <Select
                         value={account.role}
-                        onValueChange={(role) =>
-                          updateMutation.mutate({ id: account.id, updates: { role } })
-                        }
+                        onValueChange={(role) => handleRoleChange(account, role)}
                         disabled={account.id === user?.id}
                       >
                         <SelectTrigger className="w-[120px] h-8">
@@ -260,12 +320,8 @@ export default function AdminAccountsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              updateMutation.mutate({
-                                id: account.id,
-                                updates: { status: account.status === "active" ? "disabled" : "active" },
-                              })
-                            }
+                            onClick={() => setPendingStatusToggle(account)}
+                            aria-label={account.status === "active" ? `禁用账号 ${account.username}` : `启用账号 ${account.username}`}
                             title={account.status === "active" ? "禁用账号" : "启用账号"}
                           >
                             {account.status === "active" ? (
@@ -332,6 +388,103 @@ export default function AdminAccountsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={pendingRoleChange !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRoleChange(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认变更超级管理员权限</AlertDialogTitle>
+            <AlertDialogDescription>
+              将账号 <strong>{pendingRoleChange?.account.username}</strong>
+              {pendingRoleChange?.account.displayName
+                ? `（${pendingRoleChange.account.displayName}）`
+                : ""}{" "}
+              的角色从「{pendingRoleChange ? ROLE_LABELS[pendingRoleChange.account.role] || pendingRoleChange.account.role : ""}」
+              变更为「{pendingRoleChange ? ROLE_LABELS[pendingRoleChange.newRole] || pendingRoleChange.newRole : ""}」。
+              {pendingRoleChange?.newRole === "super_admin"
+                ? "超级管理员拥有全部权限，包括管理员账号管理。"
+                : "移除超级管理员后，该账号将失去管理员账号管理等高权限。"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-role-change">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!pendingRoleChange) return;
+                const { account, newRole } = pendingRoleChange;
+                updateMutation.mutate(
+                  { id: account.id, updates: { role: newRole } },
+                  {
+                    onSuccess: () =>
+                      toast({
+                        title: "角色已更新",
+                        description: `${account.username} 已调整为「${ROLE_LABELS[newRole] || newRole}」`,
+                      }),
+                  },
+                );
+                setPendingRoleChange(null);
+              }}
+              data-testid="button-confirm-role-change"
+            >
+              确认变更
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingStatusToggle !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingStatusToggle(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingStatusToggle?.status === "active" ? "确认禁用账号" : "确认启用账号"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingStatusToggle?.status === "active" ? (
+                <>
+                  禁用后，账号 <strong>{pendingStatusToggle?.username}</strong> 将无法登录管理后台。
+                </>
+              ) : (
+                <>
+                  启用后，账号 <strong>{pendingStatusToggle?.username}</strong> 将恢复管理后台访问权限。
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-status-toggle">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!pendingStatusToggle) return;
+                const account = pendingStatusToggle;
+                const nextStatus = account.status === "active" ? "disabled" : "active";
+                updateMutation.mutate(
+                  { id: account.id, updates: { status: nextStatus } },
+                  {
+                    onSuccess: () =>
+                      toast({
+                        title: nextStatus === "active" ? "账号已启用" : "账号已禁用",
+                        description: account.username,
+                      }),
+                  },
+                );
+                setPendingStatusToggle(null);
+              }}
+              data-testid="button-confirm-status-toggle"
+            >
+              确认
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

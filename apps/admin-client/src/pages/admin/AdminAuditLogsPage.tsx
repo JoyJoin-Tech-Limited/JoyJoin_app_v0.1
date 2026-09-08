@@ -230,29 +230,13 @@ export default function AdminAuditLogsPage() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">总记录数</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data?.total ?? 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">当前页</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{page} / {totalPages || 1}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">每页显示</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{PAGE_SIZE}</div>
           </CardContent>
         </Card>
       </div>

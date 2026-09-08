@@ -44,20 +44,21 @@ Every task touching admin-client must load these skills:
 - `useAuth()` from `@/hooks/auth/useAuth` — checks `user.isAdmin`
 - `@/components/ui/*` for shadcn primitives (Button, Dialog, Table, etc.)
 - `@/components/admin/*` for admin-specific components
-- `@/components/discover/`, `@/components/event/`, `@/components/profile/` for feature-grouped components
-- `@/components/navigation/` for BottomNav, MobileHeader
 - `@/pages/admin/*` for admin route pages
 - `Recharts` for charts/dashboards
 - `react-hook-form` + `zod` for form validation
 - `@tanstack/react-query` for server state
-- `framer-motion` for animations
-- `@/hooks/auth/useAuth`, `@/hooks/ui/use-toast`, `@/hooks/event/useWebSocket` for domain-organized hooks
+- `@/hooks/auth/useAuth`, `@/hooks/ui/use-toast`, `@/hooks/admin/usePageTitle` for domain-organized hooks
+- `@/lib/adminNavConfig` as the single source of truth for nav items, route RBAC roles, and page titles (consumed by AdminSidebar, AdminGuard, usePageTitle)
 
 **Legacy — never use:**
 - Direct router imports from non-wouter libraries
 - Hardcoded role strings — use the RBAC helper from shared
 - Admin pages placed outside `pages/admin/`
 - Flat `@/components/ComponentName` imports — use feature subdir instead
+- ~~framer-motion / embla / vaul / cmdk / lottie~~ — purged 2026-09-07 with the archived user-client copy (~230 dead files); do not re-add without a live use case
+- Local `formatDateTime` reimplementations — use `@/lib/dateUtils`
+- Query failures rendered as empty states — use `@/components/admin/AdminQueryError`
 
 ---
 
@@ -120,34 +121,21 @@ main.tsx                          # Vite bootstrap → renders AdminApp
 ```
 src/
   components/
-    ui/                  # shadcn/ui primitives (33 active, Button, Dialog, Table, Card, etc.)
-    admin/               # Admin-specific reusable components (sidebar, data tables, filters, guards)
-    discover/            # Event discovery components (EventCard, BlindBoxEventCard, etc.)
-    event/               # Event-related components (CompletedEventCard, PostMatchEventCard, etc.)
-    profile/             # Profile & personality components (PersonalityRadarChart, QuizIntro, etc.)
-    matching/            # Matching visualization (MatchRevealAnimation, MatchCelebrationOverlay)
-    navigation/          # BottomNav, MobileHeader
-    animation/           # AnimationLoadingScreen
-    icebreaker/          # Icebreaker tools
-    feedback/            # Post-event feedback
-    event-pool-registration/  # Pool registration flow
-    _archive/            # Unused legacy components (preserved for reference)
+    ui/                  # shadcn/ui primitives (29 active, Button, Dialog, Table, Card, etc.)
+    admin/               # Admin-specific reusable components (sidebar, guard, AdminQueryError, EmptyState, flash ops panels)
+    discover/            # Only FieldInfoTooltip + MapPicker survive (used by venue pages)
   pages/
     admin/               # Route-level page components
-      AdminLayout.tsx    # Shell: sidebar (tiered nav) + header + breadcrumb + <Switch> routes
-      AdminSidebar.tsx   # Tiered sidebar: daily-ops dock + collapsible groups (审核与调优 / 配置与系统 / 实验室)
+      AdminLayout.tsx    # Shell: sidebar (tiered nav) + header + <Switch> routes + in-shell 404
+      AdminSidebar.tsx   # Tiered sidebar driven by lib/adminNavConfig: daily-ops dock + groups (安全与反馈 / 匹配 / 运营配置 / 数据与洞察 / 系统)
       AdminDashboardPage.tsx
       AdminPoolsPage.tsx
       ...
   hooks/
     auth/                # useAuth
-    notifications/       # useNotificationCounts
-    event/               # useEventPoolRegistration, useGroupAnalysis, useRevealStatus, useWebSocket
-    ui/                  # use-toast, use-mobile, useSoundEffects, usePreloadImages
-    game/                # useLevelUp, useXPNotification
-    icebreaker/          # use-icebreaker-messages, use-icebreaker-topics
-  lib/                   # Utilities (queryClient, api helpers, formatters, csvExport, dateUtils)
-  static-data/           # Static data / lookup tables
+    admin/               # usePageTitle
+    ui/                  # use-toast, use-mobile
+  lib/                   # Utilities (queryClient, adminNavConfig, dateUtils, currency, csvExport, cityDistricts, flashAdmin, userFieldMappings)
 ```
 
 **Rules:**
@@ -203,8 +191,8 @@ Check specific permissions using the shared RBAC helpers, not hardcoded role che
 - **Components**: shadcn/ui (Radix primitives)
 - **Charts**: Recharts (`BarChart`, `LineChart`, `PieChart`, etc.)
 - **Icons**: Lucide React (`lucide-react`)
-- **Animation**: framer-motion (subtle, not excessive)
 - **Responsive**: Admin is desktop-first but should not break on tablet
+- **Error states**: every primary query renders `AdminQueryError` on failure — never fake empty data
 - **Dark mode**: `ThemeToggle` component exists — support `dark` class on `<html>`
 
 ---

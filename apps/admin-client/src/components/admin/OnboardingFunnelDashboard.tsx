@@ -46,7 +46,7 @@ export default function OnboardingFunnelDashboard() {
         <div className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-          <p className="text-muted-foreground">无法加载 Onboarding 漏斗数据，请稍后重试</p>
+          <p className="text-muted-foreground">无法加载注册漏斗数据，请稍后重试</p>
         </div>
       </div>
     );
@@ -156,7 +156,7 @@ export default function OnboardingFunnelDashboard() {
       {/* Per-step funnel bars */}
       <Card data-testid="card-onboarding-steps">
         <CardHeader>
-          <CardTitle>Onboarding 分步漏斗</CardTitle>
+          <CardTitle>注册分步漏斗</CardTitle>
           <CardDescription>
             每个步骤的进入 → 完成 → 放弃事件数与停留时长（{rangeActive ? "自定义窗口" : `${days} 天窗口`}）
           </CardDescription>

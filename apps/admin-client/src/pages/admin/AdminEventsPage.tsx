@@ -1,4 +1,3 @@
-//my path:/Users/felixg/projects/JoyJoin3/client/src/pages/admin/AdminEventsPage.tsx
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -42,14 +41,15 @@ import {
   Clock,
   MapPin,
   Play,
+  Utensils,
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
-import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import EventCreateDialog from "./EventCreateDialog";
 import EmptyState from "@/components/admin/EmptyState";
-import { CITY_DISTRICTS } from "@/lib/cityDistricts";
+import AdminQueryError from "@/components/admin/AdminQueryError";
+import { safeFormat } from "@/lib/dateUtils";
 
 // =============== 类型定义 ===============
 
@@ -138,6 +138,31 @@ const budgetOptions = [
   { value: "300-500", label: "300-500" },
 ];
 
+const formatEventDateTime = (dateTimeStr: string) =>
+  safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { locale: zhCN, fallback: dateTimeStr });
+
+/** Parse the real server error message out of an apiRequest error. */
+function getServerErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : "";
+  if (!message) return fallback;
+  const jsonMatch = message.match(/\{.*\}/s);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.error || parsed.message || fallback;
+    } catch {
+      return message;
+    }
+  }
+  return message;
+}
+
+interface StartMatchResponse {
+  message?: string;
+  groupCount?: number;
+  totalMatched?: number;
+}
+
 // =============== 组件 ===============
 
 type StatusFilter = "all" | "pending_match" | "matched" | "in_progress" | "completed";
@@ -167,25 +192,35 @@ export default function AdminEventsPage() {
   const [cuisineFilter, setCuisineFilter] = useState<CuisineFilter>("all");
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<BlindBoxEvent | null>(
-    null,
-  );
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [matchPoolId, setMatchPoolId] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const { toast } = useToast();
 
   // 盲盒活动列表
-  const { data: events = [], isLoading: isLoadingEvents } =
-    useQuery<BlindBoxEvent[]>({
-      queryKey: ["/api/admin/events"],
-    });
+  const {
+    data: events = [],
+    isLoading: isLoadingEvents,
+    isError: isEventsError,
+    error: eventsError,
+    refetch: refetchEvents,
+  } = useQuery<BlindBoxEvent[]>({
+    queryKey: ["/api/admin/events"],
+  });
 
   // 活动池列表（用于创建盲盒活动时选择池子）
   const { data: pools = [] } = useQuery<EventPoolSummary[]>({
     queryKey: ["/api/admin/event-pools"],
   });
+
+  // 详情弹窗始终展示列表查询的最新数据，不做本地乐观写
+  const selectedEvent = useMemo(
+    () => events.find((e) => e.id === selectedEventId) ?? null,
+    [events, selectedEventId],
+  );
 
   // ====== Mutation：更新活动状态 ======
   const updateStatusMutation = useMutation({
@@ -209,24 +244,27 @@ export default function AdminEventsPage() {
 
   const startMatchMutation = useMutation({
     mutationFn: async (poolId: string) => {
-      console.log("[AdminEvents] manual start matching for pool:", poolId);
-      return apiRequest("POST", `/api/admin/event-pools/${poolId}/match`, {});
+      const res = await apiRequest("POST", `/api/admin/event-pools/${poolId}/match`, {});
+      return (await res.json()) as StartMatchResponse;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
+      const groupCount = data?.groupCount;
+      const totalMatched = data?.totalMatched;
       toast({
-        title: "已触发匹配",
-        description: "已发送匹配请求，如已接好算法将开始从活动池中捞人。",
+        title: "匹配完成",
+        description:
+          typeof groupCount === "number"
+            ? `成功成局 ${groupCount} 组，共匹配 ${totalMatched ?? 0} 人`
+            : data?.message || "匹配流程已完成",
       });
     },
     onError: (error: any) => {
       console.error("[AdminEvents] Failed to trigger matching:", error);
       toast({
         title: "触发匹配失败",
-        description:
-          error?.message ||
-          "无法触发匹配，请稍后重试或检查后端路由 /api/admin/event-pools/:id/match",
+        description: getServerErrorMessage(error, "无法触发匹配，请稍后重试"),
         variant: "destructive",
       });
     },
@@ -246,14 +284,23 @@ export default function AdminEventsPage() {
   };
 
   const handleViewDetails = (event: BlindBoxEvent) => {
-    setSelectedEvent(event);
+    setSelectedEventId(event.id);
     setShowDetailsDialog(true);
   };
 
   const handleStatusUpdate = (newStatus: string) => {
     if (!selectedEvent) return;
+    if (newStatus === "canceled" && selectedEvent.status !== "canceled") {
+      setShowCancelDialog(true);
+      return;
+    }
     updateStatusMutation.mutate({ id: selectedEvent.id, status: newStatus });
-    setSelectedEvent({ ...selectedEvent, status: newStatus });
+  };
+
+  const confirmCancelEvent = () => {
+    if (!selectedEvent) return;
+    updateStatusMutation.mutate({ id: selectedEvent.id, status: "canceled" });
+    setShowCancelDialog(false);
   };
 
   // ====== 衍生数据：统计 & 过滤 ======
@@ -312,15 +359,6 @@ export default function AdminEventsPage() {
     cuisineFilter,
   ]);
 
-  const formatDateTime = (dateTimeStr: string) => {
-    try {
-      const date = new Date(dateTimeStr);
-      return format(date, "yyyy年MM月dd日 HH:mm", { locale: zhCN });
-    } catch (e) {
-      return dateTimeStr;
-    }
-  };
-
   const getCreatorName = (event: BlindBoxEvent) => {
     if (!event.creator) return "未知用户";
     const firstName = event.creator.firstName || "";
@@ -351,13 +389,6 @@ export default function AdminEventsPage() {
     );
   }
 
-  // 这里只是为了示例，如果之后想加“按区筛选”可以用这个
-  const currentCityForDistrictSelect = (cityFilter === "all"
-    ? "深圳"
-    : cityFilter) as "深圳" | "香港";
-  const currentCityDistricts =
-    CITY_DISTRICTS[currentCityForDistrictSelect] ?? [];
-
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -374,7 +405,7 @@ export default function AdminEventsPage() {
           open={showCreateDialog}
           onOpenChange={setShowCreateDialog}
           pools={pools}
-          formatDateTime={formatDateTime}
+          formatDateTime={formatEventDateTime}
           budgetOptions={budgetOptions}
           languageOptions={languageOptions}
           tasteIntensityOptions={tasteIntensityOptions}
@@ -454,7 +485,7 @@ export default function AdminEventsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">筛选条件</CardTitle>
           <CardDescription className="text-xs">
-            通过状态 / 城市 / 活动类型 / 是否已关联活动池筛选盲盒活动。
+            通过状态 / 城市 / 活动类型 / 预算 / 语言偏好 / 口味偏好 / 菜系偏好筛选盲盒活动。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 items-center">
@@ -609,7 +640,13 @@ export default function AdminEventsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredEvents.length === 0 ? (
+          {isEventsError ? (
+            <AdminQueryError
+              title="盲盒活动列表加载失败"
+              error={eventsError}
+              onRetry={() => refetchEvents()}
+            />
+          ) : filteredEvents.length === 0 ? (
             <EmptyState
               title="暂无符合筛选条件的盲盒活动"
               data-testid="text-no-events"
@@ -660,7 +697,7 @@ export default function AdminEventsPage() {
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span data-testid={`text-event-datetime-${event.id}`}>
-                          {formatDateTime(event.dateTime)}
+                          {formatEventDateTime(event.dateTime)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -681,13 +718,16 @@ export default function AdminEventsPage() {
                       </div>
                       {event.restaurantName && (
                         <div
-                          className="text-xs text-muted-foreground"
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground"
                           data-testid={`text-restaurant-${event.id}`}
                         >
-                          🍽 {event.restaurantName}
-                          {event.restaurantAddress
-                            ? ` · ${event.restaurantAddress}`
-                            : ""}
+                          <Utensils className="h-3.5 w-3.5 shrink-0" />
+                          <span>
+                            {event.restaurantName}
+                            {event.restaurantAddress
+                              ? ` · ${event.restaurantAddress}`
+                              : ""}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -751,7 +791,7 @@ export default function AdminEventsPage() {
                       className="col-span-2"
                       data-testid="text-detail-datetime"
                     >
-                      {formatDateTime(selectedEvent.dateTime)}
+                      {formatEventDateTime(selectedEvent.dateTime)}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
@@ -940,6 +980,30 @@ export default function AdminEventsPage() {
               data-testid="button-confirm-start-match"
             >
               {startMatchMutation.isPending ? "匹配中..." : "确认开始匹配"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Event Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认取消活动</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要取消「{selectedEvent?.title}」吗？取消后该活动将标记为已取消，
+              系统会通知所有已报名用户；若有已支付订单将进入退款流程。此操作不可撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-abort-cancel-event">返回</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancelEvent}
+              disabled={updateStatusMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-cancel-event"
+            >
+              {updateStatusMutation.isPending ? "处理中..." : "确认取消活动"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -105,6 +105,8 @@ export interface UserPoolRegistration {
   registeredAt?: string;
   eventIntent?: string[];
   budgetRange?: string[];
+  /** Server-computed cancel policy branch (when exposed by the detail endpoint). */
+  cancelPolicy?: string | null;
 }
 
 // ═══════════════════════════════════════════════════════════

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertCircle, Crown, DollarSign, Plus, RefreshCw, TrendingUp, Users } from "lucide-react";
+import { AlertCircle, Crown, DollarSign, Plus, RefreshCw, Search, Users } from "lucide-react";
 import { differenceInDays, format, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,14 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/ui/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
+
+interface FinanceStats {
+  totalRevenue: number;
+  subscriptionRevenue: number;
+  eventRevenue: number;
+  totalPayments: number;
+}
 
 interface Subscription {
   id?: string;
@@ -104,7 +112,9 @@ function daysUntil(value: string | Date | null | undefined) {
 
 function daysRemainingLabel(subscription: Subscription) {
   const days = daysUntil(endDateOf(subscription));
-  return days === null ? "未设置" : `${days} 天`;
+  if (days === null) return "未设置";
+  if (days < 0) return "已过期";
+  return `${days} 天`;
 }
 
 function userDisplayName(subscription: Subscription) {
@@ -143,6 +153,7 @@ export default function AdminSubscriptionsPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [planType, setPlanType] = useState("monthly");
   const [durationMonths, setDurationMonths] = useState("1");
+  const [userSearch, setUserSearch] = useState("");
   const { toast } = useToast();
 
   const {
@@ -174,6 +185,17 @@ export default function AdminSubscriptionsPage() {
     queryKey: ["/api/admin/users"],
   });
   const users = Array.isArray(rawUsers) ? rawUsers : [];
+
+  const { data: financeStats } = useQuery<FinanceStats>({
+    queryKey: ["/api/admin/finance/stats"],
+  });
+
+  const normalizedUserSearch = userSearch.trim().toLowerCase();
+  const filteredUsers = normalizedUserSearch
+    ? users.filter((user) =>
+        userOptionLabel(user).toLowerCase().includes(normalizedUserSearch),
+      )
+    : users;
 
   const createMutation = useMutation({
     mutationFn: async (data: unknown) => {
@@ -235,18 +257,13 @@ export default function AdminSubscriptionsPage() {
 
   const getPlanLabel = (currentPlanType: string) => {
     const labels: Record<string, string> = {
-      monthly: "悦聚月卡 (¥98)",
-      quarterly: "悦聚季卡 (¥294)",
+      monthly: "悦聚月卡",
+      quarterly: "悦聚季卡",
     };
     return labels[currentPlanType] || currentPlanType;
   };
 
-  const totalRevenue = subscriptions.reduce((sum, subscription) => {
-    const currentPlanType = planTypeOf(subscription);
-    const revenue =
-      currentPlanType === "monthly" ? 98 : currentPlanType === "quarterly" ? 294 : 0;
-    return sum + revenue;
-  }, 0);
+  const subscriptionRevenue = financeStats?.subscriptionRevenue;
 
   const activeCount = subscriptions.filter(isCurrentlyActive).length;
 
@@ -255,7 +272,7 @@ export default function AdminSubscriptionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">订阅管理</h1>
-          <p className="text-muted-foreground mt-1">管理用户会员订阅和权益</p>
+          <p className="text-muted-foreground mt-1">管理用户权益订阅</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-subscription">
           <Plus className="h-4 w-4 mr-2" />
@@ -263,7 +280,7 @@ export default function AdminSubscriptionsPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">活跃订阅</CardTitle>
@@ -271,7 +288,7 @@ export default function AdminSubscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeCount}</div>
-            <p className="text-xs text-muted-foreground">当前活跃会员数</p>
+            <p className="text-xs text-muted-foreground">当前活跃权益数</p>
           </CardContent>
         </Card>
 
@@ -288,23 +305,22 @@ export default function AdminSubscriptionsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">订阅收入</CardTitle>
+            <div className="flex items-center gap-1">
+              <CardTitle className="text-sm font-medium">订阅实收</CardTitle>
+              <FieldInfoTooltip
+                title="订阅实收"
+                description="不含退款，以财务口径为准"
+              />
+            </div>
             <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">¥{totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">累计订阅收入</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">转化率</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">--%</div>
-            <p className="text-xs text-muted-foreground">待统计</p>
+            <div className="text-2xl font-bold" data-testid="text-subscription-revenue">
+              {subscriptionRevenue === undefined
+                ? "--"
+                : `¥${(subscriptionRevenue / 100).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            </div>
+            <p className="text-xs text-muted-foreground">权益订阅实收（财务口径）</p>
           </CardContent>
         </Card>
       </div>
@@ -416,24 +432,37 @@ export default function AdminSubscriptionsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>创建新订阅</DialogTitle>
-            <DialogDescription>为用户创建会员订阅</DialogDescription>
+            <DialogDescription>为用户创建权益订阅</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="user">选择用户</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-8"
+                  placeholder="按姓名或手机号搜索"
+                  value={userSearch}
+                  onChange={(event) => setUserSearch(event.target.value)}
+                  data-testid="input-user-search"
+                />
+              </div>
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger data-testid="select-user">
                   <SelectValue placeholder="选择用户" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users
+                  {filteredUsers
                     .filter((user) => user?.id)
                     .map((user) => (
                       <SelectItem key={user.id} value={user.id!}>
                         {userOptionLabel(user)}
                       </SelectItem>
                     ))}
+                  {filteredUsers.filter((user) => user?.id).length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">无匹配用户</div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -445,8 +474,8 @@ export default function AdminSubscriptionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">悦聚月卡 (¥98/月)</SelectItem>
-                  <SelectItem value="quarterly">悦聚季卡 (¥294/3月)</SelectItem>
+                  <SelectItem value="monthly">悦聚月卡</SelectItem>
+                  <SelectItem value="quarterly">悦聚季卡</SelectItem>
                 </SelectContent>
               </Select>
             </div>

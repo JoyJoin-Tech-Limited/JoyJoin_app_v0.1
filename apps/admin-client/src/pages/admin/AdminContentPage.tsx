@@ -8,11 +8,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/ui/use-toast";
-import { Plus, Edit, Trash2, FileText, Send, Eye, Bell } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Send, Eye, Bell, Megaphone, BookOpen, HelpCircle, ShieldCheck } from "lucide-react";
+import AdminQueryError from "@/components/admin/AdminQueryError";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
@@ -32,10 +43,10 @@ interface Content {
 }
 
 const CONTENT_TYPES = {
-  announcement: { label: "平台公告", icon: "📢", color: "bg-blue-500" },
-  help_article: { label: "帮助文章", icon: "📖", color: "bg-green-500" },
-  faq: { label: "常见问题", icon: "❓", color: "bg-yellow-500" },
-  community_guideline: { label: "社区规范", icon: "🛡️", color: "bg-purple-500" },
+  announcement: { label: "平台公告", icon: Megaphone, color: "bg-blue-500" },
+  help_article: { label: "帮助文章", icon: BookOpen, color: "bg-green-500" },
+  faq: { label: "常见问题", icon: HelpCircle, color: "bg-yellow-500" },
+  community_guideline: { label: "社区规范", icon: ShieldCheck, color: "bg-purple-500" },
 };
 
 export default function AdminContentPage() {
@@ -44,6 +55,7 @@ export default function AdminContentPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
   const [publishingContent, setPublishingContent] = useState<Content | null>(null);
+  const [deletingContent, setDeletingContent] = useState<Content | null>(null);
   const [sendNotification, setSendNotification] = useState(false);
   const { toast } = useToast();
 
@@ -56,7 +68,7 @@ export default function AdminContentPage() {
     status: "draft" as "draft" | "published",
   });
 
-  const { data: contents = [], isLoading } = useQuery<Content[]>({
+  const { data: contents = [], isLoading, isError, error, refetch } = useQuery<Content[]>({
     queryKey: ["/api/admin/contents", activeTab],
     queryFn: async () => {
       const res = await fetch(`/api/admin/contents?type=${activeTab}`);
@@ -127,6 +139,7 @@ export default function AdminContentPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/contents"] });
+      setDeletingContent(null);
       toast({ title: "删除成功", description: "内容已删除" });
     },
     onError: () => {
@@ -185,9 +198,9 @@ export default function AdminContentPage() {
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ContentType)} data-testid="tabs-content-types">
         <TabsList className="grid w-full grid-cols-4">
-          {Object.entries(CONTENT_TYPES).map(([key, { label, icon }]) => (
+          {Object.entries(CONTENT_TYPES).map(([key, { label, icon: TypeIcon }]) => (
             <TabsTrigger key={key} value={key} data-testid={`tab-${key}`}>
-              <span className="mr-2">{icon}</span>
+              <TypeIcon className="h-4 w-4 mr-1.5" />
               {label}
             </TabsTrigger>
           ))}
@@ -201,6 +214,12 @@ export default function AdminContentPage() {
                   <p className="text-center text-muted-foreground">加载中...</p>
                 </CardContent>
               </Card>
+            ) : isError ? (
+              <AdminQueryError
+                title="内容加载失败"
+                error={error}
+                onRetry={() => refetch()}
+              />
             ) : contents.length === 0 ? (
               <Card>
                 <CardContent className="py-8">
@@ -259,11 +278,7 @@ export default function AdminContentPage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => {
-                              if (confirm("确定要删除这个内容吗？")) {
-                                deleteMutation.mutate(content.id);
-                              }
-                            }}
+                            onClick={() => setDeletingContent(content)}
                             data-testid={`button-delete-${content.id}`}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -345,18 +360,27 @@ export default function AdminContentPage() {
 
               <div>
                 <Label htmlFor="status">状态</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(v) => setFormData({ ...formData, status: v as "draft" | "published" })}
-                >
-                  <SelectTrigger data-testid="select-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">草稿</SelectItem>
-                    <SelectItem value="published">发布</SelectItem>
-                  </SelectContent>
-                </Select>
+                {formData.status === "published" ? (
+                  <div className="flex h-10 items-center gap-2">
+                    <Badge variant="default">已发布</Badge>
+                    <p className="text-xs text-muted-foreground">已发布内容如需下线请联系管理员归档</p>
+                  </div>
+                ) : (
+                  <>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(v) => setFormData({ ...formData, status: v as "draft" | "published" })}
+                    >
+                      <SelectTrigger data-testid="select-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">草稿</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">发布请通过列表中的「发布」按钮完成</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -438,6 +462,28 @@ export default function AdminContentPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingContent} onOpenChange={(open) => !open && setDeletingContent(null)}>
+        <AlertDialogContent data-testid="dialog-delete-confirmation">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除内容</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除「{deletingContent?.title}」吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingContent && deleteMutation.mutate(deletingContent.id)}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "删除中..." : "确认删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
