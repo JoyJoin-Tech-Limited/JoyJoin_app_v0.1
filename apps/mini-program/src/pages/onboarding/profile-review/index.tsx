@@ -149,7 +149,11 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion])
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsInviteCardVisible, setShowCeremony, setShellFading)
+  // setIsCouponLoading must reset too: a page hide mid-claim cancels the
+  // effect (isRevealReady flips false), the in-flight promise's .finally skips
+  // its setIsCouponLoading(false), and without this reset the re-run guard
+  // would strand the UI on a permanent skeleton with no retry affordance.
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsCouponLoading, setIsInviteCardVisible, setShowCeremony, setShellFading)
 
   // Reset invite-card impression tracking when the user returns via swipe-back
   // so analytics accurately reflect each visit.

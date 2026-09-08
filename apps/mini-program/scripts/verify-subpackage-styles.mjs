@@ -286,11 +286,24 @@ const REQUIREMENTS = [
   },
   {
     page: 'pages/onboarding/extended-data/index.wxss',
-    selectors: ['xiaoyue-inline-error{'],
+    selectors: [
+      'xiaoyue-inline-error{',
+      // Heat legend numeral token (2026-09-07): the numbered 点N次 dots must
+      // reach this onboarding subpackage page WXSS, or the legend renders as
+      // bare colored dots on device.
+      'extended-data__heat-guide-dot-num{',
+    ],
   },
   {
     page: 'pages/onboarding/profile-review/index.wxss',
-    selectors: ['xiaoyue-inline-error{'],
+    // welcome-gift-card + invite radar: restored on-page 2026-09-07; both
+    // components side-effect-import their SCSS — assert the page WXSS keeps
+    // them (pre-incident shape of the 2026-07/08 blank-surface regressions).
+    selectors: [
+      'xiaoyue-inline-error{',
+      'welcome-gift-card{',
+      'profile-review-invite-card__radar{',
+    ],
   },
   {
     page: 'pages/onboarding/welcome-back/index.wxss',
@@ -320,6 +333,20 @@ const REQUIREMENTS = [
       'flash-archive__fragment-grid{',
       'flash-archive-ceremony__paper{',
       'flash-archive__state-shell{',
+    ],
+  },
+  {
+    // Chip heat mode (2026-09-07): Chip is shared across subpackages, so its
+    // rules must land in root common.wxss. The heat palette compound
+    // selectors are consumed by edit-profile (profile-linked subpackage); if
+    // they chunk-split away, heat chips render with the generic purple
+    // escalation on device (same failure mode as the 2026-08-03/08-17
+    // subpackage style-splitting incidents).
+    page: 'common.wxss',
+    selectors: [
+      'chip--heat.chip--level-1{',
+      'chip--heat.chip--level-2{',
+      'chip--heat.chip--level-3{',
     ],
   },
 ]
