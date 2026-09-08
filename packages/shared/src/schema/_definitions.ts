@@ -1707,7 +1707,12 @@ export const invitationUses = pgTable("invitation_uses", {
   // 元数据
   createdAt: timestamp("created_at").defaultNow(),
   matchedAt: timestamp("matched_at"), // 匹配成功时间
-});
+}, (table) => [
+  // Duo-bind lookups: uses by invitation (inviter side, duo.ts / poolGroupAdmin)
+  index("idx_invitation_uses_invitation_id").on(table.invitationId),
+  // Duo-bind lookups: uses by invitee pool registration (invitee side)
+  index("idx_invitation_uses_pool_registration_id").on(table.poolRegistrationId),
+]);
 
 // ============ 用户推荐系统 - User Referral System ============
 
