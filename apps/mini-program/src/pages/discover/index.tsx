@@ -416,9 +416,9 @@ function AuthenticatedDiscover({
   )
 
   // PR-9 funnel-tail close/tap-through events. `auto` fires from the 6s timer
-  // (no haptics); `button` is the ✕ close; `tap_through` is a play-mode row
+  // (no haptics); `button` is the × close; `tap_through` is a play-mode row
   // tap — the user followed one of the two wayfinding entries. Haptics are
-  // owned by GuidanceTipCard (rows + ✕). The card plays the locked 200ms
+  // owned by GuidanceTipCard (rows + ×). The card plays the locked 200ms
   // fade + translateY(8rpx) exit before unmounting.
   const handleArrivalCoachmarkClosed = useCallback((reason: 'button' | 'tap_through' | 'auto') => {
     if (arrivalExitTimerRef.current) return
@@ -696,9 +696,9 @@ function AuthenticatedDiscover({
         </View>
       </View>
 
-      {/* PR-5 + PR-9 first-visit arrival card (one-time; ✕ / row tap / 6s
+      {/* PR-5 + PR-9 first-visit arrival card (one-time; × / row tap / 6s
           dwell to dismiss). 2026-09-07 redesign: vertical welcome card —
-          header row (mascot + kicker + ✕) → archetype-voiced hook title →
+          header row (mascot + kicker + ×) → archetype-voiced hook title →
           two tappable play-mode rows (event scrolls to the feed, street
           opens 街头盲盒). Both flag paths render the SAME GuidanceTipCard;
           only the dismiss/persist owner differs.

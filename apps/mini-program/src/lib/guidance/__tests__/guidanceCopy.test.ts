@@ -75,7 +75,7 @@ describe('E1 — absorbed arrival coachmark copy preservation', () => {
     const copy = getGuidanceTipCopy('discover_arrival')
     expect(copy.kicker).toBe('先看看怎么玩')
     expect(copy.dismissLabel).toBe('知道了')
-    expect(copy.dismissHint).toBe('轻触收起')
+    expect(copy.dismissHint).toBe('点右上角收起')
   })
 
   it('keeps both play-mode tappable rows', () => {

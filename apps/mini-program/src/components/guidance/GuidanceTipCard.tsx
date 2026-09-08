@@ -8,10 +8,10 @@ import { localAsset } from '../../lib/utils/cdnAssets'
  * GuidanceTipCard — shared coachmark visual for the C4 guidance queue
  * (2026-08-27, contract C4; vertical welcome-card redesign 2026-09-07).
  *
- * Anatomy (top → bottom): header row (56rpx mascot + kicker + ✕ close
+ * Anatomy (top → bottom): header row (56rpx mascot + kicker + × close
  * pinned right) → archetype-voiced title → two TAPPABLE play-mode rows
  * (icon slot + title/caption stack + CSS chevron). The card body itself is
- * INERT — dismissal only via the ✕, a row tap, or the queue's 6s dwell.
+ * INERT — dismissal only via the ×, a row tap, or the queue's 6s dwell.
  *
  * Row icons reuse the bundled `src/assets/icons/ui/` glyphs via direct
  * `localAsset()` Image (same pattern as the discover location pill) instead
@@ -113,6 +113,7 @@ export default function GuidanceTipCard({
           aria-label='收起提示'
           onClick={(e) => {
             e.stopPropagation()
+            if (exiting) return
             haptics('light')
             onDismiss('button')
           }}
@@ -139,6 +140,7 @@ export default function GuidanceTipCard({
               aria-label={`${row.title}。${row.caption}。点击进入`}
               onClick={(e) => {
                 e.stopPropagation()
+                if (exiting) return
                 haptics('light')
                 if (onRowTap) {
                   onRowTap(row.key)

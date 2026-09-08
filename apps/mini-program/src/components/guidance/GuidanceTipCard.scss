@@ -68,10 +68,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    // ≥44rpx hit area; the glyph itself stays optically small.
-    min-width: 48rpx;
-    min-height: 48rpx;
-    margin: -8rpx -12rpx -8rpx 0;
+    // 88rpx hit area (mini-program standard); negative margins keep the
+    // visual footprint tight so the glyph stays optically small.
+    min-width: 88rpx;
+    min-height: 88rpx;
+    margin: -20rpx -28rpx -20rpx -20rpx;
     border-radius: 50%;
     transition: background 0.12s ease;
   }

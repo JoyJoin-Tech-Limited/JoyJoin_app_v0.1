@@ -35,7 +35,6 @@ import {
 } from '../lib/guidance/arrivalMigration'
 import { markGuidanceSeen } from '../lib/guidance/guidanceApi'
 import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
-import { haptics } from '../lib/utils/haptics'
 import { logWarn } from '../lib/utils/logger'
 import type { AuthUser } from './useAuth'
 
@@ -147,7 +146,8 @@ export function useGuidanceQueue({ surface, user }: UseGuidanceQueueOptions): Us
       const tip = activeTipRef.current
       if (!tip || exitingRef.current) return
       exitingRef.current = true
-      if (reason !== 'auto') haptics('light')
+      // Interaction haptics are owned by GuidanceTipCard (close + row taps);
+      // firing here too would double-vibrate on the same tap.
       if (dwellTimerRef.current) {
         clearTimeout(dwellTimerRef.current)
         dwellTimerRef.current = null

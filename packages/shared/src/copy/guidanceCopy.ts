@@ -64,7 +64,7 @@ export const GUIDANCE_TIP_COPY: Record<GuidanceTipCopyKey, GuidanceTipCopy> = {
         caption: FLOW1_ENTRY_COPY.street.bannerLine,
       },
     ],
-    dismissHint: '轻触收起',
+    dismissHint: '点右上角收起',
   },
 };
 
