@@ -5,12 +5,21 @@ vi.mock('@tarojs/components', () => ({
   View: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => <span {...props}>{children}</span>,
   Slider: ({ onChange, onChanging, value, ...props }: any) => (
+    // Faithful WeChat semantics: onChanging fires per drag frame (native
+    // 'input'), onChange only on release (native 'change'). React would
+    // co-fire a JSX onChange prop on every 'input' event, so the commit
+    // path is wired via a raw listener instead.
     <input
       type='range'
       data-testid='slider'
       value={value}
       onInput={(e) => onChanging?.({ detail: { value: Number((e.target as HTMLInputElement).value) } })}
-      onChange={(e) => onChange?.({ detail: { value: Number((e.target as HTMLInputElement).value) } })}
+      ref={(el: HTMLInputElement | null) => {
+        if (el && !(el as any).__jjCommitWired) {
+          ;(el as any).__jjCommitWired = true
+          el.addEventListener('change', () => onChange?.({ detail: { value: Number(el.value) } }))
+        }
+      }}
       {...props}
     />
   ),
@@ -36,6 +45,8 @@ vi.mock('../../../components/ui/Button', () => ({
 }))
 
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
+
+import { haptics } from '../../../lib/utils/haptics'
 
 vi.mock('../../../hooks/useDeviceTier', () => ({ useDeviceTier: () => ({ isDegradation: false }) }))
 
@@ -162,5 +173,147 @@ describe('PersonalityTestAnswerArea slider endpoint icons (WS-3)', () => {
     })
     // Both shells keep their reserved 48rpx slots — no layout shift.
     expect(container.querySelectorAll('.answer-area__slider-anchor-icon-shell')).toHaveLength(2)
+  })
+})
+
+describe('PersonalityTestAnswerArea slider custom track (2026-09 polish)', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.mocked(haptics).mockClear()
+  })
+
+  async function renderSliderModule(sliderValue = 50, sliderTouched = false) {
+    const { default: PersonalityTestAnswerArea } = await import('./PersonalityTestAnswerArea')
+    return render(
+      <PersonalityTestAnswerArea
+        questionType='slider'
+        options={sliderOptions}
+        sliderConfig={{ leftLabel: '内向', rightLabel: '外向' }}
+        sliderValue={sliderValue}
+        sliderTouched={sliderTouched}
+        isSubmitting={false}
+        onAnswer={vi.fn()}
+        onSliderChange={vi.fn()}
+        onSliderSubmit={vi.fn()}
+      />,
+    )
+  }
+
+  it('renders the custom rail/fill/thumb layers under the native gesture slider', async () => {
+    const { container } = await renderSliderModule()
+    expect(container.querySelector('.answer-area__slider-rail')).toBeTruthy()
+    expect(container.querySelector('.answer-area__slider-fill')).toBeTruthy()
+    expect(container.querySelector('.answer-area__slider-thumb')).toBeTruthy()
+    expect(container.querySelector('.answer-area__slider-thumb-ring')).toBeTruthy()
+    expect(container.querySelector('.answer-area__slider-thumb-core')).toBeTruthy()
+    expect(container.querySelector('.answer-area__slider-thumb-dot')).toBeTruthy()
+    expect(container.querySelector('[data-testid="slider"]')).toBeTruthy()
+  })
+
+  it('renders neutral (grey) thumb ring + fill until the first touch, temperature after', async () => {
+    const { container, rerender } = await renderSliderModule(50, false)
+    const ring = container.querySelector('.answer-area__slider-thumb-ring') as HTMLElement
+    const fill = container.querySelector('.answer-area__slider-fill') as HTMLElement
+    const dot = container.querySelector('.answer-area__slider-thumb-dot') as HTMLElement
+    expect(ring.style.background).toContain('rgb(216, 221, 230)') // #D8DDE6
+    expect(fill.style.background).toContain('rgb(216, 221, 230)')
+    expect(dot.style.backgroundColor).toContain('rgb(183, 190, 201)') // #B7BEC9
+
+    const { default: PersonalityTestAnswerArea } = await import('./PersonalityTestAnswerArea')
+    rerender(
+      <PersonalityTestAnswerArea
+        questionType='slider'
+        options={sliderOptions}
+        sliderConfig={{ leftLabel: '内向', rightLabel: '外向' }}
+        sliderValue={50}
+        sliderTouched={true}
+        isSubmitting={false}
+        onAnswer={vi.fn()}
+        onSliderChange={vi.fn()}
+        onSliderSubmit={vi.fn()}
+      />,
+    )
+    // Touched at 50 → dot takes the centre temperature stop (#A78BFA).
+    expect(dot.style.backgroundColor).toContain('rgb(167, 139, 250)')
+    expect(fill.style.width).toBe('171.5px') // 22 + (343−44)×0.5 fallback geometry
+  })
+
+  it('toggles --dragging classes on badge + thumb during drag and removes them on commit', async () => {
+    const { container } = await renderSliderModule(50, true)
+    const slider = container.querySelector('[data-testid="slider"]') as HTMLInputElement
+
+    expect(container.querySelector('.answer-area__slider-thumb--dragging')).toBeNull()
+    expect(container.querySelector('.answer-area__slider-live-badge-inner--dragging')).toBeNull()
+
+    fireEvent.input(slider, { target: { value: 60 } })
+    await waitFor(() => {
+      expect(container.querySelector('.answer-area__slider-thumb--dragging')).toBeTruthy()
+      expect(container.querySelector('.answer-area__slider-live-badge-inner--dragging')).toBeTruthy()
+    })
+
+    fireEvent.change(slider, { target: { value: 60 } })
+    await waitFor(() => {
+      expect(container.querySelector('.answer-area__slider-thumb--dragging')).toBeNull()
+      expect(container.querySelector('.answer-area__slider-live-badge-inner--dragging')).toBeNull()
+    })
+  })
+
+  it('fires medium haptic on semantic option-boundary crossing, light otherwise', async () => {
+    const { container } = await renderSliderModule(50, true)
+    const slider = container.querySelector('[data-testid="slider"]') as HTMLInputElement
+
+    // First event seeds the option ref (50 → '非常外向'); no medium yet.
+    fireEvent.input(slider, { target: { value: 55 } })
+    // 55 stays in the same option ('50') → no medium.
+    fireEvent.input(slider, { target: { value: 60 } })
+    expect(vi.mocked(haptics).mock.calls.some(([tier]) => tier === 'medium')).toBe(false)
+
+    // 20 maps to '中立' (|0-20|=20 < |50-20|=30) → boundary crossed → medium.
+    fireEvent.input(slider, { target: { value: 20 } })
+    expect(vi.mocked(haptics).mock.calls.some(([tier]) => tier === 'medium')).toBe(true)
+  })
+
+  it('forwards a track-tap commit even when the value did not change (interaction gate)', async () => {
+    const onSliderChange = vi.fn()
+    const { default: PersonalityTestAnswerArea } = await import('./PersonalityTestAnswerArea')
+    const { container } = render(
+      <PersonalityTestAnswerArea
+        questionType='slider'
+        options={sliderOptions}
+        sliderConfig={{ leftLabel: '内向', rightLabel: '外向' }}
+        sliderValue={50}
+        isSubmitting={false}
+        onAnswer={vi.fn()}
+        onSliderChange={onSliderChange}
+        onSliderSubmit={vi.fn()}
+      />,
+    )
+    const slider = container.querySelector('[data-testid="slider"]') as HTMLInputElement
+    fireEvent.change(slider, { target: { value: 50 } })
+    expect(onSliderChange).toHaveBeenCalledWith(50)
+  })
+
+  it('gates the inline submit button on sliderTouched', async () => {
+    const { getByText } = await renderSliderModule(50, false)
+    const submit = getByText('确认这个感觉').closest('button') as HTMLButtonElement
+    expect(submit.disabled).toBe(true)
+  })
+
+  it('dims the custom layers while submitting', async () => {
+    const { default: PersonalityTestAnswerArea } = await import('./PersonalityTestAnswerArea')
+    const { container } = render(
+      <PersonalityTestAnswerArea
+        questionType='slider'
+        options={sliderOptions}
+        sliderConfig={{ leftLabel: '内向', rightLabel: '外向' }}
+        sliderValue={50}
+        sliderTouched={true}
+        isSubmitting={true}
+        onAnswer={vi.fn()}
+        onSliderChange={vi.fn()}
+        onSliderSubmit={vi.fn()}
+      />,
+    )
+    expect(container.querySelector('.answer-area__slider-stage--disabled')).toBeTruthy()
   })
 })

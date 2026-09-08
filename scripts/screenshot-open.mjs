@@ -55,6 +55,9 @@ const PAGES = {
   'landing': { url: 'http://localhost:9000/landing-blind-box.png', altPort: 9003 },
   'landing-legal-hint': { url: 'http://localhost:9000/landing-legal-hint.png', altPort: 9003 },
   'gathering-room': { url: 'http://localhost:9000/gathering-room.png', altPort: 9003 },
+  'personality-test-slider': { url: 'http://localhost:9000/personality-test-slider-neutral.png', altPort: 9003 },
+  'personality-test-slider-drag': { url: 'http://localhost:9000/personality-test-slider-drag.png', altPort: 9003 },
+  'personality-test-slider-settled': { url: 'http://localhost:9000/personality-test-slider-settled.png', altPort: 9003 },
 }
 
 const page = process.argv[2] || 'events'

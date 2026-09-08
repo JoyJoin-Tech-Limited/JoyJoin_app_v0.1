@@ -25,8 +25,18 @@ describe('resolveSpeechBubble', () => {
     expect(resolveSpeechBubble(null, '凭直觉选')).toEqual({ mode: 'idle', text: '凭直觉选' })
   })
 
-  it('renders nothing in back-review (whisper suppressed upstream)', () => {
+  it('renders nothing when all three sources are absent', () => {
     expect(resolveSpeechBubble(null, null)).toEqual({ mode: 'none', text: '' })
+  })
+
+  it('falls back to review mode in back-review (whisper suppressed upstream)', () => {
+    expect(resolveSpeechBubble(null, null, '这题你选了「电影」'))
+      .toEqual({ mode: 'review', text: '这题你选了「电影」' })
+  })
+
+  it('prefers commentary and whisper over the review echo', () => {
+    expect(resolveSpeechBubble('好选择', null, '这题你选了「电影」').mode).toBe('commentary')
+    expect(resolveSpeechBubble(null, '凭直觉选', '这题你选了「电影」').mode).toBe('idle')
   })
 })
 
@@ -95,5 +105,39 @@ describe('resolveIdleWhisper', () => {
         expect(line.trim().length).toBeGreaterThan(0)
       }
     }
+  })
+})
+
+describe('resolveIdleWhisper session dedupe (WS-2)', () => {
+  it('rotates to an unshown line when the deterministic pick was already whispered', () => {
+    const question = { id: 'Q_L1_001', category: '社交启动' }
+    const first = resolveIdleWhisper(question)
+    const second = resolveIdleWhisper(question, new Set([first]))
+    expect(second).not.toBe(first)
+    expect(IDLE_WHISPERS_BY_CATEGORY['社交启动']).toContain(second)
+  })
+
+  it('spills into the generic pool when the category pool is exhausted', () => {
+    const question = { id: 'Q_L1_001', category: '社交启动' }
+    const exclude = new Set(IDLE_WHISPERS_BY_CATEGORY['社交启动'])
+    const line = resolveIdleWhisper(question, exclude)
+    expect(IDLE_WHISPER_GENERIC).toContain(line)
+  })
+
+  it('allows a repeat rather than returning nothing when every pool is exhausted', () => {
+    const question = { id: 'Q_L1_001', category: '社交启动' }
+    const exclude = new Set([
+      ...IDLE_WHISPERS_BY_CATEGORY['社交启动'],
+      ...IDLE_WHISPER_GENERIC,
+    ])
+    const line = resolveIdleWhisper(question, exclude)
+    expect(typeof line).toBe('string')
+    expect(line.length).toBeGreaterThan(0)
+  })
+
+  it('skips an excluded override and falls through to the pools', () => {
+    const question = { id: 'Q_PLAYFUL_SLIDER', category: '能量感知' }
+    const line = resolveIdleWhisper(question, new Set([IDLE_WHISPER_OVERRIDES.Q_PLAYFUL_SLIDER]))
+    expect(line).not.toBe(IDLE_WHISPER_OVERRIDES.Q_PLAYFUL_SLIDER)
   })
 })

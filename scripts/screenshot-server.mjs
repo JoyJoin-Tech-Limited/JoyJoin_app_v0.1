@@ -1010,6 +1010,128 @@ register('personal-story-v17', capturePersonalStoryV17)
 register('my-image-v17', captureMyImageV17)
 register('profile-settings-v17', captureProfileSettingsV17)
 
+// ─── Personality test slider question (2026-09 custom track polish) ───
+// Auth override: nextStep 'personality-test' so the page gate keeps us on
+// the quiz; /api/assessment/v4/start mocked to a slider question. Stages:
+//   neutral  — untouched grey state (hint + neutral badge/thumb/fill)
+//   drag     — mid-drag at ~85% (badge tracking, temperature fill, 1.15× thumb)
+//   settled  — released at ~85% (spring-settled touched state)
+const PERSONALITY_TEST_SLIDER_AUTH = {
+  id: 'user-screenshot-001',
+  displayName: '悦仔测试',
+  nickname: '悦仔测试',
+  appMode: 'production',
+  archetype: null,
+  primaryArchetype: null,
+  nextStep: 'personality-test',
+  hasCompletedOnboarding: false,
+  profileEssentialComplete: true,
+  profileExtendedComplete: false,
+  activeAssessmentSessionId: null,
+  paymentsEnabled: true,
+  pendingReferralCode: '',
+  features: {},
+}
+
+const PERSONALITY_TEST_SLIDER_START = {
+  sessionId: 'mock-slider-session-001',
+  phase: 'testing',
+  // Mirrors the production Q_PLAYFUL_SLIDER bank entry (5 semantic buckets,
+  // incl. the 12-glyph slider_100 label that stress-tests badge width).
+  nextQuestion: {
+    id: 'Q_PLAYFUL_SLIDER',
+    category: '能量感知',
+    scenarioText: '周五下班，终于自由了——',
+    questionText: '拖动滑条，找到你现在最接近的感觉',
+    questionType: 'slider',
+    sliderConfig: { leftLabel: '想一个人待着', rightLabel: '快叫上朋友！' },
+    options: [
+      { value: 'slider_0', text: '完全想一个人待着' },
+      { value: 'slider_25', text: '更偏向自己充电' },
+      { value: 'slider_50', text: '看心情，居中就好' },
+      { value: 'slider_75', text: '有点想约人出去' },
+      { value: 'slider_100', text: '超想热闹一下，快叫上朋友！' },
+    ],
+  },
+  progress: { answered: 4, estimatedRemaining: 6, minQuestions: 8, softMaxQuestions: 12, hardMaxQuestions: 16 },
+  currentMatches: [],
+  isComplete: false,
+}
+
+async function capturePersonalityTestSlider(stage) {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.route('**/api/auth/user', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(PERSONALITY_TEST_SLIDER_AUTH),
+      }),
+    )
+    await page.route('**/api/assessment/v4/start', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(PERSONALITY_TEST_SLIDER_START),
+      }),
+    )
+    await page.goto(`${H5_BASE_URL}/#/pages/onboarding/personality-test/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await page.waitForSelector('.personality-test__start-btn', { state: 'visible', timeout: 20000 })
+    await page.click('.personality-test__start-btn')
+    await page.waitForSelector('.answer-area__slider-thumb', { state: 'visible', timeout: 15000 })
+    // Let the entrance stagger + track-width measurement settle.
+    await page.waitForTimeout(1200)
+
+    if (stage === 'neutral') {
+      return screenshotViewport(page)
+    }
+
+    // Drag the (H5-rendered) slider thumb from center toward ~85% using CDP
+    // touch events — Taro H5 slider only listens to touch, mouse is ignored.
+    const sliderBox = await page.locator('.answer-area__slider').boundingBox()
+    if (!sliderBox) {
+      return screenshotViewport(page)
+    }
+    const midY = sliderBox.y + sliderBox.height / 2
+    const startX = sliderBox.x + sliderBox.width * 0.5
+    const endX = sliderBox.x + sliderBox.width * 0.85
+    const client = await page.context().newCDPSession(page)
+    const touch = (type, x) =>
+      client.send('Input.dispatchTouchEvent', {
+        type,
+        touchPoints: type === 'touchEnd' ? [] : [{ x, y: midY, id: 1 }],
+      })
+    await touch('touchStart', startX)
+    for (let i = 1; i <= 12; i++) {
+      await touch('touchMove', startX + ((endX - startX) * i) / 12)
+      await page.waitForTimeout(40)
+    }
+    // Best-effort: the % readout only renders once touched; if the H5 slider
+    // ignored the gesture, capture whatever is on screen anyway.
+    await page.waitForSelector('.answer-area__slider-live-badge-value', {
+      state: 'visible',
+      timeout: 4000,
+    }).catch(() => {})
+
+    if (stage === 'drag') {
+      return screenshotViewport(page)
+    }
+    await touch('touchEnd')
+    await page.waitForTimeout(700)
+    return screenshotViewport(page)
+  })
+}
+
+register('personality-test-slider-neutral', () => capturePersonalityTestSlider('neutral'))
+register('personality-test-slider-drag', () => capturePersonalityTestSlider('drag'))
+register('personality-test-slider-settled', () => capturePersonalityTestSlider('settled'))
+
+
 const server = app.listen(PORT, '127.0.0.1', () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)
   console.log(`[screenshot-server] available URLs:`)

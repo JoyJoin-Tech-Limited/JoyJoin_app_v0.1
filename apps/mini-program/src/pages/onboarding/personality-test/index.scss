@@ -47,6 +47,29 @@
   }
 }
 
+// WS-2 (2026-09-08): commentary bubble reward pop — spring overshoot reserved
+// for the earned reaction; the idle whisper never wears a container.
+@keyframes speech-bubble-commentary-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// First-commentary affordance ring — GPU-safe opacity pulse only.
+@keyframes speech-bubble-hint-pulse {
+  0%, 100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 @keyframes tease-icon-pop {
   from {
     opacity: 0;
@@ -967,30 +990,115 @@
   }
 
   &__speech-bubble {
-    // Quiz commentary dialect — DOCUMENTED EXCEPTION to the shared speech-bubble
-    // tokens: accent left border + corner notch (no pointer tail), because the
-    // bubble faces the answer buttons below, not the mascot. Do not unify.
+    // WS-2 (2026-09-08): container-as-semantic-signal — the idle whisper is
+    // de-containerized (presence, not content); only the earned per-option
+    // commentary wears the glass bubble. DOCUMENTED EXCEPTION to the shared
+    // speech-bubble tokens: the commentary dialect keeps the corner notch
+    // (no pointer tail) because it faces the answer buttons below. Do not
+    // unify.
     position: relative;
     flex: 0 1 auto;
     min-width: 0;
-    padding: 20rpx 28rpx;
-    border-radius: 24rpx 24rpx 24rpx 6rpx;
     max-width: 600rpx;
-    background: $color-bg-clean;
-    border: 1rpx solid rgba($color-border, 0.5);
-    border-left: 3rpx solid rgba($color-primary, 0.25);
-    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.035);
     transition: background 0.3s ease, border-color 0.3s ease;
+
+    &--idle {
+      // Floating whisper: no box, no border, no shadow — the 「」 quotes are
+      // the permanent anchor (the typewriter cursor dies when typing ends)
+      // and the mascot's gaze carries the spatial relationship. Padding
+      // keeps the fast-forward tap target usable.
+      padding: 12rpx 8rpx;
+    }
+
+    &--commentary {
+      // Glass dialect matched to the Zone B question banner
+      // (MascotQuestionHeader.scss): solid fallback because WeChat
+      // backdrop-filter is unreliable.
+      padding: 20rpx 28rpx;
+      border-radius: 24rpx 24rpx 24rpx 6rpx;
+      background: rgba($color-surface, 0.88);
+      border: 1rpx solid rgba($color-primary, 0.14);
+      box-shadow:
+        0 4rpx 16rpx rgba($color-primary, 0.06),
+        inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
+      animation: speech-bubble-commentary-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    &--active {
+      // Pressed state for the tappable modes (idle fast-forward / commentary
+      // advance) — repo-standard primary tint; review mode is not tappable.
+      background: rgba($color-primary, 0.08);
+    }
+
+    &--hint::after {
+      // One-time affordance ring on the very first commentary of the
+      // session — teaches "tap the bubble to continue" now that the idle
+      // mode no longer transfers tap-learning. Pulses 3× then settles at
+      // rest opacity; radius mirrors the bubble's corner-notch silhouette.
+      content: '';
+      position: absolute;
+      top: -6rpx;
+      right: -6rpx;
+      bottom: -6rpx;
+      left: -6rpx;
+      border-radius: 30rpx 30rpx 30rpx 12rpx;
+      border: 2rpx solid rgba($color-primary, 0.35);
+      animation: speech-bubble-hint-pulse 1.6s ease-in-out 3 both;
+      pointer-events: none;
+    }
   }
 
   &__speech-bubble-text {
     font-family: $font-ui;
     font-size: $font-size-md;
     color: $color-text-primary;
-    line-height: 1.6;
+    line-height: 1.55;
     font-weight: $font-weight-medium;
     word-break: break-word;
     overflow-wrap: break-word;
+
+    &--idle,
+    &--review {
+      // Whisper/review register: one step smaller, secondary colour, lighter
+      // weight — clearly "murmured in the margin", not content.
+      font-size: $font-size-base;
+      color: $color-text-secondary;
+      font-weight: $font-weight-normal;
+    }
+
+    &--idle {
+      // 「」 quotes: the persistent anchor that survives the typewriter
+      // cursor's death — floating grey text without them read as an
+      // unstyled bug (2026-09-08 user-satisfaction audit).
+      &::before {
+        content: '「';
+      }
+
+      &::after {
+        content: '」';
+      }
+    }
+
+    // --review carries its own inner 「」 around the chosen option — no
+    // outer quotes or they'd nest.
+  }
+
+  &__speech-bubble-hint {
+    display: block;
+    margin-top: 12rpx;
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &--low-end &__speech-bubble--commentary {
+    // Degradation tier: drop the spring overshoot, keep a plain enter.
+    animation: mascot-commentary-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &--low-end &__speech-bubble--hint::after {
+    animation: none;
+    opacity: 0.4;
   }
 
   // Answer zone
@@ -1027,6 +1135,15 @@
       animation: none;
       opacity: 1;
       transform: none;
+    }
+
+    &__speech-bubble--commentary {
+      animation: none;
+    }
+
+    &__speech-bubble--hint::after {
+      animation: none;
+      opacity: 0.4;
     }
 
     &__nav-row,

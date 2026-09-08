@@ -184,11 +184,27 @@ function hashQuestionId(id: string): number {
   return Math.abs(hash)
 }
 
-/** Resolve the whisper line for a question: override → category pool → generic. */
-export function resolveIdleWhisper(question: IdleWhisperQuestion): string {
+/** Resolve the whisper line for a question: override → category pool → generic.
+ *  WS-2 (2026-09-08): `exclude` carries lines already whispered this session —
+ *  the deterministic rotation walks forward until it finds an unshown line so
+ *  Xiaoyue never repeats herself verbatim in one sitting. When the whole pool
+ *  is exhausted it spills into the generic pool, and only then allows a
+ *  repeat (better a repeat than silence). */
+export function resolveIdleWhisper(question: IdleWhisperQuestion, exclude?: ReadonlySet<string>): string {
   const override = IDLE_WHISPER_OVERRIDES[question.id]
-  if (override) return override
+  if (override && !exclude?.has(override)) return override
   const pool = (question.category ? IDLE_WHISPERS_BY_CATEGORY[question.category] : undefined)
     ?? IDLE_WHISPER_GENERIC
-  return pool[hashQuestionId(question.id) % pool.length]
+  const start = hashQuestionId(question.id) % pool.length
+  if (!exclude?.size) return pool[start]
+  for (let i = 0; i < pool.length; i++) {
+    const candidate = pool[(start + i) % pool.length]
+    if (!exclude.has(candidate)) return candidate
+  }
+  if (pool !== IDLE_WHISPER_GENERIC) {
+    for (const candidate of IDLE_WHISPER_GENERIC) {
+      if (!exclude.has(candidate)) return candidate
+    }
+  }
+  return pool[start]
 }

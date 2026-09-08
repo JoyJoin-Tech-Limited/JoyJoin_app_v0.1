@@ -59,14 +59,17 @@ const BIRTH_YEAR_RANGE = Array.from(
   (_, i) => String(CURRENT_YEAR - 18 - i),
 )
 
+// Canonical level vocabulary — must stay in sync with the extended-data
+// selector (INTEREST_LEVEL_META / heat-guide legend) and the entry-card
+// InterestChipCloud: L1 感兴趣, L2 很热衷, L3 必聊项.
 const INTEREST_LEVEL_META: Array<{
   level: InterestSelectionLevel
   label: string
   shortLabel: string
 }> = [
-  { level: 1, label: '想试试', shortLabel: '已加入' },
-  { level: 2, label: '很喜欢', shortLabel: '偏爱' },
-  { level: 3, label: '本命', shortLabel: '重点' },
+  { level: 1, label: '感兴趣', shortLabel: '感兴趣' },
+  { level: 2, label: '很热衷', shortLabel: '很热衷' },
+  { level: 3, label: '必聊项', shortLabel: '必聊项' },
 ]
 
 const activeInterests = getActiveInterests()
@@ -912,7 +915,7 @@ export default function EditProfilePage() {
             {isLoadingInterests ? (
               <Text className='edit-profile__interest-hint'>加载兴趣数据中…</Text>
             ) : (
-              <Text className='edit-profile__interest-hint'>轻点标签选择，再点一次提升热度</Text>
+              <Text className='edit-profile__interest-hint'>点1次加入 · 点2次很热衷 · 点3次必聊</Text>
             )}
 
             {(Object.entries(interestsByCategory) as [MacroCategory, typeof activeInterests][]).map(

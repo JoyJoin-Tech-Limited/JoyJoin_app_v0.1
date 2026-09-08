@@ -30,7 +30,7 @@ export function getQuestionMascotPose(_questionId: string): typeof PERSONALITY_T
   return PERSONALITY_TEST_QUESTION_EXPRESSION.choice
 }
 
-export type SpeechBubbleMode = 'idle' | 'commentary' | 'none'
+export type SpeechBubbleMode = 'idle' | 'commentary' | 'review' | 'none'
 
 /**
  * WS-1 (2026-09-02): the speech bubble has two mutually exclusive modes.
@@ -38,13 +38,17 @@ export type SpeechBubbleMode = 'idle' | 'commentary' | 'none'
  * whisper) fills the bubble on question entry before any answer. The two
  * never share state — whisper taps only fast-forward typing and never feed
  * the commentary completion/auto-advance bookkeeping.
+ * WS-2 (2026-09-08): `review` is the back-review echo (这题你选了「…」),
+ * rendered statically (no typewriter, no tap) in the floating register.
  */
 export function resolveSpeechBubble(
   postAnswerCommentary: string | null,
   idleWhisperText: string | null,
+  backReviewEchoText?: string | null,
 ): { mode: SpeechBubbleMode; text: string } {
   if (postAnswerCommentary) return { mode: 'commentary', text: postAnswerCommentary }
   if (idleWhisperText) return { mode: 'idle', text: idleWhisperText }
+  if (backReviewEchoText) return { mode: 'review', text: backReviewEchoText }
   return { mode: 'none', text: '' }
 }
 
@@ -70,6 +74,12 @@ interface PersonalityTestQuestionProps {
   postAnswerCommentary: string | null
   /** WS-1: per-question idle whisper (null in back-review / when absent). */
   idleWhisperText: string | null
+  /** WS-2: true only during the very first commentary of the session —
+   *  renders the one-time 「点我继续」 affordance cue inside the bubble. */
+  showCommentaryHint: boolean
+  /** WS-2: static back-review echo (这题你选了「…」) — non-interactive,
+   *  no typewriter; keeps Zone C alive while walking history. */
+  backReviewEchoText: string | null
   shouldShowEcho: boolean
   isEchoExiting: boolean
   echoEnabled: boolean
@@ -117,6 +127,8 @@ export default function PersonalityTestQuestion({
   error,
   postAnswerCommentary,
   idleWhisperText,
+  showCommentaryHint,
+  backReviewEchoText,
   shouldShowEcho,
   isEchoExiting,
   echoEnabled,
@@ -160,8 +172,8 @@ export default function PersonalityTestQuestion({
   // itself already renders in the banner above — typewriting it here again
   // duplicated the text and stacked extra latency on every question.
   const speech = useMemo(
-    () => resolveSpeechBubble(postAnswerCommentary, idleWhisperText),
-    [postAnswerCommentary, idleWhisperText],
+    () => resolveSpeechBubble(postAnswerCommentary, idleWhisperText, backReviewEchoText),
+    [postAnswerCommentary, idleWhisperText, backReviewEchoText],
   )
   // Idle-mode tap = fast-forward the typing only (never advances, never
   // touches commentary bookkeeping). Keyed by question id so a new
@@ -239,27 +251,61 @@ export default function PersonalityTestQuestion({
                 </View>
                 {speech.text ? (
                   <View
-                    className='personality-test__speech-bubble'
+                    className={[
+                      'personality-test__speech-bubble',
+                      speech.mode === 'commentary'
+                        ? 'personality-test__speech-bubble--commentary'
+                        : 'personality-test__speech-bubble--idle',
+                      showCommentaryHint && speech.mode === 'commentary'
+                        ? 'personality-test__speech-bubble--hint'
+                        : '',
+                    ].filter(Boolean).join(' ')}
+                    hoverClass={
+                      speech.mode === 'review'
+                        ? 'none'
+                        : 'personality-test__speech-bubble--active'
+                    }
                     onClick={
                       speech.mode === 'commentary'
                         ? onCommentaryBubbleTap
-                        : () => {
-                            setIdleFastForwardId(currentQuestion.id)
-                            onIdleWhisperTap?.()
-                          }
+                        : speech.mode === 'idle'
+                          ? () => {
+                              setIdleFastForwardId(currentQuestion.id)
+                              onIdleWhisperTap?.()
+                            }
+                          : undefined
                     }
                   >
                     <TypewriterText
-                      key={speech.mode === 'idle' ? `whisper-${currentQuestion.id}` : speechKey}
-                      className='personality-test__speech-bubble-text'
+                      key={
+                        speech.mode === 'idle'
+                          ? `whisper-${currentQuestion.id}`
+                          : speech.mode === 'review'
+                            ? `review-${currentQuestion.id}`
+                            : speechKey
+                      }
+                      className={
+                        speech.mode === 'idle'
+                          ? 'personality-test__speech-bubble-text personality-test__speech-bubble-text--idle'
+                          : speech.mode === 'review'
+                            ? 'personality-test__speech-bubble-text personality-test__speech-bubble-text--review'
+                            : 'personality-test__speech-bubble-text'
+                      }
                       text={speech.text}
                       speed={40}
                       delay={speechDelay}
-                      enabled={!(speech.mode === 'idle' && idleFastForwardId === currentQuestion.id)}
-                      showCursor
+                      enabled={
+                        speech.mode === 'review'
+                          ? false
+                          : !(speech.mode === 'idle' && idleFastForwardId === currentQuestion.id)
+                      }
+                      showCursor={speech.mode !== 'review'}
                       numberOfLines={3}
                       onComplete={speech.mode === 'commentary' ? onCommentaryComplete : undefined}
                     />
+                    {showCommentaryHint && speech.mode === 'commentary' ? (
+                      <Text className='personality-test__speech-bubble-hint'>点我继续 →</Text>
+                    ) : null}
                   </View>
                 ) : null}
               </View>

@@ -135,6 +135,20 @@ export default function PersonalityTestPage() {
   const [error, setError] = useState('')
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const commentaryReceivedAtRef = useRef<number>(0)
+  // WS-2 (2026-09-08): the 「点我继续」 affordance cue rides the very first
+  // commentary of the session only. Beat-scoped state machine (not a
+  // render-scoped ref): armed → active on the first commentary, consumed
+  // when that commentary clears — so the hint survives the instant→server
+  // text swap and every intermediate re-render, then never reappears.
+  const [commentaryHintBeat, setCommentaryHintBeat] = useState<'armed' | 'active' | 'consumed'>('armed')
+  useEffect(() => {
+    if (postAnswerCommentary && commentaryHintBeat === 'armed') {
+      setCommentaryHintBeat('active')
+    } else if (!postAnswerCommentary && commentaryHintBeat === 'active') {
+      setCommentaryHintBeat('consumed')
+    }
+  }, [postAnswerCommentary, commentaryHintBeat])
+  const showCommentaryHint = !!postAnswerCommentary && commentaryHintBeat === 'active'
   // Per-question analytics (PR-2): questionShownAtRef measures answer dwell;
   // lastTrackedQuestionRef dedupes the per-mount stepEnter ('q<N>' sub-step).
   const questionShownAtRef = useRef<number>(0)
@@ -342,9 +356,12 @@ export default function PersonalityTestPage() {
   // commentary bookkeeping (commentaryReceivedAtRef /
   // commentaryTypingDoneAtRef) and the echo-overlay guard stay untouched.
   // Suppressed entirely in back-review.
+  // WS-2 (2026-09-08): session-level dedupe — a line already whispered this
+  // session is rotated out so Xiaoyue never repeats herself verbatim.
+  const shownWhisperLinesRef = useRef<Set<string>>(new Set())
   const idleWhisperText = useMemo(() => {
     if (!question || currentHistoryIndex >= 0) return null
-    return resolveIdleWhisper(question)
+    return resolveIdleWhisper(question, shownWhisperLinesRef.current)
   }, [question, currentHistoryIndex])
 
   const lastWhisperShownRef = useRef<string | null>(null)
@@ -352,11 +369,21 @@ export default function PersonalityTestPage() {
     if (!idleWhisperText || !question) return
     if (lastWhisperShownRef.current === question.id) return
     lastWhisperShownRef.current = question.id
+    shownWhisperLinesRef.current.add(idleWhisperText)
     analytics.interaction('idle_whisper_shown', {
       questionId: question.id,
       questionIndex: progress?.answered ?? 0,
     })
   }, [analytics, idleWhisperText, question, progress?.answered])
+
+  // WS-2 (2026-09-08): back-review echo — in history-walk mode both the
+  // whisper and the commentary are suppressed, which left Zone C empty and
+  // the mascot mute. Restate the recorded answer as a static floating line
+  // so the review beat keeps her presence. Non-interactive, no typewriter.
+  const backReviewEchoText = useMemo(() => {
+    if (currentHistoryIndex < 0 || !currentSelection) return null
+    return `这题你选了「${currentSelection.text}」`
+  }, [currentHistoryIndex, currentSelection])
 
   const handleIdleWhisperTap = useCallback(() => {
     if (!question) return
@@ -724,6 +751,13 @@ export default function PersonalityTestPage() {
       } else if (result.commentary) {
         setPostAnswerCommentary(result.commentary)
         commentaryReceivedAtRef.current = Date.now()
+        // Late server commentary is a distinct beat — mark the bubble pop,
+        // but only when there was no instant per-option commentary (that
+        // path already fired a medium haptic on option tap and the bubble
+        // keeps its class across the text swap, so no pop replays).
+        if (!postAnswerCommentary) {
+          haptics('light')
+        }
         // Commentary arrived late (with the response): it gets the full
         // minimum display window from now so the feedback doesn't flash by.
         if (!postAnswerCommentary && !advanceAsapRef.current) {
@@ -1297,6 +1331,8 @@ export default function PersonalityTestPage() {
           error={error}
           postAnswerCommentary={postAnswerCommentary}
           idleWhisperText={idleWhisperText}
+          backReviewEchoText={backReviewEchoText}
+          showCommentaryHint={showCommentaryHint}
           shouldShowEcho={shouldShowEcho}
           isEchoExiting={isEchoExiting}
           echoEnabled={echoEnabled}

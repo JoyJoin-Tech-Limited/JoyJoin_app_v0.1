@@ -4,7 +4,6 @@ import { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import type { AnswerOption } from './personalityTestLogic'
 import Button from '../../../components/ui/Button'
-import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstants'
 import { haptics } from '../../../lib/utils/haptics'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { resolvePersonalityEmoji, resolvePersonalityIcon } from './emojiAssets'
@@ -119,6 +118,21 @@ function getSliderLiveLabel(options: AnswerOption[], value: number): string {
   return option?.text ?? ''
 }
 
+/**
+ * Deterministic pill width for the live badge. The badge is absolutely
+ * positioned (shrink-to-fit), and H5 measures its webkit-line-clamp label at
+ * min-content — so the width is computed from the glyph count instead:
+ * CJK glyphs ≈ 34rpx at 32rpx font, latin/punctuation ~0.6×, plus 72rpx
+ * horizontal padding. Capped to the SCSS min/max (180–480rpx).
+ */
+function estimateSliderBadgeWidthRpx(label: string): number {
+  let units = 0
+  for (const ch of label) {
+    units += /[⺀-鿿豈-﫿，。！、；：？「」『』（）—…]/.test(ch) ? 1 : 0.6
+  }
+  return Math.min(480, Math.max(180, Math.ceil(units * 34) + 72))
+}
+
 /** Continuously interpolate a hex colour between two stops (t in [0,1]). */
 function lerpHex(a: string, b: string, t: number): string {
   const parse = (hex: string) => {
@@ -140,71 +154,58 @@ function lerpHex(a: string, b: string, t: number): string {
 }
 
 /**
- * Build a dynamic gradient + transform for the slider live badge so it
- * travels smoothly with the thumb and shifts temperature from cool purple
- * (left) through soft lavender (center) to brand warm coral (right).
+ * Slider temperature model: the badge, thumb ring, thumb dot, and track fill
+ * all shift from cool purple (left) through soft lavender (center) to brand
+ * warm coral (right) as the value moves 0 → 100.
  *
- * When `reducedMotion` is true, positional transform and scale pulse are
- * suppressed so the badge only updates its background colour. This keeps
- * the control functional for users who need reduced motion.
+ * When `reducedMotion` is requested, positional follow and scale pulses are
+ * suppressed so only colour responds. The control stays fully functional.
  */
 const SLIDER_GRADIENT_STOPS = {
   leftFrom: '#8B5CF6',
   leftTo: '#6366F1',
   centerFrom: '#A78BFA',
-  centerTo: '#C4B5FD',
+  // #C4B5FD was too pale for the white badge label (~2:1) — the deeper
+  // lavender keeps white bold text legible at the centre of the range.
+  centerTo: '#A78BFA',
   // Brand coral family (#FF9B85 anchor) — the previous pink stops
   // (#FF6B9D/#F472B6) sat off the JoyJoin palette.
   rightFrom: '#FF8A6B',
   rightTo: '#FF9B85',
 } as const
 
-function buildSliderBadgeStyle(
-  value: number,
-  reducedMotion = false,
-  neutral = false,
-): { inner: React.CSSProperties; arrow: React.CSSProperties } {
+// Fixed full-track gradient for the custom fill layer. background-size is set
+// to the measured track width so any fill percentage shows the correct slice
+// (cool indigo left → lavender center → warm coral right).
+const SLIDER_TRACK_GRADIENT = `linear-gradient(90deg, ${SLIDER_GRADIENT_STOPS.leftTo} 0%, ${SLIDER_GRADIENT_STOPS.centerFrom} 45%, ${SLIDER_GRADIENT_STOPS.rightTo} 100%)`
+
+// The native Slider stays as the gesture layer with an invisible 44px block
+// (fat touch target); the visual thumb is ours. Its thumb centre travels
+// inset by half the block size, so the custom thumb/fill use the same math.
+const NATIVE_BLOCK_HALF_PX = 22
+const FALLBACK_TRACK_WIDTH_PX = 343
+
+// Untouched-slider neutrals — the default midpoint must not read as a choice.
+const SLIDER_NEUTRAL_BADGE_BG = 'linear-gradient(135deg, #9CA3AF 0%, #B7BEC9 100%)'
+const SLIDER_NEUTRAL_ARROW = '#9CA3AF'
+const SLIDER_NEUTRAL_RING = '#D8DDE6'
+const SLIDER_NEUTRAL_DOT = '#B7BEC9'
+const SLIDER_NEUTRAL_FILL = '#D8DDE6'
+
+function resolveSliderTemperature(value: number): { from: string; to: string } {
   const t = value / 100
-  const drift = reducedMotion ? 0 : ((value - 50) / 50) * 80 // -80rpx .. +80rpx
-  const scale = reducedMotion ? 1 : 1 + Math.abs(value - 50) / 50 * 0.04
-
-  // Untouched slider: neutral gray so the default midpoint doesn't read as a
-  // confirmed choice. Switches to the temperature gradient on first drag.
-  if (neutral) {
-    return {
-      inner: {
-        transform: undefined,
-        background: 'linear-gradient(135deg, #9CA3AF 0%, #B7BEC9 100%)',
-      } as React.CSSProperties,
-      arrow: {
-        borderTopColor: '#9CA3AF',
-      },
-    }
-  }
-
   const { leftFrom, leftTo, centerFrom, centerTo, rightFrom, rightTo } = SLIDER_GRADIENT_STOPS
-  let from: string
-  let to: string
   if (t <= 0.5) {
     const local = t / 0.5
-    from = lerpHex(leftFrom, centerFrom, local)
-    to = lerpHex(leftTo, centerTo, local)
-  } else {
-    const local = (t - 0.5) / 0.5
-    from = lerpHex(centerFrom, rightFrom, local)
-    to = lerpHex(centerTo, rightTo, local)
+    return {
+      from: lerpHex(leftFrom, centerFrom, local),
+      to: lerpHex(leftTo, centerTo, local),
+    }
   }
-
-  // Apply transform directly; avoid CSS custom properties because WeChat's
-  // base library handles them unreliably. The transform is GPU-composited.
+  const local = (t - 0.5) / 0.5
   return {
-    inner: {
-      transform: reducedMotion ? undefined : `translateX(${drift}rpx) scale(${scale})`,
-      background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
-    } as React.CSSProperties,
-    arrow: {
-      borderTopColor: from,
-    },
+    from: lerpHex(centerFrom, rightFrom, local),
+    to: lerpHex(centerTo, rightTo, local),
   }
 }
 
@@ -230,6 +231,13 @@ export default memo(function PersonalityTestAnswerArea({
   const [fragmentLabel, setFragmentLabel] = useState<string>('')
   const [fragmentVisible, setFragmentVisible] = useState(false)
   const [showSliderHint, setShowSliderHint] = useState(() => !sliderHintDismissedThisSession)
+  // Slider drag lifecycle: while dragging, badge/thumb follow the finger with
+  // no transition lag; on release the transition springs them to rest.
+  const [isSliderDragging, setIsSliderDragging] = useState(false)
+  // Measured px width of the slider stage so the badge/tooltip can track the
+  // real thumb position precisely (percent-based positioning can't express
+  // the native block inset). Falls back to a 375pt-design estimate.
+  const [sliderTrackWidth, setSliderTrackWidth] = useState<number | null>(null)
   // WS-3 slider endpoint icons: per-icon error state — on CDN failure the
   // icon hides but its shell keeps the 48rpx layout slot (no shift).
   const [leftAnchorIconError, setLeftAnchorIconError] = useState(false)
@@ -238,6 +246,7 @@ export default memo(function PersonalityTestAnswerArea({
   const fragmentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSliderValueRef = useRef(sliderValue)
   const lastHapticValueRef = useRef<number | null>(null)
+  const lastSliderOptionRef = useRef<string | null>(null)
 
   // Accessibility: suppress continuous spatial motion when reduced motion is requested.
   const reducedMotion = useMemo(() => {
@@ -252,11 +261,47 @@ export default memo(function PersonalityTestAnswerArea({
   // Reset selection when question changes
   useEffect(() => {
     setSelectedValue(null)
+    setIsSliderDragging(false)
+    lastSliderOptionRef.current = null
+    lastSliderValueRef.current = 50
+    lastHapticValueRef.current = null
     if (selectedTimeoutRef.current) {
       clearTimeout(selectedTimeoutRef.current)
       selectedTimeoutRef.current = null
     }
   }, [options, questionType])
+
+  // Submit mid-drag must not leave the thumb latched at grab scale with
+  // transitions off (WeChat may not fire onChange when disabled flips).
+  useEffect(() => {
+    if (isSubmitting) {
+      setIsSliderDragging(false)
+    }
+  }, [isSubmitting])
+
+  // Measure the slider stage width (px) so the tooltip badge can track the
+  // real thumb centre. Guarded: the vitest Taro mock has no selector query.
+  useEffect(() => {
+    if (questionType !== 'slider') return
+    if (typeof (Taro as any).createSelectorQuery !== 'function') return
+    let cancelled = false
+    const timer = setTimeout(() => {
+      Taro.createSelectorQuery()
+        .select('.answer-area__slider-stage')
+        .boundingClientRect((rect: any) => {
+          if (cancelled) return
+          const w = Array.isArray(rect) ? rect[0]?.width : rect?.width
+          if (typeof w === 'number' && w > 0) {
+            setSliderTrackWidth(w)
+          }
+        })
+        .exec()
+    }, 80)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [questionType])
 
   const handleAnswer = useCallback((option: AnswerOption) => {
     if (selectedTimeoutRef.current) {
@@ -294,6 +339,7 @@ export default memo(function PersonalityTestAnswerArea({
   const handleSliderChanging = useCallback((event: any) => {
     const val = Number(event.detail.value)
     lastSliderValueRef.current = val
+    setIsSliderDragging(true)
     onSliderChange(val)
 
     // Dismiss the first-time hint as soon as the user interacts (session-scoped).
@@ -302,30 +348,43 @@ export default memo(function PersonalityTestAnswerArea({
       setShowSliderHint(false)
     }
 
-    // Tactile feedback: light haptic on every 10-point threshold crossing.
+    // Tactile feedback: a firmer tick when the drag crosses into a different
+    // semantic answer option, plus light ticks on every 10-point threshold.
     // Skip on low-end devices and when reduced motion is requested (haptics
     // are a form of motion feedback).
     if (!isDegradation && !reducedMotion) {
-      const threshold = Math.round(val / 10)
-      if (lastHapticValueRef.current !== threshold) {
-        lastHapticValueRef.current = threshold
-        haptics('light')
+      const prevOption = lastSliderOptionRef.current
+      const nextOption = getNearestSliderOption(options, val)
+      const optionChanged = nextOption != null && prevOption !== null && nextOption.value !== prevOption
+      if (nextOption) {
+        lastSliderOptionRef.current = nextOption.value
+      }
+      if (optionChanged) {
+        haptics('medium')
+      } else {
+        const threshold = Math.round(val / 10)
+        if (lastHapticValueRef.current !== threshold) {
+          lastHapticValueRef.current = threshold
+          haptics('light')
+        }
       }
     }
-  }, [onSliderChange, showSliderHint, isDegradation, reducedMotion])
+  }, [onSliderChange, showSliderHint, isDegradation, reducedMotion, options])
 
   const handleSliderCommit = useCallback((event: any) => {
     const val = Number(event.detail.value)
+    setIsSliderDragging(false)
     // A tap on the track can fire onChange without onChanging; clear the hint
     // so it never outlives a real user choice.
     if (showSliderHint) {
       sliderHintDismissedThisSession = true
       setShowSliderHint(false)
     }
-    if (val !== lastSliderValueRef.current) {
-      lastSliderValueRef.current = val
-      onSliderChange(val)
-    }
+    // Always forward the commit — even when the value didn't move. A track
+    // tap at the current position is still a deliberate interaction, and the
+    // parent gates 下一题 on hasSliderInteracted.
+    lastSliderValueRef.current = val
+    onSliderChange(val)
   }, [onSliderChange, showSliderHint])
 
   // Guard: render fallback when no options are available
@@ -340,7 +399,31 @@ export default memo(function PersonalityTestAnswerArea({
   if (questionType === 'slider' && sliderConfig) {
     const lean = resolveSliderLean(sliderConfig, sliderValue)
     const liveLabel = getSliderLiveLabel(options, sliderValue)
-    const badgeStyles = buildSliderBadgeStyle(sliderValue, reducedMotion, !sliderTouched)
+    const neutral = !sliderTouched
+    const temperature = resolveSliderTemperature(sliderValue)
+
+    // Thumb-centre geometry mirrors the native slider: the (invisible) 44px
+    // block travels inset by half its size from each end of the track.
+    const trackWidthPx = sliderTrackWidth ?? FALLBACK_TRACK_WIDTH_PX
+    const thumbX = NATIVE_BLOCK_HALF_PX + (trackWidthPx - NATIVE_BLOCK_HALF_PX * 2) * (sliderValue / 100)
+    // Keep the tooltip badge on screen at the extremes: clamp its centre to
+    // the pill's own half-width (rpx → px via the 686rpx content-width scale).
+    const badgeLabel = sliderTouched ? liveLabel || '·' : '拖一拖，选一个程度'
+    const badgeWidthRpx = estimateSliderBadgeWidthRpx(badgeLabel)
+    // rpx → px via the 686rpx content-width scale. Inline rpx is silently
+    // dropped by the H5 style parser, so the pill width is always set in px.
+    const badgeWidthPx = Math.round(badgeWidthRpx * (trackWidthPx / 686))
+    const badgeClamp = Math.min(140, Math.max(64, Math.round(badgeWidthPx / 2)))
+    const badgeX = reducedMotion
+      ? trackWidthPx / 2
+      : Math.min(trackWidthPx - badgeClamp, Math.max(badgeClamp, thumbX))
+    // When the badge is edge-clamped it detaches from the thumb — slide the
+    // arrow so it keeps pointing at the real thumb position.
+    const arrowDelta = Math.max(-60, Math.min(60, thumbX - badgeX))
+    const badgeScale = reducedMotion
+      ? 1
+      : 1 + (Math.abs(sliderValue - 50) / 50) * 0.04 + (isSliderDragging ? 0.03 : 0)
+    const thumbScale = reducedMotion || isDegradation ? 1 : isSliderDragging ? 1.15 : 1
 
     return (
       <View className='answer-area__slider-shell'>
@@ -352,9 +435,9 @@ export default memo(function PersonalityTestAnswerArea({
           </View>
         ) : null}
 
-        {/* Live semantic label that reacts to drag — announced politely to screen readers.
-            Until the first drag it stays neutral so the default 50% doesn't
-            read as a confirmed choice. */}
+        {/* Live semantic label that tracks the thumb — announced politely to
+            screen readers. Until the first drag it stays neutral so the
+            default 50% doesn't read as a confirmed choice. */}
         <View
           className='answer-area__slider-live-badge'
           aria-live='polite'
@@ -362,16 +445,29 @@ export default memo(function PersonalityTestAnswerArea({
           aria-label={sliderTouched ? `当前选择：${liveLabel || '未选择'}，${sliderValue}%` : '尚未选择，拖动滑块告诉我你的感觉'}
         >
           <View
-            className={`answer-area__slider-live-badge-inner answer-area__slider-live-badge-inner--${lean}`}
-            style={badgeStyles.inner}
+            className={`answer-area__slider-live-badge-inner answer-area__slider-live-badge-inner--${lean}${isSliderDragging ? ' answer-area__slider-live-badge-inner--dragging' : ''}`}
+            style={{
+              left: `${badgeX}px`,
+              width: `${badgeWidthPx}px`,
+              transform: `translate(-50%, -50%) scale(${badgeScale})`,
+              background: neutral
+                ? SLIDER_NEUTRAL_BADGE_BG
+                : `linear-gradient(135deg, ${temperature.from} 0%, ${temperature.to} 100%)`,
+            }}
           >
-            <Text className='answer-area__slider-live-badge-label' numberOfLines={1}>
-              {sliderTouched ? (liveLabel || '·') : '拖一拖，选一个程度'}
+            <Text className='answer-area__slider-live-badge-label' numberOfLines={2}>
+              {badgeLabel}
             </Text>
             {sliderTouched ? (
               <Text className='answer-area__slider-live-badge-value'>{sliderValue}%</Text>
             ) : null}
-            <View className='answer-area__slider-live-badge-arrow' style={badgeStyles.arrow} />
+            <View
+              className='answer-area__slider-live-badge-arrow'
+              style={{
+                borderTopColor: neutral ? SLIDER_NEUTRAL_ARROW : temperature.from,
+                transform: `translateX(calc(-50% + ${arrowDelta}px))`,
+              }}
+            />
           </View>
         </View>
 
@@ -420,22 +516,62 @@ export default memo(function PersonalityTestAnswerArea({
           ))}
         </View>
 
-        <Slider
-          className='answer-area__slider'
-          min={0}
-          max={100}
-          step={1}
-          value={sliderValue}
-          activeColor={COLOR_PRIMARY}
-          backgroundColor={COLOR_PRIMARY_LIGHT}
-          blockColor={COLOR_PRIMARY}
-          blockSize={44}
-          showValue={false}
-          onChanging={handleSliderChanging}
-          onChange={handleSliderCommit}
-          disabled={isSubmitting}
-          aria-label={`程度选择滑块，最左边是${sliderConfig.leftLabel}，最右边是${sliderConfig.rightLabel}，从左到右表示程度从低到高`}
-        />
+        {/* Custom track + thumb visuals layered under the native Slider. The
+            native element keeps its (transparent) 44px block as a generous
+            gesture target; all painting is ours so the fill can carry the
+            temperature gradient and the thumb can scale on grab/release. */}
+        <View className={`answer-area__slider-stage${isSubmitting ? ' answer-area__slider-stage--disabled' : ''}`}>
+          <View className='answer-area__slider-rail' aria-hidden='true' />
+          <View
+            className='answer-area__slider-fill'
+            aria-hidden='true'
+            style={{
+              width: `${thumbX}px`,
+              background: neutral ? SLIDER_NEUTRAL_FILL : SLIDER_TRACK_GRADIENT,
+              backgroundSize: `${trackWidthPx}px 100%`,
+            }}
+          />
+          <View
+            className={`answer-area__slider-thumb${isSliderDragging ? ' answer-area__slider-thumb--dragging' : ''}`}
+            style={{
+              left: `${thumbX}px`,
+              transform: `translate(-50%, -50%) scale(${thumbScale})`,
+            }}
+            aria-hidden='true'
+          >
+            <View
+              className='answer-area__slider-thumb-ring'
+              style={{
+                background: neutral
+                  ? SLIDER_NEUTRAL_RING
+                  : `linear-gradient(135deg, ${temperature.from} 0%, ${temperature.to} 100%)`,
+              }}
+            >
+              <View className='answer-area__slider-thumb-core'>
+                <View
+                  className='answer-area__slider-thumb-dot'
+                  style={{ backgroundColor: neutral ? SLIDER_NEUTRAL_DOT : temperature.from }}
+                />
+              </View>
+            </View>
+          </View>
+          <Slider
+            className='answer-area__slider'
+            min={0}
+            max={100}
+            step={1}
+            value={sliderValue}
+            activeColor='rgba(0, 0, 0, 0)'
+            backgroundColor='rgba(0, 0, 0, 0)'
+            blockColor='rgba(0, 0, 0, 0)'
+            blockSize={44}
+            showValue={false}
+            onChanging={handleSliderChanging}
+            onChange={handleSliderCommit}
+            disabled={isSubmitting}
+            aria-label={`程度选择滑块，最左边是${sliderConfig.leftLabel}，最右边是${sliderConfig.rightLabel}，从左到右表示程度从低到高`}
+          />
+        </View>
 
         {!hideSliderSubmit && (
           <Button
@@ -445,7 +581,9 @@ export default memo(function PersonalityTestAnswerArea({
               haptics('light')
               onSliderSubmit()
             }}
-            disabled={isSubmitting}
+            // Untouched slider must not submit the default 50% silently —
+            // same gate the parent applies to 下一题 via hasSliderInteracted.
+            disabled={isSubmitting || !sliderTouched}
             loading={isSubmitting}
           >
             {isSubmitting ? '提交中…' : '确认这个感觉'}
