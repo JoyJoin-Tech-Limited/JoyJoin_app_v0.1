@@ -29,7 +29,9 @@ initializeEngineState(config) → processAnswer(state, question, option)
 | confusablePairThreshold | 0.70 | 0.80 |
 | enableTieredThreshold | false | true |
 
-Server selects `V2_ASSESSMENT_CONFIG` when `ENABLE_MATCHER_V2 === 'true'` (default behavior in production).
+**Legacy-naming trap:** `ENABLE_MATCHER_V2` does **not** toggle the matcher algorithm. MatcherV2 (`findBestMatchingArchetypesV2`; `useV2Matcher: true`) is always active — both configs set it. The env var only selects the **session profile**:
+- unset / `false` → `DEFAULT_ASSESSMENT_CONFIG` (10–16 questions, tiered threshold off). This is the profile validated by the V4 measurement program (`docs/plans/2026-09-09-personality-engine-v4-upgrade-plan.md`) and the intended production profile.
+- `true` → `V2_ASSESSMENT_CONFIG` (12–20 questions, tiered threshold on) — an *older, longer* profile (not "newer"). Its extra questions are triggered by the top1–top2 confidence gap, which is uninformative under realistic answer noise (see `docs/reports/2026-09-10-confidence-calibration.md`), and the Item 6 recovery data shows trait recovery beyond ~12–16 questions is flat-to-negative. Do not enable without a measured A/B.
 
 ## Chemistry / compatibility system
 

@@ -24,6 +24,7 @@ import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
 import { wsService } from "./wsService";
 import compression from "compression";
+import { DEFAULT_ASSESSMENT_CONFIG, V2_ASSESSMENT_CONFIG } from "@shared/personality";
 
 // Keep liveness reachable even when config is incomplete; readiness reports the failure.
 validateConfig({ exitOnFatal: false });
@@ -138,6 +139,29 @@ app.use((req, res, next) => {
         admin_key_configured: Boolean(process.env.ADMIN_CREATE_SECRET_KEY),
         run_plan_templates_enabled: process.env.RUN_PLAN_TEMPLATES_ENABLED === 'true',
       });
+
+      // Observability + accidental-flip guard for the assessment session profile.
+      // NOTE: ENABLE_MATCHER_V2 is a legacy misnomer — it does NOT toggle the
+      // matcher algorithm (MatcherV2 is always active); it selects the session
+      // config. DEFAULT (10–16q, tiered off) is the V4-validated production
+      // profile; V2 (12–20q, tiered on) is an older, longer profile outside the
+      // validated envelope (docs/plans/2026-09-09-personality-engine-v4-upgrade-plan.md).
+      const useLegacyV2Profile = process.env.ENABLE_MATCHER_V2 === 'true';
+      const activeAssessmentConfig = useLegacyV2Profile ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      logger.info('[Startup] Assessment session profile active', {
+        profile: useLegacyV2Profile ? 'V2_ASSESSMENT_CONFIG' : 'DEFAULT_ASSESSMENT_CONFIG',
+        env_flag_ENABLE_MATCHER_V2: useLegacyV2Profile,
+        min_questions: activeAssessmentConfig.minQuestions,
+        soft_max_questions: activeAssessmentConfig.softMaxQuestions,
+        hard_max_questions: activeAssessmentConfig.hardMaxQuestions,
+        tiered_threshold: activeAssessmentConfig.enableTieredThreshold,
+        matcher_algorithm: 'MatcherV2',
+      });
+      if (useLegacyV2Profile) {
+        logger.warn(
+          '[Startup] ENABLE_MATCHER_V2=true selects the older V2_ASSESSMENT_CONFIG (12–20 questions, tiered on). This is OUTSIDE the V4-validated envelope — only enable with a measured A/B. Intended production profile is DEFAULT.',
+        );
+      }
 
       // Non-production warning to help QA discover payment kill-switch
       if ((process.env.APP_MODE ?? 'production') !== 'production') {
