@@ -1,4 +1,4 @@
-import { View, Text, Input, Image, ScrollView } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import {
   type MiniScriptPlayerResult,
@@ -11,14 +11,12 @@ import {
   resolveMiniScriptTitle,
   type MiniScriptVoteInput,
 } from '@shared/miniscriptStoryFramework'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
-import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
-import { CardFlip, ParticleBurst } from '../../../components/reveal'
+import { ParticleBurst } from '../../../components/reveal'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { TOAST_DEFAULT_MS } from '../../../lib/utils/uiConstants'
@@ -27,8 +25,18 @@ import {
   MINISCRIPT_EVIDENCE_HINT_STORAGE_KEY,
   MINISCRIPT_MOTIVE_HINT_STORAGE_KEY,
 } from '../sessionShellLogic'
-import { MiniScriptEvidenceTray } from './MiniScriptEvidenceTray'
 import { MiniScriptClueDrawer } from './MiniScriptClueDrawer'
+import {
+  MiniScriptActView,
+  MiniScriptCeremonyView,
+  MiniScriptMotiveVoteView,
+  MiniScriptPreviewView,
+  MiniScriptRoleView,
+  MiniScriptTruthView,
+  MiniScriptVoteView,
+  MiniScriptWaitingView,
+  sanitizeDisplayText,
+} from './MiniScriptSessionViews'
 import {
   frameworkHasAnyEvidence,
   resolveHasMotiveRound,
@@ -36,11 +44,7 @@ import {
   roundTwoVotes,
 } from './miniScriptV2Model'
 import {
-  TRUTH_CEREMONY_CONTINUE_HINT,
-  TRUTH_CEREMONY_HOST_NEXT_CTA,
   TRUTH_CEREMONY_STAGE_HAPTIC,
-  TRUTH_CEREMONY_STAGE_TITLE,
-  TRUTH_CEREMONY_WAITING_HOST_HINT,
   planTruthCeremony,
 } from './miniScriptTruthCeremonyModel'
 import { useTruthCeremonyStage } from './useTruthCeremonyStage'
@@ -54,7 +58,6 @@ const EMPTY_PRESENTED_EVIDENCE: MiniScriptPresentedEvidence[] = []
 const EMPTY_PLAYER_RESULTS: MiniScriptPlayerResult[] = []
 const EMPTY_REVEALED_CLUES: Array<{ clueId: string; text: string; revealedInAct?: number }> = []
 const EMPTY_DEDUCTION_HINTS: Array<{ stepNumber: number; conclusion: string }> = []
-const EMPTY_MOTIVE_OPTIONS: string[] = []
 
 /** Best-effort storage read for one-time hints (mirrors the coachmark
  *  precedent in the session page — persistence failure still shows the hint). */
@@ -72,26 +75,6 @@ function persistHintSeen(key: string): void {
   } catch {
     // Storage full / unavailable — hint may re-show next session; acceptable.
   }
-}
-
-// ── Display-text hygiene ────────────────────────────────────────────────────
-// Legacy LLM content embedded snake_case machine tokens (genre keys like
-// absurd_comedy) into premise/title/beats. The server strips them for new
-// content; strip defensively here so old sessions never render raw keys.
-function sanitizeDisplayText(text: string): string {
-  return text
-    .replace(/[A-Za-z]+(?:_[A-Za-z0-9]+)+/g, '')
-    .replace(/（\s*[、，,；;：:\s]*）/g, '')
-    .replace(/\(\s*[、，,；;：:\s]*\)/g, '')
-    .replace(/[、，；]\s*(?=[、，；。])/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
-}
-
-/** Older server data self-numbered clue texts (「线索 1：…」); the client owns
- *  numbering via render index, so strip any embedded prefix defensively. */
-function stripCluePrefix(text: string): string {
-  return sanitizeDisplayText(text.replace(/^线索\s*\d+\s*[:：]\s*/, ''))
 }
 
 // ── One spoken instruction per screen (static client mapping — works for LLM
@@ -124,28 +107,6 @@ function ProgressStepper({ labels, currentStep }: { labels: string[]; currentSte
           </View>
         )
       })}
-    </View>
-  )
-}
-
-/** V2 P3: shared 本桌名侦探 honor-card markup — ceremony stage D and the
- *  steady-state truth view render the same cards (the staggered pop-in lives
- *  in CSS; the reduced-motion media query flattens it). `privateLine` is the
- *  viewer's own result — it stays on their device only. */
-function HonorCardList({ honorNames, privateLine }: { honorNames: string[]; privateLine: string | null }) {
-  return (
-    <View className='miniscript-hero__honor-cards'>
-      {honorNames.length > 0 ? (
-        honorNames.map((name, index) => (
-          <View key={`${name}-${index}`} className='miniscript-hero__honor-card'>
-            <JoyJoinIcon emoji='🔍' size={32} />
-            <Text className='miniscript-hero__honor-name'>{name}</Text>
-          </View>
-        ))
-      ) : (
-        <Text className='miniscript-hero__honor-empty'>今晚的真相藏得真好，没有人两步全中</Text>
-      )}
-      {privateLine ? <Text className='miniscript-hero__honor-private'>{privateLine}</Text> : null}
     </View>
   )
 }
@@ -715,74 +676,22 @@ export function MiniScriptHeroView({
   // ── Sub-phase content blocks ──
 
   const previewContent = useMemo(
-    () =>
-      framework ? (
-        <>
-          <Text className='miniscript-hero__preview-premise'>{premiseText}</Text>
-          <View className='miniscript-hero__preview-meta'>
-            <Text className='miniscript-hero__preview-meta-item'>{characters.length} 角色</Text>
-            <Text className='miniscript-hero__preview-meta-item'>{totalActs} 幕</Text>
-            <Text className='miniscript-hero__preview-meta-item'>约 {playMinutes} 分钟</Text>
-          </View>
-          <View className='miniscript-hero__chips'>
-            {characters.map((role) => (
-              <Text key={role.slotIndex} className='miniscript-hero__chip'>{role.roleLabel}</Text>
-            ))}
-          </View>
-          <View className='miniscript-hero__flow'>
-            {stepLabels.map((label, idx) => (
-              <Fragment key={label}>
-                {idx > 0 ? <Text className='miniscript-hero__flow-arrow'>→</Text> : null}
-                <Text className='miniscript-hero__flow-step'>{label}</Text>
-              </Fragment>
-            ))}
-          </View>
-          <View className='miniscript-hero__section'>
-            <View
-              className='miniscript-hero__section-header'
-              onClick={() => setShowFullScript((v) => !v)}
-              role='button'
-              aria-expanded={showFullScript}
-              aria-label='查看完整剧本'
-            >
-              <Text className='miniscript-hero__section-title'>查看完整剧本</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showFullScript ? '▼' : '▶'}</Text>
-            </View>
-            {showFullScript ? (
-              <>
-                <Text className='miniscript-hero__beat'>{premiseText}</Text>
-                {framework.act_flow.map((act) => (
-                  <View key={act.actNumber} className='miniscript-hero__script-act'>
-                    <Text className='miniscript-hero__script-act-title'>
-                      第 {act.actNumber} 幕 · {sanitizeDisplayText(act.title)}
-                    </Text>
-                    {act.beats.map((beat, index) => (
-                      <Text key={index} className='miniscript-hero__beat'>· {sanitizeDisplayText(beat)}</Text>
-                    ))}
-                  </View>
-                ))}
-                <Text className='miniscript-hero__beat'>结局：{sanitizeDisplayText(framework.ending.resolutionSummary)}</Text>
-              </>
-            ) : null}
-          </View>
-        </>
-      ) : null,
+    () => (
+      <MiniScriptPreviewView
+        framework={framework}
+        premiseText={premiseText}
+        characters={characters}
+        totalActs={totalActs}
+        playMinutes={playMinutes}
+        stepLabels={stepLabels}
+        showFullScript={showFullScript}
+        setShowFullScript={setShowFullScript}
+      />
+    ),
     [framework, premiseText, characters, totalActs, playMinutes, stepLabels, showFullScript],
   )
 
-  const waitingContent = useMemo(
-    () => (
-      <View className='miniscript-hero__waiting'>
-        <Image
-          className='miniscript-hero__waiting-mascot'
-          src={getXiaoyueExpressionAsset('matchWaiting')}
-          mode='aspectFit'
-        />
-        <Text className='miniscript-hero__waiting-text'>剧本已就位，等主持人发牌就能开场</Text>
-      </View>
-    ),
-    [],
-  )
+  const waitingContent = useMemo(() => <MiniScriptWaitingView />, [])
 
   const roleNeedsScroll = Boolean(
     myRole && [myRole.sinHook, myRole.alibi, myRole.secretAgenda].join('').length > 64,
@@ -790,68 +699,15 @@ export function MiniScriptHeroView({
 
   const roleContent = useMemo(
     () => (
-      <>
-        <View className='miniscript-hero__role-flip'>
-          <CardFlip
-            flipped={roleFlipped}
-            onFlip={() => {
-              if (!roleFlipped) setRoleFlipped(true)
-            }}
-            front={
-              <View className='miniscript-hero__role-front'>
-                <JoyJoinIcon emoji='🎭' size={64} />
-                <Text className='miniscript-hero__role-front-label'>你的角色是？</Text>
-                <Text className='miniscript-hero__role-front-hint'>轻触卡片揭晓</Text>
-              </View>
-            }
-            back={
-              <View className='miniscript-hero__role-back'>
-                {myRole ? (
-                  <>
-                    <Text className='miniscript-hero__role-back-title'>{myRole.roleLabel}</Text>
-                    <ScrollView
-                      className='miniscript-hero__role-back-scroll'
-                      scrollY
-                      enhanced
-                      showScrollbar={false}
-                      aria-label='角色详情，可上下滑动'
-                    >
-                      <Text className='miniscript-hero__role-back-line'>{myRole.sinHook}</Text>
-                      <Text className='miniscript-hero__role-back-line'>表面：{myRole.alibi}</Text>
-                      {myRole.secretAgenda ? (
-                        <>
-                          <Text className='miniscript-hero__role-back-label'>你的秘密 · 先别告诉别人</Text>
-                          <Text className='miniscript-hero__role-back-line miniscript-hero__role-back-line--secret'>
-                            {myRole.secretAgenda}
-                          </Text>
-                        </>
-                      ) : null}
-                    </ScrollView>
-                    {roleNeedsScroll ? (
-                      <Text className='miniscript-hero__role-back-scroll-hint'>向上滑动查看更多</Text>
-                    ) : null}
-                  </>
-                ) : (
-                  <Text className='miniscript-hero__role-back-line'>你尚未被分配角色。</Text>
-                )}
-              </View>
-            }
-          />
-        </View>
-        <View className='miniscript-hero__section'>
-          <View
-            className='miniscript-hero__section-header'
-            onClick={() => setShowPremise((v) => !v)}
-            role='button'
-            aria-expanded={showPremise}
-            aria-label='故事背景'
-          >
-            <Text className='miniscript-hero__section-title'>故事背景</Text>
-            <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showPremise ? '▼' : '▶'}</Text>
-          </View>
-          {showPremise ? <Text className='miniscript-hero__beat'>{premiseText}</Text> : null}
-        </View>
-      </>
+      <MiniScriptRoleView
+        roleFlipped={roleFlipped}
+        setRoleFlipped={setRoleFlipped}
+        myRole={myRole}
+        premiseText={premiseText}
+        roleNeedsScroll={roleNeedsScroll}
+        showPremise={showPremise}
+        setShowPremise={setShowPremise}
+      />
     ),
     [roleFlipped, myRole, premiseText, roleNeedsScroll, showPremise],
   )
@@ -882,123 +738,33 @@ export function MiniScriptHeroView({
 
   const actContent = useMemo(
     () => (
-      <>
-        {showClueDrawer && framework ? (
-          <MiniScriptClueDrawer
-            framework={framework}
-            revealedClues={revealedClues}
-            currentAct={currentAct}
-          />
-        ) : null}
-
-        {newClues.length > 0 ? (
-          <View className='miniscript-hero__section miniscript-hero__section--new-clues'>
-            <Text className='miniscript-hero__section-title'>本幕新线索</Text>
-            {newClues.map((clue) => (
-              <View key={clue.clueId} className='miniscript-hero__clue-focus'>
-                <Text className='miniscript-hero__clue-focus-text'>{stripCluePrefix(clue.text)}</Text>
-                <Text className='miniscript-hero__clue-new'>新线索</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {showEvidenceHint ? (
-          <View className='miniscript-hero__hint' role='note'>
-            <Image
-              className='miniscript-hero__hint-mascot'
-              src={getXiaoyueExpressionAsset('coachGuide')}
-              mode='aspectFit'
-            />
-            <Text className='miniscript-hero__hint-text'>把证物出示给想试探的人，听听 TA 怎么说</Text>
-            <View
-              className='miniscript-hero__hint-dismiss'
-              role='button'
-              aria-label='知道了'
-              onClick={dismissEvidenceHint}
-            >
-              <Text className='miniscript-hero__hint-dismiss-text'>知道了</Text>
-            </View>
-          </View>
-        ) : null}
-
-        {showEvidenceTray && framework ? (
-          <MiniScriptEvidenceTray
-            framework={framework}
-            currentAct={currentAct}
-            characters={characters}
-            presentedEvidence={session.miniScriptPresentedEvidence ?? EMPTY_PRESENTED_EVIDENCE}
-            currentUserId={currentUserId}
-            isPresenting={isPresentingEvidence}
-            presentingClosed={session.miniScriptVoteOpenedAt !== undefined}
-            onPresent={onPresentEvidence!}
-            onConfirmRead={onConfirmRead}
-          />
-        ) : null}
-
-        {myRole ? (
-          <View className='miniscript-hero__section'>
-            <View
-              className='miniscript-hero__section-header'
-              onClick={() => setRoleExpanded((v) => !v)}
-              role='button'
-              aria-expanded={roleExpanded}
-              aria-label='我的角色详情'
-            >
-              <Text className='miniscript-hero__section-title'>我的角色 · {myRole.roleLabel}</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{roleExpanded ? '▼' : '▶'}</Text>
-            </View>
-            {roleExpanded ? (
-              <>
-                <Text className='miniscript-hero__beat'>表面：{myRole.alibi}</Text>
-                {myRole.secretAgenda ? (
-                  <Text className='miniscript-hero__secret'>你的秘密：{myRole.secretAgenda}</Text>
-                ) : null}
-              </>
-            ) : null}
-          </View>
-        ) : null}
-
-        {isHost && currentActData ? (
-          <View className='miniscript-hero__section'>
-            <View
-              className='miniscript-hero__section-header'
-              onClick={() => setShowBeats((v) => !v)}
-              role='button'
-              aria-expanded={showBeats}
-              aria-label='主持人提词'
-            >
-              <Text className='miniscript-hero__section-title'>主持人提词</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showBeats ? '▼' : '▶'}</Text>
-            </View>
-            {showBeats
-              ? currentActData.beats.map((beat, index) => (
-                  <Text key={index} className='miniscript-hero__beat'>· {sanitizeDisplayText(beat)}</Text>
-                ))
-              : null}
-          </View>
-        ) : null}
-
-        {deductionHints.length > 0 ? (
-          <View className='miniscript-hero__section'>
-            <View
-              className='miniscript-hero__section-header'
-              onClick={() => setShowDeductionHints(!showDeductionHints)}
-              role='button'
-              aria-expanded={showDeductionHints}
-              aria-label='推理提示'
-            >
-              <Text className='miniscript-hero__section-title'>推理提示（{deductionHints.length}）</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showDeductionHints ? '▼' : '▶'}</Text>
-            </View>
-            {showDeductionHints && deductionHints.map((hint) => (
-              <Text key={hint.stepNumber} className='miniscript-hero__beat'>
-                步骤 {hint.stepNumber}：{hint.conclusion}
-              </Text>
-            ))}
-          </View>
-        ) : null}
-      </>
+      <MiniScriptActView
+        framework={framework}
+        revealedClues={revealedClues}
+        currentAct={currentAct}
+        showClueDrawer={showClueDrawer}
+        newClues={newClues}
+        showEvidenceHint={showEvidenceHint}
+        dismissEvidenceHint={dismissEvidenceHint}
+        showEvidenceTray={showEvidenceTray}
+        characters={characters}
+        presentedEvidence={session.miniScriptPresentedEvidence ?? EMPTY_PRESENTED_EVIDENCE}
+        currentUserId={currentUserId}
+        isPresentingEvidence={isPresentingEvidence}
+        presentingClosed={session.miniScriptVoteOpenedAt !== undefined}
+        onPresentEvidence={onPresentEvidence}
+        onConfirmRead={onConfirmRead}
+        myRole={myRole}
+        roleExpanded={roleExpanded}
+        setRoleExpanded={setRoleExpanded}
+        isHost={isHost}
+        currentActData={currentActData}
+        showBeats={showBeats}
+        setShowBeats={setShowBeats}
+        deductionHints={deductionHints}
+        showDeductionHints={showDeductionHints}
+        setShowDeductionHints={setShowDeductionHints}
+      />
     ),
     [
       newClues,
@@ -1045,136 +811,28 @@ export function MiniScriptHeroView({
 
   const voteContent = useMemo(
     () => (
-      <>
-        {myVote && !voteEditing ? (
-          <View className='miniscript-hero__vote-status'>
-            <Text className='miniscript-hero__vote-status-text'>
-              已投给 {myVotedLabel || '一位角色'}
-              {waitingForMotiveOpen ? ' · 等待主持人开启动机投票' : waitingOnCount > 0 ? ` · 还在等 ${waitingOnCount} 位` : ''}
-            </Text>
-            <View
-              className='miniscript-hero__vote-change'
-              role='button'
-              aria-label='改票'
-              onClick={() => {
-                haptics('light')
-                setVoteEditing(true)
-              }}
-            >
-              <Text>改票</Text>
-            </View>
-          </View>
-        ) : (
-          <>
-            <View className='miniscript-hero__section'>
-              <Text className='miniscript-hero__section-title'>你怀疑谁？</Text>
-              <View className='miniscript-hero__vote-chips'>
-                {characters.map((role) => {
-                  const slot = role.slotIndex + 1
-                  const selected = suspectSlot === slot
-                  return (
-                    <View
-                      key={role.slotIndex}
-                      className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
-                      role='button'
-                      aria-label={`${role.roleLabel}${selected ? '，已选择' : '，未选择'}`}
-                      aria-pressed={selected}
-                      onClick={() => {
-                        haptics('light')
-                        setSuspectSlot(slot)
-                      }}
-                    >
-                      <Text>{role.roleLabel}</Text>
-                    </View>
-                  )
-                })}
-              </View>
-            </View>
-
-            {voteOptions ? (
-              <>
-                <View className='miniscript-hero__section'>
-                  <Text className='miniscript-hero__section-title'>具体做了什么？</Text>
-                  <View className='miniscript-hero__vote-chips'>
-                    {voteOptions.what.map((option) => {
-                      const selected = voteWhat === option
-                      return (
-                        <View
-                          key={option}
-                          className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
-                          role='button'
-                          aria-pressed={selected}
-                          aria-label={option}
-                          onClick={() => {
-                            haptics('light')
-                            setVoteWhat(selected ? '' : option)
-                          }}
-                        >
-                          <Text>{option}</Text>
-                        </View>
-                      )
-                    })}
-                  </View>
-                </View>
-                <View className='miniscript-hero__section'>
-                  <Text className='miniscript-hero__section-title'>随口聊聊你的推理</Text>
-                  <View className='miniscript-hero__vote-chips'>
-                    {voteOptions.why.map((option) => {
-                      const selected = voteWhy === option
-                      return (
-                        <View
-                          key={option}
-                          className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
-                          role='button'
-                          aria-pressed={selected}
-                          aria-label={option}
-                          onClick={() => {
-                            haptics('light')
-                            setVoteWhy(selected ? '' : option)
-                          }}
-                        >
-                          <Text>{option}</Text>
-                        </View>
-                      )
-                    })}
-                  </View>
-                </View>
-              </>
-            ) : (
-              <View className='miniscript-hero__section'>
-                <Text className='miniscript-hero__section-title'>还有想说的吗？</Text>
-                <Input
-                  className='miniscript-hero__vote-input'
-                  value={voteReason}
-                  onInput={(e) => setVoteReason(e.detail.value)}
-                  placeholder='说说你的推理（可跳过）'
-                  maxlength={200}
-                />
-              </View>
-            )}
-
-            <Button
-              variant='primary'
-              onClick={handleSubmitVote}
-              disabled={isVoting || suspectSlot === null}
-              loading={isVoting}
-            >
-              {isVoting ? '提交中…' : '提交投票'}
-            </Button>
-          </>
-        )}
-        <View
-          className='miniscript-hero__link'
-          role='button'
-          aria-label={`返回第 ${totalActs} 幕`}
-          onClick={() => {
-            haptics('light')
-            setFinalActSubView('act')
-          }}
-        >
-          <Text>‹ 返回第 {totalActs} 幕</Text>
-        </View>
-      </>
+      <MiniScriptVoteView
+        myVote={myVote}
+        voteEditing={voteEditing}
+        setVoteEditing={setVoteEditing}
+        myVotedLabel={myVotedLabel}
+        waitingForMotiveOpen={waitingForMotiveOpen}
+        waitingOnCount={waitingOnCount}
+        characters={characters}
+        suspectSlot={suspectSlot}
+        setSuspectSlot={setSuspectSlot}
+        voteOptions={voteOptions}
+        voteWhat={voteWhat}
+        setVoteWhat={setVoteWhat}
+        voteWhy={voteWhy}
+        setVoteWhy={setVoteWhy}
+        voteReason={voteReason}
+        setVoteReason={setVoteReason}
+        isVoting={isVoting}
+        totalActs={totalActs}
+        handleSubmitVote={handleSubmitVote}
+        setFinalActSubView={setFinalActSubView}
+      />
     ),
     [
       myVote,
@@ -1204,80 +862,20 @@ export function MiniScriptHeroView({
 
   const motiveVoteContent = useMemo(
     () => (
-      <>
-        {showMotiveHint ? (
-          <View className='miniscript-hero__hint' role='note'>
-            <Image
-              className='miniscript-hero__hint-mascot'
-              src={getXiaoyueExpressionAsset('coachGuide')}
-              mode='aspectFit'
-            />
-            <Text className='miniscript-hero__hint-text'>还没完——再猜猜 TA 为什么这么做</Text>
-            <View
-              className='miniscript-hero__hint-dismiss'
-              role='button'
-              aria-label='知道了'
-              onClick={dismissMotiveHint}
-            >
-              <Text className='miniscript-hero__hint-dismiss-text'>知道了</Text>
-            </View>
-          </View>
-        ) : null}
-
-        {myMotiveVote && !motiveEditing ? (
-          <View className='miniscript-hero__vote-status'>
-            <Text className='miniscript-hero__vote-status-text'>
-              动机已投给「{myMotiveLabel || '一个选项'}」{motiveWaitingCount > 0 ? ` · 还在等 ${motiveWaitingCount} 位` : ''}
-            </Text>
-            <View
-              className='miniscript-hero__vote-change'
-              role='button'
-              aria-label='改票'
-              onClick={() => {
-                haptics('light')
-                setMotiveEditing(true)
-              }}
-            >
-              <Text>改票</Text>
-            </View>
-          </View>
-        ) : (
-          <>
-            <View className='miniscript-hero__section'>
-              <Text className='miniscript-hero__section-title'>TA 为什么这么做？</Text>
-              <View className='miniscript-hero__vote-chips'>
-                {(motiveOptions ?? EMPTY_MOTIVE_OPTIONS).map((option, index) => {
-                  const selected = motiveChoice === index
-                  return (
-                    <View
-                      key={option}
-                      className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
-                      role='button'
-                      aria-label={`${option}${selected ? '，已选择' : '，未选择'}`}
-                      aria-pressed={selected}
-                      onClick={() => {
-                        haptics('light')
-                        setMotiveChoice(index)
-                      }}
-                    >
-                      <Text>{option}</Text>
-                    </View>
-                  )
-                })}
-              </View>
-            </View>
-
-            <Button
-              variant='primary'
-              onClick={handleSubmitMotiveVote}
-              disabled={isVoting || motiveChoice === null}
-              loading={isVoting}
-            >
-              {isVoting ? '提交中…' : '提交动机'}
-            </Button>
-          </>
-        )}
-      </>
+      <MiniScriptMotiveVoteView
+        showMotiveHint={showMotiveHint}
+        dismissMotiveHint={dismissMotiveHint}
+        myMotiveVote={myMotiveVote}
+        motiveEditing={motiveEditing}
+        setMotiveEditing={setMotiveEditing}
+        myMotiveLabel={myMotiveLabel}
+        motiveWaitingCount={motiveWaitingCount}
+        motiveOptions={motiveOptions}
+        motiveChoice={motiveChoice}
+        setMotiveChoice={setMotiveChoice}
+        isVoting={isVoting}
+        handleSubmitMotiveVote={handleSubmitMotiveVote}
+      />
     ),
     [
       showMotiveHint,
@@ -1400,96 +998,25 @@ export function MiniScriptHeroView({
   }, [ceremonyStage, ceremonyStageRevealed])
 
   const truthContent = useMemo(
-    () =>
-      framework ? (
-        <>
-          <View className='miniscript-hero__section miniscript-hero__section--truth'>
-            {revealedSolution ? (
-              <>
-                <Text className='miniscript-hero__truth-label'>真相人物</Text>
-                <Text className='miniscript-hero__truth-who'>{culpritCharacter?.roleLabel ?? revealedSolution.who}</Text>
-                <Text className='miniscript-hero__truth-label'>发生了什么</Text>
-                <Text className='miniscript-hero__beat'>{revealedSolution.what}</Text>
-                <Text className='miniscript-hero__truth-label'>背后原因</Text>
-                <Text className='miniscript-hero__beat'>{revealedSolution.why}</Text>
-                {guessedCount !== undefined ? (
-                  <Text className='miniscript-hero__truth-guessed'>{guessedCount} 人猜中了！</Text>
-                ) : null}
-                {showTwoStepResults ? (
-                  <View className='miniscript-hero__honor'>
-                    <Text className='miniscript-hero__honor-title'>本桌名侦探</Text>
-                    <HonorCardList honorNames={honorNames} privateLine={honorPrivateLine} />
-                  </View>
-                ) : null}
-              </>
-            ) : (
-              <Text className='miniscript-hero__beat'>真相正在同步，请稍候。</Text>
-            )}
-          </View>
-
-          <View className='miniscript-hero__section'>
-            <Text className='miniscript-hero__section-title'>认领小秘密</Text>
-            <Text className='miniscript-hero__confession'>{sanitizeDisplayText(framework.ending.confessionMechanic)}</Text>
-            {characters.map((role) => {
-              const isMine = myRole?.slotIndex === role.slotIndex
-              if (isMine && myRole?.secretAgenda) {
-                return (
-                  <View key={role.slotIndex} className='miniscript-hero__confess-card'>
-                    <CardFlip
-                      flipped={confessFlipped}
-                      onFlip={() => setConfessFlipped((f) => !f)}
-                      front={
-                        <View className='miniscript-hero__confess-front'>
-                          <Text className='miniscript-hero__confess-role'>{role.roleLabel}</Text>
-                          <Text className='miniscript-hero__confess-hint'>你的秘密 · 轻触亮相</Text>
-                        </View>
-                      }
-                      back={
-                        <View className='miniscript-hero__confess-back'>
-                          <Text className='miniscript-hero__confess-role'>{role.roleLabel}</Text>
-                          <Text className='miniscript-hero__confess-secret'>你的秘密：{myRole.secretAgenda}</Text>
-                        </View>
-                      }
-                    />
-                  </View>
-                )
-              }
-              return (
-                <View key={role.slotIndex} className='miniscript-hero__confess-card'>
-                  <Text className='miniscript-hero__confess-role'>{role.roleLabel}</Text>
-                  <Text className='miniscript-hero__confess-hint'>
-                    {isHost ? '请 TA 大声说出自己的秘密' : '等 TA 亲口说出秘密'}
-                  </Text>
-                </View>
-              )
-            })}
-          </View>
-
-          {tallyRows.length > 0 ? (
-            <View className='miniscript-hero__section'>
-              <Text className='miniscript-hero__section-title'>投票结果</Text>
-              {tallyRows.map((row) => (
-                <View key={row.key} className='miniscript-hero__vote-row'>
-                  <Text className='miniscript-hero__beat'>{row.label}</Text>
-                  <Text className='miniscript-hero__vote-count'>{row.count} 票</Text>
-                </View>
-              ))}
-              <Text className='miniscript-hero__vote-total'>共 {voteProgress.votedCount} 人参与投票</Text>
-            </View>
-          ) : null}
-
-          <View className='miniscript-hero__still'>
-            <Text className='miniscript-hero__still-label'>今晚剧照</Text>
-            <Text className='miniscript-hero__still-title'>{scriptTitle}</Text>
-            <View className='miniscript-hero__still-roles'>
-              {characters.map((role) => (
-                <Text key={role.slotIndex} className='miniscript-hero__still-role'>{role.roleLabel}</Text>
-              ))}
-            </View>
-            <Text className='miniscript-hero__still-outcome'>{sanitizeDisplayText(framework.ending.resolutionSummary)}</Text>
-          </View>
-        </>
-      ) : null,
+    () => (
+      <MiniScriptTruthView
+        framework={framework}
+        revealedSolution={revealedSolution}
+        culpritCharacter={culpritCharacter}
+        guessedCount={guessedCount}
+        showTwoStepResults={showTwoStepResults}
+        honorNames={honorNames}
+        honorPrivateLine={honorPrivateLine}
+        characters={characters}
+        myRole={myRole}
+        confessFlipped={confessFlipped}
+        setConfessFlipped={setConfessFlipped}
+        tallyRows={tallyRows}
+        votedCount={voteProgress.votedCount}
+        scriptTitle={scriptTitle}
+        isHost={isHost}
+      />
+    ),
     [
       framework,
       revealedSolution,
@@ -1514,115 +1041,41 @@ export function MiniScriptHeroView({
   // miniScriptCeremonyBeat advances — the host gets a 下一段 CTA, everyone
   // else a waiting hint, and tap-through is disabled while held. Once the
   // ceremony completes, the steady-state truthContent above renders in full.
-  const ceremonyContent = useMemo(() => {
-    const stage = ceremony.stage
-    if (!stage || !revealedSolution) return null
-    const revealed = ceremony.stageRevealed
-    return (
-      <View
-        className='miniscript-hero__ceremony'
-        role={revealed ? 'button' : undefined}
-        aria-label={revealed ? TRUTH_CEREMONY_CONTINUE_HINT : undefined}
-        onClick={
-          revealed
-            ? () => {
-                haptics('light')
-                ceremony.advance()
-              }
-            : undefined
-        }
-      >
-        <View className='miniscript-hero__ceremony-dots' aria-hidden='true'>
-          {ceremonyPlan.stages.map((dotStage, dotIndex) => (
-            <View
-              key={dotStage}
-              className={`miniscript-hero__ceremony-dot${dotIndex === ceremony.stageIndex ? ' miniscript-hero__ceremony-dot--active' : ''}${dotIndex < ceremony.stageIndex ? ' miniscript-hero__ceremony-dot--past' : ''}`}
-            />
-          ))}
-        </View>
-        <View key={stage} className='miniscript-hero__ceremony-stage'>
-          <Text className='miniscript-hero__ceremony-title'>{TRUTH_CEREMONY_STAGE_TITLE[stage]}</Text>
-          {revealed && stage === 'tally' ? (
-            <View className='miniscript-hero__ceremony-panel'>
-              {tallyRows.map((row) => (
-                <View key={row.key} className='miniscript-hero__vote-row'>
-                  <Text className='miniscript-hero__beat'>{row.label}</Text>
-                  <Text className='miniscript-hero__vote-count'>{row.count} 票</Text>
-                </View>
-              ))}
-              <Text className='miniscript-hero__vote-total'>共 {voteProgress.votedCount} 人参与投票</Text>
-            </View>
-          ) : null}
-          {revealed && stage === 'culprit' ? (
-            <View className='miniscript-hero__culprit-card'>
-              <Text className='miniscript-hero__culprit-label'>真相人物</Text>
-              <Text className='miniscript-hero__culprit-name'>{culpritCharacter?.roleLabel ?? revealedSolution.who}</Text>
-              <Text className='miniscript-hero__culprit-what'>{revealedSolution.what}</Text>
-              {guessedCount !== undefined ? (
-                <Text className='miniscript-hero__truth-guessed'>{guessedCount} 人猜中了！</Text>
-              ) : null}
-            </View>
-          ) : null}
-          {revealed && stage === 'motive' ? (
-            <View className='miniscript-hero__motive-card'>
-              <Text className='miniscript-hero__motive-label'>真动机</Text>
-              <Text className='miniscript-hero__motive-text'>{revealedSolution.why}</Text>
-            </View>
-          ) : null}
-          {revealed && stage === 'honor' ? (
-            <HonorCardList honorNames={honorNames} privateLine={honorPrivateLine} />
-          ) : null}
-        </View>
-        {/* N8: the hold block is a SIBLING of the tap-to-continue stage, not
-            nested inside it — on held beats the container carries no button
-            role, so the host 下一段 CTA is the only button on the beat. */}
-        {!revealed ? (
-          <View className='miniscript-hero__ceremony-hold'>
-            {isHost && onAdvanceCeremony ? (
-              <View
-                className='miniscript-hero__ceremony-next'
-                role='button'
-                aria-label={TRUTH_CEREMONY_HOST_NEXT_CTA}
-                aria-disabled={isAdvancingCeremony}
-                onClick={() => {
-                  if (isAdvancingCeremony) return
-                  haptics('medium')
-                  onAdvanceCeremony()
-                }}
-              >
-                <Text className='miniscript-hero__ceremony-next-text'>
-                  {isAdvancingCeremony ? '揭晓中…' : TRUTH_CEREMONY_HOST_NEXT_CTA}
-                </Text>
-              </View>
-            ) : (
-              <View role='status' aria-live='polite'>
-                <Text className='miniscript-hero__ceremony-waiting'>{TRUTH_CEREMONY_WAITING_HOST_HINT}</Text>
-              </View>
-            )}
-          </View>
-        ) : null}
-        {revealed ? (
-          <Text className='miniscript-hero__ceremony-hint'>{TRUTH_CEREMONY_CONTINUE_HINT}</Text>
-        ) : null}
-      </View>
-    )
-  }, [
-    ceremony.stage,
-    ceremony.stageIndex,
-    ceremony.stageRevealed,
-    ceremony.advance,
-    ceremonyPlan.stages,
-    revealedSolution,
-    isHost,
-    onAdvanceCeremony,
-    isAdvancingCeremony,
-    tallyRows,
-    voteProgress.votedCount,
-    culpritCharacter,
-    guessedCount,
-    honorNames,
-    honorPrivateLine,
-  ])
+  const ceremonyContent = useMemo(
+    () => (
+      <MiniScriptCeremonyView
+        ceremony={ceremony}
+        ceremonyStages={ceremonyPlan.stages}
+        revealedSolution={revealedSolution}
+        tallyRows={tallyRows}
+        votedCount={voteProgress.votedCount}
+        culpritCharacter={culpritCharacter}
+        guessedCount={guessedCount}
+        honorNames={honorNames}
+        honorPrivateLine={honorPrivateLine}
+        isHost={isHost}
+        onAdvanceCeremony={onAdvanceCeremony}
+        isAdvancingCeremony={isAdvancingCeremony}
+      />
+    ),
+    [
+      ceremony.stage,
+      ceremony.stageIndex,
+      ceremony.stageRevealed,
+      ceremony.advance,
+      ceremonyPlan.stages,
+      revealedSolution,
+      isHost,
+      onAdvanceCeremony,
+      isAdvancingCeremony,
+      tallyRows,
+      voteProgress.votedCount,
+      culpritCharacter,
+      guessedCount,
+      honorNames,
+      honorPrivateLine,
+    ],
+  )
 
   // ── Stable shell: ONE outer card across all sub-phases (H). Only the keyed
   // inner content swaps — the card (and its entrance animation) mounts once,
