@@ -13,8 +13,24 @@
 
 import type { ArchetypeName } from "./archetypeConfig";
 export { ArchetypeName };
-import { compatibilityMatrix as chemistryMatrix, getChemistryScore } from '@shared/personality/archetypeCompatibility';
-export { chemistryMatrix, getChemistryScore };
+import {
+  compatibilityMatrix as chemistryMatrix,
+  getChemistryScore,
+  getChemistryScoreForMode,
+  getDerivedArchetypeChemistry,
+  deriveChemistry,
+  DERIVED_CHEMISTRY_MATRIX,
+} from '@shared/personality/archetypeCompatibility';
+export {
+  chemistryMatrix,
+  getChemistryScore,
+  // Plan Item 10: derived chemistry re-exported so this runtime copy stays in
+  // sync with the canonical module (personality skill rule).
+  getChemistryScoreForMode,
+  getDerivedArchetypeChemistry,
+  deriveChemistry,
+  DERIVED_CHEMISTRY_MATRIX,
+};
 
 // 社交能量值映射 (0-100)
 export const ARCHETYPE_ENERGY: Record<ArchetypeName, number> = {

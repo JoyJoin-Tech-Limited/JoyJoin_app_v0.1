@@ -158,6 +158,24 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  hand-authored matrix until shadow evidence + operator sign-off.
    *  Env fallback: MATCH_CHEMISTRY_CALIBRATION_ENABLED (default: false). */
   matchChemistryCalibrationEnabled: "MATCH_CHEMISTRY_CALIBRATION_ENABLED",
+  /** V4 engine upgrade / Item 5: literature-prior group-composition gates
+   *  (min-E floor, mean-A floor, exactly-one-spark with bidirectional pool
+   *  exemption, X-variance hard cap) at the match commit gate + H4
+   *  redistribution re-evaluation, with admission-time steering. Ships dark;
+   *  M9/M10 locked against the 2026-09-10 Monte Carlo baseline.
+   *  Env fallback: COMPOSITION_GATES_ENABLED (default: false). */
+  compositionGatesEnabled: "COMPOSITION_GATES_ENABLED",
+  /** V4 engine upgrade / Item 10: mechanically derived archetype chemistry
+   *  (similarity on A/E/C + complementarity on X/P) replaces the hand-authored
+   *  matrix as mechanical authority. Ships dark — the ρ ≥ 0.7 validation gate
+   *  FAILED (best-in-family ρ ≈ 0.69; see
+   *  docs/reports/2026-09-10-derived-chemistry-validation.md), so the authored
+   *  matrix remains authoritative until the curated layer is reconciled.
+   *  When on, a chemistry pair score change can shift group formation (chemistry
+   *  is 28% of the pair score) — quantified by the `simulate:groups`
+   *  derived-chemistry comparison arm (AC-10.5).
+   *  Env fallback: DERIVED_CHEMISTRY_ENABLED (default: false). */
+  derivedChemistryEnabled: "DERIVED_CHEMISTRY_ENABLED",
   /** Alang/Flash digital-NPC kill-switch. When false, hides the legacy Alang
    * prototype and all formal Flash routes. Env fallback: ALANG_ENABLED
    * (default: false). */
@@ -307,6 +325,13 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   /** Chemistry calibration read path is Phase-3 scope — Phase 0 only
    *  accumulates stats. Explicitly off; see FLAG_ENV_MAP note. */
   matchChemistryCalibrationEnabled: false,
+  /** Item 5 composition gates ship dark until the Monte Carlo gate-on arm
+   *  validates M9/M10; see FLAG_ENV_MAP note. */
+  compositionGatesEnabled: false,
+  /** Item 10 derived chemistry ships dark — the ρ ≥ 0.7 validation gate FAILED
+   *  (≈0.69 ceiling); see FLAG_ENV_MAP note. Explicit false so the admin toggle
+   *  UI and listFeatureFlags() show a stable default. */
+  derivedChemistryEnabled: false,
   /** 惊艳开局包 P1/P2 — both default off until test-pool dual-run
    *  validation; see FLAG_ENV_MAP notes and docs/systems/MAGNETISM_ENGINE.md. */
   magnetismGroupRulesEnabled: false,

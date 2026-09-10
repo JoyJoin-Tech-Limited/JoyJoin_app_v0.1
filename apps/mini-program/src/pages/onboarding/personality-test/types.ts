@@ -2,7 +2,7 @@ import type { AnonymousAssessmentResult } from '../../../lib/auth/anonymousOnboa
 
 export type Phase = 'intro' | 'testing' | 'completing'
 
-export type AssessmentQuestionType = 'choice' | 'slider' | 'emoji_tap'
+export type AssessmentQuestionType = 'choice' | 'slider' | 'emoji_tap' | 'ipsative'
 
 export interface AssessmentOption {
   value: string

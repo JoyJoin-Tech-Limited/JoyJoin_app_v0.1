@@ -1,6 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { compatibilityMatrix } from "@shared/personality/archetypeCompatibility";
-import { chemistryMatrix } from "../archetypeChemistry";
+import {
+  compatibilityMatrix,
+  getChemistryScore as canonicalGetChemistryScore,
+  getChemistryScoreForMode as canonicalGetChemistryScoreForMode,
+  getDerivedArchetypeChemistry as canonicalGetDerivedArchetypeChemistry,
+  deriveChemistry as canonicalDeriveChemistry,
+  DERIVED_CHEMISTRY_MATRIX as canonicalDerivedMatrix,
+} from "@shared/personality/archetypeCompatibility";
+import {
+  chemistryMatrix,
+  getChemistryScore,
+  getChemistryScoreForMode,
+  getDerivedArchetypeChemistry,
+  deriveChemistry,
+  DERIVED_CHEMISTRY_MATRIX,
+} from "../archetypeChemistry";
 
 const {
   aggregateArchetypePairFeedbackRowsMock,
@@ -118,25 +132,53 @@ describe("archetypeChemistryCalibration", () => {
     expect(Array.from(calibrationMap.values())[0]?.empiricalScore).toBe(75);
   });
 
-  it("shared compatibilityMatrix and server chemistryMatrix are identical for all 144 ordered pairs", () => {
-    const archetypes = Object.keys(compatibilityMatrix);
-    expect(archetypes.length).toBe(12);
+  it("re-exports the canonical chemistryMatrix by identity (no divergent runtime copy)", () => {
+    // The previous "144 ordered pairs" loop compared an object to itself: the
+    // server `chemistryMatrix` is a literal re-export of the canonical
+    // `compatibilityMatrix`, so the pair-by-pair comparison could never fail
+    // (tautological — Item 10 verifier finding). Assert OBJECT IDENTITY
+    // instead, which is the actual canonical/runtime sync invariant.
+    expect(chemistryMatrix).toBe(compatibilityMatrix);
+    expect(Object.keys(compatibilityMatrix)).toHaveLength(12);
+  });
+});
 
-    let mismatchCount = 0;
-    const mismatches: string[] = [];
+/**
+ * Plan Item 10 — derived chemistry canonical/runtime sync + flag-off identity.
+ * The personality skill requires the canonical (shared `archetypeCompatibility`)
+ * and runtime (this app's `archetypeChemistry`) copies to stay in sync.
+ */
+describe("derived chemistry — canonical/runtime sync (Item 10)", () => {
+  const archetypes = Object.keys(compatibilityMatrix);
+  expect(archetypes.length).toBe(12);
 
-    for (const arch1 of archetypes) {
-      for (const arch2 of archetypes) {
-        const sharedScore = compatibilityMatrix[arch1]?.[arch2];
-        const serverScore = chemistryMatrix[arch1]?.[arch2];
-        if (sharedScore !== serverScore) {
-          mismatchCount++;
-          mismatches.push(`${arch1}-${arch2}: shared=${sharedScore} server=${serverScore}`);
-        }
+  it("runtime and canonical share the same derived function identities", () => {
+    expect(getDerivedArchetypeChemistry).toBe(canonicalGetDerivedArchetypeChemistry);
+    expect(deriveChemistry).toBe(canonicalDeriveChemistry);
+    expect(getChemistryScoreForMode).toBe(canonicalGetChemistryScoreForMode);
+  });
+
+  it("re-exports the canonical derived matrix by identity (no divergent runtime copy)", () => {
+    // Same reasoning as the chemistryMatrix test above: the runtime
+    // `DERIVED_CHEMISTRY_MATRIX` is a literal re-export, so pair-by-pair
+    // comparison was tautological. Identity is the real sync contract.
+    expect(DERIVED_CHEMISTRY_MATRIX).toBe(canonicalDerivedMatrix);
+  });
+
+  it("flag-off is byte-identical to the hand-authored getChemistryScore path", () => {
+    for (const a of archetypes) {
+      for (const b of archetypes) {
+        expect(getChemistryScoreForMode(a, b, false)).toBe(getChemistryScore(a, b));
+        expect(getChemistryScoreForMode(a, b, false)).toBe(canonicalGetChemistryScore(a, b));
       }
     }
+  });
 
-    expect(mismatchCount).toBe(0);
-    expect(mismatches).toEqual([]);
+  it("flag-on returns the derived matrix", () => {
+    for (const a of archetypes) {
+      for (const b of archetypes) {
+        expect(getChemistryScoreForMode(a, b, true)).toBe(canonicalGetDerivedArchetypeChemistry(a, b));
+      }
+    }
   });
 });

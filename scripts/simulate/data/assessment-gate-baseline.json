@@ -1,0 +1,47 @@
+{
+  "note": "Assessment gate baseline (P3). Records the last-known STATUS per metric. REGRESSION = status was pass and is now fail. Regenerate with `npm run gate:assessment -- --update-baseline` only after a change is understood.",
+  "docsSyncNotes": [
+    "personality-system SKILL.md §\"Common mistakes\" (line ~64) and checklist (line ~75): the runtime/canonical chemistry \"two-copy\" sync warning is stale — apps/server/src/archetypeChemistry.ts re-exports compatibilityMatrix / derived chemistry from @shared/personality/archetypeCompatibility by reference. There is no second copy to update; canonical sync is an identity invariant, not a data-sync task. Reword or remove; the P3 sync test now asserts object identity."
+  ],
+  "metrics": {
+    "M1": {
+      "status": "pass"
+    },
+    "M2": {
+      "status": "pass"
+    },
+    "M3": {
+      "status": "known-fail",
+      "disposition": "Structural (Item 6 post-P1a audit): the 85% centroid-mixture bar predates the stratified-reachability finding — σ=10 centroid respondents have inherently unstable true labels (their true nearest centroid flips under the mixture). Item 11 improved centroid top-1 53.0%→54.3%; general-pop clean (38.5%) sits just under the 40.0% floor. Not CI-breaking until the threshold is re-locked."
+    },
+    "M6": {
+      "status": "pass"
+    },
+    "M8": {
+      "status": "known-fail",
+      "disposition": "Tier 3 centroid/gate work: hamster_praise→rooster (unregistered, redraw); dolphin_calm→rooster/spider (registered persistent confusion gates). Item 8 baseline locked RED 3/24."
+    },
+    "M9": {
+      "status": "pass"
+    },
+    "M10": {
+      "status": "pass"
+    },
+    "M11": {
+      "status": "pass"
+    },
+    "M12": {
+      "status": "known-fail",
+      "disposition": "Curated-matrix finding (Item 10): the authored matrix encodes X/P complementarity but no A/E/C similarity signal; the contract-faithful family ceiling is ≈0.69. Derived chemistry ships dark."
+    },
+    "M13": {
+      "status": "pass"
+    },
+    "M14": {
+      "status": "pass"
+    },
+    "M15": {
+      "status": "pass"
+    }
+  }
+}

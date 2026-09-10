@@ -18,8 +18,18 @@ import type {
   AssessmentMatch,
 } from './types'
 
-function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestionType {
+function getQuestionType(
+  question: AssessmentQuestion | null,
+): Exclude<AssessmentQuestionType, 'ipsative'> {
   if (!question?.questionType) {
+    return 'choice'
+  }
+  // Plan Item 1: ipsative (equal-SDI forced-choice) items render through the
+  // standard choice surface — two options, same card list, no test-length or
+  // layout change. Intentionally minimal; visual polish is a taro-engineer
+  // follow-up. The server never serves ipsative items while the
+  // enableIpsativeItems flag is off, so this branch is dark in production.
+  if (question.questionType === 'ipsative') {
     return 'choice'
   }
   return question.questionType

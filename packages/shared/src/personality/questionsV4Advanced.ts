@@ -377,7 +377,7 @@ export const questionsV4Advanced: AdaptiveQuestion[] = [
       {
         value: "B",
         text: "趁着灵感还在就直接动手，边做边调整",
-        traitScores: { A: -1, C: -2, E: 0, O: 3, X: -1, P: 0 }
+        traitScores: { A: -1, C: -2, E: 1, O: 3, X: -1, P: 0 }
       },
       {
         value: "C",
@@ -648,7 +648,7 @@ export const questionsV4Advanced: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "准时参加，主动帮忙布置或端茶倒水",
-        traitScores: { A: 2, C: 2, E: 0, O: 0, X: 0, P: 1 }
+        traitScores: { A: 2, C: 2, E: 1, O: 0, X: 0, P: 1 }
       },
       {
         value: "D",

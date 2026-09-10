@@ -234,9 +234,33 @@ jobs:
       - name: Run Harness 5-Pillar Gate
         run: npm run harness:gate
 
+  assessment-gate:
+    needs: [guardrails]
+    name: Assessment Instrument Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund --prefer-offline
+
+      # Parses the committed Item 6–12 artifacts (recovery/adversarial/groups/
+      # boundary/derived-chemistry/calibration). Exits non-zero only on a
+      # REGRESSION (a previously-passing metric now failing); known-fail metrics
+      # (M3/M8/M12 dispositions) are reported, not CI-breaking.
+      - name: Run assessment instrument gate
+        run: npm run gate:assessment
+
   ai-test:
     name: AI Simulation Test
-    needs: [lint-shared, lint-admin, lint-server, lint-mini-program, test-server, test-shared, test-admin-client, test-mini-program, harness-gate]
+    needs: [lint-shared, lint-admin, lint-server, lint-mini-program, test-server, test-shared, test-admin-client, test-mini-program, harness-gate, assessment-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

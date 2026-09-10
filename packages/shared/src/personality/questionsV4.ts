@@ -8,6 +8,7 @@
  *   - questionsV4Extended: L2 supplement + L3 precision + reverse scoring + P dimension
  *   - questionsV4Advanced: O dimension + forced choice + confusion pairs
  *   - questionsV4Attractor: Attractor + high confusion + playful questions
+ *   - questionsV4Ipsative: Plan Item 1 equal-SDI forced-choice pairs (flag-gated)
  */
 
 import { AdaptiveQuestion } from './types';
@@ -16,6 +17,7 @@ import { questionsV4L2 } from './questionsV4L2';
 import { questionsV4Extended } from './questionsV4Extended';
 import { questionsV4Advanced } from './questionsV4Advanced';
 import { questionsV4Attractor } from './questionsV4Attractor';
+import { questionsV4Ipsative } from './questionsV4Ipsative';
 
 export const questionsV4: AdaptiveQuestion[] = [
   ...questionsV4L1,
@@ -23,6 +25,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   ...questionsV4Extended,
   ...questionsV4Advanced,
   ...questionsV4Attractor,
+  ...questionsV4Ipsative,
 ];
 
 export const ANCHOR_QUESTION_IDS = questionsV4

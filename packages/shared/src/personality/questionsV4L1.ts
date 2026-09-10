@@ -114,7 +114,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "快讲完规则我们直接开一局试试！",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 1 }
+        traitScores: { A: 0, C: 0, E: 1, O: 2, X: 1, P: 1 }
       },
       {
         value: "B",
@@ -178,7 +178,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "立刻在群里@组织者，提出优化建议",
-        traitScores: { A: 0, C: 1, E: 0, O: 2, X: 1, P: 0 }
+        traitScores: { A: 0, C: 1, E: 1, O: 2, X: 1, P: 0 }
       },
       {
         value: "B",
@@ -466,7 +466,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "欢呼庆祝，享受胜利喜悦",
-        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 2, P: 3 }
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: 2, P: 3 }
       },
       {
         value: "B",

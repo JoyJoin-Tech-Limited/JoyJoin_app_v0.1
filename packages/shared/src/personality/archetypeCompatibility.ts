@@ -11,6 +11,20 @@
  */
 
 import { ArchetypeId } from './archetypeNames';
+// Derived chemistry (Plan Item 10) — mechanical authority behind the
+// `derivedChemistryEnabled` flag. `derivedChemistry.ts` intentionally does NOT
+// import this module, so there is no cycle. Import/export here keeps the
+// canonical (this file) and runtime (apps/server/src/archetypeChemistry.ts)
+// surfaces in sync, per the personality skill's rule.
+import {
+  deriveChemistry,
+  getDerivedArchetypeChemistry,
+  DERIVED_CHEMISTRY_MATRIX,
+  type TraitVector,
+} from './derivedChemistry';
+
+export { deriveChemistry, getDerivedArchetypeChemistry, DERIVED_CHEMISTRY_MATRIX };
+export type { TraitVector };
 
 export const ALL_ARCHETYPES: ArchetypeId[] = [
   'corgi',      // High energy, warm & extroverted
@@ -212,6 +226,28 @@ export function getArchetypeCompatibility(primaryArchetype: ArchetypeId, targetA
 
 export function getChemistryScore(archetype1: ArchetypeId, archetype2: ArchetypeId): number {
   return compatibilityMatrix[archetype1]?.[archetype2] ?? 50;
+}
+
+/**
+ * Chemistry accessor with an explicit authority switch (Plan Item 10).
+ *
+ * `derivedChemistryEnabled === false` (default everywhere; ships dark) returns
+ * the hand-authored `compatibilityMatrix` — byte-identical to
+ * `getChemistryScore`. When `true`, the mechanically derived matrix is the
+ * mechanical authority and the hand-authored matrix is re-scoped to narrative
+ * deltas (`ARCHETYPE_COMPATIBILITY_DESCRIPTIONS`, unchanged in tone).
+ *
+ * Callers thread the resolved `derivedChemistryEnabled` feature flag in — this
+ * function never reads env/flags itself.
+ */
+export function getChemistryScoreForMode(
+  archetype1: ArchetypeId,
+  archetype2: ArchetypeId,
+  derivedChemistryEnabled: boolean,
+): number {
+  return derivedChemistryEnabled
+    ? getDerivedArchetypeChemistry(archetype1, archetype2)
+    : getChemistryScore(archetype1, archetype2);
 }
 
 export function getTopCompatibleArchetypes(primaryArchetype: ArchetypeId, limit: number = 5) {

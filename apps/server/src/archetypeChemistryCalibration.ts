@@ -2,6 +2,7 @@ import type { ArchetypeName } from "./archetypeChemistry";
 import {
   getAllArchetypePairs,
   getChemistryScore,
+  getDerivedArchetypeChemistry,
   isArchetypeName,
   normalizeArchetypePair,
 } from "./archetypeChemistry";
@@ -273,7 +274,18 @@ export function getCalibratedChemistryScore(
   archetype1: ArchetypeName,
   archetype2: ArchetypeName,
   calibrationMap?: ChemistryCalibrationMap,
+  /**
+   * Plan Item 10: when true, the mechanically derived chemistry matrix is the
+   * mechanical authority. The empirical calibration map was fit against the
+   * hand-authored matrix, so it is intentionally NOT applied on top of derived
+   * scores. Default false keeps the authored path byte-identical.
+   */
+  derivedChemistryEnabled = false,
 ): number {
+  if (derivedChemistryEnabled) {
+    return getDerivedArchetypeChemistry(archetype1, archetype2);
+  }
+
   if (!calibrationMap) {
     return getChemistryScore(archetype1, archetype2);
   }

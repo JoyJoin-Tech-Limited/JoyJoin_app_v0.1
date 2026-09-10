@@ -1,0 +1,51 @@
+{
+  "suite": "derived-chemistry-validation",
+  "planItem": 10,
+  "generatedAt": "2026-09-10",
+  "pairsCompared": 78,
+  "spearman": 0.57,
+  "pearson": 0.6,
+  "gate": {
+    "rhoGate": 0.7,
+    "pass": false
+  },
+  "formula": {
+    "similarityTraits": [
+      "A",
+      "E",
+      "C"
+    ],
+    "complementarityTraits": [
+      "X",
+      "P"
+    ],
+    "calibration": {
+      "rawMean": 70.212963,
+      "rawSd": 13.154038,
+      "scale": 0.55,
+      "offset": 41.2,
+      "targetMean": 80.01,
+      "targetSd": 7.27
+    }
+  },
+  "weightSensitivity": [
+    {
+      "w": 0,
+      "rho": 0.69
+    },
+    {
+      "w": 0.2,
+      "rho": 0.68
+    },
+    {
+      "w": 0.5,
+      "rho": 0.57
+    },
+    {
+      "w": 1,
+      "rho": -0.08
+    }
+  ],
+  "bestSensitivity": 0.69,
+  "dispositionCount": 9
+}

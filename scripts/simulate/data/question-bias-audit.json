@@ -1,16 +1,16 @@
 {
   "summary": {
-    "totalQuestions": 140,
-    "questionsWithNetPositiveBias": 136,
-    "questionsWithNetNegativeBias": 2,
-    "questionsBalanced": 2,
+    "totalQuestions": 176,
+    "questionsWithNetPositiveBias": 141,
+    "questionsWithNetNegativeBias": 4,
+    "questionsBalanced": 31,
     "avgNetBiasPerTrait": {
-      "A": 2.036,
-      "C": 2.129,
-      "E": 2.743,
-      "O": 1.8,
-      "X": 0.35,
-      "P": 1.271
+      "A": 1.659,
+      "C": 1.716,
+      "E": 2.301,
+      "O": 1.386,
+      "X": 0.244,
+      "P": 1.063
     }
   },
   "topCandidates": [
@@ -18,11 +18,11 @@
       "id": "Q99",
       "text": "新搬到一个社区，邻居们组织了一个欢迎聚会。 — 你会？",
       "level": 3,
-      "inflationScore": 10.9375,
+      "inflationScore": 11.8462,
       "netTraitSums": {
         "A": 3,
         "C": 7,
-        "E": 3,
+        "E": 4,
         "O": 1,
         "X": -3,
         "P": 1
@@ -39,9 +39,9 @@
           "zero": 1
         },
         "E": {
-          "positive": 2,
+          "positive": 3,
           "negative": 0,
-          "zero": 2
+          "zero": 1
         },
         "O": {
           "positive": 1,
@@ -533,7 +533,7 @@
     },
     {
       "id": "Q36",
-      "text": "朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动。 — 你的第一反应是？",
+      "text": "朋友向你推荐一个ta非常喜欢、但你之前从未接触过的活动。 — 你的第一反应是？",
       "level": 2,
       "inflationScore": 9.4286,
       "netTraitSums": {
@@ -674,7 +674,7 @@
     },
     {
       "id": "Q59",
-      "text": "请评估以下陈述与你的符合程度：我通常能敏锐地察觉到社交场合中微妙的氛围变化和他人未说出口的情绪。",
+      "text": "请评估以下陈述与你的符合程度：我一般能敏锐地察觉到社交场合中微妙的氛围变化和他人未说出口的情绪。",
       "level": 3,
       "inflationScore": 8.1442,
       "netTraitSums": {
@@ -721,7 +721,7 @@
     },
     {
       "id": "Q37",
-      "text": "当朋友问你我该不该换工作/结束一段关系？这类重大人生抉择时， — 你通常如何回应？",
+      "text": "当朋友问你我该不该换工作/结束一段关系？这类重大人生抉择时， — 你一般如何回应？",
       "level": 2,
       "inflationScore": 8.1231,
       "netTraitSums": {
@@ -762,6 +762,53 @@
           "positive": 2,
           "negative": 1,
           "zero": 2
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q6",
+      "text": "去探店的路上，你发现有条更近、人更少的路可以走。 — 你会怎么做？",
+      "level": 1,
+      "inflationScore": 8.1,
+      "netTraitSums": {
+        "A": 3,
+        "C": 3,
+        "E": 4,
+        "O": 2,
+        "X": 0,
+        "P": 0
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "X": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 2
+        },
+        "P": {
+          "positive": 0,
+          "negative": 0,
+          "zero": 4
         }
       },
       "recommendedAction": "Add reversed options across 4 traits"
@@ -812,53 +859,6 @@
         }
       },
       "recommendedAction": "Rebalance A/C/E"
-    },
-    {
-      "id": "Q113",
-      "text": "聚会上气氛开始变得热烈起来。 — 你更倾向于怎么做？",
-      "level": 3,
-      "inflationScore": 8.0357,
-      "netTraitSums": {
-        "A": 6,
-        "C": 2,
-        "E": 5,
-        "O": 1,
-        "X": 1,
-        "P": 3
-      },
-      "polarityCounts": {
-        "A": {
-          "positive": 2,
-          "negative": 0,
-          "zero": 2
-        },
-        "C": {
-          "positive": 2,
-          "negative": 0,
-          "zero": 2
-        },
-        "E": {
-          "positive": 2,
-          "negative": 1,
-          "zero": 1
-        },
-        "O": {
-          "positive": 1,
-          "negative": 0,
-          "zero": 3
-        },
-        "X": {
-          "positive": 1,
-          "negative": 2,
-          "zero": 1
-        },
-        "P": {
-          "positive": 2,
-          "negative": 1,
-          "zero": 1
-        }
-      },
-      "recommendedAction": "Rebalance A/C/O"
     }
   ],
   "perTraitAnalysis": {
@@ -870,9 +870,9 @@
         "Q22_v1",
         "Q40"
       ],
-      "avgOptionScore": 0.4974,
-      "positiveOptionCount": 211,
-      "negativeOptionCount": 91
+      "avgOptionScore": 0.4214,
+      "positiveOptionCount": 222,
+      "negativeOptionCount": 100
     },
     "C": {
       "mostBiasedQuestions": [
@@ -882,9 +882,9 @@
         "Q27",
         "Q87"
       ],
-      "avgOptionScore": 0.5201,
-      "positiveOptionCount": 222,
-      "negativeOptionCount": 67
+      "avgOptionScore": 0.4358,
+      "positiveOptionCount": 236,
+      "negativeOptionCount": 77
     },
     "E": {
       "mostBiasedQuestions": [
@@ -894,9 +894,9 @@
         "Q120",
         "Q23_v1"
       ],
-      "avgOptionScore": 0.6702,
-      "positiveOptionCount": 290,
-      "negativeOptionCount": 64
+      "avgOptionScore": 0.5844,
+      "positiveOptionCount": 328,
+      "negativeOptionCount": 87
     },
     "O": {
       "mostBiasedQuestions": [
@@ -906,9 +906,9 @@
         "Q101",
         "Q94"
       ],
-      "avgOptionScore": 0.4398,
-      "positiveOptionCount": 171,
-      "negativeOptionCount": 74
+      "avgOptionScore": 0.3521,
+      "positiveOptionCount": 177,
+      "negativeOptionCount": 84
     },
     "X": {
       "mostBiasedQuestions": [
@@ -918,21 +918,21 @@
         "Q104",
         "Q85"
       ],
-      "avgOptionScore": 0.0855,
-      "positiveOptionCount": 181,
-      "negativeOptionCount": 210
+      "avgOptionScore": 0.062,
+      "positiveOptionCount": 185,
+      "negativeOptionCount": 216
     },
     "P": {
       "mostBiasedQuestions": [
         "Q97",
-        "Q109",
         "Q11",
         "Q126",
-        "Q29"
+        "Q29",
+        "Q72"
       ],
-      "avgOptionScore": 0.3106,
-      "positiveOptionCount": 174,
-      "negativeOptionCount": 110
+      "avgOptionScore": 0.2698,
+      "positiveOptionCount": 194,
+      "negativeOptionCount": 126
     }
   }
 }

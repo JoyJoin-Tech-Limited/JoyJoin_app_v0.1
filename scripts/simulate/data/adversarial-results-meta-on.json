@@ -1,0 +1,503 @@
+{
+  "suite": "adversarial-persona-suite",
+  "planItem": 7,
+  "contract": "item7-adversarial-personas",
+  "seed": 20260909,
+  "respondentsPerArm": 240,
+  "arms": [
+    "clean-control",
+    "straight-liner",
+    "acquiescence-biased",
+    "midpoint-hugger",
+    "self-image-inflated",
+    "self-image-inflated-differential",
+    "random-clicker"
+  ],
+  "totalSessions": 1680,
+  "results": {
+    "clean-control": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 15.554167,
+      "meanValidity": 0.944792,
+      "medianValidity": 1,
+      "validityDistribution": {
+        "below06": 0.004167,
+        "from06to08": 0.133333,
+        "from08to1": 0.1,
+        "exactly1": 0.7625
+      },
+      "acquiescenceTriggerRate": 0.1375,
+      "lowDifferentiationTriggerRate": 0.104167,
+      "meanMaxSameOptionValueShare": 0.474699,
+      "meanTraitConfidence": 0.915457,
+      "meanTop1Confidence": 0.854646,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 0.2625,
+        "from07to08": 0.1625,
+        "from08to1": 0.575
+      },
+      "highConfidenceExtremeRate": 0.5625,
+      "meanMaxTraitDeviation": 34.195833,
+      "agreementWithCleanControl": 1,
+      "agreementWithGroundTruth": 0.4625,
+      "archetypeTally": {
+        "cat": 28,
+        "turtle": 28,
+        "dolphin_calm": 11,
+        "koala": 20,
+        "hamster_praise": 19,
+        "corgi": 30,
+        "spider": 6,
+        "rooster": 23,
+        "elephant": 23,
+        "fox": 31,
+        "owl": 11,
+        "octopus": 10
+      }
+    },
+    "straight-liner": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 15,
+      "meanValidity": 0.75,
+      "medianValidity": 0.75,
+      "validityDistribution": {
+        "below06": 0,
+        "from06to08": 1,
+        "from08to1": 0,
+        "exactly1": 0
+      },
+      "acquiescenceTriggerRate": 1,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.857143,
+      "meanTraitConfidence": 0.891444,
+      "meanTop1Confidence": 0.8,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 0,
+        "from07to08": 0,
+        "from08to1": 1
+      },
+      "highConfidenceExtremeRate": 1,
+      "meanMaxTraitDeviation": 36,
+      "agreementWithCleanControl": 0.129167,
+      "agreementWithGroundTruth": 0.083333,
+      "archetypeTally": {
+        "fox": 240
+      }
+    },
+    "acquiescence-biased": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 15,
+      "meanValidity": 0.75,
+      "medianValidity": 0.75,
+      "validityDistribution": {
+        "below06": 0,
+        "from06to08": 1,
+        "from08to1": 0,
+        "exactly1": 0
+      },
+      "acquiescenceTriggerRate": 1,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.714286,
+      "meanTraitConfidence": 0.948717,
+      "meanTop1Confidence": 0.964332,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 0,
+        "from07to08": 0,
+        "from08to1": 1
+      },
+      "highConfidenceExtremeRate": 1,
+      "meanMaxTraitDeviation": 36,
+      "agreementWithCleanControl": 0.125,
+      "agreementWithGroundTruth": 0.083333,
+      "archetypeTally": {
+        "corgi": 240
+      }
+    },
+    "midpoint-hugger": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 15,
+      "meanValidity": 1,
+      "medianValidity": 1,
+      "validityDistribution": {
+        "below06": 0,
+        "from06to08": 0,
+        "from08to1": 0,
+        "exactly1": 1
+      },
+      "acquiescenceTriggerRate": 0,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.428571,
+      "meanTraitConfidence": 0.924608,
+      "meanTop1Confidence": 0.89593,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 0,
+        "from07to08": 0,
+        "from08to1": 1
+      },
+      "highConfidenceExtremeRate": 1,
+      "meanMaxTraitDeviation": 27,
+      "agreementWithCleanControl": 0.116667,
+      "agreementWithGroundTruth": 0.0875,
+      "archetypeTally": {
+        "turtle": 240
+      }
+    },
+    "self-image-inflated": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 15.55,
+      "meanValidity": 0.947917,
+      "medianValidity": 1,
+      "validityDistribution": {
+        "below06": 0.008333,
+        "from06to08": 0.1,
+        "from08to1": 0.116667,
+        "exactly1": 0.775
+      },
+      "acquiescenceTriggerRate": 0.108333,
+      "lowDifferentiationTriggerRate": 0.125,
+      "meanMaxSameOptionValueShare": 0.443156,
+      "meanTraitConfidence": 0.912978,
+      "meanTop1Confidence": 0.84982,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 0.175,
+        "from07to08": 0.295833,
+        "from08to1": 0.529167
+      },
+      "highConfidenceExtremeRate": 0.529167,
+      "meanMaxTraitDeviation": 36.258333,
+      "agreementWithCleanControl": 0.454167,
+      "agreementWithGroundTruth": 0.325,
+      "archetypeTally": {
+        "turtle": 25,
+        "dolphin_calm": 24,
+        "elephant": 37,
+        "koala": 37,
+        "corgi": 27,
+        "rooster": 34,
+        "owl": 6,
+        "hamster_praise": 30,
+        "spider": 7,
+        "cat": 7,
+        "octopus": 1,
+        "fox": 5
+      }
+    },
+    "self-image-inflated-differential": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 15.55,
+      "meanValidity": 0.947917,
+      "medianValidity": 1,
+      "validityDistribution": {
+        "below06": 0.008333,
+        "from06to08": 0.1,
+        "from08to1": 0.116667,
+        "exactly1": 0.775
+      },
+      "acquiescenceTriggerRate": 0.108333,
+      "lowDifferentiationTriggerRate": 0.125,
+      "meanMaxSameOptionValueShare": 0.443156,
+      "meanTraitConfidence": 0.912978,
+      "meanTop1Confidence": 0.857875,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 0.1375,
+        "from07to08": 0.325,
+        "from08to1": 0.5375
+      },
+      "highConfidenceExtremeRate": 0.5375,
+      "meanMaxTraitDeviation": 36.258333,
+      "agreementWithCleanControl": 0.454167,
+      "agreementWithGroundTruth": 0.325,
+      "archetypeTally": {
+        "turtle": 25,
+        "dolphin_calm": 24,
+        "elephant": 37,
+        "koala": 37,
+        "corgi": 27,
+        "rooster": 34,
+        "owl": 6,
+        "hamster_praise": 30,
+        "spider": 7,
+        "cat": 7,
+        "octopus": 1,
+        "fox": 5
+      }
+    },
+    "random-clicker": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 15.475,
+      "meanValidity": 0.946667,
+      "medianValidity": 1,
+      "validityDistribution": {
+        "below06": 0,
+        "from06to08": 0,
+        "from08to1": 0.266667,
+        "exactly1": 0.733333
+      },
+      "acquiescenceTriggerRate": 0,
+      "lowDifferentiationTriggerRate": 0.266667,
+      "meanMaxSameOptionValueShare": 0.336487,
+      "meanTraitConfidence": 0.884902,
+      "meanTop1Confidence": 0.760303,
+      "top1ConfidenceDistribution": {
+        "below05": 0.008333,
+        "from05to07": 0.354167,
+        "from07to08": 0.233333,
+        "from08to1": 0.404167
+      },
+      "highConfidenceExtremeRate": 0.283333,
+      "meanMaxTraitDeviation": 26.779167,
+      "agreementWithCleanControl": 0.095833,
+      "agreementWithGroundTruth": 0.045833,
+      "archetypeTally": {
+        "spider": 55,
+        "elephant": 10,
+        "hamster_praise": 15,
+        "turtle": 36,
+        "koala": 54,
+        "owl": 15,
+        "dolphin_calm": 31,
+        "corgi": 8,
+        "rooster": 5,
+        "fox": 5,
+        "cat": 5,
+        "octopus": 1
+      }
+    }
+  },
+  "lockedBaselines": {
+    "straightLinerAcquiescenceRateMin": 0.95,
+    "acquiescenceBiasedAcquiescenceRateMin": 0.7,
+    "randomValidityMaxMarginAboveClean": 0.01,
+    "confidenceDropRequiredArms": [
+      "straight-liner",
+      "random-clicker"
+    ],
+    "highConfidenceThreshold": 0.8,
+    "extremeTraitDeviationThreshold": 25
+  },
+  "assertions": [
+    {
+      "id": "AC-7.2a",
+      "description": "Zero engine crashes across all adversarial sessions (M6 LOCKED)",
+      "measured": "0 crashes / 1680 sessions",
+      "threshold": "0 crashes, sessions ≥ 1,000",
+      "pass": true
+    },
+    {
+      "id": "AC-7.2b",
+      "description": "Zero NaN / out-of-range trait scores, confidences, validityScores",
+      "measured": "0 NaN/invalid sessions",
+      "threshold": "0",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3a",
+      "description": "Straight-liner trips the engine acquiescence check (same-option-value share > 0.7)",
+      "measured": "100.0% of runs",
+      "threshold": "≥ 95% (locked)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3b",
+      "description": "Acquiescence-biased (yea-saying) trips the engine acquiescence check (provisional HELD, locked)",
+      "measured": "100.0% of runs",
+      "threshold": "≥ 70% (locked)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3c",
+      "description": "Random-clicker mean validityScore must not exceed clean-control mean (degradation monotonicity)",
+      "measured": "0.9467 vs clean 0.9448",
+      "threshold": "≤ clean + 0.01 (locked)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3d-straight-liner",
+      "description": "straight-liner mean trait confidence DROPS below clean control",
+      "measured": "0.8914 vs clean 0.9155",
+      "threshold": "< clean mean (locked, directional)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3d-random-clicker",
+      "description": "random-clicker mean trait confidence DROPS below clean control",
+      "measured": "0.8849 vs clean 0.9155",
+      "threshold": "< clean mean (locked, directional)",
+      "pass": true
+    },
+    {
+      "id": "AC-4.1-serving",
+      "description": "Meta item (Q168) is served and answered in every session (closing phase, flag on)",
+      "measured": "100.0% of sessions (min across arms)",
+      "threshold": "= 100% (contract AC-4.1)",
+      "pass": true
+    },
+    {
+      "id": "M7-precision",
+      "description": "Clean-control meta false-flag rate (honest respondents must not be flagged)",
+      "measured": "4.6%",
+      "threshold": "≤ 10% (contract AC-4.3 / M7, locked)",
+      "pass": true
+    }
+  ],
+  "provisionalEvaluation": [
+    {
+      "description": "Random-clicker mean validityScore",
+      "provisional": "< 0.6",
+      "measured": "0.9467",
+      "held": false,
+      "disposition": "The raw engine validity checks (same-value share, trait stdev) barely fire on uniform-random responding: random answers almost never repeat one literal option value > 70% of the time, and random-walk trait scores are differentiated enough to pass the stdev ≥ 8 check most of the time (low-diff fired in only ~27% of random sessions vs ~10% clean). The raw engine therefore scores a random clicker about as valid as an honest respondent. This is precisely the gap Item 2 (consistency pairs) and Item 4 (meta-consistency) must close. Locked assertion AC-7.3c uses degradation monotonicity instead."
+    },
+    {
+      "description": "Midpoint-hugger trips the existing low-differentiation check",
+      "provisional": "triggers low-differentiation (locked ≥ 95%)",
+      "measured": "0.0% of runs (mean validity 1.0000, mean trait conf 0.9246 vs clean 0.9155)",
+      "held": false,
+      "disposition": "The failure is the finding. The min-Σ|loading| options on MCQ items are NOT zero-loading: they carry small but systematically-signed loadings that accumulate over 12–16 answers into trait estimates with stdev ≥ 8. Worse, the evidence is highly CONSISTENT, so the raw engine assigns midpoint-hugging ABOVE-clean trait confidence and high-confidence extreme archetypes (100% of sessions). The engine has no neutral-responding detector at all — no assertion is made against a signal it does not produce; this gap is Item 3 shrinkage territory (see AC-7.4)."
+    },
+    {
+      "description": "ALL adversarial arms mean traitConfidences below clean controls",
+      "provisional": "all five arms < clean",
+      "measured": "straight-liner=0.891, acquiescence-biased=0.949, midpoint-hugger=0.925, self-image-inflated=0.913, self-image-inflated-differential=0.913, random-clicker=0.885 (clean=0.915)",
+      "held": false,
+      "disposition": "Response sets that destroy evidence quality (straight-liner, random-clicker) drop confidence below clean (locked as AC-7.3d-*); but consistently-biased answering (midpoint-hugger, acquiescence-biased) produces consistent evidence and the raw confidence signal does NOT separate it from clean — it scores ABOVE clean. Confidence shrinkage under consistent-but-biased evidence is the Item 3 gap (see AC-7.4 findings)."
+    }
+  ],
+  "meta": {
+    "enabled": true,
+    "questionId": "Q168",
+    "targetTrait": "A",
+    "discrepancyThreshold": 30,
+    "multiplier": 0.8,
+    "targets": {
+      "inflatedRecallMin": 0.8,
+      "cleanFalseFlagMax": 0.1,
+      "metaAnsweredRateMin": 1
+    },
+    "perArm": {
+      "clean-control": {
+        "metaAnsweredRate": 1,
+        "metaFlagRate": 0.045833,
+        "meanMetaDiscrepancy": 11.666667,
+        "medianMetaDiscrepancy": 10.5,
+        "p10MetaDiscrepancy": 2,
+        "p90MetaDiscrepancy": 23,
+        "p99MetaDiscrepancy": 34.22,
+        "highConfidenceExtremeRate": 0.5625
+      },
+      "straight-liner": {
+        "metaAnsweredRate": 1,
+        "metaFlagRate": 1,
+        "meanMetaDiscrepancy": 40,
+        "medianMetaDiscrepancy": 40,
+        "p10MetaDiscrepancy": 40,
+        "p90MetaDiscrepancy": 40,
+        "p99MetaDiscrepancy": 40,
+        "highConfidenceExtremeRate": 1
+      },
+      "acquiescence-biased": {
+        "metaAnsweredRate": 1,
+        "metaFlagRate": 0,
+        "meanMetaDiscrepancy": 25,
+        "medianMetaDiscrepancy": 25,
+        "p10MetaDiscrepancy": 25,
+        "p90MetaDiscrepancy": 25,
+        "p99MetaDiscrepancy": 25,
+        "highConfidenceExtremeRate": 1
+      },
+      "midpoint-hugger": {
+        "metaAnsweredRate": 1,
+        "metaFlagRate": 0,
+        "meanMetaDiscrepancy": 13,
+        "medianMetaDiscrepancy": 13,
+        "p10MetaDiscrepancy": 13,
+        "p90MetaDiscrepancy": 13,
+        "p99MetaDiscrepancy": 13,
+        "highConfidenceExtremeRate": 1
+      },
+      "self-image-inflated": {
+        "metaAnsweredRate": 1,
+        "metaFlagRate": 0.075,
+        "meanMetaDiscrepancy": 11.6625,
+        "medianMetaDiscrepancy": 10,
+        "p10MetaDiscrepancy": 2,
+        "p90MetaDiscrepancy": 25,
+        "p99MetaDiscrepancy": 36.83,
+        "highConfidenceExtremeRate": 0.529167
+      },
+      "self-image-inflated-differential": {
+        "metaAnsweredRate": 1,
+        "metaFlagRate": 0.025,
+        "meanMetaDiscrepancy": 10.029167,
+        "medianMetaDiscrepancy": 8,
+        "p10MetaDiscrepancy": 2,
+        "p90MetaDiscrepancy": 22.1,
+        "p99MetaDiscrepancy": 31.61,
+        "highConfidenceExtremeRate": 0.5375
+      },
+      "random-clicker": {
+        "metaAnsweredRate": 1,
+        "metaFlagRate": 0.429167,
+        "meanMetaDiscrepancy": 28.895833,
+        "medianMetaDiscrepancy": 26,
+        "p10MetaDiscrepancy": 5,
+        "p90MetaDiscrepancy": 55,
+        "p99MetaDiscrepancy": 76.44,
+        "highConfidenceExtremeRate": 0.283333
+      }
+    },
+    "evaluation": [
+      {
+        "description": "M7 recall — self-image-inflated-DIFFERENTIAL sessions meta-flagged (realistic self-enhancement model)",
+        "target": "≥ 80% (contract AC-4.3, LOCKED; cycle-2 amendment 1 measures the differential arm)",
+        "measured": "2.5% (mean discrepancy 10.0, median 8.0, p10 2.0 vs threshold 30)",
+        "held": false
+      },
+      {
+        "description": "M7 recall — self-image-inflated (UNIFORM, consistent-liar reference)",
+        "target": "≥ 80% (NOT locked for this arm — documented reference)",
+        "measured": "7.5% (mean discrepancy 11.7)",
+        "held": false
+      },
+      {
+        "description": "M7 precision — clean-control sessions meta-flagged (false-flag)",
+        "target": "≤ 10% (contract AC-4.3, LOCKED — hard-asserted above)",
+        "measured": "4.6% (mean discrepancy 11.7, median 10.5, p99 34.2)",
+        "held": true
+      },
+      {
+        "description": "Threshold separation — clean p99 vs differential p10 discrepancy",
+        "target": "differential p10 ≥ clean p99 (distributional separation at the flag boundary)",
+        "measured": "clean p99 = 34.2, differential p10 = 2.0, threshold = 30",
+        "held": false
+      }
+    ]
+  }
+}

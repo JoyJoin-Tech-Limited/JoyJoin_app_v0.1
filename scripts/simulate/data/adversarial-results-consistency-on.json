@@ -1,0 +1,447 @@
+{
+  "suite": "adversarial-persona-suite",
+  "planItem": 7,
+  "contract": "item7-adversarial-personas",
+  "seed": 20260909,
+  "respondentsPerArm": 240,
+  "arms": [
+    "clean-control",
+    "straight-liner",
+    "acquiescence-biased",
+    "midpoint-hugger",
+    "self-image-inflated",
+    "random-clicker"
+  ],
+  "totalSessions": 1440,
+  "results": {
+    "clean-control": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 17.554167,
+      "meanValidity": 0.94875,
+      "medianValidity": 1,
+      "validityDistribution": {
+        "below06": 0.008333,
+        "from06to08": 0.116667,
+        "from08to1": 0.091667,
+        "exactly1": 0.783333
+      },
+      "acquiescenceTriggerRate": 0.125,
+      "lowDifferentiationTriggerRate": 0.1,
+      "meanMaxSameOptionValueShare": 0.502107,
+      "meanTraitConfidence": 0.942297,
+      "meanTop1Confidence": 0.783708,
+      "top1ConfidenceDistribution": {
+        "below05": 0.0125,
+        "from05to07": 0.375,
+        "from07to08": 0.233333,
+        "from08to1": 0.379167
+      },
+      "highConfidenceExtremeRate": 0.375,
+      "meanMaxTraitDeviation": 34.575,
+      "agreementWithCleanControl": 1,
+      "agreementWithGroundTruth": 0.470833,
+      "archetypeTally": {
+        "cat": 28,
+        "turtle": 26,
+        "dolphin_calm": 20,
+        "koala": 17,
+        "hamster_praise": 16,
+        "corgi": 25,
+        "spider": 3,
+        "rooster": 23,
+        "elephant": 26,
+        "fox": 25,
+        "owl": 10,
+        "octopus": 21
+      }
+    },
+    "straight-liner": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 17,
+      "meanValidity": 0.75,
+      "medianValidity": 0.75,
+      "validityDistribution": {
+        "below06": 0,
+        "from06to08": 1,
+        "from08to1": 0,
+        "exactly1": 0
+      },
+      "acquiescenceTriggerRate": 1,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.882353,
+      "meanTraitConfidence": 0.884976,
+      "meanTop1Confidence": 0.75,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 0,
+        "from07to08": 1,
+        "from08to1": 0
+      },
+      "highConfidenceExtremeRate": 0,
+      "meanMaxTraitDeviation": 36,
+      "agreementWithCleanControl": 0.104167,
+      "agreementWithGroundTruth": 0.083333,
+      "archetypeTally": {
+        "fox": 240
+      }
+    },
+    "acquiescence-biased": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 17,
+      "meanValidity": 0.75,
+      "medianValidity": 0.75,
+      "validityDistribution": {
+        "below06": 0,
+        "from06to08": 1,
+        "from08to1": 0,
+        "exactly1": 0
+      },
+      "acquiescenceTriggerRate": 1,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.764706,
+      "meanTraitConfidence": 0.940481,
+      "meanTop1Confidence": 0.620383,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 1,
+        "from07to08": 0,
+        "from08to1": 0
+      },
+      "highConfidenceExtremeRate": 0,
+      "meanMaxTraitDeviation": 37,
+      "agreementWithCleanControl": 0.104167,
+      "agreementWithGroundTruth": 0.083333,
+      "archetypeTally": {
+        "corgi": 240
+      }
+    },
+    "midpoint-hugger": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 17,
+      "meanValidity": 0.75,
+      "medianValidity": 0.75,
+      "validityDistribution": {
+        "below06": 0,
+        "from06to08": 1,
+        "from08to1": 0,
+        "exactly1": 0
+      },
+      "acquiescenceTriggerRate": 0,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.411765,
+      "meanTraitConfidence": 0.953219,
+      "meanTop1Confidence": 0.675362,
+      "top1ConfidenceDistribution": {
+        "below05": 0,
+        "from05to07": 1,
+        "from07to08": 0,
+        "from08to1": 0
+      },
+      "highConfidenceExtremeRate": 0,
+      "meanMaxTraitDeviation": 27,
+      "agreementWithCleanControl": 0.108333,
+      "agreementWithGroundTruth": 0.0875,
+      "archetypeTally": {
+        "turtle": 240
+      }
+    },
+    "self-image-inflated": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 17.554167,
+      "meanValidity": 0.927917,
+      "medianValidity": 1,
+      "validityDistribution": {
+        "below06": 0.033333,
+        "from06to08": 0.125,
+        "from08to1": 0.129167,
+        "exactly1": 0.7125
+      },
+      "acquiescenceTriggerRate": 0.158333,
+      "lowDifferentiationTriggerRate": 0.1625,
+      "meanMaxSameOptionValueShare": 0.490579,
+      "meanTraitConfidence": 0.939233,
+      "meanTop1Confidence": 0.773492,
+      "top1ConfidenceDistribution": {
+        "below05": 0.033333,
+        "from05to07": 0.3375,
+        "from07to08": 0.2625,
+        "from08to1": 0.366667
+      },
+      "highConfidenceExtremeRate": 0.366667,
+      "meanMaxTraitDeviation": 36.275,
+      "agreementWithCleanControl": 0.429167,
+      "agreementWithGroundTruth": 0.308333,
+      "archetypeTally": {
+        "turtle": 20,
+        "dolphin_calm": 37,
+        "elephant": 40,
+        "koala": 38,
+        "hamster_praise": 22,
+        "corgi": 28,
+        "rooster": 28,
+        "owl": 6,
+        "octopus": 4,
+        "cat": 7,
+        "fox": 5,
+        "spider": 5
+      }
+    },
+    "random-clicker": {
+      "sessions": 240,
+      "crashes": 0,
+      "nanDetections": 0,
+      "safetyCapHits": 0,
+      "meanQuestions": 17.408333,
+      "meanValidity": 0.551667,
+      "medianValidity": 0.5,
+      "validityDistribution": {
+        "below06": 0.541667,
+        "from06to08": 0.320833,
+        "from08to1": 0.129167,
+        "exactly1": 0.008333
+      },
+      "acquiescenceTriggerRate": 0,
+      "lowDifferentiationTriggerRate": 0.270833,
+      "meanMaxSameOptionValueShare": 0.336349,
+      "meanTraitConfidence": 0.835994,
+      "meanTop1Confidence": 0.459039,
+      "top1ConfidenceDistribution": {
+        "below05": 0.6125,
+        "from05to07": 0.295833,
+        "from07to08": 0.041667,
+        "from08to1": 0.05
+      },
+      "highConfidenceExtremeRate": 0.045833,
+      "meanMaxTraitDeviation": 25.8,
+      "agreementWithCleanControl": 0.070833,
+      "agreementWithGroundTruth": 0.066667,
+      "archetypeTally": {
+        "hamster_praise": 16,
+        "koala": 61,
+        "dolphin_calm": 35,
+        "elephant": 17,
+        "spider": 34,
+        "owl": 10,
+        "turtle": 36,
+        "corgi": 10,
+        "rooster": 8,
+        "cat": 6,
+        "octopus": 2,
+        "fox": 5
+      }
+    }
+  },
+  "lockedBaselines": {
+    "straightLinerAcquiescenceRateMin": 0.95,
+    "acquiescenceBiasedAcquiescenceRateMin": 0.7,
+    "randomValidityMaxMarginAboveClean": 0.01,
+    "confidenceDropRequiredArms": [
+      "straight-liner",
+      "random-clicker"
+    ],
+    "highConfidenceThreshold": 0.8,
+    "extremeTraitDeviationThreshold": 25
+  },
+  "assertions": [
+    {
+      "id": "AC-7.2a",
+      "description": "Zero engine crashes across all adversarial sessions (M6 LOCKED)",
+      "measured": "0 crashes / 1440 sessions",
+      "threshold": "0 crashes, sessions ≥ 1,000",
+      "pass": true
+    },
+    {
+      "id": "AC-7.2b",
+      "description": "Zero NaN / out-of-range trait scores, confidences, validityScores",
+      "measured": "0 NaN/invalid sessions",
+      "threshold": "0",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3a",
+      "description": "Straight-liner trips the engine acquiescence check (same-option-value share > 0.7)",
+      "measured": "100.0% of runs",
+      "threshold": "≥ 95% (locked)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3b",
+      "description": "Acquiescence-biased (yea-saying) trips the engine acquiescence check (provisional HELD, locked)",
+      "measured": "100.0% of runs",
+      "threshold": "≥ 70% (locked)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3c",
+      "description": "Random-clicker mean validityScore must not exceed clean-control mean (degradation monotonicity)",
+      "measured": "0.5517 vs clean 0.9488",
+      "threshold": "≤ clean + 0.01 (locked)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3d-straight-liner",
+      "description": "straight-liner mean trait confidence DROPS below clean control",
+      "measured": "0.8850 vs clean 0.9423",
+      "threshold": "< clean mean (locked, directional)",
+      "pass": true
+    },
+    {
+      "id": "AC-7.3d-random-clicker",
+      "description": "random-clicker mean trait confidence DROPS below clean control",
+      "measured": "0.8360 vs clean 0.9423",
+      "threshold": "< clean mean (locked, directional)",
+      "pass": true
+    },
+    {
+      "id": "AC-2.4a",
+      "description": "Random-clicker mean validityScore (baseline 0.947)",
+      "measured": "0.5517",
+      "threshold": "< 0.6 (contract)",
+      "pass": true
+    },
+    {
+      "id": "AC-2.4b",
+      "description": "Midpoint-hugger high-confidence extreme rate (baseline 100%)",
+      "measured": "0.0%",
+      "threshold": "< 50% (contract, partial-closure floor)",
+      "pass": true
+    },
+    {
+      "id": "AC-2.4c",
+      "description": "Straight-liner high-confidence extreme rate (baseline 100%)",
+      "measured": "0.0%",
+      "threshold": "≤ 60% (contract)",
+      "pass": true
+    },
+    {
+      "id": "AC-2.4d",
+      "description": "Acquiescence-biased high-confidence extreme rate (baseline 100%)",
+      "measured": "0.0%",
+      "threshold": "≤ 60% (contract)",
+      "pass": true
+    },
+    {
+      "id": "AC-2.4e",
+      "description": "Clean-control mean validityScore must stay high (detector precision; baseline 0.945)",
+      "measured": "0.9488",
+      "threshold": "≥ 0.9 (contract)",
+      "pass": true
+    },
+    {
+      "id": "AC-2.4f",
+      "description": "M5: clean-vs-random mean traitConfidence gap (baseline 0.0306)",
+      "measured": "0.1063",
+      "threshold": "≥ 0.1 (contract, M5)",
+      "pass": true
+    },
+    {
+      "id": "AC-2.1-completion",
+      "description": "Pair completion guarantee under natural termination (started pairs that completed, mean across arms)",
+      "measured": "100.0%",
+      "threshold": "≥ 95% (contract AC-2.1)",
+      "pass": true
+    }
+  ],
+  "provisionalEvaluation": [
+    {
+      "description": "Random-clicker mean validityScore",
+      "provisional": "< 0.6",
+      "measured": "0.5517",
+      "held": true,
+      "disposition": "Held — lock at measured baseline."
+    },
+    {
+      "description": "Midpoint-hugger trips the existing low-differentiation check",
+      "provisional": "triggers low-differentiation (locked ≥ 95%)",
+      "measured": "0.0% of runs (mean validity 0.7500, mean trait conf 0.9532 vs clean 0.9423)",
+      "held": false,
+      "disposition": "The failure is the finding. The min-Σ|loading| options on MCQ items are NOT zero-loading: they carry small but systematically-signed loadings that accumulate over 12–16 answers into trait estimates with stdev ≥ 8. Worse, the evidence is highly CONSISTENT, so the raw engine assigns midpoint-hugging ABOVE-clean trait confidence and high-confidence extreme archetypes (100% of sessions). The engine has no neutral-responding detector at all — no assertion is made against a signal it does not produce; this gap is Item 3 shrinkage territory (see AC-7.4)."
+    },
+    {
+      "description": "ALL adversarial arms mean traitConfidences below clean controls",
+      "provisional": "all five arms < clean",
+      "measured": "straight-liner=0.885, acquiescence-biased=0.940, midpoint-hugger=0.953, self-image-inflated=0.939, random-clicker=0.836 (clean=0.942)",
+      "held": false,
+      "disposition": "Response sets that destroy evidence quality (straight-liner, random-clicker) drop confidence below clean (locked as AC-7.3d-*); but consistently-biased answering (midpoint-hugger, acquiescence-biased) produces consistent evidence and the raw confidence signal does NOT separate it from clean — it scores ABOVE clean. Confidence shrinkage under consistent-but-biased evidence is the Item 3 gap (see AC-7.4 findings)."
+    }
+  ],
+  "consistency": {
+    "enabled": true,
+    "targets": {
+      "randomMeanValidityMax": 0.6,
+      "midpointHighConfidenceExtremeRateMax": 0.5,
+      "straightLinerAcquiescenceHCERateMax": 0.6,
+      "cleanMeanValidityMin": 0.9,
+      "confidenceGapMin": 0.1,
+      "pairCompletionRateMin": 0.95
+    },
+    "baselines": {
+      "randomMeanValidity": 0.946667,
+      "midpointHighConfidenceExtremeRate": 1,
+      "straightLinerHighConfidenceExtremeRate": 1,
+      "acquiescenceHighConfidenceExtremeRate": 1,
+      "cleanMeanValidity": 0.944792,
+      "cleanMeanTraitConfidence": 0.9155,
+      "randomMeanTraitConfidence": 0.8849
+    },
+    "perArm": {
+      "clean-control": {
+        "pairCompletionRate": 1,
+        "pairMismatchRate": 0,
+        "meanPairValidityPenalty": 0,
+        "meanNeutralResponseShare": 0.125601,
+        "neutralDetectorFireRate": 0
+      },
+      "straight-liner": {
+        "pairCompletionRate": 1,
+        "pairMismatchRate": 0,
+        "meanPairValidityPenalty": 0,
+        "meanNeutralResponseShare": 0.058824,
+        "neutralDetectorFireRate": 0
+      },
+      "acquiescence-biased": {
+        "pairCompletionRate": 1,
+        "pairMismatchRate": 0,
+        "meanPairValidityPenalty": 0,
+        "meanNeutralResponseShare": 0,
+        "neutralDetectorFireRate": 0
+      },
+      "midpoint-hugger": {
+        "pairCompletionRate": 1,
+        "pairMismatchRate": 0,
+        "meanPairValidityPenalty": 0,
+        "meanNeutralResponseShare": 1,
+        "neutralDetectorFireRate": 1
+      },
+      "self-image-inflated": {
+        "pairCompletionRate": 1,
+        "pairMismatchRate": 0,
+        "meanPairValidityPenalty": 0,
+        "meanNeutralResponseShare": 0.101446,
+        "neutralDetectorFireRate": 0
+      },
+      "random-clicker": {
+        "pairCompletionRate": 1,
+        "pairMismatchRate": 0.75,
+        "meanPairValidityPenalty": 0.394167,
+        "meanNeutralResponseShare": 0.304362,
+        "neutralDetectorFireRate": 0
+      }
+    }
+  }
+}

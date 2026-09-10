@@ -1,0 +1,3738 @@
+{
+  "generatedAt": "2026-09-10T09:40:41.659Z",
+  "date": "2026-09-10",
+  "mode": "gated",
+  "seed": 20260910,
+  "samples": 600,
+  "radii": [
+    5,
+    10
+  ],
+  "distributions": [
+    "uniform",
+    "normal"
+  ],
+  "normalSigma": 10,
+  "contentHash": "477139ac6d2b1f8db62bcbb44e69558e7a3de78db53237eb86d0fcf42ccf0956",
+  "runtimeSec": 0.435,
+  "thresholds": {
+    "uniform:5": 0.05,
+    "uniform:10": 0.2,
+    "normal:10": 0.2
+  },
+  "rosterOrder": [
+    "corgi",
+    "rooster",
+    "hamster_praise",
+    "fox",
+    "dolphin_calm",
+    "spider",
+    "koala",
+    "octopus",
+    "owl",
+    "elephant",
+    "turtle",
+    "cat"
+  ],
+  "breachingCells": [
+    {
+      "source": "hamster_praise",
+      "distribution": "uniform",
+      "radius": 5,
+      "flipRate": 0.101667,
+      "threshold": 0.05,
+      "confusableFlips": 0,
+      "hardFlips": 61
+    },
+    {
+      "source": "dolphin_calm",
+      "distribution": "uniform",
+      "radius": 5,
+      "flipRate": 0.06,
+      "threshold": 0.05,
+      "confusableFlips": 36,
+      "hardFlips": 0
+    },
+    {
+      "source": "dolphin_calm",
+      "distribution": "uniform",
+      "radius": 10,
+      "flipRate": 0.285,
+      "threshold": 0.2,
+      "confusableFlips": 152,
+      "hardFlips": 19
+    }
+  ],
+  "normalBreachingCells": [
+    {
+      "source": "corgi",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.23,
+      "threshold": 0.2,
+      "confusableFlips": 24,
+      "hardFlips": 114
+    },
+    {
+      "source": "hamster_praise",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.245,
+      "threshold": 0.2,
+      "confusableFlips": 2,
+      "hardFlips": 145
+    },
+    {
+      "source": "fox",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.206667,
+      "threshold": 0.2,
+      "confusableFlips": 94,
+      "hardFlips": 30
+    },
+    {
+      "source": "dolphin_calm",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.556667,
+      "threshold": 0.2,
+      "confusableFlips": 267,
+      "hardFlips": 67
+    },
+    {
+      "source": "spider",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.263333,
+      "threshold": 0.2,
+      "confusableFlips": 42,
+      "hardFlips": 116
+    },
+    {
+      "source": "koala",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.423333,
+      "threshold": 0.2,
+      "confusableFlips": 133,
+      "hardFlips": 121
+    },
+    {
+      "source": "elephant",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.268333,
+      "threshold": 0.2,
+      "confusableFlips": 44,
+      "hardFlips": 117
+    },
+    {
+      "source": "turtle",
+      "distribution": "normal",
+      "radius": 10,
+      "flipRate": 0.276667,
+      "threshold": 0.2,
+      "confusableFlips": 49,
+      "hardFlips": 117
+    }
+  ],
+  "flipSplit": {
+    "byGateCell": [
+      {
+        "source": "hamster_praise",
+        "radius": 5,
+        "confusableFlips": 0,
+        "hardFlips": 61
+      },
+      {
+        "source": "dolphin_calm",
+        "radius": 5,
+        "confusableFlips": 36,
+        "hardFlips": 0
+      },
+      {
+        "source": "dolphin_calm",
+        "radius": 10,
+        "confusableFlips": 152,
+        "hardFlips": 19
+      }
+    ],
+    "byAbsorber": [
+      {
+        "source": "corgi",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 50,
+        "classification": "hard"
+      },
+      {
+        "source": "corgi",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "octopus",
+        "count": 39,
+        "classification": "hard"
+      },
+      {
+        "source": "corgi",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "fox",
+        "count": 25,
+        "classification": "hard"
+      },
+      {
+        "source": "corgi",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 24,
+        "classification": "confusable"
+      },
+      {
+        "source": "rooster",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 29,
+        "classification": "confusable"
+      },
+      {
+        "source": "rooster",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 19,
+        "classification": "hard"
+      },
+      {
+        "source": "rooster",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 3,
+        "classification": "confusable"
+      },
+      {
+        "source": "rooster",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "hamster_praise",
+        "distribution": "uniform",
+        "radius": 5,
+        "absorber": "rooster",
+        "count": 61,
+        "classification": "hard"
+      },
+      {
+        "source": "hamster_praise",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 50,
+        "classification": "hard"
+      },
+      {
+        "source": "hamster_praise",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 109,
+        "classification": "hard"
+      },
+      {
+        "source": "hamster_praise",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "octopus",
+        "count": 31,
+        "classification": "hard"
+      },
+      {
+        "source": "hamster_praise",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 4,
+        "classification": "hard"
+      },
+      {
+        "source": "hamster_praise",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 2,
+        "classification": "confusable"
+      },
+      {
+        "source": "hamster_praise",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "fox",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "octopus",
+        "count": 94,
+        "classification": "confusable"
+      },
+      {
+        "source": "fox",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 12,
+        "classification": "hard"
+      },
+      {
+        "source": "fox",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 12,
+        "classification": "hard"
+      },
+      {
+        "source": "fox",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 5,
+        "classification": "hard"
+      },
+      {
+        "source": "fox",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "owl",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "uniform",
+        "radius": 5,
+        "absorber": "rooster",
+        "count": 36,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 122,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 27,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 19,
+        "classification": "hard"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 3,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 122,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 76,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 38,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 36,
+        "classification": "hard"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 31,
+        "classification": "confusable"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 30,
+        "classification": "hard"
+      },
+      {
+        "source": "dolphin_calm",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "fox",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 2,
+        "classification": "confusable"
+      },
+      {
+        "source": "spider",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 64,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 42,
+        "classification": "confusable"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 32,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 11,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 4,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "owl",
+        "count": 3,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "spider",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "turtle",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 53,
+        "classification": "confusable"
+      },
+      {
+        "source": "koala",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 22,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 15,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 5,
+        "classification": "confusable"
+      },
+      {
+        "source": "koala",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 4,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 80,
+        "classification": "confusable"
+      },
+      {
+        "source": "koala",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 59,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 53,
+        "classification": "confusable"
+      },
+      {
+        "source": "koala",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 31,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 28,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "turtle",
+        "count": 2,
+        "classification": "hard"
+      },
+      {
+        "source": "koala",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "octopus",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "fox",
+        "count": 39,
+        "classification": "confusable"
+      },
+      {
+        "source": "octopus",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "owl",
+        "count": 3,
+        "classification": "confusable"
+      },
+      {
+        "source": "octopus",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "cat",
+        "count": 2,
+        "classification": "hard"
+      },
+      {
+        "source": "octopus",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 2,
+        "classification": "hard"
+      },
+      {
+        "source": "octopus",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "corgi",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "octopus",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "octopus",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 35,
+        "classification": "hard"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "cat",
+        "count": 26,
+        "classification": "hard"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "fox",
+        "count": 14,
+        "classification": "hard"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 10,
+        "classification": "hard"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 10,
+        "classification": "hard"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 7,
+        "classification": "hard"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "turtle",
+        "count": 6,
+        "classification": "confusable"
+      },
+      {
+        "source": "owl",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "hamster_praise",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "elephant",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "turtle",
+        "count": 10,
+        "classification": "hard"
+      },
+      {
+        "source": "elephant",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 1,
+        "classification": "hard"
+      },
+      {
+        "source": "elephant",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 47,
+        "classification": "hard"
+      },
+      {
+        "source": "elephant",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 44,
+        "classification": "confusable"
+      },
+      {
+        "source": "elephant",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "turtle",
+        "count": 44,
+        "classification": "hard"
+      },
+      {
+        "source": "elephant",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "rooster",
+        "count": 12,
+        "classification": "hard"
+      },
+      {
+        "source": "elephant",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "dolphin_calm",
+        "count": 11,
+        "classification": "hard"
+      },
+      {
+        "source": "elephant",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "owl",
+        "count": 3,
+        "classification": "hard"
+      },
+      {
+        "source": "turtle",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 12,
+        "classification": "hard"
+      },
+      {
+        "source": "turtle",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 105,
+        "classification": "hard"
+      },
+      {
+        "source": "turtle",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "owl",
+        "count": 29,
+        "classification": "confusable"
+      },
+      {
+        "source": "turtle",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "cat",
+        "count": 20,
+        "classification": "confusable"
+      },
+      {
+        "source": "turtle",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 7,
+        "classification": "hard"
+      },
+      {
+        "source": "turtle",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "spider",
+        "count": 5,
+        "classification": "hard"
+      },
+      {
+        "source": "cat",
+        "distribution": "uniform",
+        "radius": 10,
+        "absorber": "owl",
+        "count": 3,
+        "classification": "hard"
+      },
+      {
+        "source": "cat",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "owl",
+        "count": 55,
+        "classification": "hard"
+      },
+      {
+        "source": "cat",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "turtle",
+        "count": 26,
+        "classification": "confusable"
+      },
+      {
+        "source": "cat",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "octopus",
+        "count": 25,
+        "classification": "hard"
+      },
+      {
+        "source": "cat",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "fox",
+        "count": 3,
+        "classification": "hard"
+      },
+      {
+        "source": "cat",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "koala",
+        "count": 2,
+        "classification": "hard"
+      },
+      {
+        "source": "cat",
+        "distribution": "normal",
+        "radius": 10,
+        "absorber": "elephant",
+        "count": 1,
+        "classification": "hard"
+      }
+    ]
+  },
+  "grid": [
+    {
+      "source": "corgi",
+      "sourceIndex": 0,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "corgi": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "hamster_praise": 600
+      },
+      "clampEvents": 319,
+      "clampSamples": 319
+    },
+    {
+      "source": "corgi",
+      "sourceIndex": 0,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "corgi": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "hamster_praise": 591,
+        "fox": 9
+      },
+      "clampEvents": 304,
+      "clampSamples": 304
+    },
+    {
+      "source": "corgi",
+      "sourceIndex": 0,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 138,
+      "flipRate": 0.23,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 24,
+      "hardFlips": 114,
+      "confusableFlipRate": 0.04,
+      "hardFlipRate": 0.19,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "hamster_praise",
+          "count": 50,
+          "rate": 0.08333333333333333,
+          "shareOfFlips": 0.36231884057971014,
+          "classification": "hard"
+        },
+        {
+          "archetype": "octopus",
+          "count": 39,
+          "rate": 0.065,
+          "shareOfFlips": 0.2826086956521739,
+          "classification": "hard"
+        },
+        {
+          "archetype": "fox",
+          "count": 25,
+          "rate": 0.041666666666666664,
+          "shareOfFlips": 0.18115942028985507,
+          "classification": "hard"
+        },
+        {
+          "archetype": "rooster",
+          "count": 24,
+          "rate": 0.04,
+          "shareOfFlips": 0.17391304347826086,
+          "classification": "confusable"
+        }
+      ],
+      "top1Counts": {
+        "octopus": 39,
+        "corgi": 462,
+        "fox": 25,
+        "rooster": 24,
+        "hamster_praise": 50
+      },
+      "nonFlipRunnerUpCounts": {
+        "octopus": 45,
+        "hamster_praise": 350,
+        "rooster": 35,
+        "fox": 32
+      },
+      "clampEvents": 417,
+      "clampSamples": 364
+    },
+    {
+      "source": "rooster",
+      "sourceIndex": 1,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "rooster": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "corgi": 455,
+        "hamster_praise": 145
+      },
+      "clampEvents": 117,
+      "clampSamples": 117
+    },
+    {
+      "source": "rooster",
+      "sourceIndex": 1,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "rooster": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "corgi": 356,
+        "hamster_praise": 228,
+        "spider": 16
+      },
+      "clampEvents": 304,
+      "clampSamples": 269
+    },
+    {
+      "source": "rooster",
+      "sourceIndex": 1,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 52,
+      "flipRate": 0.086667,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 32,
+      "hardFlips": 20,
+      "confusableFlipRate": 0.053333,
+      "hardFlipRate": 0.033333,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "corgi",
+          "count": 29,
+          "rate": 0.04833333333333333,
+          "shareOfFlips": 0.5576923076923077,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 19,
+          "rate": 0.03166666666666667,
+          "shareOfFlips": 0.36538461538461536,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 3,
+          "rate": 0.005,
+          "shareOfFlips": 0.057692307692307696,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "spider",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.019230769230769232,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "rooster": 548,
+        "hamster_praise": 19,
+        "corgi": 29,
+        "spider": 1,
+        "dolphin_calm": 3
+      },
+      "nonFlipRunnerUpCounts": {
+        "hamster_praise": 179,
+        "spider": 72,
+        "corgi": 261,
+        "elephant": 15,
+        "dolphin_calm": 13,
+        "koala": 7,
+        "fox": 1
+      },
+      "clampEvents": 409,
+      "clampSamples": 335
+    },
+    {
+      "source": "hamster_praise",
+      "sourceIndex": 2,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 61,
+      "flipRate": 0.101667,
+      "threshold": 0.05,
+      "breach": true,
+      "confusableFlips": 0,
+      "hardFlips": 61,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0.101667,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "rooster",
+          "count": 61,
+          "rate": 0.10166666666666667,
+          "shareOfFlips": 1,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "hamster_praise": 539,
+        "rooster": 61
+      },
+      "nonFlipRunnerUpCounts": {
+        "rooster": 505,
+        "corgi": 34
+      },
+      "clampEvents": 319,
+      "clampSamples": 319
+    },
+    {
+      "source": "hamster_praise",
+      "sourceIndex": 2,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 50,
+      "flipRate": 0.083333,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 50,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0.083333,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "rooster",
+          "count": 50,
+          "rate": 0.08333333333333333,
+          "shareOfFlips": 1,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "hamster_praise": 550,
+        "rooster": 50
+      },
+      "nonFlipRunnerUpCounts": {
+        "corgi": 185,
+        "rooster": 324,
+        "octopus": 41
+      },
+      "clampEvents": 399,
+      "clampSamples": 356
+    },
+    {
+      "source": "hamster_praise",
+      "sourceIndex": 2,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 147,
+      "flipRate": 0.245,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 2,
+      "hardFlips": 145,
+      "confusableFlipRate": 0.003333,
+      "hardFlipRate": 0.241667,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "rooster",
+          "count": 109,
+          "rate": 0.18166666666666667,
+          "shareOfFlips": 0.7414965986394558,
+          "classification": "hard"
+        },
+        {
+          "archetype": "octopus",
+          "count": 31,
+          "rate": 0.051666666666666666,
+          "shareOfFlips": 0.2108843537414966,
+          "classification": "hard"
+        },
+        {
+          "archetype": "corgi",
+          "count": 4,
+          "rate": 0.006666666666666667,
+          "shareOfFlips": 0.027210884353741496,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 2,
+          "rate": 0.0033333333333333335,
+          "shareOfFlips": 0.013605442176870748,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "koala",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.006802721088435374,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "rooster": 109,
+        "octopus": 31,
+        "hamster_praise": 453,
+        "corgi": 4,
+        "dolphin_calm": 2,
+        "koala": 1
+      },
+      "nonFlipRunnerUpCounts": {
+        "rooster": 188,
+        "corgi": 182,
+        "octopus": 67,
+        "dolphin_calm": 15,
+        "koala": 1
+      },
+      "clampEvents": 489,
+      "clampSamples": 393
+    },
+    {
+      "source": "fox",
+      "sourceIndex": 3,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "fox": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "octopus": 600
+      },
+      "clampEvents": 119,
+      "clampSamples": 119
+    },
+    {
+      "source": "fox",
+      "sourceIndex": 3,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "fox": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "dolphin_calm": 128,
+        "octopus": 423,
+        "corgi": 42,
+        "spider": 7
+      },
+      "clampEvents": 219,
+      "clampSamples": 219
+    },
+    {
+      "source": "fox",
+      "sourceIndex": 3,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 124,
+      "flipRate": 0.206667,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 94,
+      "hardFlips": 30,
+      "confusableFlipRate": 0.156667,
+      "hardFlipRate": 0.05,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "octopus",
+          "count": 94,
+          "rate": 0.15666666666666668,
+          "shareOfFlips": 0.7580645161290323,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "corgi",
+          "count": 12,
+          "rate": 0.02,
+          "shareOfFlips": 0.0967741935483871,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 12,
+          "rate": 0.02,
+          "shareOfFlips": 0.0967741935483871,
+          "classification": "hard"
+        },
+        {
+          "archetype": "spider",
+          "count": 5,
+          "rate": 0.008333333333333333,
+          "shareOfFlips": 0.04032258064516129,
+          "classification": "hard"
+        },
+        {
+          "archetype": "owl",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.008064516129032258,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "fox": 476,
+        "octopus": 94,
+        "dolphin_calm": 12,
+        "corgi": 12,
+        "spider": 5,
+        "owl": 1
+      },
+      "nonFlipRunnerUpCounts": {
+        "corgi": 73,
+        "octopus": 284,
+        "dolphin_calm": 77,
+        "spider": 27,
+        "owl": 12,
+        "hamster_praise": 3
+      },
+      "clampEvents": 260,
+      "clampSamples": 249
+    },
+    {
+      "source": "dolphin_calm",
+      "sourceIndex": 4,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 36,
+      "flipRate": 0.06,
+      "threshold": 0.05,
+      "breach": true,
+      "confusableFlips": 36,
+      "hardFlips": 0,
+      "confusableFlipRate": 0.06,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "rooster",
+          "count": 36,
+          "rate": 0.06,
+          "shareOfFlips": 1,
+          "classification": "confusable"
+        }
+      ],
+      "top1Counts": {
+        "dolphin_calm": 564,
+        "rooster": 36
+      },
+      "nonFlipRunnerUpCounts": {
+        "corgi": 72,
+        "spider": 315,
+        "rooster": 152,
+        "hamster_praise": 25
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "dolphin_calm",
+      "sourceIndex": 4,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 171,
+      "flipRate": 0.285,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 152,
+      "hardFlips": 19,
+      "confusableFlipRate": 0.253333,
+      "hardFlipRate": 0.031667,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "rooster",
+          "count": 122,
+          "rate": 0.20333333333333334,
+          "shareOfFlips": 0.7134502923976608,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "spider",
+          "count": 27,
+          "rate": 0.045,
+          "shareOfFlips": 0.15789473684210525,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "corgi",
+          "count": 19,
+          "rate": 0.03166666666666667,
+          "shareOfFlips": 0.1111111111111111,
+          "classification": "hard"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 3,
+          "rate": 0.005,
+          "shareOfFlips": 0.017543859649122806,
+          "classification": "confusable"
+        }
+      ],
+      "top1Counts": {
+        "dolphin_calm": 429,
+        "spider": 27,
+        "corgi": 19,
+        "rooster": 122,
+        "hamster_praise": 3
+      },
+      "nonFlipRunnerUpCounts": {
+        "corgi": 53,
+        "spider": 235,
+        "rooster": 62,
+        "hamster_praise": 75,
+        "koala": 4
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "dolphin_calm",
+      "sourceIndex": 4,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 334,
+      "flipRate": 0.556667,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 267,
+      "hardFlips": 67,
+      "confusableFlipRate": 0.445,
+      "hardFlipRate": 0.111667,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "rooster",
+          "count": 122,
+          "rate": 0.20333333333333334,
+          "shareOfFlips": 0.3652694610778443,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "spider",
+          "count": 76,
+          "rate": 0.12666666666666668,
+          "shareOfFlips": 0.2275449101796407,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 38,
+          "rate": 0.06333333333333334,
+          "shareOfFlips": 0.11377245508982035,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "corgi",
+          "count": 36,
+          "rate": 0.06,
+          "shareOfFlips": 0.10778443113772455,
+          "classification": "hard"
+        },
+        {
+          "archetype": "koala",
+          "count": 31,
+          "rate": 0.051666666666666666,
+          "shareOfFlips": 0.09281437125748503,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "elephant",
+          "count": 30,
+          "rate": 0.05,
+          "shareOfFlips": 0.08982035928143713,
+          "classification": "hard"
+        },
+        {
+          "archetype": "fox",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.0029940119760479044,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "rooster": 122,
+        "dolphin_calm": 266,
+        "elephant": 30,
+        "hamster_praise": 38,
+        "spider": 76,
+        "corgi": 36,
+        "koala": 31,
+        "fox": 1
+      },
+      "nonFlipRunnerUpCounts": {
+        "spider": 140,
+        "hamster_praise": 52,
+        "rooster": 23,
+        "corgi": 38,
+        "koala": 10,
+        "elephant": 3
+      },
+      "clampEvents": 97,
+      "clampSamples": 96
+    },
+    {
+      "source": "spider",
+      "sourceIndex": 5,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "spider": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "dolphin_calm": 588,
+        "koala": 12
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "spider",
+      "sourceIndex": 5,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 3,
+      "flipRate": 0.005,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 2,
+      "hardFlips": 1,
+      "confusableFlipRate": 0.003333,
+      "hardFlipRate": 0.001667,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "dolphin_calm",
+          "count": 2,
+          "rate": 0.0033333333333333335,
+          "shareOfFlips": 0.6666666666666666,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "koala",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.3333333333333333,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "spider": 597,
+        "dolphin_calm": 2,
+        "koala": 1
+      },
+      "nonFlipRunnerUpCounts": {
+        "dolphin_calm": 475,
+        "koala": 115,
+        "rooster": 6,
+        "elephant": 1
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "spider",
+      "sourceIndex": 5,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 158,
+      "flipRate": 0.263333,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 42,
+      "hardFlips": 116,
+      "confusableFlipRate": 0.07,
+      "hardFlipRate": 0.193333,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "koala",
+          "count": 64,
+          "rate": 0.10666666666666667,
+          "shareOfFlips": 0.4050632911392405,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 42,
+          "rate": 0.07,
+          "shareOfFlips": 0.26582278481012656,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "rooster",
+          "count": 32,
+          "rate": 0.05333333333333334,
+          "shareOfFlips": 0.20253164556962025,
+          "classification": "hard"
+        },
+        {
+          "archetype": "elephant",
+          "count": 11,
+          "rate": 0.018333333333333333,
+          "shareOfFlips": 0.06962025316455696,
+          "classification": "hard"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 4,
+          "rate": 0.006666666666666667,
+          "shareOfFlips": 0.02531645569620253,
+          "classification": "hard"
+        },
+        {
+          "archetype": "owl",
+          "count": 3,
+          "rate": 0.005,
+          "shareOfFlips": 0.0189873417721519,
+          "classification": "hard"
+        },
+        {
+          "archetype": "corgi",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.006329113924050633,
+          "classification": "hard"
+        },
+        {
+          "archetype": "turtle",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.006329113924050633,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "elephant": 11,
+        "spider": 442,
+        "dolphin_calm": 42,
+        "koala": 64,
+        "rooster": 32,
+        "turtle": 1,
+        "owl": 3,
+        "hamster_praise": 4,
+        "corgi": 1
+      },
+      "nonFlipRunnerUpCounts": {
+        "dolphin_calm": 309,
+        "koala": 65,
+        "owl": 4,
+        "rooster": 39,
+        "hamster_praise": 17,
+        "elephant": 3,
+        "corgi": 4,
+        "fox": 1
+      },
+      "clampEvents": 97,
+      "clampSamples": 97
+    },
+    {
+      "source": "koala",
+      "sourceIndex": 6,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "koala": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "elephant": 486,
+        "dolphin_calm": 44,
+        "rooster": 12,
+        "hamster_praise": 50,
+        "spider": 8
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "koala",
+      "sourceIndex": 6,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 99,
+      "flipRate": 0.165,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 58,
+      "hardFlips": 41,
+      "confusableFlipRate": 0.096667,
+      "hardFlipRate": 0.068333,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "dolphin_calm",
+          "count": 53,
+          "rate": 0.08833333333333333,
+          "shareOfFlips": 0.5353535353535354,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "rooster",
+          "count": 22,
+          "rate": 0.03666666666666667,
+          "shareOfFlips": 0.2222222222222222,
+          "classification": "hard"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 15,
+          "rate": 0.025,
+          "shareOfFlips": 0.15151515151515152,
+          "classification": "hard"
+        },
+        {
+          "archetype": "elephant",
+          "count": 5,
+          "rate": 0.008333333333333333,
+          "shareOfFlips": 0.050505050505050504,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "spider",
+          "count": 4,
+          "rate": 0.006666666666666667,
+          "shareOfFlips": 0.04040404040404041,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "koala": 501,
+        "hamster_praise": 15,
+        "dolphin_calm": 53,
+        "rooster": 22,
+        "spider": 4,
+        "elephant": 5
+      },
+      "nonFlipRunnerUpCounts": {
+        "rooster": 68,
+        "elephant": 295,
+        "dolphin_calm": 45,
+        "hamster_praise": 73,
+        "spider": 20
+      },
+      "clampEvents": 117,
+      "clampSamples": 117
+    },
+    {
+      "source": "koala",
+      "sourceIndex": 6,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 254,
+      "flipRate": 0.423333,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 133,
+      "hardFlips": 121,
+      "confusableFlipRate": 0.221667,
+      "hardFlipRate": 0.201667,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "elephant",
+          "count": 80,
+          "rate": 0.13333333333333333,
+          "shareOfFlips": 0.31496062992125984,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "rooster",
+          "count": 59,
+          "rate": 0.09833333333333333,
+          "shareOfFlips": 0.23228346456692914,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 53,
+          "rate": 0.08833333333333333,
+          "shareOfFlips": 0.20866141732283464,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 31,
+          "rate": 0.051666666666666666,
+          "shareOfFlips": 0.1220472440944882,
+          "classification": "hard"
+        },
+        {
+          "archetype": "spider",
+          "count": 28,
+          "rate": 0.04666666666666667,
+          "shareOfFlips": 0.11023622047244094,
+          "classification": "hard"
+        },
+        {
+          "archetype": "turtle",
+          "count": 2,
+          "rate": 0.0033333333333333335,
+          "shareOfFlips": 0.007874015748031496,
+          "classification": "hard"
+        },
+        {
+          "archetype": "corgi",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.003937007874015748,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "elephant": 80,
+        "rooster": 59,
+        "koala": 346,
+        "dolphin_calm": 53,
+        "hamster_praise": 31,
+        "spider": 28,
+        "corgi": 1,
+        "turtle": 2
+      },
+      "nonFlipRunnerUpCounts": {
+        "elephant": 196,
+        "hamster_praise": 45,
+        "rooster": 42,
+        "spider": 28,
+        "dolphin_calm": 28,
+        "octopus": 6,
+        "turtle": 1
+      },
+      "clampEvents": 251,
+      "clampSamples": 229
+    },
+    {
+      "source": "octopus",
+      "sourceIndex": 7,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "octopus": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "fox": 600
+      },
+      "clampEvents": 306,
+      "clampSamples": 306
+    },
+    {
+      "source": "octopus",
+      "sourceIndex": 7,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "octopus": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "hamster_praise": 88,
+        "fox": 418,
+        "owl": 58,
+        "dolphin_calm": 35,
+        "cat": 1
+      },
+      "clampEvents": 332,
+      "clampSamples": 332
+    },
+    {
+      "source": "octopus",
+      "sourceIndex": 7,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 49,
+      "flipRate": 0.081667,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 42,
+      "hardFlips": 7,
+      "confusableFlipRate": 0.07,
+      "hardFlipRate": 0.011667,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "fox",
+          "count": 39,
+          "rate": 0.065,
+          "shareOfFlips": 0.7959183673469388,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "owl",
+          "count": 3,
+          "rate": 0.005,
+          "shareOfFlips": 0.061224489795918366,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "cat",
+          "count": 2,
+          "rate": 0.0033333333333333335,
+          "shareOfFlips": 0.04081632653061224,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 2,
+          "rate": 0.0033333333333333335,
+          "shareOfFlips": 0.04081632653061224,
+          "classification": "hard"
+        },
+        {
+          "archetype": "corgi",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.02040816326530612,
+          "classification": "hard"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.02040816326530612,
+          "classification": "hard"
+        },
+        {
+          "archetype": "spider",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.02040816326530612,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "octopus": 551,
+        "fox": 39,
+        "spider": 1,
+        "owl": 3,
+        "dolphin_calm": 2,
+        "corgi": 1,
+        "cat": 2,
+        "hamster_praise": 1
+      },
+      "nonFlipRunnerUpCounts": {
+        "hamster_praise": 94,
+        "fox": 309,
+        "corgi": 13,
+        "owl": 60,
+        "dolphin_calm": 35,
+        "cat": 25,
+        "koala": 13,
+        "spider": 1,
+        "elephant": 1
+      },
+      "clampEvents": 325,
+      "clampSamples": 322
+    },
+    {
+      "source": "owl",
+      "sourceIndex": 8,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "owl": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "cat": 532,
+        "elephant": 43,
+        "spider": 25
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "owl",
+      "sourceIndex": 8,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "owl": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "spider": 77,
+        "cat": 411,
+        "elephant": 35,
+        "fox": 70,
+        "koala": 4,
+        "dolphin_calm": 3
+      },
+      "clampEvents": 97,
+      "clampSamples": 97
+    },
+    {
+      "source": "owl",
+      "sourceIndex": 8,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 109,
+      "flipRate": 0.181667,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 6,
+      "hardFlips": 103,
+      "confusableFlipRate": 0.01,
+      "hardFlipRate": 0.171667,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "spider",
+          "count": 35,
+          "rate": 0.058333333333333334,
+          "shareOfFlips": 0.3211009174311927,
+          "classification": "hard"
+        },
+        {
+          "archetype": "cat",
+          "count": 26,
+          "rate": 0.043333333333333335,
+          "shareOfFlips": 0.23853211009174313,
+          "classification": "hard"
+        },
+        {
+          "archetype": "fox",
+          "count": 14,
+          "rate": 0.023333333333333334,
+          "shareOfFlips": 0.12844036697247707,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 10,
+          "rate": 0.016666666666666666,
+          "shareOfFlips": 0.09174311926605505,
+          "classification": "hard"
+        },
+        {
+          "archetype": "elephant",
+          "count": 10,
+          "rate": 0.016666666666666666,
+          "shareOfFlips": 0.09174311926605505,
+          "classification": "hard"
+        },
+        {
+          "archetype": "koala",
+          "count": 7,
+          "rate": 0.011666666666666667,
+          "shareOfFlips": 0.06422018348623854,
+          "classification": "hard"
+        },
+        {
+          "archetype": "turtle",
+          "count": 6,
+          "rate": 0.01,
+          "shareOfFlips": 0.05504587155963303,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "hamster_praise",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.009174311926605505,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "owl": 491,
+        "cat": 26,
+        "spider": 35,
+        "fox": 14,
+        "dolphin_calm": 10,
+        "elephant": 10,
+        "hamster_praise": 1,
+        "koala": 7,
+        "turtle": 6
+      },
+      "nonFlipRunnerUpCounts": {
+        "fox": 79,
+        "cat": 277,
+        "elephant": 56,
+        "spider": 49,
+        "koala": 20,
+        "turtle": 7,
+        "octopus": 2,
+        "dolphin_calm": 1
+      },
+      "clampEvents": 190,
+      "clampSamples": 178
+    },
+    {
+      "source": "elephant",
+      "sourceIndex": 9,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "elephant": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "koala": 588,
+        "turtle": 12
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "elephant",
+      "sourceIndex": 9,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 11,
+      "flipRate": 0.018333,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 11,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0.018333,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "turtle",
+          "count": 10,
+          "rate": 0.016666666666666666,
+          "shareOfFlips": 0.9090909090909091,
+          "classification": "hard"
+        },
+        {
+          "archetype": "spider",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.09090909090909091,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "elephant": 589,
+        "turtle": 10,
+        "spider": 1
+      },
+      "nonFlipRunnerUpCounts": {
+        "koala": 383,
+        "spider": 59,
+        "rooster": 54,
+        "turtle": 92,
+        "dolphin_calm": 1
+      },
+      "clampEvents": 171,
+      "clampSamples": 167
+    },
+    {
+      "source": "elephant",
+      "sourceIndex": 9,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 161,
+      "flipRate": 0.268333,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 44,
+      "hardFlips": 117,
+      "confusableFlipRate": 0.073333,
+      "hardFlipRate": 0.195,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "spider",
+          "count": 47,
+          "rate": 0.07833333333333334,
+          "shareOfFlips": 0.2919254658385093,
+          "classification": "hard"
+        },
+        {
+          "archetype": "koala",
+          "count": 44,
+          "rate": 0.07333333333333333,
+          "shareOfFlips": 0.2732919254658385,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "turtle",
+          "count": 44,
+          "rate": 0.07333333333333333,
+          "shareOfFlips": 0.2732919254658385,
+          "classification": "hard"
+        },
+        {
+          "archetype": "rooster",
+          "count": 12,
+          "rate": 0.02,
+          "shareOfFlips": 0.07453416149068323,
+          "classification": "hard"
+        },
+        {
+          "archetype": "dolphin_calm",
+          "count": 11,
+          "rate": 0.018333333333333333,
+          "shareOfFlips": 0.06832298136645963,
+          "classification": "hard"
+        },
+        {
+          "archetype": "owl",
+          "count": 3,
+          "rate": 0.005,
+          "shareOfFlips": 0.018633540372670808,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "elephant": 439,
+        "turtle": 44,
+        "koala": 44,
+        "owl": 3,
+        "dolphin_calm": 11,
+        "spider": 47,
+        "rooster": 12
+      },
+      "nonFlipRunnerUpCounts": {
+        "koala": 229,
+        "rooster": 68,
+        "turtle": 84,
+        "spider": 49,
+        "cat": 2,
+        "owl": 3,
+        "dolphin_calm": 4
+      },
+      "clampEvents": 270,
+      "clampSamples": 242
+    },
+    {
+      "source": "turtle",
+      "sourceIndex": 10,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "turtle": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "elephant": 471,
+        "cat": 129
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "turtle",
+      "sourceIndex": 10,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 12,
+      "flipRate": 0.02,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 12,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0.02,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "elephant",
+          "count": 12,
+          "rate": 0.02,
+          "shareOfFlips": 1,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "turtle": 588,
+        "elephant": 12
+      },
+      "nonFlipRunnerUpCounts": {
+        "elephant": 396,
+        "cat": 169,
+        "owl": 23
+      },
+      "clampEvents": 159,
+      "clampSamples": 159
+    },
+    {
+      "source": "turtle",
+      "sourceIndex": 10,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 166,
+      "flipRate": 0.276667,
+      "threshold": 0.2,
+      "breach": true,
+      "confusableFlips": 49,
+      "hardFlips": 117,
+      "confusableFlipRate": 0.081667,
+      "hardFlipRate": 0.195,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "elephant",
+          "count": 105,
+          "rate": 0.175,
+          "shareOfFlips": 0.6325301204819277,
+          "classification": "hard"
+        },
+        {
+          "archetype": "owl",
+          "count": 29,
+          "rate": 0.04833333333333333,
+          "shareOfFlips": 0.1746987951807229,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "cat",
+          "count": 20,
+          "rate": 0.03333333333333333,
+          "shareOfFlips": 0.12048192771084337,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "koala",
+          "count": 7,
+          "rate": 0.011666666666666667,
+          "shareOfFlips": 0.04216867469879518,
+          "classification": "hard"
+        },
+        {
+          "archetype": "spider",
+          "count": 5,
+          "rate": 0.008333333333333333,
+          "shareOfFlips": 0.030120481927710843,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "turtle": 434,
+        "elephant": 105,
+        "owl": 29,
+        "cat": 20,
+        "spider": 5,
+        "koala": 7
+      },
+      "nonFlipRunnerUpCounts": {
+        "elephant": 252,
+        "cat": 150,
+        "owl": 27,
+        "spider": 1,
+        "koala": 4
+      },
+      "clampEvents": 252,
+      "clampSamples": 238
+    },
+    {
+      "source": "cat",
+      "sourceIndex": 11,
+      "distribution": "uniform",
+      "radius": 5,
+      "samples": 600,
+      "flips": 0,
+      "flipRate": 0,
+      "threshold": 0.05,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 0,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0,
+      "lockedGate": true,
+      "absorbers": [],
+      "top1Counts": {
+        "cat": 600
+      },
+      "nonFlipRunnerUpCounts": {
+        "owl": 536,
+        "turtle": 61,
+        "octopus": 3
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "cat",
+      "sourceIndex": 11,
+      "distribution": "uniform",
+      "radius": 10,
+      "samples": 600,
+      "flips": 3,
+      "flipRate": 0.005,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 0,
+      "hardFlips": 3,
+      "confusableFlipRate": 0,
+      "hardFlipRate": 0.005,
+      "lockedGate": true,
+      "absorbers": [
+        {
+          "archetype": "owl",
+          "count": 3,
+          "rate": 0.005,
+          "shareOfFlips": 1,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "cat": 597,
+        "owl": 3
+      },
+      "nonFlipRunnerUpCounts": {
+        "owl": 414,
+        "turtle": 159,
+        "octopus": 24
+      },
+      "clampEvents": 0,
+      "clampSamples": 0
+    },
+    {
+      "source": "cat",
+      "sourceIndex": 11,
+      "distribution": "normal",
+      "radius": 10,
+      "sigma": 10,
+      "samples": 600,
+      "flips": 112,
+      "flipRate": 0.186667,
+      "threshold": 0.2,
+      "breach": false,
+      "confusableFlips": 26,
+      "hardFlips": 86,
+      "confusableFlipRate": 0.043333,
+      "hardFlipRate": 0.143333,
+      "lockedGate": false,
+      "absorbers": [
+        {
+          "archetype": "owl",
+          "count": 55,
+          "rate": 0.09166666666666666,
+          "shareOfFlips": 0.49107142857142855,
+          "classification": "hard"
+        },
+        {
+          "archetype": "turtle",
+          "count": 26,
+          "rate": 0.043333333333333335,
+          "shareOfFlips": 0.23214285714285715,
+          "classification": "confusable"
+        },
+        {
+          "archetype": "octopus",
+          "count": 25,
+          "rate": 0.041666666666666664,
+          "shareOfFlips": 0.22321428571428573,
+          "classification": "hard"
+        },
+        {
+          "archetype": "fox",
+          "count": 3,
+          "rate": 0.005,
+          "shareOfFlips": 0.026785714285714284,
+          "classification": "hard"
+        },
+        {
+          "archetype": "koala",
+          "count": 2,
+          "rate": 0.0033333333333333335,
+          "shareOfFlips": 0.017857142857142856,
+          "classification": "hard"
+        },
+        {
+          "archetype": "elephant",
+          "count": 1,
+          "rate": 0.0016666666666666668,
+          "shareOfFlips": 0.008928571428571428,
+          "classification": "hard"
+        }
+      ],
+      "top1Counts": {
+        "cat": 488,
+        "octopus": 25,
+        "turtle": 26,
+        "owl": 55,
+        "fox": 3,
+        "elephant": 1,
+        "koala": 2
+      },
+      "nonFlipRunnerUpCounts": {
+        "octopus": 83,
+        "owl": 248,
+        "turtle": 144,
+        "fox": 12,
+        "elephant": 1
+      },
+      "clampEvents": 41,
+      "clampSamples": 41
+    }
+  ],
+  "fragilePairs": [
+    {
+      "pair": [
+        "dolphin_calm",
+        "rooster"
+      ],
+      "aToB": 280,
+      "bToA": 3,
+      "total": 283,
+      "confusableTotal": 283,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 122,
+          "bToA": 3,
+          "total": 125
+        },
+        "uniform:5": {
+          "aToB": 36,
+          "bToA": 0,
+          "total": 36
+        },
+        "uniform:10": {
+          "aToB": 122,
+          "bToA": 0,
+          "total": 122
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "hamster_praise",
+        "rooster"
+      ],
+      "aToB": 220,
+      "bToA": 19,
+      "total": 239,
+      "confusableTotal": 0,
+      "hardTotal": 239,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 109,
+          "bToA": 19,
+          "total": 128
+        },
+        "uniform:5": {
+          "aToB": 61,
+          "bToA": 0,
+          "total": 61
+        },
+        "uniform:10": {
+          "aToB": 50,
+          "bToA": 0,
+          "total": 50
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "elephant",
+        "turtle"
+      ],
+      "aToB": 54,
+      "bToA": 117,
+      "total": 171,
+      "confusableTotal": 0,
+      "hardTotal": 171,
+      "byRadius": {
+        "uniform:10": {
+          "aToB": 10,
+          "bToA": 12,
+          "total": 22
+        },
+        "normal:10": {
+          "aToB": 44,
+          "bToA": 105,
+          "total": 149
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "dolphin_calm",
+        "spider"
+      ],
+      "aToB": 103,
+      "bToA": 44,
+      "total": 147,
+      "confusableTotal": 147,
+      "hardTotal": 0,
+      "byRadius": {
+        "uniform:10": {
+          "aToB": 27,
+          "bToA": 2,
+          "total": 29
+        },
+        "normal:10": {
+          "aToB": 76,
+          "bToA": 42,
+          "total": 118
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "dolphin_calm",
+        "koala"
+      ],
+      "aToB": 31,
+      "bToA": 106,
+      "total": 137,
+      "confusableTotal": 137,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 31,
+          "bToA": 53,
+          "total": 84
+        },
+        "uniform:10": {
+          "aToB": 0,
+          "bToA": 53,
+          "total": 53
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "fox",
+        "octopus"
+      ],
+      "aToB": 94,
+      "bToA": 39,
+      "total": 133,
+      "confusableTotal": 133,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 94,
+          "bToA": 39,
+          "total": 133
+        }
+      },
+      "registeredConfusable": true,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "elephant",
+        "koala"
+      ],
+      "aToB": 44,
+      "bToA": 85,
+      "total": 129,
+      "confusableTotal": 129,
+      "hardTotal": 0,
+      "byRadius": {
+        "uniform:10": {
+          "aToB": 0,
+          "bToA": 5,
+          "total": 5
+        },
+        "normal:10": {
+          "aToB": 44,
+          "bToA": 80,
+          "total": 124
+        }
+      },
+      "registeredConfusable": true,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "koala",
+        "spider"
+      ],
+      "aToB": 32,
+      "bToA": 65,
+      "total": 97,
+      "confusableTotal": 0,
+      "hardTotal": 97,
+      "byRadius": {
+        "uniform:10": {
+          "aToB": 4,
+          "bToA": 1,
+          "total": 5
+        },
+        "normal:10": {
+          "aToB": 28,
+          "bToA": 64,
+          "total": 92
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "cat",
+        "owl"
+      ],
+      "aToB": 58,
+      "bToA": 26,
+      "total": 84,
+      "confusableTotal": 0,
+      "hardTotal": 84,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 55,
+          "bToA": 26,
+          "total": 81
+        },
+        "uniform:10": {
+          "aToB": 3,
+          "bToA": 0,
+          "total": 3
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "koala",
+        "rooster"
+      ],
+      "aToB": 81,
+      "bToA": 0,
+      "total": 81,
+      "confusableTotal": 0,
+      "hardTotal": 81,
+      "byRadius": {
+        "uniform:10": {
+          "aToB": 22,
+          "bToA": 0,
+          "total": 22
+        },
+        "normal:10": {
+          "aToB": 59,
+          "bToA": 0,
+          "total": 59
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "elephant",
+        "spider"
+      ],
+      "aToB": 48,
+      "bToA": 11,
+      "total": 59,
+      "confusableTotal": 0,
+      "hardTotal": 59,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 47,
+          "bToA": 11,
+          "total": 58
+        },
+        "uniform:10": {
+          "aToB": 1,
+          "bToA": 0,
+          "total": 1
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "corgi",
+        "dolphin_calm"
+      ],
+      "aToB": 0,
+      "bToA": 55,
+      "total": 55,
+      "confusableTotal": 0,
+      "hardTotal": 55,
+      "byRadius": {
+        "uniform:10": {
+          "aToB": 0,
+          "bToA": 19,
+          "total": 19
+        },
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 36,
+          "total": 36
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "corgi",
+        "hamster_praise"
+      ],
+      "aToB": 50,
+      "bToA": 4,
+      "total": 54,
+      "confusableTotal": 0,
+      "hardTotal": 54,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 50,
+          "bToA": 4,
+          "total": 54
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "corgi",
+        "rooster"
+      ],
+      "aToB": 24,
+      "bToA": 29,
+      "total": 53,
+      "confusableTotal": 53,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 24,
+          "bToA": 29,
+          "total": 53
+        }
+      },
+      "registeredConfusable": true,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "hamster_praise",
+        "koala"
+      ],
+      "aToB": 1,
+      "bToA": 46,
+      "total": 47,
+      "confusableTotal": 0,
+      "hardTotal": 47,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 31,
+          "total": 32
+        },
+        "uniform:10": {
+          "aToB": 0,
+          "bToA": 15,
+          "total": 15
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "cat",
+        "turtle"
+      ],
+      "aToB": 26,
+      "bToA": 20,
+      "total": 46,
+      "confusableTotal": 46,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 26,
+          "bToA": 20,
+          "total": 46
+        }
+      },
+      "registeredConfusable": true,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "dolphin_calm",
+        "hamster_praise"
+      ],
+      "aToB": 41,
+      "bToA": 2,
+      "total": 43,
+      "confusableTotal": 43,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 38,
+          "bToA": 2,
+          "total": 40
+        },
+        "uniform:10": {
+          "aToB": 3,
+          "bToA": 0,
+          "total": 3
+        }
+      },
+      "registeredConfusable": true,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "dolphin_calm",
+        "elephant"
+      ],
+      "aToB": 30,
+      "bToA": 11,
+      "total": 41,
+      "confusableTotal": 0,
+      "hardTotal": 41,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 30,
+          "bToA": 11,
+          "total": 41
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "corgi",
+        "octopus"
+      ],
+      "aToB": 39,
+      "bToA": 1,
+      "total": 40,
+      "confusableTotal": 0,
+      "hardTotal": 40,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 39,
+          "bToA": 1,
+          "total": 40
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "owl",
+        "spider"
+      ],
+      "aToB": 35,
+      "bToA": 3,
+      "total": 38,
+      "confusableTotal": 0,
+      "hardTotal": 38,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 35,
+          "bToA": 3,
+          "total": 38
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "corgi",
+        "fox"
+      ],
+      "aToB": 25,
+      "bToA": 12,
+      "total": 37,
+      "confusableTotal": 0,
+      "hardTotal": 37,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 25,
+          "bToA": 12,
+          "total": 37
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "owl",
+        "turtle"
+      ],
+      "aToB": 6,
+      "bToA": 29,
+      "total": 35,
+      "confusableTotal": 35,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 6,
+          "bToA": 29,
+          "total": 35
+        }
+      },
+      "registeredConfusable": true,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "rooster",
+        "spider"
+      ],
+      "aToB": 1,
+      "bToA": 32,
+      "total": 33,
+      "confusableTotal": 0,
+      "hardTotal": 33,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 32,
+          "total": 33
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "hamster_praise",
+        "octopus"
+      ],
+      "aToB": 31,
+      "bToA": 1,
+      "total": 32,
+      "confusableTotal": 0,
+      "hardTotal": 32,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 31,
+          "bToA": 1,
+          "total": 32
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "cat",
+        "octopus"
+      ],
+      "aToB": 25,
+      "bToA": 2,
+      "total": 27,
+      "confusableTotal": 0,
+      "hardTotal": 27,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 25,
+          "bToA": 2,
+          "total": 27
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "fox",
+        "owl"
+      ],
+      "aToB": 1,
+      "bToA": 14,
+      "total": 15,
+      "confusableTotal": 0,
+      "hardTotal": 15,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 14,
+          "total": 15
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "dolphin_calm",
+        "fox"
+      ],
+      "aToB": 1,
+      "bToA": 12,
+      "total": 13,
+      "confusableTotal": 0,
+      "hardTotal": 13,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 12,
+          "total": 13
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "elephant",
+        "owl"
+      ],
+      "aToB": 3,
+      "bToA": 10,
+      "total": 13,
+      "confusableTotal": 0,
+      "hardTotal": 13,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 3,
+          "bToA": 10,
+          "total": 13
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "elephant",
+        "rooster"
+      ],
+      "aToB": 12,
+      "bToA": 0,
+      "total": 12,
+      "confusableTotal": 0,
+      "hardTotal": 12,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 12,
+          "bToA": 0,
+          "total": 12
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "dolphin_calm",
+        "owl"
+      ],
+      "aToB": 0,
+      "bToA": 10,
+      "total": 10,
+      "confusableTotal": 0,
+      "hardTotal": 10,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 10,
+          "total": 10
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "koala",
+        "turtle"
+      ],
+      "aToB": 2,
+      "bToA": 7,
+      "total": 9,
+      "confusableTotal": 0,
+      "hardTotal": 9,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 2,
+          "bToA": 7,
+          "total": 9
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "koala",
+        "owl"
+      ],
+      "aToB": 0,
+      "bToA": 7,
+      "total": 7,
+      "confusableTotal": 0,
+      "hardTotal": 7,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 7,
+          "total": 7
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "spider",
+        "turtle"
+      ],
+      "aToB": 1,
+      "bToA": 5,
+      "total": 6,
+      "confusableTotal": 0,
+      "hardTotal": 6,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 5,
+          "total": 6
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "fox",
+        "spider"
+      ],
+      "aToB": 5,
+      "bToA": 0,
+      "total": 5,
+      "confusableTotal": 0,
+      "hardTotal": 5,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 5,
+          "bToA": 0,
+          "total": 5
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "hamster_praise",
+        "spider"
+      ],
+      "aToB": 0,
+      "bToA": 4,
+      "total": 4,
+      "confusableTotal": 0,
+      "hardTotal": 4,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 4,
+          "total": 4
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "cat",
+        "fox"
+      ],
+      "aToB": 3,
+      "bToA": 0,
+      "total": 3,
+      "confusableTotal": 0,
+      "hardTotal": 3,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 3,
+          "bToA": 0,
+          "total": 3
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "octopus",
+        "owl"
+      ],
+      "aToB": 3,
+      "bToA": 0,
+      "total": 3,
+      "confusableTotal": 3,
+      "hardTotal": 0,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 3,
+          "bToA": 0,
+          "total": 3
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": true
+    },
+    {
+      "pair": [
+        "cat",
+        "koala"
+      ],
+      "aToB": 2,
+      "bToA": 0,
+      "total": 2,
+      "confusableTotal": 0,
+      "hardTotal": 2,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 2,
+          "bToA": 0,
+          "total": 2
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "dolphin_calm",
+        "octopus"
+      ],
+      "aToB": 0,
+      "bToA": 2,
+      "total": 2,
+      "confusableTotal": 0,
+      "hardTotal": 2,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 2,
+          "total": 2
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "cat",
+        "elephant"
+      ],
+      "aToB": 1,
+      "bToA": 0,
+      "total": 1,
+      "confusableTotal": 0,
+      "hardTotal": 1,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 0,
+          "total": 1
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "corgi",
+        "koala"
+      ],
+      "aToB": 0,
+      "bToA": 1,
+      "total": 1,
+      "confusableTotal": 0,
+      "hardTotal": 1,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 1,
+          "total": 1
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "corgi",
+        "spider"
+      ],
+      "aToB": 0,
+      "bToA": 1,
+      "total": 1,
+      "confusableTotal": 0,
+      "hardTotal": 1,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 1,
+          "total": 1
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "hamster_praise",
+        "owl"
+      ],
+      "aToB": 0,
+      "bToA": 1,
+      "total": 1,
+      "confusableTotal": 0,
+      "hardTotal": 1,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 0,
+          "bToA": 1,
+          "total": 1
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    },
+    {
+      "pair": [
+        "octopus",
+        "spider"
+      ],
+      "aToB": 1,
+      "bToA": 0,
+      "total": 1,
+      "confusableTotal": 0,
+      "hardTotal": 1,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 0,
+          "total": 1
+        }
+      },
+      "registeredConfusable": false,
+      "registeredPersistent": false
+    }
+  ],
+  "p0CrossReference": [
+    {
+      "pair": [
+        "fox",
+        "owl"
+      ],
+      "total": 15,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 1,
+          "bToA": 14,
+          "total": 15
+        }
+      }
+    },
+    {
+      "pair": [
+        "octopus",
+        "owl"
+      ],
+      "total": 3,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 3,
+          "bToA": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "pair": [
+        "cat",
+        "turtle"
+      ],
+      "total": 46,
+      "byRadius": {
+        "normal:10": {
+          "aToB": 26,
+          "bToA": 20,
+          "total": 46
+        }
+      }
+    },
+    {
+      "pair": [
+        "elephant",
+        "koala"
+      ],
+      "total": 129,
+      "byRadius": {
+        "uniform:10": {
+          "aToB": 0,
+          "bToA": 5,
+          "total": 5
+        },
+        "normal:10": {
+          "aToB": 44,
+          "bToA": 80,
+          "total": 124
+        }
+      }
+    }
+  ],
+  "registeredPairs": {
+    "confusable": [
+      [
+        "dolphin_calm",
+        "hamster_praise"
+      ],
+      [
+        "fox",
+        "octopus"
+      ],
+      [
+        "elephant",
+        "koala"
+      ],
+      [
+        "owl",
+        "turtle"
+      ],
+      [
+        "corgi",
+        "rooster"
+      ],
+      [
+        "cat",
+        "turtle"
+      ]
+    ],
+    "persistent": [
+      [
+        "dolphin_calm",
+        "rooster"
+      ],
+      [
+        "owl",
+        "turtle"
+      ],
+      [
+        "dolphin_calm",
+        "koala"
+      ],
+      [
+        "corgi",
+        "rooster"
+      ],
+      [
+        "dolphin_calm",
+        "spider"
+      ],
+      [
+        "fox",
+        "octopus"
+      ],
+      [
+        "cat",
+        "turtle"
+      ],
+      [
+        "octopus",
+        "owl"
+      ]
+    ]
+  }
+}

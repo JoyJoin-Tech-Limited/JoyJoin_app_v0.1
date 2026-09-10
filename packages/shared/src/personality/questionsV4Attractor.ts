@@ -852,7 +852,7 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "立刻加入讨论，抛出自己独特的观点，享受思想碰撞",
-        traitScores: { A: -1, C: -1, E: 0, O: 4, X: 3, P: 2 }
+        traitScores: { A: -1, C: -1, E: 1, O: 4, X: 3, P: 2 }
       },
       {
         value: "B",
@@ -867,7 +867,7 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
       {
         value: "D",
         text: "有些厌烦这种争论，默默划走",
-        traitScores: { A: 0, C: 1, E: 2, O: -1, X: -3, P: -1 }
+        traitScores: { A: 0, C: 1, E: -1, O: -1, X: -3, P: -1 }
       }
     ]
   },
@@ -1002,12 +1002,12 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "默默做好自己的部分，用行动支持团队",
-        traitScores: { A: 1, C: 2, E: 0, O: 0, X: -2, P: -1 }
+        traitScores: { A: 1, C: 2, E: 1, O: 0, X: -2, P: -1 }
       },
       {
         value: "D",
         text: "倾听每个人的想法，找到大家都认可的方向",
-        traitScores: { A: 3, C: -1, E: 0, O: 0, X: -2, P: 1 }
+        traitScores: { A: 3, C: -1, E: 1, O: 0, X: -2, P: 1 }
       }
     ]
   },
@@ -1041,7 +1041,7 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
       {
         value: "D",
         text: "先问问大家想做什么，收集意见再决定",
-        traitScores: { A: 3, C: 1, E: 0, O: 0, X: -1, P: -1 }
+        traitScores: { A: 3, C: 1, E: 1, O: 0, X: -1, P: -1 }
       }
     ]
   },
@@ -1247,6 +1247,63 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
         text: "直接调解",
         traitScores: { X: 2, C: 2, A: 1 },
         iconAssetKey: "direct",
+      },
+    ],
+  },
+
+  // ==================== Q168: 自我视角收尾题 (Plan Item 4, flag-gated) ====================
+
+  // Q168 — 自我视角·温度直觉 (meta-consistency self-view slider)
+  // 目标: 直接自陈「我在乎别人感受的程度」(A 特质自我视角)，与引擎的场景化估计对照，
+  //       用于 Plan Item 4 的收尾一致性检查 (metaConsistency.ts)。
+  // 设计依据:
+  //   - 仅在 AssessmentConfig.enableMetaConsistency 开启时作为最后一个收尾题出现
+  //     (在 Q_PLAYFUL_SLIDER / Q_PLAYFUL_EMOJI 之后)；收尾题机制复用，客户端零改动。
+  //   - 所有选项 traitScores 全零: 自陈答案测量的是自我视角，绝不能喂进它所要对照的
+  //     估计值 (否则自报告会把估计拉向自己，掩盖恰恰要被检测的偏差)。
+  //   - 选项 value 沿用 slider_N 约定 (小程序按 value 中的数字映射滑条位置)。
+  //   - discriminationIndex = 0: 这不是特质区分题，永远不进入自适应选题池。
+  {
+    id: "Q168",
+    level: 3,
+    category: "自我视角",
+    scenarioText: "聚会散场前，一个朋友看起来有点低落，嘴上却说「我没事」。",
+    questionText: "回想一下平时，这种时候你通常是怎样的？",
+    primaryTraits: ["A"],
+    questionType: "slider",
+    isAnchor: false,
+    discriminationIndex: 0,
+    sliderConfig: {
+      leftLabel: "通常是别人先察觉",
+      rightLabel: "通常是我先察觉并上前",
+      // 无 traitMappings: 本题不做特质计分 (见上方设计依据)。
+      traitMappings: [],
+    },
+    options: [
+      {
+        value: "slider_0",
+        text: "几乎不会，我常事后才知道",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 },
+      },
+      {
+        value: "slider_25",
+        text: "偶尔能察觉，但不太会主动上前",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 },
+      },
+      {
+        value: "slider_50",
+        text: "看情况，一半一半",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 },
+      },
+      {
+        value: "slider_75",
+        text: "多数时候能察觉，会过去问一句",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 },
+      },
+      {
+        value: "slider_100",
+        text: "几乎总是我先察觉并上前关心",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 },
       },
     ],
   },

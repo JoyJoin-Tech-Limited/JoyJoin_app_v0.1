@@ -8,6 +8,7 @@ import { questionsV4L2 } from '../../packages/shared/src/personality/questionsV4
 import { questionsV4Extended } from '../../packages/shared/src/personality/questionsV4Extended.js';
 import { questionsV4Advanced } from '../../packages/shared/src/personality/questionsV4Advanced.js';
 import { questionsV4Attractor } from '../../packages/shared/src/personality/questionsV4Attractor.js';
+import { questionsV4Ipsative } from '../../packages/shared/src/personality/questionsV4Ipsative.js';
 import type { AdaptiveQuestion, TraitKey, TraitScores } from '../../packages/shared/src/personality/types.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -170,6 +171,7 @@ function main() {
     ...questionsV4Extended,
     ...questionsV4Advanced,
     ...questionsV4Attractor,
+    ...questionsV4Ipsative,
   ];
 
   // Compute metrics for each question

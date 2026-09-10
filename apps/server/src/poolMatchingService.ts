@@ -31,8 +31,9 @@ import {
   coupons,
   userCoupons,
   matchHistory,
+  assessmentSessions,
 } from "@shared/schema";
-import { eq, and, inArray, isNull, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, isNull, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
 import { calculateAge } from "@shared/utils";
 import { INTEREST_TAXONOMY } from "@shared/interests";
@@ -111,6 +112,28 @@ export interface UserWithProfile {
   // Match Compass preferences
   preferenceStrictness: number | null;
   genderCompositionPreference: string | null;
+
+  // Item 5 (V4 engine upgrade): REPORTED ACOEXP trait vector from the user's
+  // latest COMPLETED assessment session — the explicit trait-carrying input
+  // for the literature-prior composition gates (AC-5.1b). Optional and inert
+  // unless `compositionGatesEnabled` is threaded into the core: pair scoring
+  // NEVER reads this field. Cold-start policy: members without a complete
+  // vector skip gates (i)/(ii)/(iv) (R3 skip-on-missing-cache precedent).
+  traitScores?: CompositionTraitVector | null;
+}
+
+/**
+ * Reported ACOEXP vector (0–100 per trait) consumed by the Item 5
+ * composition gates. All six keys must be finite numbers for the vector to
+ * be usable; anything less is treated as cold-start (gates skip).
+ */
+export interface CompositionTraitVector {
+  A?: number;
+  C?: number;
+  E?: number;
+  O?: number;
+  X?: number;
+  P?: number;
 }
 
 export interface MatchGroup {
@@ -251,6 +274,11 @@ export function calculateChemistryScore(
   user1: UserWithProfile,
   user2: UserWithProfile,
   chemistryCalibrationMap?: ChemistryCalibrationMap,
+  /**
+   * Plan Item 10: thread the resolved `derivedChemistryEnabled` flag through
+   * (never read per-pair). Default false preserves the authored path exactly.
+   */
+  derivedChemistryEnabled = false,
 ): number {
   const primary1 = (user1.archetype || "koala") as ArchetypeName;
   const primary2 = (user2.archetype || "koala") as ArchetypeName;
@@ -258,12 +286,12 @@ export function calculateChemistryScore(
   const secondary2 = (user2.secondaryArchetype || "koala") as ArchetypeName;
 
   // 主角色化学反应（70%权重）
-  const primaryChemistryRaw = getCalibratedChemistryScore(primary1, primary2, chemistryCalibrationMap);
+  const primaryChemistryRaw = getCalibratedChemistryScore(primary1, primary2, chemistryCalibrationMap, derivedChemistryEnabled);
   const primaryChemistry = primaryChemistryRaw * 0.70;
 
   // 次要角色交叉加成（各15%权重，共30%）
-  const crossChemistry1Raw = getCalibratedChemistryScore(primary1, secondary2, chemistryCalibrationMap);
-  const crossChemistry2Raw = getCalibratedChemistryScore(secondary1, primary2, chemistryCalibrationMap);
+  const crossChemistry1Raw = getCalibratedChemistryScore(primary1, secondary2, chemistryCalibrationMap, derivedChemistryEnabled);
+  const crossChemistry2Raw = getCalibratedChemistryScore(secondary1, primary2, chemistryCalibrationMap, derivedChemistryEnabled);
   const crossChemistry1 = crossChemistry1Raw * 0.15;
   const crossChemistry2 = crossChemistry2Raw * 0.15;
 
@@ -338,6 +366,69 @@ export async function preloadUserInterests(userIds: string[]): Promise<UserInter
     if (!cache.has(userId)) {
       cache.set(userId, { topics: [], heatMap: {} });
     }
+  }
+
+  return cache;
+}
+
+/**
+ * Item 5 (AC-5.1b): batch preload of REPORTED ACOEXP trait vectors for the
+ * composition gates — mirrors `preloadUserInterests` (one batch query, no
+ * per-member lookups in the matching hot path).
+ *
+ * Source: the user's latest COMPLETED assessment session
+ * (`assessment_sessions.completedAt IS NOT NULL`, newest first). Mirrors the
+ * profile read path (`routes/domains/profile.ts`): prefer
+ * `finalResult.traitScores` (engine-normalized 0–100), fall back to the
+ * top-level `trait_scores` JSONB for legacy sessions.
+ *
+ * Cold-start policy (mandatory per the Item 5 contract): users with no
+ * completed session — or a session whose vector is incomplete — get NO cache
+ * entry (absence is meaningful). The gates skip members without a complete
+ * vector instead of treating them as failing (R3 skip-on-missing-cache
+ * precedent), so gate-on never strands cold-start users (M10 guard).
+ */
+export async function preloadLatestTraitVectors(
+  userIds: string[],
+): Promise<Map<string, CompositionTraitVector>> {
+  const cache = new Map<string, CompositionTraitVector>();
+  if (userIds.length === 0) return cache;
+
+  const rows = await db
+    .select({
+      userId: assessmentSessions.userId,
+      traitScores: assessmentSessions.traitScores,
+      finalResult: assessmentSessions.finalResult,
+    })
+    .from(assessmentSessions)
+    .where(
+      and(
+        inArray(assessmentSessions.userId, userIds),
+        sql`${assessmentSessions.completedAt} IS NOT NULL`,
+      ),
+    )
+    .orderBy(desc(assessmentSessions.completedAt));
+
+  // Rows are newest-first, so the first row seen per user is the latest
+  // completed session.
+  for (const row of rows) {
+    if (!row.userId || cache.has(row.userId)) continue;
+    const raw = ((row.finalResult as any)?.traitScores ?? row.traitScores) as
+      | Record<string, unknown>
+      | null;
+    if (!raw || typeof raw !== "object") continue;
+    const vector: CompositionTraitVector = {};
+    let complete = true;
+    for (const trait of ["A", "C", "E", "O", "X", "P"] as const) {
+      const value = raw[trait];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        vector[trait] = value;
+      } else {
+        complete = false;
+        break;
+      }
+    }
+    if (complete) cache.set(row.userId, vector);
   }
 
   return cache;
@@ -792,6 +883,8 @@ export async function calculatePairScore(
   matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
   matchNeverMeetSentinelEnabled = false,
   useWeightProfileV2 = false,
+  /** Plan Item 10: resolved derived-chemistry flag, threaded (hot path — no per-pair lookup). */
+  derivedChemistryEnabled = false,
 ): Promise<number> {
   const sortedUserIds = user1.userId < user2.userId
     ? `${user1.userId}|${user2.userId}`
@@ -809,7 +902,7 @@ export async function calculatePairScore(
     return pairScoreCache.get(cacheKey)!;
   }
 
-  const chemistry = calculateChemistryScore(user1, user2, chemistryCalibrationMap);
+  const chemistry = calculateChemistryScore(user1, user2, chemistryCalibrationMap, derivedChemistryEnabled);
   const interest = await calculateInterestScoreAsync(user1.userId, user2.userId, interestsCache);
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
@@ -879,6 +972,8 @@ async function calculateGroupPairScore(
   matchNeverMeetSentinelEnabled = false,
   useWeightProfileV2 = false,
   excludePairKeys?: Set<string>,
+  /** Plan Item 10: resolved derived-chemistry flag, threaded through. */
+  derivedChemistryEnabled = false,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -905,6 +1000,7 @@ async function calculateGroupPairScore(
         matchHistoryLookup,
         matchNeverMeetSentinelEnabled,
         useWeightProfileV2,
+        derivedChemistryEnabled,
       );
       // Skip anti-repetition sentinel (-1) pairs — they should not contaminate the average
       if (pairScore >= 0) {
@@ -925,6 +1021,8 @@ function calculateGroupChemistryScore(
   members: UserWithProfile[],
   chemistryCalibrationMap?: ChemistryCalibrationMap,
   excludePairKeys?: Set<string>,
+  /** Plan Item 10: resolved derived-chemistry flag, threaded through. */
+  derivedChemistryEnabled = false,
 ): number {
   if (members.length < 2) return 0;
   let total = 0;
@@ -937,7 +1035,7 @@ function calculateGroupChemistryScore(
       ) {
         continue;
       }
-      total += calculateChemistryScore(members[i], members[j], chemistryCalibrationMap);
+      total += calculateChemistryScore(members[i], members[j], chemistryCalibrationMap, derivedChemistryEnabled);
       count++;
     }
   }
@@ -1301,6 +1399,291 @@ export function adjustScoreForNoveltyDispersion(
   return groupHasExplorer ? avgScore - MAGNETISM_EXPLORE_RANKING_PENALTY : avgScore;
 }
 
+// ── Item 5 (V4 engine upgrade): literature-prior composition gates ────────
+// Four group-composition gates behind the compositionGatesEnabled flag
+// (COMPOSITION_GATES_ENABLED), extending the R1–R3 commit-gate family.
+// Literature priors: docs/strategy/scientific-foundation.md.
+//   (i)   group minimum-E floor (stability floor)
+//   (ii)  group mean-A floor (viability floor)
+//   (iii) exactly-one-spark: spark = member with reported X ≥ 70 ∨ P ≥ 70
+//         (LOCKED to the Item 9 Monte Carlo baseline definition; replaces the
+//         archetype-level R2 energizer definition when this flag is on).
+//         Enforcement = admission-time steering (R4 argmax-nudge pattern) +
+//         commit-gate backstop; pool-level exemption is BIDIRECTIONAL
+//         (spark-deficit AND spark-surplus pools).
+//   (iv)  X-variance hard cap — extends the harmonyScore variance pattern
+//         (natural-stdDev ≤ 20 → no penalty) to reported trait X.
+// Cold-start policy (AC-5.1b): members without a complete reported vector
+// skip gates (i)/(ii)/(iv) — R3 skip-on-missing-cache precedent; without it
+// M10 (unmatched-rate delta ≤ +2pp) is unachievable.
+// AC-5.2: NONE of the four gates is monotonic under member addition, so they
+// are re-evaluated in `magnetismRulesSatisfiedFor` (H4 absorption + Phase-2
+// whole-group formation), not just at the greedy commit gate.
+
+/**
+ * (i) Stability floor: a committed group's minimum reported E must reach this.
+ * Barrick et al. (1998): the MINIMUM member score matters — a single
+ * low-stability member degrades the whole group's viability.
+ */
+export const COMPOSITION_MIN_E_FLOOR = 25;
+/**
+ * (ii) Viability floor: a committed group's mean reported A must reach this.
+ * Bell (2007) meta-analysis: team-level Agreeableness predicts team
+ * performance (stronger in field settings).
+ */
+export const COMPOSITION_MEAN_A_FLOOR = 45;
+/**
+ * (iii) Spark definition (LOCKED, Item 9 baseline): a member is a spark when
+ * reported X ≥ threshold OR P ≥ threshold.
+ */
+export const COMPOSITION_SPARK_TRAIT_THRESHOLD = 70;
+/**
+ * (iv) X-variance hard cap: a committed group's population variance of
+ * reported X must not exceed this. Extends the harmonyScore variance pattern
+ * (energy stdDev ≤ 20 is natural) to trait X — stdDev ≤ 25 within a group is
+ * treated as natural spread; beyond it, extraversion polarization degrades
+ * the table. Initial value bites the violation TAIL of the Item 9 baseline
+ * distribution (p90 ≈ 621), not the median; calibrated via `simulate:groups`
+ * gate-on arm against M9 (≥95% pass) ∧ M10 (≤ +2pp unmatched).
+ */
+export const COMPOSITION_X_VARIANCE_CAP = 750;
+
+/** (iii) Ranking penalty for admitting a SECOND spark into a group that already has one (R4 nudge pattern: argmax-only, never a ban). */
+export const COMPOSITION_SECOND_SPARK_RANKING_PENALTY = 12;
+/** (iii) Ranking bonus for a spark candidate joining a sparkless group (prefer-a-spark steering). */
+export const COMPOSITION_SPARKLESS_GROUP_SPARK_BONUS = 16;
+/** (i) Ranking penalty for admitting a member whose reported E is below the stability floor (bad-apple steering; Barrick et al. 1998). */
+export const COMPOSITION_LOW_E_RANKING_PENALTY = 8;
+/** (ii) Ranking bonus/penalty steering a below-floor group's mean A back over the viability floor. */
+export const COMPOSITION_MEAN_A_LIFT_BONUS = 8;
+export const COMPOSITION_MEAN_A_DRAG_PENALTY = 8;
+/** (iv) Ranking penalty for an admission that would push the group's X-variance over the hard cap. */
+export const COMPOSITION_X_VARIANCE_RANKING_PENALTY = 10;
+
+/** True when the member carries a complete, finite reported ACOEXP vector. */
+export function hasCompleteTraitVector(member: UserWithProfile): boolean {
+  const t = member.traitScores;
+  if (!t) return false;
+  return (["A", "C", "E", "O", "X", "P"] as const).every(
+    (k) => typeof t[k] === "number" && Number.isFinite(t[k]),
+  );
+}
+
+/**
+ * (iii) spark predicate — LOCKED definition: reported X ≥ 70 ∨ P ≥ 70.
+ * Cold-start members (no complete vector) count as NON-sparks
+ * (deterministic; the bidirectional pool exemption absorbs the uncertainty).
+ */
+export function isCompositionSpark(member: UserWithProfile): boolean {
+  const t = member.traitScores;
+  if (!t) return false;
+  const x = typeof t.X === "number" ? t.X : null;
+  const p = typeof t.P === "number" ? t.P : null;
+  return (x !== null && x >= COMPOSITION_SPARK_TRAIT_THRESHOLD) ||
+    (p !== null && p >= COMPOSITION_SPARK_TRAIT_THRESHOLD);
+}
+
+export interface CompositionSparkPoolState {
+  sparkCount: number;
+  expectedGroups: number;
+  /** sparks < expectedGroups → some group MUST end sparkless → skip the ≥1-spark direction. */
+  deficitExempt: boolean;
+  /** sparks > expectedGroups → some group MUST take 2+ sparks → skip the ≤1-spark direction. */
+  surplusExempt: boolean;
+}
+
+/**
+ * Pool-level spark arithmetic, computed once per run. The exemption is
+ * BIDIRECTIONAL (contract AC-5.1(iii)): rejection-only against a spark-surplus
+ * population (Item 9 baseline: 79.3% of groups carry 2+ sparks) would strand
+ * pools and blow M10, and a spark-deficit pool can never give every group a
+ * spark. `expectedGroups` is the pool's planned group count (targetGroups,
+ * fallback ceil(eligible/maxGroupSize)).
+ */
+export function computeSparkPoolState(
+  eligibleUsers: UserWithProfile[],
+  expectedGroups: number,
+): CompositionSparkPoolState {
+  const sparkCount = eligibleUsers.filter(isCompositionSpark).length;
+  const groups = Math.max(1, expectedGroups);
+  return {
+    sparkCount,
+    expectedGroups: groups,
+    deficitExempt: sparkCount < groups,
+    surplusExempt: sparkCount > groups,
+  };
+}
+
+export interface CompositionGateEvaluation {
+  satisfied: boolean;
+  minEFloorSatisfied: boolean;
+  meanAFloorSatisfied: boolean;
+  sparkRuleSatisfied: boolean;
+  xVarianceCapSatisfied: boolean;
+  /** Per-gate false = gate skipped (cold-start skip or pool exemption). */
+  evaluated: { minE: boolean; meanA: boolean; sparkMin: boolean; sparkMax: boolean; xVariance: boolean };
+}
+
+/**
+ * Evaluate the four Item-5 composition gates on a candidate group.
+ * Cold-start skip (AC-5.1b): if ANY member lacks a complete reported vector,
+ * gates (i)/(ii)/(iv) are skipped (satisfied, evaluated=false). Gate (iii)
+ * counts only known vectors and respects the bidirectional pool exemption.
+ * Pure + sync: usable by the greedy commit gate, the H4 redistribution
+ * re-evaluation, and the Monte Carlo harness (identical predicate, no drift).
+ */
+export function evaluateCompositionGates(
+  members: UserWithProfile[],
+  sparkPoolState: CompositionSparkPoolState,
+): CompositionGateEvaluation {
+  const allHaveTraits = members.every(hasCompleteTraitVector);
+
+  // (i) stability floor — Barrick et al. (1998): minimum member score matters.
+  let minEFloorSatisfied = true;
+  if (allHaveTraits) {
+    minEFloorSatisfied = members.every((m) => (m.traitScores!.E as number) >= COMPOSITION_MIN_E_FLOOR);
+  }
+
+  // (ii) viability floor — Bell (2007): team-level Agreeableness.
+  let meanAFloorSatisfied = true;
+  if (allHaveTraits) {
+    const meanA = members.reduce((s, m) => s + (m.traitScores!.A as number), 0) / members.length;
+    meanAFloorSatisfied = meanA >= COMPOSITION_MEAN_A_FLOOR;
+  }
+
+  // (iv) X-variance hard cap — harmonyScore variance pattern extended to trait X.
+  let xVarianceCapSatisfied = true;
+  if (allHaveTraits) {
+    const meanX = members.reduce((s, m) => s + (m.traitScores!.X as number), 0) / members.length;
+    const varX = members.reduce((s, m) => s + Math.pow((m.traitScores!.X as number) - meanX, 2), 0) / members.length;
+    xVarianceCapSatisfied = varX <= COMPOSITION_X_VARIANCE_CAP;
+  }
+
+  // (iii) exactly-one-spark — bidirectional exemption; sparkless members with
+  // missing vectors count as non-sparks (see isCompositionSpark).
+  const sparkCount = members.filter(isCompositionSpark).length;
+  const sparkMinSatisfied = sparkPoolState.deficitExempt || sparkCount >= 1;
+  const sparkMaxSatisfied = sparkPoolState.surplusExempt || sparkCount <= 1;
+  const sparkRuleSatisfied = sparkMinSatisfied && sparkMaxSatisfied;
+
+  return {
+    satisfied: minEFloorSatisfied && meanAFloorSatisfied && sparkRuleSatisfied && xVarianceCapSatisfied,
+    minEFloorSatisfied,
+    meanAFloorSatisfied,
+    sparkRuleSatisfied,
+    xVarianceCapSatisfied,
+    evaluated: {
+      minE: allHaveTraits,
+      meanA: allHaveTraits,
+      sparkMin: !sparkPoolState.deficitExempt,
+      sparkMax: !sparkPoolState.surplusExempt,
+      xVariance: allHaveTraits,
+    },
+  };
+}
+
+/**
+ * Item-5 admission-time steering (AC-5.1(iii)/AC-5.2): R4-pattern argmax-only
+ * nudges during group expansion. NEVER a ban — the admission threshold
+ * (`bestAvgScore >= minPairScore`) still sees the true pair-score average, and
+ * cached pair scores are never mutated. [DUO] a duo candidate is steered as a
+ * UNIT: the partner's traits count toward the unit's spark/floor effects, so
+ * steering can never prefer splitting an atomic unit.
+ *
+ * The spark nudges respect the BIDIRECTIONAL pool exemption: in a
+ * spark-surplus pool (sparks > expectedGroups) exactly-one-per-group is
+ * arithmetically impossible, so the second-spark penalty is skipped —
+ * penalizing it would only delay spark admissions until their best partners
+ * are consumed (Monte Carlo stranding evidence, 2026-09-10). In a
+ * spark-deficit pool the prefer-a-spark bonus is skipped (some groups must go
+ * sparkless regardless). The mean-A nudge is PREVENTIVE: it fires when the
+ * projected post-admission mean would sit below the viability floor.
+ */
+export function adjustScoreForCompositionGates(
+  candidate: UserWithProfile,
+  candidatePartner: UserWithProfile | null,
+  groupMembers: UserWithProfile[],
+  avgScore: number,
+  sparkPoolState: CompositionSparkPoolState,
+): number {
+  const unit = candidatePartner ? [candidate, candidatePartner] : [candidate];
+  let score = avgScore;
+
+  // (iii) spark steering: spread sparks across groups, exemption-aware.
+  const unitHasSpark = unit.some(isCompositionSpark);
+  if (unitHasSpark) {
+    const groupSparkCount = groupMembers.filter(isCompositionSpark).length;
+    if (!sparkPoolState.surplusExempt && groupSparkCount >= 1) {
+      score -= COMPOSITION_SECOND_SPARK_RANKING_PENALTY; // second-spark admission
+    } else if (!sparkPoolState.deficitExempt && groupSparkCount === 0) {
+      score += COMPOSITION_SPARKLESS_GROUP_SPARK_BONUS; // prefer-a-spark for sparkless groups
+    }
+  }
+
+  // (i) stability steering: discourage admitting a sub-floor-E member.
+  if (unit.some((m) => hasCompleteTraitVector(m) && (m.traitScores!.E as number) < COMPOSITION_MIN_E_FLOOR)) {
+    score -= COMPOSITION_LOW_E_RANKING_PENALTY;
+  }
+
+  // (ii) viability steering (preventive): when the PROJECTED post-admission
+  // mean A would sit below the floor, lift high-A units and drag low-A units.
+  const traitedMembers = groupMembers.filter(hasCompleteTraitVector);
+  const unitTraited = unit.filter(hasCompleteTraitVector);
+  if (traitedMembers.length > 0 && unitTraited.length === unit.length && unitTraited.length > 0) {
+    const projected = [...traitedMembers, ...unitTraited];
+    const projectedMeanA = projected.reduce((s, m) => s + (m.traitScores!.A as number), 0) / projected.length;
+    if (projectedMeanA < COMPOSITION_MEAN_A_FLOOR) {
+      const unitMeanA = unitTraited.reduce((s, m) => s + (m.traitScores!.A as number), 0) / unitTraited.length;
+      score += unitMeanA >= COMPOSITION_MEAN_A_FLOOR
+        ? COMPOSITION_MEAN_A_LIFT_BONUS
+        : -COMPOSITION_MEAN_A_DRAG_PENALTY;
+    }
+  }
+
+  // (iv) X-variance steering: penalize admissions that would push the group's
+  // X-variance over the hard cap (projected variance over trait-bearing members).
+  if (traitedMembers.length >= 1 && unitTraited.length === unit.length && unitTraited.length > 0) {
+    const projected = [...traitedMembers, ...unitTraited];
+    const meanX = projected.reduce((s, m) => s + (m.traitScores!.X as number), 0) / projected.length;
+    const varX = projected.reduce((s, m) => s + Math.pow((m.traitScores!.X as number) - meanX, 2), 0) / projected.length;
+    if (varX > COMPOSITION_X_VARIANCE_CAP) {
+      score -= COMPOSITION_X_VARIANCE_RANKING_PENALTY;
+    }
+  }
+
+  return score;
+}
+
+/**
+ * Per-gate rejection counters for the observability pillar (AC: gate-rejection
+ * counts logged per gate). Optional trailing core param; undefined = no
+ * collection (byte-identical gate-off). The Monte Carlo harness aggregates
+ * these into the gate-on report's per-gate rejection shares.
+ */
+export interface CompositionGateStats {
+  commitRejections: { minEFloor: number; meanAFloor: number; sparkRule: number; xVarianceCap: number; total: number };
+  redistributionRejections: { minEFloor: number; meanAFloor: number; sparkRule: number; xVarianceCap: number; total: number };
+}
+
+export function createCompositionGateStats(): CompositionGateStats {
+  const zero = () => ({ minEFloor: 0, meanAFloor: 0, sparkRule: 0, xVarianceCap: 0, total: 0 });
+  return { commitRejections: zero(), redistributionRejections: zero() };
+}
+
+function recordCompositionGateRejection(
+  stats: CompositionGateStats | undefined,
+  bucket: keyof CompositionGateStats,
+  result: CompositionGateEvaluation,
+): void {
+  if (!stats) return;
+  const b = stats[bucket];
+  if (!result.minEFloorSatisfied) b.minEFloor++;
+  if (!result.meanAFloorSatisfied) b.meanAFloor++;
+  if (!result.sparkRuleSatisfied) b.sparkRule++;
+  if (!result.xVarianceCapSatisfied) b.xVarianceCap++;
+  b.total++;
+}
+
 /**
  * In-memory greedy pool matching (same algorithm as `matchEventPool` after eligibility + caches).
  * Exported for stress benchmarks and tests — **not** an HTTP entrypoint.
@@ -1324,6 +1707,16 @@ export async function runGreedyPoolMatchingCore(
   // be placed into the SAME group occupying 2 seats, with MAX 1 duo per group.
   // Trailing optional param — default [] keeps zero-duo pools byte-identical.
   duoPairs: Array<{ inviterId: string; inviteeId: string }> = [],
+  // Item 5 (V4 engine upgrade): literature-prior composition gates. Trailing
+  // optional params — default false/undefined keeps gate-off byte-identical.
+  // The flag is read ONCE per run in matchEventPool via getFeatureFlag and
+  // threaded in; the core NEVER reads env directly.
+  compositionGatesEnabled = false,
+  compositionGateStats?: CompositionGateStats,
+  // Item 10 (V4 engine upgrade): derived-chemistry mechanical authority.
+  // Trailing optional param — default false keeps flag-off byte-identical.
+  // Read ONCE per run in matchEventPool via getFeatureFlag and threaded in.
+  derivedChemistryEnabled = false,
 ): Promise<MatchGroup[]> {
   // 4. 贪婪分组算法（优先处理邀请关系）
   const groups: MatchGroup[] = [];
@@ -1419,6 +1812,7 @@ export async function runGreedyPoolMatchingCore(
         matchHistoryLookup,
         matchNeverMeetSentinelEnabled,
         useWeightProfileV2,
+        derivedChemistryEnabled,
       );
 
       // Check if this pair has an invitation relationship
@@ -1452,6 +1846,25 @@ export async function runGreedyPoolMatchingCore(
     magnetismGroupRulesEnabled &&
     eligibleUsers.some(u => userArchetypeEnergy(u) >= MAGNETISM_ENERGIZER_THRESHOLD);
 
+  // Item 5 composition gates: pool-level spark arithmetic, computed ONCE per
+  // run. Bidirectional exemption (deficit AND surplus) — see
+  // computeSparkPoolState. Forced null when the flag is off (gates inert).
+  const sparkPoolState = compositionGatesEnabled
+    ? computeSparkPoolState(
+        eligibleUsers,
+        pool.targetGroups ?? Math.ceil(eligibleUsers.length / maxGroupSize),
+      )
+    : null;
+  if (sparkPoolState) {
+    logger.info("[Pool Matching] composition gates active", {
+      poolId: poolIdForLog,
+      sparkCount: sparkPoolState.sparkCount,
+      expectedGroups: sparkPoolState.expectedGroups,
+      deficitExempt: sparkPoolState.deficitExempt,
+      surplusExempt: sparkPoolState.surplusExempt,
+    });
+  }
+
   // R1 pair-score lookup: served from the precomputed cache (every eligible
   // pair was scored above). A cache miss should not happen; fall back to
   // calculatePairScore defensively (it re-caches) rather than crashing.
@@ -1472,6 +1885,7 @@ export async function runGreedyPoolMatchingCore(
       matchHistoryLookup,
       matchNeverMeetSentinelEnabled,
       useWeightProfileV2,
+      derivedChemistryEnabled,
     );
   };
 
@@ -1538,6 +1952,22 @@ export async function runGreedyPoolMatchingCore(
       continue;
     }
 
+    // Item 5 gate (i) seed feasibility: a group containing a member whose
+    // reported E is below the stability floor can NEVER pass the commit gate
+    // (min-E cannot recover by adding members — non-monotonic, one-way). Such
+    // a member is unmatchable under the gate by construction; skipping the
+    // doomed seed strands ONLY that member (the gate's mandatory fallback:
+    // stay unmatched, never force-place) and saves the groupmates from a
+    // guaranteed commit-gate rejection cycle. Cold-start members (no complete
+    // vector) are never skipped here — gates skip them instead (AC-5.1b).
+    // [DUO] a duo partner below the floor dooms the unit: both partners stay
+    // unmatched together (atomic-unit semantics preserved).
+    if (compositionGatesEnabled &&
+        groupMembers.some((m) => hasCompleteTraitVector(m) && (m.traitScores!.E as number) < COMPOSITION_MIN_E_FLOOR)) {
+      groupMembers.forEach((m) => used.delete(m.userId));
+      continue;
+    }
+
     // 继续添加成员直到达到目标人数
     while (groupMembers.length < targetGroupSize) {
       let bestCandidate: UserWithProfile | null = null;
@@ -1566,6 +1996,20 @@ export async function runGreedyPoolMatchingCore(
             const partner = eligibleUsers.find((u) => u.userId === partnerId);
             if (!partner || used.has(partner.userId)) continue;
             candidatePartner = partner;
+          }
+        }
+
+        // Item 5 gate (i) admission feasibility (flag-gated): a sub-floor-E
+        // member can never be committed (the commit gate would reject the
+        // group), so block admission fail-fast instead of churning the group
+        // through a guaranteed rejection. Same semantics, zero churn; the
+        // member stays unmatched (the gate's mandatory fallback). [DUO] the
+        // check covers the partner — a sub-floor-E partner blocks the unit,
+        // never splits it. Cold-start members are never blocked (gates skip).
+        if (compositionGatesEnabled) {
+          const unit = candidatePartner ? [candidate, candidatePartner] : [candidate];
+          if (unit.some((m) => hasCompleteTraitVector(m) && (m.traitScores!.E as number) < COMPOSITION_MIN_E_FLOOR)) {
+            continue;
           }
         }
 
@@ -1601,6 +2045,7 @@ export async function runGreedyPoolMatchingCore(
               matchHistoryLookup,
               matchNeverMeetSentinelEnabled,
               useWeightProfileV2,
+              derivedChemistryEnabled,
             );
           }
           return totalScore / groupMembers.length;
@@ -1618,9 +2063,16 @@ export async function runGreedyPoolMatchingCore(
         // adjustment affects ONLY the argmax — cached pair scores are never
         // mutated and the admission gate below still uses the true avgScore
         // (nudge, not ban).
-        const rankingScore = magnetismGroupRulesEnabled
+        let rankingScore = magnetismGroupRulesEnabled
           ? adjustScoreForNoveltyDispersion(candidate, groupMembers, avgScore)
           : avgScore;
+        // Item 5 composition-gate steering (flag-gated): same argmax-only
+        // nudge pattern as R4 — spreads sparks across groups, steers sub-floor
+        // E/A and X-variance-breaking admissions. [DUO] the duo partner's
+        // traits count toward the unit's effects (never splits a duo).
+        if (compositionGatesEnabled && sparkPoolState) {
+          rankingScore = adjustScoreForCompositionGates(candidate, candidatePartner, groupMembers, rankingScore, sparkPoolState);
+        }
 
         if (rankingScore > bestScore) {
           bestScore = rankingScore;
@@ -1684,8 +2136,29 @@ export async function runGreedyPoolMatchingCore(
       }
     }
 
+    // Item 5 composition gates — commit-gate backstop (reject BEFORE commit;
+    // rejections fall through to the existing release path below, so rejected
+    // members recombine into later candidate groups and [DUO] partners are
+    // always released together — a gate can never split an atomic unit).
+    let compositionGatesSatisfied = true;
+    if (compositionGatesEnabled && sparkPoolState && groupMembers.length >= minGroupSize && genderFloorSatisfied) {
+      const gateResult = evaluateCompositionGates(groupMembers, sparkPoolState);
+      compositionGatesSatisfied = gateResult.satisfied;
+      if (!gateResult.satisfied) {
+        recordCompositionGateRejection(compositionGateStats, "commitRejections", gateResult);
+        logger.info("[Pool Matching] group rejected by composition gates", {
+          poolId: poolIdForLog,
+          memberCount: groupMembers.length,
+          minEFloorSatisfied: gateResult.minEFloorSatisfied,
+          meanAFloorSatisfied: gateResult.meanAFloorSatisfied,
+          sparkRuleSatisfied: gateResult.sparkRuleSatisfied,
+          xVarianceCapSatisfied: gateResult.xVarianceCapSatisfied,
+        });
+      }
+    }
+
     // 只保留达到最小人数且满足性别下限的小组
-    if (groupMembers.length >= minGroupSize && genderFloorSatisfied && magnetismRulesSatisfied) {
+    if (groupMembers.length >= minGroupSize && genderFloorSatisfied && magnetismRulesSatisfied && compositionGatesSatisfied) {
       const avgPairScore = await calculateGroupPairScore(
         groupMembers,
         interestsCache,
@@ -1699,9 +2172,10 @@ export async function runGreedyPoolMatchingCore(
         useWeightProfileV2,
         // [DUO] duo-internal pair excluded from group quality metrics
         duoQualityExclusions,
+        derivedChemistryEnabled,
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
-      const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap, duoQualityExclusions);
+      const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap, duoQualityExclusions, derivedChemistryEnabled);
       const diversity = calculateGroupDiversity(groupMembers, genderBalanceMode, genderBalanceBonusPoints);
       const communicationBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
@@ -1735,24 +2209,53 @@ export async function runGreedyPoolMatchingCore(
   // but the H4 redistribution pass below also changes final group composition
   // (absorption adds members, Phase 2 forms whole groups). Those paths must
   // respect the same rules — otherwise an absorbed or remainder member could
-  // be stranded with no strong tie. Inert when the flag is off (returns true),
-  // so default redistribution behavior is unchanged.
+  // be stranded with no strong tie. Inert when both flags are off (returns
+  // true), so default redistribution behavior is unchanged.
   const magnetismRulesSatisfiedFor = async (members: UserWithProfile[]): Promise<boolean> => {
-    if (!magnetismGroupRulesEnabled) return true;
-    // [DUO] R1 excludes duo-internal ties (same wrapper as the commit gate).
-    const strongTieSatisfied = await groupSatisfiesStrongTieRule(members, getR1PairScore);
-    const energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(members);
-    const topicAnchorSatisfied = groupHasTopicAnchor(members, interestsCache);
-    if (!strongTieSatisfied || !energizerSatisfied || !topicAnchorSatisfied) {
-      logger.info("[Pool Matching] redistribution candidate rejected by magnetism group rules", {
+    if (!magnetismGroupRulesEnabled && !compositionGatesEnabled) return true;
+    let strongTieSatisfied = true;
+    let energizerSatisfied = true;
+    let topicAnchorSatisfied = true;
+    if (magnetismGroupRulesEnabled) {
+      // [DUO] R1 excludes duo-internal ties (same wrapper as the commit gate).
+      strongTieSatisfied = await groupSatisfiesStrongTieRule(members, getR1PairScore);
+      energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(members);
+      topicAnchorSatisfied = groupHasTopicAnchor(members, interestsCache);
+    }
+    // AC-5.2: NONE of the four Item-5 composition gates is monotonic under
+    // member addition (min-E/mean-A can DROP, X-variance and spark-count can
+    // BREAK), so they MUST be re-evaluated here — H4 absorption and Phase-2
+    // whole-group formation both change final group composition. The old
+    // "R2 is monotonic under absorption" assumption covers only the
+    // archetype-level R2 energizer rule, not these trait-level gates.
+    let compositionSatisfied = true;
+    let compositionResult: CompositionGateEvaluation | null = null;
+    if (compositionGatesEnabled && sparkPoolState) {
+      compositionResult = evaluateCompositionGates(members, sparkPoolState);
+      compositionSatisfied = compositionResult.satisfied;
+      if (!compositionSatisfied) {
+        recordCompositionGateRejection(compositionGateStats, "redistributionRejections", compositionResult);
+      }
+    }
+    if (!strongTieSatisfied || !energizerSatisfied || !topicAnchorSatisfied || !compositionSatisfied) {
+      logger.info("[Pool Matching] redistribution candidate rejected by group composition rules", {
         poolId: poolIdForLog,
         memberCount: members.length,
         strongTieSatisfied,
         energizerSatisfied,
         topicAnchorSatisfied,
+        compositionSatisfied,
+        ...(compositionResult && !compositionResult.satisfied
+          ? {
+              minEFloorSatisfied: compositionResult.minEFloorSatisfied,
+              meanAFloorSatisfied: compositionResult.meanAFloorSatisfied,
+              sparkRuleSatisfied: compositionResult.sparkRuleSatisfied,
+              xVarianceCapSatisfied: compositionResult.xVarianceCapSatisfied,
+            }
+          : {}),
       });
     }
-    return strongTieSatisfied && energizerSatisfied && topicAnchorSatisfied;
+    return strongTieSatisfied && energizerSatisfied && topicAnchorSatisfied && compositionSatisfied;
   };
 
   // H4: Redistribution pass for stranded users (behind adaptive-weights or Match Compass relaxed flag)
@@ -1793,6 +2296,7 @@ export async function runGreedyPoolMatchingCore(
               matchHistoryLookup,
               matchNeverMeetSentinelEnabled,
               useWeightProfileV2,
+              derivedChemistryEnabled,
             );
           }
           const avgScore = totalScore / group.members.length;
@@ -1819,7 +2323,10 @@ export async function runGreedyPoolMatchingCore(
           }
           // 磁场引擎 (P1): absorption must not break the commit rules — an
           // absorbed member still needs a strong tie (R1) and the group must
-          // keep its topic anchor (R3). R2 is monotonic under absorption.
+          // keep its topic anchor (R3). (Only the archetype-level R2 is
+          // monotonic under absorption; the Item-5 trait-level composition
+          // gates are NOT — they are re-evaluated inside
+          // magnetismRulesSatisfiedFor, AC-5.2.)
           if (!(await magnetismRulesSatisfiedFor([...bestGroup.members, stranded]))) {
             continue;
           }
@@ -1838,8 +2345,9 @@ export async function runGreedyPoolMatchingCore(
             matchNeverMeetSentinelEnabled,
             useWeightProfileV2,
             duoQualityExclusions,
+            derivedChemistryEnabled,
           );
-          bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap, duoQualityExclusions);
+          bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap, duoQualityExclusions, derivedChemistryEnabled);
           bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
           bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
           bestGroup.overallScore = Math.round(
@@ -1894,8 +2402,9 @@ export async function runGreedyPoolMatchingCore(
             matchNeverMeetSentinelEnabled,
             useWeightProfileV2,
             duoQualityExclusions,
+            derivedChemistryEnabled,
           );
-          const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap, duoQualityExclusions);
+          const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap, duoQualityExclusions, derivedChemistryEnabled);
           const diversity = calculateGroupDiversity(stillStranded, genderBalanceMode, genderBalanceBonusPoints);
           const communicationBalance = calculateEnergyBalance(stillStranded);
           const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
@@ -1957,6 +2466,7 @@ export async function runGreedyPoolMatchingCore(
                 matchHistoryLookup,
                 matchNeverMeetSentinelEnabled,
                 useWeightProfileV2,
+                derivedChemistryEnabled,
               );
             }
             const avgScore = totalScore / group.members.length;
@@ -1980,7 +2490,8 @@ export async function runGreedyPoolMatchingCore(
               });
               continue;
             }
-            // 磁场引擎 (P1): same rule gate as Phase-1 absorption.
+            // 磁场引擎 (P1): same rule gate as Phase-1 absorption — including
+            // the non-monotonic Item-5 composition gates (AC-5.2).
             if (!(await magnetismRulesSatisfiedFor([...bestGroup.members, stranded]))) {
               continue;
             }
@@ -1998,8 +2509,9 @@ export async function runGreedyPoolMatchingCore(
               matchNeverMeetSentinelEnabled,
               useWeightProfileV2,
               duoQualityExclusions,
+              derivedChemistryEnabled,
             );
-            bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap, duoQualityExclusions);
+            bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap, duoQualityExclusions, derivedChemistryEnabled);
             bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
             bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
             bestGroup.overallScore = Math.round(
@@ -2172,6 +2684,39 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   // R2 能量编排 / R3 话题锚点 / R4 新奇分散) — read ONCE per run and threaded
   // into the greedy core like the flags above. Default OFF.
   const magnetismGroupRulesEnabled = await getFeatureFlag("magnetismGroupRulesEnabled", false);
+
+  // Item 5 (V4 engine upgrade): literature-prior composition gates — read
+  // ONCE per run and threaded like the flags above. Default OFF (ships dark).
+  // When on, batch-preload REPORTED ACOEXP vectors from each eligible user's
+  // latest COMPLETED assessment session (mirrors preloadUserInterests) and
+  // attach them at the UserWithProfile boundary (AC-5.1b). Cold-start members
+  // keep traitScores = null and skip gates (i)/(ii)/(iv).
+  const compositionGatesEnabled = await getFeatureFlag("compositionGatesEnabled", false);
+  if (compositionGatesEnabled) {
+    const traitVectorCache = await preloadLatestTraitVectors(eligibleUserIds);
+    for (const user of eligibleUsers) {
+      user.traitScores = traitVectorCache.get(user.userId) ?? null;
+    }
+    logger.info("[Pool Matching] composition gates enabled", {
+      poolId,
+      eligibleCount: eligibleUsers.length,
+      traitedCount: traitVectorCache.size,
+    });
+  }
+
+  // Item 10 (V4 engine upgrade): derived-chemistry mechanical authority — read
+  // ONCE per run and threaded like the flags above. Default OFF (ships dark:
+  // the ρ ≥ 0.7 validation gate failed — see
+  // docs/reports/2026-09-10-derived-chemistry-validation.md). When on, pair
+  // chemistry is computed from trait-vector geometry, which can shift pair
+  // scores and therefore group formation (AC-10.5 quantifies this).
+  const derivedChemistryEnabled = await getFeatureFlag("derivedChemistryEnabled", false);
+  if (derivedChemistryEnabled) {
+    logger.info("[Pool Matching] derived chemistry enabled", {
+      poolId,
+      eligibleCount: eligibleUsers.length,
+    });
+  }
   
   // 3.6 获取邀请关系 (invitation relationships)
   // Batch query all invitation uses for registrations in this pool, then join in memory.
@@ -2251,6 +2796,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     useWeightProfileV2,
     magnetismGroupRulesEnabled,
     duoPairs,
+    compositionGatesEnabled,
+    undefined,
+    derivedChemistryEnabled,
   );
 }
 

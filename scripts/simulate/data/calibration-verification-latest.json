@@ -1,0 +1,143 @@
+{
+  "suite": "confidence-calibration-verification",
+  "planItem": 12,
+  "generatedAt": "2026-09-10",
+  "seed": 20260909,
+  "n": 2000,
+  "noiseArms": [
+    "clean",
+    "moderate"
+  ],
+  "calibrationVersion": "v1-20260909",
+  "sessionCount": 4000,
+  "m15": {
+    "pass": true,
+    "tolerance": 0.1,
+    "minPerBin": 50,
+    "evaluatedBins": 4,
+    "failedBins": 0,
+    "bins": [
+      {
+        "index": 0,
+        "lo": 0,
+        "hi": 0.1,
+        "n": 2,
+        "meanCalibrated": 0.048104,
+        "observedAgreement": 0.5,
+        "absGap": 0.451896,
+        "status": "insufficient"
+      },
+      {
+        "index": 1,
+        "lo": 0.1,
+        "hi": 0.2,
+        "n": 12,
+        "meanCalibrated": 0.144403,
+        "observedAgreement": 0.083333,
+        "absGap": 0.061069,
+        "status": "insufficient"
+      },
+      {
+        "index": 2,
+        "lo": 0.2,
+        "hi": 0.3,
+        "n": 219,
+        "meanCalibrated": 0.280663,
+        "observedAgreement": 0.305936,
+        "absGap": 0.025273,
+        "status": "pass"
+      },
+      {
+        "index": 3,
+        "lo": 0.3,
+        "hi": 0.4,
+        "n": 2745,
+        "meanCalibrated": 0.334241,
+        "observedAgreement": 0.339891,
+        "absGap": 0.00565,
+        "status": "pass"
+      },
+      {
+        "index": 4,
+        "lo": 0.4,
+        "hi": 0.5,
+        "n": 816,
+        "meanCalibrated": 0.445474,
+        "observedAgreement": 0.430147,
+        "absGap": 0.015327,
+        "status": "pass"
+      },
+      {
+        "index": 5,
+        "lo": 0.5,
+        "hi": 0.6,
+        "n": 206,
+        "meanCalibrated": 0.514779,
+        "observedAgreement": 0.533981,
+        "absGap": 0.019202,
+        "status": "pass"
+      },
+      {
+        "index": 6,
+        "lo": 0.6,
+        "hi": 0.7,
+        "n": 0,
+        "meanCalibrated": 0,
+        "observedAgreement": 0,
+        "absGap": 0,
+        "status": "insufficient"
+      },
+      {
+        "index": 7,
+        "lo": 0.7,
+        "hi": 0.8,
+        "n": 0,
+        "meanCalibrated": 0,
+        "observedAgreement": 0,
+        "absGap": 0,
+        "status": "insufficient"
+      },
+      {
+        "index": 8,
+        "lo": 0.8,
+        "hi": 0.9,
+        "n": 0,
+        "meanCalibrated": 0,
+        "observedAgreement": 0,
+        "absGap": 0,
+        "status": "insufficient"
+      },
+      {
+        "index": 9,
+        "lo": 0.9,
+        "hi": 1,
+        "n": 0,
+        "meanCalibrated": 0,
+        "observedAgreement": 0,
+        "absGap": 0,
+        "status": "insufficient"
+      }
+    ]
+  },
+  "rawEce": 0.604918,
+  "calibratedEce": 0.456629,
+  "perNoise": [
+    {
+      "noise": "clean",
+      "pass": false,
+      "evaluatedBins": 4,
+      "failedBins": 1
+    },
+    {
+      "noise": "moderate",
+      "pass": false,
+      "evaluatedBins": 4,
+      "failedBins": 1
+    }
+  ],
+  "forced16": {
+    "pass": true,
+    "evaluatedBins": 3,
+    "failedBins": 0
+  }
+}

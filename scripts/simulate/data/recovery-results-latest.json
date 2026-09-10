@@ -1,0 +1,286 @@
+{
+  "suite": "latent-trait-recovery",
+  "planItem": 6,
+  "generatedAt": "2026-09-10",
+  "seed": 20260909,
+  "n": 2000,
+  "checkpoints": [
+    8,
+    12,
+    16
+  ],
+  "population": {
+    "centroidMixtureWeight": 0.6,
+    "centroidTraitSd": 10,
+    "generalTraitMean": 50,
+    "generalTraitSd": 15,
+    "traitMin": 5,
+    "traitMax": 95,
+    "realizedCentroidMixture": 1185,
+    "realizedGeneral": 815
+  },
+  "engineFlags": {
+    "ipsativeOn": false,
+    "consistencyOn": false,
+    "metaOn": false,
+    "shrinkageOn": false
+  },
+  "arms": [
+    {
+      "noise": "clean",
+      "checkpoints": {
+        "8": {
+          "checkpoint": 8,
+          "pearsonByTrait": {
+            "A": 0.815167,
+            "C": 0.670895,
+            "E": 0.615534,
+            "O": 0.650307,
+            "X": 0.782297,
+            "P": 0.625187
+          },
+          "maeByTrait": {
+            "A": 10.032498,
+            "C": 12.815184,
+            "E": 12.094605,
+            "O": 13.239129,
+            "X": 10.830174,
+            "P": 12.182659
+          },
+          "top1Agreement": 0.357,
+          "top1AgreementBySource": {
+            "centroid_mixture": 0.38903,
+            "general": 0.310429
+          },
+          "meanConfidence": 0.840172,
+          "meanSampleCountByTrait": {
+            "A": 3.3685,
+            "C": 4.789,
+            "E": 4.959,
+            "O": 3.757,
+            "X": 5.0105,
+            "P": 3.356
+          }
+        },
+        "12": {
+          "checkpoint": 12,
+          "pearsonByTrait": {
+            "A": 0.815985,
+            "C": 0.756807,
+            "E": 0.773989,
+            "O": 0.752146,
+            "X": 0.813401,
+            "P": 0.686613
+          },
+          "maeByTrait": {
+            "A": 9.615617,
+            "C": 10.965537,
+            "E": 10.698028,
+            "O": 11.268915,
+            "X": 10.688058,
+            "P": 11.457501
+          },
+          "top1Agreement": 0.438,
+          "top1AgreementBySource": {
+            "centroid_mixture": 0.486076,
+            "general": 0.368098
+          },
+          "meanConfidence": 0.892871,
+          "meanSampleCountByTrait": {
+            "A": 4.0225,
+            "C": 5.9015,
+            "E": 6.7455,
+            "O": 5.0835,
+            "X": 6.26,
+            "P": 4.222
+          }
+        },
+        "16": {
+          "checkpoint": 16,
+          "pearsonByTrait": {
+            "A": 0.809129,
+            "C": 0.706182,
+            "E": 0.76273,
+            "O": 0.766574,
+            "X": 0.865177,
+            "P": 0.729726
+          },
+          "maeByTrait": {
+            "A": 9.85193,
+            "C": 11.579275,
+            "E": 10.562335,
+            "O": 10.755197,
+            "X": 10.718267,
+            "P": 11.919237
+          },
+          "top1Agreement": 0.4785,
+          "top1AgreementBySource": {
+            "centroid_mixture": 0.542616,
+            "general": 0.385276
+          },
+          "meanConfidence": 0.919788,
+          "meanSampleCountByTrait": {
+            "A": 6.3465,
+            "C": 7.902,
+            "E": 9.5625,
+            "O": 7.399,
+            "X": 9.29,
+            "P": 6.945
+          }
+        }
+      },
+      "natural": {
+        "lengthMean": 12.449,
+        "lengthMedian": 12,
+        "lengthMin": 12,
+        "lengthMax": 16,
+        "hardMaxHitRate": 0.0195,
+        "stopAtOrBelow12Rate": 0.734,
+        "pearsonByTraitAtStop": {
+          "A": 0.815607,
+          "C": 0.750868,
+          "E": 0.771447,
+          "O": 0.753683,
+          "X": 0.82045,
+          "P": 0.683132
+        },
+        "top1AgreementAtStop": 0.4455,
+        "top1AgreementAtStopBySource": {
+          "centroid_mixture": 0.496203,
+          "general": 0.371779
+        },
+        "meanConfidenceAtStop": 0.906203,
+        "meanGapAtStop": 0.646721,
+        "lowGapShare": 0.0565
+      }
+    },
+    {
+      "noise": "moderate",
+      "checkpoints": {
+        "8": {
+          "checkpoint": 8,
+          "pearsonByTrait": {
+            "A": 0.63444,
+            "C": 0.563997,
+            "E": 0.512614,
+            "O": 0.552876,
+            "X": 0.719224,
+            "P": 0.553198
+          },
+          "maeByTrait": {
+            "A": 13.622851,
+            "C": 14.44815,
+            "E": 13.103459,
+            "O": 13.564856,
+            "X": 11.509076,
+            "P": 12.798355
+          },
+          "top1Agreement": 0.238,
+          "top1AgreementBySource": {
+            "centroid_mixture": 0.291139,
+            "general": 0.160736
+          },
+          "meanConfidence": 0.841779,
+          "meanSampleCountByTrait": {
+            "A": 3.5085,
+            "C": 4.6915,
+            "E": 5.1845,
+            "O": 3.756,
+            "X": 4.871,
+            "P": 3.0975
+          }
+        },
+        "12": {
+          "checkpoint": 12,
+          "pearsonByTrait": {
+            "A": 0.650835,
+            "C": 0.635167,
+            "E": 0.697599,
+            "O": 0.630712,
+            "X": 0.751347,
+            "P": 0.604476
+          },
+          "maeByTrait": {
+            "A": 13.164705,
+            "C": 13.204718,
+            "E": 11.486044,
+            "O": 12.118526,
+            "X": 10.99834,
+            "P": 12.128157
+          },
+          "top1Agreement": 0.264,
+          "top1AgreementBySource": {
+            "centroid_mixture": 0.31308,
+            "general": 0.192638
+          },
+          "meanConfidence": 0.886301,
+          "meanSampleCountByTrait": {
+            "A": 4.107,
+            "C": 5.635,
+            "E": 6.8825,
+            "O": 4.884,
+            "X": 5.9495,
+            "P": 4.0015
+          }
+        },
+        "16": {
+          "checkpoint": 16,
+          "pearsonByTrait": {
+            "A": 0.708373,
+            "C": 0.633516,
+            "E": 0.700627,
+            "O": 0.64732,
+            "X": 0.823128,
+            "P": 0.687014
+          },
+          "maeByTrait": {
+            "A": 12.486663,
+            "C": 12.748942,
+            "E": 11.515245,
+            "O": 11.93446,
+            "X": 9.600371,
+            "P": 10.709869
+          },
+          "top1Agreement": 0.327,
+          "top1AgreementBySource": {
+            "centroid_mixture": 0.4,
+            "general": 0.220859
+          },
+          "meanConfidence": 0.912859,
+          "meanSampleCountByTrait": {
+            "A": 6.423,
+            "C": 7.6255,
+            "E": 9.671,
+            "O": 7.053,
+            "X": 8.875,
+            "P": 6.575
+          }
+        }
+      },
+      "natural": {
+        "lengthMean": 12.354,
+        "lengthMedian": 12,
+        "lengthMin": 12,
+        "lengthMax": 16,
+        "hardMaxHitRate": 0.009,
+        "stopAtOrBelow12Rate": 0.776,
+        "pearsonByTraitAtStop": {
+          "A": 0.657358,
+          "C": 0.611683,
+          "E": 0.660276,
+          "O": 0.626157,
+          "X": 0.761473,
+          "P": 0.639063
+        },
+        "top1AgreementAtStop": 0.286,
+        "top1AgreementAtStopBySource": {
+          "centroid_mixture": 0.347679,
+          "general": 0.196319
+        },
+        "meanConfidenceAtStop": 0.896101,
+        "meanGapAtStop": 0.655356,
+        "lowGapShare": 0.0345
+      }
+    }
+  ]
+}

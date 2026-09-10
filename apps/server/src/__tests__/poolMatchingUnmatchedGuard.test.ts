@@ -21,6 +21,10 @@ describe("pool matching unmatched-marking guard", () => {
     // registrations that never got an assignedGroupId (the true stranded).
     expect(source).toContain('matchStatus: "unmatched"');
     expect(source).toContain("isNull(eventPoolRegistrations.assignedGroupId)");
-    expect(source).toContain('import { eq, and, inArray, isNull, sql } from "drizzle-orm"');
+    // The drizzle import line must still bring in `isNull` (the guard above
+    // depends on it). Item 5 added `desc` for the trait-vector preload
+    // (assessment_sessions newest-first ordering) — keep the assertion on the
+    // presence of the guard-relevant tokens rather than the exact line.
+    expect(source).toMatch(/import \{[^}]*\bisNull\b[^}]*\} from "drizzle-orm"/);
   });
 });
