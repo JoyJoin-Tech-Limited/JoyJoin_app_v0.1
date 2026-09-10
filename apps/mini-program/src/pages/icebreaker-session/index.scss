@@ -138,7 +138,7 @@ $__gold-accent:  $color-landed-gold;
     align-self: center;
     display: flex;
     align-items: center;
-    gap: 10rpx;
+    gap: $spacing-xs;
     max-width: calc(100vw - 96rpx);
     margin: -4rpx auto 16rpx;
     padding: 12rpx 22rpx;
@@ -205,7 +205,7 @@ $__gold-accent:  $color-landed-gold;
     border-radius: $radius-full;
     box-shadow: $shadow-md;
     z-index: 100;
-    animation: fade-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: icebreaker-toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__phase-toast-mascot {
@@ -1028,7 +1028,10 @@ $__gold-accent:  $color-landed-gold;
   }
 }
 
-@keyframes fade-slide-up {
+// Toast-only entrance: the shared `fade-slide-up` (mixins) is pure translateY;
+// this local variant keeps the translateX(-50%) centering. Do NOT reuse it on
+// full-width sheets — the -50% would shift them by half their own width.
+@keyframes icebreaker-toast-in {
   from {
     opacity: 0;
     transform: translateX(-50%) translateY(12rpx);

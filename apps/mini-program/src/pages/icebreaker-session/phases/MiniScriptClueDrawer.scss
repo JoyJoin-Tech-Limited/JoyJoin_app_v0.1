@@ -47,6 +47,15 @@
     background: rgba($color-text-primary, 0.4);
   }
 
+  // Exit: backdrop fades, surface slides down — no abrupt unmount.
+  &--out &__backdrop {
+    animation: overlay-fade-out 200ms ease forwards;
+  }
+
+  &--out &__surface {
+    animation: sheet-slide-down 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
   &__surface {
     position: relative;
     z-index: 1;
@@ -84,6 +93,11 @@
   &__scroll {
     flex: 1;
     min-height: 0;
+  }
+
+  // WeChat drops padding on the native <ScrollView> element — pad the inner
+  // wrapper instead (documented mini-program ScrollView trap).
+  &__scroll-inner {
     padding: 0 $spacing-lg;
   }
 
@@ -159,5 +173,12 @@
   &__close-text {
     font-size: $font-size-sm + 2rpx; // 26rpx — off-scale by design; visual unchanged
     color: $color-text-secondary-on-light;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .miniscript-clues--out .miniscript-clues__backdrop,
+  .miniscript-clues--out .miniscript-clues__surface {
+    animation-duration: 1ms;
   }
 }

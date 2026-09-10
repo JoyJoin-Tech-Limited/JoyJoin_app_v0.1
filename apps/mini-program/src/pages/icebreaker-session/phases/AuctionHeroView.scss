@@ -223,4 +223,45 @@ $au-deep: $phase-accent-auction-deep;
     color: $color-error;
     text-align: center;
   }
+
+  // S17 — all-closed 成交一览
+  &__recap-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
+  }
+
+  &__recap-title {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $au-deep;
+  }
+
+  &__recap-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-md;
+    background: rgba($au-accent, 0.06);
+  }
+
+  &__recap-lot {
+    @include type-label;
+    color: $color-text-primary;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__recap-win {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $au-deep;
+    flex-shrink: 0;
+  }
 }

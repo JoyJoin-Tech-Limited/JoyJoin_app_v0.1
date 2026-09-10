@@ -273,7 +273,6 @@ export function MiniScriptHeroView({
   const [showPremise, setShowPremise] = useState(false)
   const [roleExpanded, setRoleExpanded] = useState(false)
   const [showBeats, setShowBeats] = useState(false)
-  const [showAllClues, setShowAllClues] = useState(false)
   const [showDeductionHints, setShowDeductionHints] = useState(false)
   // Final act and the consensus vote are two screens client-side (the server
   // opens the vote when the last act lands): the act view gets its 自由聊 beat,
@@ -292,7 +291,6 @@ export function MiniScriptHeroView({
     setShowPremise,
     setRoleExpanded,
     setShowBeats,
-    setShowAllClues,
     setShowDeductionHints,
   )
   useDidShow(() => setFinalActSubView('act'))
@@ -938,29 +936,6 @@ export function MiniScriptHeroView({
           />
         ) : null}
 
-        {revealedClues.length > 0 ? (
-          <View className='miniscript-hero__section'>
-            <View
-              className='miniscript-hero__section-header'
-              onClick={() => setShowAllClues((v) => !v)}
-              role='button'
-              aria-expanded={showAllClues}
-              aria-label='全部线索'
-            >
-              <Text className='miniscript-hero__section-title'>全部线索（{revealedClues.length}）</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showAllClues ? '▼' : '▶'}</Text>
-            </View>
-            {showAllClues
-              ? revealedClues.map((clue, idx) => (
-                  <View key={clue.clueId} className='miniscript-hero__clue'>
-                    <Text className='miniscript-hero__clue-index'>线索 {idx + 1}</Text>
-                    <Text className='miniscript-hero__clue-text'>{stripCluePrefix(clue.text)}</Text>
-                  </View>
-                ))
-              : null}
-          </View>
-        ) : null}
-
         {myRole ? (
           <View className='miniscript-hero__section'>
             <View
@@ -1033,7 +1008,6 @@ export function MiniScriptHeroView({
       currentActData,
       isHost,
       deductionHints,
-      showAllClues,
       showBeats,
       showDeductionHints,
       showEvidenceTray,

@@ -67,8 +67,8 @@ $uw-deep: $phase-accent-undercover-deep;
     border: 2rpx solid rgba($uw-deep, 0.45);
 
     &--undercover {
-      background: rgba($color-error, 0.08);
-      border-color: rgba($color-error, 0.35);
+      background: rgba($color-semantic-secret, 0.08);
+      border-color: rgba($color-semantic-secret, 0.35);
     }
   }
 
@@ -87,7 +87,7 @@ $uw-deep: $phase-accent-undercover-deep;
     background: rgba($uw-deep, 0.14);
 
     &--undercover {
-      background: rgba($color-error, 0.14);
+      background: rgba($color-semantic-secret, 0.14);
     }
   }
 
@@ -98,7 +98,7 @@ $uw-deep: $phase-accent-undercover-deep;
   }
 
   &__word-back-pill--undercover &__word-back-pill-text {
-    color: $color-error;
+    color: $color-semantic-secret;
   }
 
   &__word-back-hint {
@@ -135,7 +135,7 @@ $uw-deep: $phase-accent-undercover-deep;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12rpx $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
     border-radius: $radius-md;
     background: rgba($uw-accent, 0.08);
   }
@@ -175,11 +175,11 @@ $uw-deep: $phase-accent-undercover-deep;
     border-radius: $radius-md;
     background: $color-surface;
     border: 2rpx solid rgba($uw-accent, 0.18);
-    transition: border-color 200ms ease, box-shadow 200ms ease;
+    transition: border-color 200ms ease;
 
     &--selected {
       border-color: rgba($uw-deep, 0.75);
-      box-shadow: 0 0 20rpx rgba($uw-accent, 0.3);
+      background: rgba($uw-accent, 0.1);
     }
   }
 
@@ -204,7 +204,7 @@ $uw-deep: $phase-accent-undercover-deep;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4rpx;
+    gap: $spacing-2xs;
   }
 
   &__target-name {
@@ -242,12 +242,12 @@ $uw-deep: $phase-accent-undercover-deep;
   &__desc-list {
     display: flex;
     flex-direction: column;
-    gap: 10rpx;
+    gap: $spacing-xs;
     margin-bottom: $spacing-sm;
   }
 
   &__desc-item {
-    padding: 14rpx $spacing-sm;
+    padding: $spacing-sm $spacing-sm;
     border-radius: $radius-md;
     background: rgba($uw-accent, 0.08);
   }
@@ -255,7 +255,7 @@ $uw-deep: $phase-accent-undercover-deep;
   &__desc-name {
     @include type-caption;
     color: $color-text-secondary;
-    margin-bottom: 2rpx;
+    margin-bottom: $spacing-2xs;
   }
 
   &__desc-text {
@@ -278,10 +278,10 @@ $uw-deep: $phase-accent-undercover-deep;
     border: 2rpx solid rgba($uw-accent, 0.3);
     background: $color-surface;
     @include type-body;
-    transition: box-shadow 200ms ease;
+    transition: border-color 200ms ease;
 
     &--focused {
-      box-shadow: 0 0 20rpx rgba($uw-accent, 0.35);
+      border-color: rgba($uw-deep, 0.6);
     }
   }
 

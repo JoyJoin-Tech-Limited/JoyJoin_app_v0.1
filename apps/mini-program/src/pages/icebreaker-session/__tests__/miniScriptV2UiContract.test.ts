@@ -57,7 +57,9 @@ describe('MiniScript V2 P2 · evidence area (AC-08)', () => {
     expect(traySource).not.toContain('isReactionVisibleToMember')
     expect(traySource).not.toContain('MINISCRIPT_REACTION_DELAY_MS')
     expect(traySource).not.toContain('setNowTick')
-    expect(traySource).not.toContain('setTimeout')
+    // Blanket setTimeout is NOT banned any more: the picker/reveal exit motion
+    // (S5) legitimately uses close timers. The banned pattern is a device-clock
+    // *reaction gate*, which the four assertions above already lock out.
     expect(traySource).not.toContain('Date.now()')
     // Presented combos still grey out (server is idempotent on repeats).
     expect(traySource).toContain('buildPresentedComboSet')
@@ -77,8 +79,10 @@ describe('MiniScript V2 P2 · evidence area (AC-08)', () => {
   })
 
   it('blocks background scroll behind both evidence masks (catchMove)', () => {
-    expect(traySource).toMatch(/miniscript-evidence__picker-mask' catchMove/)
-    expect(traySource).toMatch(/miniscript-evidence__reveal-mask' catchMove/)
+    // className is a template literal now (exit-motion modifier), so match the
+    // class + catchMove on the same line rather than the exact quote.
+    expect(traySource).toMatch(/miniscript-evidence__picker-mask[^\n]*catchMove/)
+    expect(traySource).toMatch(/miniscript-evidence__reveal-mask[^\n]*catchMove/)
   })
 
   it('stops offering presents once the vote has opened (WRONG_SUB_PHASE guard)', () => {

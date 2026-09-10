@@ -637,11 +637,13 @@ $ms-deep: $phase-accent-miniscript-deep;
   &__section--new-clues &__clue-focus {
     animation: ms-clue-pop 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
-    &:nth-child(2) {
+    // nth-of-type counts only <view> siblings — nth-child counted the section
+    // title (<text>) as child 1, so clue #3 landed at 0ms and popped first.
+    &:nth-of-type(2) {
       animation-delay: 80ms;
     }
 
-    &:nth-child(3) {
+    &:nth-of-type(3) {
       animation-delay: 160ms;
     }
   }

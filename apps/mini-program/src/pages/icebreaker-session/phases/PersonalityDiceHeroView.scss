@@ -248,6 +248,11 @@ $pd-deep: $phase-accent-dice-deep;
   &__choose-card-body {
     @include type-body;
     color: $color-text-secondary;
+    // Defense-in-depth: clamp long AI challenge text (choose + reveal lists).
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   &__choose-card-pass {

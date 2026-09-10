@@ -40,22 +40,30 @@ interface AuctionHeroViewProps {
   lotsMeta?: AIResponseMeta
 }
 
+// Each emoji rides on its own `emoji: '…'` line so the guardrail's allowed
+// context pattern (`emoji: '…'`) matches — same contract as the shared
+// emojiToIconMap allow-list. Never return a bare emoji literal.
+const LOT_EMOJI_RULES: Array<{ keywords: string[]; emoji: string }> = [
+  { keywords: ['社死', '尴尬', '糗'], emoji: '😅' },
+  { keywords: ['旅行', '游', '出发'], emoji: '✈️' },
+  { keywords: ['秘密', '爆料', '习惯'], emoji: '🤫' },
+  { keywords: ['歌', '唱', '音乐'], emoji: '🎤' },
+  { keywords: ['舞', '跳'], emoji: '💃' },
+  { keywords: ['表演', '演'], emoji: '🎭' },
+  { keywords: ['吃', '美食', '喝'], emoji: '🍜' },
+  { keywords: ['运动', '跑', '健身'], emoji: '💪' },
+  { keywords: ['游戏', '玩'], emoji: '🎮' },
+  { keywords: ['电影', '剧'], emoji: '🎬' },
+  { keywords: ['书', '读'], emoji: '📚' },
+  { keywords: ['画', '艺术'], emoji: '🎨' },
+]
+const LOT_EMOJI_FALLBACK = { keywords: [], emoji: '🔮' }
+
 function lotEmoji(lot: { emoji?: string; title?: string }): string {
   if (lot.emoji) return lot.emoji
   const title = lot.title ?? ''
-  if (title.includes('社死') || title.includes('尴尬') || title.includes('糗')) return '😅'
-  if (title.includes('旅行') || title.includes('游') || title.includes('出发')) return '✈️'
-  if (title.includes('秘密') || title.includes('爆料') || title.includes('习惯')) return '🤫'
-  if (title.includes('歌') || title.includes('唱') || title.includes('音乐')) return '🎤'
-  if (title.includes('舞') || title.includes('跳')) return '💃'
-  if (title.includes('表演') || title.includes('演')) return '🎭'
-  if (title.includes('吃') || title.includes('美食') || title.includes('喝')) return '🍜'
-  if (title.includes('运动') || title.includes('跑') || title.includes('健身')) return '💪'
-  if (title.includes('游戏') || title.includes('玩')) return '🎮'
-  if (title.includes('电影') || title.includes('剧')) return '🎬'
-  if (title.includes('书') || title.includes('读')) return '📚'
-  if (title.includes('画') || title.includes('艺术')) return '🎨'
-  return '🔮'
+  const rule = LOT_EMOJI_RULES.find((entry) => entry.keywords.some((kw) => title.includes(kw)))
+  return rule?.emoji ?? LOT_EMOJI_FALLBACK.emoji
 }
 
 export function AuctionHeroView({
@@ -163,6 +171,24 @@ export function AuctionHeroView({
       .reverse()
   }, [session.auctionBidHistory, idx, nameOf])
 
+  // S17: per-lot winners for the all-closed recap (server keeps the full history).
+  const lotWinners = useMemo(() => {
+    const history = session.auctionBidHistory || []
+    return lots.map((lot, lotIndex) => {
+      const winning = history
+        .filter((b) => b.lotIndex === lotIndex)
+        .reduce<{ userId: string; amount: number } | null>(
+          (best, b) => (!best || b.amount > best.amount ? { userId: b.userId, amount: b.amount } : best),
+          null,
+        )
+      return {
+        lotTitle: lot.title,
+        winnerName: winning ? nameOf(winning.userId) : null,
+        amount: winning?.amount ?? 0,
+      }
+    })
+  }, [lots, session.auctionBidHistory, nameOf])
+
   const minBid = (high?.amount ?? 0) + 1
   const roleControls = resolveAuctionRoleControls({ isHost, isSingleTest, previewRole })
   const showBidControls = roleControls.canBid
@@ -203,6 +229,7 @@ export function AuctionHeroView({
     setBidError('')
     haptics('medium')
     onPlaceBid(amount)
+    setBidText(String(amount + 1))
   }
 
   // ── CardFlip lot reveal ──
@@ -303,7 +330,21 @@ export function AuctionHeroView({
               </Button>
             ) : undefined
           }
-        />
+        >
+          {lotWinners.length > 0 ? (
+            <View className='auction-hero__recap-list'>
+              <Text className='auction-hero__recap-title'>成交一览</Text>
+              {lotWinners.map((winner, index) => (
+                <View key={index} className='auction-hero__recap-row'>
+                  <Text className='auction-hero__recap-lot'>{winner.lotTitle}</Text>
+                  <Text className='auction-hero__recap-win'>
+                    {winner.winnerName ? `${winner.winnerName} · ${winner.amount} 币` : '流拍'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </PhaseHeroCard>
       </View>
     )
   }
@@ -340,6 +381,7 @@ export function AuctionHeroView({
                 <View className='auction-hero__quick-bids'>
                   <Button
                     variant='secondary'
+                    size='sm'
                     onClick={() => handleQuickBid((high?.amount ?? 0) + 5)}
                     disabled={!canBid || isPlacingBid || balance < (high?.amount ?? 0) + 5}
                   >
@@ -347,6 +389,7 @@ export function AuctionHeroView({
                   </Button>
                   <Button
                     variant='secondary'
+                    size='sm'
                     onClick={() => handleQuickBid((high?.amount ?? 0) + 10)}
                     disabled={!canBid || isPlacingBid || balance < (high?.amount ?? 0) + 10}
                   >
@@ -354,6 +397,7 @@ export function AuctionHeroView({
                   </Button>
                   <Button
                     variant='secondary'
+                    size='sm'
                     onClick={() => handleQuickBid(balance)}
                     disabled={!canBid || isPlacingBid || balance <= (high?.amount ?? 0)}
                   >
@@ -367,7 +411,14 @@ export function AuctionHeroView({
                   onInput={(e) => setBidText(e.detail.value)}
                   placeholder={`最低出价 ${minBid}`}
                 />
-                {bidError ? <Text className='auction-hero__error'>{bidError}</Text> : null}
+                {bidError || (!canBid && !isPlacingBid) ? (
+                  <View role='alert' aria-live='polite'>
+                    {bidError ? <Text className='auction-hero__error'>{bidError}</Text> : null}
+                    {!canBid && !isPlacingBid ? (
+                      <Text className='auction-hero__error'>余额不足，本标无法再出价</Text>
+                    ) : null}
+                  </View>
+                ) : null}
                 <Button
                   variant='primary'
                   onClick={() => {
@@ -387,8 +438,9 @@ export function AuctionHeroView({
                     setBidError('')
                     haptics('medium')
                     onPlaceBid(n)
+                    setBidText(String(n + 1))
                   }}
-                  disabled={isPlacingBid}
+                  disabled={!canBid || isPlacingBid}
                   loading={isPlacingBid}
                 >
                   {isPlacingBid ? '提交中…' : '出价'}
@@ -396,14 +448,14 @@ export function AuctionHeroView({
               </View>
             ) : null}
             {roleControls.canHostControl ? (
-              <Button
-                variant='secondary'
-                onClick={onCloseLot}
-                disabled={isClosingLot}
-                loading={isClosingLot}
+              <View
+                className='phase-hero-card__ghost-link'
+                role='button'
+                aria-label='关闭本标'
+                onClick={isClosingLot ? undefined : onCloseLot}
               >
-                {isClosingLot ? '处理中…' : '关闭本标（落槌）'}
-              </Button>
+                <Text>{isClosingLot ? '处理中…' : '关闭本标（落槌）'}</Text>
+              </View>
             ) : null}
           </>
         }
