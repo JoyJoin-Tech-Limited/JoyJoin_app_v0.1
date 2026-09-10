@@ -20,13 +20,11 @@ import { logger } from "../lib/logger";
 
 async function backfillSession(session: any): Promise<{ sessionId: string; updated: boolean; reason?: string }> {
   const {
-    DEFAULT_ASSESSMENT_CONFIG,
-    V2_ASSESSMENT_CONFIG,
+    resolveAssessmentConfig,
     getFinalResult,
   } = await import("@shared/personality");
 
-  const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === "true";
-  const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+  const assessmentConfig = resolveAssessmentConfig(process.env);
 
   const answers = await storage.getAssessmentAnswers(session.id);
   if (!answers || answers.length === 0) {

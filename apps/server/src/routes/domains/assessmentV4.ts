@@ -121,13 +121,10 @@ export function registerAssessmentV4Routes(app: Express): void {
         selectNextQuestion,
         shouldTerminate,
         getClosingQuestionsRemaining,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
+        resolveAssessmentConfig,
       } = await import('@shared/personality');
       
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      const assessmentConfig = resolveAssessmentConfig(process.env);
       
       let session;
       let engineState;
@@ -380,14 +377,11 @@ export function registerAssessmentV4Routes(app: Express): void {
         getClosingQuestionsRemaining,
         getFinalResult,
         getOptionFeedback,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG,
+        resolveAssessmentConfig,
         SECONDARY_QUESTION_MAP,
       } = await import('@shared/personality');
       
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      const assessmentConfig = resolveAssessmentConfig(process.env);
       
       // Find the question
       const question = questionsV4.find(q => q.id === questionId);
@@ -699,13 +693,11 @@ export function registerAssessmentV4Routes(app: Express): void {
         getClosingQuestionsRemaining,
         getFinalResult,
         getOptionFeedback,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG,
+        resolveAssessmentConfig,
         SECONDARY_QUESTION_MAP,
       } = await import('@shared/personality');
 
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      const assessmentConfig = resolveAssessmentConfig(process.env);
 
       const question = questionsV4.find(q => q.id === questionId);
       if (!question) {
@@ -940,13 +932,10 @@ export function registerAssessmentV4Routes(app: Express): void {
       const { 
         skipQuestion,
         MAX_SKIP_COUNT,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
+        resolveAssessmentConfig,
       } = await import('@shared/personality');
       
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      const assessmentConfig = resolveAssessmentConfig(process.env);
       
       // Get current skip count from session
       const currentSkipCount = session.skipCount || 0;
@@ -1069,13 +1058,10 @@ export function registerAssessmentV4Routes(app: Express): void {
         selectNextQuestion,
         shouldTerminate,
         getClosingQuestionsRemaining,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
+        resolveAssessmentConfig,
       } = await import('@shared/personality');
       
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      const assessmentConfig = resolveAssessmentConfig(process.env);
       
       // Reconstruct engine state from session answers (including skipped state)
       const { engineState } = await restoreEngineState(session, assessmentConfig);
@@ -1163,13 +1149,10 @@ export function registerAssessmentV4Routes(app: Express): void {
         initializeEngineState, 
         processAnswer,
         questionsV4,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
+        resolveAssessmentConfig,
       } = await import('@shared/personality');
 
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      const assessmentConfig = resolveAssessmentConfig(process.env);
 
       // Check if user already has an active session
       let session = await storage.getAssessmentSessionByUser(userId);

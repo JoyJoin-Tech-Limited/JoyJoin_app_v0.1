@@ -65,9 +65,8 @@ export function registerXiaoyueRoutes(app: Express): void {
           return res.json({ prefetched: false, reason: 'Session not found' });
         }
 
-        const { V2_ASSESSMENT_CONFIG, DEFAULT_ASSESSMENT_CONFIG } = await import('@shared/personality');
-        const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-        const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+        const { resolveAssessmentConfig } = await import('@shared/personality');
+        const assessmentConfig = resolveAssessmentConfig(process.env);
         const { engineState } = await restoreEngineState(session, assessmentConfig);
 
         const matches = engineState.currentMatches ?? [];

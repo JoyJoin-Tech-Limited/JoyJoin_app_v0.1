@@ -4,6 +4,7 @@
  */
 
 export * from './types';
+export * from './assessmentProfile';
 export * from './questionsV4';
 export * from './prototypes';
 export * from './feedback';

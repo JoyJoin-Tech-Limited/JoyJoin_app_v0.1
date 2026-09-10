@@ -30,6 +30,7 @@
     "./centerTabRouting": "./src/centerTabRouting.ts",
     "./matchingWeights": "./src/matchingWeights.ts",
     "./personality": "./src/personality/index.ts",
+    "./personality/assessmentProfile": "./src/personality/assessmentProfile.ts",
     "./personality/confidenceCalibration": "./src/personality/confidenceCalibration.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
     "./personality/resultViewModel": "./src/personality/resultViewModel.ts",
