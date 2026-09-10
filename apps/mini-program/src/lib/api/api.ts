@@ -335,6 +335,7 @@ export async function apiRequestBinary(options: {
   path: string
   data?: unknown
   timeout?: number
+  method?: 'GET' | 'POST'
 }): Promise<ArrayBuffer> {
   const requestUrl = buildApiUrl(options.path)
   const sessionToken = getSessionToken()
@@ -343,7 +344,7 @@ export async function apiRequestBinary(options: {
   try {
     response = await Taro.request<ArrayBuffer>({
       url: requestUrl,
-      method: 'POST',
+      method: options.method ?? 'POST',
       data: options.data,
       responseType: 'arraybuffer',
       enableCookie: true,

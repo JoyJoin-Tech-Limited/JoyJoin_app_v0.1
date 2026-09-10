@@ -223,6 +223,15 @@ $ld-tint: $phase-accent-lie-tint;
     min-width: 0;
   }
 
+  &__assist-toggle {
+    display: flex;
+    align-items: center;
+    min-height: 56rpx;
+    @include type-caption;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
   &__assist-input {
     box-sizing: border-box;
     flex: 1;

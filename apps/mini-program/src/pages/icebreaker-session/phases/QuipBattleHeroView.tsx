@@ -122,6 +122,7 @@ export function QuipBattleHeroView({
   const hasVoted = userId ? votedUserIds.includes(userId) : false
   const allSubmitted = submittedUserIds.length >= playerCount
   const allVoted = votedUserIds.length >= playerCount
+  const hasAnyAnswer = Object.values(answerMap).some((value) => value.trim().length > 0)
 
   const championResult = revealed && results.length > 0 ? results[0] : null
 
@@ -304,7 +305,7 @@ export function QuipBattleHeroView({
                 </Button>
               ) : null}
               {prompts.length > 0 ? (
-                <Button variant='primary' onClick={handleSubmit} disabled={submitting}>
+                <Button variant='primary' onClick={handleSubmit} disabled={submitting || !hasAnyAnswer}>
                   {submitting ? '提交中…' : '提交答案'}
                 </Button>
               ) : null}

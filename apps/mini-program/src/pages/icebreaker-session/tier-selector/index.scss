@@ -271,6 +271,14 @@
     color: $color-text-secondary;
   }
 
+  &__mascot-affirmation {
+    display: block;
+    @include type-caption;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    margin-top: $spacing-2xs;
+  }
+
   // ── Footer / CTA ────────────────────────────────────────────────
   // Pinned bottom bar — a flex sibling of the ScrollView (not position:fixed),
   // so the CTA stays reachable without fixed-in-scrollview quirks.
@@ -681,54 +689,9 @@
     line-height: 1;
   }
 
-  // ── Tier Vibe Preview (Batch C ceremony backdrop) ────────────────
-  &__preview {
-    @include flex-center;
-    flex-direction: column;
-    gap: $spacing-xs;
-    margin-bottom: $spacing-md;
-    padding: $spacing-sm;
-    background: $color-surface;
-    border-radius: $card-radius-sm;
-    border: 2rpx solid $color-border;
-    box-shadow: $shadow-sm;
-    animation: tier-selector-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    overflow: hidden;
-  }
-
-  &__preview-frame {
-    position: relative;
-    width: 100%;
-    max-width: 640rpx;
-    padding-bottom: 31.8%;
-    border-radius: $card-radius-sm - 8rpx;
-    overflow: hidden;
-    background: $color-bg-warm-mid;
-  }
-
-  &__preview-frame-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: inherit;
-  }
-
-  &__preview-label {
-    @include type-caption;
-    color: $color-text-muted;
-    margin-top: $spacing-xs;
-  }
-
-  &__preview-affirmation {
-    @include type-caption;
-    color: $color-primary;
-    font-weight: $font-weight-semibold;
-    margin-top: 4rpx;
-    text-align: center;
-    animation: tier-selector-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
+  // ── (Tier Vibe Preview card removed 2026 — duplicated the selected card's
+  // art + the mascot's confirmation line; the affirmation now rides the
+  // mascot block above.) ────────────────────────────────────────────
 }
 
 // ─── Animations ─────────────────────────────────────────────────────
@@ -776,7 +739,6 @@
 // ─── JS-driven reduced-motion override ──────────────────────────────
 .tier-selector--reduce-motion {
   .tier-selector__mascot,
-  .tier-selector__preview,
   .tier-selector__advanced-grid {
     animation: none;
     opacity: 1;

@@ -1,5 +1,5 @@
-import { ScrollView, Text, View } from '@tarojs/components'
-import { useCallback, useMemo, useState } from 'react'
+import { RootPortal, ScrollView, Text, View } from '@tarojs/components'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MiniScriptStoryFrameworkPublic } from '@shared/miniscriptStoryFramework'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { haptics } from '../../../lib/utils/haptics'
@@ -37,10 +37,24 @@ export function MiniScriptClueDrawer({
   currentAct: number
 }) {
   const [open, setOpen] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Swipe-back safety: the drawer must not reopen when the page is re-shown
   // (REL-04).
-  useResetOnShow(setOpen)
+  useResetOnShow((v: boolean) => {
+    if (!v) {
+      setOpen(false)
+      setClosing(false)
+    }
+  })
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    },
+    [],
+  )
 
   const groups = useMemo(
     () => buildClueDrawerGroups({ framework, revealedClues, currentAct }),
@@ -53,7 +67,14 @@ export function MiniScriptClueDrawer({
   // Hooks stay above the itemCount early-return (rules-of-hooks).
   const closeDrawer = useCallback(() => {
     haptics('light')
-    setOpen(false)
+    // Play the slide-down exit before unmounting (200ms < the 220ms animation
+    // is clipped, so keep the timer at 200ms and the keyframe at 200ms).
+    setClosing(true)
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    closeTimerRef.current = setTimeout(() => {
+      setOpen(false)
+      setClosing(false)
+    }, 200)
   }, [])
   const pullToDismiss = usePullToDismiss(closeDrawer)
 
@@ -79,7 +100,8 @@ export function MiniScriptClueDrawer({
       </View>
 
       {open ? (
-        <View className='miniscript-clues' catchMove onClick={closeDrawer}>
+        <RootPortal>
+        <View className={`miniscript-clues${closing ? ' miniscript-clues--out' : ''}`} catchMove onClick={closeDrawer}>
           <View className='miniscript-clues__backdrop' />
           <View
             className='miniscript-clues__surface'
@@ -101,6 +123,7 @@ export function MiniScriptClueDrawer({
               <Text className='miniscript-clues__title'>目前已知的线索</Text>
             </View>
             <ScrollView className='miniscript-clues__scroll' scrollY enhanced showScrollbar={false}>
+              <View className='miniscript-clues__scroll-inner'>
               {groups.map((group) => (
                 <View key={group.actNumber} className='miniscript-clues__act'>
                   <Text className='miniscript-clues__act-title'>第 {group.actNumber} 幕</Text>
@@ -122,6 +145,7 @@ export function MiniScriptClueDrawer({
                   ))}
                 </View>
               ))}
+              </View>
             </ScrollView>
             <View
               className='miniscript-clues__close'
@@ -133,6 +157,7 @@ export function MiniScriptClueDrawer({
             </View>
           </View>
         </View>
+        </RootPortal>
       ) : null}
     </>
   )

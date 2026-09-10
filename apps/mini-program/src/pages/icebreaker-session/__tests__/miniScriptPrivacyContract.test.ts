@@ -6,6 +6,12 @@ const source = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.tsx'),
   'utf8',
 )
+// 2026-09-10: sub-phase content (preview / role / truth) moved to
+// MiniScriptSessionViews.tsx to keep MiniScriptHeroView under the size gate.
+const viewSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptSessionViews.tsx'),
+  'utf8',
+)
 const styles = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.scss'),
   'utf8',
@@ -24,16 +30,16 @@ describe('MiniScript PM privacy and reveal contract', () => {
   it('gives the host a structured pre-assignment story preview', () => {
     // Wave-2 restructure: headline title + meta + role chips + flow timeline,
     // with the full beats behind a collapsed disclosure.
-    expect(source).toContain('查看完整剧本')
-    expect(source).toContain('characters.map')
-    expect(source).toContain('framework.act_flow.map')
+    expect(viewSource).toContain('查看完整剧本')
+    expect(viewSource).toContain('characters.map')
+    expect(viewSource).toContain('framework.act_flow.map')
   })
 
   it('renders the revealed who / what / why solution from server state', () => {
     expect(source).toContain('session.miniScriptRevealedSolution')
-    expect(source).toContain('真相人物')
-    expect(source).toContain('发生了什么')
-    expect(source).toContain('背后原因')
+    expect(viewSource).toContain('真相人物')
+    expect(viewSource).toContain('发生了什么')
+    expect(viewSource).toContain('背后原因')
   })
 
   it('mirrors the server vote-progress authority instead of a client all-voted gate', () => {
@@ -53,8 +59,8 @@ describe('MiniScript PM privacy and reveal contract', () => {
   })
 
   it('keeps long role-card content inside a vertically scrollable back face', () => {
-    expect(source).toMatch(/<ScrollView[\s\S]*?className='miniscript-hero__role-back-scroll'[\s\S]*?scrollY/)
-    expect(source).toContain('向上滑动查看更多')
+    expect(viewSource).toMatch(/<ScrollView[\s\S]*?className='miniscript-hero__role-back-scroll'[\s\S]*?scrollY/)
+    expect(viewSource).toContain('向上滑动查看更多')
     expect(styles).toMatch(/&__role-front,\s*&__role-back\s*{[^}]*height:\s*520rpx;/s)
     expect(styles).toMatch(/&__role-back-scroll\s*{[^}]*min-height:\s*0;[^}]*flex:\s*1;/s)
     expect(styles).toMatch(/&__role-back-line\s*{[^}]*word-break:\s*normal;[^}]*overflow-wrap:\s*normal;/s)

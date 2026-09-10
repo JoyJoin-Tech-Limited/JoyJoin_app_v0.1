@@ -85,7 +85,7 @@ $sf-deep: $phase-accent-speed-deep;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rpx;
+    gap: $spacing-2xs;
   }
 
   &__pair-tile-name {
@@ -101,7 +101,7 @@ $sf-deep: $phase-accent-speed-deep;
     position: absolute;
     top: 8rpx;
     right: 8rpx;
-    padding: 2rpx 12rpx;
+    padding: $spacing-2xs $spacing-sm;
     border-radius: $radius-pill;
     background: $sf-deep;
   }
