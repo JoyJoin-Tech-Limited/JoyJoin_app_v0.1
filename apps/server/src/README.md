@@ -58,7 +58,7 @@ Primary files:
 Boundary:
 - Bot profiles include full matching-compatible data (archetypes, `user_interests`, industry tiers) so `poolMatchingService` scores them identically to real users.
 - `finalizeTestPoolGroups()` creates real `events` / `blindBoxEvents` / `eventAttendance` / `venueTimeSlotBookings` for the test group so the post-match flow (event detail, confirm-attendance) works end-to-end.
-- Cleanup uses `apps/server/src/lib/fkCascadeDelete.ts` (`cascadeDeleteByIds`) to discover non-`ON DELETE CASCADE` FK dependents from `pg_constraint` at runtime and delete transitive children deepest-first; this avoids the previous whack-a-mole of hand-enumerated child tables. It deletes all test pool registrations and icebreaker data but preserves `payments` records.
+- Cleanup uses `apps/server/src/lib/fkCascadeDelete.ts` (`cascadeDeleteByIds`) to discover non-`ON DELETE CASCADE` FK dependents from `pg_constraint` at runtime and delete transitive children deepest-first; this avoids the previous whack-a-mole of hand-enumerated child tables (2026-09-10 fix: `blind_box_pre_attendance` + 20+ FK children were missing from the manual list, causing `23503`). It deletes all test pool registrations and icebreaker data but preserves `payments` records. Single-test pool cleanup (`singleTestService.cleanupSingleTestPoolRows`) also uses `cascadeDeleteByIds` for the same reason.
 - Startup sentinel crashes the server if `is_test_bot=true` rows exist in `APP_MODE=production`.
 
 Full guide: `docs/operations/test-mode-operations.md` §H
@@ -240,7 +240,7 @@ Primary files:
 Pre-event online anteroom for one matched pool group. Server exposes `GET /api/pool-groups/:groupId/room-state` (member attendance, top interests, V2 outfit/equipped items, event date/time) and emits `ROOM_*` WS presence events via the shared WebSocket service. Attendance remains the DB-backed source of truth (`event_attendance`); presence is ephemeral with 5 s leave grace and 2 s poke throttle.
 
 Primary files:
-- `apps/server/src/routes/domains/userEventPools.ts` — `GET /api/pool-groups/:groupId/room-state` and reuse of existing `POST /api/pool-groups/:groupId/confirm-attendance`
+- `apps/server/src/routes/domains/userEventPools.ts` — `GET /api/pool-groups/:groupId/room-state` and reuse of existing `POST /api/pool-groups/:groupId/confirm-attendance`; also owns the pool registration routes (`POST /api/event-pools/:id/register`, `POST /api/event-pools/:id/register-with-payment`) which must include machine-readable `code` on all user-facing error responses (see AGENTS.md §6 "Registration error code contract")
 - `apps/server/src/repositories/equipmentRepo.ts` — `getEquipmentLooksForUsers` batch resolves V2 outfit/equipped items
 - `apps/server/src/wsService.ts` — `ROOM_PRESENCE_STATE`, `ROOM_MEMBER_ENTERED`, `ROOM_MEMBER_LEFT`, `ROOM_POKE`
 - `packages/shared/src/wsEvents.ts` — WS event contracts

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { registerForPool, type EventPoolRegistrationPayload } from '@shared/api'
-import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
+import { getErrorMessage, ERROR_CODE_GENERIC_FALLBACK, type ErrorCode } from '@shared/copy/errorBaselines'
 
 import { apiRequest, type ApiError } from '../lib/api/api'
 import { bustRegistrationCaches } from '../lib/api/registrationCacheBust'
@@ -26,23 +26,46 @@ import { TOAST_DEFAULT_MS } from '../lib/utils/uiConstants'
 import type { PoolEventType } from '../pages/pool-registration/flowConfig'
 import type { RegistrationStep } from '../pages/pool-registration/poolRegistrationForm'
 
-/** Map a server error to copy-governed text: known `data.code` values resolve
- *  through the shared error-baseline templates; unmapped codes surface the
- *  shared generic copy (`getErrorMessage` never returns null). */
+/** True when a server-supplied string is safe to show a WeChat user directly:
+ *  non-empty, not a bare machine code, and Chinese (so English/technical
+ *  transport strings never leak into the UI). */
+function isUserFacingServerMessage(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const trimmed = value.trim()
+  if (trimmed === '') return false
+  if (/^[A-Z][A-Z0-9_]*$/.test(trimmed)) return false
+  return /[\u4e00-\u9fff]/.test(trimmed)
+}
+
+/** Map a server error to copy-governed text.
+ *
+ *  Order: known `data.code` → governed template; otherwise the server's own
+ *  Chinese message; otherwise the localized `Error.message`; otherwise the
+ *  caller's fallback code. An UNMAPPED code must NOT short-circuit to the
+ *  generic sentinel — that was the swallowed-error class behind the duplicate
+ *  registration dead-end (2026-09-10): the server sent a human message but the
+ *  client showed "出了点问题，稍后再试". */
 export function resolveMessage(error: unknown, fallbackCode: ErrorCode): string {
   const apiError = error as ApiError | undefined
-  if (apiError?.data && typeof apiError.data === 'object' && !Array.isArray(apiError.data)) {
-    const code = (apiError.data as { code?: unknown }).code
+  const data = apiError?.data
+
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const code = (data as { code?: unknown }).code
     if (typeof code === 'string') {
-      return getErrorMessage(code as ErrorCode)
+      const mapped = getErrorMessage(code as ErrorCode)
+      if (mapped !== ERROR_CODE_GENERIC_FALLBACK) return mapped
     }
+    const serverMessage = (data as { message?: unknown }).message
+    if (isUserFacingServerMessage(serverMessage)) return serverMessage
   }
+
+  // Legacy: the response body itself was a bare ErrorCode string.
   if (error instanceof Error && error.message) {
     const mapped = getErrorMessage(error.message as ErrorCode)
-    if (mapped !== error.message) {
-      return mapped
-    }
+    if (mapped !== ERROR_CODE_GENERIC_FALLBACK) return mapped
+    if (isUserFacingServerMessage(error.message)) return error.message
   }
+
   return getErrorMessage(fallbackCode)
 }
 
@@ -60,6 +83,40 @@ export function getEntitlementCode(error: unknown): MiniProgramPaymentEntitlemen
   }
 
   return null
+}
+
+/** True when the server rejected the submit with code ALREADY_REGISTERED —
+ *  the registration row EXISTS (double-confirm held re-fire, retry after a
+ *  network-swallowed success, or a payment-fulfillment-created registration
+ *  invisible to a stale registrations cache). This is a terminal joined
+ *  state, not a failure: treating it as one shows a generic error card whose
+ *  retry can never succeed (2026-09-10 duplicate-submit trap fix). */
+export function isAlreadyRegisteredError(error: unknown): boolean {
+  const data = (error as ApiError | undefined)?.data
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return false
+  }
+  return (data as { code?: unknown }).code === 'ALREADY_REGISTERED'
+}
+
+/** Diagnostic fields for submit-failure logs — the mapped user copy alone
+ *  swallows the real server code/message, so log the raw response too. */
+export function describeSubmitError(error: unknown): {
+  statusCode?: number
+  serverCode?: string
+  serverMessage?: string
+} {
+  const apiError = error as ApiError | undefined
+  const data = apiError?.data
+  const serverCode =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as { code?: unknown }).code
+      : undefined
+  return {
+    statusCode: apiError?.statusCode,
+    serverCode: typeof serverCode === 'string' ? serverCode : undefined,
+    serverMessage: apiError instanceof Error ? apiError.message : undefined,
+  }
 }
 
 /** Structural subset of AuthUserResponse consumed by the optimistic
@@ -145,9 +202,13 @@ export function useOptimisticRegistration(
     // AC-5b/N-8: the hook owns the failure toast — same copy resolution as
     // the existing catch. Entitlement-code rejections suppress the toast
     // entirely: the payment-handoff navigation is the feedback, and a generic
-    // toast right before navigation would read as noise.
+    // toast right before navigation would read as noise. ALREADY_REGISTERED
+    // is suppressed too: the terminal-joined branch below owns the feedback
+    // (a "failure" toast after a confirmed registration would be a lie).
     rollbackMessage: (error) =>
-      getEntitlementCode(error) ? null : resolveMessage(error, 'submit-failed'),
+      getEntitlementCode(error) || isAlreadyRegisteredError(error)
+        ? null
+        : resolveMessage(error, 'submit-failed'),
   })
 
   // M4 optimistic path (AC-2/3): instant local success at tap, celebration
@@ -239,17 +300,45 @@ export function useOptimisticRegistration(
             return
           }
 
+          // ALREADY_REGISTERED: the row exists server-side, so the user IS
+          // in — convert to the terminal joined surface instead of an error
+          // card whose 重新提交 can never succeed. Mirrors the success branch
+          // side-effects; celebration analytics are NOT re-fired (the
+          // original registration already counted).
+          if (isAlreadyRegisteredError(err)) {
+            celebratedRef.current = true
+            setRegistered(true)
+            void bustRegistrationCaches(queryClient, { poolId })
+            void queryClient.invalidateQueries({ queryKey: ['mini-program', 'duo-status', poolId] })
+            clearPaymentReturnContextStorage()
+            setResumeContext(null)
+            discoverAnalytics.track('registration_already_registered', poolId, { step })
+            logInfo('[PoolRegistration] Server reports existing registration; joined surface engaged', {
+              poolId,
+              eventType,
+              step,
+              ...describeSubmitError(err),
+            })
+            Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
+            return
+          }
+
           // AC-7: capacity/availability rejections roll back like any other
           // failure — server remains authority; existing error handling
           // applies through the hook's re-thrown error.
           const message = resolveMessage(err, 'submit-failed')
           setError(message)
-          discoverAnalytics.track('registration_submit_error', poolId, { message, step })
+          discoverAnalytics.track('registration_submit_error', poolId, {
+            message,
+            step,
+            ...describeSubmitError(err),
+          })
           logError('[PoolRegistration] Failed (optimistic)', {
             poolId,
             eventType,
             step,
             message,
+            ...describeSubmitError(err),
           })
           // AC-5b: the failure toast is owned by useOptimisticMutation
           // (rollbackMessage) — no Taro.showToast in this branch.

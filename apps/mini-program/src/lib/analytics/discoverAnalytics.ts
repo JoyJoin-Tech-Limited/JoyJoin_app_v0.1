@@ -14,6 +14,10 @@ export type DiscoverAnalyticsEventType =
   | 'registration_step_reaction_shown'
   | 'registration_inclusions_viewed'
   | 'registration_submit_error'
+  // Terminal-joined recovery: server rejected the submit with
+  // ALREADY_REGISTERED (row already existed) and the client converted it to
+  // the joined surface instead of a dead-end error card (2026-09-10).
+  | 'registration_already_registered'
   | 'registration_terminal_state_view'
   | 'registration_terminal_cta_tap'
   | 'registration_terminal_notify_tap'

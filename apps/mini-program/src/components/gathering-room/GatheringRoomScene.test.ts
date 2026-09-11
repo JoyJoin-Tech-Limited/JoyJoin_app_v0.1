@@ -1,5 +1,13 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, it } from 'vitest'
 import { seatIndexFor } from './GatheringRoomScene'
+
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const SCENE_TSX = readFileSync(path.join(HERE, 'GatheringRoomScene.tsx'), 'utf8')
+const SCENE_SCSS = readFileSync(path.join(HERE, 'GatheringRoomScene.scss'), 'utf8')
 
 describe('gathering room seat map', () => {
   it('maps 3-person groups to a triangle around the table', () => {
@@ -27,5 +35,26 @@ describe('gathering room seat map', () => {
     expect(seatIndexFor(0, 1)).toBeGreaterThanOrEqual(0)
     expect(seatIndexFor(1, 2)).toBeGreaterThanOrEqual(0)
     expect(seatIndexFor(5, 1)).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('gathering room absent-member rendering contract', () => {
+  /**
+   * Regression lock (2026-09-10): absent members previously rendered NO avatar
+   * (`if (presence === 'absent') return null`), so on device every tablemate
+   * who hadn't explicitly confirmed or wasn't concurrently online showed a
+   * blank seat — "only my own avatar renders". Every member must render their
+   * seat; absent ones show a muted silhouette.
+   */
+  it('never suppresses the avatar/seat for absent members', () => {
+    expect(SCENE_TSX).not.toMatch(/presence\s*===\s*['"]absent['"][^;]*return null/)
+    expect(SCENE_TSX).not.toMatch(/\{[^}]*presence\s*===\s*['"]absent['"][^}]*\?\s*null/)
+  })
+
+  it('provides the seat-anchored silhouette modifier for absent members', () => {
+    expect(SCENE_SCSS).toMatch(/&--absent\s*\{/)
+    // The silhouette must be a static dim/desaturate treatment, not a
+    // walk-in animation that would replay at the seat.
+    expect(SCENE_SCSS).toMatch(/&--absent\s*\{[^}]*opacity/)
   })
 })

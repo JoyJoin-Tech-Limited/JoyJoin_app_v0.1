@@ -84,6 +84,17 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       opacity: 1;
     }
 
+    // 未现身 placeholder silhouette (占位剪影, PRD §3): the member's own V2
+    // avatar stays at their seat, muted to read as "held place, 正在路上"
+    // rather than a live presence. Static treatment (no breathing loop); the
+    // 360ms opacity transition on the base class crossfades to full color
+    // when the member actually arrives. Declared before --pressed/--entering
+    // so interaction and arrival states override the dim.
+    &--absent {
+      opacity: 0.45;
+      filter: grayscale(0.9);
+    }
+
     // One-hop celebration when a member's attendance flips to confirmed.
     &--just-confirmed {
       animation: gathering-room-hop 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -172,9 +183,10 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     text-overflow: ellipsis;
   }
 
-  // Held-place card for absent members — stays at the seat anchor while the
-  // dimmed avatar waits at the door. Positioned standalone (left/top inline).
-  // z-index 4: plates always read above the neighbouring seat's avatar.
+  // Held-place card — hangs below the feet of the seat's avatar (or the
+  // absent member's placeholder silhouette). Positioned standalone (left/top
+  // inline). z-index 4: plates always read above the neighbouring seat's
+  // avatar.
   &__name-card {
     position: absolute;
     z-index: 4;

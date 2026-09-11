@@ -134,6 +134,9 @@ const DISCOVER_EVENT_TYPES = [
   "registration_terminal_cta_tap",
   "registration_terminal_notify_tap",
   "registration_submit_error",
+  // Terminal-joined recovery signal (2026-09-10): submit rejected with
+  // ALREADY_REGISTERED converted to the joined surface client-side.
+  "registration_already_registered",
   // Event-feedback balanced layer funnel (2026-08-07): the 5-dimension upgrade
   // is the product's core conversion — invite seen → engaged → submitted.
   "feedback_invite_seen",

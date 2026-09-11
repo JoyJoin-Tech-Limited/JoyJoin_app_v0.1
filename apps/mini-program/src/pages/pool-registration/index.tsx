@@ -16,7 +16,7 @@ import { apiRequest } from '../../lib/api/api'
 import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { interactionLatency } from '../../lib/analytics/interactionLatency'
-import { useOptimisticRegistration, getEntitlementCode, resolveMessage } from '../../hooks/useOptimisticRegistration'
+import { useOptimisticRegistration, getEntitlementCode, isAlreadyRegisteredError, describeSubmitError, resolveMessage } from '../../hooks/useOptimisticRegistration'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
   buildPoolRegistrationPaymentReturnContext,
@@ -860,14 +860,41 @@ export default function PoolRegistrationPage() {
         return
       }
 
+      // ALREADY_REGISTERED: the registration row exists server-side
+      // (double-confirm, network-swallowed first success, or a
+      // payment-fulfillment-created registration missed by a stale
+      // registrations cache). Terminal joined state — engage the success
+      // surface instead of an error card whose retry can never succeed.
+      if (isAlreadyRegisteredError(err)) {
+        await bustRegistrationCaches(queryClient, { poolId })
+        void queryClient.invalidateQueries({ queryKey: ['mini-program', 'duo-status', poolId] })
+        clearPaymentReturnContextStorage()
+        setResumeContext(null)
+        setRegistered(true)
+        discoverAnalytics.track('registration_already_registered', poolId, { step })
+        logInfo('[PoolRegistration] Server reports existing registration; joined surface engaged', {
+          poolId,
+          eventType,
+          step,
+          ...describeSubmitError(err),
+        })
+        Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
+        return
+      }
+
       const message = resolveMessage(err, 'submit-failed')
       setError(message)
-      discoverAnalytics.track('registration_submit_error', poolId, { message, step })
+      discoverAnalytics.track('registration_submit_error', poolId, {
+        message,
+        step,
+        ...describeSubmitError(err),
+      })
       logError('[PoolRegistration] Failed', {
         poolId,
         eventType,
         step,
         message,
+        ...describeSubmitError(err),
       })
       Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {

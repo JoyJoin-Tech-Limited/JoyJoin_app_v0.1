@@ -47,9 +47,18 @@ export type ErrorCode =
   | 'POOL_CLOSED'
   | 'REGISTRATION_DEADLINE_PASSED'
   | 'POOL_FULL'
+  | 'ALREADY_REGISTERED'
   | 'REGISTRATION_FAILED'
   | 'REGISTRATION_DISABLED'
-  | 'PAYMENTS_DISABLED';
+  | 'PAYMENTS_DISABLED'
+  | 'POOL_NOT_FOUND'
+  | 'ATTENDANCE_NOT_READY'
+  | 'GATHERING_ROOM_DISABLED'
+  | 'INVALID_COUPON'
+  | 'NO_ACTIVE_ENTITLEMENT'
+  | 'NO_AVAILABLE_EVENT_PACK_CREDITS'
+  | 'PAYMENT_CREATION_FAILED'
+  | 'WECHAT_BINDING_REQUIRED';
 
 interface ErrorTemplate {
   /** Surface type — determines tone mode */
@@ -203,6 +212,12 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
     surface: 'toast-error',
     default: '本场活动报名已满',
   },
+  // Duplicate registration is a terminal joined state, not a failure — the
+  // copy reassures instead of implying the submit failed.
+  ALREADY_REGISTERED: {
+    surface: 'toast-error',
+    default: '你已经报过名啦',
+  },
   REGISTRATION_FAILED: {
     surface: 'toast-error',
     default: '提交没成功，再试一次',
@@ -215,6 +230,43 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
     surface: 'full-page-error',
     default: '支付功能维护中',
     mascot: '{{mascotName}}正在升级支付系统，稍后回来试试~',
+  },
+  // Registration/payment-path codes emitted by the server. Without a template
+  // every one of these collapsed to ERROR_CODE_GENERIC_FALLBACK in the client
+  // ("出了点问题，稍后再试") — the same swallowed-error class as the duplicate
+  // registration dead-end (2026-09-10). Keep this list in lock-step with the
+  // codes the register/register-with-payment routes emit.
+  POOL_NOT_FOUND: {
+    surface: 'toast-error',
+    default: '活动不存在或已下架',
+  },
+  ATTENDANCE_NOT_READY: {
+    surface: 'toast-error',
+    default: '暂不能确认出席',
+  },
+  GATHERING_ROOM_DISABLED: {
+    surface: 'toast-error',
+    default: '集结房间暂未开放',
+  },
+  INVALID_COUPON: {
+    surface: 'toast-error',
+    default: '优惠券暂不可用',
+  },
+  NO_ACTIVE_ENTITLEMENT: {
+    surface: 'toast-error',
+    default: '需要先开通权益',
+  },
+  NO_AVAILABLE_EVENT_PACK_CREDITS: {
+    surface: 'toast-error',
+    default: '次卡次数已用完',
+  },
+  PAYMENT_CREATION_FAILED: {
+    surface: 'toast-error',
+    default: '支付创建失败，请重试',
+  },
+  WECHAT_BINDING_REQUIRED: {
+    surface: 'toast-error',
+    default: '请重新登录后再试',
   },
 };
 

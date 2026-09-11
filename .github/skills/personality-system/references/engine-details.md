@@ -33,6 +33,32 @@ initializeEngineState(config) → processAnswer(state, question, option)
 - unset / `false` → `DEFAULT_ASSESSMENT_CONFIG` (10–16 questions, tiered threshold off). This is the profile validated by the V4 measurement program (`docs/plans/2026-09-09-personality-engine-v4-upgrade-plan.md`) and the intended production profile.
 - `true` → `V2_ASSESSMENT_CONFIG` (12–20 questions, tiered threshold on) — an *older, longer* profile (not "newer"). Its extra questions are triggered by the top1–top2 confidence gap, which is uninformative under realistic answer noise (see `docs/reports/2026-09-10-confidence-calibration.md`), and the Item 6 recovery data shows trait recovery beyond ~12–16 questions is flat-to-negative. Do not enable without a measured A/B.
 
+### Assessment profile resolver
+
+`packages/shared/src/personality/assessmentProfile.ts` centralizes config selection. All 6 server call sites import from this module — never construct configs inline.
+
+```ts
+resolveAssessmentProfileId(env?: string): "standard" | "extended"
+resolveAssessmentConfig(env?: string, overrides?: Partial<AssessmentConfig>): AssessmentConfig
+assessmentConfigForProfile(id: "standard" | "extended"): AssessmentConfig
+```
+
+**Never use these legacy identifiers** (they create confusion): `V2_ASSESSMENT_CONFIG` as a direct import (use the resolver), `ENABLE_MATCHER_V2` as a feature-flag name (it's a profile selector, not a toggle).
+
+### V4 dark flags (all default false)
+
+| Flag | Module | Controls |
+|------|--------|----------|
+| `enableIpsativeItems` | `questionsV4Ipsative.ts` | Ipsative item type — **mothballed** (M4 true no-op, zero ΔP) |
+| `enableConsistencyFolding` | `consistencyPairs.ts` | Near-paraphrase pair detection + neutral detector (HC-extreme 100%→0%) |
+| `enableTraitShrinkage` | `traitShrinkage.ts` | Confidence-weighted shrinkage toward population mean (K=75, W_MIN=0.5) |
+| `enableMetaConsistency` | `metaConsistency.ts` | Self-image inflation detection (structural ceiling — undetectable internally) |
+| `compositionGatesEnabled` | `poolMatchingService.ts` | Min-E 25, mean-A 45, spark X≥70∨P≥70, X-var cap 750 on matched groups |
+
+### Confidence calibration
+
+`confidenceCalibration.ts` + `confidenceCalibrationArtifact.ts`: PAVA isotonic fit mapping raw session confidence → true P(correct). Artifact versioned `v1-20260909`. Raw 0.90 → calibrated ~0.34. ECE improved 0.605→0.457. Live behind the dark flag.
+
 ## Chemistry / compatibility system
 
 The 12×12 chemistry matrix (`archetypeCompatibility.ts`) is consumed by the **matching domain** as one scoring dimension (28% weight in deterministic pair scoring). Personality system owns the matrix data; matching domain owns how it is applied in group formation.

@@ -848,15 +848,23 @@ async function cleanupSingleTestPoolRows(
       .set({ eventId: null, blindBoxEventId: null })
       .where(inArray(eventPoolGroups.id, groupIds));
 
-    if (linkedEventIds.length > 0) {
-      await conn.delete(eventAttendance).where(inArray(eventAttendance.eventId, linkedEventIds));
-      await conn.delete(events).where(inArray(events.id, linkedEventIds));
-    }
+    // Catalog-driven cascade for the derived `events` rows: children like
+    // event_feedback, match_history, connections, chat_* and reports all carry
+    // NO ACTION FKs and grow over time — hand-enumeration is whack-a-mole.
+    await cascadeDeleteByIds(conn, "events", "id", linkedEventIds);
 
     if (linkedBlindBoxEventIds.length > 0) {
+      // event_attendance.blind_box_event_id has no DB-level FK (drizzle-only
+      // reference), so catalog discovery cannot see it — delete explicitly.
       await conn
         .delete(eventAttendance)
         .where(inArray(eventAttendance.blindBoxEventId, linkedBlindBoxEventIds));
+      // Cascade the rest (blind_box_pre_attendance from 确认出席,
+      // reunion_requests, venue_bookings, invitations, invitation_uses...).
+      // Without this the recreate path fails on
+      // blind_box_pre_attendance_event_id_blind_box_events_id_fk as soon as the
+      // tester confirmed attendance in the previous run.
+      await cascadeDeleteByIds(conn, "blind_box_events", "id", linkedBlindBoxEventIds);
     }
   }
 
@@ -873,7 +881,10 @@ async function cleanupSingleTestPoolRows(
     await conn
       .delete(eventAttendance)
       .where(inArray(eventAttendance.blindBoxEventId, staleBlindBoxEventIds));
-    await conn.delete(blindBoxEvents).where(inArray(blindBoxEvents.id, staleBlindBoxEventIds));
+    // Same cascade rationale as the group-linked block above: pre-attendance,
+    // reunion requests, venue bookings and invitations reference
+    // blind_box_events with NO ACTION FKs.
+    await cascadeDeleteByIds(conn, "blind_box_events", "id", staleBlindBoxEventIds);
   }
 
   // Safety net: legacy `events` rows derived from this pool's matches
@@ -904,8 +915,9 @@ async function cleanupSingleTestPoolRows(
     const orphanEventIds = orphanEventCandidateIds
       .filter((id: string) => !referencedOrphanEventIds.has(id));
     if (orphanEventIds.length > 0) {
-      await conn.delete(eventAttendance).where(inArray(eventAttendance.eventId, orphanEventIds));
-      await conn.delete(events).where(inArray(events.id, orphanEventIds));
+      // Cascade so feedback / match-history / connection rows derived from the
+      // orphaned event cannot block the delete.
+      await cascadeDeleteByIds(conn, "events", "id", orphanEventIds);
     }
   }
 
@@ -927,7 +939,10 @@ async function cleanupSingleTestPoolRows(
     .returning({ id: eventPoolGroups.id });
 
   if (deletePool) {
-    await conn.delete(eventPools).where(eq(eventPools.id, poolId));
+    // Cascade covers pool-level children not reachable via registrations or
+    // groups (invitations.pool_id from duo invites, matching_shadow_experiments,
+    // stray venue_time_slot_bookings / event_credit_redemptions by pool_id).
+    await cascadeDeleteByIds(conn, "event_pools", "id", [poolId]);
   }
 
   return {

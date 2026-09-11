@@ -49,10 +49,15 @@ describe('single-test group finalization (单人调试局全链路)', () => {
 
   it('cleanup removes the finalized records so re-runs never bind stale events', () => {
     expect(serviceSource).toContain('.delete(venueTimeSlotBookings)');
-    expect(serviceSource).toContain('.delete(events).where(inArray(events.id, linkedEventIds))');
+    // Events / blind_box_events are deleted via the catalog-driven cascade so
+    // played-session children (blind_box_pre_attendance 确认出席, event_feedback,
+    // match_history, connections, reunion_requests, venue_bookings) cannot 500
+    // the recreate path with a NO ACTION FK violation.
+    expect(serviceSource).toContain('cascadeDeleteByIds(conn, "events", "id", linkedEventIds)');
     expect(serviceSource).toContain('inArray(eventAttendance.blindBoxEventId, linkedBlindBoxEventIds)');
+    expect(serviceSource).toContain('cascadeDeleteByIds(conn, "blind_box_events", "id", linkedBlindBoxEventIds)');
     // Safety net for pool-level blind_box_events rows without a group back-link.
-    expect(serviceSource).toContain('.delete(blindBoxEvents).where(inArray(blindBoxEvents.id, staleBlindBoxEventIds))');
+    expect(serviceSource).toContain('cascadeDeleteByIds(conn, "blind_box_events", "id", staleBlindBoxEventIds)');
   });
 
   it('cleanup nulls group event back-links before deleting events/blind_box_events (NO ACTION FKs)', () => {
@@ -61,8 +66,8 @@ describe('single-test group finalization (单人调试局全链路)', () => {
     // deleting the referenced rows or the second test run 500s.
     expect(serviceSource).toContain('.set({ eventId: null, blindBoxEventId: null })');
     const nullOutIndex = serviceSource.indexOf('.set({ eventId: null, blindBoxEventId: null })');
-    const eventsDeleteIndex = serviceSource.indexOf('.delete(events).where(inArray(events.id, linkedEventIds))');
-    const blindBoxDeleteIndex = serviceSource.indexOf('.delete(blindBoxEvents).where(inArray(blindBoxEvents.id, staleBlindBoxEventIds))');
+    const eventsDeleteIndex = serviceSource.indexOf('cascadeDeleteByIds(conn, "events", "id", linkedEventIds)');
+    const blindBoxDeleteIndex = serviceSource.indexOf('cascadeDeleteByIds(conn, "blind_box_events", "id", staleBlindBoxEventIds)');
     expect(nullOutIndex).toBeGreaterThan(-1);
     expect(eventsDeleteIndex).toBeGreaterThan(nullOutIndex);
     expect(blindBoxDeleteIndex).toBeGreaterThan(nullOutIndex);

@@ -920,9 +920,12 @@ async function captureWelcomeBack() {
 // Presence arrives over the mock WS endpoint (/ws on the mock server): after
 // USER_JOINED the mock replies ROOM_PRESENCE_STATE with five of the six fixture
 // members (the owl is absent), so the header must reach 已到 5/6 before we
-// capture and a name card must remain at the absent member's seat. Avatar art
-// resolves to the approved full-starter composites via the CDN-intercept in
-// withBrowserPage (served from apps/mini-program/src/assets).
+// capture. Every member's avatar renders at their own seat — the absent owl
+// shows as a muted seat-anchored silhouette (占位剪影) with its held-place
+// name card (fixed 2026-09-10: absent members previously rendered no avatar
+// at all, so on device every offline/unconfirmed tablemate was a blank seat).
+// Avatar art resolves to the approved full-starter composites via the
+// CDN-intercept in withBrowserPage (served from apps/mini-program/src/assets).
 async function captureGatheringRoom(viewport = V17_VIEWPORT) {
   return withBrowserPage(viewport, async (page) => {
     await page.goto(
@@ -933,10 +936,15 @@ async function captureGatheringRoom(viewport = V17_VIEWPORT) {
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
     await page.waitForSelector('.gathering-room__action-bar', { state: 'visible', timeout: 15000 })
-    // Present members rendered: the owl is excluded from WS presence, so only
-    // five seats mount — absent members show a held-place name card only.
+    // All six seats mount — five live members at full color, the absent owl
+    // as a muted silhouette at its own seat.
     await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__seat').length === 5,
+      () => document.querySelectorAll('.gathering-room-scene__seat').length === 6,
+      undefined,
+      { timeout: 10000 }
+    )
+    await page.waitForFunction(
+      () => document.querySelectorAll('.gathering-room-scene__seat-body--absent').length === 1,
       undefined,
       { timeout: 10000 }
     )
@@ -952,16 +960,16 @@ async function captureGatheringRoom(viewport = V17_VIEWPORT) {
       const text = pill.textContent ?? ''
       return /已到\s*5\/6/.test(text) && /已确认\s*2\/6/.test(text)
     }, undefined, { timeout: 15000 })
-    // Universal name plates: all six members render a plate; the five present
-    // members get the seated variant and the absent owl keeps the held-place
-    // plate only. The own member's plate carries the 我 chip.
+    // Universal name plates: all six members render a plate, always in the
+    // seated hang below the feet (avatars — or the absent silhouette — are at
+    // every anchor). The own member's plate carries the 我 chip.
     await page.waitForFunction(
       () => document.querySelectorAll('.gathering-room-scene__name-card').length === 6,
       undefined,
       { timeout: 10000 }
     )
     await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__name-card--seated').length === 5,
+      () => document.querySelectorAll('.gathering-room-scene__name-card--seated').length === 6,
       undefined,
       { timeout: 10000 }
     )
@@ -970,10 +978,11 @@ async function captureGatheringRoom(viewport = V17_VIEWPORT) {
       undefined,
       { timeout: 10000 }
     )
-    // Every rendered avatar resolved to its approved full-starter composite.
+    // Every rendered avatar (including the absent silhouette) resolved to its
+    // approved full-starter composite.
     await page.waitForFunction(() => {
       const bodies = Array.from(document.querySelectorAll('.pixel-avatar-composite__body'))
-      return bodies.length === 5 && bodies.every((el) =>
+      return bodies.length === 6 && bodies.every((el) =>
         /full-starter-v2\.[a-f0-9]{12}\.webp/.test(el.getAttribute('src') ?? ''))
     }, undefined, { timeout: 10000 })
     // No avatar fell back to the error/placeholder state.

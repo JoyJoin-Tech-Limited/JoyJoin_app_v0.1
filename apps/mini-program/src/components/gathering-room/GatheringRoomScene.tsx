@@ -12,9 +12,9 @@ import './GatheringRoomScene.scss'
  *
  * Full-viewport zero-scroll room: 4–6 matched members wait for the offline
  * event as their existing V2 pixel avatars (with equipped outfits). Three
- * presence states (PRD): 未现身 (held-place name card at the seat, no
- * avatar), 在场 (walks in from the door on live arrival, idle breathing),
- * 已确认出席 (seated pose + 已确认 badge).
+ * presence states (PRD §3): 未现身 (seat-anchored muted silhouette + held-place
+ * name card — 占位剪影, narratively "正在路上"), 在场 (walks in from the door on
+ * live arrival, idle breathing), 已确认出席 (seated pose + 已确认 badge).
  *
  * The scene renders the composite room art (`ROOM_COMPOSITE_PATH`) from the
  * bundled package copy (packOptions force-included). Loading locally removes
@@ -239,13 +239,21 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     .filter(Boolean)
     .join(' ')
 
-  // Absent members render no avatar at all — the held-place name card at the
-  // seat anchor (rendered by the parent) is their only visual. The seated
-  // (confirmed) offset lives on the seat WRAPPER so pose keyframes and the
-  // press state on the body never fight it — an animation on the same element
-  // would override an inline transform mid-run and snap the avatar back to
-  // the standing spot. A live arrival mounts at the door point and the
-  // wrapper's 640ms transition walks the avatar to its seat.
+  // Every member renders their avatar at their own seat — including absent
+  // ones, who show as a muted seat-anchored silhouette (占位剪影, PRD §3
+  // 名牌/剪影 placeholder). Rendering nothing for absent members left bare
+  // floor + a floating name card on every seat whose owner hadn't explicitly
+  // confirmed or wasn't concurrently online — on device that is almost every
+  // tablemate, so the room looked broken ("only my own avatar renders").
+  // The 2026-08-17 lesson still holds: never pile dimmed avatars at the DOOR;
+  // a silhouette anchored AT THE SEAT with its name card reads as a held
+  // place, and a live arrival swaps it for the real avatar walking in.
+  //
+  // The seated (confirmed) offset lives on the seat WRAPPER so pose keyframes
+  // and the press state on the body never fight it — an animation on the same
+  // element would override an inline transform mid-run and snap the avatar
+  // back to the standing spot. A live arrival mounts at the door point and
+  // the wrapper's 640ms transition walks the avatar to its seat.
   const doorPoint = doorQueuePoint(seatIndex)
   const seatStyle: CSSProperties = {
     left: `${anchor.x}%`,
@@ -277,11 +285,6 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     () => new Map((profile.equippedItems ?? []).map((item) => [item.id, item])),
     [profile.equippedItems],
   )
-
-  // 未现身 = held-place name card only (rendered by the parent at the seat
-  // anchor). No avatar: a pile of dimmed avatars waiting at the door read as
-  // a layout bug, not as "on the way" (device screenshot 2026-08-17).
-  if (presence === 'absent') return null
 
   return (
     <View
@@ -343,7 +346,10 @@ const GatheringRoomNamePlate = memo(function GatheringRoomNamePlate({
     <View
       className={[
         'gathering-room-scene__name-card',
-        presence !== 'absent' ? 'gathering-room-scene__name-card--seated' : '',
+        // Every member now has an avatar (or its absent silhouette) at the
+        // seat anchor — the plate always hangs below the feet (--seated),
+        // never overlaps the legs.
+        'gathering-room-scene__name-card--seated',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -454,8 +460,10 @@ export function GatheringRoomScene({
 
       {/* Character layer — above the art and lamp-breathe overlay. Each seat
           is memoized so presence changes only re-render the seat whose state
-          actually changed. Absent members show only their held-place name
-          card at the seat; the avatar walks in from the door on arrival. */}
+          actually changed. Every member's avatar stays at their own seat:
+          absent members render as a muted silhouette (占位剪影) behind their
+          held-place name card; the real avatar walks in from the door on
+          arrival and the silhouette crossfades to full color. */}
       {entranceArmed
         ? memberProfiles.map((profile, index) => {
             const seatIndex = seatIndexFor(index, memberProfiles.length)
@@ -463,19 +471,17 @@ export function GatheringRoomScene({
             const presence = presenceByUserId.get(profile.userId) ?? 'absent'
             return (
               <Fragment key={profile.userId}>
-                {presence === 'absent' ? null : (
-                  <GatheringRoomSeat
-                    profile={profile}
-                    presence={presence}
-                    seatIndex={seatIndex}
-                    isOwn={isOwn}
-                    isEntering={enteringUserIds.has(profile.userId)}
-                    playOwnDoorEntry={isOwn && playOwnDoorEntry}
-                    pokeBadge={isOwn ? pokeBadge ?? null : null}
-                    reducedMotion={reducedMotion}
-                    onAvatarTap={onAvatarTap}
-                  />
-                )}
+                <GatheringRoomSeat
+                  profile={profile}
+                  presence={presence}
+                  seatIndex={seatIndex}
+                  isOwn={isOwn}
+                  isEntering={enteringUserIds.has(profile.userId)}
+                  playOwnDoorEntry={isOwn && playOwnDoorEntry}
+                  pokeBadge={isOwn ? pokeBadge ?? null : null}
+                  reducedMotion={reducedMotion}
+                  onAvatarTap={onAvatarTap}
+                />
                 <GatheringRoomNamePlate
                   profile={profile}
                   seatIndex={seatIndex}

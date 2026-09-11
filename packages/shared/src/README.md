@@ -36,7 +36,7 @@ This package holds contracts and logic that are intentionally shared across mult
 ### Brand-governed copy
 - `packages/shared/src/copy/` — centralized copy modules for mini-program 文案 governance:
   - `terms.ts` — core terminology table (canonical vs legacy), banned words
-  - `errorBaselines.ts` — error message factory functions (`getErrorMessage`, `getErrorForSurface`)
+  - `errorBaselines.ts` — `ErrorCode` union type + `ERROR_MESSAGE_MAP` (code → Chinese template), `ERROR_CODE_GENERIC_FALLBACK` sentinel, and `resolveMessage(error, surface?)` mapping function with unmapped-code safety net (falls through to server Chinese message via CJK-only guard, then to `getErrorMessage`). Contract test: `apps/server/src/__tests__/registrationErrorCodes.test.ts` verifies all server `code: "..."` literals have templates.
   - `emptyStates.ts` — empty state templates with action guidance (`getEmptyStateMessage`)
   - `mascotVoice.ts` — 悦仔常用句式库 (personified sentence patterns)
   - `toneMap.ts` — surface ↔ tone mapping (System UI / 悦仔 Voice / Social Game)

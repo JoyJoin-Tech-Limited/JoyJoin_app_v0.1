@@ -53,4 +53,22 @@ describe("fk cascade delete contract", () => {
     expect(adminUsers).not.toContain("DELETE FROM event_attendance WHERE user_id");
     expect(adminUsers).not.toContain("UPDATE moderation_logs SET admin_id = NULL");
   });
+
+  it("is used for derived events / blind_box_events / pool deletion in single-test cleanup", () => {
+    const singleTest = readRepoFile("apps/server/src/services/singleTestService.ts");
+
+    // Regression guard for the 重新创建调试局 FK violation: once a played
+    // session exists, blind_box_pre_attendance (确认出席), event_feedback,
+    // match_history, connections, reunion_requests and venue_bookings reference
+    // the test events/blind_box_events with NO ACTION FKs. Hand-enumerated
+    // deletes miss them, so cleanup must cascade from pg_constraint.
+    expect(singleTest).toContain('cascadeDeleteByIds(conn, "events", "id", linkedEventIds)');
+    expect(singleTest).toContain('cascadeDeleteByIds(conn, "blind_box_events", "id", linkedBlindBoxEventIds)');
+    expect(singleTest).toContain('cascadeDeleteByIds(conn, "blind_box_events", "id", staleBlindBoxEventIds)');
+    expect(singleTest).toContain('cascadeDeleteByIds(conn, "events", "id", orphanEventIds)');
+    expect(singleTest).toContain('cascadeDeleteByIds(conn, "event_pools", "id", [poolId])');
+    expect(singleTest).not.toContain("conn.delete(events)");
+    expect(singleTest).not.toContain("conn.delete(blindBoxEvents)");
+    expect(singleTest).not.toContain("conn.delete(eventPools)");
+  });
 });

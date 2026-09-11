@@ -634,7 +634,15 @@ export function registerUserEventPoolRoutes(app: Express): void {
       });
 
       if (existingReg) {
-        return res.status(400).json({ message: "You have already registered for this event pool" });
+        // Duplicate registration is a terminal joined state, not a failure:
+        // carry the machine-readable code (same contract as
+        // register-with-payment below) so clients can map it to the
+        // AlreadyJoined/success surface instead of a generic error card whose
+        // retry can never succeed.
+        return res.status(400).json({
+          message: "你已经报名过这个活动了",
+          code: "ALREADY_REGISTERED",
+        });
       }
 
       const [registrationCountRow] = await db
@@ -930,7 +938,12 @@ export function registerUserEventPoolRoutes(app: Express): void {
       });
 
       if (error?.code === "23505" || error?.cause?.code === "23505") {
-        return res.status(400).json({ message: "You have already registered for this event pool" });
+        // Unique-violation on (pool_id, user_id) — same terminal-joined
+        // contract as the pre-check above (code required for client mapping).
+        return res.status(400).json({
+          message: "你已经报名过这个活动了",
+          code: "ALREADY_REGISTERED",
+        });
       }
 
       if (error instanceof Error && error.message === "No available event-pack credits remain") {
@@ -989,7 +1002,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
       });
 
       if (!pool) {
-        return res.status(404).json({ message: "活动不存在" });
+        return res.status(404).json({ message: "活动不存在", code: "POOL_NOT_FOUND" });
       }
 
       // Check duplicates
@@ -1083,7 +1096,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
       const user = await storage.getUser(userId);
       const paymentOpenId = user?.wechatOpenId?.trim();
       if (!paymentOpenId) {
-        return res.status(400).json({ message: "微信身份未绑定，请重新登录" });
+        return res.status(400).json({ message: "微信身份未绑定，请重新登录", code: "WECHAT_BINDING_REQUIRED" });
       }
 
       const paymentResult = await paymentService.createMiniProgramPayment({

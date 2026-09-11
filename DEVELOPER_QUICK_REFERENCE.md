@@ -867,18 +867,33 @@ const DEFAULT_ASSESSMENT_CONFIG = {
 | Anchor (L1) | 15 | Core trait measurement with high discrimination |
 | Adaptive (L2) | 30 | Target weak confidence areas dynamically |
 | Disambiguation (L3) | 15 | Target specific archetype confusion pairs |
-| Total Bank | 60 | V4 adaptive selection (8-16 asked per session) |
+| Ipsative (mothballed) | 12 | Desirability-bias detection — zero ΔP, dark behind `enableIpsativeItems` |
+| Consistency pairs | 3 pairs | Near-paraphrase validity check — dark behind `enableConsistencyFolding` |
+| Total Bank | 130+ | V4 adaptive selection (8-16 asked per session) |
+
+### Assessment Profile Resolver
+
+Config selection centralized in `packages/shared/src/personality/assessmentProfile.ts`. Never construct configs inline — always use the resolver:
+
+```ts
+resolveAssessmentConfig(env?, overrides?)  // → AssessmentConfig
+resolveAssessmentProfileId(env?)           // → "standard" | "extended"
+assessmentConfigForProfile(id)             // → AssessmentConfig
+```
+
+**`ENABLE_MATCHER_V2` naming trap:** env var selects the session profile, not the matcher algorithm. MatcherV2 is always active. See `.github/skills/personality-system/references/engine-details.md` for details.
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
 | `packages/shared/src/personality/archetypeNames.ts` | Canonical 12-archetype ordering |
-| `packages/shared/src/personality/questionsV4.ts` | 60-question bank with trait vectors |
+| `packages/shared/src/personality/questionsV4.ts` | 130+ question bank with trait vectors |
 | `packages/shared/src/personality/adaptiveEngine.ts` | Question selection & confidence tracking |
+| `packages/shared/src/personality/assessmentProfile.ts` | Profile resolver — single source of truth for config selection |
 | `packages/shared/src/personality/matcherV2.ts` | V2 weighted Manhattan distance matcher with asymmetric penalties and VETO filters |
 | `packages/shared/src/personality/prototypes.ts` | 12 archetype trait profiles |
-| `packages/shared/src/personality/types.ts` | Type definitions (TraitKey, ArchetypeMatch, etc.) |
+| `packages/shared/src/personality/types.ts` | Type definitions (TraitKey, ArchetypeMatch, AssessmentConfig, dark flags) |
 | `apps/mini-program/src/pages/onboarding/personality-test/` | Adaptive test UI (mini-program) |
 
 | `apps/mini-program/src/pages/onboarding/personality-test/results/` | Results display (mini-program) |
