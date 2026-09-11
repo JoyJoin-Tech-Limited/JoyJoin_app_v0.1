@@ -65,10 +65,16 @@ interface GuidanceTipCardProps {
   onRowTap?: (key: GuidanceTipCardRowKey) => void
 }
 
-/** Default bundled ui glyphs per row key (device-reliable via localAsset). */
-const ROW_ICON_ASSET: Record<GuidanceTipCardRowKey, string> = {
+/** Default bundled ui glyphs per row key (device-reliable via localAsset).
+ *  Keys without an entry fall back to the 8rpx brand dot. */
+const ROW_ICON_ASSET: Partial<Record<GuidanceTipCardRowKey, string>> = {
   event: '/assets/icons/ui/icon-people.webp',
   street: '/assets/icons/ui/icon-footprint.webp',
+  // P6 profile_first_visit rows (2026-09-11): people=专属形象,
+  // gift=当前装备 (盲盒装备), trophy=潮流值成长.
+  avatar: '/assets/icons/ui/icon-people.webp',
+  equipment: '/assets/icons/ui/icon-gift.webp',
+  trend: '/assets/icons/ui/icon-trophy.webp',
 }
 
 function resolveRowIcon(row: GuidanceTipCardRow): string | null {

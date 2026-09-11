@@ -3274,8 +3274,9 @@ page {
 .flash-story-collection {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 16rpx;
+  justify-content: center;
+  gap: 12rpx;
+  overflow: hidden;
   margin-top: 20rpx;
   padding: 20rpx 20rpx 16rpx;
   border: 2rpx solid $flow-border-subtle;
@@ -3307,8 +3308,8 @@ page {
   }
 
   &__slot {
-    width: 34rpx;
-    height: 34rpx;
+    width: 28rpx;
+    height: 28rpx;
     border: 2rpx solid transparent;
     border-radius: 10rpx;
     box-sizing: border-box;
@@ -3326,12 +3327,12 @@ page {
     &--key { background: rgba($flash-radar-found, 0.8); }
   }
 
-  &__count {
-    align-self: center;
-    color: $color-primary-dark;
-    font-family: $font-cn-display;
-    font-size: $font-size-md;
-    font-weight: $font-weight-black;
+  &__hint {
+    display: block;
+    margin: 16rpx 8rpx 0;
+    color: $color-text-tertiary-on-light;
+    font-size: $font-size-xs;
+    line-height: 1.6;
   }
 }
 
@@ -3827,18 +3828,33 @@ page {
 }
 
 // 档案台入口链接（AC-05）：事件页「我的故事碎片」区头的克制入口。
+// P8: 计数移入区头、胶囊视觉瘦身——min-height 保住 88rpx 触控区，视觉只留轻文字链。
+.flash-page__section-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-left: auto;
+}
+
+.flash-page__collection-count {
+  color: $color-primary-dark;
+  font-family: $font-cn-display;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-black;
+  line-height: 1.4;
+}
+
 .flash-page__section-link {
   display: inline-flex;
   align-items: center;
   min-height: 88rpx;
-  margin-left: auto;
-  padding: 12rpx 24rpx;
+  padding: 12rpx 16rpx;
   border-radius: $radius-pill;
-  background: rgba($color-primary, 0.08);
+  background: rgba($color-primary, 0.06);
   transition: background 0.12s ease;
 
   &--pressed {
-    background: rgba($color-primary, 0.16);
+    background: rgba($color-primary, 0.12);
   }
 }
 

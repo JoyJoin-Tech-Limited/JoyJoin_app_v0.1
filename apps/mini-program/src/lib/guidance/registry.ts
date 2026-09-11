@@ -14,9 +14,9 @@
  * invariant can never degrade silently.
  *
  * W1 registers ONLY `discover_arrival` (absorbed from the legacy storage-
- * keyed arrival coachmark in pages/discover). Later waves APPEND tips here
- * (tab tips, spotlight, flash/blind-box entries) — never renumber existing
- * priorities.
+ * keyed arrival coachmark in pages/discover). W2 (P6, 2026-09-11) appends
+ * `profile_first_visit`. Later waves APPEND tips here (tab tips, spotlight,
+ * flash/blind-box entries) — never renumber existing priorities.
  */
 
 import type { GuidanceTipId } from '@shared/api'
@@ -79,5 +79,16 @@ export const GUIDANCE_TIP_REGISTRY: readonly GuidanceTipDefinition[] = [
     surface: 'discover',
     trigger: (ctx) => ctx.arrivalPending,
     copyKey: 'discover_arrival',
+  },
+  {
+    // W2 (P6, 2026-09-11): profile first-visit coachmark — 悦仔 explains the
+    // 个性化系统 (专属形象 / 当前装备 / 潮流值). First-visit gating comes
+    // from the server-persisted seen-state + the session shown-set (C1), so
+    // the trigger itself is unconditional.
+    id: 'profile_first_visit',
+    priority: 20,
+    surface: 'profile',
+    trigger: () => true,
+    copyKey: 'profile_first_visit',
   },
 ] as const

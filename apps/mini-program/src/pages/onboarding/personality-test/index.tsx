@@ -42,6 +42,7 @@ import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { triggerXiaoyueAnalysisPrefetch } from './triggerXiaoyueAnalysisPrefetch'
 import PersonalityTestIntro from './PersonalityTestIntro'
+import PersonalityTestReturnInterstitial from './PersonalityTestReturnInterstitial'
 import PersonalityTestQuestion from './PersonalityTestQuestion'
 import { getNearestSliderOption } from './PersonalityTestAnswerArea'
 import PersonalityTestPreloadLayer from './PersonalityTestPreloadLayer'
@@ -122,6 +123,21 @@ export default function PersonalityTestPage() {
   // allow restart mode for the authenticated user result state
   const isRestartEntry = router.params.mode === 'restart'
   const { saveCheckpoint } = useOnboardingCheckpoint()
+
+  // Post-onboarding retake interstitial (2026-09-11): a user who already
+  // holds an archetype and is fully past onboarding no longer gets silently
+  // bounced to the results page — they see an in-page choice (查看结果 /
+  // 重新测一次). Mid-onboarding users (any in-flight nextStep, including the
+  // contradictory archetype + personality-test state) keep the legacy instant
+  // redirect so the onboarding funnel is never interrupted.
+  const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
+  const isOnboardingInFlight = Boolean(auth.nextStep) && auth.nextStep !== 'discover'
+  const showArchetypeInterstitial =
+    !auth.isLoading &&
+    auth.isAuthenticated &&
+    Boolean(existingArchetype) &&
+    !isRestartEntry &&
+    !isOnboardingInFlight
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [sessionId, setSessionId] = useState('')
@@ -288,9 +304,11 @@ export default function PersonalityTestPage() {
     [],
   )
   useEffect(() => {
-    if (phase !== 'intro' || auth.isLoading || hasStoredIncompleteSession || sessionId) return
+    // Gated on the return interstitial: entering via the interstitial must
+    // NOT create a server session before the user picks 重新测一次.
+    if (phase !== 'intro' || auth.isLoading || hasStoredIncompleteSession || sessionId || showArchetypeInterstitial) return
     fireSpeculativeStart(canUseSpeculativeResult)
-  }, [phase, auth.isLoading, hasStoredIncompleteSession, sessionId, fireSpeculativeStart, canUseSpeculativeResult])
+  }, [phase, auth.isLoading, hasStoredIncompleteSession, sessionId, showArchetypeInterstitial, fireSpeculativeStart, canUseSpeculativeResult])
 
   const analytics = useOnboardingAnalytics('personality-test', {
     enabled:
@@ -307,12 +325,13 @@ export default function PersonalityTestPage() {
   // (handleStart). Fail-open fire-and-forget via discoverAnalytics.
   const introViewTrackedRef = useRef(false)
   useEffect(() => {
-    if (phase !== 'intro' || auth.isLoading || introViewTrackedRef.current) return
+    // The return interstitial replaces the intro — it is not an intro view.
+    if (phase !== 'intro' || auth.isLoading || introViewTrackedRef.current || showArchetypeInterstitial) return
     introViewTrackedRef.current = true
     discoverAnalytics.track('onboarding_intro_viewed', undefined, {
       entryMode: hasStoredIncompleteSession ? 'resume' : 'fresh',
     })
-  }, [phase, auth.isLoading, hasStoredIncompleteSession])
+  }, [phase, auth.isLoading, hasStoredIncompleteSession, showArchetypeInterstitial])
 
   // R1-3 funnel: mid-test exit (swipe-back / forward nav / app background /
   // unload) fires step_abandoned once per visit; completion marks the guard
@@ -461,14 +480,18 @@ export default function PersonalityTestPage() {
     }
 
     // If user already has an archetype, they should never be on the test page
-    const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
-
-    if (existingArchetype && ! isRestartEntry) {
-      Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults }).catch((err: unknown) => {
-        logError('[PersonalityTest] redirectTo results failed', {
-          err: err instanceof Error ? err.message : String(err),
+    if (existingArchetype && !isRestartEntry) {
+      // Mid-onboarding users keep the legacy silent bounce — the funnel must
+      // not be interrupted. Post-onboarding users get the return interstitial
+      // instead (showArchetypeInterstitial owns the render + prefire gating),
+      // so this branch intentionally does nothing for them.
+      if (isOnboardingInFlight) {
+        Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults }).catch((err: unknown) => {
+          logError('[PersonalityTest] redirectTo results failed', {
+            err: err instanceof Error ? err.message : String(err),
+          })
         })
-      })
+      }
       return
     }
 
@@ -487,7 +510,31 @@ export default function PersonalityTestPage() {
       return
     }
 
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, auth.user?.archetype, auth.user?.primaryArchetype, isPageExiting, isSubmitting, isProfileSocialTypeEntry, isRestartEntry,phase])
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, existingArchetype, isOnboardingInFlight, isPageExiting, isSubmitting, isProfileSocialTypeEntry, isRestartEntry,phase])
+
+  // Return interstitial CTAs (2026-09-11): primary keeps the exact redirect
+  // target + error logging of the legacy bounce; secondary re-enters this
+  // page in restart mode using the same URL the results page builds
+  // (useResultsRevealSequence.ts handleRestart).
+  const handleInterstitialViewResults = useCallback(() => {
+    haptics('medium')
+    Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults }).catch((err: unknown) => {
+      logError('[PersonalityTest] redirectTo results failed', {
+        err: err instanceof Error ? err.message : String(err),
+      })
+    })
+  }, [])
+
+  const handleInterstitialRestart = useCallback(() => {
+    haptics('light')
+    Taro.redirectTo({
+      url: `${MINI_PROGRAM_ROUTES.personalityTest}?mode=restart`,
+    }).catch((err: unknown) => {
+      logError('[PersonalityTest] restart redirect failed', {
+        err: err instanceof Error ? err.message : String(err),
+      })
+    })
+  }, [])
 
   const handleStart = useCallback(async () => {
     haptics('medium')
@@ -1255,6 +1302,18 @@ export default function PersonalityTestPage() {
         subtitle='先对齐好你的进度，马上带你进入测试。'
         hint='上次答到一半？我会帮你接上。'
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.introHero}
+      />
+    )
+  }
+
+  // Post-onboarding retake interstitial: replaces the intro entirely, so
+  // handleStart / personality_test_started / the speculative prefire all stay
+  // dormant until the user explicitly picks 重新测一次.
+  if (showArchetypeInterstitial) {
+    return (
+      <PersonalityTestReturnInterstitial
+        onViewResults={handleInterstitialViewResults}
+        onRestart={handleInterstitialRestart}
       />
     )
   }

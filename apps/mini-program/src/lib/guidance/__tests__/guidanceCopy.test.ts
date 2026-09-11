@@ -22,6 +22,7 @@ function collectCopyStrings(): Array<{ label: string; value: string }> {
   const out: Array<{ label: string; value: string }> = []
   for (const [key, copy] of Object.entries(GUIDANCE_TIP_COPY)) {
     out.push({ label: `${key}.kicker`, value: copy.kicker })
+    if (copy.title) out.push({ label: `${key}.title`, value: copy.title })
     out.push({ label: `${key}.dismissLabel`, value: copy.dismissLabel })
     out.push({ label: `${key}.dismissHint`, value: copy.dismissHint })
     copy.rows.forEach((row, index) => {
@@ -85,5 +86,15 @@ describe('E1 — absorbed arrival coachmark copy preservation', () => {
     expect(copy.rows[0].title).toContain('盲盒活动')
     expect(copy.rows[1].key).toBe('street')
     expect(copy.rows[1].title).toContain('街头盲盒')
+  })
+})
+
+describe('P6 — profile_first_visit copy (2026-09-11)', () => {
+  it('explains the 个性化系统 in one 悦仔-voiced card with three explainer rows', () => {
+    const copy = getGuidanceTipCopy('profile_first_visit')
+    expect(copy.kicker).toBe('悦仔的小提示')
+    expect(copy.title).toBe('这是你的专属形象')
+    expect(copy.rows).toHaveLength(3)
+    expect(copy.rows.map((row) => row.key)).toEqual(['avatar', 'equipment', 'trend'])
   })
 })

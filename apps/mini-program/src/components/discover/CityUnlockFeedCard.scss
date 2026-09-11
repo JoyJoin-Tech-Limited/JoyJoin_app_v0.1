@@ -41,6 +41,12 @@
     flex-shrink: 0;
   }
 
+  &__emoji {
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
+  }
+
   &__text {
     display: flex;
     flex-direction: column;

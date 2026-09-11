@@ -121,6 +121,13 @@
     opacity: 0;
     animation: xiaoyue-sentence-in 0.4s ease forwards;
   }
+
+  // Instant entrance (e.g. detail-sheet re-open within one page session):
+  // sentences render visible with no stagger replay.
+  &--instant &__sentence {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 @keyframes xiaoyue-pulse-ring {

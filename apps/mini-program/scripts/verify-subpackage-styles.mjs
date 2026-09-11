@@ -50,7 +50,15 @@ const REQUIREMENTS = [
     // overflow:hidden clips the entire identity card. The Profile stage must
     // keep an explicit `height` next to its `min-height`.
     page: 'pages/profile/index.wxss',
-    selectors: ['profile-page__identity-stage{position:relative;height:728rpx'],
+    selectors: [
+      'profile-page__identity-stage{position:relative;height:728rpx',
+      // P6 profile first-visit guidance tip (2026-09-11): GuidanceTipCard
+      // carries no TSX-side SCSS import; its rules are @use'd by the page
+      // SCSS and must reach the profile page WXSS — same subpackage
+      // style-splitting trap guard as the families above.
+      'guidance-tip-card__row{',
+      'profile-page__guidance-dock{',
+    ],
   },
   {
     // 桌友 card-deck reskin (2026-08-15): TablemateCard styles are @use'd by
@@ -282,7 +290,14 @@ const REQUIREMENTS = [
   },
   {
     page: 'pages/onboarding/essential-data/index.wxss',
-    selectors: ['xiaoyue-inline-error{'],
+    selectors: [
+      'xiaoyue-inline-error{',
+      // Intent zero-scroll variants (2026-09-11): the page SCSS @use's
+      // IntentCard.scss; if the @use is dropped, the 3×2 compact grid and the
+      // 随缘 strip render unstyled on device.
+      'intent-card--compact{',
+      'intent-card--strip{',
+    ],
   },
   {
     page: 'pages/onboarding/extended-data/index.wxss',

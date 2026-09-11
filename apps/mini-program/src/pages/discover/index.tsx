@@ -52,7 +52,7 @@ import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import SingleTestBanner from '../../components/dev/SingleTestBanner'
 import AlangDiscoverCard from '../../components/alang/AlangDiscoverCard'
-import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
+import GuidanceTipCard, { type GuidanceTipCardRowKey } from '../../components/guidance/GuidanceTipCard'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 import { getSystemInfoCompat } from '../../lib/utils/systemInfo'
@@ -477,7 +477,9 @@ function AuthenticatedDiscover({
     Taro.pageScrollTo({ selector: '.discover-auth__section', offsetTop: -12, duration: 250 }).catch(fallback)
   }, [])
 
-  const runArrivalRowAction = useCallback((key: 'event' | 'street') => {
+  // Row-key type is the shared union (GuidanceTipCardRowKey); this surface
+  // only ever receives 'event' | 'street' (its two registered rows).
+  const runArrivalRowAction = useCallback((key: GuidanceTipCardRowKey) => {
     if (key === 'street') {
       Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangEvent }).catch((error) => {
         logWarn('[Discover] arrival row: failed to open 街头盲盒', {
@@ -491,14 +493,14 @@ function AuthenticatedDiscover({
 
   // Row tap, legacy flag-off path: dismiss as a guided tap-through (keeps
   // the arrival_hook_tap_through analytics semantics), then route.
-  const handleLegacyArrivalRowTap = useCallback((key: 'event' | 'street') => {
+  const handleLegacyArrivalRowTap = useCallback((key: GuidanceTipCardRowKey) => {
     handleArrivalCoachmarkClosed('tap_through')
     runArrivalRowAction(key)
   }, [handleArrivalCoachmarkClosed, runArrivalRowAction])
 
   // Row tap, queue flag-on path: identical analytics semantics, dismissal
   // persisted + exit animation owned by the queue hook.
-  const handleQueueArrivalRowTap = useCallback((key: 'event' | 'street') => {
+  const handleQueueArrivalRowTap = useCallback((key: GuidanceTipCardRowKey) => {
     onboardingAnalytics.interaction('discover', 'arrival_hook_tap_through', {
       fromOnboarding: true,
       dismissReason: 'tap_through',

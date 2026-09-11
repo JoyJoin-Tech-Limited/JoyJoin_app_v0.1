@@ -6,10 +6,18 @@
 // PR-8: XiaoyueInlineError renders in this page's tray — co-compile its
 // rules into this page's WXSS.
 @use '../../../components/mascot/XiaoyueInlineError.scss' as *;
+// Subpackage WXSS guard: IntentCard's compact/strip variants must reach this
+// page's WXSS on device (verify-subpackage-styles.mjs asserts the selectors).
+@use '../../../components/intent/IntentCard.scss' as *;
 
 .essential-data {
   display: flex;
   flex-direction: column;
+  // Zero-scroll policy (2026-09-11): the page root never scrolls; &__scroll
+  // owns any residual overflow. Include order mirrors gathering-room —
+  // viewport-min-height must come AFTER no-scroll-page-shell so its
+  // min-height: 100dvh wins over the shell's min-height: 0.
+  @include no-scroll-page-shell;
   @include viewport-min-height;
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
@@ -19,6 +27,13 @@
     padding: 0 $container-padding;
     margin-bottom: $spacing-xs;
     @include safe-area-inline($container-padding);
+    // P3 fix: keep the 「装盒中 · 第 1 格」 pill clear of the native top
+    // bar / capsule. Mirrors extended-data's header rhythm ($spacing-xl above
+    // the spine). env(safe-area-inset-top) resolves to 0 under the native
+    // nav bar, so devices whose webview already starts below the bar are NOT
+    // double-padded; custom-nav runtimes still get the inset compensation.
+    // Declared last so it wins over the shorthand padding-top above.
+    @include safe-area-top(padding-top, $spacing-xl);
   }
 
   &__scroll {
@@ -356,9 +371,17 @@
     color: $color-text-primary;
   }
 
+  /* Intent picker (2026-09-11 zero-scroll): 6 explicit intents in a 3×2
+     compact grid + 随缘 as a full-width slim strip below. */
+  &__intent-picker {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
   &__intent-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: $spacing-sm;
   }
 

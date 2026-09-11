@@ -31,6 +31,40 @@
     transform: scale(0.97);
   }
 
+  /* Onboarding essential-data zero-scroll variants (2026-09-11). The default
+     variant above stays pixel-identical for pool-registration. */
+  &--compact {
+    min-height: 192rpx;
+    padding: $spacing-xs $spacing-sm;
+    gap: $spacing-xs;
+
+    .intent-card__icon {
+      margin-bottom: 0;
+    }
+  }
+
+  &--strip {
+    flex-direction: row;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 96rpx;
+    padding: $spacing-xs $spacing-md;
+    text-align: left;
+
+    .intent-card__icon {
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+
+    .intent-card__label {
+      text-align: left;
+    }
+
+    .intent-card__subtitle {
+      text-align: left;
+    }
+  }
+
   &:active {
     box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
   }
@@ -67,6 +101,14 @@
     text-align: center;
     line-height: $line-height-normal;
     max-width: 100%;
+  }
+
+  &__strip-text {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-xs;
+    flex: 1;
+    min-width: 0;
   }
 
   &__check {

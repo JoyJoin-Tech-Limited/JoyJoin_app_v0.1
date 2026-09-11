@@ -1,5 +1,10 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
+// P6 profile first-visit guidance tip (2026-09-11): GuidanceTipCard carries
+// NO TSX-side SCSS import by design — its rules must compile into this page's
+// WXSS (subpackage style-splitting rule, AGENTS §15 /
+// verify-subpackage-styles gate).
+@use '../../components/guidance/GuidanceTipCard.scss' as *;
 
 .profile-page {
   display: flex;
@@ -61,7 +66,9 @@
 
   &__settings-entry {
     min-height: $cta-min-tap;
-    margin: 0 $container-padding $spacing-lg;
+    // P6 density pass (2026-09-11): inter-section rhythm normalized from
+    // $spacing-lg (40rpx) to $spacing-md (24rpx), still on the 8rpx grid.
+    margin: 0 $container-padding $spacing-md;
     padding: $spacing-sm $spacing-md;
     box-sizing: border-box;
     display: flex;
@@ -116,6 +123,18 @@
     box-sizing: border-box;
   }
 
+  // P6 first-visit guidance tip dock (2026-09-11): fixed overlay flush above
+  // the tab bar so the card never pushes page content down (zero-scroll
+  // policy). The card's own bottom margin ($spacing-md) supplies the air gap;
+  // z-index 30 sits above the nav (20) and every scrolled section.
+  &__guidance-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(#{$tab-bar-root-height} + env(safe-area-inset-bottom));
+    z-index: 30;
+  }
+
   // Deterministic rollback surface when the server disables Profile V1.7.
   &__fallback-hero {
     position: relative;
@@ -123,7 +142,8 @@
     align-items: center;
     gap: $spacing-md;
     min-height: 224rpx;
-    margin: $spacing-md $container-padding $spacing-lg;
+    // P6 density pass: bottom gap normalized to $spacing-md (24rpx).
+    margin: $spacing-md $container-padding $spacing-md;
     padding: $spacing-lg;
     padding-right: $spacing-lg;
     background: var(--profile-surface);
@@ -218,7 +238,8 @@
     display: flex;
     gap: $spacing-sm;
     padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
+    // P6 density pass: section gap normalized to $spacing-md (24rpx).
+    margin-bottom: $spacing-md;
     opacity: 0;
     transform: translateY(16rpx);
     transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
@@ -230,51 +251,43 @@
     }
   }
 
+  // P6 density pass (2026-09-11): tiles flattened toward a lighter one-liner
+  // feel — shorter tile, tighter padding, no drop shadow, lighter tint
+  // borders, and the 2rpx brand-gradient anchor strip removed. All data,
+  // tints, and tap behavior are unchanged; radii stay on the card tokens.
   &__stat {
     position: relative;
     flex: 1;
     min-width: 0;
-    min-height: 144rpx;
+    min-height: 128rpx;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: $spacing-xs;
-    padding: $spacing-md $spacing-sm;
+    padding: $spacing-sm;
     background: var(--profile-surface);
     border: 1rpx solid transparent;
     border-radius: $card-radius-sm;
-    box-shadow: $shadow-card;
     overflow: hidden;
     transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
       transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-
-    // Unified brand-gradient anchor strip (2rpx) across all three stats.
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2rpx;
-      background: $brand-gradient;
-    }
 
     // Semantic brand tints: footprint=cream, connections=pink,
     // completion=purple (matches its primary progress bar).
     &--tint-cream {
       background: $color-bg-tint-cream;
-      border-color: rgba($color-landed-gold, 0.3);
+      border-color: rgba($color-landed-gold, 0.2);
     }
 
     &--tint-pink {
       background: $color-bg-tint-pink;
-      border-color: rgba($color-secondary, 0.22);
+      border-color: rgba($color-secondary, 0.16);
     }
 
     &--tint-purple {
       background: $color-bg-tint-purple;
-      border-color: rgba($color-primary, 0.18);
+      border-color: rgba($color-primary, 0.12);
     }
 
     &--pressed {
@@ -356,7 +369,8 @@
     position: relative;
     display: flex;
     align-items: center;
-    margin: 0 $container-padding $spacing-lg;
+    // P6 density pass: section gap normalized to $spacing-md (24rpx).
+    margin: 0 $container-padding $spacing-md;
     padding: $spacing-md;
     padding-right: 88rpx;
     background: $color-bg-tint-purple;
@@ -449,7 +463,8 @@
   // Milestones
   &__milestones {
     padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
+    // P6 density pass: section gap normalized to $spacing-md (24rpx).
+    margin-bottom: $spacing-md;
   }
 
   &__milestones-title {
@@ -514,7 +529,8 @@
     // made the two cards overlap in render (text-on-text, 2026-08-01 audit).
     height: 728rpx;
     min-height: 728rpx;
-    margin: $spacing-md $container-padding $spacing-lg;
+    // P6 density pass: bottom gap normalized to $spacing-md (24rpx).
+    margin: $spacing-md $container-padding $spacing-md;
     border-radius: $card-radius;
     overflow: hidden;
     box-sizing: border-box;
@@ -1202,7 +1218,8 @@
   }
 
   &__archive {
-    margin: 0 $container-padding $spacing-lg;
+    // P6 density pass: section gap normalized to $spacing-md (24rpx).
+    margin: 0 $container-padding $spacing-md;
     opacity: 0;
     transform: translateY(16rpx);
     transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.16s,

@@ -536,6 +536,107 @@
   }
 
   // ───────────────────────────────────────────
+  //  Return interstitial (post-onboarding archetype holder, 2026-09-11)
+  // ───────────────────────────────────────────
+
+  &--return {
+    // Full-screen centered state standard: vh fallback before dvh for
+    // runtimes without dvh support; the root class already flexes column.
+    min-height: 100vh;
+    min-height: 100dvh;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__return-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 $container-padding;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__return-mascot {
+    width: 240rpx;
+    height: 240rpx;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba($color-primary, 0.05);
+  }
+
+  &__return-mascot-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__return-title {
+    @include type-display-page-title;
+    display: block;
+    margin-top: $spacing-md;
+    font-size: $font-size-xl;
+    line-height: $line-height-display;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__return-body {
+    @include type-body;
+    display: block;
+    margin-top: $spacing-sm;
+    max-width: 560rpx;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    text-align: center;
+  }
+
+  &__return-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-sm;
+    width: 100%;
+    max-width: 560rpx;
+    margin-top: $spacing-lg;
+  }
+
+  &__return-primary {
+    @include button-primary;
+    @include type-brand-cta-label;
+    width: 100%;
+    border: 0;
+
+    &--hover {
+      opacity: 0.96;
+      transform: translateY(1rpx) scale(0.995);
+    }
+  }
+
+  &__return-secondary {
+    @include flex-center;
+    min-height: $cta-min-tap;
+    padding: 16rpx 32rpx;
+    border-radius: $button-radius;
+    border: 2rpx solid rgba($color-primary, 0.24);
+    background: transparent;
+    transition: background 0.12s ease;
+
+    &--hover {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__return-secondary-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+    line-height: 1.2;
+  }
+
+  // ───────────────────────────────────────────
   //  Testing Phase — Glassmium + Mascot Layout
   // ───────────────────────────────────────────
 
@@ -1117,6 +1218,10 @@
   @media (prefers-reduced-motion: reduce) {
     &--exiting {
       transition: none;
+    }
+
+    &--return {
+      animation: none;
     }
 
     &__stage,

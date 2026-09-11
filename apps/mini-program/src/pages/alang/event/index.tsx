@@ -264,17 +264,20 @@ export default function FlashHomePage() {
           <View className='flash-page__section'>
             <View className='flash-page__section-head'>
               <Text className='flash-page__section-title'>我的故事碎片</Text>
-              <View
-                className='flash-page__section-link'
-                hoverClass='flash-page__section-link--pressed'
-                role='button'
-                aria-label='打开谜案档案台'
-                onClick={() => {
-                  haptics('light')
-                  void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangArchive })
-                }}
-              >
-                <Text className='flash-page__section-link-text'>档案台</Text>
+              <View className='flash-page__section-actions'>
+                <Text className='flash-page__collection-count'>{collection.collected}/15</Text>
+                <View
+                  className='flash-page__section-link'
+                  hoverClass='flash-page__section-link--pressed'
+                  role='button'
+                  aria-label='打开谜案档案台'
+                  onClick={() => {
+                    haptics('light')
+                    void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangArchive })
+                  }}
+                >
+                  <Text className='flash-page__section-link-text'>档案台</Text>
+                </View>
               </View>
             </View>
             <View
@@ -302,8 +305,10 @@ export default function FlashHomePage() {
                   </View>
                 </View>
               ))}
-              <Text className='flash-story-collection__count'>{collection.collected}/15</Text>
             </View>
+            {collection.collected === 0 ? (
+              <Text className='flash-story-collection__hint'>去街上撞撞运气，碎片会自己来找你</Text>
+            ) : null}
             {fragmentsQuery.data?.length ? (
               <View className='flash-story-fragment-list'>
                 {fragmentsQuery.data.map((fragment) => (

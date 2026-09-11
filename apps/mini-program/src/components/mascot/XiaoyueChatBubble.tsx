@@ -31,6 +31,13 @@ export interface XiaoyueChatBubbleProps {
   isLoading?: boolean
   /** Stagger delay per sentence (ms) */
   staggerDelay?: number
+  /** Base entrance delay (ms) added before the per-sentence stagger starts.
+   *  Use when the bubble mounts inside an animated container (e.g. a bottom
+   *  sheet slide-up) so the first sentence does not play out mid-motion. */
+  entranceDelay?: number
+  /** Render all sentences instantly (no opacity-0 entrance animation).
+   *  Use for surfaces that re-open within the same page session. */
+  instantEntrance?: boolean
   className?: string
   /** Show speech tail pointing to the mascot avatar */
   tail?: boolean
@@ -62,6 +69,8 @@ export default function XiaoyueChatBubble({
   showGlow = true,
   isLoading = false,
   staggerDelay = 80,
+  entranceDelay = 0,
+  instantEntrance = false,
   className = '',
   tail = false,
   hideAvatar = false,
@@ -97,7 +106,7 @@ export default function XiaoyueChatBubble({
 
   return (
     <View
-      className={`xiaoyue-chat-bubble ${layoutClass} ${hideAvatar ? 'xiaoyue-chat-bubble--no-avatar' : ''} ${centerAvatar ? 'xiaoyue-chat-bubble--center-avatar' : ''} ${className}`}
+      className={`xiaoyue-chat-bubble ${layoutClass} ${hideAvatar ? 'xiaoyue-chat-bubble--no-avatar' : ''} ${centerAvatar ? 'xiaoyue-chat-bubble--center-avatar' : ''} ${instantEntrance ? 'xiaoyue-chat-bubble--instant' : ''} ${className}`}
       role='status'
       aria-live='polite'
       aria-atomic='true'
@@ -125,7 +134,7 @@ export default function XiaoyueChatBubble({
           <Text
             key={i}
             className='xiaoyue-chat-bubble__sentence'
-            style={{ animationDelay: `${i * effectiveStaggerDelay}ms` }}
+            style={{ animationDelay: `${entranceDelay + i * effectiveStaggerDelay}ms` }}
           >
             {sentence.trim()}
             {i < sentences.length - 1 ? '。' : ''}

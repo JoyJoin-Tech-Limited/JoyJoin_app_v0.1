@@ -18,6 +18,13 @@ interface IntentCardProps {
   dimmed?: boolean
   onClick?: () => void
   iconSize?: number
+  /**
+   * Layout variant. 'default' is the original centered card (unchanged pixels
+   * for pool-registration). 'compact' shrinks min-height/padding for the
+   * essential-data 3×2 zero-scroll grid; 'strip' is the full-width horizontal
+   * row used for 随缘 (icon left + label/subtitle inline).
+   */
+  variant?: 'default' | 'compact' | 'strip'
   className?: string
   testId?: string
 }
@@ -35,6 +42,7 @@ export default function IntentCard({
   dimmed = false,
   onClick,
   iconSize = 144,
+  variant = 'default',
   className = '',
   testId,
 }: IntentCardProps) {
@@ -44,10 +52,13 @@ export default function IntentCard({
     onClick()
   }, [onClick])
 
+  const variantClass = variant === 'default' ? '' : `intent-card--${variant}`
+
   return (
     <View
       className={[
         'intent-card',
+        variantClass,
         selected ? 'intent-card--selected' : '',
         dimmed ? 'intent-card--dimmed' : '',
         className,
@@ -70,8 +81,17 @@ export default function IntentCard({
           lazyLoad={false}
         />
       ) : null}
-      <Text className='intent-card__label'>{option.label}</Text>
-      {option.subtitle ? <Text className='intent-card__subtitle'>{option.subtitle}</Text> : null}
+      {variant === 'strip' ? (
+        <View className='intent-card__strip-text'>
+          <Text className='intent-card__label'>{option.label}</Text>
+          {option.subtitle ? <Text className='intent-card__subtitle'>{option.subtitle}</Text> : null}
+        </View>
+      ) : (
+        <>
+          <Text className='intent-card__label'>{option.label}</Text>
+          {option.subtitle ? <Text className='intent-card__subtitle'>{option.subtitle}</Text> : null}
+        </>
+      )}
       {selected && <CheckBadge className='intent-card__check' />}
     </View>
   )

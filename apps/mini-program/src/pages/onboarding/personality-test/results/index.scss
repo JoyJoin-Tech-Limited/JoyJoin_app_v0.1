@@ -2034,10 +2034,49 @@ $color-skill-cool: #7c3aed;
     }
   }
 
+  &__detail-scroll-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
   &__detail-scroll {
     flex: 1;
     min-height: 0;
     overflow: hidden;
+  }
+
+  &__detail-scroll-inner {
+    // WeChat drops padding on the native ScrollView element in webview
+    // rendering mode — inner spacing lives here instead. 48rpx top keeps the
+    // first mascot line clear of the sheet's rounded top edge; 32rpx bottom
+    // keeps the last line clear of the bottom fade.
+    padding-top: 48rpx;
+    padding-bottom: 32rpx;
+  }
+
+  &__detail-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    pointer-events: none;
+
+    &--top {
+      top: 0;
+      height: 48rpx;
+      // Matches the sheet background (rgba($color-surface, 0.98)); solid
+      // token reads identical over the dimmed overlay.
+      background: linear-gradient(to bottom, $color-surface 0%, rgba($color-surface, 0) 100%);
+    }
+
+    &--bottom {
+      bottom: 0;
+      height: 24rpx;
+      background: linear-gradient(to top, $color-surface 0%, rgba($color-surface, 0) 100%);
+    }
   }
 
   @keyframes personality-results-detail-slide-up {
@@ -2115,15 +2154,19 @@ $color-skill-cool: #7c3aed;
   }
 
   &__detail-partner-scroll {
+    // Edge-to-edge bleed only — WeChat drops horizontal padding on the native
+    // ScrollView element, so the insets live on the inner row (same canon as
+    // pages/icebreaker-session, pages/matching-status, pages/event-detail).
     margin: 0 (-$container-padding);
-    padding: 0 $container-padding;
   }
 
   &__detail-partner-row {
     display: flex;
     flex-direction: row;
     gap: 14rpx;
-    padding-right: 8rpx;
+    // Trailing inset matches the sheet content padding so the last card's
+    // right edge aligns with the rest of the sheet when scrolled to the end.
+    padding: 0 $container-padding;
     min-height: 200rpx;
     align-items: flex-start;
   }

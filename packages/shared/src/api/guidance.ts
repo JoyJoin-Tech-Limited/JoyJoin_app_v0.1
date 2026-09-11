@@ -20,6 +20,9 @@ export const GUIDANCE_TIP_IDS = [
   /** W1: discover first-arrival coachmark (absorbed from the legacy
    *  storage-keyed arrival tip in pages/discover). */
   'discover_arrival',
+  /** W2 (P6, 2026-09-11): profile first-visit coachmark — 悦仔 explains the
+   *  个性化系统 (专属形象 / 当前装备 / 潮流值) on the first profile tab visit. */
+  'profile_first_visit',
 ] as const
 
 export type GuidanceTipId = (typeof GUIDANCE_TIP_IDS)[number]

@@ -26,6 +26,11 @@ import { normalizeMatchScore, type TypicalityLabel } from './resultHelpers'
  *  Extracted from hardcoded hex literals for brand token discipline. */
 const CARD_GRADIENT_MID = '#fff8ee'
 
+/** Detail-sheet slide-up duration — mirrors
+ *  `personality-results-detail-slide-up 0.35s` in index.scss. The mascot
+ *  chat-bubble sentence stagger waits for this before starting on first open. */
+const DETAIL_SHEET_SLIDE_UP_MS = 350
+
 interface FinalStageProps {
   displayArchetypeName: string
   displayArchetypeId: string
@@ -148,6 +153,11 @@ export default function FinalStage({
   const [touchTilt, setTouchTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isDetailClosing, setIsDetailClosing] = useState(false)
+  // Detail-sheet bubble entrance: first open defers the sentence stagger until
+  // the sheet slide-up completes; re-opens within this page session render
+  // sentences instantly (no opacity-0 replay).
+  const detailHasOpenedRef = useRef(false)
+  const [detailDeferEntrance, setDetailDeferEntrance] = useState(false)
   const [isCardPressed, setIsCardPressed] = useState(false)
   const [badgesVisible, setBadgesVisible] = useState(false)
   const touchActiveRef = useRef(false)
@@ -272,6 +282,9 @@ export default function FinalStage({
 
   const handleCardTap = useCallback(() => {
     haptics('light')
+    const isFirstOpen = !detailHasOpenedRef.current
+    detailHasOpenedRef.current = true
+    setDetailDeferEntrance(isFirstOpen)
     setIsDetailOpen(true)
   }, [])
 
@@ -738,12 +751,17 @@ export default function FinalStage({
             {/* Sheet handle */}
             <View className='personality-results__detail-handle' />
 
-            <ScrollView
-              className='personality-results__detail-scroll'
-              scrollY
-              showScrollbar={false}
-            >
-              {/* Sheet header */}
+            <View className='personality-results__detail-scroll-wrap'>
+              <ScrollView
+                className='personality-results__detail-scroll'
+                scrollY
+                showScrollbar={false}
+              >
+                {/* WeChat drops padding on the native ScrollView element, so
+                    the top breathing room lives on this inner wrapper — the
+                    first mascot line never touches the sheet's rounded edge. */}
+                <View className='personality-results__detail-scroll-inner'>
+                  {/* Sheet header */}
               <View className='personality-results__detail-header'>
                 <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
                 <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
@@ -763,6 +781,8 @@ export default function FinalStage({
                     horizontal
                     showGlow
                     staggerDelay={70}
+                    entranceDelay={detailDeferEntrance ? DETAIL_SHEET_SLIDE_UP_MS : 0}
+                    instantEntrance={!detailDeferEntrance}
                     avatarSize={ONBOARDING_MASCOT_SIZE}
                     className='personality-results__detail-chat'
                   />
@@ -914,7 +934,14 @@ export default function FinalStage({
                   </ScrollView>
                 </View>
               )}
-            </ScrollView>
+                </View>
+              </ScrollView>
+              {/* Top/bottom fade masks over the scroll viewport — plain Views
+                  with a white-to-transparent gradient (no mask-image, which is
+                  unreliable in WeChat). pointer-events: none so scroll passes. */}
+              <View className='personality-results__detail-fade personality-results__detail-fade--top' />
+              <View className='personality-results__detail-fade personality-results__detail-fade--bottom' />
+            </View>
 
             {/* Close button */}
             <View

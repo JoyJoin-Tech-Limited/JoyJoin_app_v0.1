@@ -8,11 +8,13 @@ import {
 } from '@shared/personality/archetypeNames'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { formatHSLAsRGBA, getArchetypeHSL, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
+import { getGuidanceTipCopy } from '@shared/copy/guidanceCopy'
 import type { PersonalStoryResponse } from '@joyjoin/shared/schema'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import IdentityStageScene from '../../components/profile/IdentityStageScene'
 import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
@@ -22,8 +24,10 @@ import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { useGuidanceQueue } from '../../hooks/useGuidanceQueue'
 import { useSyncDeadline } from '../../hooks/useSyncDeadline'
 import { apiRequest } from '../../lib/api/api'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
@@ -477,6 +481,27 @@ export default function ProfilePage() {
     }
   }
 
+  // ── P6 profile first-visit guidance tip (2026-09-11, C4 queue) ──
+  // 悦仔 explains the 个性化系统 (专属形象 / 当前装备 / 潮流值) once per user.
+  // The queue hook owns the flag gate (features.guidanceQueueEnabled),
+  // arbitration, 6s dwell, and the server-persisted seen-write; the card is
+  // docked above the tab bar as an overlay so it never pushes page content
+  // down (zero-scroll policy). Rows are informational — with no onRowTap a
+  // row tap degrades to a tap-through dismiss inside the card.
+  const {
+    activeTip: profileGuidanceTip,
+    exiting: profileGuidanceTipExiting,
+    dismiss: dismissProfileGuidanceTip,
+  } = useGuidanceQueue({ surface: 'profile', user: authUser })
+  const profileGuidanceCopy = useMemo(() => getGuidanceTipCopy('profile_first_visit'), [])
+  const profileTipShowing = profileGuidanceTip?.id === 'profile_first_visit'
+  const profileTipMascot = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
+  const profileTipMascotFallback = useMemo(
+    () => localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp'),
+    [],
+  )
+  const [profileTipMascotError, setProfileTipMascotError] = useState(false)
+
   return renderGate(
     <View className={`profile-page ${tabEntranceClass}`}>
       <View className='profile-page__nav' data-testid='profile-top-navigation'>
@@ -920,6 +945,25 @@ export default function ProfilePage() {
 
         <View className='profile-page__spacer' />
       </ScrollView>
+
+      {/* P6 first-visit guidance tip (C4 queue): docked overlay above the
+          tab bar — fixed-positioned so it never pushes page content down.
+          Dismissal (× / row tap / 6s dwell) is owned by useGuidanceQueue;
+          the seen-write persists server-side so the tip fires once per user. */}
+      {profileTipShowing ? (
+        <View className='profile-page__guidance-dock'>
+          <GuidanceTipCard
+            kicker={profileGuidanceCopy.kicker}
+            title={profileGuidanceCopy.title ?? ''}
+            rows={profileGuidanceCopy.rows}
+            mascotSrc={profileTipMascotError ? profileTipMascotFallback : profileTipMascot}
+            onMascotError={() => setProfileTipMascotError(true)}
+            exiting={profileGuidanceTipExiting}
+            ariaLabel={`${profileGuidanceCopy.kicker}：${profileGuidanceCopy.title ?? ''}。${profileGuidanceCopy.rows.map((row) => `${row.title}，${row.caption}`).join('。')}。${profileGuidanceCopy.dismissHint}`}
+            onDismiss={(reason) => dismissProfileGuidanceTip(reason)}
+          />
+        </View>
+      ) : null}
     </View>
   )
 }

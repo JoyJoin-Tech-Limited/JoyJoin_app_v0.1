@@ -56,6 +56,14 @@ const discoverScssSource = readFileSync(
   resolve(process.cwd(), 'src/pages/discover/index.scss'),
   'utf8',
 )
+const profilePageSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/profile/index.tsx'),
+  'utf8',
+)
+const profileScssSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/profile/index.scss'),
+  'utf8',
+)
 const tipCardTsxSource = readFileSync(
   resolve(process.cwd(), 'src/components/guidance/GuidanceTipCard.tsx'),
   'utf8',
@@ -82,8 +90,19 @@ describe('C5 — registry ⊆ shared server enum', () => {
     }
   })
 
-  it('W1 registers only discover_arrival', () => {
-    expect(GUIDANCE_TIP_REGISTRY.map((tip) => tip.id)).toEqual(['discover_arrival'])
+  it('wave ordering: W1 discover_arrival, then W2 (P6) profile_first_visit — never renumbered', () => {
+    expect(GUIDANCE_TIP_REGISTRY.map((tip) => tip.id)).toEqual([
+      'discover_arrival',
+      'profile_first_visit',
+    ])
+  })
+
+  it('profile_first_visit is a profile-surface tip with an unconditional trigger (seen-state gates first visit)', () => {
+    const tip = GUIDANCE_TIP_REGISTRY.find((entry) => entry.id === 'profile_first_visit')
+    expect(tip?.surface).toBe('profile')
+    expect(tip?.copyKey).toBe('profile_first_visit')
+    expect(tip?.priority).toBeGreaterThan(10)
+    expect(tip?.trigger({ surface: 'profile', arrivalPending: false })).toBe(true)
   })
 })
 
@@ -255,6 +274,37 @@ describe('B2/E1 — flag-mutually-exclusive coachmark paths', () => {
     // The component must NOT side-effect import its own SCSS in TSX.
     expect(tipCardTsxSource).not.toMatch(/import\s+['"][^'"]*GuidanceTipCard\.scss['"]/)
     expect(tipCardTsxSource).not.toMatch(/require\(['"][^'"]*GuidanceTipCard\.scss['"]\)/)
+  })
+})
+
+describe('P6 — profile_first_visit wiring (2026-09-11)', () => {
+  it('fires on the profile surface when unseen, and the seen-stamp blocks it', () => {
+    expect(
+      evaluateGuidanceQueue({ ...baseCtx, surface: 'profile', arrivalPending: false })?.id,
+    ).toBe('profile_first_visit')
+    expect(
+      evaluateGuidanceQueue({
+        ...baseCtx,
+        surface: 'profile',
+        arrivalPending: false,
+        seenGuidance: { profile_first_visit: '2026-09-11T00:00:00.000Z' },
+      }),
+    ).toBeNull()
+  })
+
+  it('the profile page consumes the queue for the profile surface with the shared copy', () => {
+    expect(profilePageSource).toContain("useGuidanceQueue({ surface: 'profile', user: authUser })")
+    expect(profilePageSource).toContain("getGuidanceTipCopy('profile_first_visit')")
+  })
+
+  it('the tip renders docked above the tab bar — never pushing page content down', () => {
+    expect(profilePageSource).toContain('profile-page__guidance-dock')
+    expect(profileScssSource).toContain('&__guidance-dock')
+    expect(profileScssSource).toContain('position: fixed')
+  })
+
+  it('the consuming page SCSS @use\'s the component SCSS (subpackage rule)', () => {
+    expect(profileScssSource).toContain("@use '../../components/guidance/GuidanceTipCard.scss'")
   })
 })
 

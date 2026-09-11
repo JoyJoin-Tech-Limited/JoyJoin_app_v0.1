@@ -22,6 +22,7 @@ import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGua
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
+import { MASCOT_SIZE } from '../../../lib/mascot/mascotSizes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { usePreloadIntentIcons } from '../../../hooks/usePreloadIntentIcons'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
@@ -757,28 +758,44 @@ export default function EssentialDataPage() {
     [INTENT_REACTIONS, triggerMascotReaction],
   )
 
-  // Memoize intent grid to prevent re-render on unrelated state changes
+  // Memoize intent grid to prevent re-render on unrelated state changes.
+  // Zero-scroll layout (2026-09-11): the six explicit intents render as
+  // compact cards in a 3-column × 2-row grid; 随缘 is a full-width slim strip
+  // below the grid — semantically "交给悦仔安排", not a seventh peer card.
   const intentGrid = useMemo(() => {
     const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
-    return (
-      <View className='essential-data__intent-grid'>
-        {intentOptions.map((option: IntentCardOption) => {
-          const isExplicitlySelected = intent.includes(option.value)
-          const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
-          const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
+    const gridOptions = intentOptions.filter(
+      (option: IntentCardOption) => option.value !== INTENT_FLEXIBLE_OPTION.value,
+    )
+    const flexibleOption = intentOptions.find(
+      (option: IntentCardOption) => option.value === INTENT_FLEXIBLE_OPTION.value,
+    )
 
-          return (
-            <IntentCard
-              key={option.value}
-              option={option}
-              selected={isExplicitlySelected}
-              dimmed={isDimmed}
-              onClick={() => toggleIntent(option.value)}
-              iconSize={144}
-              testId={`essential-intent-${option.value}`}
-            />
-          )
-        })}
+    const renderCard = (option: IntentCardOption, variant: 'compact' | 'strip', iconSize: number) => {
+      const isExplicitlySelected = intent.includes(option.value)
+      const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
+      const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
+
+      return (
+        <IntentCard
+          key={option.value}
+          option={option}
+          variant={variant}
+          selected={isExplicitlySelected}
+          dimmed={isDimmed}
+          onClick={() => toggleIntent(option.value)}
+          iconSize={iconSize}
+          testId={`essential-intent-${option.value}`}
+        />
+      )
+    }
+
+    return (
+      <View className='essential-data__intent-picker'>
+        <View className='essential-data__intent-grid'>
+          {gridOptions.map((option: IntentCardOption) => renderCard(option, 'compact', 96))}
+        </View>
+        {flexibleOption ? renderCard(flexibleOption, 'strip', 64) : null}
       </View>
     )
   }, [intentOptions, intent, toggleIntent])
@@ -836,7 +853,7 @@ export default function EssentialDataPage() {
               pose={stepConfig.mascotPose}
               horizontal
               showGlow
-              avatarSize={ONBOARDING_MASCOT_SIZE}
+              avatarSize={currentStep === 1 ? MASCOT_SIZE.sm : ONBOARDING_MASCOT_SIZE}
             />
           </View>
 
@@ -1152,7 +1169,9 @@ export default function EssentialDataPage() {
             </Card>
           )}
 
-          <ResponsiveSpacer heightRpx={48} collapseBelow={700} />
+          {/* Zero-scroll policy (2026-09-11): the intent step fits one
+              viewport by design — no trailing spacer there. */}
+          {currentStep !== 1 && <ResponsiveSpacer heightRpx={48} collapseBelow={700} />}
         </View>
       </ScrollView>
 
