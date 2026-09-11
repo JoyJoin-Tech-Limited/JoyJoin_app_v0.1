@@ -1,0 +1,129 @@
+{
+  "meta": {
+    "timestamp": "2026-09-11T07:24:43.784Z",
+    "reps": 20000,
+    "nTraits": 5,
+    "trueRs": [
+      0.55,
+      0.6,
+      0.65,
+      0.7,
+      0.75
+    ],
+    "ns": [
+      300,
+      400,
+      500
+    ],
+    "powerTarget": 0.9,
+    "powerReferenceTrueR": 0.65,
+    "model": "Fisher-z sampling, traits independent across domains",
+    "seedBase": 24301
+  },
+  "matrix": [
+    {
+      "mode": "all",
+      "trueR": 0.55,
+      "passRate": {
+        "300": 0,
+        "400": 0,
+        "500": 0
+      }
+    },
+    {
+      "mode": "all",
+      "trueR": 0.6,
+      "passRate": {
+        "300": 0.03155,
+        "400": 0.032,
+        "500": 0.03195
+      }
+    },
+    {
+      "mode": "all",
+      "trueR": 0.65,
+      "passRate": {
+        "300": 0.6585,
+        "400": 0.7722,
+        "500": 0.8378
+      }
+    },
+    {
+      "mode": "all",
+      "trueR": 0.7,
+      "passRate": {
+        "300": 0.9932,
+        "400": 0.99875,
+        "500": 0.9997
+      }
+    },
+    {
+      "mode": "all",
+      "trueR": 0.75,
+      "passRate": {
+        "300": 1,
+        "400": 1,
+        "500": 1
+      }
+    },
+    {
+      "mode": "mean-floor",
+      "trueR": 0.55,
+      "passRate": {
+        "300": 0.00175,
+        "400": 0.00015,
+        "500": 0.0001
+      }
+    },
+    {
+      "mode": "mean-floor",
+      "trueR": 0.6,
+      "passRate": {
+        "300": 0.4716,
+        "400": 0.4774,
+        "500": 0.47885
+      }
+    },
+    {
+      "mode": "mean-floor",
+      "trueR": 0.65,
+      "passRate": {
+        "300": 0.9984,
+        "400": 0.9998,
+        "500": 1
+      }
+    },
+    {
+      "mode": "mean-floor",
+      "trueR": 0.7,
+      "passRate": {
+        "300": 1,
+        "400": 1,
+        "500": 1
+      }
+    },
+    {
+      "mode": "mean-floor",
+      "trueR": 0.75,
+      "passRate": {
+        "300": 1,
+        "400": 1,
+        "500": 1
+      }
+    }
+  ],
+  "requiredN": {
+    "all": 625,
+    "mean-floor": 100
+  },
+  "gateDefinitions": {
+    "all": {
+      "meanMin": 0.6,
+      "floorMin": 0.6
+    },
+    "mean-floor": {
+      "meanMin": 0.6,
+      "floorMin": 0.5
+    }
+  }
+}

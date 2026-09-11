@@ -80,18 +80,33 @@ not a shortened quiz.
 - **IPIP** (International Personality Item Pool, ipip.ori.org): 3,320
   public-domain items, free for any use including commercial, with existing
   Chinese translations. This is the instrument for our convergent-validity
-  study.
+  study. **Pinned instrument:** the 50-item Big-Five Factor Markers (10 per
+  factor; Goldberg, 1992). Factor IV is *Emotional Stability* (higher = more
+  stable); Factor V is *Intellect/Imagination*, mapped to ACOEXP Openness.
 
 ## Pre-launch validation program (remote-only)
 
-1. **Convergent validity** — 300–500 remote participants take V4 + IPIP-NEO
-   Big Five; target r > 0.6 on mapped factors.
+1. **Convergent validity** — 300–500 remote participants take V4 + the **IPIP
+   Big-Five Factor Markers** (50 items, 10 per factor; Goldberg, 1992; public
+   domain, `ipip.ori.org`); target **mean r > 0.6 across the five mapped
+   factors with every factor ≥ 0.5**. Instrument/key pinned in
+   `scripts/simulate/data/ipip-bigfive-keying.json`; gate rule justified by the
+   power analysis in `docs/strategy/remote-validation-harness.md`.
 2. **Remote vibe simulation** — 15-min video mini-tables of 4–6 strangers;
    regress trait-based group composition against post-session 同频 /
    would-meet-again ratings.
 3. **Test-retest** — same panel re-tested at 4 weeks for stability.
 4. **Perceived accuracy A/B** — narrative variants tested on the panel
    (answer-citing vs generic; contrastive runner-up section vs not).
+
+> **Analysis tooling:** the engineering counterpart that computes and gates
+> these four measurements is documented in
+> [`docs/strategy/remote-validation-harness.md`](./remote-validation-harness.md)
+> (`scripts/simulate/analyze-remote-validation.ts`). It defines the
+> ACOEXP↔IPIP Big Five mapping, the panel data contract, and the locked vs.
+> proposed thresholds, and ships a synthetic self-test
+> (`npm run simulate:remote-validation:fixture`) that proves the pipeline
+> recovers a known planted structure. It does not recruit participants.
 
 ## Known limitations (state these before critics do)
 

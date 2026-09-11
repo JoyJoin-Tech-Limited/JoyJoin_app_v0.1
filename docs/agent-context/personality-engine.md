@@ -40,6 +40,10 @@
 
 **Confidence calibration artifact:** `confidenceCalibrationArtifact.ts`, versioned `v1-20260909`. PAVA isotonic fit mapping raw confidence → true P(correct). Stored in `packages/shared/src/personality/`.
 
+## Remote-validation harness (2026-09-11)
+
+External validation is the gate that simulation cannot satisfy (simulated respondents come from the same model under test). Engineering counterpart: `scripts/simulate/analyze-remote-validation.ts` + `scripts/simulate/lib/remote-validation/`. Computes the four `scientific-foundation.md` pre-launch measurements: convergent validity (ACOEXP↔IPIP Big Five, r≥0.6 LOCKED), 4-week test-retest, vibe-composition→同频 regression, narrative A/B. Mapping + panel data contract + thresholds: `docs/strategy/remote-validation-harness.md`. Self-test: `npm run simulate:remote-validation:fixture` (9/9 planted-structure recovery checks). **It does not recruit participants** — the 300–500-person panel is an ops task. No flag may be enabled on simulation evidence alone.
+
 ## Baseline metrics (pre-V4, 2026-06-02)
 
 - 12 centroids: **100% exact match**

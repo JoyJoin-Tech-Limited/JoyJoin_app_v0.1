@@ -258,6 +258,42 @@ jobs:
       - name: Run assessment instrument gate
         run: npm run gate:assessment
 
+  remote-validation-gate:
+    needs: [guardrails]
+    name: Remote Validation Harness Self-Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund --prefer-offline
+
+      # Generates the deterministic synthetic panel and asserts the harness
+      # recovers its planted structure (convergent/retest/vibe/narrative).
+      # Proves the remote-validation analysis pipeline is correct before real
+      # human panel data exists. Exits non-zero on any failed assertion.
+      # See docs/strategy/remote-validation-harness.md.
+      - name: Run remote-validation harness self-test
+        run: npm run simulate:remote-validation:fixture
+
+      # Validates the VALIDATOR: sweeps planted validity from strong to weak and
+      # asserts the harness PASSes a genuinely valid instrument and FAILs a
+      # genuinely invalid one. This is method-validation, not engine validation.
+      - name: Run remote-validation discrimination sweep
+        run: npm run simulate:remote-validation:sweep
+
+      # Recomputes the convergent-gate power analysis (P1). Deterministic; keeps
+      # the adopted `mean-floor` rule and the gate logic from silently drifting.
+      - name: Run remote-validation power analysis
+        run: npm run simulate:remote-validation:power
+
   ai-test:
     name: AI Simulation Test
     needs: [lint-shared, lint-admin, lint-server, lint-mini-program, test-server, test-shared, test-admin-client, test-mini-program, harness-gate, assessment-gate]

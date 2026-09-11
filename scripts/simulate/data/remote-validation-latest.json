@@ -1,0 +1,328 @@
+{
+  "meta": {
+    "timestamp": "2026-09-11T07:28:43.504Z",
+    "panelId": "synthetic-self-test",
+    "instrument": "IPIP Big-Five Factor Markers (50-item; 10 per factor)",
+    "respondents": 400,
+    "vibeSessions": 78,
+    "selfTest": true,
+    "keyingPlaceholder": false,
+    "convergentGateMode": "mean-floor",
+    "selfTestChecks": [
+      {
+        "id": "status:convergent",
+        "expectation": "analysis recovers planted signal (PASS)",
+        "observed": "PASS",
+        "pass": true
+      },
+      {
+        "id": "status:retest",
+        "expectation": "analysis recovers planted signal (PASS)",
+        "observed": "PASS",
+        "pass": true
+      },
+      {
+        "id": "status:vibe",
+        "expectation": "analysis recovers planted signal (PASS)",
+        "observed": "PASS",
+        "pass": true
+      },
+      {
+        "id": "status:narrative",
+        "expectation": "analysis recovers planted signal (PASS)",
+        "observed": "PASS",
+        "pass": true
+      },
+      {
+        "id": "magnitude:convergent",
+        "expectation": "min r within ±0.08 of planted 0.828",
+        "observed": "min r 0.811",
+        "pass": true
+      },
+      {
+        "id": "magnitude:retest",
+        "expectation": "mean r within ±0.08 of planted 0.779",
+        "observed": "mean r 0.768",
+        "pass": true
+      },
+      {
+        "id": "sign:vibe:spark",
+        "expectation": "spark β > 0 (planted +0.5)",
+        "observed": "spark β 0.333",
+        "pass": true
+      },
+      {
+        "id": "sign:vibe:minE",
+        "expectation": "minE β ≥ 0 (planted +0.4 floor effect)",
+        "observed": "minE β 0.331",
+        "pass": true
+      },
+      {
+        "id": "effect:narrative",
+        "expectation": "answer-citing scores higher at p < 0.05",
+        "observed": "p 0.0003",
+        "pass": true
+      }
+    ]
+  },
+  "thresholds": {
+    "convergent": {
+      "rMin": 0.6,
+      "locked": true,
+      "source": "scientific-foundation.md §Pre-launch validation program 1"
+    },
+    "retest": {
+      "meanRMin": 0.7,
+      "locked": false,
+      "source": "proposed — 4-week Big Five domain stability bar"
+    },
+    "vibe": {
+      "minR2": 0.05,
+      "alpha": 0.05,
+      "locked": false,
+      "source": "proposed — composition predicts 同频"
+    },
+    "narrative": {
+      "alpha": 0.05,
+      "locked": false,
+      "source": "proposed — hypothesized arm scores higher"
+    }
+  },
+  "results": [
+    {
+      "id": "convergent",
+      "label": "Convergent validity — mean-floor gate (mean r ≥ 0.6, min r ≥ 0.5)",
+      "status": "PASS",
+      "measured": "mean r 0.826, min r 0.811 (n=400)",
+      "threshold": "mean r ≥ 0.6 and min r ≥ 0.5, n ≥ 30",
+      "detail": {
+        "gateMode": "mean-floor",
+        "meanR": 0.826,
+        "minR": 0.811,
+        "perTrait": [
+          {
+            "trait": "A",
+            "bigFive": "agreeableness",
+            "sign": 1,
+            "r": 0.819,
+            "ci": [
+              0.784,
+              0.849
+            ],
+            "n": 400,
+            "gated": true
+          },
+          {
+            "trait": "C",
+            "bigFive": "conscientiousness",
+            "sign": 1,
+            "r": 0.816,
+            "ci": [
+              0.78,
+              0.846
+            ],
+            "n": 400,
+            "gated": true
+          },
+          {
+            "trait": "E",
+            "bigFive": "emotional_stability",
+            "sign": 1,
+            "r": 0.839,
+            "ci": [
+              0.808,
+              0.866
+            ],
+            "n": 400,
+            "gated": true
+          },
+          {
+            "trait": "O",
+            "bigFive": "openness",
+            "sign": 1,
+            "r": 0.847,
+            "ci": [
+              0.817,
+              0.872
+            ],
+            "n": 400,
+            "gated": true
+          },
+          {
+            "trait": "X",
+            "bigFive": "extraversion",
+            "sign": 1,
+            "r": 0.811,
+            "ci": [
+              0.774,
+              0.842
+            ],
+            "n": 400,
+            "gated": true
+          },
+          {
+            "trait": "P",
+            "bigFive": "extraversion",
+            "sign": 1,
+            "r": 0.578,
+            "ci": [
+              0.509,
+              0.64
+            ],
+            "n": 400,
+            "gated": false
+          }
+        ],
+        "divergent": [
+          {
+            "trait": "P",
+            "note": "Positivity is a JoyJoin-specific positive-affect remix; closest Big Five facet is Extraversion warmth, so its correlation is exploratory.",
+            "r": 0.578
+          }
+        ]
+      }
+    },
+    {
+      "id": "retest",
+      "label": "Test-retest stability — mean trait r ≥ 0.7",
+      "status": "PASS",
+      "measured": "mean r 0.768 (n=400)",
+      "threshold": "mean r ≥ 0.7, n ≥ 20",
+      "detail": {
+        "perTrait": [
+          {
+            "trait": "A",
+            "r": 0.763,
+            "ci": [
+              0.718,
+              0.801
+            ],
+            "n": 400
+          },
+          {
+            "trait": "C",
+            "r": 0.772,
+            "ci": [
+              0.729,
+              0.809
+            ],
+            "n": 400
+          },
+          {
+            "trait": "E",
+            "r": 0.818,
+            "ci": [
+              0.782,
+              0.848
+            ],
+            "n": 400
+          },
+          {
+            "trait": "O",
+            "r": 0.791,
+            "ci": [
+              0.752,
+              0.825
+            ],
+            "n": 400
+          },
+          {
+            "trait": "X",
+            "r": 0.794,
+            "ci": [
+              0.754,
+              0.827
+            ],
+            "n": 400
+          },
+          {
+            "trait": "P",
+            "r": 0.671,
+            "ci": [
+              0.613,
+              0.722
+            ],
+            "n": 400
+          }
+        ],
+        "meanR": 0.768
+      }
+    },
+    {
+      "id": "vibe",
+      "label": "Vibe-simulation — trait composition predicts 同频",
+      "status": "PASS",
+      "measured": "R² 0.861, minE β 0.331",
+      "threshold": "R² ≥ 0.05 and ≥1 core composition predictor positive at α=0.05",
+      "detail": {
+        "sessions": 78,
+        "skipped": 0,
+        "r2": 0.861,
+        "adjR2": 0.851,
+        "coefs": [
+          {
+            "name": "meanA",
+            "beta": 0.079,
+            "se": 0.047,
+            "t": 1.67,
+            "p": 0.0995
+          },
+          {
+            "name": "meanC",
+            "beta": 0.194,
+            "se": 0.045,
+            "t": 4.34,
+            "p": 0
+          },
+          {
+            "name": "minE",
+            "beta": 0.331,
+            "se": 0.047,
+            "t": 7.11,
+            "p": 0
+          },
+          {
+            "name": "spark",
+            "beta": 0.333,
+            "se": 0.052,
+            "t": 6.38,
+            "p": 0
+          },
+          {
+            "name": "xVariance",
+            "beta": -0.898,
+            "se": 0.055,
+            "t": -16.22,
+            "p": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "narrative",
+      "label": "Narrative A/B — answer_citing scores higher",
+      "status": "PASS",
+      "measured": "answer_citing 4.54 vs rest 4.12 (Δ=0.43, p=0.0003)",
+      "threshold": "positive Δ and p < 0.05",
+      "detail": {
+        "perArm": [
+          {
+            "arm": "answer_citing",
+            "n": 200,
+            "mean": 4.544
+          },
+          {
+            "arm": "generic",
+            "n": 200,
+            "mean": 4.115
+          }
+        ],
+        "welch": {
+          "t": 3.691,
+          "df": 397.8,
+          "p": 0.0003
+        }
+      }
+    }
+  ]
+}

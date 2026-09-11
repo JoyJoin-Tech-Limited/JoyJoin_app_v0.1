@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "timestamp": "2026-09-11T07:25:42.405Z",
+    "n": 400,
+    "ipipItemNoise": 0.7,
+    "passThreshold": 0.6,
+    "gateMode": "mean-floor",
+    "seedBase": 20260911
+  },
+  "rows": [
+    {
+      "v4NoiseSd": 2,
+      "expectedR": 0.93,
+      "measuredMinR": 0.916,
+      "convStatus": "PASS",
+      "expectedRetestR": 0.875,
+      "retestMeanR": 0.861,
+      "retestStatus": "PASS"
+    },
+    {
+      "v4NoiseSd": 8,
+      "expectedR": 0.828,
+      "measuredMinR": 0.802,
+      "convStatus": "PASS",
+      "expectedRetestR": 0.779,
+      "retestMeanR": 0.737,
+      "retestStatus": "PASS"
+    },
+    {
+      "v4NoiseSd": 12,
+      "expectedR": 0.733,
+      "measuredMinR": 0.683,
+      "convStatus": "PASS",
+      "expectedRetestR": 0.689,
+      "retestMeanR": 0.656,
+      "retestStatus": "FAIL"
+    },
+    {
+      "v4NoiseSd": 16,
+      "expectedR": 0.642,
+      "measuredMinR": 0.591,
+      "convStatus": "PASS",
+      "expectedRetestR": 0.603,
+      "retestMeanR": 0.554,
+      "retestStatus": "FAIL"
+    },
+    {
+      "v4NoiseSd": 20,
+      "expectedR": 0.563,
+      "measuredMinR": 0.536,
+      "convStatus": "FAIL",
+      "expectedRetestR": 0.529,
+      "retestMeanR": 0.513,
+      "retestStatus": "FAIL"
+    },
+    {
+      "v4NoiseSd": 28,
+      "expectedR": 0.443,
+      "measuredMinR": 0.403,
+      "convStatus": "FAIL",
+      "expectedRetestR": 0.417,
+      "retestMeanR": 0.382,
+      "retestStatus": "FAIL"
+    },
+    {
+      "v4NoiseSd": 40,
+      "expectedR": 0.329,
+      "measuredMinR": 0.275,
+      "convStatus": "FAIL",
+      "expectedRetestR": 0.31,
+      "retestMeanR": 0.27,
+      "retestStatus": "FAIL"
+    }
+  ],
+  "checks": [
+    {
+      "id": "discrimination:strong-valid-PASS",
+      "pass": true,
+      "detail": "expected r ≥ 0.7 → all PASS (3 levels)"
+    },
+    {
+      "id": "discrimination:strong-invalid-FAIL",
+      "pass": true,
+      "detail": "expected r ≤ 0.5 → all FAIL (2 levels)"
+    },
+    {
+      "id": "magnitude:recovery",
+      "pass": true,
+      "detail": "measured ∈ [expected − 0.09, expected + 0.03] for all levels"
+    },
+    {
+      "id": "monotonicity",
+      "pass": true,
+      "detail": "measured r non-increasing as measurement noise grows (±0.02)"
+    },
+    {
+      "id": "retest:tracks-expectation",
+      "pass": true,
+      "detail": "expected retest r ≥ 0.75 → PASS (2); ≤ 0.62 → FAIL (4)"
+    }
+  ],
+  "passed": true
+}
