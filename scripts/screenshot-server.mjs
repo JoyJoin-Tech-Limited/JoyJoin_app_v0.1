@@ -812,8 +812,8 @@ async function captureProfileReviewCeremony() {
 // Motion is intentionally ENABLED (no ?motion=reduce) so the direction-aware
 // step exit animation is exercised, not skipped.
 
-async function interceptAuthNextStep(page, nextStep) {
-  // Static fulfill: fetch the mock user once and pin nextStep. (Do not call
+async function interceptAuthUserOverrides(page, overrides) {
+  // Static fulfill: fetch the mock user once and apply overrides. (Do not call
   // the route fetch method and then fulfill with both a response object and a
   // json body — mixing them does not reliably override the body.)
   let base
@@ -827,13 +827,21 @@ async function interceptAuthNextStep(page, nextStep) {
     console.error('[screenshot-server] failed to fetch auth/user mock base', err)
     throw err
   }
+  const merged = { ...base, ...overrides }
+  if (overrides.features) {
+    merged.features = { ...(base.features || {}), ...overrides.features }
+  }
   await page.route('**/api/auth/user', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ ...base, nextStep }),
+      body: JSON.stringify(merged),
     })
   )
+}
+
+async function interceptAuthNextStep(page, nextStep) {
+  return interceptAuthUserOverrides(page, { nextStep })
 }
 
 async function captureEssentialData({ captureExitFrame = false } = {}) {
@@ -889,6 +897,13 @@ async function captureEssentialDataStep2() {
       await page.click('.essential-data__submit')
       // 140ms exit + 300ms entry settle → intent grid fully in.
       await page.waitForSelector('.essential-data__intent-grid', { timeout: 5000 })
+      // P4b (2026-09-11): 3×2 compact grid + full-width 随缘 strip below it.
+      await page.waitForSelector('.intent-card--strip', { state: 'visible', timeout: 5000 })
+      await page.waitForFunction(
+        () => document.querySelectorAll('.essential-data__intent-grid .intent-card--compact').length === 6,
+        undefined,
+        { timeout: 5000 },
+      )
       await page.waitForTimeout(500)
       return screenshotViewport(page)
     }
@@ -1139,6 +1154,221 @@ async function capturePersonalityTestSlider(stage) {
 register('personality-test-slider-neutral', () => capturePersonalityTestSlider('neutral'))
 register('personality-test-slider-drag', () => capturePersonalityTestSlider('drag'))
 register('personality-test-slider-settled', () => capturePersonalityTestSlider('settled'))
+
+// ─── 2026-09-11 staging UI batch verification captures ─────────────
+
+// H5-only divergence (NOT app source — do not "fix" app code for this): the
+// guidance queue's tab-route gate reads `Taro.getCurrentInstance().router.path`,
+// which on H5 carries the runtime's `?stamp=XX` query suffix, so
+// `isTabPageRoute()` refuses and the queue never fires in the H5 harness.
+// WeChat-native paths have no query, so production is unaffected. This patch
+// rewrites the gate in the served JS chunk (network-layer only) to strip the
+// query before matching — visually equivalent to device behaviour.
+async function installGuidanceH5RouteGatePatch(page) {
+  await page.route('**/js/common.*.js', async (route) => {
+    try {
+      const response = await route.fetch()
+      const body = await response.text()
+      // Minified shape: function fX(e){const t=e.replace(/^\//,"");return Object.values(routes).includes(t)}
+      const gatePattern = /(function [A-Za-z_$][\w$]*\(e\)\{const t=e\.replace\(\/\^\\\/\/,""\))(;return Object\.values\([A-Za-z_$][\w$]*\)\.includes\(t\)\})/
+      if (gatePattern.test(body)) {
+        const patched = body.replace(gatePattern, '$1.split("?")[0]$2')
+        console.log('[screenshot-server] guidance H5 route-gate patch applied')
+        await route.fulfill({ response, body: patched })
+        return
+      }
+      await route.fulfill({ response, body })
+    } catch (err) {
+      console.warn('[screenshot-server] guidance chunk patch failed (fail-open)', err)
+      await route.continue()
+    }
+  })
+}
+
+// P6: profile first-visit guidance tip (C4 queue). The mock user lacks
+// features.guidanceQueueEnabled, so force it on via the auth intercept and
+// stub /api/guidance/** so the seen-write / queue never fail-closed. The tip
+// auto-dismisses after a 6s dwell — capture as soon as the card is visible.
+async function captureProfileGuidanceTip() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await installGuidanceH5RouteGatePatch(page)
+    await page.route('**/api/guidance/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, recorded: true }),
+      }),
+    )
+    await page.goto(`${H5_BASE_URL}/#/pages/profile/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await interceptAuthUserOverrides(page, {
+      nextStep: 'discover',
+      features: { guidanceQueueEnabled: true },
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.profile-page__identity-stage--entered')
+    // The dock + card mount on the queue's first evaluate; capture well
+    // inside the 6s dwell window before the auto-dismiss fires.
+    await page.waitForSelector('.profile-page__guidance-dock .guidance-tip-card', {
+      state: 'visible',
+      timeout: 8000,
+    })
+    await page.waitForTimeout(600)
+    return screenshotViewport(page)
+  })
+}
+register('profile-guidance-tip', captureProfileGuidanceTip)
+
+// P9: post-onboarding archetype-holder retake interstitial. Auth intercept:
+// primaryArchetype held AND nextStep null (fully past onboarding) → the page
+// renders the explicit choice instead of the legacy silent bounce.
+async function capturePersonalityTestReturnInterstitial() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/onboarding/personality-test/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await interceptAuthUserOverrides(page, {
+      archetype: 'dolphin_calm',
+      primaryArchetype: 'dolphin_calm',
+      nextStep: null,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await page.waitForSelector('.personality-test__return-title', { state: 'visible', timeout: 15000 })
+    await page.waitForFunction(() => {
+      const title = document.querySelector('.personality-test__return-title')?.textContent ?? ''
+      const primary = document.querySelector('.personality-test__return-primary')?.textContent ?? ''
+      const secondary = document.querySelector('.personality-test__return-secondary')?.textContent ?? ''
+      return title.includes('你已经解锁了氛围命格')
+        && primary.includes('查看我的结果')
+        && secondary.includes('重新测一次')
+    }, undefined, { timeout: 10000 })
+    await page.waitForTimeout(800)
+    return screenshotViewport(page)
+  })
+}
+register('personality-test-return-interstitial', capturePersonalityTestReturnInterstitial)
+
+// P1/P2: expanded personality-results detail sheet (mascot analysis bubble +
+// 氛围画像 bars + 默契搭档 strip). Seeds a completed replay snapshot so the
+// page jumps straight to the result stage (no slot animation, no result
+// fetch), then intercepts the Xiaoyue analysis call so the hero CTA renders.
+const RESULTS_SESSION_SNAPSHOT = {
+  sessionId: 'mock-results-session-001',
+  phase: 'completed',
+  timestamp: Date.now(),
+  completedAt: new Date().toISOString(),
+  result: {
+    primaryArchetype: 'dolphin_calm',
+    secondaryArchetype: 'corgi',
+    traitScores: { A: 82, O: 64, C: 58, E: 76, X: 42, P: 88 },
+    topMatches: [
+      { archetype: 'dolphin_calm', score: 92, confidence: 0.9 },
+      { archetype: 'corgi', score: 78, confidence: 0.7 },
+      { archetype: 'fox', score: 61, confidence: 0.5 },
+    ],
+    totalQuestionsAnswered: 12,
+    archetypeConfidence: 0.9,
+    isDecisive: true,
+  },
+  topArchetypes: [
+    { archetype: 'dolphin_calm', score: 92, confidence: 0.9 },
+    { archetype: 'corgi', score: 78, confidence: 0.7 },
+    { archetype: 'fox', score: 61, confidence: 0.5 },
+  ],
+  // Replay fast-path: skips the slot animation entirely.
+  resultSequenceCompletedAt: new Date().toISOString(),
+}
+
+const RESULTS_XIAOYUE_ANALYSIS = {
+  headline: '你把气氛调到了刚刚好的温度',
+  analysis: '你身上有一种很稳的松弛感——不是冷，也不是热，而是让一桌人都慢慢放松下来的那种温度。你不太抢话，但你接得住别人的话头，也懂得在冷场前递一个台阶。跟你待在一起，人会不自觉地多说一点真心话。',
+  socialRole: '氛围稳定器',
+  bestScene: '五六个人的深聊小局',
+  microAction: '下次聚会，试着先问一个轻一点的问题',
+  shareLine: '我是机灵海豚，氛围里的定海神针',
+  stateLabel: '松弛在线',
+  whyThisFits: '你的稳定感和亲和力都偏高，外向度适中——你不是点燃场子的人，你是让场子一直暖着的人。',
+  blendLine: '隐约还有一点社牛柯基的影子，关键时刻你也会主动破冰。',
+  expressionTags: ['松弛感', '接得住话', '稳定输出'],
+  shareVariants: {
+    selfIntro: '我是机灵海豚，负责让一桌人舒服',
+    friendCallout: '这个人就是传说中的氛围稳定器',
+    socialInvite: '要不要一起来测测你的氛围命格',
+  },
+  cached: true,
+}
+
+async function capturePersonalityResultsDetail() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.route('**/api/xiaoyue/analysis', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(RESULTS_XIAOYUE_ANALYSIS),
+      }),
+    )
+    // Safety net only — the replay fast-path never fetches the result.
+    await page.route('**/api/assessment/v4/*/result', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessionId: RESULTS_SESSION_SNAPSHOT.sessionId,
+          completedAt: RESULTS_SESSION_SNAPSHOT.completedAt,
+          result: RESULTS_SESSION_SNAPSHOT.result,
+          topArchetypes: RESULTS_SESSION_SNAPSHOT.topArchetypes,
+        }),
+      }),
+    )
+    await page.goto(`${H5_BASE_URL}/#/pages/onboarding/personality-test/results/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    // Taro H5 getStorageSync only returns values written via Taro.setStorage —
+    // the raw localStorage entry must carry the {"data": ...} wrapper or the
+    // app reads '' and falls back to the auth user's archetype.
+    await page.evaluate((snapshot) => {
+      localStorage.clear()
+      sessionStorage.clear()
+      localStorage.setItem(
+        'joyjoin_v4_assessment_session',
+        JSON.stringify({ data: JSON.stringify(snapshot) }),
+      )
+    }, RESULTS_SESSION_SNAPSHOT)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    // Replay fast-path lands on the result stage; the hero CTA (查看悦仔完整
+    // 解读) renders once the intercepted analysis resolves.
+    await page.waitForSelector('.personality-results__hero-xiaoyue-cta', {
+      state: 'visible',
+      timeout: 20000,
+    })
+    await page.waitForTimeout(1000)
+    await page.click('.personality-results__hero-xiaoyue-cta')
+
+    await page.waitForSelector('.personality-results__detail-sheet', {
+      state: 'visible',
+      timeout: 10000,
+    })
+    // 350ms slide-up + deferred bubble sentence stagger — let it fully settle.
+    await page.waitForFunction(() => {
+      const sheet = document.querySelector('.personality-results__detail-sheet')
+      const traits = document.querySelectorAll('.personality-results__trait-row').length
+      const partners = document.querySelectorAll('.personality-results__detail-partner').length
+      return Boolean(sheet) && traits === 6 && partners === 3
+    }, undefined, { timeout: 10000 })
+    await page.waitForTimeout(2000)
+    return screenshotViewport(page)
+  })
+}
+register('personality-results-detail', capturePersonalityResultsDetail)
 
 
 const server = app.listen(PORT, '127.0.0.1', () => {

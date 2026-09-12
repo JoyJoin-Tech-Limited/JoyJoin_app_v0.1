@@ -40,6 +40,8 @@
 
     .intent-card__icon {
       margin-bottom: 0;
+      width: 96rpx;
+      height: 96rpx;
     }
   }
 
@@ -54,6 +56,8 @@
     .intent-card__icon {
       margin-bottom: 0;
       flex-shrink: 0;
+      width: 64rpx;
+      height: 64rpx;
     }
 
     .intent-card__label {
@@ -85,6 +89,14 @@
 
   &__icon {
     margin-bottom: 8rpx;
+    /* H5 drops inline rpx styles (AGENTS §3): JoyJoinIcon's inline
+       width/height never reach taro-image-core in H5, which then falls back
+       to a 320×240 default and balloons the card (2026-09-12 stretched-grid
+       regression). Size the icon here in WXSS — compiled rpx→px works in H5
+       and the values mirror the iconSize prop at each call site (default
+       144, compact 96, strip 64), so device pixels are unchanged. */
+    width: 144rpx;
+    height: 144rpx;
   }
 
   &__label {

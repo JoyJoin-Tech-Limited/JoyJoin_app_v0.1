@@ -58,6 +58,12 @@ const PAGES = {
   'personality-test-slider': { url: 'http://localhost:9000/personality-test-slider-neutral.png', altPort: 9003 },
   'personality-test-slider-drag': { url: 'http://localhost:9000/personality-test-slider-drag.png', altPort: 9003 },
   'personality-test-slider-settled': { url: 'http://localhost:9000/personality-test-slider-settled.png', altPort: 9003 },
+  'onboarding-essential-step1': { url: 'http://localhost:9000/onboarding-essential-step1.png', altPort: 9003 },
+  'onboarding-essential-step2': { url: 'http://localhost:9000/onboarding-essential-step2.png', altPort: 9003 },
+  'profile-v17': { url: 'http://localhost:9000/profile-v17.png', altPort: 9003 },
+  'profile-guidance-tip': { url: 'http://localhost:9000/profile-guidance-tip.png', altPort: 9003 },
+  'personality-test-return-interstitial': { url: 'http://localhost:9000/personality-test-return-interstitial.png', altPort: 9003 },
+  'personality-results-detail': { url: 'http://localhost:9000/personality-results-detail.png', altPort: 9003 },
 }
 
 const page = process.argv[2] || 'events'
