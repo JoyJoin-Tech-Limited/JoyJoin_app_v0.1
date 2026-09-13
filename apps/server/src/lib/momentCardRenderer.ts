@@ -1,7 +1,9 @@
 /**
  * Server-side Moment Card PNG renderer.
  *
- * Replicates the mini-program Canvas layout from MomentCardView.tsx
+ * Ports the layout of the former mini-program Canvas MomentCardView
+ * (removed 2026-09-10) — this server renderer is now the canonical
+ * implementation.
  * using @napi-rs/canvas for headless rendering.
  *
  * Font note: CJK text requires a Chinese font installed on the host.
@@ -53,7 +55,7 @@ if (!cjkFontRegistered) {
 const CARD_WIDTH = 640;
 const CARD_HEIGHT = 1040;
 
-// Brand colors (match MomentCardView.tsx)
+// Brand colors (ported from the former client MomentCardView)
 const CARD_BG_DARK = "#1e1e2f";
 const CARD_GOLD_MUTED = "#d4af37";
 const CARD_TEXT_MUTED = "#9CA3AF";
@@ -200,7 +202,7 @@ function drawKeepsakeBlock(
   const permissionH = permissionLine ? 16 : 0;
 
   // AIGC compliance microline — always present, right-aligned inside the
-  // block's bottom padding (mirrors the mini-program MomentCardView label).
+  // block's bottom padding (mirrors the former client MomentCardView label).
   const AIGC_LABEL = "话题由 AI 生成";
   const aigcFontSize = 10;
   const aigcGap = 6;
@@ -227,7 +229,7 @@ function drawKeepsakeBlock(
 
   // Eyebrow — per-char advance for letterspacing. Canvas has no
   // letter-spacing, and U+2009 thin-space joins render as tofu when the host
-  // CJK font lacks that glyph (mirrors mini-program MomentCardView).
+  // CJK font lacks that glyph (mirrors the former client MomentCardView).
   setFont(ctx, 11, 600);
   ctx.fillStyle = "#7C3AED";
   ctx.textAlign = "left";
