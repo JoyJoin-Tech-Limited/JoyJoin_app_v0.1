@@ -293,7 +293,7 @@ export function PersonalityDiceHeroView({
     if (countdownRemaining > 0) {
       return (
         <View className='personality-dice-hero personality-dice-hero--countdown'>
-          <View className='personality-dice-hero__countdown'>
+          <View className='personality-dice-hero__countdown' role='status' aria-live='polite'>
             <Text className='personality-dice-hero__countdown-number'>{countdownRemaining}</Text>
             <Text className='personality-dice-hero__countdown-label'>准备揭晓大家的选择</Text>
           </View>
@@ -484,12 +484,19 @@ export function PersonalityDiceHeroView({
               </Button>
             ) : null}
             {hasContent && isMyChallenge && !hasResponded && !chooseModeEnabled ? (
-              <SwipeCard onSwipeRight={handleAccept} onSwipeLeft={handlePass} threshold={0.4}>
-                <View className='personality-dice-hero__swipe-area'>
-                  <Text className='personality-dice-hero__swipe-hint'>认怂 ｜ 接受挑战</Text>
-                  <Text className='personality-dice-hero__swipe-subhint'>左右滑动卡片做出选择</Text>
-                </View>
-              </SwipeCard>
+              <>
+                <Button variant='primary' onClick={handleAccept} disabled={isCompleting}>
+                  接受挑战
+                </Button>
+                <Button variant='secondary' onClick={handlePass} disabled={isCompleting}>
+                  认怂
+                </Button>
+                <SwipeCard onSwipeRight={handleAccept} onSwipeLeft={handlePass} threshold={0.4}>
+                  <View className='personality-dice-hero__swipe-area'>
+                    <Text className='personality-dice-hero__swipe-hint'>也可以左右滑动卡片</Text>
+                  </View>
+                </SwipeCard>
+              </>
             ) : null}
             {hasContent && isMyChallenge && hasCompleted && !chooseModeEnabled ? (
               <View className='personality-dice-hero__status-badge personality-dice-hero__status-badge--accept'>

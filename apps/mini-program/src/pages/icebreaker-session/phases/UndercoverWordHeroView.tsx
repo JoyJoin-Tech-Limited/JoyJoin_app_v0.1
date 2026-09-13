@@ -254,7 +254,9 @@ export function UndercoverWordHeroView({
             <ParticleBurst
               trigger={burstTriggered}
               type={results.caught ? 'confetti' : 'roses'}
-              spotlightColor={results.caught ? '#5FA88F' : '#E67E22'}
+              spotlightColor={
+                results.caught ? PHASE_ACCENTS.group_mirror?.accent : PHASE_ACCENTS.undercover_word?.accent
+              }
               count={48}
             />
           </View>

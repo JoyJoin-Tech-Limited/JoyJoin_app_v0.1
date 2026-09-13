@@ -6,6 +6,15 @@ const heroSource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.tsx'),
   'utf8',
 )
+// 2026-09-10: the sub-phase content blocks moved to MiniScriptSessionViews.tsx
+// to keep MiniScriptHeroView under the harness size gate. Presence assertions
+// that used to live in heroSource now check the extracted views module;
+// ordering/count assertions use the concatenation so relative order holds.
+const viewSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptSessionViews.tsx'),
+  'utf8',
+)
+const heroAndViews = heroSource + viewSource
 const traySource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptEvidenceTray.tsx'),
   'utf8',
@@ -57,7 +66,9 @@ describe('MiniScript V2 P2 · evidence area (AC-08)', () => {
     expect(traySource).not.toContain('isReactionVisibleToMember')
     expect(traySource).not.toContain('MINISCRIPT_REACTION_DELAY_MS')
     expect(traySource).not.toContain('setNowTick')
-    expect(traySource).not.toContain('setTimeout')
+    // Blanket setTimeout is NOT banned any more: the picker/reveal exit motion
+    // (S5) legitimately uses close timers. The banned pattern is a device-clock
+    // *reaction gate*, which the four assertions above already lock out.
     expect(traySource).not.toContain('Date.now()')
     // Presented combos still grey out (server is idempotent on repeats).
     expect(traySource).toContain('buildPresentedComboSet')
@@ -72,13 +83,15 @@ describe('MiniScript V2 P2 · evidence area (AC-08)', () => {
   it('wires the presenter 已读完 early release through confirm-read', () => {
     expect(traySource).toContain('onConfirmRead?.(activeReaction.evidenceId, activeReaction.targetRoleSlot)')
     expect(actionsSource).toContain("'/api/miniscript/confirm-read'")
-    expect(heroSource).toContain('onConfirmRead={onConfirmRead}')
+    expect(viewSource).toContain('onConfirmRead={onConfirmRead}')
     expect(phaseViewsSource).toContain('onConfirmRead={onMiniScriptConfirmRead}')
   })
 
   it('blocks background scroll behind both evidence masks (catchMove)', () => {
-    expect(traySource).toMatch(/miniscript-evidence__picker-mask' catchMove/)
-    expect(traySource).toMatch(/miniscript-evidence__reveal-mask' catchMove/)
+    // className is a template literal now (exit-motion modifier), so match the
+    // class + catchMove on the same line rather than the exact quote.
+    expect(traySource).toMatch(/miniscript-evidence__picker-mask[^\n]*catchMove/)
+    expect(traySource).toMatch(/miniscript-evidence__reveal-mask[^\n]*catchMove/)
   })
 
   it('stops offering presents once the vote has opened (WRONG_SUB_PHASE guard)', () => {
@@ -113,14 +126,14 @@ describe('MiniScript V2 P2 · clue drawer (AC-09)', () => {
   it('renders the persistent count entry bar in act + vote sub-phases', () => {
     expect(drawerSource).toContain('线索 {itemCount} 条')
     // Mounted in actContent and at the vote sub-phase JSX level.
-    expect(heroSource.match(/<MiniScriptClueDrawer/g)).toHaveLength(2)
+    expect(heroAndViews.match(/<MiniScriptClueDrawer/g)).toHaveLength(2)
   })
 
   it('sits the act-view entry bar above the fold sections (V2 P3 reposition)', () => {
     // Act view: the bar renders as the FIRST actContent child — directly
     // below 本幕任务, above 本幕新线索 and every fold section.
-    const drawerIndex = heroSource.indexOf('<MiniScriptClueDrawer')
-    const newCluesIndex = heroSource.indexOf('miniscript-hero__section--new-clues')
+    const drawerIndex = heroAndViews.indexOf('<MiniScriptClueDrawer')
+    const newCluesIndex = heroAndViews.indexOf('miniscript-hero__section--new-clues')
     expect(drawerIndex).toBeGreaterThan(-1)
     expect(newCluesIndex).toBeGreaterThan(-1)
     expect(drawerIndex).toBeLessThan(newCluesIndex)
@@ -170,12 +183,12 @@ describe('MiniScript V2 P2 · two-round vote (AC-10/13)', () => {
   })
 
   it('renders motiveOptions as round-2 option cards submitting voteRound 2', () => {
-    expect(heroSource).toContain('(motiveOptions ?? EMPTY_MOTIVE_OPTIONS).map')
+    expect(viewSource).toContain('(motiveOptions ?? EMPTY_MOTIVE_OPTIONS).map')
     expect(heroSource).toContain('onVote({ voteRound: 2, motiveChoice })')
   })
 
   it('shows the public honor list for dual-correct players only', () => {
-    expect(heroSource).toContain('本桌名侦探')
+    expect(viewSource).toContain('本桌名侦探')
     expect(heroSource).toContain('r.round1Correct === true && r.round2Correct === true')
   })
 
@@ -185,7 +198,7 @@ describe('MiniScript V2 P2 · two-round vote (AC-10/13)', () => {
   })
 
   it('ships both one-time Xiaoyue hints with persisted dismissal', () => {
-    expect(heroSource).toContain('把证物出示给想试探的人，听听 TA 怎么说')
+    expect(viewSource).toContain('把证物出示给想试探的人，听听 TA 怎么说')
     expect(heroSource).toContain('MINISCRIPT_EVIDENCE_HINT_STORAGE_KEY')
     expect(heroSource).toContain('MINISCRIPT_MOTIVE_HINT_STORAGE_KEY')
     expect(heroSource).toContain('persistHintSeen')
@@ -194,15 +207,15 @@ describe('MiniScript V2 P2 · two-round vote (AC-10/13)', () => {
 
 describe('MiniScript V2 P3 · copy + waiting states (audit fixes)', () => {
   it('softens the round-2 hint and the round-1 why prompt', () => {
-    expect(heroSource).toContain('还没完——再猜猜 TA 为什么这么做')
-    expect(heroSource).not.toContain('猜对人还不够——再猜猜 TA 为什么这么做')
-    expect(heroSource).toContain('随口聊聊你的推理')
+    expect(viewSource).toContain('还没完——再猜猜 TA 为什么这么做')
+    expect(heroAndViews).not.toContain('猜对人还不够——再猜猜 TA 为什么这么做')
+    expect(viewSource).toContain('随口聊聊你的推理')
   })
 
   it('tells round-1 players exactly who they are waiting for once the ballot can close', () => {
     // Player view: hasMotiveRound && voteRound === 1 && canReveal → the stale
     // 还在等 N 位 line is replaced by the explicit host wait.
-    expect(heroSource).toContain('等待主持人开启动机投票')
+    expect(viewSource).toContain('等待主持人开启动机投票')
     expect(heroSource).toContain('hasMotiveRound && voteRound === 1 && voteProgress.canReveal')
   })
 

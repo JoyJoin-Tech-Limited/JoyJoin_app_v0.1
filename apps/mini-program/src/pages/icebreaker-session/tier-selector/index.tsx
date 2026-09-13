@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
+import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
@@ -567,26 +567,9 @@ export default function TierSelectorPage() {
         </View>
       )}
 
-      {/* Tier card background preview for the selected tier */}
-      <View className='tier-selector__preview' key={`preview-${fadeKey}`} aria-hidden>
-        <View className='tier-selector__preview-frame'>
-          <Image
-            className='tier-selector__preview-frame-image'
-            src={TIER_CARD_BACKGROUNDS[selectedTier]}
-            mode='scaleToFill'
-          />
-        </View>
-        <Text className='tier-selector__preview-label'>
-          {resolveTierDisplay(selectedTier, { glowVariant: 'default' })} · 这就是今晚的氛围
-        </Text>
-        <Text className='tier-selector__preview-affirmation'>
-          {selectedTier === 'custom'
-            ? getCustomSelectionSummary(selectedPhases)
-            : getPreviewAffirmation(selectedTier, selectedVibe)}
-        </Text>
-      </View>
-
-      {/* 悦仔 Mascot Line */}
+      {/* 悦仔 Mascot Line — now carries the choice affirmation. The duplicate
+          tier preview card (same art as the selected card) was removed for
+          简洁; the selected card already shows tier name + check. */}
       <View className='tier-selector__mascot' aria-live='polite'>
         <Image
           className='tier-selector__mascot-avatar'
@@ -595,6 +578,11 @@ export default function TierSelectorPage() {
         />
         <View className='tier-selector__mascot-text-wrap' key={`mascot-text-${fadeKey}`}>
           <Text className='tier-selector__mascot-text'>{yuezaiReaction}</Text>
+          <Text className='tier-selector__mascot-affirmation'>
+            {selectedTier === 'custom'
+              ? getCustomSelectionSummary(selectedPhases)
+              : getPreviewAffirmation(selectedTier, selectedVibe)}
+          </Text>
         </View>
       </View>
 

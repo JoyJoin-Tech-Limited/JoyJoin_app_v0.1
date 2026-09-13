@@ -617,6 +617,19 @@ $onboarding-stage-shift-ids: (
   to   { opacity: 1; transform: translateY(0); }
 }
 
+// Exit companions for bottom sheets (full-width). Pure translateY + opacity:
+// the entrance `fade-slide-up` is reused by narrow toasts, so sheets share
+// their own out-motion instead of an abrupt unmount.
+@keyframes sheet-slide-down {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(100%); }
+}
+
+@keyframes overlay-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
 @keyframes shimmer-slide {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }

@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView } from '@tarojs/components'
+import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
@@ -8,11 +8,10 @@ import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import { PhaseHeaderIcon } from '../phaseUtils'
-import { apiRequest } from '../../../lib/api/api'
+import { apiRequest, apiRequestBinary } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import IdentityReveal from '../../../components/reveal/IdentityReveal'
-import CardFlip from '../../../components/reveal/CardFlip'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
@@ -143,6 +142,7 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
       </Card>
 
       {panel && showPanel ? (
+        <RootPortal>
         <View
           className='icebreaker__moment-panel-backdrop'
           onClick={() => setShowPanel(false)}
@@ -180,8 +180,135 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
             </ScrollView>
           </View>
         </View>
+        </RootPortal>
       ) : null}
     </>
+  )
+}
+
+type KeepsakeStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
+
+/**
+ * S12 — the recap keepsake is the one shareable artifact: the server-rendered
+ * moment-card PNG (`/moment-card.png`, gated server-side by
+ * SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER). When server render is
+ * disabled (503) or the fetch fails we degrade to a text-only block with the
+ * connections hook — never a dead save/share button.
+ */
+function RecapKeepsake({
+  socialSessionId,
+  onConnectTap,
+}: {
+  socialSessionId: string
+  onConnectTap?: () => void
+}) {
+  const [status, setStatus] = useState<KeepsakeStatus>('idle')
+  const [imagePath, setImagePath] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleGenerate = useCallback(async () => {
+    if (status === 'loading') return
+    setStatus('loading')
+    try {
+      const buffer = await apiRequestBinary({
+        path: buildSocialPath(socialSessionId, '/moment-card.png'),
+        method: 'GET',
+        timeout: 20000,
+      })
+      const filePath = `${Taro.env.USER_DATA_PATH}/joyjoin-recap-keepsake-${Date.now()}.png`
+      const fs = Taro.getFileSystemManager()
+      await new Promise<void>((resolve, reject) => {
+        fs.writeFile({
+          filePath,
+          data: buffer,
+          success: () => resolve(),
+          fail: (err) => reject(new Error(err.errMsg ?? 'writeFile failed')),
+        })
+      })
+      setImagePath(filePath)
+      setStatus('ready')
+      haptics('success')
+    } catch {
+      setStatus('unavailable')
+    }
+  }, [socialSessionId, status])
+
+  const handleSave = useCallback(async () => {
+    if (!imagePath || saving) return
+    setSaving(true)
+    try {
+      const setting = await Taro.getSetting()
+      if (setting.authSetting['scope.writePhotosAlbum'] === false) {
+        const { confirm } = await Taro.showModal({
+          title: '需要相册权限',
+          content: '保存纪念卡到相册需要你授权访问相册。',
+          confirmText: '去设置',
+          cancelText: '取消',
+        })
+        if (confirm) await Taro.openSetting()
+        return
+      }
+      await Taro.saveImageToPhotosAlbum({ filePath: imagePath })
+      haptics('success')
+      void Taro.showToast({ title: '已存进相册', icon: 'success' })
+    } catch {
+      void Taro.showToast({ title: '保存没成功，稍后再试', icon: 'none' })
+    } finally {
+      setSaving(false)
+    }
+  }, [imagePath, saving])
+
+  return (
+    <Card className='icebreaker__recap-keepsake'>
+      <Text className='icebreaker__recap-keepsake-title'>今晚的破冰纪念卡</Text>
+      {status === 'ready' ? (
+        <Image
+          className='icebreaker__recap-keepsake-image'
+          src={imagePath}
+          mode='widthFix'
+          ariaLabel='今晚的破冰纪念卡'
+        />
+      ) : (
+        <Text className='icebreaker__recap-keepsake-note'>
+          {status === 'unavailable'
+            ? '这台设备暂时生成不了纪念卡，先去认识这桌人吧'
+            : '把今晚的高光存成一张卡，随时回看'}
+        </Text>
+      )}
+      <View className='icebreaker__recap-keepsake-actions'>
+        {status === 'ready' ? (
+          <>
+            <Button
+              variant='primary'
+              className='icebreaker__recap-keepsake-btn'
+              onClick={() => void handleSave()}
+              disabled={saving}
+              loading={saving}
+            >
+              {saving ? '保存中…' : '保存到相册'}
+            </Button>
+            <Button variant='secondary' className='icebreaker__recap-keepsake-btn' openType='share'>
+              分享给朋友
+            </Button>
+          </>
+        ) : status === 'unavailable' ? null : (
+          <Button
+            variant='primary'
+            className='icebreaker__recap-keepsake-btn'
+            onClick={() => void handleGenerate()}
+            disabled={status === 'loading'}
+            loading={status === 'loading'}
+          >
+            {status === 'loading' ? '正在整理…' : '生成今晚纪念卡'}
+          </Button>
+        )}
+        {onConnectTap ? (
+          <Button variant='secondary' className='icebreaker__recap-keepsake-btn' onClick={onConnectTap}>
+            去认识这桌人
+          </Button>
+        ) : null}
+      </View>
+    </Card>
   )
 }
 
@@ -244,7 +371,7 @@ export function RecapPhaseView({
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
   const [showBurst, setShowBurst] = useState(false)
   const [headlineRevealed, setHeadlineRevealed] = useState(false)
-  const [shareFlipped, setShareFlipped] = useState(false)
+  const [detailsExpanded, setDetailsExpanded] = useState(false)
   // D5 — Fires success haptic only once per recap-render when the stamp seals
   const stampHapticFiredRef = useRef(false)
   const handleStampSealed = useCallback(() => {
@@ -268,37 +395,7 @@ export function RecapPhaseView({
     }
   }, [showBurst])
 
-  const handleShareFlip = useCallback(() => {
-    setShareFlipped((prev) => !prev)
-  }, [])
-
   const aigcEnabled = useAIGCLabelsEnabled()
-
-  // Build dynamic share card lines
-  const shareLines = useCallback(() => {
-    const lines: string[] = []
-    lines.push(`${playerCount} 位玩家一起度过了愉快的破冰时光`)
-    if ((recapData?.challengesCompleted ?? 0) > 0) {
-      lines.push(`完成了 ${recapData?.challengesCompleted} 个挑战`)
-    }
-    if (recapData?.lieDetectiveWinner) {
-      lines.push(`最佳侦探：${recapData.lieDetectiveWinner}`)
-    }
-    if (medals.length > 0) {
-      lines.push(`共颁发 ${medals.length} 个奖项`)
-    }
-    if (recapData?.undercoverWord) {
-      lines.push(
-        recapData.undercoverWord.caught
-          ? `卧底 ${recapData.undercoverWord.undercoverDisplayName} 已被揪出`
-          : `卧底 ${recapData.undercoverWord.undercoverDisplayName} 成功隐藏`,
-      )
-    }
-    if (recapData?.lieDetective) {
-      lines.push(`悦仔谎言胜率 ${(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%`)
-    }
-    return lines
-  }, [playerCount, recapData, medals.length])
 
   return (
     <View className='icebreaker__recap'>
@@ -376,6 +473,20 @@ export function RecapPhaseView({
       {/* V2 Data cards */}
       {(recapData || recapMoments.length > 0) && (
         <View className='icebreaker__recap-details'>
+          <View
+            className='icebreaker__recap-details-toggle'
+            role='button'
+            aria-expanded={detailsExpanded}
+            aria-label='本局亮点'
+            onClick={() => setDetailsExpanded((v) => !v)}
+          >
+            <Text className='icebreaker__recap-details-toggle-text'>本局亮点</Text>
+            <Text className='icebreaker__recap-details-toggle-icon' aria-hidden='true'>
+              {detailsExpanded ? '▾' : '▸'}
+            </Text>
+          </View>
+          {detailsExpanded ? (
+          <>
           {/* Topics */}
           {recapData?.topicsDiscussed.length ? (
             <Card className='icebreaker__recap-section'>
@@ -500,41 +611,16 @@ export function RecapPhaseView({
               ))}
             </Card>
           )}
+          {socialSessionId ? <MomentCardCTA socialSessionId={socialSessionId} /> : null}
+          </>
+          ) : null}
         </View>
       )}
 
-      {/* Dynamic share card with CardFlip */}
-      {socialSessionId && (
-        <View className='icebreaker__recap-share-wrap'>
-          <CardFlip
-            front={
-              <View className='icebreaker__recap-share-front'>
-                <JoyJoinIcon emoji='🎉' tier='reaction' size={56} className='icebreaker__recap-share-front-emoji' />
-                <Text className='icebreaker__recap-share-front-title'>今晚的破冰记忆</Text>
-                <Text className='icebreaker__recap-share-front-hint'>点我查看详情</Text>
-              </View>
-            }
-            back={
-              <View className='icebreaker__recap-share-back'>
-                {shareLines().map((line, i) => (
-                  <Text key={i} className='icebreaker__recap-share-back-line'>
-                    {line}
-                  </Text>
-                ))}
-                <View className='icebreaker__recap-share-back-cta'>
-                  <Button variant='secondary' onClick={onLeave}>
-                    收好今晚，回到活动
-                  </Button>
-                </View>
-              </View>
-            }
-            flipped={shareFlipped}
-            onFlip={handleShareFlip}
-            duration={500}
-            reducedMotion={shouldReduceMotion}
-          />
-        </View>
-      )}
+      {/* S12 keepsake — the single shareable artifact + connections hook at peak warmth */}
+      {socialSessionId ? (
+        <RecapKeepsake socialSessionId={socialSessionId} onConnectTap={onConnectTap} />
+      ) : null}
 
       {/* Empty state */}
       {!recapData && medals.length === 0 && recapMoments.length === 0 && (
@@ -545,9 +631,6 @@ export function RecapPhaseView({
           </Text>
         </Card>
       )}
-
-      {/* Moment card CTA */}
-      {socialSessionId && <MomentCardCTA socialSessionId={socialSessionId} />}
 
       {/* Xiaoyue farewell — PM-locked permission line (2026-07-17) */}
       <View className='icebreaker__recap-farewell'>
@@ -599,11 +682,6 @@ export function RecapPhaseView({
         >
           回到活动详情
         </Button>
-        {onConnectTap ? (
-          <Button variant='secondary' className='icebreaker__recap-connect-btn' onClick={onConnectTap}>
-            去认识这桌人
-          </Button>
-        ) : null}
       </View>
 
       {/* AI feedback lives below the exits — it must not interrupt the arc */}

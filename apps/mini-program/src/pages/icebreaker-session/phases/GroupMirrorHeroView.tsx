@@ -88,6 +88,7 @@ export function GroupMirrorHeroView({
 
   const hasSubmitted = userId ? submittedUserIds.includes(userId) : false
   const allSubmitted = submittedUserIds.length >= playerCount
+  const hasAnyAnswer = Object.keys(voteMap).length > 0
 
   const handleGenerate = async () => {
     setIsGenerating(true)
@@ -279,7 +280,7 @@ export function GroupMirrorHeroView({
         actions={
           <>
             {hasSubmitted ? null : (
-              <Button variant='primary' onClick={handleSubmit} disabled={submitting}>
+              <Button variant='primary' onClick={handleSubmit} disabled={submitting || !hasAnyAnswer}>
                 {submitting ? '提交中…' : '提交投票'}
               </Button>
             )}

@@ -97,6 +97,7 @@ export function LieDetectiveHeroView({
   }, [isRevealed])
 
   const [assistTags, setAssistTags] = useState(['', '', ''])
+  const [assistOpen, setAssistOpen] = useState([false, false, false])
   const [generatingRow, setGeneratingRow] = useState<number | null>(null)
   const [customStatements, setCustomStatements] = useState(['', '', ''])
   const [customLieIndex, setCustomLieIndex] = useState<number | null>(null)
@@ -149,7 +150,7 @@ export function LieDetectiveHeroView({
         <PhaseHeroCard
           phase='lie_detective'
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
-          title='等待所有玩家提交陈述…'
+          title={submitted ? '等待其他玩家提交…' : '写下你的三句话'}
           statusText={
             submitted
               ? '你的陈述已提交，等待其他玩家完成'
@@ -209,36 +210,56 @@ export function LieDetectiveHeroView({
                       autoHeight
                       disabled={isGeneratingStatements || generatingRow === index}
                     />
-                    <View className='lie-detective-hero__assist-row'>
-                      <Input
-                        className='lie-detective-hero__assist-input'
-                        placeholder='用标签生成一句话，多点几次会有不同的思路'
-                        value={assistTags[index]}
-                        onInput={(event) => updateAssistTag(index, event.detail.value)}
-                        maxlength={20}
-                        disabled={generatingRow === index}
-                      />
-                      <View
-                        className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
-                        role='button'
-                        aria-label={`根据第 ${index + 1} 个标签生成句子`}
-                        onClick={() => void handleAssistGenerate(index)}
-                      >
-                        <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
-                      </View>
+                    <View
+                      className='lie-detective-hero__assist-toggle'
+                      role='button'
+                      aria-label={`用标签生成第 ${index + 1} 句`}
+                      onClick={() =>
+                        setAssistOpen((current) => current.map((value, i) => (i === index ? !value : value)))
+                      }
+                    >
+                      <Text>{assistOpen[index] ? '收起标签生成' : '+ 标签生成'}</Text>
                     </View>
-                    {assistTagInvalid ? (
-                      <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
+                    {assistOpen[index] ? (
+                      <View className='lie-detective-hero__assist-row'>
+                        <Input
+                          className='lie-detective-hero__assist-input'
+                          placeholder='输入一个标签，生成一句话'
+                          value={assistTags[index]}
+                          onInput={(event) => updateAssistTag(index, event.detail.value)}
+                          maxlength={20}
+                          disabled={generatingRow === index}
+                        />
+                        <View
+                          className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
+                          role='button'
+                          aria-label={`根据第 ${index + 1} 个标签生成句子`}
+                          onClick={() => void handleAssistGenerate(index)}
+                        >
+                          <Text>{generatingRow === index ? '生成中…' : '生成'}</Text>
+                        </View>
+                      </View>
                     ) : null}
-                    <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
+                    {assistTagInvalid ? (
+                      <View role='alert' aria-live='polite'>
+                        <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
+                      </View>
+                    ) : null}
+                    {trimmed.length > 0 ? (
+                      <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
+                    ) : null}
                   </View>
                 )
               })}
               {hasDuplicateCustomStatements ? (
-                <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+                <View role='alert' aria-live='polite'>
+                  <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+                </View>
               ) : null}
               {customStatementsValid && customLieIndex === null ? (
-                <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+                <View role='alert' aria-live='polite'>
+                  <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+                </View>
               ) : null}
             </View>
           ) : null}
@@ -347,6 +368,10 @@ export function LieDetectiveHeroView({
                 key={stmt.index}
                 className={'lie-detective-hero__statement' + cardModifier}
                 style={flipIn ? { animationDelay: `${stmtPosition * 90}ms` } : undefined}
+                role='radio'
+                aria-checked={isSelected}
+                aria-disabled={isOwnTurn || isVoting || isRevealed}
+                aria-label={`第 ${stmt.index} 句：${stmt.text}`}
                 onClick={() => {
                   if (!isOwnTurn && !isVoting && !isRevealed) {
                     haptics('light')
@@ -377,12 +402,12 @@ export function LieDetectiveHeroView({
         </View>
 
         {showZeroMessage ? (
-          <View className='lie-detective-hero__edge-msg'>
+          <View className='lie-detective-hero__edge-msg' role='status' aria-live='polite'>
             <Text className='lie-detective-hero__edge-text'>大家都被悦仔骗了！</Text>
           </View>
         ) : null}
         {showHundredMessage ? (
-          <View className='lie-detective-hero__edge-msg'>
+          <View className='lie-detective-hero__edge-msg' role='status' aria-live='polite'>
             <Text className='lie-detective-hero__edge-text'>火眼金睛！全对！</Text>
           </View>
         ) : null}

@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { useDidShow, useRouter, useUnload } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter, useUnload, useShareAppMessage } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import type { SocialSessionState } from '@shared/socialIcebreaker'
@@ -601,6 +601,17 @@ export default function IcebreakerSessionPage() {
     enabled: (phase === 'recap' || phase === 'ended') && !!socialSessionId && !authLoading,
     staleTime: 0,
   })
+
+  // Native share sheet config (S12). Registered at page level — Taro's
+  // useShareAppMessage is a page lifecycle hook; the recap view only renders
+  // the openType='share' trigger.
+  useShareAppMessage(() => ({
+    title: recapQuery.data?.summary?.headline
+      ? `今晚破冰：${recapQuery.data.summary.headline}`
+      : '我们这桌刚破冰完，记下了今晚',
+    path: '/pages/index/index?source=icebreaker-recap-share',
+    imageUrl: cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp'),
+  }))
 
   const myVoteIndex = useMemo(() => {
     const currentPlayer = session?.lieDetectivePlayers?.[session.currentLieDetectivePlayerIndex ?? 0]

@@ -10,7 +10,7 @@ describe('Lie Detective unified entry', () => {
     const source = fs.readFileSync(phaseFile, 'utf8')
 
     expect(source).toContain("placeholder='输入一句话，或者试试标签生成'")
-    expect(source).toContain("placeholder='用标签生成一句话，多点几次会有不同的思路'")
+    expect(source).toContain("placeholder='输入一个标签，生成一句话'")
     expect(source).toContain('标签生成')
     expect(source).toContain('请换一个 20 字以内的友好标签')
     expect(source).not.toContain('V1 自填三句话')

@@ -113,7 +113,7 @@
 .icebreaker__recap-medal {
   @include flex-center;
   flex-direction: column;
-  gap: 6rpx;
+  gap: $spacing-xs;
   animation: recap-medal-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   opacity: 0;
 
@@ -314,61 +314,68 @@
   flex: 1;
 }
 
-// ── Share card (CardFlip) ────────────────────────────────────────
-.icebreaker__recap-share-wrap {
+// ── S12 keepsake ─────────────────────────────────────────────────
+.icebreaker__recap-keepsake {
+  @include card-premium;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
   width: 100%;
   max-width: 640rpx;
-  
-
-  .reveal-card-flip {
-    min-height: 220rpx;
-  }
-
-  .reveal-card-flip__face {
-    @include card-premium;
-    padding: $spacing-lg;
-    min-height: 220rpx;
-  }
+  padding: $spacing-lg;
 }
 
-.icebreaker__recap-share-front {
-  @include flex-center;
+.icebreaker__recap-keepsake-title {
+  @include type-heading;
+  color: $color-text-primary;
+  text-align: center;
+}
+
+.icebreaker__recap-keepsake-note {
+  @include type-body;
+  color: $color-text-secondary;
+  text-align: center;
+}
+
+.icebreaker__recap-keepsake-image {
+  width: 100%;
+  border-radius: $card-radius-sm;
+}
+
+.icebreaker__recap-keepsake-actions {
+  display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  min-height: 220rpx;
-  text-align: center;
-
-  &-emoji {
-    font-size: $font-size-3xl;
-    line-height: 1;
-  }
-
-  &-title {
-    @include type-heading;
-    color: $color-text-primary;
-  }
-
-  &-hint {
-    @include type-caption;
-    color: $color-text-muted;
-  }
+  width: 100%;
+  margin-top: $spacing-xs;
 }
 
-.icebreaker__recap-share-back {
-  @include flex-center;
-  flex-direction: column;
-  gap: $spacing-xs;
-  min-height: 220rpx;
-  text-align: center;
+.icebreaker__recap-keepsake-btn {
+  width: 100%;
+}
 
-  &-line {
-    @include type-body;
-    color: $color-text-secondary;
-  }
+// ── S12 collapsible 本局亮点 ─────────────────────────────────────
+.icebreaker__recap-details-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  min-height: 88rpx;
+  padding: 0 $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-radius: $card-radius-sm;
+  background: rgba($color-primary, 0.06);
+}
 
-  &-cta {
-    margin-top: $spacing-sm;
-  }
+.icebreaker__recap-details-toggle-text {
+  @include type-body-emphasis;
+  color: $color-text-primary;
+}
+
+.icebreaker__recap-details-toggle-icon {
+  @include type-body;
+  color: $color-text-secondary;
 }
 
 // ── Moment card CTA ──────────────────────────────────────────────

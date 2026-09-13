@@ -1,5 +1,5 @@
-import { View, Text } from '@tarojs/components'
-import { useCallback, useMemo, useState } from 'react'
+import { RootPortal, View, Text } from '@tarojs/components'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MiniScriptPresentedEvidence } from '@shared/socialIcebreaker'
 import type {
   MiniScriptCharacterPublic,
@@ -90,7 +90,28 @@ export function MiniScriptEvidenceTray({
 
   // Swipe-down-to-dismiss on the picker's non-scroll chrome (drag handle +
   // title) — the shared info-overlay-family gesture (N1).
-  const closePicker = useCallback(() => setPendingEvidence(null), [])
+  // Play the exit animation before unmounting (opening + closing phases).
+  const [pickerClosing, setPickerClosing] = useState(false)
+  const [revealClosing, setRevealClosing] = useState(false)
+  const pickerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const revealCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (pickerCloseTimerRef.current) clearTimeout(pickerCloseTimerRef.current)
+      if (revealCloseTimerRef.current) clearTimeout(revealCloseTimerRef.current)
+    },
+    [],
+  )
+
+  const closePicker = useCallback(() => {
+    setPickerClosing(true)
+    if (pickerCloseTimerRef.current) clearTimeout(pickerCloseTimerRef.current)
+    pickerCloseTimerRef.current = setTimeout(() => {
+      setPendingEvidence(null)
+      setPickerClosing(false)
+    }, 200)
+  }, [])
   const pullToDismiss = usePullToDismiss(closePicker)
 
   // Swipe-back safety: the picker/reaction card must not survive the WeChat
@@ -100,6 +121,8 @@ export function MiniScriptEvidenceTray({
       setPendingEvidence(null)
       setTargetSlot(null)
       setActiveReaction(null)
+      setPickerClosing(false)
+      setRevealClosing(false)
     }
   })
 
@@ -137,6 +160,21 @@ export function MiniScriptEvidenceTray({
   const reactionTargetLabel = activeReaction
     ? characters.find((c) => c.slotIndex + 1 === activeReaction.targetRoleSlot)?.roleLabel ?? 'TA'
     : ''
+
+  const closeReveal = useCallback(() => {
+    if (!activeReaction) return
+    haptics('light')
+    // Early release: the confirm-read POST lands readConfirmedAt server-side,
+    // so every other member's next poll carries the reaction without waiting
+    // out the server-side 8s gate.
+    onConfirmRead?.(activeReaction.evidenceId, activeReaction.targetRoleSlot)
+    setRevealClosing(true)
+    if (revealCloseTimerRef.current) clearTimeout(revealCloseTimerRef.current)
+    revealCloseTimerRef.current = setTimeout(() => {
+      setActiveReaction(null)
+      setRevealClosing(false)
+    }, 200)
+  }, [activeReaction, onConfirmRead])
 
   return (
     <View className='miniscript-evidence'>
@@ -209,7 +247,8 @@ export function MiniScriptEvidenceTray({
       </View>
 
       {pendingEvidence ? (
-        <View className='miniscript-evidence__picker-mask' catchMove onClick={closePicker}>
+        <RootPortal>
+        <View className={`miniscript-evidence__picker-mask${pickerClosing ? ' miniscript-evidence__picker-mask--out' : ''}`} catchMove onClick={closePicker}>
           <View
             className='miniscript-evidence__picker'
             onClick={(e) => {
@@ -261,31 +300,35 @@ export function MiniScriptEvidenceTray({
             >
               {isPresenting ? '出示中…' : '出示给 TA'}
             </Button>
+            <View
+              className='phase-hero-card__ghost-link'
+              role='button'
+              aria-label='取消出示'
+              onClick={closePicker}
+            >
+              <Text>取消</Text>
+            </View>
           </View>
         </View>
+        </RootPortal>
       ) : null}
 
       {activeReaction ? (
-        <View className='miniscript-evidence__reveal-mask' catchMove>
+        <RootPortal>
+        <View className={`miniscript-evidence__reveal-mask${revealClosing ? ' miniscript-evidence__reveal-mask--out' : ''}`} catchMove>
           <View className='miniscript-evidence__reveal'>
             <Text className='miniscript-evidence__reveal-target'>{reactionTargetLabel} 的反应</Text>
             <Text className='miniscript-evidence__reveal-text'>「{activeReaction.reactionText}」</Text>
             <Text className='miniscript-evidence__reveal-guide'>大声读出来！大家都在听。</Text>
             <Button
               variant='primary'
-              onClick={() => {
-                haptics('light')
-                // Early release: the confirm-read POST lands readConfirmedAt
-                // server-side, so every other member's next poll carries the
-                // reaction without waiting out the server-side 8s gate.
-                onConfirmRead?.(activeReaction.evidenceId, activeReaction.targetRoleSlot)
-                setActiveReaction(null)
-              }}
+              onClick={closeReveal}
             >
               已读完
             </Button>
           </View>
         </View>
+        </RootPortal>
       ) : null}
     </View>
   )

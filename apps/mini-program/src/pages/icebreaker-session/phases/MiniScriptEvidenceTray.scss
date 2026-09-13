@@ -146,6 +146,15 @@
     animation: fade-slide-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  // Exit: mask fades, sheet slides down.
+  &__picker-mask--out {
+    animation: overlay-fade-out 200ms ease forwards;
+
+    .miniscript-evidence__picker {
+      animation: sheet-slide-down 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  }
+
   // N1: drag handle (visual affordance for the swipe-down dismiss gesture) —
   // same chrome as MiniScriptClueDrawer / TablemateDetailSheet handles.
   &__picker-handle {
@@ -189,6 +198,15 @@
     animation: ms-content-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  // Exit: mask fades, card slides down.
+  &__reveal-mask--out {
+    animation: overlay-fade-out 200ms ease forwards;
+
+    .miniscript-evidence__reveal {
+      animation: sheet-slide-down 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  }
+
   &__reveal-target {
     font-size: $font-size-xs;
     color: $color-text-tertiary-on-light;
@@ -220,5 +238,12 @@
 @media (prefers-reduced-motion: reduce) {
   .miniscript-evidence__pending {
     animation: none;
+  }
+
+  .miniscript-evidence__picker-mask--out,
+  .miniscript-evidence__picker-mask--out .miniscript-evidence__picker,
+  .miniscript-evidence__reveal-mask--out,
+  .miniscript-evidence__reveal-mask--out .miniscript-evidence__reveal {
+    animation-duration: 1ms;
   }
 }

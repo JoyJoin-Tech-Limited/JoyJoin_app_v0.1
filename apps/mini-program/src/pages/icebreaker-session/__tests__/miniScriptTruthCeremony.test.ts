@@ -18,6 +18,11 @@ const heroSource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.tsx'),
   'utf8',
 )
+// 2026-09-10: ceremony + honor content moved to MiniScriptSessionViews.tsx.
+const viewSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptSessionViews.tsx'),
+  'utf8',
+)
 const heroStyles = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.scss'),
   'utf8',
@@ -164,19 +169,19 @@ describe('host-paced ceremony beats (locked Q14)', () => {
   })
 
   it('renders the host 下一段 CTA and the player waiting hint on held beats', () => {
-    expect(heroSource).toContain('TRUTH_CEREMONY_HOST_NEXT_CTA')
-    expect(heroSource).toContain('TRUTH_CEREMONY_WAITING_HOST_HINT')
-    expect(heroSource).toContain('onAdvanceCeremony')
-    expect(heroSource).toContain('miniscript-hero__ceremony-hold')
-    expect(heroSource).toContain('miniscript-hero__ceremony-next')
-    expect(heroSource).toContain('miniscript-hero__ceremony-waiting')
+    expect(viewSource).toContain('TRUTH_CEREMONY_HOST_NEXT_CTA')
+    expect(viewSource).toContain('TRUTH_CEREMONY_WAITING_HOST_HINT')
+    expect(viewSource).toContain('onAdvanceCeremony')
+    expect(viewSource).toContain('miniscript-hero__ceremony-hold')
+    expect(viewSource).toContain('miniscript-hero__ceremony-next')
+    expect(viewSource).toContain('miniscript-hero__ceremony-waiting')
     // N8 (a11y): held beats carry no button role on the container — tap is a
     // no-op there, so role/tap advance only exist once the beat is revealed.
-    expect(heroSource).toContain("role={revealed ? 'button' : undefined}")
+    expect(viewSource).toContain("role={revealed ? 'button' : undefined}")
     // The hold block (host CTA) is a SIBLING of the tap-to-continue stage,
     // never nested inside the button region (button-in-button fix).
-    const stageIndex = heroSource.indexOf("className='miniscript-hero__ceremony-stage'")
-    const holdIndex = heroSource.indexOf("className='miniscript-hero__ceremony-hold'")
+    const stageIndex = viewSource.indexOf("className='miniscript-hero__ceremony-stage'")
+    const holdIndex = viewSource.indexOf("className='miniscript-hero__ceremony-hold'")
     expect(stageIndex).toBeGreaterThan(-1)
     expect(holdIndex).toBeGreaterThan(stageIndex)
     // Stage haptics wait for the server beat to land.
@@ -259,8 +264,8 @@ describe('ceremony view wiring (structural)', () => {
 
 describe('honor card polish (structural)', () => {
   it('renders honor names as JoyJoinIcon cards, never raw emoji', () => {
-    expect(heroSource).toContain("<JoyJoinIcon emoji='🔍' size={32} />")
-    expect(heroSource).toContain('miniscript-hero__honor-card')
+    expect(viewSource).toContain("<JoyJoinIcon emoji='🔍' size={32} />")
+    expect(viewSource).toContain('miniscript-hero__honor-card')
   })
 
   it('staggers the honor-card pop-in with brand entrance easing', () => {
