@@ -72,7 +72,7 @@ Source of truth: `apps/server/src/ai/socialModelRouter.ts`
 | `generateConversationTopics` | `apps/server/src/conversationTopicsService.ts` | DeepSeek | Flash (thinking disabled) | Group conversation copy |
 | `generatePairExplanation` | `apps/server/src/matchExplanationService.ts` | DeepSeek | Flash (thinking disabled); Pro-thinking only when `ENABLE_PRO_MATCH_EXPLANATIONS=true` (budget-gated) | Match narrative copy |
 | `generateIceBreakers` | `apps/server/src/matchExplanationService.ts` | DeepSeek | Flash (thinking disabled) | Match narrative copy |
-| `generateMiniScriptFramework` | `apps/server/src/socialIcebreakerMiniScriptAI.ts` | DeepSeek | Flash (thinking disabled) | 迷你剧本杀 framework JSON, `max_tokens: 4096` |
+| `generateMiniScriptFramework` | `apps/server/src/lib/miniscriptAgent.ts` | DeepSeek | Flash (thinking disabled) | 迷你剧本杀 framework JSON, `max_tokens: 4096` |
 | `analyzeComplexSemantics` | `apps/server/src/inference/hybridSemantic.ts` | DeepSeek | Flash-thinking + `reasoning_effort: max` | **Forced** to DeepSeek regardless of mode; the only thinking-tier social function |
 
 ### Caller behavior

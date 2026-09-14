@@ -14,6 +14,7 @@ const {
   couponsTable,
   userCouponsTable,
   matchHistoryTable,
+  assessmentSessionsTable,
 } = vi.hoisted(() => ({
   mockState: {
     userInterestsByUserId: new Map<string, any>(),
@@ -38,6 +39,10 @@ const {
   couponsTable: Symbol('coupons'),
   userCouponsTable: Symbol('userCoupons'),
   matchHistoryTable: Symbol('matchHistory'),
+  // W6-F: `matchEventPool` now preloads reported trait vectors whenever the
+  // X-variance dispersion nudge is active (env default ON), so the schema mock
+  // must expose assessmentSessions even when the item5/W2 gates are off.
+  assessmentSessionsTable: Symbol('assessmentSessions'),
 }));
 
 vi.mock('@shared/schema', () => ({
@@ -53,12 +58,16 @@ vi.mock('@shared/schema', () => ({
   coupons: couponsTable,
   userCoupons: userCouponsTable,
   matchHistory: matchHistoryTable,
+  assessmentSessions: assessmentSessionsTable,
 }));
 
 vi.mock('drizzle-orm', () => ({
   eq: (_field: unknown, value: unknown) => ({ type: 'eq', value }),
   and: (...conditions: unknown[]) => ({ type: 'and', conditions }),
   inArray: (_field: unknown, values: unknown[]) => ({ type: 'inArray', values }),
+  // W6-F: `preloadLatestTraitVectors` (now always reached when the nudge is on)
+  // chains `.orderBy(desc(assessmentSessions.completedAt))`.
+  desc: (field: unknown) => ({ type: 'desc', field }),
   sql: () => ({}),
 }));
 
@@ -66,16 +75,17 @@ function makeAwaitable(value: unknown) {
   return {
     limit: () => Promise.resolve(value),
     returning: () => Promise.resolve(value),
+    // W6 AC-W6.6a: the match-history preload now chains .orderBy(); keep the
+    // mocked query builder chainable and resolve the same fixture.
+    orderBy: () => Promise.resolve(value),
     then: (resolve: (v: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(value).then(resolve, reject),
   };
 }
 
-vi.mock('../db', () => ({
-  db: {
-    select: () => ({
-      from: (table: unknown) => {
-        const runWhere = (condition: any) => {
+vi.mock('../db', () => {
+  const buildFrom = (table: unknown) => {
+    const runWhere = (condition: any) => {
           if (table === eventPoolsTable) {
             return makeAwaitable(mockState.poolRow ? [mockState.poolRow] : []);
           }
@@ -103,14 +113,18 @@ vi.mock('../db', () => ({
             throw new Error('coupon lookup failed');
           }
           return makeAwaitable([]);
-        };
-        // innerJoin chains (used by matchEventPool's registration query) resolve
-        // back to the same where() logic — additive, existing callers unaffected.
-        const joinable: any = { where: runWhere };
-        joinable.innerJoin = () => joinable;
-        return joinable;
-      },
-    }),
+    };
+    // innerJoin chains (used by matchEventPool's registration query) resolve
+    // back to the same where() logic — additive, existing callers unaffected.
+    const joinable: any = { where: runWhere };
+    joinable.innerJoin = () => joinable;
+    return joinable;
+  };
+  return {
+    db: {
+    select: () => ({ from: buildFrom }),
+    // perf-W4: preloadLatestTraitVectors uses selectDistinctOn(...).from(...).
+    selectDistinctOn: () => ({ from: buildFrom }),
     update: (_table: unknown) => ({
       set: (values: any) => {
         mockState.updateSetCalls.push(values);
@@ -133,8 +147,9 @@ vi.mock('../db', () => ({
       },
     },
     transaction: (...args: any[]) => mockState.transactionImpl(...args),
-  },
-}));
+    },
+  };
+});
 
 vi.mock('../wsService', () => ({
   wsService: { broadcastToUser: vi.fn() },
@@ -181,6 +196,7 @@ const {
   countDisclosedGenders,
   groupSatisfiesGenderFloor,
   groupHasExactGenderBalance,
+  CHEMISTRY_UNKNOWN_ARCHETYPE_SCORE,
 } = await import('../poolMatchingService');
 import type { UserWithProfile, MatchGroup } from '../poolMatchingService';
 import { logger } from '../lib/logger';
@@ -865,8 +881,10 @@ describe('match history never-meet sentinel (MATCH_NEVER_MEET_SENTINEL, default 
     ['b', { topics: [], heatMap: {} }],
   ]) as any;
 
-  const historyLookup = (wouldMeetAgain: boolean | null) =>
-    new Map<string, { wouldMeetAgain: boolean | null }>([['a|b', { wouldMeetAgain }]]);
+  // W6 AC-W6.6b: the hard-skip policy is two-strike — the signal now carries
+  // `negativeCount`, so a single negative no longer hard-skips.
+  const historyLookup = (wouldMeetAgain: boolean | null, negativeCount = wouldMeetAgain === false ? 1 : 0) =>
+    new Map<string, any>([['a|b', { wouldMeetAgain, negativeCount, latestNegativeAt: null }]]);
 
   it('scores normally with the flag OFF even when history says wouldMeetAgain=false', async () => {
     const a = makeGenderUser('a', '女性');
@@ -874,7 +892,7 @@ describe('match history never-meet sentinel (MATCH_NEVER_MEET_SENTINEL, default 
 
     const withHistory = await calculatePairScore(
       a, b, emptyInterestsCache, undefined, undefined, false, undefined, undefined,
-      historyLookup(false), false,
+      historyLookup(false, 2), false,
     );
     // Baseline uses the same explicit legacy path (semanticSimilarityEnabled=false)
     // so the comparison isolates the history effect.
@@ -884,13 +902,25 @@ describe('match history never-meet sentinel (MATCH_NEVER_MEET_SENTINEL, default 
     expect(withHistory).toBe(noHistory);
   });
 
-  it('returns the -1 hard-skip sentinel with the flag ON when history says wouldMeetAgain=false', async () => {
+  it('flag ON: a SINGLE negative does NOT hard-skip (two-strike policy)', async () => {
     const a = makeGenderUser('a', '女性');
     const b = makeGenderUser('b', '男性');
 
     const score = await calculatePairScore(
       a, b, emptyInterestsCache, undefined, undefined, false, undefined, undefined,
-      historyLookup(false), true,
+      historyLookup(false, 1), true,
+    );
+
+    expect(score).toBeGreaterThanOrEqual(0);
+  });
+
+  it('flag ON: TWO in-window negatives trigger the -1 hard skip', async () => {
+    const a = makeGenderUser('a', '女性');
+    const b = makeGenderUser('b', '男性');
+
+    const score = await calculatePairScore(
+      a, b, emptyInterestsCache, undefined, undefined, false, undefined, undefined,
+      historyLookup(false, 2), true,
     );
 
     expect(score).toBe(-1);
@@ -939,13 +969,16 @@ describe('matchEventPool threads the never-meet sentinel flag (read once per run
       maxGroupSize: 6,
       targetGroups: 1,
     };
-    // Every pairwise combination reports wouldMeetAgain=false.
+    // Every pairwise combination reports TWO negative meetings (two rows per
+    // pair) so the W6 two-strike policy hard-skips them. A single negative row
+    // would NOT hard-skip.
     const ids = users.map((u) => u.userId);
     mockState.matchHistoryRows = [];
     for (let i = 0; i < ids.length; i++) {
       for (let j = i + 1; j < ids.length; j++) {
         const [user1Id, user2Id] = [ids[i], ids[j]].sort();
-        mockState.matchHistoryRows.push({ user1Id, user2Id, wouldMeetAgain: false });
+        mockState.matchHistoryRows.push({ user1Id, user2Id, wouldMeetAgain: false, matchedAt: new Date() });
+        mockState.matchHistoryRows.push({ user1Id, user2Id, wouldMeetAgain: false, matchedAt: new Date() });
       }
     }
   }
@@ -969,12 +1002,90 @@ describe('matchEventPool threads the never-meet sentinel flag (read once per run
     expect(getFeatureFlag).toHaveBeenCalledWith('matchNeverMeetSentinel', false);
   });
 
-  it('flag ON: the -1 sentinel hard-skips every flagged pair, so no group forms', async () => {
+  it('flag ON: two-strike negatives hard-skip every flagged pair, so no group forms', async () => {
     seedFourUserPool();
     mockSentinelFlag(true);
 
     const groups = await matchEventPool('pool-sentinel');
 
     expect(groups).toHaveLength(0);
+  });
+});
+
+// =============================================================================
+// W6 AC-W6.5 — unknown archetype in the production read path (no koala coercion)
+// =============================================================================
+describe('W6 AC-W6.5 unknown archetype read path', () => {
+  // Four eligible users with an explicit, otherwise-identical profile. The only
+  // variable is `archetype`, so `avgChemistryScore` isolates the chemistry path.
+  function seedUnknownArchetypePool(archetype: string | null) {
+    const users = ['u0', 'u1', 'u2', 'u3'].map((id, i) =>
+      makeGenderUser(id, i % 2 === 0 ? '男性' : '女性', {
+        archetype,
+        secondaryArchetype: null,
+      }),
+    );
+    mockState.registrations = users;
+    for (const u of users) {
+      mockState.userInterestsByUserId.set(u.userId, {
+        userId: u.userId,
+        selections: [
+          { topicId: 't1', heat: 25 },
+          { topicId: 't2', heat: 10 },
+        ],
+      });
+    }
+    mockState.poolRow = {
+      id: 'pool-unknown-archetype',
+      title: 'Unknown Archetype Pool',
+      eventType: '饭局',
+      city: '深圳',
+      dateTime: new Date(),
+      createdBy: 'host-1',
+      minGroupSize: 4,
+      maxGroupSize: 6,
+      targetGroups: 1,
+    };
+  }
+
+  it('null archetypes are neutral 50 (not the koala 90) and the unknown log fires once per run', async () => {
+    seedUnknownArchetypePool(null);
+    const infoSpy = vi.spyOn(logger, 'info');
+
+    const groups = await matchEventPool('pool-unknown-archetype');
+
+    expect(groups).toHaveLength(1);
+    // The read path must leave archetype null so the resolver applies the
+    // explicit neutral. A koala substitution here would report 78 (mock matrix
+    // returns 90 for koala×koala), so `toBe(50)` is the anti-koala assertion.
+    expect(groups[0].avgChemistryScore).toBe(CHEMISTRY_UNKNOWN_ARCHETYPE_SCORE);
+
+    const unknownLogs = infoSpy.mock.calls.filter(
+      (call) => call[0] === '[Pool Matching] unknown archetypes treated as neutral chemistry',
+    );
+    // Exactly once per run — never once per pair.
+    expect(unknownLogs).toHaveLength(1);
+    expect(unknownLogs[0][1]).toMatchObject({
+      poolId: 'pool-unknown-archetype',
+      eligibleCount: 4,
+      unknownCount: 4,
+    });
+    expect((unknownLogs[0][1] as { sampleUserIds: string[] }).sampleUserIds).toEqual([
+      'u0',
+      'u1',
+      'u2',
+      'u3',
+    ]);
+    infoSpy.mockRestore();
+  });
+
+  it('control: known koala archetypes score through the matrix, proving the field detects substitution', async () => {
+    seedUnknownArchetypePool('koala');
+
+    const groups = await matchEventPool('pool-unknown-archetype');
+
+    expect(groups).toHaveLength(1);
+    // Koala×koala resolves through the (mocked) matrix → strictly above neutral.
+    expect(groups[0].avgChemistryScore).toBeGreaterThan(CHEMISTRY_UNKNOWN_ARCHETYPE_SCORE);
   });
 });

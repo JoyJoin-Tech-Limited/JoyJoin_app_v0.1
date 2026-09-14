@@ -716,6 +716,8 @@ async function captureLandingLegalHint() {
 }
 register('landing-legal-hint', captureLandingLegalHint)
 register('icebreaker-micro-challenge', () => captureIcebreaker('mock-micro_challenge'))
+register('icebreaker-opt-out', () => captureIcebreaker('mock-micro_challenge_optout', '.phase-opt-out'))
+register('icebreaker-opted-out', () => captureIcebreaker('mock-micro_challenge_opted_out', '.phase-opt-out'))
 register('icebreaker-lie-detective', () => captureIcebreaker('mock-lie_detective'))
 register('icebreaker-auction', () => captureIcebreaker('mock-auction'))
 register('icebreaker-personality-dice', () => captureIcebreaker('mock-personality_dice'))

@@ -658,6 +658,7 @@ async function runAnalysisGeneration(
         model: getDeepseekModel('flash'),
         latencyMs: 0,
         promptVersion: XIAOYUE_CRAFT_PROMPT_VERSION,
+        enforceReviewVocab: true,
       }
     );
 

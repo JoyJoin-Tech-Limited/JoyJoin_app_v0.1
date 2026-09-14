@@ -3,8 +3,23 @@ import {
   compileAgentRunPlan,
   getBudgetForTier,
   getNonCorePoolForTier,
+  buildArchetypeMix,
+  deriveArchetypeComposition,
+  deriveLieDetectiveMinutes,
+  applyRosterDerivedTiming,
+  applyPeakDecompression,
+  ensureNoJudgmentClosing,
+  normalizeRunPlanTiming,
+  isJudgmentPhase,
+  LIE_DETECTIVE_MINUTES_PER_PLAYER,
+  LIE_DETECTIVE_MIN_MINUTES,
+  LIE_DETECTIVE_MAX_MINUTES,
   type CompilationContext,
+  type RunPlanTemplate,
 } from '../runPlanCompiler';
+import { getPhaseModule } from '../phaseRegistry';
+import { GLOW_RUN_PLAN, BLAZE_RUN_PLAN, BREEZE_RUN_PLAN } from '../socialIcebreakerRunPlans';
+import { createRunPlan } from '../phaseModule';
 import type { TierMachineId } from '../socialIcebreakerTierManifest';
 import type { SocialIcebreakerPhase } from '../socialIcebreaker';
 
@@ -19,6 +34,7 @@ const ALL_PHASES: SocialIcebreakerPhase[] = [
   'quip_battle',
   'undercover_word',
   'group_mirror',
+  'speed_friending',
   'mini_script',
   'recap',
 ];
@@ -549,3 +565,267 @@ function getEnergyArc(phase: SocialIcebreakerPhase): string {
   };
   return map[phase] ?? 'unknown';
 }
+
+// ─── Composition rules (W5, gm-debrief) ─────────────────────────────────────
+
+describe('archetype composition rules (W5)', () => {
+  it('buildArchetypeMix counts roster archetypes and returns undefined when empty', () => {
+    expect(buildArchetypeMix([])).toBeUndefined();
+    expect(
+      buildArchetypeMix([
+        { archetype: '社牛柯基' },
+        { archetype: '社牛柯基' },
+        { archetype: '慢热龟' },
+      ]),
+    ).toEqual({ 社牛柯基: 2, 慢热龟: 1 });
+    expect(buildArchetypeMix([{}, { archetype: '  ' }])).toBeUndefined();
+  });
+
+  it('deriveArchetypeComposition flags shy-heavy when low-energy archetypes are the majority', () => {
+    const shy = deriveArchetypeComposition({ 慢热龟: 2, 小透明猫: 2 });
+    expect(shy?.shyHeavy).toBe(true);
+    expect(shy?.outgoingHeavy).toBe(false);
+    expect(shy?.lowEnergyCount).toBe(4);
+
+    const lively = deriveArchetypeComposition({ 社牛柯基: 2, 小太阳鸡: 2 });
+    expect(lively?.outgoingHeavy).toBe(true);
+    expect(lively?.shyHeavy).toBe(false);
+    expect(deriveArchetypeComposition(undefined)).toBeNull();
+  });
+
+  it('AC-W5.5: shy-heavy legacy compilation injects speed_friending', () => {
+    const plan = compileAgentRunPlan({
+      tier: 'blaze',
+      playerCount: 4,
+      enabledPhases: ALL_ENABLED,
+      vibe: 'balanced',
+      archetypeMix: { 慢热龟: 2, 小透明猫: 2 },
+    });
+    const phases = plan.segments.map((s) => s.phase);
+    expect(phases).toContain('speed_friending');
+
+    const baseline = compileAgentRunPlan({
+      tier: 'blaze',
+      playerCount: 4,
+      enabledPhases: ALL_ENABLED,
+      vibe: 'balanced',
+    });
+    const baselineFull = baseline.segments.filter((s) => s.participation === 'full').length;
+    const composedFull = plan.segments.filter((s) => s.participation === 'full').length;
+    expect(composedFull).toBeLessThanOrEqual(baselineFull);
+  });
+
+  it('AC-W5.1: template path prefers pass_ok over full for a shy-heavy table', () => {
+    const template: RunPlanTemplate = {
+      vibe: 'balanced',
+      tier: 'breeze',
+      playerCountMin: 2,
+      playerCountMax: 12,
+      coreWarmupMinutes: 10,
+      coreMicroChallengeMinutes: 8,
+      coreRecapMinutes: 5,
+      slots: [
+        {
+          slotType: 'deep_chat',
+          eligiblePhases: ['lie_detective', 'personality_dice'],
+          allocatedMinutes: 12,
+        },
+      ],
+    };
+    const baseline = resolveTemplateSlots('balanced', 'breeze', 4, ALL_ENABLED, template);
+    const shy = resolveTemplateSlots(
+      'balanced',
+      'breeze',
+      4,
+      ALL_ENABLED,
+      template,
+      deriveArchetypeComposition({ 慢热龟: 2, 小透明猫: 2 }),
+    );
+
+    expect(shy.map((s) => s.phase)).toContain('personality_dice');
+    const baselineFull = baseline.filter((s) => s.participation === 'full').length;
+    const shyFull = shy.filter((s) => s.participation === 'full').length;
+    expect(shyFull).toBeLessThan(baselineFull);
+  });
+
+  it('flag-off (no archetypeMix) leaves phase selection byte-identical', () => {
+    const base = compileAgentRunPlan({
+      tier: 'blaze',
+      playerCount: 4,
+      enabledPhases: ALL_ENABLED,
+      vibe: 'balanced',
+    });
+    const withUndefinedMix = compileAgentRunPlan({
+      tier: 'blaze',
+      playerCount: 4,
+      enabledPhases: ALL_ENABLED,
+      vibe: 'balanced',
+      archetypeMix: undefined,
+    });
+    expect(withUndefinedMix.segments.map((s) => s.phase)).toEqual(
+      base.segments.map((s) => s.phase),
+    );
+  });
+});
+
+// ─── W9 (gm-debrief): re-timing & placement ────────────────────────────────
+
+const isPeak = (phase: SocialIcebreakerPhase) => getPhaseModule(phase).energyArc === 'peak';
+
+describe('W9 — roster-derived timing, decompression, placement', () => {
+  describe('AC-W9.1: anonymous judgment is not the closing act', () => {
+    it('group_mirror is appreciation-only, never a judgment closer', () => {
+      expect(getPhaseModule('group_mirror').perceptionTone).toBe('appreciation');
+      expect(isJudgmentPhase('group_mirror')).toBe(false);
+    });
+
+    it('keeps group_mirror as the warm falling closer (energy-arc consistency)', () => {
+      const plan = compileAgentRunPlan(makeCtx('glow', WITH_GROUP_MIRROR));
+      const phases = plan.segments.map((s) => s.phase);
+      const penultimate = plan.segments[plan.segments.length - 2];
+      expect(penultimate.phase).toBe('group_mirror');
+      expect(getPhaseModule('group_mirror').energyArc).toBe('falling');
+      expect(isJudgmentPhase(penultimate.phase)).toBe(false);
+      expect(phases[phases.length - 1]).toBe('recap');
+    });
+
+    it('leaves an appreciation closer untouched (guard is forward-defense)', () => {
+      const plan = createRunPlan(
+        [
+          { phase: 'warmup', allocatedMinutes: 8, energyWeight: 1 },
+          { phase: 'micro_challenge', allocatedMinutes: 8, energyWeight: 2 },
+          { phase: 'group_mirror', allocatedMinutes: 10, energyWeight: 1 },
+          { phase: 'recap', allocatedMinutes: 5, energyWeight: 1 },
+        ],
+        'test',
+      );
+      const guarded = ensureNoJudgmentClosing(plan.segments);
+      expect(guarded.map((s) => s.phase)).toEqual([
+        'warmup',
+        'micro_challenge',
+        'group_mirror',
+        'recap',
+      ]);
+    });
+  });
+
+  describe('AC-W9.2: lie_detective duration derives from playerCount', () => {
+    it('floors at 15 minutes for a 6-player table and scales by 2.5 min/player', () => {
+      expect(deriveLieDetectiveMinutes(6)).toBeGreaterThanOrEqual(15);
+      expect(deriveLieDetectiveMinutes(6)).toBe(15);
+      expect(deriveLieDetectiveMinutes(8)).toBe(
+        Math.ceil(8 * LIE_DETECTIVE_MINUTES_PER_PLAYER),
+      );
+      expect(deriveLieDetectiveMinutes(20)).toBe(LIE_DETECTIVE_MAX_MINUTES);
+      expect(deriveLieDetectiveMinutes(2)).toBe(LIE_DETECTIVE_MIN_MINUTES);
+    });
+
+    it('lifts sub-floor allocations and preserves the tier total', () => {
+      const segments = [
+        { phase: 'warmup' as const, allocatedMinutes: 8, energyWeight: 1 },
+        { phase: 'micro_challenge' as const, allocatedMinutes: 8, energyWeight: 2 },
+        { phase: 'lie_detective' as const, allocatedMinutes: 10, energyWeight: 3 },
+        { phase: 'auction' as const, allocatedMinutes: 20, energyWeight: 3 },
+        { phase: 'recap' as const, allocatedMinutes: 5, energyWeight: 1 },
+      ];
+      const before = segments.reduce((sum, s) => sum + s.allocatedMinutes, 0);
+      const after = applyRosterDerivedTiming(segments, 6);
+      const lie = after.find((s) => s.phase === 'lie_detective');
+      expect(lie?.allocatedMinutes).toBe(15);
+      expect(after.reduce((sum, s) => sum + s.allocatedMinutes, 0)).toBe(before);
+      // Donor never drops below the floor.
+      expect(after.find((s) => s.phase === 'auction')?.allocatedMinutes).toBe(15);
+    });
+
+    it('gives every tier ≥15 min for a 6-player roster', () => {
+      for (const tier of ['breeze', 'glow', 'blaze'] as const) {
+        const plan = compileAgentRunPlan(makeCtx(tier, ALL_ENABLED, 6));
+        const lie = plan.segments.find((s) => s.phase === 'lie_detective');
+        expect(lie?.allocatedMinutes).toBeGreaterThanOrEqual(15);
+      }
+    });
+
+    it('hardcoded fallback plans carry the 6-player floor', () => {
+      for (const plan of [BREEZE_RUN_PLAN, GLOW_RUN_PLAN, BLAZE_RUN_PLAN]) {
+        const lie = plan.segments.find((s) => s.phase === 'lie_detective');
+        expect(lie?.allocatedMinutes).toBeGreaterThanOrEqual(15);
+        expect(plan.totalMinutes).toBe(
+          plan.segments.reduce((sum, s) => sum + s.allocatedMinutes, 0),
+        );
+      }
+    });
+  });
+
+  describe('AC-W9.3: no two consecutive peak phases', () => {
+    it('compiles blaze with zero adjacent peaks', () => {
+      const plan = compileAgentRunPlan(makeCtx('blaze', ALL_ENABLED, 6));
+      const phases = plan.segments.map((s) => s.phase);
+      for (let i = 1; i < phases.length; i++) {
+        expect(isPeak(phases[i - 1]) && isPeak(phases[i])).toBe(false);
+      }
+    });
+
+    it('keeps every template combo free of adjacent peaks', () => {
+      for (const vibe of ['deep_chat', 'balanced', 'play_fun'] as const) {
+        for (const tier of ['breeze', 'glow', 'blaze'] as const) {
+          const segments = resolveTemplateSlots(vibe, tier, 6, ALL_PHASES);
+          const phases = segments.map((s) => s.phase);
+          for (let i = 1; i < phases.length; i++) {
+            expect(isPeak(phases[i - 1]) && isPeak(phases[i])).toBe(false);
+          }
+        }
+      }
+    });
+
+    it('decompresses an adjacent peak pair without touching core/recap', () => {
+      const segments = [
+        { phase: 'warmup' as const, allocatedMinutes: 8, energyWeight: 1 },
+        { phase: 'micro_challenge' as const, allocatedMinutes: 8, energyWeight: 2 },
+        { phase: 'lie_detective' as const, allocatedMinutes: 15, energyWeight: 3 },
+        { phase: 'undercover_word' as const, allocatedMinutes: 12, energyWeight: 3 },
+        { phase: 'auction' as const, allocatedMinutes: 15, energyWeight: 3 },
+        { phase: 'quip_battle' as const, allocatedMinutes: 10, energyWeight: 2 },
+        { phase: 'personality_dice' as const, allocatedMinutes: 10, energyWeight: 2 },
+        { phase: 'recap' as const, allocatedMinutes: 5, energyWeight: 1 },
+      ];
+      const out = applyPeakDecompression(segments);
+      expect(out[0].phase).toBe('warmup');
+      expect(out[out.length - 1].phase).toBe('recap');
+      const phases = out.map((s) => s.phase);
+      for (let i = 1; i < phases.length; i++) {
+        expect(isPeak(phases[i - 1]) && isPeak(phases[i])).toBe(false);
+      }
+    });
+
+    it('is a byte-identical no-op when there is no adjacency', () => {
+      const segments = [
+        { phase: 'warmup' as const, allocatedMinutes: 8, energyWeight: 1 },
+        { phase: 'micro_challenge' as const, allocatedMinutes: 8, energyWeight: 2 },
+        { phase: 'personality_dice' as const, allocatedMinutes: 12, energyWeight: 2 },
+        { phase: 'lie_detective' as const, allocatedMinutes: 15, energyWeight: 3 },
+        { phase: 'group_mirror' as const, allocatedMinutes: 10, energyWeight: 1 },
+        { phase: 'recap' as const, allocatedMinutes: 5, energyWeight: 1 },
+      ];
+      expect(applyPeakDecompression(segments)).toEqual(segments);
+    });
+  });
+
+  describe('normalizeRunPlanTiming', () => {
+    it('recomputes totalMinutes after re-timing and reordering', () => {
+      const plan = createRunPlan(
+        [
+          { phase: 'warmup', allocatedMinutes: 8, energyWeight: 1 },
+          { phase: 'micro_challenge', allocatedMinutes: 8, energyWeight: 2 },
+          { phase: 'lie_detective', allocatedMinutes: 10, energyWeight: 3 },
+          { phase: 'recap', allocatedMinutes: 5, energyWeight: 1 },
+        ],
+        'test',
+      );
+      const normalized = normalizeRunPlanTiming(plan, 6);
+      expect(normalized.segments.find((s) => s.phase === 'lie_detective')?.allocatedMinutes).toBe(15);
+      expect(normalized.totalMinutes).toBe(
+        normalized.segments.reduce((sum, s) => sum + s.allocatedMinutes, 0),
+      );
+    });
+  });
+});

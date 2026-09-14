@@ -60,6 +60,7 @@ const ADMIN_ROUTE_FILES = [
   'apps/server/src/routes/domains/adminOperations.ts',
   'apps/server/src/routes/domains/adminPoolRegistrations.ts',
   'apps/server/src/routes/domains/adminReferrals.ts',
+  'apps/server/src/routes/domains/adminSocialIcebreaker.ts',
   'apps/server/src/routes/domains/adminUsers.ts',
   'apps/server/src/routes/domains/aiServices.ts',
   'apps/server/src/routes/domains/assessmentResults.ts',
@@ -139,6 +140,9 @@ describe('Admin RBAC coverage audit', () => {
     expect(summaryByFile['apps/server/src/adminAuth.ts'] ?? 0).toBeGreaterThan(0);
     expect(summaryByFile['apps/server/src/routes.ts'] ?? 0).toBeGreaterThanOrEqual(0);
     expect(summaryByFile['apps/server/src/routes/domains/payments.ts'] ?? 0).toBeGreaterThan(0);
+    // Guard against a silently-unscanned file: the W1 admin recovery routes
+    // must actually be discovered, not merely listed in ADMIN_ROUTE_FILES.
+    expect(summaryByFile['apps/server/src/routes/domains/adminSocialIcebreaker.ts'] ?? 0).toBeGreaterThanOrEqual(2);
   });
 
   it('every /api/admin/* route other than POST /api/admin/login includes requireAdmin', () => {

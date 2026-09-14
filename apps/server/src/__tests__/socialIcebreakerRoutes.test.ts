@@ -463,6 +463,41 @@ describe.sequential('social icebreaker routes', () => {
     });
   });
 
+  it('keeps an idle GET payload structurally stable across consecutive polls (perf-W1)', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'stable-poll-host');
+      const sessionId = `session-stable-poll-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const firstResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}`, {
+        headers: { cookie: hostCookie },
+      });
+      const first = await firstResponse.json() as any;
+
+      // ~10s cadence simulated: a second poll bumps lastSeenAt via the route
+      // heartbeat. Pre-fix this changed the payload; the volatile fields must
+      // no longer be present, so the JSON stays identical for an idle session.
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      const secondResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}`, {
+        headers: { cookie: hostCookie },
+      });
+      const second = await secondResponse.json() as any;
+
+      expect(first.expiresAt).toBeUndefined();
+      expect(second.expiresAt).toBeUndefined();
+      expect(first.joinedParticipants?.[0]?.lastSeenAt).toBeUndefined();
+      expect(second.joinedParticipants?.[0]?.lastSeenAt).toBeUndefined();
+      expect(second.joinedParticipants?.[0]?.isActive).toBe(true);
+      expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+    });
+  });
+
   it('returns normalized AI metadata for warmup topics', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'topics-host');

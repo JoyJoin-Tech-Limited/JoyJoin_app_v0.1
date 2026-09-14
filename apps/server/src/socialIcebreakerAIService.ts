@@ -1,24 +1,17 @@
 import type {
-  SocialTopic,
-  MicroChallenge,
   LieDetectiveStatement,
-  AtmosphereMood,
-  PersonalityDiceChallenge,
-  PersonalityDiceChallengeGroup,
-  SocialTopicDepthLevel,
-  SocialTopicPromptStyle,
-  SocialTopicSafety,
   AuctionLot,
   XiaoyueSessionPack,
   XiaoyueAdaptiveSuggestion,
   MomentHighlightsPanel,
   MomentHighlightAspect,
+  PersonalityDiceChallenge,
+  PersonalityDiceChallengeGroup,
 } from '@shared/socialIcebreaker';
 import { auctionLotsLlmPayloadSchema, parseXiaoyueSessionPack } from '@shared/socialIcebreaker';
-import { selectPermissionLineForTopic } from '@shared/socialIcebreakerYuezaiCopy';
+import { findReviewBlockedVocab } from '@shared/copy/terms';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 import {
-  buildAIGCMeta,
   buildFallbackAIMeta,
   buildLiveAIMeta,
   type AIResponseMeta,
@@ -28,13 +21,10 @@ import { extractJsonPayloadForParse } from './ai/extractLlmJson';
 import { getClientForFunction, getDeepseekSelection } from './ai/socialModelRouter';
 import { createAiCorrelationId, logAITrace } from './lib/aiTraceLogger';
 import {
-  buildWarmupTopicsPrompt,
-  buildMicroChallengesPrompt,
   buildLieDetectivePrompt,
   buildLieDetectiveV2Prompt,
   LieDetectiveV2ResponseSchema,
   buildXiaoYueCommentPrompt,
-  buildRecapSummaryPrompt,
   buildPersonalityDicePrompt,
   buildPersonalityDicePromptV4,
   buildAuctionLotsPrompt,
@@ -44,12 +34,8 @@ import {
   buildUndercoverWordPrompt,
   buildGroupMirrorPrompt,
   MINISCRIPT_FRAMEWORK_SYSTEM,
-  WARMUP_TOPICS_PROMPT_VERSION,
-  WARMUP_TOPICS_CHAT_PROMPT_VERSION,
-  MICRO_CHALLENGES_PROMPT_VERSION,
   LIE_DETECTIVE_PROMPT_VERSION,
   LIE_DETECTIVE_V2_PROMPT_VERSION,
-  RECAP_SUMMARY_PROMPT_VERSION,
   PERSONALITY_DICE_PROMPT_VERSION,
   PERSONALITY_DICE_CHOOSE_PROMPT_VERSION,
   AUCTION_LOTS_PROMPT_VERSION,
@@ -59,17 +45,16 @@ import {
   UNDERCOVER_WORD_PROMPT_VERSION,
   GROUP_MIRROR_PROMPT_VERSION,
 } from './ai/socialIcebreakerPrompts';
-import { selectMicroChallenges } from '@joyjoin/shared';
 import { getRandomQuipBattlePrompts, type QuipBattlePrompt } from '@shared/quipBattle';
 import { getFallbackUndercoverPair, type UndercoverWordPair } from '@shared/undercoverWord';
 import { buildArchetypeContext } from './lib/contextInjector';
 import { getFallbackGroupMirrorQuestions, type GroupMirrorQuestion } from '@shared/groupMirror';
 import { getRandomFallbackSet, type LieDetectiveV2FallbackStatement } from '@shared/lieDetectiveFallback';
 import { logger } from "./lib/logger";
-import { moderateGeneratedContent, type ModerationCheck } from './lib/aiContentModeration';
 import { XIAOYUE_PERSONA } from './prompts';
 import { validateContentSafe } from './lib/contentSafety';
 import { AIServiceResult, fireAndForgetQualityGate, isLLMTimeoutError, raceWithTimeout, RACE_LLM_TIMEOUT_MS } from './socialIcebreakerAICore';
+import { attachAIGC, moderateAndAttachAIGC, containsReviewBlockedVocab, type ModerationCheck } from './socialIcebreakerAI/moderation';
 
 export { fireAndForgetQualityGate, isLLMTimeoutError, raceWithTimeout, RACE_LLM_TIMEOUT_MS } from './socialIcebreakerAICore';
 export type { AIServiceResult } from './socialIcebreakerAICore';
@@ -77,133 +62,12 @@ export type { AIServiceResult } from './socialIcebreakerAICore';
 /** Re-export for downstream consumers that previously imported from this file. */
 export { XIAOYUE_COMMENT_PROMPT_VERSION, MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION };
 
-function normalizeTopicDepthLevel(value: unknown): SocialTopicDepthLevel {
-  if (value === 3) return 3;
-  if (value === 2) return 2;
-  return 1;
-}
-
-function normalizeTopicPromptStyle(value: unknown): SocialTopicPromptStyle {
-  if (value === 'binary' || value === 'reflective') {
-    return value;
-  }
-  return 'experiential';
-}
-
-function normalizeTopicSafety(value: unknown): SocialTopicSafety {
-  if (value === 'open' || value === 'reflective') {
-    return value;
-  }
-  return 'gentle';
-}
-
-function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: AtmosphereMood, index: number): SocialTopic {
-  const base: SocialTopic = {
-    id: topic.id || `topic_${index + 1}`,
-    question: topic.question || '分享一件让你会心一笑的小事',
-    mood: topic.mood || fallbackMood,
-    emoji: topic.emoji || '✨',
-    category: topic.category || '轻松开场',
-    depthLevel: normalizeTopicDepthLevel(topic.depthLevel),
-    promptStyle: normalizeTopicPromptStyle(topic.promptStyle),
-    safety: normalizeTopicSafety(topic.safety),
-  };
-  // 悦仔说 permission whisper — deterministic per topic so every table member
-  // sees the identical line (campfire-vault-card-pr1 A2).
-  base.permissionLine = selectPermissionLineForTopic({ question: base.question, depthLevel: base.depthLevel });
-  if (topic.promptTiers?.opener && topic.promptTiers?.followUp && topic.promptTiers?.reflection) {
-    base.promptTiers = {
-      opener: String(topic.promptTiers.opener).slice(0, 30),
-      followUp: String(topic.promptTiers.followUp).slice(0, 40),
-      reflection: String(topic.promptTiers.reflection).slice(0, 50),
-    };
-  }
-  return base;
-}
-
-function warmupTopicsChecks(topics: SocialTopic[]): ModerationCheck[] {
-  return topics.flatMap((t, i) => {
-    const checks: ModerationCheck[] = [
-      { field: `topic[${i}].question`, text: t.question },
-      { field: `topic[${i}].category`, text: t.category },
-    ];
-    if (t.promptTiers) {
-      checks.push(
-        { field: `topic[${i}].promptTiers.opener`, text: t.promptTiers.opener },
-        { field: `topic[${i}].promptTiers.followUp`, text: t.promptTiers.followUp },
-        { field: `topic[${i}].promptTiers.reflection`, text: t.promptTiers.reflection },
-      );
-    }
-    return checks;
-  });
-}
-
-/**
- * Brave-but-safe guarantee (campfire-vault-card-pr1 A1).
- *
- * A topic counts as "brave" when it is marked `safety: 'reflective'` — the
- * existing field, no new enum. Brave questions are emotionally vulnerable
- * (jealousy toward a friend, fear of falling behind, pretending to fit in)
- * but must never touch death, abuse, self-harm, or explicit content; the
- * moderation pass below remains the hard gate on that.
- */
-export function hasBraveTopic(topics: SocialTopic[]): boolean {
-  return topics.some((t) => t.safety === 'reflective');
-}
-
-/**
- * Repair an LLM topic set that contains no brave question by replacing the
- * final topic with a curated brave topic for the requested mood. Deterministic:
- * the first curated brave topic for the mood whose question is not already in
- * the set is chosen. Runs BEFORE moderation so the repaired set is what gets
- * checked and persisted.
- */
-function ensureBraveTopic(
-  topics: SocialTopic[],
-  mood: AtmosphereMood,
-  aiCorrelationId?: string,
-): SocialTopic[] {
-  if (hasBraveTopic(topics)) return topics;
-  const presentQuestions = new Set(topics.map((t) => t.question));
-  const candidate = FALLBACK_WARMUP_TOPICS.find(
-    (t) => t.mood === mood && t.safety === 'reflective' && !presentQuestions.has(t.question),
-  ) ?? FALLBACK_WARMUP_TOPICS.find((t) => t.safety === 'reflective' && !presentQuestions.has(t.question));
-  if (!candidate) return topics;
-  const repaired = [...topics];
-  const replacementIndex = repaired.length > 0 ? repaired.length - 1 : 0;
-  repaired[replacementIndex] = normalizeSocialTopic(candidate, mood, replacementIndex);
-  logger.info('[SocialIcebreakerAI] generateWarmupTopics brave guarantee repair: injected curated brave topic', {
-    mood,
-    replacementQuestion: candidate.question,
-    aiCorrelationId,
-  });
-  return repaired;
-}
-
-function microChallengesChecks(challenges: MicroChallenge[]): ModerationCheck[] {
-  return challenges.flatMap((c, i) => [
-    { field: `challenge[${i}].title`, text: c.title },
-    { field: `challenge[${i}].description`, text: c.description },
-    { field: `challenge[${i}].completionCTA`, text: c.completionCTA },
-    { field: `challenge[${i}].visualHint`, text: c.visualHint },
-  ]);
-}
-
 function lieDetectiveStatementsChecks(statements: LieDetectiveStatement[]): ModerationCheck[] {
   return statements.map((s, i) => ({ field: `statement[${i}].text`, text: s.text }));
 }
 
 function xiaoYueCommentChecks(comment: string): ModerationCheck[] {
   return [{ field: 'comment', text: comment }];
-}
-
-function recapChecks(recap: { headline: string; moments: string[]; closingLine: string }): ModerationCheck[] {
-  const checks: ModerationCheck[] = [
-    { field: 'headline', text: recap.headline },
-    { field: 'closingLine', text: recap.closingLine },
-  ];
-  recap.moments.forEach((moment, i) => checks.push({ field: `moment[${i}]`, text: moment }));
-  return checks;
 }
 
 function xiaoyueSessionPackChecks(pack: XiaoyueSessionPack): ModerationCheck[] {
@@ -239,154 +103,6 @@ function groupMirrorQuestionsChecks(questions: GroupMirrorQuestion[]): Moderatio
   return questions.map((q, i) => ({ field: `question[${i}].questionText`, text: q.questionText }));
 }
 
-function attachAIGC<T>(result: AIServiceResult<T>): AIServiceResult<T> {
-  return {
-    data: result.data,
-    meta: {
-      ...result.meta,
-      aigc: buildAIGCMeta({ fallbackUsed: result.meta.fallbackUsed, labelType: 'ai-generated' }),
-    },
-  };
-}
-
-function moderateAndAttachAIGC<T>(
-  result: AIServiceResult<T>,
-  options: {
-    provider: AIProvider | null;
-    model?: string;
-    latencyMs: number;
-    promptVersion?: string;
-    aiCorrelationId: string;
-    feature: string;
-    fallbackData: T;
-    checks: ModerationCheck[];
-  },
-): AIServiceResult<T> {
-  if (result.meta.fallbackUsed) {
-    return attachAIGC(result);
-  }
-  const moderation = moderateGeneratedContent(options.checks, {
-    domain: 'icebreaker',
-    feature: options.feature,
-    provider: options.provider,
-    model: options.model,
-    latencyMs: options.latencyMs,
-    promptVersion: options.promptVersion,
-    traceId: options.aiCorrelationId,
-  });
-  if (!moderation.safe) {
-    return attachAIGC({
-      data: options.fallbackData,
-      meta: buildFallbackAIMeta('content_safety', options.promptVersion ?? 'unknown', options.aiCorrelationId),
-    });
-  }
-  return attachAIGC(result);
-}
-
-// ============ CURATED FALLBACK CONTENT ============
-
-/** Curated warmup fallback bank — exported for contract tests (A1 brave-per-mood coverage). */
-export const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
-  { id: 'w1', question: '最近最离谱的一次外卖经历是什么？', mood: 'funny', emoji: '🍜', category: '生活趣事', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w2', question: '如果今天能重来一件事，你会改什么？', mood: 'life', emoji: '🔄', category: '今日状态', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w3', question: '手机里现在最奇怪的一张照片，敢不敢给大家看看？', mood: 'funny', emoji: '📱', category: '轻松破冰', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w4', question: '最近有没有那种"世界真小"的巧合？', mood: 'life', emoji: '🌍', category: '偶遇故事', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w5', question: '你的性格要是道菜，你是什么菜？', mood: 'funny', emoji: '🍽️', category: '自我比喻', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w6', question: '最近一次真正放松是在哪儿？干嘛呢？', mood: 'relaxed', emoji: '😌', category: '舒适感', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w7', question: '明天要是突然不用上班，第一件事做什么？', mood: 'relaxed', emoji: '🌟', category: '理想日常', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w8', question: '如果能和任何人对坐吃一顿饭，你最想选谁？想聊点什么？', mood: 'emotional', emoji: '💫', category: '重要关系', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w9', question: '最近有没有一个瞬间，让你突然心里一暖？', mood: 'emotional', emoji: '🥹', category: '感动瞬间', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w10', question: '你觉得自己哪个优点，其实被身边人低估了？', mood: 'life', emoji: '💡', category: '自我认知', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w11', question: '描述一下你理想的周末，越具体越好', mood: 'relaxed', emoji: '☀️', category: '理想节奏', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w12', question: '如果能瞬间学会一门技能，你想拿捏什么？', mood: 'funny', emoji: '🎯', category: '愿望清单', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w13', question: '最近有什么让你笑到停不下来的事？', mood: 'funny', emoji: '😂', category: '快乐来源', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w14', question: '小时候最想当什么？现在还这么想吗？', mood: 'life', emoji: '👶', category: '成长轨迹', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w15', question: '给五年前的自己留句话，你会说什么？', mood: 'emotional', emoji: '⏰', category: '自我回望', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w16', question: '最近尝试了什么新鲜事物，结果真香还是踩雷？', mood: 'life', emoji: '🚀', category: '新鲜体验', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w17', question: '你一般怎么给自己"充电"？', mood: 'relaxed', emoji: '🔋', category: '恢复能量', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w18', question: '有什么事看起来很难，其实上手发现也就那样？', mood: 'funny', emoji: '🤔', category: '反差观察', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w19', question: '什么样的环境让你瞬间放松下来？', mood: 'relaxed', emoji: '🏡', category: '舒适空间', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w20', question: '最想去但还没去的地方是哪儿？为什么一直想去？', mood: 'emotional', emoji: '✈️', category: '向往之地', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w21', question: '今晚来这儿，你最期待发生什么？', mood: 'relaxed', emoji: '🎉', category: '现场期待', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w22', question: '用三个词形容下今天的心情呗', mood: 'life', emoji: '💭', category: '情绪快照', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w23', question: '有什么生活习惯，说出来别人会觉得"你也这样？"', mood: 'funny', emoji: '🙈', category: '可爱怪癖', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w24', question: '最近有没有一件事，让你突然改变了想法？', mood: 'emotional', emoji: '🌱', category: '观点变化', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w25', question: '如果人生是部电影，你现在演到哪个章节了？', mood: 'life', emoji: '🎬', category: '人生叙事', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  // Brave-but-safe entries (campfire-vault-card-pr1 A1): every mood carries ≥1
-  // emotionally vulnerable question marked safety 'reflective' — never death,
-  // abuse, self-harm, or explicit content.
-  { id: 'w26', question: '有没有哪一刻，你突然觉得自己被落下了？', mood: 'life', emoji: '🍂', category: '情绪共鸣', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w27', question: '你有没有过跟着大家一起笑，其实没听懂笑点的时候？', mood: 'funny', emoji: '😅', category: '可爱瞬间', depthLevel: 2, promptStyle: 'experiential', safety: 'reflective' },
-  { id: 'w28', question: '最近有没有觉得累，却不好意思说出来的时刻？', mood: 'relaxed', emoji: '🌙', category: '情绪安放', depthLevel: 2, promptStyle: 'reflective', safety: 'reflective' },
-];
-
-const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
-  {
-    id: 'c1',
-    title: '找3个共同点',
-    description: '在座的各位，找出3个你们共有的爱好或经历，越 unexpected 越好',
-    durationSeconds: 180,
-    completionCTA: '拿捏了！',
-    visualHint: '🔍🤝',
-  },
-  {
-    id: 'c2',
-    title: '用3个词形容右边的人',
-    description: '每人用3个词形容坐在自己右边的人，不准说"挺好的"',
-    durationSeconds: 120,
-    completionCTA: '说完收工！',
-    visualHint: '💬🌟',
-  },
-  {
-    id: 'c3',
-    title: '整一个离谱创业点子',
-    description: '来，大家一起整一个绝对不会成功的创业idea，脑洞越大越好',
-    durationSeconds: 150,
-    completionCTA: '这项目我投了！',
-    visualHint: '🚀💡',
-  },
-  {
-    id: 'c4',
-    title: '哼歌猜曲',
-    description: '每人哼一段歌，其他人猜，跑调也没事反而更好猜',
-    durationSeconds: 120,
-    completionCTA: '这波绝了！',
-    visualHint: '🎵🎤',
-  },
-  {
-    id: 'c5',
-    title: '30秒不为人知',
-    description: '每人30秒，说一个在场没人知道的事，越小众越好',
-    durationSeconds: 180,
-    completionCTA: '原来你是这样的！',
-    visualHint: '⚡👤',
-  },
-  {
-    id: 'c6',
-    title: '心灵感应挑战',
-    description: '两人背对背同时说同一个数字，看看你们有没有默契',
-    durationSeconds: 90,
-    completionCTA: '这都能中？',
-    visualHint: '🧠✨',
-  },
-  {
-    id: 'c7',
-    title: '生日排序',
-    description: '所有人按生日月份排成一排，不能说话只能比划，整起来',
-    durationSeconds: 120,
-    completionCTA: '排对了！',
-    visualHint: '🎯👥',
-  },
-  {
-    id: 'c8',
-    title: '接力编故事',
-    description: '每人接一句话，编个完整故事，结尾必须让人意想不到',
-    durationSeconds: 180,
-    completionCTA: '编剧实锤！',
-    visualHint: '📖🎭',
-  },
-];
-
 const FALLBACK_LIE_DETECTIVE_STATEMENTS: LieDetectiveStatement[][] = [
   [
     { index: 1, text: '我曾在凌晨三点一个人爬过一座山，就是觉得想去了', isLie: false },
@@ -405,332 +121,10 @@ const FALLBACK_LIE_DETECTIVE_STATEMENTS: LieDetectiveStatement[][] = [
   ],
 ];
 
-// ============ AI GENERATORS ============
-
-function getTargetTopicCount(vibe?: 'chat' | 'balanced' | 'game'): number {
-  switch (vibe) {
-    case 'chat': return 6;
-    case 'game': return 4;
-    case 'balanced':
-    default: return 5;
-  }
-}
-
-function getPromptVersionForVibe(vibe?: 'chat' | 'balanced' | 'game'): string {
-  return vibe === 'chat' ? WARMUP_TOPICS_CHAT_PROMPT_VERSION : WARMUP_TOPICS_PROMPT_VERSION;
-}
-
-function isWarmupLlmEnabled(): boolean {
-  const v = process.env.SOCIAL_WARMUP_LLM_ENABLED;
-  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
-  return v.toLowerCase() === 'true';
-}
-
-/** Hard ceiling for one warmup-topics LLM call. The AbortController below is
- *  best-effort (SDK/transport may swallow signals); the race in raceWithTimeout
- *  is the deterministic bound, so a hung provider can never freeze /topics. */
-const WARMUP_TOPICS_LLM_TIMEOUT_MS = 6000;
-
-export async function generateWarmupTopics(params: {
-  mood: AtmosphereMood;
-  eventType: string;
-  participantCount: number;
-  avoidTopics?: string[];
-  _refinementHint?: string;
-  roster?: Array<{ archetype?: string }>;
-  /** Vibe drives card count, depth curve, and tier generation. */
-  vibe?: 'chat' | 'balanced' | 'game';
-}): Promise<AIServiceResult<SocialTopic[]>> {
-  const aiCorrelationId = createAiCorrelationId();
-  const promptVersion = getPromptVersionForVibe(params.vibe);
-
-  // If AI is disabled, return curated fallback immediately
-  if (!isWarmupLlmEnabled()) {
-    const meta = buildFallbackAIMeta('disabled', promptVersion, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
-  }
-
-  let selection: ReturnType<typeof getClientForFunction>;
-  try {
-    selection = getClientForFunction('generateWarmupTopics');
-  } catch (error) {
-    logger.error('[SocialIcebreakerAI] generateWarmupTopics provider selection failed; using curated fallback', {
-      error: error instanceof Error ? error.message : String(error),
-      aiCorrelationId,
-    });
-    const meta = buildFallbackAIMeta('provider_unavailable', promptVersion, aiCorrelationId);
-    logAITrace({
-      traceId: aiCorrelationId,
-      domain: 'icebreaker',
-      feature: 'generateWarmupTopics',
-      provider: null,
-      model: 'n/a',
-      latencyMs: 0,
-      success: false,
-      fallbackUsed: true,
-      fromCache: false,
-      promptVersion: meta.promptVersion,
-      errorCode: meta.evaluatorRejectionReason,
-    });
-    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
-  }
-
-  const { client, model, provider } = selection;
-  const t0 = Date.now();
-
-  // 6s budget for warmup generation. AbortController is best-effort; the race
-  // wrapper is the hard bound — a hung provider must never freeze /topics
-  // (2026-07-26 出题卡死 incident: >75s generating, stall nudge misfired).
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), WARMUP_TOPICS_LLM_TIMEOUT_MS);
-
-  try {
-    const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
-    if (sessionContext?.mixText) {
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
-    }
-    const prompt = buildWarmupTopicsPrompt({ ...params, sessionContext });
-
-    const response = await raceWithTimeout(
-      client.chat.completions.create({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.9,
-        max_tokens: params.vibe === 'chat' ? 1200 : 500,
-      }, { signal: controller.signal }),
-      WARMUP_TOPICS_LLM_TIMEOUT_MS,
-    );
-
-    const content = response.choices[0]?.message?.content?.trim();
-    if (!content) {
-      const meta = buildFallbackAIMeta('empty_response', promptVersion, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
-    }
-
-    const parsed = JSON.parse(content);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      const latencyMs = Date.now() - t0;
-      logger.info(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms vibe=${params.vibe ?? 'balanced'}`);
-      const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
-      fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'warmup', params.eventType);
-      const targetCount = getTargetTopicCount(params.vibe);
-      const normalizedTopics: SocialTopic[] = parsed.slice(0, targetCount + 1).map((topic, index) => normalizeSocialTopic(topic, params.mood, index));
-      // Brave-but-safe guarantee: repair before moderation so the checked and
-      // persisted set always contains ≥1 brave question (contract A1/A4).
-      const liveTopics = ensureBraveTopic(normalizedTopics, params.mood, aiCorrelationId);
-      return moderateAndAttachAIGC(
-        { data: liveTopics, meta },
-        {
-          provider,
-          model,
-          latencyMs,
-          promptVersion: meta.promptVersion,
-          aiCorrelationId,
-          feature: 'generateWarmupTopics',
-          fallbackData: getFallbackTopics(params.mood, params.vibe),
-          checks: warmupTopicsChecks(liveTopics),
-        },
-      );
-    }
-    const latencyMs = Date.now() - t0;
-    logger.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
-    const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
-  } catch (error) {
-    const latencyMs = Date.now() - t0;
-    const isTimeout = isLLMTimeoutError(error);
-    logger.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
-    const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', promptVersion, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function getFallbackTopics(mood: AtmosphereMood, vibe?: 'chat' | 'balanced' | 'game'): SocialTopic[] {
-  const targetCount = getTargetTopicCount(vibe);
-  const filtered = FALLBACK_WARMUP_TOPICS.filter(t => t.mood === mood);
-  const shuffled = [...filtered].sort(() => Math.random() - 0.5);
-  // If not enough for this mood, supplement with others
-  const topics = shuffled.length < targetCount
-    ? [...shuffled, ...FALLBACK_WARMUP_TOPICS.filter(t => t.mood !== mood)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, targetCount - shuffled.length)]
-      .map((topic, index) => normalizeSocialTopic(topic, mood, index))
-    : shuffled.slice(0, targetCount).map((topic, index) => normalizeSocialTopic(topic, mood, index));
-  // Brave-but-safe guarantee applies to the served fallback set too: shuffle +
-  // slice can otherwise drop the mood's only brave topic (contract A1 /
-  // Reliability pillar — repair swaps the final card for a curated brave one).
-  return ensureBraveTopic(topics, mood);
-}
-
-export function getCuratedWarmupTopics(mood: AtmosphereMood, vibe?: 'chat' | 'balanced' | 'game'): SocialTopic[] {
-  return getFallbackTopics(mood, vibe);
-}
-
-function isMicroChallengeLlmEnabled(): boolean {
-  const v = process.env.SOCIAL_MICRO_CHALLENGE_LLM_ENABLED;
-  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
-  return v.toLowerCase() === 'true';
-}
-
 function isLieDetectiveLlmEnabled(): boolean {
   const v = process.env.SOCIAL_LIE_DETECTIVE_LLM_ENABLED;
   if (v === undefined || v === '') return true; // default: AI enabled for backward compat
   return v.toLowerCase() === 'true';
-}
-
-function buildSelectorMeta(): AIResponseMeta {
-  return {
-    generatedAt: new Date().toISOString(),
-    fromCache: false,
-    provider: null,
-    fallbackUsed: false,
-    promptVersion: 'selector-v1',
-  };
-}
-
-function inferSceneFromEventType(eventType: string): 'dinner' | 'bar' | 'both' {
-  const t = eventType.toLowerCase();
-  if (t.includes('酒') || t.includes('bar') || t.includes('pub')) return 'bar';
-  if (t.includes('饭') || t.includes('餐') || t.includes('dinner') || t.includes('lunch')) return 'dinner';
-  return 'both';
-}
-
-export async function generateMicroChallenges(params: {
-  eventType: string;
-  participantCount: number;
-  completedChallengeIds?: string[];
-  /** Deterministic seed for template selector (e.g. session ID). */
-  seed?: string;
-  _refinementHint?: string;
-  roster?: Array<{ archetype?: string }>;
-}): Promise<AIServiceResult<MicroChallenge[]>> {
-  const aiCorrelationId = createAiCorrelationId();
-
-  // 1. Always build the deterministic selector baseline
-  const selectorSeed = params.seed ?? `default-${params.participantCount}-${params.eventType}`;
-  let selectorResult = [] as MicroChallenge[];
-  try {
-    selectorResult = selectMicroChallenges({
-      participantCount: params.participantCount,
-      completedIds: params.completedChallengeIds,
-      seed: selectorSeed,
-      scene: inferSceneFromEventType(params.eventType),
-      count: 3,
-    });
-  } catch (selectorErr) {
-    logger.warn('[SocialIcebreakerAI] selector fallback unavailable, relying on AI only', {
-      error: selectorErr instanceof Error ? selectorErr.message : String(selectorErr),
-    });
-  }
-
-  // 2. If AI is disabled, return selector result immediately
-  if (!isMicroChallengeLlmEnabled()) {
-    if (selectorResult.length === 0) {
-      throw new Error(`No micro-challenge templates available for ${params.participantCount} players`);
-    }
-    logAITrace({
-      traceId: aiCorrelationId,
-      domain: 'icebreaker',
-      feature: 'generateMicroChallenges',
-      provider: null,
-      model: 'selector-v1',
-      latencyMs: 0,
-      success: true,
-      fallbackUsed: false,
-      fromCache: false,
-      promptVersion: 'selector-v1',
-    });
-    return attachAIGC({ data: selectorResult, meta: buildSelectorMeta() });
-  }
-
-  // 3. AI path (backward-compatible primary)
-  const { client, model, provider } = getClientForFunction('generateMicroChallenges');
-  const t0 = Date.now();
-
-  // 6s hard abort — this generator runs inline inside transitionPhase (host
-  // /advance, auto fuse, poll-driven processAutoAdvance), so an unbounded
-  // DeepSeek call freezes phase transitions and stalls every session poll.
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-  try {
-    const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
-    if (sessionContext?.mixText) {
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
-    }
-    const prompt = buildMicroChallengesPrompt({ ...params, sessionContext });
-
-    const response = await raceWithTimeout(
-      client.chat.completions.create({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.8,
-        max_tokens: 400,
-      }, { signal: controller.signal }),
-      6000,
-    );
-
-    const content = response.choices[0]?.message?.content?.trim();
-    if (!content) {
-      const meta = buildFallbackAIMeta('empty_response', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return attachAIGC({ data: selectorResult, meta });
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(extractJsonPayloadForParse(content));
-    } catch {
-      const latencyMs = Date.now() - t0;
-      logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using selector fallback`);
-      const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return attachAIGC({ data: selectorResult, meta });
-    }
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      const latencyMs = Date.now() - t0;
-      logger.info(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms`);
-      const meta = buildLiveAIMeta(provider, MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
-      fireAndForgetQualityGate(content, 'icebreaker_micro_challenge', aiCorrelationId, 'micro_challenge', params.eventType);
-      const liveChallenges: MicroChallenge[] = parsed.slice(0, 3);
-      return moderateAndAttachAIGC(
-        { data: liveChallenges, meta },
-        {
-          provider,
-          model,
-          latencyMs,
-          promptVersion: MICRO_CHALLENGES_PROMPT_VERSION,
-          aiCorrelationId,
-          feature: 'generateMicroChallenges',
-          fallbackData: selectorResult,
-          checks: microChallengesChecks(liveChallenges),
-        },
-      );
-    }
-    const latencyMs = Date.now() - t0;
-    logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape, using selector fallback`);
-    const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return attachAIGC({ data: selectorResult, meta });
-  } catch (error) {
-    const latencyMs = Date.now() - t0;
-    const isTimeout = isLLMTimeoutError(error);
-    logger.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
-    const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    if (selectorResult.length === 0) throw error;
-    return attachAIGC({ data: selectorResult, meta });
-  } finally {
-    clearTimeout(timeoutId);
-  }
 }
 
 /** Determine the effective lie-detective mode. */
@@ -815,8 +209,9 @@ export async function generateLieDetectiveStatementFromTag(params: {
     );
     const text = response.choices[0]?.message?.content?.trim().replace(/^["“]|["”]$/g, '');
     const safetyResult = text ? validateContentSafe(text, 'lieDetectiveStatement') : null;
-    if (!text || text.length > 80 || !safetyResult?.safe) {
-      throw new Error('invalid_generated_statement');
+    const blockedWord = text ? findReviewBlockedVocab(text) : null;
+    if (!text || text.length > 80 || !safetyResult?.safe || blockedWord) {
+      throw new Error(blockedWord ? 'banned_vocab' : 'invalid_generated_statement');
     }
     const latencyMs = Date.now() - t0;
     const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
@@ -824,7 +219,8 @@ export async function generateLieDetectiveStatementFromTag(params: {
     return attachAIGC({ data: { text }, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    const meta = buildFallbackAIMeta('llm_error', promptVersion, aiCorrelationId);
+    const reason = error instanceof Error && error.message === 'banned_vocab' ? 'banned_vocab' : 'llm_error';
+    const meta = buildFallbackAIMeta(reason, promptVersion, aiCorrelationId);
     logger.warn('[SocialIcebreakerAI] tag-assisted statement generation fell back', {
       provider,
       latencyMs,
@@ -1304,100 +700,6 @@ export async function generateXiaoYueComment(params: {
   }
 }
 
-function isRecapLlmEnabled(): boolean {
-  const v = process.env.SOCIAL_RECAP_LLM_ENABLED;
-  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
-  return v.toLowerCase() === 'true';
-}
-
-export async function generateRecapSummary(params: {
-  participants: Array<{ displayName: string; archetype?: string }>;
-  topicsDiscussed: string[];
-  challengesCompleted: number;
-  commonGroundCount: number;
-  lieDetectiveHighlights?: string[];
-  /** Bounded one-liners, e.g. "Name：挑战标题" — max ~6 in caller */
-  personalityDiceRecapLines?: string[];
-  /** Single bounded line, e.g. premise excerpt */
-  miniScriptRecapLine?: string;
-  /** Bounded one-liners after auction phase, e.g. lot titles + winners */
-  auctionRecapLines?: string[];
-  durationMinutes: number;
-}): Promise<AIServiceResult<{ headline: string; moments: string[]; closingLine: string }>> {
-  const aiCorrelationId = createAiCorrelationId();
-
-  // If AI is disabled, return deterministic default recap immediately
-  if (!isRecapLlmEnabled()) {
-    const meta = buildFallbackAIMeta('disabled', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return attachAIGC({ data: getDefaultRecap(params), meta });
-  }
-
-  const { client, model, provider } = getClientForFunction('generateRecapSummary');
-  const t0 = Date.now();
-  try {
-    const sessionContext = buildArchetypeContext(params.participants);
-    if (sessionContext?.mixText) {
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
-    }
-
-    const prompt = buildRecapSummaryPrompt({ ...params, sessionContext });
-
-    // 6s hard bound — this generator runs inside transitionPhase on the path
-    // into recap, so an unbounded call freezes the whole session.
-    const response = await raceWithTimeout(
-      client.chat.completions.create({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.8,
-        max_tokens: 300,
-      }),
-      RACE_LLM_TIMEOUT_MS,
-    );
-
-    const content = response.choices[0]?.message?.content?.trim();
-    if (!content) {
-      const meta = buildFallbackAIMeta('empty_response', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return attachAIGC({ data: getDefaultRecap(params), meta });
-    }
-
-    const parsed = JSON.parse(content);
-    if (parsed.headline && parsed.moments && parsed.closingLine) {
-      const latencyMs = Date.now() - t0;
-      logger.info(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms`);
-      const meta = buildLiveAIMeta(provider, RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
-      fireAndForgetQualityGate(content, 'icebreaker_recap', aiCorrelationId, 'recap');
-      const liveRecap: { headline: string; moments: string[]; closingLine: string } = parsed;
-      return moderateAndAttachAIGC(
-        { data: liveRecap, meta },
-        {
-          provider,
-          model,
-          latencyMs,
-          promptVersion: RECAP_SUMMARY_PROMPT_VERSION,
-          aiCorrelationId,
-          feature: 'generateRecapSummary',
-          fallbackData: getDefaultRecap(params),
-          checks: recapChecks(liveRecap),
-        },
-      );
-    }
-    const latencyMs = Date.now() - t0;
-    logger.warn(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
-    const meta = buildFallbackAIMeta('parse_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return attachAIGC({ data: getDefaultRecap(params), meta });
-  } catch (error) {
-    const latencyMs = Date.now() - t0;
-    logger.error(`[SocialIcebreakerAI] generateRecapSummary error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
-    const meta = buildFallbackAIMeta('llm_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return attachAIGC({ data: getDefaultRecap(params), meta });
-  }
-}
-
 const ADAPTIVE_SUGGESTION_PROMPT_VERSION = 'social-adaptive-suggestion-v2';
 const MOMENT_HIGHLIGHTS_PROMPT_VERSION = 'social-moment-highlights-v2';
 
@@ -1443,6 +745,12 @@ export async function generateAdaptiveGameSuggestion(params: {
     const message = boundedText(parsed?.message, 160, 20);
     const actionableHint = boundedText(parsed?.actionableHint, 100, 10);
     if (!message || !actionableHint) throw new Error('invalid_response_shape');
+    const blockedWord = containsReviewBlockedVocab([message, actionableHint]);
+    if (blockedWord) {
+      const meta = buildFallbackAIMeta('banned_vocab', ADAPTIVE_SUGGESTION_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateAdaptiveGameSuggestion', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: ADAPTIVE_SUGGESTION_PROMPT_VERSION, errorCode: 'banned_vocab', extra: { blockedWord } });
+      return attachAIGC({ data: params.fallback, meta });
+    }
     const data: XiaoyueAdaptiveSuggestion = {
       ...params.fallback,
       message,
@@ -1455,6 +763,14 @@ export async function generateAdaptiveGameSuggestion(params: {
   } catch (error) {
     const reason = isLLMTimeoutError(error) ? 'timeout' : 'llm_or_parse_error';
     const meta = buildFallbackAIMeta(reason, ADAPTIVE_SUGGESTION_PROMPT_VERSION, aiCorrelationId);
+    logger.warn('[SocialIcebreakerAI] generateAdaptiveGameSuggestion error; using fallback', {
+      provider,
+      model,
+      latencyMs: Date.now() - t0,
+      reason,
+      aiCorrelationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateAdaptiveGameSuggestion', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: ADAPTIVE_SUGGESTION_PROMPT_VERSION, errorCode: reason });
     return attachAIGC({ data: params.fallback, meta });
   }
@@ -1537,37 +853,35 @@ export async function generateMomentHighlights(params: {
     const parsed = JSON.parse(extractJsonPayloadForParse(response.choices[0]?.message?.content ?? ''));
     const data = normalizeMomentHighlightsPayload(parsed, params.evidence);
     if (!data) throw new Error('invalid_or_ungrounded_response');
+    const blockedWord = containsReviewBlockedVocab([
+      data.headline,
+      data.overview,
+      data.closingLine,
+      ...data.highlights.flatMap((h) => [h.title, h.narrative]),
+    ]);
+    if (blockedWord) {
+      const meta = buildFallbackAIMeta('banned_vocab', MOMENT_HIGHLIGHTS_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMomentHighlights', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: MOMENT_HIGHLIGHTS_PROMPT_VERSION, errorCode: 'banned_vocab', extra: { blockedWord } });
+      return attachAIGC({ data: params.fallback, meta });
+    }
     const meta = buildLiveAIMeta(provider, MOMENT_HIGHLIGHTS_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMomentHighlights', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: MOMENT_HIGHLIGHTS_PROMPT_VERSION });
     return attachAIGC({ data, meta });
   } catch (error) {
     const reason = isLLMTimeoutError(error) ? 'timeout' : 'llm_or_parse_error';
     const meta = buildFallbackAIMeta(reason, MOMENT_HIGHLIGHTS_PROMPT_VERSION, aiCorrelationId);
+    logger.warn('[SocialIcebreakerAI] generateMomentHighlights error; using fallback', {
+      provider,
+      model,
+      latencyMs: Date.now() - t0,
+      reason,
+      aiCorrelationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMomentHighlights', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: MOMENT_HIGHLIGHTS_PROMPT_VERSION, errorCode: reason });
     return attachAIGC({ data: params.fallback, meta });
   }
 }
-
-function getDefaultRecap(params: {
-  participants: Array<{ displayName: string }>;
-  topicsDiscussed: string[];
-  challengesCompleted: number;
-  commonGroundCount: number;
-  durationMinutes: number;
-}): { headline: string; moments: string[]; closingLine: string } {
-  const names = params.participants.map(p => p.displayName);
-  return {
-    headline: `${params.durationMinutes}分钟，这局有点东西`,
-    moments: [
-      `聊了${params.topicsDiscussed.length}个话题，有几个还挺深的`,
-      `完成了${params.challengesCompleted}个挑战，没人掉链子`,
-      `发现了${params.commonGroundCount}个共同点，缘分啊`,
-      `${names.length}个人，从陌生到能聊到一块`,
-    ],
-    closingLine: `这局算你们赢，下次继续 ${names.length > 2 ? '（特别是' + names.slice(0, 2).join('和') + '）' : ''}🌟`,
-  };
-}
-
 
 // ─── Xiaoyue Session Pack ─────────────────────────────────────────────────────
 
@@ -1758,8 +1072,6 @@ export async function generateXiaoyueSessionPack(params: {
     return attachAIGC({ data: FALLBACK_SESSION_PACK, meta });
   }
 }
-
-
 
 // ─── Quip Battle ─────────────────────────────────────────────────────────────
 
@@ -2079,6 +1391,15 @@ export {
 export {
   generateAuctionLots,
 } from './socialIcebreakerAuctionAI';
+
+// ─── Extracted modules (re-exported to preserve the public barrel) ───────────
 export {
-  fetchMiniScriptFrameworkModelJson,
-} from './socialIcebreakerMiniScriptAI';
+  generateWarmupTopics,
+  getCuratedWarmupTopics,
+  resetWarmupTopicDedupe,
+  hasBraveTopic,
+  FALLBACK_WARMUP_TOPICS,
+} from './socialIcebreakerAI/warmupTopics';
+export type { WarmupFallbackOptions } from './socialIcebreakerAI/warmupTopics';
+export { generateMicroChallenges } from './socialIcebreakerAI/microChallenge';
+export { generateRecapSummary } from './socialIcebreakerAI/recap';

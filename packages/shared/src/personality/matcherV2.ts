@@ -21,25 +21,24 @@ import {
   getArchetypeThreshold,
   ARCHETYPE_MATCH_THRESHOLDS 
 } from './traitCorrection';
+import { PROTOTYPE_SOUL_TRAITS, ARCHETYPE_VETO_RULES, ARCHETYPE_EMOJI, ARCHETYPE_TAGLINE } from './matcherV2Data';
+import {
+  ALL_TRAITS,
+  TRAIT_STD,
+  toZScoreVector,
+  calculateAsymmetricAvoidPenalty,
+  calculateOppositePoleConflictMultiplier,
+  isMatcherDebugEnabled,
+} from './matcherV2Scoring';
 
-const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
-const TRAIT_STD = 15;
-const TRAIT_MEAN = 50;
+// Re-export moved data tables so the public API of this module is unchanged
+export { PROTOTYPE_SOUL_TRAITS, ARCHETYPE_VETO_RULES } from './matcherV2Data';
+export { setMatcherDebug } from './matcherV2Scoring';
+
 const SIGNAL_TRAIT_WEIGHT = 1.5;
 const OVERSHOOT_THRESHOLD_SD = 1.5;
 const MIN_SIMILARITY_GAP = 0.15;
 const MIN_CONFIDENCE_FOR_DECISIVE = 0.7;
-
-// V2.3: Asymmetric penalty parameters
-const ASYMMETRIC_PENALTY_LAMBDA = 2.0; // Penalty strength for avoid trait divergence
-const ASYMMETRIC_PENALTY_THRESHOLD_SD = 0.5; // Start penalizing at 0.5 SD gap
-const GAUSSIAN_SIGMA_D = 1.2; // Gaussian kernel sigma for distance→similarity
-
-// Debug logging control
-let DEBUG_MATCHER = false;
-export function setMatcherDebug(enabled: boolean) {
-  DEBUG_MATCHER = enabled;
-}
 
 interface MatcherDebugLog {
   userTraits: Record<TraitKey, number>;
@@ -63,179 +62,6 @@ export function getMatcherDebugLogs(): MatcherDebugLog[] {
 export function clearMatcherDebugLogs(): void {
   debugLogs.length = 0;
 }
-
-/**
- * 12原型灵魂特质权重矩阵
- * primary: 核心特质 (权重2.0)
- * secondary: 次要特质 (权重1.5)
- * avoid: 应避免的特质 (权重降低)
- */
-export const PROTOTYPE_SOUL_TRAITS: Record<string, {
-  primary: Partial<Record<TraitKey, number>>;
-  secondary: Partial<Record<TraitKey, number>>;
-  avoid: Partial<Record<TraitKey, number>>;
-}> = {
-  // Reduced weights for Manhattan distance: primary 1.6-1.8, secondary 1.2-1.3, avoid 0.6-0.8
-  "elephant": {
-    primary: { E: 1.8 },
-    secondary: { C: 1.3, A: 1.2 },
-    avoid: { X: 0.7, O: 0.7 }
-  },
-  "spider": {
-    primary: { C: 1.8 },
-    secondary: { E: 1.3, A: 1.2 },
-    avoid: { P: 0.7, X: 0.8 }
-  },
-  "rooster": {
-    primary: { P: 1.8 },
-    secondary: { E: 1.3, C: 1.2, X: 1.2 },
-    avoid: { O: 0.6 }
-  },
-  "hamster_praise": {
-    primary: { A: 1.7, X: 1.6 },
-    secondary: { P: 1.3 },
-    avoid: { C: 0.7, O: 0.8 }
-  },
-  "fox": {
-    primary: { O: 1.8 },
-    secondary: { X: 1.3, P: 1.2 },
-    avoid: { A: 0.7, C: 0.7 }
-  },
-  "koala": {
-    primary: { A: 1.8 },
-    secondary: { E: 1.3, P: 1.2 },
-    // V2.3 FIX: X avoid weight lowered to 0.4 for stronger penalty on high-X users
-    avoid: { O: 0.7, X: 0.4 }
-  },
-  "turtle": {
-    primary: { E: 1.8, C: 1.7 },
-    secondary: { A: 1.2 },
-    avoid: { X: 0.6, O: 0.6, P: 0.7 }
-  },
-  "corgi": {
-    primary: { X: 1.7, P: 1.6 },
-    secondary: { A: 1.3, E: 1.2 },
-    avoid: { C: 0.8, O: 0.8 }
-  },
-  "owl": {
-    primary: { O: 1.8 },
-    secondary: { C: 1.3, E: 1.2 },
-    avoid: { X: 0.6, A: 0.7, P: 0.7 }
-  },
-  "dolphin_calm": {
-    primary: { E: 1.7, O: 1.5 },
-    secondary: { A: 1.2 },
-    avoid: { X: 0.7, P: 0.6 }
-  },
-  "cat": {
-    primary: { E: 1.6 },
-    secondary: { O: 1.2 },
-    avoid: { X: 0.6, A: 0.6 }
-  },
-  "octopus": {
-    primary: { O: 1.8 },
-    secondary: { P: 1.3, X: 1.2 },
-    avoid: { C: 0.6, E: 0.8 }
-  }
-};
-
-/**
- * 原型专属调整规则 (返回乘数 0.3-1.3)
- * 1.0 = 中性, <1.0 = 惩罚, >1.0 = 加成
- * 规则更简单，依赖灵魂特质权重做主要区分
- *
- * ── P5c recalibration (2026-09-14, debiased measurement scale) ──
- * All user-trait thresholds re-derived from the measured per-archetype
- * distributions of the DEBIASED pipeline (K=80 members/archetype, clean
- * end-to-end; scripts/simulate/data/centroid-recalibration-latest.json).
- * Multiplier values and rule topology UNCHANGED — thresholds only.
- */
-export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, number>) => number> = {
-  "rooster": (t) => {
-    // P是rooster的灵魂 — measured rooster P 83.5±3.8; P blows up to 86+ for non-rooster boundary members (P5c round 2): 87/82/68 → 88/85/68
-    if (t.P >= 88) return 1.25;
-    if (t.P >= 85) return 1.1;
-    if (t.P < 68) return 0.5;
-    return 1.0;
-  },
-  "dolphin_calm": (t) => {
-    // measured dolphin P 76.7 / E 74.7 / X 76.3, rooster P 83.5 (P5c): P≥78→88 (P blows up to 86 for dolphin's own boundary members — the suppression must sit above the blow-up), boost E≥75&&X<55&&P<65 → E≥72&&X<80&&P<74, E≥72&&P<68 → E≥70&&P<76
-    if (t.P >= 88) return 0.5; // 高P更像rooster
-    if (t.E >= 72 && t.X < 80 && t.P < 74) return 1.25; // 强化低X信号
-    if (t.E >= 70 && t.P < 76) return 1.1;
-    return 1.0;
-  },
-  "owl": (t) => {
-    // 猫头鹰核心: 高O + 低X — measured owl O 73.2±11.9 / X 46.8±14.4 (P5c): O 75/70/65 → 68/62/50, X<45→40, X>55→60; O<50→0.5 → O<42→0.5 (round 2: the 50/50 owl-octopus blend measures O≈45 and must not be crushed)
-    if (t.O >= 68 && t.X < 40) return 1.35;
-    if (t.O >= 62) return 1.15;
-    if (t.O < 42) return 0.5;
-    if (t.X > 60) return 0.6;
-    return 1.0;
-  },
-  "turtle": (t) => {
-    // 龟核心: 高E+C + 低X + 低O — measured turtle O 37.8 / X 24.2 (P5c): O>72/>68 → >60/>50, X<38&&O<60 → X<30&&O<45
-    if (t.O > 60) return 0.4; // 高O更像猫头鹰
-    if (t.O > 50) return 0.6;
-    if (t.X < 30 && t.O < 45) return 1.3;
-    return 1.0;
-  },
-  "fox": (t) => t.O >= 88 ? 1.15 : (t.O < 72 ? 0.5 : 1.0), // P5c round 2: measured fox O 78–87 (mean 87.2±5.3); O≥88 keeps the boost off octopus's centroid (O=87) so octopus wins its own isolation past the 100-clamp tie
-  "octopus": (t) => {
-    // measured octopus O 78–87 / C 28–31 (C is the distinctive channel; fox C=35, corgi C=35): O≥82&&C<60 → O≥78&&C<34, C>65→62
-    if (t.O >= 78 && t.C < 34) return 1.2;
-    if (t.C > 62) return 0.7;
-    return 1.0;
-  },
-  "cat": (t) => {
-    // measured cat X 22.1±5.7 / A 36.7 (P5c): X<35&&A<60 → X<28&&A<48, X>50→40
-    if (t.X < 28 && t.A < 48) return 1.2;
-    if (t.X > 40) return 0.5;
-    return 1.0;
-  },
-  "koala": (t) => {
-    // measured koala X 54.0±18.4 / A 84.1±12.1 vs high-X archetypes 92–98 (P5c): X 85/75/65/58 → 95/88/78/68 (blown-X boundary members reach 86–92 — veto targets the true high-X cluster); A<68→0.6 → A<70→0.45 (P5c round 2: center-cloud koala basin 17.7% > 13% drift-gate cap — stronger center rejection; ~12% of genuine koala members sit below 70 and retain their base-distance advantage)
-    if (t.X >= 95) return 0.15; // Near-VETO for very high-X users
-    if (t.X >= 88) return 0.25; // Severe penalty
-    if (t.X >= 78) return 0.35; // Strong penalty
-    if (t.X >= 68) return 0.5; // Moderate penalty
-    // Only give bonus for A if X is appropriate (low-X users)
-    if (t.A >= 78 && t.X < 50) return 1.15;
-    if (t.A < 70) return 0.45;
-    return 1.0;
-  },
-  "hamster_praise": (t) => {
-    // measured hamster A 44–67 (A saturates under high X) / X 95.3 (P5c): A≥70&&X≥88 → A≥42&&X≥92, A≥64&&X≥80 → A≥38&&X≥85 → A≥42&&X≥85 (round 2: the A≥38 tier boosted hamster for rooster's own blown-X persona, A=39)
-    if (t.A >= 42 && t.X >= 92) return 1.2;
-    if (t.A >= 42 && t.X >= 85) return 1.1;
-    return 1.0;
-  },
-  "corgi": (t) => {
-    // measured corgi X 95.6±2.5 / P 82.5±3.8 (P5c): X 75/70/65/60 → 92/88/82/70, P 70/65/60 → 78/72/68, X<55 → X<55 (low-X penalty region unchanged — nobody measures below 55 on the new scale except turtle/cat/owl X)
-    if (t.X >= 92 && t.P >= 78) return 1.3; // Strong match for high-X + good-P
-    if (t.X >= 88 && t.P >= 72) return 1.2; // Good match
-    if (t.X >= 82 && t.P >= 68) return 1.1; // Moderate match
-    if (t.X >= 70) return 1.05; // Slight boost for extroverts
-    if (t.X < 55) return 0.6; // Penalty for low-X users
-    return 1.0;
-  },
-  "elephant": (t) => {
-    // measured elephant E 68.2±10.7 / A 63.8±19.2 / P 46.5±19.1 / X 42.3, turtle X 24.2 / P 26.8 (P5c): X<32→30, P<38→35, E≥76&&A≥70&&P≥40 → E≥72&&A≥68&&P≥42, E≥75→68, E<72→58
-    if (t.X < 30) return 0.5; // Very low X is turtle territory
-    if (t.P < 35) return 0.6; // Very low P is turtle territory
-    if (t.E >= 72 && t.A >= 68 && t.P >= 42) return 1.25;
-    if (t.E >= 68) return 1.1;
-    if (t.E < 58) return 0.6;
-    return 1.0;
-  },
-  "spider": (t) => {
-    // measured spider C 74.7±10.2 / E 55.1, dolphin E 74.7 (P5c): E≥78→72, C≥73→74, C<60→64
-    if (t.E >= 72) return 0.5; // Very high E is dolphin_calm territory
-    if (t.C >= 74) return 1.1;
-    if (t.C < 64) return 0.6;
-    return 1.0;
-  }
-};
 
 import { CONFUSION_PAIR_GATES, SIGNATURE_THRESHOLDS } from './matcherV2Gates';
 export { CONFUSION_PAIR_GATES, SIGNATURE_THRESHOLDS } from './matcherV2Gates';
@@ -286,187 +112,6 @@ export interface UserSecondaryData {
   conflictPosture?: 'approach' | 'avoid' | 'mediate';
   riskTolerance?: 'high' | 'medium' | 'low';
   statusOrientation?: 'leader' | 'supporter' | 'independent';
-}
-
-/**
- * V2.3 Helper: Convert raw trait score to z-score
- * z = (score - mean) / std = (score - 50) / 15
- */
-function toZScore(rawScore: number): number {
-  return (rawScore - TRAIT_MEAN) / TRAIT_STD;
-}
-
-/**
- * V2.3 Helper: Convert trait scores to z-score vector
- */
-function toZScoreVector(traits: Record<TraitKey, number>): Record<TraitKey, number> {
-  const zScores: Partial<Record<TraitKey, number>> = {};
-  for (const trait of ALL_TRAITS) {
-    zScores[trait] = toZScore(traits[trait] ?? TRAIT_MEAN);
-  }
-  return zScores as Record<TraitKey, number>;
-}
-
-/**
- * V2.3 Helper: Calculate asymmetric penalty for avoid traits
- * Heavily penalizes when user trait diverges significantly from archetype's profile
- * on traits marked as "avoid" in the soul trait config
- * 
- * Uses the avoid weight to scale the penalty - lower weight = stronger penalty needed
- */
-function calculateAsymmetricAvoidPenalty(
-  userTraits: Record<TraitKey, number>,
-  archetypeProfile: Record<TraitKey, number>,
-  avoidTraits: Partial<Record<TraitKey, number>>
-): { totalPenalty: number; penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number; weight: number }> } {
-  let totalPenalty = 0;
-  const penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number; weight: number }> = [];
-
-  for (const [traitStr, weight] of Object.entries(avoidTraits)) {
-    const trait = traitStr as TraitKey;
-    const avoidWeight = weight ?? 0.7; // Default avoid weight if not specified
-    const userZ = toZScore(userTraits[trait] ?? TRAIT_MEAN);
-    const archetypeZ = toZScore(archetypeProfile[trait]);
-    const gapSD = Math.abs(userZ - archetypeZ);
-
-    // V2.3 FIX: Apply penalty based on gap and inverse of avoid weight
-    // Lower avoid weight = stronger penalty multiplier
-    // For avoid weight 0.7, penalty multiplier is ~1.43x
-    // For avoid weight 0.5, penalty multiplier is 2x
-    const weightMultiplier = 1 / Math.max(0.3, avoidWeight);
-
-    // Apply penalty if gap exceeds threshold (0.5 SD)
-    if (gapSD > ASYMMETRIC_PENALTY_THRESHOLD_SD) {
-      const excessGap = gapSD - ASYMMETRIC_PENALTY_THRESHOLD_SD;
-      // V2.3 FIX: Stronger quadratic penalty with weight multiplier
-      // Use lambda=3.0 for stronger penalties (was 2.0)
-      const basePenalty = 3.0 * Math.pow(excessGap, 2);
-      const penalty = basePenalty * weightMultiplier;
-      totalPenalty += penalty;
-      penaltyDetails.push({ trait, gap: gapSD, penalty, weight: avoidWeight });
-    } else if (gapSD > 0.3) {
-      // V2.3: Also apply mild linear penalty for moderate gaps (0.3-0.5 SD)
-      const mildPenalty = 0.5 * (gapSD - 0.3) * weightMultiplier;
-      totalPenalty += mildPenalty;
-      penaltyDetails.push({ trait, gap: gapSD, penalty: mildPenalty, weight: avoidWeight });
-    }
-  }
-
-  return { totalPenalty, penaltyDetails };
-}
-
-/**
- * V2.4: Bidirectional Opposite-Pole Conflict Gate
- * 
- * Detects when user and archetype are on OPPOSITE sides of the 50-point midpoint.
- * This represents a qualitative personality mismatch (e.g., introvert vs extrovert).
- * 
- * Rule: If (archetype <50 AND user >55) OR (archetype >55 AND user <45) → conflict
- * 
- * Penalty scales with z-gap:
- * - ≥0.8 SD (12 pts): 0.4 multiplier
- * - ≥1.2 SD (18 pts): 0.2 multiplier  
- * - ≥1.8 SD (27 pts): 0.1 multiplier
- */
-interface OppositePoleConflict {
-  trait: TraitKey;
-  archetypeScore: number;
-  userScore: number;
-  gapSD: number;
-  multiplier: number;
-  traitImportance: 'primary' | 'secondary' | 'avoid' | 'neutral';
-}
-
-function calculateOppositePoleConflictMultiplier(
-  userTraits: Record<TraitKey, number>,
-  archetypeProfile: Record<TraitKey, number>,
-  archetypeName: string
-): { finalMultiplier: number; conflicts: OppositePoleConflict[] } {
-  const conflicts: OppositePoleConflict[] = [];
-  let combinedMultiplier = 1.0;
-  
-  // Get soul trait config for importance weighting
-  const soulConfig = PROTOTYPE_SOUL_TRAITS[archetypeName];
-  
-  for (const trait of ALL_TRAITS) {
-    const archetypeScore = archetypeProfile[trait];
-    const userScore = userTraits[trait] ?? TRAIT_MEAN;
-    
-    // Check for opposite-pole conflict
-    const archetypeLow = archetypeScore < 50;
-    const archetypeHigh = archetypeScore > 55;
-    const userLow = userScore < 45;
-    const userHigh = userScore > 55;
-    
-    const isConflict = (archetypeLow && userHigh) || (archetypeHigh && userLow);
-    
-    if (!isConflict) continue;
-    
-    // Calculate z-gap
-    const gapSD = Math.abs(toZScore(userScore) - toZScore(archetypeScore));
-    
-    // Determine trait importance
-    let traitImportance: 'primary' | 'secondary' | 'avoid' | 'neutral' = 'neutral';
-    let importanceMultiplier = 1.0;
-    
-    if (soulConfig) {
-      if (trait in soulConfig.primary) {
-        traitImportance = 'primary';
-        importanceMultiplier = 1.2; // Primary traits are more important
-      } else if (trait in soulConfig.avoid) {
-        traitImportance = 'avoid';
-        importanceMultiplier = 1.5; // Avoid traits get strongest penalty
-      } else if (trait in soulConfig.secondary) {
-        traitImportance = 'secondary';
-        importanceMultiplier = 1.0;
-      }
-    }
-    
-    // Calculate base multiplier based on z-gap (graduated penalty)
-    let baseMultiplier = 1.0;
-    if (gapSD >= 1.8) {
-      baseMultiplier = 0.1; // Extreme mismatch
-    } else if (gapSD >= 1.2) {
-      baseMultiplier = 0.2; // Severe mismatch
-    } else if (gapSD >= 0.8) {
-      baseMultiplier = 0.4; // Moderate mismatch
-    } else if (gapSD >= 0.5) {
-      baseMultiplier = 0.6; // Mild mismatch
-    } else {
-      // Gap too small for conflict penalty
-      continue;
-    }
-    
-    // Calculate penalty from base multiplier and scale by importance
-    // baseMultiplier 0.4 = penalty of 0.6 (1 - 0.4)
-    // With importance 1.2, penalty becomes 0.72, so multiplier = 1 - 0.72 = 0.28
-    const basePenalty = 1.0 - baseMultiplier;
-    const scaledPenalty = basePenalty * importanceMultiplier;
-    // Clamp to ensure multiplier doesn't go below 0.05
-    const adjustedMultiplier = Math.max(0.05, 1.0 - scaledPenalty);
-    
-    conflicts.push({
-      trait,
-      archetypeScore,
-      userScore,
-      gapSD,
-      multiplier: adjustedMultiplier,
-      traitImportance,
-    });
-    
-    // Combine multipliers (multiplicative)
-    combinedMultiplier *= adjustedMultiplier;
-  }
-  
-  // Log conflicts if debug enabled
-  if (DEBUG_MATCHER && conflicts.length > 0) {
-    console.log(`[OppositePole] ${archetypeName} conflicts:`, 
-      conflicts.map(c => `${c.trait}(arch=${c.archetypeScore}, user=${c.userScore}, gap=${c.gapSD.toFixed(2)}SD, mult=${c.multiplier.toFixed(2)}, ${c.traitImportance})`).join('; ')
-    );
-    console.log(`[OppositePole] ${archetypeName} combined multiplier: ${combinedMultiplier.toFixed(3)}`);
-  }
-  
-  return { finalMultiplier: combinedMultiplier, conflicts };
 }
 
 export class PrototypeMatcher {
@@ -528,7 +173,7 @@ export class PrototypeMatcher {
       // Use sigmoid-like decay: factor = 1 / (1 + penalty)
       asymmetricPenaltyFactor = 1 / (1 + totalPenalty);
       
-      if (DEBUG_MATCHER && penaltyDetails.length > 0) {
+      if (isMatcherDebugEnabled() && penaltyDetails.length > 0) {
         console.log(`[Matcher] ${prototype.name} asymmetric penalties (totalPenalty=${totalPenalty.toFixed(3)}, factor=${asymmetricPenaltyFactor.toFixed(3)}):`, 
           penaltyDetails.map(p => `${p.trait}: gap=${p.gap.toFixed(2)}SD, penalty=${p.penalty.toFixed(3)}, weight=${p.weight}`).join('; ')
         );
@@ -537,7 +182,7 @@ export class PrototypeMatcher {
 
     const finalScore = (baseSimilarity * penaltyFactor * asymmetricPenaltyFactor) + secondaryBonus;
 
-    if (DEBUG_MATCHER) {
+    if (isMatcherDebugEnabled()) {
       console.log(`[Matcher] ${prototype.name}: base=${baseSimilarity.toFixed(3)}, overshoot=${penaltyFactor.toFixed(3)}, asymm=${asymmetricPenaltyFactor.toFixed(3)}, combined=${(penaltyFactor * asymmetricPenaltyFactor).toFixed(3)}, final=${(finalScore * 100).toFixed(1)}`);
     }
 
@@ -1136,7 +781,7 @@ export class PrototypeMatcher {
     // V2.3: Debug logging - capture z-scores
     const userZScores = toZScoreVector(userTraits);
     
-    if (DEBUG_MATCHER) {
+    if (isMatcherDebugEnabled()) {
       console.log('\n[Matcher V2.3] ========== MATCHING START ==========');
       console.log('[Matcher] User raw traits:', userTraits);
       console.log('[Matcher] User z-scores:', Object.fromEntries(
@@ -1165,7 +810,7 @@ export class PrototypeMatcher {
     this.applyConfusionAwareClassifier(userTraits, results);
 
     // V2.3: Debug logging - final ranking
-    if (DEBUG_MATCHER) {
+    if (isMatcherDebugEnabled()) {
       console.log('\n[Matcher] Final ranking after all adjustments:');
       results.slice(0, 5).forEach((r, i) => {
         console.log(`  ${i + 1}. ${r.archetype}: ${r.details.finalScore.toFixed(1)} (base=${r.details.baseSimilarity.toFixed(3)}, penalty=${r.details.penaltyFactor.toFixed(3)})`);
@@ -1440,36 +1085,6 @@ export interface StyleSpectrumResult {
   isDecisive: boolean;
   decisionReason: string;
 }
-
-const ARCHETYPE_EMOJI: Record<string, string> = {
-  "corgi": "🐕",
-  "rooster": "🐔",
-  "hamster_praise": "🐷",
-  "fox": "🦊",
-  "dolphin_calm": "🐬",
-  "spider": "🕷️",
-  "koala": "🐻",
-  "octopus": "🐙",
-  "owl": "🦉",
-  "elephant": "🐘",
-  "turtle": "🐢",
-  "cat": "🐱"
-};
-
-const ARCHETYPE_TAGLINE: Record<string, string> = {
-  "corgi": "快乐感染者，派对灵魂",
-  "rooster": "积极阳光，热情洋溢",
-  "hamster_praise": "暖场达人，社交催化剂",
-  "fox": "灵动聪慧，观察敏锐",
-  "dolphin_calm": "从容不迫，温和可靠",
-  "spider": "细心周到，默默付出",
-  "koala": "温暖陪伴，善解人意",
-  "octopus": "创意无限，思维跳跃",
-  "owl": "深度思考，洞察本质",
-  "elephant": "稳重可靠，值得信赖",
-  "turtle": "踏实内敛，专注当下",
-  "cat": "独立自在，享受独处"
-};
 
 /**
  * 获取风格谱系结果 - 用于趣味化呈现

@@ -218,6 +218,7 @@ ${eventType ? `活动类型：${eventType}` : ''}
       model: result.model,
       latencyMs: result.latencyMs,
       promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
+      enforceReviewVocab: true,
     });
     if (!moderation.safe) {
       return getDefaultTopics(participants, 'content_safety');

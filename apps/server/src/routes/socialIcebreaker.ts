@@ -222,6 +222,7 @@ function scheduleStartBackgroundGeneration(params: {
             userId: p.userId,
             displayName: p.displayName,
             archetype: p.archetype,
+            interests: p.interests,
           })),
         },
       ).catch((preGenErr) => {
@@ -244,8 +245,10 @@ function scheduleStartBackgroundGeneration(params: {
           mood: vibeMoodMap[state.vibe ?? 'balanced'] ?? 'relaxed',
           eventType: state.eventType || eventType || '活动',
           participantCount: roster.length || 1,
-          roster: roster.map((p) => ({ archetype: p.archetype })),
+          roster: roster.map((p) => ({ archetype: p.archetype, interests: p.interests })),
           vibe: state.vibe,
+          // W7.4: dedupe warmup topics per pool/group across sessions.
+          dedupeKey: state.icebreakerSessionId,
         }),
         new Promise<null>((resolve) => {
           warmupBudgetTimer = setTimeout(() => resolve(null), warmupBudgetMs);
@@ -468,7 +471,14 @@ router.post('/start', async (req: any, res) => {
       rosterCount > previousPlayerCount
     ) {
       try {
-        const newRunPlan = await compileForSession(state, state.eventTier);
+        // W5: the roster just grew — recompile with the live archetype mix so
+        // composition rules see the real table. Flag off → no extra read and
+        // no roster is passed (compileForSession stays byte-identical).
+        const matchingAwareForPlan = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+        const rosterForPlan = matchingAwareForPlan
+          ? await listParticipants(existing.socialSessionId).catch(() => [])
+          : undefined;
+        const newRunPlan = await compileForSession(state, state.eventTier, rosterForPlan);
         const oldPhases = state.runPlan?.segments?.map((s) => s.phase).join(',') ?? '';
         const newPhases = newRunPlan.segments.map((s) => s.phase).join(',');
         if (oldPhases !== newPhases) {
@@ -842,6 +852,8 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
       avoidTopics,
       roster: participants || [],
       vibe: state.vibe,
+      // W7.4: dedupe warmup topics per pool/group across sessions.
+      dedupeKey: state.icebreakerSessionId,
     });
   } catch (error) {
     logger.error('[SocialIcebreaker] topics generation failed; serving curated fallback topics', {
@@ -849,7 +861,9 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
       error: error instanceof Error ? error.message : String(error),
     });
     topicResult = {
-      data: getCuratedWarmupTopics(mood, state.vibe),
+      data: getCuratedWarmupTopics(mood, state.vibe, {
+        dedupeKey: state.icebreakerSessionId,
+      }),
       meta: buildFallbackAIMeta('route_generation_error', 'social-warmup-topics-route-fallback'),
     };
   }
@@ -929,7 +943,9 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
   if ((state.warmupTopics || []).length === 0) {
     const healingMood = state.selectedMood ?? 'relaxed';
     state.selectedMood = healingMood;
-    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe);
+    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe, {
+      dedupeKey: state.icebreakerSessionId,
+    });
     state.warmupTopicsMeta = buildFallbackAIMeta('ready_route_missing_topics', 'social-warmup-topics-ready-heal');
     state.warmupTopicsStatus = 'ready';
     state.warmupTopicsGeneratingAt = undefined;
@@ -992,7 +1008,9 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
   if ((state.warmupTopics || []).length === 0) {
     const healingMood = state.selectedMood ?? 'relaxed';
     state.selectedMood = healingMood;
-    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe);
+    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe, {
+      dedupeKey: state.icebreakerSessionId,
+    });
     state.warmupTopicsMeta = buildFallbackAIMeta('next_topic_route_missing_topics', 'social-warmup-topics-next-heal');
     state.warmupTopicsStatus = 'ready';
     state.warmupTopicsGeneratingAt = undefined;

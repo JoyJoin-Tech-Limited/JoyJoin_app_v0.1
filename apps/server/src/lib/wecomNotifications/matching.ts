@@ -1,4 +1,4 @@
-import { notifyOpsMarkdown, buildAdminUrl } from "../wecomNotifier";
+import { notifyOpsMarkdown, notifyCriticalMarkdown, buildAdminUrl } from "../wecomNotifier";
 
 export interface PoolMatchedPayload {
   poolTitle: string;
@@ -71,4 +71,77 @@ export async function notifyVenueAssignmentResult(payload: VenueAssignmentResult
   lines.push("", `[查看活动池 →](${buildAdminUrl(`/admin/pools/${payload.poolId}`)})`);
 
   await notifyOpsMarkdown("🏠 场地分配完成", lines);
+}
+
+export interface VenueTbdEscalationPayload {
+  poolId: string;
+  poolTitle: string;
+  poolDate: string;
+  /** Groups still without a venue after the retry pass. */
+  unassignedGroups: number;
+  totalGroups: number;
+  /** Reason-code breakdown from the latest retry. */
+  reasonBreakdown: string;
+  /** Whole hours until the event start (can be <= 2 at the T-2h deadline). */
+  hoursUntilEvent: number;
+  /** 'warning' = repeated retry failure; 'critical' = T-2h deadline breached. */
+  severity: "warning" | "critical";
+}
+
+/**
+ * W8 (AC-W8.5): escalating alert when venue assignment is still unresolved.
+ * `warning` on repeated retry attempts, `critical` once the T-2h decision
+ * deadline the user was promised has been breached.
+ */
+export async function notifyVenueTbdEscalation(payload: VenueTbdEscalationPayload): Promise<void> {
+  const lines: string[] = [
+    `**活动：** ${payload.poolTitle} | ${payload.poolDate}`,
+    `**未分配场地：** ❌ ${payload.unassignedGroups}/${payload.totalGroups} 组`,
+    `**距离活动开始：** 约 ${payload.hoursUntilEvent} 小时`,
+  ];
+  if (payload.reasonBreakdown) {
+    lines.push(`**未分配原因：** ${payload.reasonBreakdown}`);
+  }
+  lines.push(
+    "",
+    payload.severity === "critical"
+      ? "🚨 **已超过承诺用户的 T-2h 决策时限**，请立即人工分配场地。"
+      : "⚠️ **多次自动重试仍未分配完成**，请人工介入选址。",
+    "",
+    `[查看活动池 →](${buildAdminUrl(`/admin/pools/${payload.poolId}`)})`,
+  );
+
+  const title = payload.severity === "critical" ? "🚨 场地-已超 T-2h 决策时限" : "⚠️ 场地-重试仍未分配";
+  if (payload.severity === "critical") {
+    await notifyCriticalMarkdown(title, lines);
+  } else {
+    await notifyOpsMarkdown(title, lines);
+  }
+}
+
+export interface StuckMatchingPoolPayload {
+  poolId: string;
+  poolTitle: string;
+  /** Minutes the pool sat in `matching` before the watchdog recovered it. */
+  stuckForMinutes: number;
+  /** ISO timestamp of the last status write (when the run began / stalled). */
+  stuckSince: string;
+}
+
+/**
+ * W8 (AC-W8.4): a matching run died between the `active → matching` CAS and its
+ * commit (process crash, DB drop). The watchdog resets the pool to `active` so
+ * it can be retried, and pages ops. Carries ids/title only — no PII.
+ */
+export async function notifyStuckMatchingPool(payload: StuckMatchingPoolPayload): Promise<void> {
+  await notifyCriticalMarkdown("⚠️ 匹配卡住已自动回滚", [
+    `**活动：** ${payload.poolTitle}`,
+    `**活动池 ID：** ${payload.poolId}`,
+    `**卡住时长：** ${payload.stuckForMinutes} 分钟`,
+    `**开始时间：** ${payload.stuckSince}`,
+    "",
+    "系统已将该活动池状态回滚为 `active`，等待下一次匹配触发。请检查匹配服务日志与数据库连接。",
+    "",
+    `[查看活动池 →](${buildAdminUrl(`/admin/pools/${payload.poolId}`)})`,
+  ]);
 }

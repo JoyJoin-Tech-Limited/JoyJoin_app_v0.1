@@ -190,7 +190,10 @@ export async function executePostMatchCommitSideEffects(
                     category: "activities",
                     type: "venue_tbd",
                     title: "地点待定",
-                    message: "我们正在为您协调最佳场地，活动前会通知您具体地点",
+                    // W8 (AC-W8.5): commit to a concrete T-2h decision so the
+                    // user knows exactly when the location will be settled
+                    // (paired with the venue-TBD retry scheduler + ops alerts).
+                    message: "我们正在为您协调最佳场地，最晚会在活动开始前 2 小时确定并通知您",
                     relatedResourceId: poolId,
                   })
                 )

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { eventCreditRedemptions, eventPoolRegistrations, payments } from "@shared/schema";
+import { eventCreditRedemptions, eventPoolRegistrations, notifications, payments } from "@shared/schema";
 
 /**
  * Auto-refund pipeline tests (sprint auto-refund-pipeline-20260805).
@@ -11,16 +11,30 @@ import { eventCreditRedemptions, eventPoolRegistrations, payments } from "@share
 
 type AnyRow = Record<string, unknown> & { id?: string };
 
-const state: { payments: AnyRow[]; redemptions: AnyRow[]; registrations: AnyRow[] } = {
+const state: {
+  payments: AnyRow[];
+  redemptions: AnyRow[];
+  registrations: AnyRow[];
+  notifications: AnyRow[];
+  /** Injects a transient failure on the notifications SELECT (the AC-W2.5
+   *  guard read) to prove the refund run does not abort after money moved. */
+  failGuardRead: boolean;
+} = {
   payments: [],
   redemptions: [],
   registrations: [],
+  notifications: [],
+  failGuardRead: false,
 };
 
 function rowsForTable(table: unknown): AnyRow[] {
   if (table === payments) return state.payments;
   if (table === eventCreditRedemptions) return state.redemptions;
   if (table === eventPoolRegistrations) return state.registrations;
+  if (table === notifications) {
+    if (state.failGuardRead) throw new Error("transient guard-read DB error");
+    return state.notifications;
+  }
   return [];
 }
 
@@ -73,7 +87,14 @@ vi.mock("../db", () => ({
   db: {
     select: () => ({
       from: (table: unknown) => ({
-        where: async (cond: unknown) => rowsForTable(table).filter((row) => evalWhere(row, cond)),
+        // Returns a (thenable) array that also supports the production
+        // `.where(...).limit(1)` chain used by the AC-W2.5 guard.
+        where: (cond: unknown) => {
+          const rows = rowsForTable(table).filter((row) => evalWhere(row, cond));
+          const chain = rows as AnyRow[] & { limit: (n: number) => Promise<AnyRow[]> };
+          chain.limit = async (n: number) => rows.slice(0, n);
+          return chain;
+        },
         limit: async (cond: unknown) =>
           rowsForTable(table)
             .filter((row) => evalWhere(row, cond))
@@ -114,7 +135,19 @@ vi.mock("../repositories/refundAttemptsRepo", () => ({
 
 vi.mock("../repositories/notificationsRepo", () => ({
   notificationsRepo: {
-    createNotification: vi.fn(async () => undefined),
+    // Persist into the fake notifications table so the AC-W2.5
+    // (user, type, pool) idempotency guard can see prior-run notices.
+    createNotification: vi.fn(async (data: AnyRow) => {
+      state.notifications.push({
+        id: `n-${state.notifications.length + 1}`,
+        user_id: data.userId,
+        type: data.type,
+        related_resource_id: data.relatedResourceId,
+        title: data.title,
+        message: data.message,
+        category: data.category,
+      });
+    }),
   },
 }));
 
@@ -133,6 +166,7 @@ import {
   refundPoolCancellation,
   refundUnmatchedRegistrations,
   refundCollapsedGroupRegistrations,
+  REFUND_CONTEXTS,
 } from "../services/autoRefundService";
 
 const moneyPayment = (id: string, userId: string, wechatOrderId = `wx_${id}`): AnyRow => ({
@@ -167,6 +201,8 @@ beforeEach(() => {
   state.payments = [];
   state.redemptions = [];
   state.registrations = [];
+  state.notifications = [];
+  state.failGuardRead = false;
   vi.mocked(getFeatureFlag).mockResolvedValue(true);
   vi.mocked(paymentService.createRefund).mockClear();
   vi.mocked(paymentFulfillmentRepo.finalizeRefundedPayment).mockClear();
@@ -303,7 +339,7 @@ describe("refundUnmatchedRegistrations (Trigger B)", () => {
     const summary = await refundUnmatchedRegistrations("pool-1", "测试饭局");
 
     expect(paymentService.createRefund).toHaveBeenCalledTimes(1);
-    expect(paymentService.createRefund).toHaveBeenCalledWith("p1", "场次未成行，自动退款", "auto-refund");
+    expect(paymentService.createRefund).toHaveBeenCalledWith("p1", "座位未排上，自动退款", "auto-refund");
     expect(eventCreditsRepo.reverseRedemptionForRegistration).toHaveBeenCalledTimes(1);
     expect(eventCreditsRepo.reverseRedemptionForRegistration).toHaveBeenCalledWith(
       expect.anything(),
@@ -328,7 +364,7 @@ describe("refundUnmatchedRegistrations (Trigger B)", () => {
     expect(summary.refundedPayments).toBe(0);
   });
 
-  it("uses the unmatched notification type and copy", async () => {
+  it("uses the seat-not-allocated notification type and copy (never 场次未成行)", async () => {
     state.payments = [moneyPayment("p1", "u1")];
     state.registrations = [
       { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
@@ -337,8 +373,149 @@ describe("refundUnmatchedRegistrations (Trigger B)", () => {
     await refundUnmatchedRegistrations("pool-1", "测试饭局");
 
     const notif = vi.mocked(notificationsRepo.createNotification).mock.calls[0][0];
-    expect(notif.type).toBe("unmatched_refund");
-    expect(notif.title).toBe("场次未成行，报名费已退回");
+    expect(notif.type).toBe("seat_not_allocated_refund");
+    expect(notif.title).toBe("本次座位未排上，报名费已退回");
+    // P-3 / AC-W2.4: the pool may still have formed groups — never claim the
+    // event did not happen.
+    expect(notif.title).not.toContain("场次未成行");
+    expect(notif.relatedResourceId).toBe("pool-1");
+  });
+});
+
+describe("AC-W2.4 — distinct pool-cancelled vs seat-not-allocated copy + code", () => {
+  it("exposes two distinct machine codes and notification types", () => {
+    expect(REFUND_CONTEXTS.pool_cancelled.code).toBe("POOL_CANCELLED");
+    expect(REFUND_CONTEXTS.seat_not_allocated.code).toBe("SEAT_NOT_ALLOCATED");
+    expect(REFUND_CONTEXTS.pool_cancelled.code).not.toBe(REFUND_CONTEXTS.seat_not_allocated.code);
+    expect(REFUND_CONTEXTS.pool_cancelled.notificationType)
+      .not.toBe(REFUND_CONTEXTS.seat_not_allocated.notificationType);
+  });
+
+  it("pool_cancelled says the event was cancelled; seat_not_allocated never claims 场次未成行", () => {
+    expect(REFUND_CONTEXTS.pool_cancelled.notificationTitleMoney).toContain("活动取消");
+    expect(REFUND_CONTEXTS.seat_not_allocated.notificationTitleMoney).toContain("座位");
+    expect(REFUND_CONTEXTS.seat_not_allocated.notificationTitleMoney).not.toContain("场次未成行");
+    expect(REFUND_CONTEXTS.seat_not_allocated.notificationTitleCredit).not.toContain("场次未成行");
+  });
+
+  it("the same unmatched user is notified with the seat-not-allocated code via Trigger B", async () => {
+    state.payments = [moneyPayment("p1", "u1")];
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+
+    await refundUnmatchedRegistrations("pool-1", "测试饭局");
+
+    const notif = vi.mocked(notificationsRepo.createNotification).mock.calls[0][0];
+    expect(notif.type).toBe(REFUND_CONTEXTS.seat_not_allocated.notificationType);
+  });
+});
+
+describe("AC-W2.5 — unmatched notice on every payment path, exactly once", () => {
+  it("notifies paid / credit / subscription / free unmatched users exactly once each", async () => {
+    // Four unmatched registrations, one per payment path:
+    //   u1 paid (money)  u2 credit  u3 subscription (no row)  u4 free (no row)
+    state.payments = [moneyPayment("p1", "u1")];
+    state.redemptions = [redemption("r1", "u2", "reg-2")];
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-2", userId: "u2", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-3", userId: "u3", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-4", userId: "u4", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+
+    const summary = await refundUnmatchedRegistrations("pool-1", "测试饭局");
+
+    expect(summary.refundedPayments).toBe(1);
+    expect(summary.refundedCredits).toBe(1);
+    const calls = vi.mocked(notificationsRepo.createNotification).mock.calls.map((c) => c[0]);
+    const byUser = new Map(calls.map((c) => [c.userId, c]));
+    expect([...byUser.keys()].sort()).toEqual(["u1", "u2", "u3", "u4"]);
+    expect(calls).toHaveLength(4); // exactly once per user
+    // Paid + credit keep their refund-aware variants; subscription/free get the
+    // neutral informational variant (no refund claim to describe).
+    expect(byUser.get("u1")!.title).toBe(REFUND_CONTEXTS.seat_not_allocated.notificationTitleMoney);
+    expect(byUser.get("u2")!.title).toBe(REFUND_CONTEXTS.seat_not_allocated.notificationTitleCredit);
+    expect(byUser.get("u3")!.title).toBe(REFUND_CONTEXTS.seat_not_allocated.notificationTitleNeutral);
+    expect(byUser.get("u4")!.title).toBe(REFUND_CONTEXTS.seat_not_allocated.notificationTitleNeutral);
+    for (const c of calls) expect(c.type).toBe("seat_not_allocated_refund");
+  });
+
+  it("re-running the pipeline does not re-notify (idempotent, exactly once across runs)", async () => {
+    state.payments = [moneyPayment("p1", "u1")];
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-2", userId: "u2", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+
+    await refundUnmatchedRegistrations("pool-1", "测试饭局");
+    expect(notificationsRepo.createNotification).toHaveBeenCalledTimes(2);
+
+    // Second run: the paid refund claim is gone (payment refunded) and the
+    // (user, type, pool) existence guard suppresses the informational pass.
+    state.payments = [{ ...moneyPayment("p1", "u1"), status: "refunded" }];
+    vi.mocked(notificationsRepo.createNotification).mockClear();
+
+    await refundUnmatchedRegistrations("pool-1", "测试饭局");
+
+    expect(notificationsRepo.createNotification).not.toHaveBeenCalled();
+  });
+
+  it("does not suppress a user unmatched in a DIFFERENT pool (guard is pool-scoped)", async () => {
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+    await refundUnmatchedRegistrations("pool-1", "测试饭局");
+    expect(notificationsRepo.createNotification).toHaveBeenCalledTimes(1);
+
+    state.registrations = [
+      { id: "reg-9", userId: "u1", pool_id: "pool-2", match_status: "unmatched" },
+    ];
+    vi.mocked(notificationsRepo.createNotification).mockClear();
+    await refundUnmatchedRegistrations("pool-2", "另一场");
+    expect(notificationsRepo.createNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("guard-read failure never aborts the run — treats it as not-yet-notified and still notifies", async () => {
+    // Two unmatched registrations with no payment/redemption row (subscription
+    // / free path): the only DB read left is the AC-W2.5 existence guard.
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-2", userId: "u2", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+    state.failGuardRead = true;
+
+    // Must not throw (the call-site contract is "never throws") and must still
+    // deliver a notice to both users rather than stranding them after money
+    // claims already completed.
+    const summary = await refundUnmatchedRegistrations("pool-1", "测试饭局");
+
+    expect(notificationsRepo.createNotification).toHaveBeenCalledTimes(2);
+    expect(summary.failedRefunds).toHaveLength(0);
+  });
+
+  it("does not send false neutral copy to a user whose refund FAILED", async () => {
+    state.payments = [moneyPayment("p1", "u1"), moneyPayment("p2", "u2")];
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-2", userId: "u2", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+    // u1's refund fails; u2's succeeds.
+    vi.mocked(paymentService.createRefund)
+      .mockRejectedValueOnce(new Error("WeChat refund rejected"))
+      .mockResolvedValueOnce(undefined);
+
+    const summary = await refundUnmatchedRegistrations("pool-1", "测试饭局");
+
+    expect(summary.failedRefunds).toHaveLength(1);
+    expect(summary.failedRefunds[0].paymentId).toBe("p1");
+    const calls = vi.mocked(notificationsRepo.createNotification).mock.calls.map((c) => c[0]);
+    const byUser = new Map(calls.map((c) => [c.userId, c]));
+    // u2 (successful refund) gets the money copy; u1 (failed) gets NOTHING —
+    // neutral "你无需额外操作" would be false reassurance.
+    expect(byUser.get("u2")!.title).toBe(REFUND_CONTEXTS.seat_not_allocated.notificationTitleMoney);
+    expect(byUser.has("u1")).toBe(false);
+    expect(calls).toHaveLength(1);
   });
 });
 

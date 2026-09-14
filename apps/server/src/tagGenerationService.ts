@@ -282,21 +282,40 @@ ${JSON.stringify(userProfile, null, 2)}
       return { tags: combinedTags, isFallback: true, meta: buildFallbackAIMeta('partial_valid_output', TAG_GENERATION_PROMPT_VERSION) };
     }
 
-    // Post-generation moderation: check descriptor and fullTag of each tag
-    const moderationChecks = validTags.map((t, i) => [
+    // Post-generation moderation: user-visible descriptor/fullTag must also pass
+    // the WeChat review-vocab gate (匹配/社交/灵魂/撮合/AI) on top of profanity.
+    const visibleTagChecks = validTags.flatMap((t, i) => [
       { field: `tag_${i}_descriptor`, text: t.descriptor },
       { field: `tag_${i}_fullTag`, text: t.fullTag },
-      { field: `tag_${i}_reasoning`, text: t.reasoning },
-    ]).flat();
-    const moderation = moderateGeneratedContent(moderationChecks, {
+    ]);
+    const visibleModeration = moderateGeneratedContent(visibleTagChecks, {
       domain: 'creative_identity',
       feature: 'generateSocialTags',
       provider,
       model,
       latencyMs: durationMs,
       promptVersion: TAG_GENERATION_PROMPT_VERSION,
+      enforceReviewVocab: true,
     });
-    if (!moderation.safe) {
+    if (!visibleModeration.safe) {
+      return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('content_safety', TAG_GENERATION_PROMPT_VERSION) };
+    }
+
+    // EXCLUSION: `reasoning` is internal rationale only (never surfaced to users),
+    // so it keeps profanity moderation but is excluded from the review-vocab gate —
+    // enforcing on internal prose would needlessly degrade otherwise-visible tags.
+    const reasoningModeration = moderateGeneratedContent(
+      validTags.map((t, i) => ({ field: `tag_${i}_reasoning`, text: t.reasoning })),
+      {
+        domain: 'creative_identity',
+        feature: 'generateSocialTags',
+        provider,
+        model,
+        latencyMs: durationMs,
+        promptVersion: TAG_GENERATION_PROMPT_VERSION,
+      },
+    );
+    if (!reasoningModeration.safe) {
       return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('content_safety', TAG_GENERATION_PROMPT_VERSION) };
     }
 

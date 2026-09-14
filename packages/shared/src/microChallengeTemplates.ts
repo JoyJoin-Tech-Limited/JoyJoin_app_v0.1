@@ -443,8 +443,17 @@ export function selectMicroChallenges(
     return fallback.slice(0, count).map((t) => applyWowModifier(t, rand));
   }
 
+  // 1b. Energy-arc floor (W5, AC-W5.3): a low-energy target must not select
+  //     high-energy challenges while lower-energy alternatives exist, so a
+  //     quiet table is never handed a hype challenge. No energyArc supplied →
+  //     `candidates === eligible` and selection is byte-identical to pre-W5.
+  const targetEnergy = inferTargetEnergy(params.energyArc);
+  const candidates =
+    targetEnergy === 'low' ? eligible.filter((t) => t.energyLevel !== 'high') : eligible;
+  const scoreEligible = candidates.length > 0 ? candidates : eligible;
+
   // 2. Score
-  const scored = eligible.map((t) => ({
+  const scored = scoreEligible.map((t) => ({
     template: t,
     score: scoreTemplate(t, params),
   }));

@@ -56,6 +56,8 @@ function moderateAndAttachAIGC<T>(
     latencyMs: options.latencyMs,
     promptVersion: options.promptVersion,
     traceId: options.aiCorrelationId,
+    // W7.2: WeChat review posture — banned vocabulary degrades to curated.
+    enforceReviewVocab: true,
   });
   if (!moderation.safe) {
     return attachAIGC({

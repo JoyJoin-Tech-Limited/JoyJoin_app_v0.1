@@ -29,6 +29,8 @@ import {
   cleanupPhaseStateForNextPhase,
   ensureSessionEnabledPhases,
 } from '../socialIcebreakerPhaseConfig';
+import { getFeatureFlag } from '../lib/featureFlags';
+import { inferMicroChallengeEnergyArc } from '../lib/icebreakerRosterSignals';
 import {
   getSession,
   updateSession,
@@ -245,10 +247,19 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
   }
 
   const roster = await listParticipants(socialSessionId);
+  // W5: only enrich with mood/energy/interest hooks when matching-aware is on,
+  // so the flag-off call is byte-identical to pre-W5.
+  const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
   const result = await generateMicroChallenges({
     participantCount: roster.length || state.playerCount || 1,
     eventType: state.eventType || '活动',
-    roster: roster.map((p) => ({ archetype: p.archetype })),
+    roster: roster.map((p) => ({ archetype: p.archetype, interests: p.interests })),
+    ...(matchingAware
+      ? {
+          mood: state.selectedMood,
+          energyArc: inferMicroChallengeEnergyArc({ roster, mood: state.selectedMood }),
+        }
+      : {}),
   });
 
   state.currentChallenge = result.data[0];

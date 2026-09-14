@@ -44,9 +44,19 @@ import { createAiCorrelationId, logAITrace } from './aiTraceLogger';
 import { recordAIProviderRecoveryMetric } from '../middleware/metrics';
 import { validateMiniScriptFramework } from './miniscriptValidator';
 import { runMiniScriptRuntimeCritic } from './miniscriptCritic';
+import {
+  moderateGeneratedContent,
+  type ModerationCheck,
+  type ModerationResult,
+} from './aiContentModeration';
 import { findCatalogEntry, getRandomCatalogEntry } from './miniscriptCatalog';
 import { logger } from "./logger";
 import { buildArchetypeContext } from './contextInjector';
+import {
+  buildRosterCharacterTraits,
+  type RosterSignalMember,
+} from './icebreakerRosterSignals';
+import { getFeatureFlag } from './featureFlags';
 import { validateCraft } from './writingCraftValidator';
 
 /**
@@ -184,10 +194,202 @@ function finalizeFrameworkUserSurfaces(
   };
 }
 
+/**
+ * W7.2 — collect every user-visible (or player-revealed) string from a generated
+ * framework so the WeChat review-vocab gate (匹配/社交/灵魂/撮合/AI) and the
+ * profanity filter can scan the whole story before it is persisted. Machine
+ * identifiers (`style`/`genres` keys, `clueId`, `evidence.id`/`iconKey`, the
+ * `fromClues` clue-id references) are deliberately excluded — they are not
+ * user-facing copy and are label-scrubbed separately by
+ * `finalizeFrameworkUserSurfaces`.
+ */
+function collectFrameworkModerationChecks(
+  framework: MiniScriptStoryFramework,
+): ModerationCheck[] {
+  const checks: ModerationCheck[] = [
+    { field: 'title', text: framework.title },
+    { field: 'premise', text: framework.premise },
+    { field: 'ending.resolutionSummary', text: framework.ending.resolutionSummary },
+    { field: 'ending.confessionMechanic', text: framework.ending.confessionMechanic },
+    { field: 'solution.who', text: framework.solution.who },
+    { field: 'solution.what', text: framework.solution.what },
+    { field: 'solution.why', text: framework.solution.why },
+  ];
+
+  framework.characters.forEach((character, i) => {
+    checks.push(
+      { field: `characters[${i}].roleLabel`, text: character.roleLabel },
+      { field: `characters[${i}].sinHook`, text: character.sinHook },
+      { field: `characters[${i}].alibi`, text: character.alibi },
+      // Revealed to the owning player at the revelation beat — still AI copy.
+      { field: `characters[${i}].secret`, text: character.secret },
+    );
+  });
+
+  framework.clues.forEach((clue, i) => {
+    checks.push({ field: `clues[${i}].text`, text: clue.text });
+  });
+
+  framework.act_flow.forEach((act, i) => {
+    checks.push(
+      { field: `act_flow[${i}].title`, text: act.title },
+      { field: `act_flow[${i}].cliffhanger`, text: act.cliffhanger },
+      ...act.beats.map((beat, j) => ({
+        field: `act_flow[${i}].beats[${j}]`,
+        text: beat,
+      })),
+    );
+    act.evidence?.forEach((item, j) => {
+      checks.push(
+        { field: `act_flow[${i}].evidence[${j}].name`, text: item.name },
+        { field: `act_flow[${i}].evidence[${j}].description`, text: item.description },
+      );
+      if (item.evidenceReactions) {
+        for (const [slot, text] of Object.entries(item.evidenceReactions)) {
+          checks.push({
+            field: `act_flow[${i}].evidence[${j}].evidenceReactions[${slot}]`,
+            text,
+          });
+        }
+      }
+    });
+  });
+
+  framework.playerKnowledge.forEach((knowledge, i) => {
+    checks.push(
+      { field: `playerKnowledge[${i}].secretAgenda`, text: knowledge.secretAgenda },
+      { field: `playerKnowledge[${i}].truthfulAlibi`, text: knowledge.truthfulAlibi },
+      ...knowledge.knownFacts.map((fact, j) => ({
+        field: `playerKnowledge[${i}].knownFacts[${j}]`,
+        text: fact,
+      })),
+    );
+  });
+
+  framework.motiveOptions?.forEach((motive, i) => {
+    checks.push({ field: `motiveOptions[${i}]`, text: motive });
+  });
+  framework.voteOptions?.what.forEach((option, i) => {
+    checks.push({ field: `voteOptions.what[${i}]`, text: option });
+  });
+  framework.voteOptions?.why.forEach((option, i) => {
+    checks.push({ field: `voteOptions.why[${i}]`, text: option });
+  });
+  framework.redHerrings?.forEach((herring, i) => {
+    checks.push(
+      { field: `redHerrings[${i}].text`, text: herring.text },
+      { field: `redHerrings[${i}].misleadingTarget`, text: herring.misleadingTarget },
+    );
+  });
+  framework.deductionChain?.forEach((step, i) => {
+    checks.push({ field: `deductionChain[${i}].conclusion`, text: step.conclusion });
+  });
+
+  return checks;
+}
+
+/**
+ * W7.2 — deterministic content gate for the generated framework. Returns the
+ * `moderateGeneratedContent` verdict, failing closed (`safe: false`) if the
+ * moderator itself throws so a broken gate can never ship unreviewed copy.
+ */
+function moderateFrameworkSurfaces(params: {
+  framework: MiniScriptStoryFramework;
+  provider: AIProvider;
+  model?: string;
+  latencyMs: number;
+  promptVersion: string;
+  traceId: string;
+}): ModerationResult {
+  try {
+    return moderateGeneratedContent(
+      collectFrameworkModerationChecks(params.framework),
+      {
+        domain: 'icebreaker',
+        feature: 'generateMiniScriptFramework',
+        provider: params.provider,
+        model: params.model,
+        latencyMs: params.latencyMs,
+        promptVersion: params.promptVersion,
+        traceId: params.traceId,
+        // WeChat review posture (W7.2): no visible AI string may contain
+        // 匹配/社交/灵魂/撮合/AI. A hit degrades the framework to curated
+        // fallback — never ship blocked vocab.
+        enforceReviewVocab: true,
+      },
+    );
+  } catch (error) {
+    logger.error('[MiniScriptAgent] moderation failed — failing closed to catalog fallback', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { safe: false, field: 'moderation', message: 'moderation_error' };
+  }
+}
+
+/**
+ * W5 (AC-W5.4): the curated failure fallback must not be roster-blind. When the
+ * `icebreakerMatchingAwareEnabled` flag is on and the matched roster is known,
+ * overlay every character slot with a real player's name + top interest/
+ * archetype — the same guarantee the live prompt path asks the LLM for.
+ *
+ * Coherence: the culprit (`solution.who`) is re-pointed at the woven role it
+ * already targeted, and each slot's private `playerKnowledge` is rewritten to
+ * match its woven role so a player never receives another character's secret.
+ *
+ * Flag off / no named roster → the framework is returned untouched, keeping the
+ * fallback byte-identical to pre-W5 (AC-W5.6).
+ */
+function weaveRosterTraitsIntoFramework(
+  framework: MiniScriptStoryFramework,
+  params: { roster?: RosterSignalMember[]; includeRosterTraits?: boolean },
+): MiniScriptStoryFramework {
+  if (!params.includeRosterTraits || !params.roster || params.roster.length === 0) {
+    return framework;
+  }
+  const traits = buildRosterCharacterTraits(params.roster, framework.characters.length);
+  if (!traits) return framework;
+
+  const characters = framework.characters.map((character, slotIndex) => {
+    const trait = traits[slotIndex]!;
+    return {
+      ...character,
+      roleLabel: trait.roleLabel,
+      sinHook: trait.sinHook,
+      alibi: trait.alibi,
+      secret: trait.secret,
+    };
+  });
+
+  const { whoSlot } = framework.solution;
+  let solution = framework.solution;
+  if (whoSlot != null && whoSlot >= 1 && whoSlot <= characters.length) {
+    solution = { ...solution, who: characters[whoSlot - 1]!.roleLabel };
+  } else {
+    const priorIdx = framework.characters.findIndex((c) => c.roleLabel === framework.solution.who);
+    if (priorIdx >= 0) solution = { ...solution, who: characters[priorIdx]!.roleLabel };
+  }
+
+  const playerKnowledge = framework.playerKnowledge.map((knowledge) => {
+    const woven = characters[knowledge.slotIndex];
+    if (!woven) return knowledge;
+    return {
+      ...knowledge,
+      knownFacts: [`我是${woven.roleLabel}`, woven.alibi].slice(0, 6),
+      secretAgenda: woven.secret,
+      truthfulAlibi: woven.alibi,
+    };
+  });
+
+  return { ...framework, characters, playerKnowledge, solution };
+}
+
 function getCatalogFallback(params: {
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
   playerCount: number;
+  roster?: RosterSignalMember[];
+  /** W5: gate the roster weave so flag-off stays byte-identical to pre-W5. */
+  includeRosterTraits?: boolean;
 }): MiniScriptStoryFramework {
   const warnFallback = (source: string) =>
     logger.warn('[MiniScriptAgent] fallback path taken', {
@@ -195,18 +397,22 @@ function getCatalogFallback(params: {
       style: params.style,
       genres: params.genres,
       playerCount: params.playerCount,
+      rosterWeaved: params.includeRosterTraits === true && (params.roster?.length ?? 0) > 0,
     });
+
+  const finalize = (framework: MiniScriptStoryFramework) =>
+    finalizeFrameworkUserSurfaces(weaveRosterTraitsIntoFramework(framework, params));
 
   const exact = findCatalogEntry(params.style, params.genres);
   if (exact) {
     warnFallback('catalog_exact');
-    return finalizeFrameworkUserSurfaces(adaptCatalogEntry(exact.framework, params));
+    return finalize(adaptCatalogEntry(exact.framework, params));
   }
 
   const random = getRandomCatalogEntry(params.style, params.genres);
   if (random) {
     warnFallback('catalog_random');
-    return finalizeFrameworkUserSurfaces(adaptCatalogEntry(random.framework, params));
+    return finalize(adaptCatalogEntry(random.framework, params));
   }
 
   // Production-grade fallback: complete playable frameworks from the shared
@@ -214,14 +420,14 @@ function getCatalogFallback(params: {
   const curated = findCuratedMiniScriptStory(params.style, params.genres);
   if (curated) {
     warnFallback('curated_shared');
-    return finalizeFrameworkUserSurfaces(adaptCatalogEntry(curated, params));
+    return finalize(adaptCatalogEntry(curated, params));
   }
 
   // Dev-only last resort: the intentionally thin v2 stub. Never served in
   // production unless MINISCRIPT_ENABLE_STUB_FALLBACK explicitly opts in.
   if (isMiniscriptStubFallbackEnabled()) {
     warnFallback('v2_stub_dev_only');
-    return finalizeFrameworkUserSurfaces(generateV2Stub(params));
+    return finalize(generateV2Stub(params));
   }
 
   // Unreachable while the curated registry is non-empty. Defensive: in
@@ -230,7 +436,7 @@ function getCatalogFallback(params: {
     style: params.style,
     genres: params.genres,
   });
-  return finalizeFrameworkUserSurfaces(adaptCatalogEntry(MINISCRIPT_CURATED_STORIES[0]!, params));
+  return finalize(adaptCatalogEntry(MINISCRIPT_CURATED_STORIES[0]!, params));
 }
 
 /**
@@ -411,8 +617,10 @@ async function pass1Generate(params: {
   config: ReturnType<typeof getGameModeConfig>;
   lite?: boolean;
   signal?: AbortSignal;
-  roster?: Array<{ archetype?: string }>;
+  roster?: Array<{ displayName?: string; archetype?: string; interests?: string[] }>;
   selectedLabel?: string;
+  /** W5: when true, weave the roster's names/archetypes/interests into characters. */
+  includeRosterTraits?: boolean;
 }): Promise<{
   ok: boolean;
   framework?: MiniScriptStoryFramework;
@@ -432,6 +640,7 @@ async function pass1Generate(params: {
     lite: params.lite,
     sessionContext: sessionContext?.mixText ? { mixText: sessionContext.mixText } : undefined,
     selectedLabel: params.selectedLabel,
+    roster: params.includeRosterTraits ? params.roster : undefined,
   });
 
   let selection;
@@ -607,7 +816,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
   lite?: boolean;
-  roster?: Array<{ archetype?: string }>;
+  roster?: Array<{ displayName?: string; archetype?: string; interests?: string[] }>;
   selectedLabel?: string;
   onProgress?: (stage: 'generating' | 'validating' | 'fallback', progress: number) => void;
 }): Promise<{
@@ -619,6 +828,12 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   const promptVersion = MINISCRIPT_GENERATION_PROMPT_VERSION;
   const tAll = Date.now();
   const config = getGameModeConfig(params.genres);
+  // W5: roster trait weaving is kill-switched. Flag off → pass1Generate omits
+  // the roster block and the prompt is byte-identical to pre-W5.
+  const includeRosterTraits = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+  // W5: pass the same gate into the failure fallback so a roster is only woven
+  // when the flag is on (flag-off stays byte-identical to pre-W5).
+  const fallbackParams = { ...params, includeRosterTraits };
   params.onProgress?.('generating', 15);
 
   const emitTrace = (fields: {
@@ -646,7 +861,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   // ── LLM disabled → immediate catalog fallback ──────────────────────────────
   if (!isMiniscriptLlmEnabled()) {
     params.onProgress?.('fallback', 86);
-    const framework = getCatalogFallback(params);
+    const framework = getCatalogFallback(fallbackParams);
     emitTrace({ provider: null, success: true, fallbackUsed: true, errorCode: 'llm_disabled' });
     return {
       framework,
@@ -690,6 +905,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
           config,
           signal: controller.signal,
           roster: params.roster,
+          includeRosterTraits,
         }),
         timeoutMs,
       ).catch((error): Awaited<ReturnType<typeof pass1Generate>> => {
@@ -709,7 +925,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   if (!pass1.ok || !pass1.framework) {
     clearTimeout(timer);
     params.onProgress?.('fallback', 86);
-    const framework = getCatalogFallback(params);
+    const framework = getCatalogFallback(fallbackParams);
     emitTrace({
       provider: pass1.provider ?? null,
       model: pass1.model,
@@ -738,7 +954,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   if (!withAuthorityRaw) {
     clearTimeout(timer);
     params.onProgress?.('fallback', 86);
-    const framework = getCatalogFallback(params);
+    const framework = getCatalogFallback(fallbackParams);
     emitTrace({
       provider: pass1.provider!,
       model: pass1.model,
@@ -762,6 +978,49 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   // LLM that echoes machine keys or overshoots the title still ships clean copy.
   const withAuthority = finalizeFrameworkUserSurfaces(withAuthorityRaw);
 
+  // ── Content moderation (post-generation, pre-persist; W7.2) ────────────────
+  // The mini-script route renders this framework to every player (and reveals
+  // character secrets / clues / the solution at later beats), so the generated
+  // copy must clear the same deterministic gate the social-icebreaker
+  // generators use. Fail-closed: a review-blocked token (匹配/社交/灵魂/撮合/AI),
+  // a profanity hit, or a moderator error degrades to the curated catalog
+  // fallback (roster weaving still applies) — never ship blocked vocab.
+  // Synchronous, so the 28s PIPELINE_TIMEOUT_MS bound is unaffected.
+  const moderation = moderateFrameworkSurfaces({
+    framework: withAuthority,
+    provider: pass1.provider!,
+    model: pass1.model,
+    latencyMs: Date.now() - tAll,
+    promptVersion,
+    traceId: aiCorrelationId,
+  });
+  if (!moderation.safe) {
+    clearTimeout(timer);
+    params.onProgress?.('fallback', 86);
+    const moderationErrorCode = moderation.blockedWord ? 'banned_vocab' : 'content_safety';
+    const framework = getCatalogFallback(fallbackParams);
+    emitTrace({
+      provider: pass1.provider!,
+      model: pass1.model,
+      success: false,
+      fallbackUsed: true,
+      errorCode: moderationErrorCode,
+    });
+    return {
+      framework,
+      meta: {
+        promptVersion,
+        fallbackUsed: true,
+        // The LLM story was REJECTED by moderation — llmAccepted stays false so
+        // the acceptance metric is not corrupted by a rejected generation.
+        llmAccepted: false,
+        providerRecoveryUsed: pass1.deepSeekRecoveryUsed,
+        catalogUsed: true,
+      },
+      aiResponseMeta: buildFallbackAIMeta(moderationErrorCode, promptVersion, aiCorrelationId),
+    };
+  }
+
   // ── Runtime critic (post-generation, pre-persist; flag-gated no-op by default)
   // Runs before pass 2 so a blocked story never burns validation budget. The
   // critic never throws: timeout/budget-exhaustion fail open, a detected
@@ -773,7 +1032,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   if (critic.verdict === 'blocked') {
     clearTimeout(timer);
     params.onProgress?.('fallback', 86);
-    const framework = getCatalogFallback(params);
+    const framework = getCatalogFallback(fallbackParams);
     emitTrace({
       provider: pass1.provider!,
       model: pass1.model,
@@ -839,7 +1098,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
     if (!pass2 || !pass2.valid) {
       clearTimeout(timer);
       params.onProgress?.('fallback', 86);
-      const framework = getCatalogFallback(params);
+      const framework = getCatalogFallback(fallbackParams);
       const pass2ErrorCode = pass2 == null
         ? 'pipeline_timeout'
         : pass2.meta.fixable

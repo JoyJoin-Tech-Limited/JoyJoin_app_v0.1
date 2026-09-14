@@ -3,11 +3,11 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { getEventParticipants, type EventParticipantSummary } from '@shared/api'
+import { getEventParticipants, getMyPoolRegistrations, type EventParticipantSummary } from '@shared/api'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { apiRequest } from '../../lib/api/api'
 import { queryClient } from '../../lib/api/queryClient'
-import { CONNECTIONS_SHELL_QUERY_KEY } from '../../lib/prefetchEngine'
+import { CONNECTIONS_SHELL_QUERY_KEY, REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
@@ -37,6 +37,7 @@ import {
   type VenueStyleLiteral,
 } from './feedbackOptions'
 import { buildEventFeedbackPayload, type AttendeeTraitInput } from './feedbackPayload'
+import { buildGroupOutcomePayload } from './groupOutcomePayload'
 import './index.scss'
 
 interface MutualMatch {
@@ -284,6 +285,93 @@ export default function EventFeedbackPage() {
     enabled: !!eventId && !authLoading && !!currentUserId,
   })
 
+  // W4 (AC-W4.2a): resolve the caller's matched group for this event so the
+  // feedback submission can also feed the canonical outcome pipeline
+  // (event_group_outcomes → match_history). Pool events use the pool id as the
+  // routed event id (see joinedEventsRepo), so a registration whose poolId
+  // matches the route param identifies the matched group. Reuses the shared
+  // registrations cache key — no extra round-trip on the common path.
+  const { data: poolRegistrations } = useQuery({
+    queryKey: REGISTRATIONS_QUERY_KEY,
+    queryFn: () => getMyPoolRegistrations(apiRequest),
+    enabled: !!eventId && !authLoading && !!currentUserId,
+  })
+
+  /**
+   * Best-effort canonical outcome submission. Runs AFTER the primary feedback
+   * POST succeeded and never blocks or fails the user's submission — the
+   * learning pipeline must not degrade the feedback UX.
+   *
+   * Distinguishes "registrations not resolved yet" from "resolved, but no
+   * matched group": the shared registrations cache can still be in flight on a
+   * cold start, and silently returning there would drop the outcome (the exact
+   * fuel-line gap W4 set out to close). When unresolved we block the
+   * fire-and-forget promise on `ensureQueryData` instead of losing the write.
+   */
+  const submitGroupOutcome = useCallback(async () => {
+    let matchedRegistration = poolRegistrations?.find(
+      (registration) => registration.poolId === eventId && !!registration.assignedGroupId,
+    )
+    if (!poolRegistrations) {
+      try {
+        const registrations = await queryClient.ensureQueryData({
+          queryKey: REGISTRATIONS_QUERY_KEY,
+          queryFn: () => getMyPoolRegistrations(apiRequest),
+        })
+        matchedRegistration = registrations.find(
+          (registration) => registration.poolId === eventId && !!registration.assignedGroupId,
+        )
+      } catch (err) {
+        logError('[EventFeedback] Group outcome skipped: registrations unavailable', {
+          eventId,
+          message: err instanceof Error ? err.message : String(err),
+        })
+        return
+      }
+    }
+    if (!matchedRegistration?.assignedGroupId) {
+      logInfo('[EventFeedback] Group outcome skipped: no matched group for this event', { eventId })
+      return
+    }
+    const payload = buildGroupOutcomePayload({
+      groupId: matchedRegistration.assignedGroupId,
+      rating,
+      atmosphereScore,
+      connectionStatus,
+      selectedConnections,
+      memberUserIds: participants.map((participant) => participant.id),
+    })
+    if (!payload) {
+      logInfo('[EventFeedback] Group outcome skipped: no usable feedback signal', { eventId })
+      return
+    }
+    try {
+      void apiRequest({
+        path: `/api/event-pools/${encodeURIComponent(matchedRegistration.poolId)}/group-outcome`,
+        method: 'POST',
+        data: payload,
+      }).catch((err) => {
+        logError('[EventFeedback] Group outcome submission failed', {
+          message: err instanceof Error ? err.message : String(err),
+        })
+      })
+    } catch (err) {
+      // Defensive: a synchronous throw while dispatching must never bubble into
+      // the feedback submit flow (the caller fires this callback-and-forgets).
+      logError('[EventFeedback] Group outcome dispatch threw', {
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }, [
+    poolRegistrations,
+    eventId,
+    rating,
+    atmosphereScore,
+    connectionStatus,
+    selectedConnections,
+    participants,
+  ])
+
   // Balanced-layer funnel (2026-08-15 merge): the invite interstitial is gone
   // and the deep fields are inline, so "engaged" = the FIRST deep field the
   // user touches (thermometer / radar / venue / status / trait tag / improve
@@ -404,6 +492,13 @@ export default function EventFeedbackPage() {
       if (hasDeepFields) {
         trackFeedbackEvent('feedback_deep_submitted', { eventId })
       }
+      // W4 (AC-W4.2a): the primary feedback POST above only writes the legacy
+      // event_feedback table, which the matching learning pipeline never reads.
+      // Feed the same submission into the canonical outcome pipeline
+      // (event_group_outcomes → match_history → calibration). Fire-and-forget:
+      // a failure here must never fail the user's submission, which already
+      // succeeded and is reflected in the revealed state above.
+      void submitGroupOutcome()
       // Invalidate the Connections Predictive Shell so the 连接 tab reflects the
       // new feedback-complete / connections state instead of stale feedback-pending.
       queryClient.invalidateQueries({ queryKey: CONNECTIONS_SHELL_QUERY_KEY })
@@ -430,6 +525,7 @@ export default function EventFeedbackPage() {
     improvementAreas,
     improvementOther,
     venueStyleRating,
+    submitGroupOutcome,
   ])
 
   const handleCopyWechat = useCallback((wechatId: string) => {

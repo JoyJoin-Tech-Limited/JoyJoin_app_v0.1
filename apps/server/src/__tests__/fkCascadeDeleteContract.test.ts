@@ -48,7 +48,11 @@ describe("fk cascade delete contract", () => {
     // discovery cannot see them and they require explicit privacy cleanup.
     expect(adminUsers).toContain("DELETE FROM social_icebreaker_participants WHERE user_id");
     expect(adminUsers).toContain("DELETE FROM social_icebreaker_lie_truths WHERE user_id");
-    expect(adminUsers).toContain("DELETE FROM social_icebreaker_sessions WHERE host_user_id");
+    // W1 (host resilience): a deleted/banned host must never hard-delete a live
+    // session — the room would freeze with no way to advance. Sessions are
+    // reassigned to a remaining participant or tombstoned instead.
+    expect(adminUsers).not.toContain("DELETE FROM social_icebreaker_sessions WHERE host_user_id");
+    expect(adminUsers).toContain("reassignOrTombstoneHostedSessions");
     expect(adminUsers).toContain("DELETE FROM industry_ai_logs WHERE user_id");
     expect(adminUsers).not.toContain("DELETE FROM event_attendance WHERE user_id");
     expect(adminUsers).not.toContain("UPDATE moderation_logs SET admin_id = NULL");

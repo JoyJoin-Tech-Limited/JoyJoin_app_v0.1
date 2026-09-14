@@ -16,6 +16,8 @@ const routeMocks = vi.hoisted(() => {
     getGroupMembershipContext: vi.fn(),
     upsertEventGroupOutcome: vi.fn(),
     deriveMatchHistoryAndRefreshCalibration: vi.fn(),
+    // W4 AC-W4.3: the adaptive-weights bandit is now fed from this route.
+    recordOutcomeFeedback: vi.fn(),
     validateContentSafeAsync: vi.fn(),
     recordViolation: vi.fn(),
     logAITrace: vi.fn(),
@@ -39,6 +41,12 @@ vi.mock("../repositories/eventGroupOutcomesRepo", () => ({
 
 vi.mock("../services/matchHistoryDerivation", () => ({
   deriveMatchHistoryAndRefreshCalibration: routeMocks.deriveMatchHistoryAndRefreshCalibration,
+}));
+
+vi.mock("../matchingWeightsService", () => ({
+  matchingWeightsService: {
+    recordOutcomeFeedback: routeMocks.recordOutcomeFeedback,
+  },
 }));
 
 vi.mock("../lib/contentSafety", () => ({
@@ -125,6 +133,8 @@ describe("event group outcome routes", () => {
       insertedCount: 1,
       updatedCount: 0,
     });
+    routeMocks.recordOutcomeFeedback.mockReset();
+    routeMocks.recordOutcomeFeedback.mockResolvedValue(undefined);
     routeMocks.validateContentSafeAsync.mockReset();
     routeMocks.validateContentSafeAsync.mockResolvedValue({ safe: true });
     routeMocks.recordViolation.mockReset();
@@ -239,6 +249,9 @@ describe("event group outcome routes", () => {
       outcome: {
         id: "outcome-1",
         submittedAt: new Date("2026-04-02T11:00:00.000Z"),
+        wouldMeetAgain: true,
+        atmosphereScore: 4,
+        connectionRadar: { "member-2": 5 },
       },
     });
 
@@ -283,6 +296,16 @@ describe("event group outcome routes", () => {
       );
       // W1: successful submissions trigger fire-and-forget match-history derivation.
       expect(routeMocks.deriveMatchHistoryAndRefreshCalibration).toHaveBeenCalledWith("group-1");
+      // W4 AC-W4.3: the same outcome feeds the adaptive-weights bandit path
+      // (a no-op at runtime unless ENABLE_ADAPTIVE_WEIGHTS is on AND an
+      // operator has activated an adaptive config).
+      expect(routeMocks.recordOutcomeFeedback).toHaveBeenCalledWith({
+        eventId: undefined,
+        userId: "member-1",
+        wouldMeetAgain: true,
+        atmosphereScore: 4,
+        connectionCount: 1,
+      });
     });
   });
 

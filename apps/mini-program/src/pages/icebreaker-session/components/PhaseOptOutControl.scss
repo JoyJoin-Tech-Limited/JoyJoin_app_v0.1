@@ -1,0 +1,138 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// W3 honest opt-out (只想听 / 换一个). Quiet secondary affordance that attaches
+// beneath the phase card — never competes with the phase's primary CTA.
+
+@keyframes phase-opt-out-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.phase-opt-out {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-md;
+
+  &__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 0 $spacing-lg;
+    border: 2rpx solid rgba($color-primary, 0.24);
+    border-radius: $radius-pill;
+    background: transparent;
+    transition: background 0.12s ease, transform 0.12s ease;
+
+    &:active,
+    &--pressed {
+      background: rgba($color-primary, 0.06);
+      transform: scale(0.98);
+    }
+
+    &--busy {
+      opacity: 0.6;
+    }
+  }
+
+  &__action-label {
+    @include type-label;
+    // G6: $color-primary (#8B5CF6) lands ~4.2:1 on the warm surface — below the
+    // 4.5:1 AA floor. The dark primary variant is the AA-safe text token.
+    color: $color-primary-dark;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__hint {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &--opted-out,
+  &--silent {
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    border: 2rpx solid rgba($color-primary, 0.14);
+    border-radius: $radius-md;
+    background: rgba($color-primary, 0.06);
+    animation: phase-opt-out-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__state-title {
+    @include type-label;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__state-body {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    width: 100%;
+    // G12: the hint→notice separation must clear the 16rpx minimum; the parent
+    // flex gap alone was 8rpx.
+    margin-top: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($color-error, 0.08);
+  }
+
+  &__notice-title {
+    @include type-label;
+    color: $color-error;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__notice-body {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  // Reduced-motion: no entrance animation, no press scale — the state change
+  // still reads because the copy swaps, never because of motion.
+  &--reduced-motion {
+    animation: none !important;
+    transition: none !important;
+
+    .phase-opt-out__action {
+      transition: none;
+    }
+
+    .phase-opt-out__action:active,
+    .phase-opt-out__action--pressed {
+      transform: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-opt-out,
+  .phase-opt-out--opted-out,
+  .phase-opt-out--silent {
+    animation: none !important;
+  }
+
+  .phase-opt-out__action {
+    transition: none;
+
+    &:active,
+    &--pressed {
+      transform: none;
+    }
+  }
+}

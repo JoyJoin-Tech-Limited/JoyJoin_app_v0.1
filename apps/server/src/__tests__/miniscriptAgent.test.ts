@@ -596,3 +596,118 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     expect(framework.title!.endsWith('…')).toBe(true);
   });
 });
+
+// ─── W7.2: review-vocab moderation on the live mini-script path ──────────────
+
+describe('W7.2 — mini-script framework content moderation (live path)', () => {
+  beforeEach(() => {
+    hoisted.traceMock.mockReset();
+    hoisted.metricsMock.mockReset();
+    hoisted.validateMock.mockReset();
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';
+  });
+
+  afterEach(() => {
+    delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
+    delete process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED;
+  });
+
+  it('degrades a review-blocked framework to curated fallback and logs a non-PII moderation trace', async () => {
+    const injectedBody = '我记得当时有人提起「匹配」这个词，但具体细节有点模糊。';
+    const dirtyPayload = {
+      ...validV2Payload,
+      characters: validV2Payload.characters.map((character, i) =>
+        i === 0 ? { ...character, alibi: injectedBody } : character,
+      ),
+    };
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(dirtyPayload) } }],
+    });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const { framework, meta, aiResponseMeta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['light_reasoning'],
+    });
+
+    // Fail-closed: the blocked LLM story never ships.
+    expect(meta.fallbackUsed).toBe(true);
+    expect(meta.llmAccepted).toBe(false);
+    expect(meta.catalogUsed).toBe(true);
+    expect(aiResponseMeta.fallbackUsed).toBe(true);
+    expect(aiResponseMeta.evaluatorRejectionReason).toBe('banned_vocab');
+
+    // The curated fallback carries no review-blocked token (nor the raw LLM copy).
+    const serialized = JSON.stringify(framework);
+    for (const token of ['匹配', '社交', '灵魂', '撮合']) {
+      expect(serialized).not.toContain(token);
+    }
+    expect(serialized).not.toContain(injectedBody);
+
+    // Structured non-PII moderation trace: field + blocked word + length only.
+    expect(hoisted.traceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'icebreaker',
+        feature: 'generateMiniScriptFramework',
+        provider: 'deepseek',
+        errorCode: 'banned_vocab',
+        fallbackUsed: true,
+        promptVersion: expect.any(String),
+        extra: expect.objectContaining({
+          field: 'characters[0].alibi',
+          blockedWord: '匹配',
+          textLength: injectedBody.length,
+        }),
+      }),
+    );
+
+    // The raw AI body must never appear in any trace payload.
+    for (const call of hoisted.traceMock.mock.calls) {
+      expect(JSON.stringify(call[0])).not.toContain(injectedBody);
+    }
+  });
+
+  it('passes benign LLM copy through unchanged (no moderation degradation)', async () => {
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(validV2Payload) } }],
+    });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['light_reasoning'],
+    });
+
+    expect(meta.llmAccepted).toBe(true);
+    expect(meta.fallbackUsed).toBe(false);
+    expect(meta.catalogUsed).toBe(false);
+    // Benign copy is unchanged by the moderation gate (which only scrubs nothing —
+    // it either accepts the framework or replaces it wholesale).
+    expect(framework.premise).toBe(validV2Payload.premise);
+    expect(framework.characters.map((c) => c.roleLabel)).toEqual(
+      validV2Payload.characters.map((c) => c.roleLabel),
+    );
+    expect(hoisted.traceMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ errorCode: 'banned_vocab' }),
+    );
+    expect(hoisted.traceMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ errorCode: 'content_safety' }),
+    );
+  });
+});

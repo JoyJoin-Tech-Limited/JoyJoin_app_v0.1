@@ -9,7 +9,9 @@
 export {
   TERMINOLOGY_TABLE,
   BANNED_WORDS,
+  REVIEW_BLOCKED_VOCAB,
   findBannedWord,
+  findReviewBlockedVocab,
   findLegacyTerms,
 } from './terms.js';
 export type { CanonicalTermId, TermEntry } from './terms.js';

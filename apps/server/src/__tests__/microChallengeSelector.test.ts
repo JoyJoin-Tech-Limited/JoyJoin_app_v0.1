@@ -55,7 +55,9 @@ describe('generateMicroChallenges with selector', () => {
 
   it('returns AI challenges when AI succeeds and is enabled', async () => {
     mockCreate.mockResolvedValue({
-      choices: [{ message: { content: '[{"id":"ai1","title":"AI Challenge","description":"AI desc","durationSeconds":120,"completionCTA":"Done"}]' } }],
+      // W7 AC-W7.2: the copy must be free of review-blocked vocabulary — the
+      // literal token "AI" is now filtered, so the mock uses benign copy.
+      choices: [{ message: { content: '[{"id":"ai1","title":"一起做顿饭","description":"合作完成一道菜再一起开动","durationSeconds":120,"completionCTA":"完成"}]' } }],
     });
 
     const result = await generateMicroChallenges({
@@ -65,7 +67,7 @@ describe('generateMicroChallenges with selector', () => {
     });
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].title).toBe('AI Challenge');
+    expect(result.data[0].title).toBe('一起做顿饭');
     expect(result.meta.provider).not.toBeNull();
     expect(mockCreate).toHaveBeenCalled();
   });

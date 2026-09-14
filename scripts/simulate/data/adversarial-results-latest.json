@@ -20,43 +20,43 @@
       "crashes": 0,
       "nanDetections": 0,
       "safetyCapHits": 0,
-      "meanQuestions": 14.643333,
-      "meanValidity": 0.966833,
+      "meanQuestions": 14.486667,
+      "meanValidity": 0.981,
       "medianValidity": 1,
       "validityDistribution": {
-        "below06": 0.003333,
-        "from06to08": 0.126667,
-        "from08to1": 0,
-        "exactly1": 0.87
+        "below06": 0,
+        "from06to08": 0.073333,
+        "from08to1": 0.003333,
+        "exactly1": 0.923333
       },
-      "acquiescenceTriggerRate": 0.13,
+      "acquiescenceTriggerRate": 0.073333,
       "lowDifferentiationTriggerRate": 0.003333,
-      "meanMaxSameOptionValueShare": 0.458415,
-      "meanTraitConfidence": 0.899168,
-      "meanTop1Confidence": 0.750689,
+      "meanMaxSameOptionValueShare": 0.47287,
+      "meanTraitConfidence": 0.912215,
+      "meanTop1Confidence": 0.830278,
       "top1ConfidenceDistribution": {
         "below05": 0,
-        "from05to07": 0.446667,
-        "from07to08": 0.313333,
-        "from08to1": 0.24
+        "from05to07": 0.306667,
+        "from07to08": 0.136667,
+        "from08to1": 0.556667
       },
-      "highConfidenceExtremeRate": 0.23,
-      "meanMaxTraitDeviation": 37.976667,
+      "highConfidenceExtremeRate": 0.556667,
+      "meanMaxTraitDeviation": 39.14,
       "agreementWithCleanControl": 1,
-      "agreementWithGroundTruth": 0.476667,
+      "agreementWithGroundTruth": 0.463333,
       "archetypeTally": {
-        "corgi": 17,
-        "octopus": 67,
-        "rooster": 37,
-        "elephant": 20,
-        "cat": 71,
-        "spider": 18,
-        "dolphin_calm": 2,
-        "fox": 36,
-        "turtle": 19,
-        "hamster_praise": 4,
-        "owl": 6,
-        "koala": 3
+        "dolphin_calm": 16,
+        "corgi": 63,
+        "owl": 25,
+        "turtle": 23,
+        "hamster_praise": 8,
+        "octopus": 15,
+        "cat": 46,
+        "rooster": 21,
+        "spider": 28,
+        "fox": 25,
+        "koala": 11,
+        "elephant": 19
       }
     },
     "straight-liner": {
@@ -76,20 +76,20 @@
       "acquiescenceTriggerRate": 1,
       "lowDifferentiationTriggerRate": 0,
       "meanMaxSameOptionValueShare": 0.857143,
-      "meanTraitConfidence": 0.865333,
-      "meanTop1Confidence": 0.855318,
+      "meanTraitConfidence": 0.858899,
+      "meanTop1Confidence": 0.778213,
       "top1ConfidenceDistribution": {
         "below05": 0,
         "from05to07": 0,
-        "from07to08": 0,
-        "from08to1": 1
+        "from07to08": 1,
+        "from08to1": 0
       },
-      "highConfidenceExtremeRate": 1,
-      "meanMaxTraitDeviation": 32,
-      "agreementWithCleanControl": 0.223333,
-      "agreementWithGroundTruth": 0.23,
+      "highConfidenceExtremeRate": 0,
+      "meanMaxTraitDeviation": 30,
+      "agreementWithCleanControl": 0.026667,
+      "agreementWithGroundTruth": 0.096667,
       "archetypeTally": {
-        "octopus": 300
+        "hamster_praise": 300
       }
     },
     "acquiescence-biased": {
@@ -109,20 +109,20 @@
       "acquiescenceTriggerRate": 1,
       "lowDifferentiationTriggerRate": 0,
       "meanMaxSameOptionValueShare": 0.785714,
-      "meanTraitConfidence": 0.854138,
-      "meanTop1Confidence": 0.667052,
+      "meanTraitConfidence": 0.873463,
+      "meanTop1Confidence": 1,
       "top1ConfidenceDistribution": {
         "below05": 0,
-        "from05to07": 1,
+        "from05to07": 0,
         "from07to08": 0,
-        "from08to1": 0
+        "from08to1": 1
       },
-      "highConfidenceExtremeRate": 0,
-      "meanMaxTraitDeviation": 38,
-      "agreementWithCleanControl": 0.12,
-      "agreementWithGroundTruth": 0.08,
+      "highConfidenceExtremeRate": 1,
+      "meanMaxTraitDeviation": 35,
+      "agreementWithCleanControl": 0.026667,
+      "agreementWithGroundTruth": 0.096667,
       "archetypeTally": {
-        "fox": 300
+        "hamster_praise": 300
       }
     },
     "midpoint-hugger": {
@@ -143,17 +143,17 @@
       "lowDifferentiationTriggerRate": 0,
       "meanMaxSameOptionValueShare": 0.428571,
       "meanTraitConfidence": 0.872747,
-      "meanTop1Confidence": 0.658127,
+      "meanTop1Confidence": 1,
       "top1ConfidenceDistribution": {
         "below05": 0,
-        "from05to07": 1,
+        "from05to07": 0,
         "from07to08": 0,
-        "from08to1": 0
+        "from08to1": 1
       },
       "highConfidenceExtremeRate": 0,
       "meanMaxTraitDeviation": 20,
-      "agreementWithCleanControl": 0.066667,
-      "agreementWithGroundTruth": 0.09,
+      "agreementWithCleanControl": 0.063333,
+      "agreementWithGroundTruth": 0.113333,
       "archetypeTally": {
         "elephant": 300
       }
@@ -163,43 +163,43 @@
       "crashes": 0,
       "nanDetections": 0,
       "safetyCapHits": 0,
-      "meanQuestions": 14.76,
-      "meanValidity": 0.980333,
+      "meanQuestions": 14.596667,
+      "meanValidity": 0.954167,
       "medianValidity": 1,
       "validityDistribution": {
         "below06": 0,
-        "from06to08": 0.073333,
-        "from08to1": 0.006667,
-        "exactly1": 0.92
+        "from06to08": 0.183333,
+        "from08to1": 0,
+        "exactly1": 0.816667
       },
-      "acquiescenceTriggerRate": 0.073333,
-      "lowDifferentiationTriggerRate": 0.006667,
-      "meanMaxSameOptionValueShare": 0.418587,
-      "meanTraitConfidence": 0.881018,
-      "meanTop1Confidence": 0.769527,
+      "acquiescenceTriggerRate": 0.183333,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.456354,
+      "meanTraitConfidence": 0.895132,
+      "meanTop1Confidence": 0.860748,
       "top1ConfidenceDistribution": {
         "below05": 0,
-        "from05to07": 0.443333,
-        "from07to08": 0.263333,
-        "from08to1": 0.293333
+        "from05to07": 0.18,
+        "from07to08": 0.196667,
+        "from08to1": 0.623333
       },
-      "highConfidenceExtremeRate": 0.293333,
-      "meanMaxTraitDeviation": 37.563333,
-      "agreementWithCleanControl": 0.38,
-      "agreementWithGroundTruth": 0.423333,
+      "highConfidenceExtremeRate": 0.623333,
+      "meanMaxTraitDeviation": 40.01,
+      "agreementWithCleanControl": 0.543333,
+      "agreementWithGroundTruth": 0.473333,
       "archetypeTally": {
-        "rooster": 87,
-        "fox": 27,
-        "koala": 5,
-        "elephant": 34,
-        "spider": 41,
-        "turtle": 25,
-        "hamster_praise": 11,
-        "octopus": 30,
-        "dolphin_calm": 4,
-        "cat": 26,
-        "corgi": 9,
-        "owl": 1
+        "rooster": 39,
+        "corgi": 71,
+        "spider": 55,
+        "koala": 30,
+        "cat": 18,
+        "dolphin_calm": 19,
+        "turtle": 20,
+        "elephant": 30,
+        "owl": 10,
+        "fox": 2,
+        "octopus": 2,
+        "hamster_praise": 4
       }
     },
     "self-image-inflated-differential": {
@@ -207,43 +207,43 @@
       "crashes": 0,
       "nanDetections": 0,
       "safetyCapHits": 0,
-      "meanQuestions": 14.76,
-      "meanValidity": 0.980333,
+      "meanQuestions": 14.596667,
+      "meanValidity": 0.954167,
       "medianValidity": 1,
       "validityDistribution": {
         "below06": 0,
-        "from06to08": 0.073333,
-        "from08to1": 0.006667,
-        "exactly1": 0.92
+        "from06to08": 0.183333,
+        "from08to1": 0,
+        "exactly1": 0.816667
       },
-      "acquiescenceTriggerRate": 0.073333,
-      "lowDifferentiationTriggerRate": 0.006667,
-      "meanMaxSameOptionValueShare": 0.418587,
-      "meanTraitConfidence": 0.881018,
-      "meanTop1Confidence": 0.769527,
+      "acquiescenceTriggerRate": 0.183333,
+      "lowDifferentiationTriggerRate": 0,
+      "meanMaxSameOptionValueShare": 0.456354,
+      "meanTraitConfidence": 0.895132,
+      "meanTop1Confidence": 0.860748,
       "top1ConfidenceDistribution": {
         "below05": 0,
-        "from05to07": 0.443333,
-        "from07to08": 0.263333,
-        "from08to1": 0.293333
+        "from05to07": 0.18,
+        "from07to08": 0.196667,
+        "from08to1": 0.623333
       },
-      "highConfidenceExtremeRate": 0.293333,
-      "meanMaxTraitDeviation": 37.563333,
-      "agreementWithCleanControl": 0.38,
-      "agreementWithGroundTruth": 0.423333,
+      "highConfidenceExtremeRate": 0.623333,
+      "meanMaxTraitDeviation": 40.01,
+      "agreementWithCleanControl": 0.543333,
+      "agreementWithGroundTruth": 0.473333,
       "archetypeTally": {
-        "rooster": 87,
-        "fox": 27,
-        "koala": 5,
-        "elephant": 34,
-        "spider": 41,
-        "turtle": 25,
-        "hamster_praise": 11,
-        "octopus": 30,
-        "dolphin_calm": 4,
-        "cat": 26,
-        "corgi": 9,
-        "owl": 1
+        "rooster": 39,
+        "corgi": 71,
+        "spider": 55,
+        "koala": 30,
+        "cat": 18,
+        "dolphin_calm": 19,
+        "turtle": 20,
+        "elephant": 30,
+        "owl": 10,
+        "fox": 2,
+        "octopus": 2,
+        "hamster_praise": 4
       }
     },
     "random-clicker": {
@@ -251,43 +251,42 @@
       "crashes": 0,
       "nanDetections": 0,
       "safetyCapHits": 0,
-      "meanQuestions": 14.856667,
-      "meanValidity": 0.939333,
+      "meanQuestions": 14.796667,
+      "meanValidity": 0.943333,
       "medianValidity": 1,
       "validityDistribution": {
         "below06": 0,
         "from06to08": 0,
-        "from08to1": 0.303333,
-        "exactly1": 0.696667
+        "from08to1": 0.283333,
+        "exactly1": 0.716667
       },
       "acquiescenceTriggerRate": 0,
-      "lowDifferentiationTriggerRate": 0.303333,
-      "meanMaxSameOptionValueShare": 0.339688,
-      "meanTraitConfidence": 0.857077,
-      "meanTop1Confidence": 0.697633,
+      "lowDifferentiationTriggerRate": 0.283333,
+      "meanMaxSameOptionValueShare": 0.340839,
+      "meanTraitConfidence": 0.857868,
+      "meanTop1Confidence": 0.729026,
       "top1ConfidenceDistribution": {
         "below05": 0,
-        "from05to07": 0.626667,
-        "from07to08": 0.233333,
-        "from08to1": 0.14
+        "from05to07": 0.576667,
+        "from07to08": 0.203333,
+        "from08to1": 0.22
       },
-      "highConfidenceExtremeRate": 0.036667,
-      "meanMaxTraitDeviation": 18.18,
-      "agreementWithCleanControl": 0.146667,
-      "agreementWithGroundTruth": 0.146667,
+      "highConfidenceExtremeRate": 0.05,
+      "meanMaxTraitDeviation": 18.746667,
+      "agreementWithCleanControl": 0.083333,
+      "agreementWithGroundTruth": 0.1,
       "archetypeTally": {
-        "octopus": 99,
-        "turtle": 44,
-        "cat": 42,
-        "spider": 11,
-        "elephant": 32,
-        "fox": 23,
-        "corgi": 18,
+        "hamster_praise": 61,
+        "spider": 40,
+        "elephant": 61,
+        "cat": 12,
+        "koala": 23,
+        "owl": 43,
         "rooster": 7,
-        "dolphin_calm": 3,
-        "hamster_praise": 16,
-        "owl": 4,
-        "koala": 1
+        "turtle": 27,
+        "octopus": 9,
+        "fox": 12,
+        "dolphin_calm": 5
       }
     }
   },
@@ -334,21 +333,21 @@
     {
       "id": "AC-7.3c",
       "description": "Random-clicker mean validityScore must not exceed clean-control mean (degradation monotonicity)",
-      "measured": "0.9393 vs clean 0.9668",
+      "measured": "0.9433 vs clean 0.9810",
       "threshold": "≤ clean + 0.01 (locked)",
       "pass": true
     },
     {
       "id": "AC-7.3d-straight-liner",
       "description": "straight-liner mean trait confidence DROPS below clean control",
-      "measured": "0.8653 vs clean 0.8992",
+      "measured": "0.8589 vs clean 0.9122",
       "threshold": "< clean mean (locked, directional)",
       "pass": true
     },
     {
       "id": "AC-7.3d-random-clicker",
       "description": "random-clicker mean trait confidence DROPS below clean control",
-      "measured": "0.8571 vs clean 0.8992",
+      "measured": "0.8579 vs clean 0.9122",
       "threshold": "< clean mean (locked, directional)",
       "pass": true
     }
@@ -357,21 +356,21 @@
     {
       "description": "Random-clicker mean validityScore",
       "provisional": "< 0.6",
-      "measured": "0.9393",
+      "measured": "0.9433",
       "held": false,
       "disposition": "The raw engine validity checks (same-value share, trait stdev) barely fire on uniform-random responding: random answers almost never repeat one literal option value > 70% of the time, and random-walk trait scores are differentiated enough to pass the stdev ≥ 8 check most of the time (low-diff fired in only ~27% of random sessions vs ~10% clean). The raw engine therefore scores a random clicker about as valid as an honest respondent. This is precisely the gap Item 2 (consistency pairs) and Item 4 (meta-consistency) must close. Locked assertion AC-7.3c uses degradation monotonicity instead."
     },
     {
       "description": "Midpoint-hugger trips the existing low-differentiation check",
       "provisional": "triggers low-differentiation (locked ≥ 95%)",
-      "measured": "0.0% of runs (mean validity 1.0000, mean trait conf 0.8727 vs clean 0.8992)",
+      "measured": "0.0% of runs (mean validity 1.0000, mean trait conf 0.8727 vs clean 0.9122)",
       "held": false,
       "disposition": "The failure is the finding. The min-Σ|loading| options on MCQ items are NOT zero-loading: they carry small but systematically-signed loadings that accumulate over 12–16 answers into trait estimates with stdev ≥ 8. Worse, the evidence is highly CONSISTENT, so the raw engine assigns midpoint-hugging ABOVE-clean trait confidence and high-confidence extreme archetypes (100% of sessions). The engine has no neutral-responding detector at all — no assertion is made against a signal it does not produce; this gap is Item 3 shrinkage territory (see AC-7.4)."
     },
     {
       "description": "ALL adversarial arms mean traitConfidences below clean controls",
       "provisional": "all five arms < clean",
-      "measured": "straight-liner=0.865, acquiescence-biased=0.854, midpoint-hugger=0.873, self-image-inflated=0.881, self-image-inflated-differential=0.881, random-clicker=0.857 (clean=0.899)",
+      "measured": "straight-liner=0.859, acquiescence-biased=0.873, midpoint-hugger=0.873, self-image-inflated=0.895, self-image-inflated-differential=0.895, random-clicker=0.858 (clean=0.912)",
       "held": true,
       "disposition": "Held — lock at measured baseline."
     }

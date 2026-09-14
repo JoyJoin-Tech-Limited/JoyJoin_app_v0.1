@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow, useRouter, useUnload } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import type { SocialSessionState } from '@shared/socialIcebreaker'
+import type { SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
 import type { WSMessage } from '@shared/wsEvents'
 import type {
   MiniScriptGenre,
@@ -12,7 +12,7 @@ import type {
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { getApiErrorStatusCode } from '../../lib/api/authSession'
-import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS } from '../../lib/utils/uiConstants'
+import { TOAST_MEDIUM_MS } from '../../lib/utils/uiConstants'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
@@ -31,6 +31,7 @@ import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingSh
 import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
 import Button from '../../components/ui/Button'
 import { type SessionPhase } from './phaseViews'
+import type { PhaseActionNotice } from './viewModels/phaseOptOutModel'
 import { apiVibeToClient } from '../../lib/vibeMapping'
 import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
 import { getPhaseToastText } from './phaseToastText'
@@ -45,6 +46,7 @@ import {
   type SessionSensoryEvent,
 } from './hooks/useSessionSensoryEvents'
 import { useKeepScreenOn } from './hooks/useKeepScreenOn'
+import { useIdlePollBackoff } from './hooks/useIdlePollBackoff'
 import { MOOD_FIELD_BLOOM_MS, deriveMoodField } from './viewModels/ambientFieldModel'
 import { GroupBeatTracker, parseSocialGroupBeat } from './viewModels/groupBeatModel'
 import { SessionPhaseViews, type SessionPhaseViewsProps } from './SessionPhaseViews'
@@ -116,12 +118,24 @@ export default function IcebreakerSessionPage() {
   // PR1 壳层 transient flags — covered by useResetOnShow for swipe-back safety.
   const [coachmarkShown, setCoachmarkShown] = useState(false)
   const [suggestionOverlayOpen, setSuggestionOverlayOpen] = useState(false)
+  // W3 honest opt-out: transient, code-specific failure copy + the late-joiner
+  // observer flag. Both are reset on re-show (swipe-back) and phase change.
+  const [optOutNotice, setOptOutNotice] = useState<PhaseActionNotice | null>(null)
+  const [lieRosterLocked, setLieRosterLocked] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
   const coachmarkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const syncLostRef = useRef(false)
+  // G1: track the previous pending-action to detect a settle (true → false) and
+  // drop the idle-poll backoff — a completed action means fresh state is due.
+  const prevPendingActionRef = useRef<string | null>(null)
 
-  useResetOnShow(setCoachmarkShown, setSuggestionOverlayOpen)
+  useResetOnShow(
+    setCoachmarkShown,
+    setSuggestionOverlayOpen,
+    () => setOptOutNotice(null),
+    setLieRosterLocked,
+  )
 
   // C4 guidance-queue ceremony suppression (2026-08-27): a live icebreaker
   // session is a ceremony surface — the queue must not fire while it is on
@@ -245,6 +259,23 @@ export default function IcebreakerSessionPage() {
 
   const { isPageVisible } = usePageVisibility()
 
+  // W9 (AC-W9.5): keep the 3s cadence while the table is active, then back off
+  // to 6s/12s once the server payload stops changing. Hidden page or an
+  // in-flight action pauses the poll entirely (optimistic state is already
+  // applied, so a stale poll cannot overwrite it).
+  const { intervalFor: pollIntervalFor, reset: resetIdlePoll } =
+    useIdlePollBackoff<SocialSessionState>(isPageVisible && !pendingAction)
+
+  // G1: when an in-flight action settles (pendingAction true → false) the server
+  // has just written new state, so reset the backoff and let the poll resume at
+  // the base cadence instead of inheriting the pre-action idle interval.
+  useEffect(() => {
+    if (prevPendingActionRef.current !== null && pendingAction === null) {
+      resetIdlePoll()
+    }
+    prevPendingActionRef.current = pendingAction
+  }, [pendingAction, resetIdlePoll])
+
   // S2 / playbook §10 ruling 4: POCKET is screen-on, face-down, app
   // foreground — hold the screen awake while the field is live on this page;
   // released on hide/unmount so the rest of the app is unaffected.
@@ -272,12 +303,16 @@ export default function IcebreakerSessionPage() {
     (message: WSMessage) => {
       const beat = parseSocialGroupBeat(message, resolvedSessionId)
       if (!beat) return
+      // G1: a beat proves the table is active even when the polled payload is
+      // unchanged — reset the idle backoff so remote state is observed promptly
+      // instead of up to 12s late.
+      resetIdlePoll()
       const pattern = groupBeatTrackerRef.current?.registerBeat(beat)
       if (pattern) {
         if (socialHaptics(pattern)) playPattern(pattern)
       }
     },
-    [resolvedSessionId, playPattern],
+    [resolvedSessionId, playPattern, resetIdlePoll],
   )
   useWebSocket({
     autoConnect: groupBeatsEnabled && !!resolvedSessionId,
@@ -294,7 +329,7 @@ export default function IcebreakerSessionPage() {
     queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
     queryFn: () => apiRequest<SocialSessionState>({ path: buildSocialPath(socialSessionId ?? '') }),
     enabled: !!socialSessionId && !authLoading,
-    refetchInterval: !isPageVisible || pendingAction ? false : POLL_SOCIAL_SESSION_MS,
+    refetchInterval: (query) => pollIntervalFor(query),
     staleTime: 0,
     // F3: nothing reads isFetching — don't re-render the full tree on every
     // fetch start/settle (2 wasted reconciliations per 3s poll).
@@ -312,6 +347,7 @@ export default function IcebreakerSessionPage() {
       return
     }
     if (!socialSessionId) return
+    resetIdlePoll()
     void queryClient.invalidateQueries({
       queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
     })
@@ -340,6 +376,14 @@ export default function IcebreakerSessionPage() {
   // regenerate topics after the host already advanced the session).
   const phaseRef = useRef(phase)
   phaseRef.current = phase
+
+  // W3: an opt-out failure notice and the roster-locked observer flag are
+  // phase-scoped — clear them the moment the phase changes so a stale notice
+  // never rides into the next round.
+  useEffect(() => {
+    setOptOutNotice(null)
+    setLieRosterLocked(false)
+  }, [phase])
 
   // PR1 壳层: suggestion visibility = data-derived suggestion AND an explicit
   // overlay flag (useResetOnShow-covered) so swipe-back never resurrects a stuck card.
@@ -387,6 +431,9 @@ export default function IcebreakerSessionPage() {
     [session, hostUserId]
   )
   const playerCount = session?.playerCount ?? participants.length
+  // W3 (AC-W3.4): stable callback so `handleGenerateStatements` does not churn
+  // its identity every poll tick.
+  const handleLieRosterLocked = useCallback(() => setLieRosterLocked(true), [])
   const {
     performSocialAction,
     handleGenerateTopics,
@@ -410,6 +457,7 @@ export default function IcebreakerSessionPage() {
     executeTierSwitch,
     handleConfirmTierSwitch,
     handleCompleteChallenge,
+    handleOptOut,
     handleNextSpeedFriendingRound,
     handleCompleteSpeedFriending,
     handleGenerateStatements,
@@ -452,6 +500,8 @@ export default function IcebreakerSessionPage() {
     setIsTierSheetOpen,
     setPendingTierSwitch,
     setDismissedSuggestionAt,
+    onOptOutNotice: setOptOutNotice,
+    onLieRosterLocked: handleLieRosterLocked,
   })
 
   const canChangeTier = (phase === 'waiting' || phase === 'warmup') && isHost
@@ -1011,6 +1061,10 @@ export default function IcebreakerSessionPage() {
     onDiceRevealReady: handleDiceRevealReady,
     onNextSpeedFriendingRound: handleNextSpeedFriendingRound,
     onCompleteSpeedFriending: handleCompleteSpeedFriending,
+    onOptOut: () => handleOptOut(phase as SocialIcebreakerPhase),
+    isOptingOut: pendingAction === 'opt-out',
+    optOutNotice,
+    lieRosterLocked,
     onGoBack: handleGoBack,
     onConnectTap: handleConnectTap,
   }

@@ -17,6 +17,10 @@ import {
 import { getArchetypeHSL } from '@shared/archetypeColors';
 import type { UndercoverWordPair } from '@shared/undercoverWord';
 import {
+  sanitizeGroupMirrorQuestions,
+  type GroupMirrorQuestion,
+} from '@shared/groupMirror';
+import {
   generateUndercoverWordPair,
   generateGroupMirrorQuestions,
   generateMomentHighlights,
@@ -667,7 +671,11 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
       const result = await getPreGenerationResult(socialSessionId, 'group_mirror');
       if (result) {
         const questions = result.contentJson as unknown as Array<Record<string, unknown>>;
-        state.groupMirrorQuestions = questions as any;
+        // W9 (AC-W9.1): the phase is the closing act — strip any passive
+        // judgment framing and backfill with appreciation superlatives.
+        state.groupMirrorQuestions = sanitizeGroupMirrorQuestions(
+          questions as unknown as GroupMirrorQuestion[],
+        ) as any;
         state.groupMirrorQuestionsMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-group-mirror-v1');
         state.groupMirrorAnswers = [];
         state.groupMirrorVotes = [];
@@ -702,7 +710,10 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
       roster,
     });
 
-    state.groupMirrorQuestions = result.data;
+    // W9 (AC-W9.1): appreciation-only closing act.
+    const questions = sanitizeGroupMirrorQuestions(result.data);
+
+    state.groupMirrorQuestions = questions;
     state.groupMirrorQuestionsMeta = result.meta;
     state.groupMirrorAnswers = [];
     state.groupMirrorVotes = [];
@@ -715,7 +726,7 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
     await runBotSimulationSafely(socialSessionId, state, 'group-mirror-generate');
     await updateSession(socialSessionId, state);
 
-    return res.json({ questions: result.data, meta: result.meta });
+    return res.json({ questions, meta: result.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] generateGroupMirrorQuestions error:', { error: String(error) });
     return res.status(500).json({ error: 'Failed to generate group mirror questions' });

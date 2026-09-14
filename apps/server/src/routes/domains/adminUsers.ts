@@ -12,6 +12,8 @@ import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { notifyAdminAction } from "../../lib/wecomNotifications";
 import { cascadeDeleteByIds } from "../../lib/fkCascadeDelete";
+import { reassignOrTombstoneHostedSessions } from "../../lib/socialIcebreakerStore";
+import { registerAdminSocialIcebreakerRoutes } from "./adminSocialIcebreaker";
 import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
 
 type AdminUserInterestSummary = {
@@ -855,6 +857,30 @@ export function registerAdminUserRoutes(app: Express): void {
         return res.status(400).json({ message: "封禁原因必填，至少5个字符" });
       }
 
+      // Host resilience (W1): a banned user must not keep a live room frozen.
+      // Move hosted sessions to a remaining participant or tombstone them
+      // BEFORE applying the ban, so a recovery failure aborts the whole action
+      // (fail closed) instead of silently leaving a banned host owning a live
+      // room — matching the delete path, which also rolls back on failure.
+      let bannedHostRecovery: {
+        reassigned: Array<{ sessionId: string; newHostUserId: string }>;
+        tombstoned: string[];
+      } = { reassigned: [], tombstoned: [] };
+      try {
+        bannedHostRecovery = await db.transaction((tx: any) =>
+          reassignOrTombstoneHostedSessions(tx, req.params.id),
+        );
+      } catch (recoveryErr) {
+        logger.error("Failed to recover hosted icebreaker sessions on ban — aborted ban", {
+          userId: req.params.id,
+          error: String(recoveryErr),
+        });
+        return res.status(500).json({
+          message: "封禁失败：主持中的破冰房间恢复失败，请稍后重试",
+          code: "HOST_RECOVERY_FAILED",
+        });
+      }
+
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: true });
 
       logAdminAudit({
@@ -865,7 +891,11 @@ export function registerAdminUserRoutes(app: Express): void {
         targetEntityId: req.params.id,
         before: { isBanned: user.isBanned },
         after: { isBanned: true, reason: reason.trim() },
-        context: { reason: reason.trim() },
+        context: {
+          reason: reason.trim(),
+          hostSessionsReassigned: bannedHostRecovery.reassigned.length,
+          hostSessionsTombstoned: bannedHostRecovery.tombstoned.length,
+        },
       });
 
       // WeCom notification for ban
@@ -939,13 +969,24 @@ export function registerAdminUserRoutes(app: Express): void {
         return res.status(400).json({ message: "Admin accounts cannot be deleted from user management" });
       }
 
+      let hostSessionRecovery: {
+        reassigned: Array<{ sessionId: string; newHostUserId: string }>;
+        tombstoned: string[];
+      } = { reassigned: [], tombstoned: [] };
+
       await db.transaction(async (tx: any) => {
+        // Host resilience (W1): a departing user's live sessions must never be
+        // hard-deleted. Reassign the host role to a remaining participant, or
+        // tombstone the row (end it in place) when the host was alone. This
+        // runs BEFORE the participant rows are removed so a replacement can be
+        // discovered.
+        hostSessionRecovery = await reassignOrTombstoneHostedSessions(tx, userId);
+
         // These identifiers intentionally have no FK in the current schema, so
         // pg_constraint discovery cannot see them. Keep this list limited to
         // non-FK privacy records; FK-backed tables belong to the cascade below.
         await tx.execute(sql`DELETE FROM social_icebreaker_participants WHERE user_id = ${userId}`);
         await tx.execute(sql`DELETE FROM social_icebreaker_lie_truths WHERE user_id = ${userId}`);
-        await tx.execute(sql`DELETE FROM social_icebreaker_sessions WHERE host_user_id = ${userId}`);
         await tx.execute(sql`DELETE FROM industry_ai_logs WHERE user_id = ${userId}`);
 
         // Discover the live FK graph from PostgreSQL and delete transitive
@@ -963,7 +1004,11 @@ export function registerAdminUserRoutes(app: Express): void {
         targetEntityId: userId,
         before: { displayName: user.displayName, phoneNumber: user.phoneNumber },
         after: null as any,
-        context: { action: 'delete_all_user_data' as string },
+        context: {
+          action: 'delete_all_user_data' as string,
+          hostSessionsReassigned: hostSessionRecovery.reassigned.length,
+          hostSessionsTombstoned: hostSessionRecovery.tombstoned.length,
+        },
       });
 
       res.json({ message: "User data deleted successfully" });
@@ -972,4 +1017,9 @@ export function registerAdminUserRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to delete user data. See server logs for details." });
     }
   });
+
+  // Host-resilience admin controls (Sprint W1). Registered here so the
+  // existing admin-user entry point owns the whole admin session surface
+  // without touching the central route composition root.
+  registerAdminSocialIcebreakerRoutes(app);
 }

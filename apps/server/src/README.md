@@ -75,7 +75,8 @@ Primary files:
 - `apps/server/src/socialIcebreakerAICore.ts` — shared AI core: `AIServiceResult`, `fireAndForgetQualityGate`, `raceWithTimeout`, `isLLMTimeoutError`, `RACE_LLM_TIMEOUT_MS`
 - `apps/server/src/socialIcebreakerAuctionAI.ts` — auction lot generation
 - `apps/server/src/socialIcebreakerPersonalityDiceAI.ts` — personality-dice challenge generation
-- `apps/server/src/socialIcebreakerMiniScriptAI.ts` — mini-script framework fetch (owns its own 32s pipeline timeout)
+- `apps/server/src/lib/miniscriptAgent.ts` — active mini-script framework generation (`generateMiniScriptFrameworkWithMeta`; owns its own 28s pipeline timeout + catalog fallback, mounted at top-level `/api/miniscript/*`)
+- `apps/server/src/socialIcebreakerMiniScriptAI.ts` — unwired WIP (no importers); superseded by `lib/miniscriptAgent.ts`
 - `apps/server/src/socialIcebreakerPhaseConfig.ts`
 - `apps/server/src/routes/socialIcebreakerHelpers.ts` — phase transition pipeline, auto-advance fuse, stall recovery, recap snapshot
 - `apps/server/src/routes/socialIcebreakerGameplayCore.ts`, `socialIcebreakerGameplayExtra.ts`, `socialIcebreakerCustom.ts`, `socialIcebreakerTier.ts`, `socialIcebreakerExtended.ts` — phase routes and custom/tier/extended flows

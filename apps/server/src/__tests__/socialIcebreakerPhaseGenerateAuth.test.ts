@@ -363,8 +363,10 @@ describe('POST group-mirror/generate host auth', () => {
     const id = 'social_gm-gen-200';
     storeCtx.sessions.set(id, baseSession({ socialSessionId: id, currentPhase: 'group_mirror' }));
     seedParticipants(id);
+    // W9 sanitizes at the delivery boundary and reads the production
+    // `questionText` field; an appreciation-framed question is preserved.
     generateGroupMirrorQuestions.mockResolvedValueOnce({
-      data: [{ id: 'q1', promptText: 'Who would...?' }],
+      data: [{ id: 'q1', questionText: 'Who would light up the room?' }],
       meta: {},
     } as any);
 

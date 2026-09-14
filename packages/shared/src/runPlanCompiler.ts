@@ -5,6 +5,8 @@ import type { SocialIcebreakerPhase } from './socialIcebreaker.js';
 import type { IcebreakerRunPlan, PhaseSegment, PhaseModule } from './phaseModule.js';
 import { createRunPlan } from './phaseModule.js';
 import { getPhaseModule } from './phaseRegistry.js';
+import { archetypeEnergyLevels } from './atmospherePrediction.js';
+import { ARCHETYPE_BY_ID } from './personality/archetypeNames.js';
 
 export interface CompilationContext {
   tier: TierMachineId;
@@ -12,10 +14,156 @@ export interface CompilationContext {
   enabledPhases: SocialIcebreakerPhase[];
   /** Vibe preference — defaults to 'balanced' if not provided. */
   vibe?: 'chat' | 'balanced' | 'game';
-  /** Archetype mix — e.g. { "开心柯基": 2, "布偶猫": 1 }. Reserved for future weighting. */
+  /**
+   * Archetype mix — e.g. { "开心柯基": 2, "布偶猫": 1 }. Populated by
+   * `compileForSession` from the matched roster (W5, gm-debrief). When absent
+   * the compiler is byte-identical to pre-W5 behavior.
+   */
   archetypeMix?: Record<string, number>;
   /** Enable LLM enhancement layer — reserved for future sprint. */
   llmEnhancement?: boolean;
+}
+
+// ─── Composition profile (W5) ─────────────────────────────────────────────
+
+/**
+ * Deterministic composition profile derived from `archetypeMix`. Used ONLY to
+ * order phase selection — never to alter pair scores (that boundary lives in
+ * the matching engine).
+ *
+ * Documented composition rule (AC-W5.5):
+ * - **Shy-heavy** (`lowEnergyCount >= 2` and `lowEnergyRatio >= 0.5`): the plan
+ *   is biased toward lower-pressure phases — structured `speed_friending`
+ *   first (added to the eligible pool when enabled), then `pass_ok` /
+ *   `observe_ok` phases, and only then remaining `participation: 'full'`
+ *   phases. This yields fewer full-participation phases for quiet tables.
+ * - **Outgoing-heavy** (`highEnergyCount >= 2` and `highEnergyRatio >= 0.5`):
+ *   the inverse ordering, preferring full-participation phases.
+ */
+export interface ArchetypeComposition {
+  totalMembers: number;
+  lowEnergyCount: number;
+  highEnergyCount: number;
+  lowEnergyRatio: number;
+  highEnergyRatio: number;
+  shyHeavy: boolean;
+  outgoingHeavy: boolean;
+}
+
+/** Energy below this counts as a low-energy ("shy") archetype. */
+const LOW_ENERGY_THRESHOLD = 55;
+/** Energy at/above this counts as an energizer — aligned with W2's floor. */
+const HIGH_ENERGY_THRESHOLD = 75;
+
+function resolveArchetypeEnergy(key: string): number {
+  const direct = archetypeEnergyLevels[key];
+  if (typeof direct === 'number') return direct;
+  const def = ARCHETYPE_BY_ID[key];
+  const byName = def ? archetypeEnergyLevels[def.nameCn] : undefined;
+  return typeof byName === 'number' ? byName : 60;
+}
+
+/** Build a `{ archetype: count }` mix from a matched roster. */
+export function buildArchetypeMix(
+  roster: ReadonlyArray<{ archetype?: string | null }>,
+): Record<string, number> | undefined {
+  if (!roster || roster.length === 0) return undefined;
+  const mix: Record<string, number> = {};
+  for (const member of roster) {
+    const key = member.archetype?.trim();
+    if (!key) continue;
+    mix[key] = (mix[key] ?? 0) + 1;
+  }
+  return Object.keys(mix).length > 0 ? mix : undefined;
+}
+
+/** Derive the deterministic composition profile, or `null` when no mix. */
+export function deriveArchetypeComposition(
+  mix?: Record<string, number>,
+): ArchetypeComposition | null {
+  if (!mix) return null;
+  let totalMembers = 0;
+  let lowEnergyCount = 0;
+  let highEnergyCount = 0;
+  for (const [key, count] of Object.entries(mix)) {
+    if (!Number.isFinite(count) || count <= 0) continue;
+    totalMembers += count;
+    const energy = resolveArchetypeEnergy(key);
+    if (energy < LOW_ENERGY_THRESHOLD) lowEnergyCount += count;
+    else if (energy >= HIGH_ENERGY_THRESHOLD) highEnergyCount += count;
+  }
+  if (totalMembers === 0) return null;
+  const lowEnergyRatio = lowEnergyCount / totalMembers;
+  const highEnergyRatio = highEnergyCount / totalMembers;
+  return {
+    totalMembers,
+    lowEnergyCount,
+    highEnergyCount,
+    lowEnergyRatio,
+    highEnergyRatio,
+    shyHeavy: lowEnergyCount >= 2 && lowEnergyRatio >= 0.5,
+    outgoingHeavy: highEnergyCount >= 2 && highEnergyRatio >= 0.5,
+  };
+}
+
+function orderByComposition(
+  phases: SocialIcebreakerPhase[],
+  composition?: ArchetypeComposition | null,
+): SocialIcebreakerPhase[] {
+  if (!composition || (!composition.shyHeavy && !composition.outgoingHeavy)) return phases;
+
+  if (composition.shyHeavy) {
+    const structured = phases.filter((p) => p === 'speed_friending');
+    const lowPressure = phases.filter(
+      (p) => p !== 'speed_friending' && getPhaseModule(p).participation !== 'full',
+    );
+    const highPressure = phases.filter(
+      (p) => p !== 'speed_friending' && getPhaseModule(p).participation === 'full',
+    );
+    return [...structured, ...lowPressure, ...highPressure];
+  }
+
+  const highPressure = phases.filter((p) => getPhaseModule(p).participation === 'full');
+  const lowPressure = phases.filter((p) => getPhaseModule(p).participation !== 'full');
+  return [...highPressure, ...lowPressure];
+}
+
+/** Inject `speed_friending` into the eligible pool for shy-heavy tables. */
+function applyCompositionBias(
+  pool: SocialIcebreakerPhase[],
+  enabledPhases: SocialIcebreakerPhase[],
+  composition?: ArchetypeComposition | null,
+): SocialIcebreakerPhase[] {
+  if (!composition) return pool;
+  let candidates = pool;
+  if (
+    composition.shyHeavy &&
+    enabledPhases.includes('speed_friending') &&
+    !candidates.includes('speed_friending')
+  ) {
+    candidates = [...candidates, 'speed_friending'];
+  }
+  return orderByComposition(candidates, composition);
+}
+
+/** Composition-aware reorder of a template slot's candidate pool (W5). */
+function compositionCandidatePool(
+  phases: SocialIcebreakerPhase[],
+  slotType: RunPlanTemplateSlot['slotType'] | undefined,
+  enabledPhases: SocialIcebreakerPhase[],
+  composition?: ArchetypeComposition | null,
+): SocialIcebreakerPhase[] {
+  if (!composition) return phases;
+  let pool = phases;
+  if (
+    composition.shyHeavy &&
+    enabledPhases.includes('speed_friending') &&
+    slotType === 'flexible' &&
+    !pool.includes('speed_friending')
+  ) {
+    pool = [...pool, 'speed_friending'];
+  }
+  return orderByComposition(pool, composition);
 }
 
 // ─── Tier budgets (minutes) ───────────────────────────────────────────────
@@ -127,14 +275,18 @@ function selectNonCorePhases(
   tier: TierMachineId,
   enabledPhases: SocialIcebreakerPhase[],
   vibe: CompilationContext['vibe'],
+  composition?: ArchetypeComposition | null,
 ): SocialIcebreakerPhase[] {
   const pool = TIER_NON_CORE_POOLS[tier];
   const target = TIER_SLOT_TARGETS[tier];
 
   const eligible = pool.filter((phase) => isEnabled(phase, enabledPhases));
+  // Vibe first, then composition — the composition rule is the stronger,
+  // roster-derived signal and must win the final ordering (AC-W5.5).
   const biased = applyVibeBias(eligible, vibe);
+  const composed = applyCompositionBias(biased, enabledPhases, composition);
 
-  return biased.slice(0, target);
+  return composed.slice(0, target);
 }
 
 /**
@@ -271,11 +423,170 @@ function energyArcToWeight(arc: PhaseModule['energyArc']): number {
   }
 }
 
+// ─── W9: roster-derived timing, peak decompression, closing guard ──────────
+
+/** Lie Detective: every player contributes a fixed 3-statement set + reveal + vote. */
+export const LIE_DETECTIVE_STATEMENTS_PER_PLAYER = 3;
+/** Runtime budget per player (statement write + reveal + one vote round). */
+export const LIE_DETECTIVE_MINUTES_PER_PLAYER = 2.5;
+/** 6-player floor — below this the 3×N statements + reveals feel rushed. */
+export const LIE_DETECTIVE_MIN_MINUTES = 15;
+/** Hard cap so a large roster cannot blow the tier budget. */
+export const LIE_DETECTIVE_MAX_MINUTES = 25;
+/** Non-core phases never shrink below this during rebalancing. */
+export const NON_CORE_FLOOR_MINUTES = 4;
+
+/** Phases whose allocation is fixed by the registry (never rebalanced). */
+const FIXED_TIMING_PHASES: ReadonlySet<SocialIcebreakerPhase> = new Set([
+  'warmup',
+  'micro_challenge',
+  'recap',
+]);
+
+/**
+ * Derive the `lie_detective` allocation from roster size.
+ * AC-W9.2: ≥2.5 min/player, floored at 15 (a 6-player table) and capped at 25.
+ */
+export function deriveLieDetectiveMinutes(playerCount: number): number {
+  const count = Math.max(3, Math.floor(playerCount || 0));
+  return Math.min(
+    LIE_DETECTIVE_MAX_MINUTES,
+    Math.max(LIE_DETECTIVE_MIN_MINUTES, Math.ceil(count * LIE_DETECTIVE_MINUTES_PER_PLAYER)),
+  );
+}
+
+/** True when `phase` is anonymous passive perception-voting (must not close). */
+export function isJudgmentPhase(phase: SocialIcebreakerPhase): boolean {
+  return getPhaseModule(phase).perceptionTone === 'judgment';
+}
+
+/**
+ * AC-W9.2: raise `lie_detective` to its roster-derived floor and shave the
+ * delta from the other non-core phases (largest-first, never below
+ * `NON_CORE_FLOOR_MINUTES`, never core/recap). The plan total is preserved
+ * whenever the donor budget allows; otherwise it grows and the caller surfaces
+ * the remainder. No-op when the phase is absent or already large enough.
+ */
+export function applyRosterDerivedTiming(
+  segments: PhaseSegment[],
+  playerCount: number,
+): PhaseSegment[] {
+  const lieIndex = segments.findIndex((s) => s.phase === 'lie_detective');
+  if (lieIndex < 0) return segments;
+  const required = deriveLieDetectiveMinutes(playerCount);
+  if (segments[lieIndex].allocatedMinutes >= required) return segments;
+
+  const out = segments.map((s) => ({ ...s }));
+  let delta = required - out[lieIndex].allocatedMinutes;
+  out[lieIndex].allocatedMinutes = required;
+
+  const donors = out
+    .filter(
+      (s) =>
+        !FIXED_TIMING_PHASES.has(s.phase) &&
+        s.phase !== 'lie_detective' &&
+        s.allocatedMinutes > NON_CORE_FLOOR_MINUTES,
+    )
+    .sort((a, b) => b.allocatedMinutes - a.allocatedMinutes);
+
+  for (const donor of donors) {
+    if (delta <= 0) break;
+    const give = Math.min(delta, donor.allocatedMinutes - NON_CORE_FLOOR_MINUTES);
+    donor.allocatedMinutes -= give;
+    delta -= give;
+  }
+  return out;
+}
+
+/**
+ * AC-W9.3: no two consecutive `energyArc: 'peak'` phases. When the non-core
+ * middle has adjacent peaks, interleave peaks and non-peaks with a greedy
+ * alternation (peak-first when the counts allow, so the warm non-peak closer
+ * lands last). Prefix (warmup/micro_challenge) and the closing recap are pinned.
+ * Byte-identical no-op when there is no adjacency.
+ */
+export function applyPeakDecompression(segments: PhaseSegment[]): PhaseSegment[] {
+  if (segments.length < 4) return segments;
+  const prefix = segments.slice(0, 2);
+  const middle = segments.slice(2, -1);
+  const closing = segments.slice(-1);
+  const isPeak = (segment: PhaseSegment) =>
+    getPhaseModule(segment.phase).energyArc === 'peak';
+
+  let adjacent = false;
+  for (let i = 1; i < middle.length; i++) {
+    if (isPeak(middle[i - 1]) && isPeak(middle[i])) {
+      adjacent = true;
+      break;
+    }
+  }
+  if (!adjacent) return segments;
+
+  const peaks = middle.filter(isPeak);
+  const nonPeaks = middle.filter((segment) => !isPeak(segment));
+  const preferPeakFirst = nonPeaks.length >= peaks.length - 1;
+  const ordered: PhaseSegment[] = [];
+  let lastWasPeak = false;
+
+  while (peaks.length > 0 || nonPeaks.length > 0) {
+    if (lastWasPeak) {
+      if (nonPeaks.length > 0) {
+        ordered.push(nonPeaks.shift() as PhaseSegment);
+        lastWasPeak = false;
+      } else {
+        ordered.push(peaks.shift() as PhaseSegment);
+      }
+    } else if (preferPeakFirst && peaks.length > 0) {
+      ordered.push(peaks.shift() as PhaseSegment);
+      lastWasPeak = true;
+    } else if (nonPeaks.length > 0) {
+      ordered.push(nonPeaks.shift() as PhaseSegment);
+      lastWasPeak = false;
+    } else {
+      ordered.push(peaks.shift() as PhaseSegment);
+      lastWasPeak = true;
+    }
+  }
+  return [...prefix, ...ordered, ...closing];
+}
+
+/**
+ * AC-W9.1: a `perceptionTone: 'judgment'` phase must never be the final act
+ * before recap. Returns the segments unchanged when the invariant holds (or
+ * when there are too few segments); otherwise swaps the judgment phase with the
+ * preceding non-core segment so a non-judgment act closes the gameplay block.
+ */
+export function ensureNoJudgmentClosing(segments: PhaseSegment[]): PhaseSegment[] {
+  if (segments.length < 4) return segments;
+  const closing = segments[segments.length - 1];
+  if (closing.phase !== 'recap') return segments;
+  const penultimate = segments[segments.length - 2];
+  if (!penultimate || !isJudgmentPhase(penultimate.phase)) return segments;
+  const out = [...segments];
+  [out[out.length - 3], out[out.length - 2]] = [out[out.length - 2], out[out.length - 3]];
+  return out;
+}
+
+/**
+ * Single W9 entry point: roster-derived timing (`lie_detective`), peak
+ * decompression, and the judgment-closing guard. Used by both compiler paths
+ * and by the server's fallback-plan normalization.
+ */
+export function normalizeRunPlanTiming(
+  plan: IcebreakerRunPlan,
+  playerCount: number,
+): IcebreakerRunPlan {
+  const timed = applyRosterDerivedTiming(plan.segments, playerCount);
+  const decompressed = applyPeakDecompression(timed);
+  const guarded = ensureNoJudgmentClosing(decompressed);
+  const totalMinutes = guarded.reduce((sum, segment) => sum + segment.allocatedMinutes, 0);
+  return { ...plan, segments: guarded, totalMinutes };
+}
+
 /**
  * Validate the compiled run plan.
  */
-function validateRunPlan(plan: IcebreakerRunPlan, enabledPhases: SocialIcebreakerPhase[]): void {
-  const phases = plan.segments.map((s) => s.phase);
+function validateRunPlan(plan: IcebreakerRunPlan, enabledPhases: SocialIcebreakerPhase[]): void {  const phases = plan.segments.map((s) => s.phase);
 
   // No duplicates
   const uniquePhases = new Set(phases);
@@ -331,6 +642,10 @@ export function compileAgentRunPlan(ctx: CompilationContext): IcebreakerRunPlan 
 
   const { tier, enabledPhases } = ctx;
 
+  // 0. Deterministic composition profile (W5, AC-W5.1). Null when no mix is
+  //    supplied, which keeps the pre-W5 phase order byte-identical.
+  const composition = deriveArchetypeComposition(ctx.archetypeMix);
+
   // 1. Core phases
   const corePhases = CORE_PHASES.filter((phase) => isEnabled(phase, enabledPhases));
   if (corePhases.length !== CORE_PHASES.length) {
@@ -338,7 +653,7 @@ export function compileAgentRunPlan(ctx: CompilationContext): IcebreakerRunPlan 
   }
 
   // 2. Select non-core phases
-  const nonCorePhases = selectNonCorePhases(tier, enabledPhases, ctx.vibe);
+  const nonCorePhases = selectNonCorePhases(tier, enabledPhases, ctx.vibe, composition);
 
   // 3. Sort by energy arc
   const sortedNonCore = sortByEnergyArc(nonCorePhases);
@@ -365,7 +680,10 @@ export function compileAgentRunPlan(ctx: CompilationContext): IcebreakerRunPlan 
   const segments = buildSegments(allPhases, nonCoreAllocations);
 
   // 8. Create plan
-  const plan = createRunPlan(segments, `compiler-rule-v1-${tier}`);
+  const plan = normalizeRunPlanTiming(
+    createRunPlan(segments, `compiler-rule-v1-${tier}`),
+    ctx.playerCount,
+  );
 
   // 9. Validate
   validateRunPlan(plan, enabledPhases);
@@ -472,72 +790,60 @@ function resolveSlot(
   usedPhases: Set<SocialIcebreakerPhase>,
   playerCount: number,
   enabledPhases: SocialIcebreakerPhase[],
+  composition?: ArchetypeComposition | null,
 ): { phase: SocialIcebreakerPhase; segment: PhaseSegment } | null {
+  // Composition-aware candidate ordering (W5, AC-W5.5). When no composition is
+  // supplied both arrays are returned unchanged, so the pre-W5 resolution is
+  // byte-identical.
+  const eligiblePhases = compositionCandidatePool(
+    slot.eligiblePhases,
+    slot.slotType,
+    enabledPhases,
+    composition,
+  );
+  const fullPool = compositionCandidatePool(
+    getFullPoolForSlotType(slot.slotType),
+    slot.slotType,
+    enabledPhases,
+    composition,
+  );
+
+  const buildSegment = (phase: SocialIcebreakerPhase): PhaseSegment => {
+    const module = getPhaseModule(phase);
+    return {
+      phase,
+      allocatedMinutes: slot.allocatedMinutes,
+      energyWeight: energyArcToWeight(module.energyArc),
+      participation: module.participation,
+      tone: module.tone,
+    };
+  };
+
   // 1. Try slot's eligible phases with category spacing
-  for (const phase of slot.eligiblePhases) {
+  for (const phase of eligiblePhases) {
     if (canUsePhase(phase, usedPhases, playerCount, enabledPhases, lastCategory)) {
-      const module = getPhaseModule(phase);
-      return {
-        phase,
-        segment: {
-          phase,
-          allocatedMinutes: slot.allocatedMinutes,
-          energyWeight: energyArcToWeight(module.energyArc),
-          participation: module.participation,
-          tone: module.tone,
-        },
-      };
+      return { phase, segment: buildSegment(phase) };
     }
   }
 
   // 2. Fallback to full pool for slot type with category spacing
-  for (const phase of getFullPoolForSlotType(slot.slotType)) {
+  for (const phase of fullPool) {
     if (canUsePhase(phase, usedPhases, playerCount, enabledPhases, lastCategory)) {
-      const module = getPhaseModule(phase);
-      return {
-        phase,
-        segment: {
-          phase,
-          allocatedMinutes: slot.allocatedMinutes,
-          energyWeight: energyArcToWeight(module.energyArc),
-          participation: module.participation,
-          tone: module.tone,
-        },
-      };
+      return { phase, segment: buildSegment(phase) };
     }
   }
 
   // 3. Try slot's eligible phases ignoring category spacing
-  for (const phase of slot.eligiblePhases) {
+  for (const phase of eligiblePhases) {
     if (canUsePhaseIgnoreCategory(phase, usedPhases, playerCount, enabledPhases)) {
-      const module = getPhaseModule(phase);
-      return {
-        phase,
-        segment: {
-          phase,
-          allocatedMinutes: slot.allocatedMinutes,
-          energyWeight: energyArcToWeight(module.energyArc),
-          participation: module.participation,
-          tone: module.tone,
-        },
-      };
+      return { phase, segment: buildSegment(phase) };
     }
   }
 
   // 4. Fallback to full pool ignoring category spacing
-  for (const phase of getFullPoolForSlotType(slot.slotType)) {
+  for (const phase of fullPool) {
     if (canUsePhaseIgnoreCategory(phase, usedPhases, playerCount, enabledPhases)) {
-      const module = getPhaseModule(phase);
-      return {
-        phase,
-        segment: {
-          phase,
-          allocatedMinutes: slot.allocatedMinutes,
-          energyWeight: energyArcToWeight(module.energyArc),
-          participation: module.participation,
-          tone: module.tone,
-        },
-      };
+      return { phase, segment: buildSegment(phase) };
     }
   }
 
@@ -562,6 +868,7 @@ export function resolveTemplateSlots(
   playerCount: number,
   enabledPhases: SocialIcebreakerPhase[],
   template?: RunPlanTemplate | null,
+  composition?: ArchetypeComposition | null,
 ): PhaseSegment[] {
   const resolvedTemplate = template ?? findDefaultTemplate(vibe, tier);
   if (!resolvedTemplate) {
@@ -577,7 +884,14 @@ export function resolveTemplateSlots(
   let lastCategory = getPhaseModule('micro_challenge').category;
 
   for (const slot of resolvedTemplate.slots) {
-    const resolved = resolveSlot(slot, lastCategory, usedPhases, playerCount, enabledPhases);
+    const resolved = resolveSlot(
+      slot,
+      lastCategory,
+      usedPhases,
+      playerCount,
+      enabledPhases,
+      composition,
+    );
     if (resolved) {
       segments.push(resolved.segment);
       usedPhases.add(resolved.phase);
@@ -587,7 +901,9 @@ export function resolveTemplateSlots(
 
   segments.push(buildCoreSegment('recap', resolvedTemplate.coreRecapMinutes));
 
-  return segments;
+  // W9: roster-derived lie_detective timing, peak decompression, closing guard.
+  const timed = applyRosterDerivedTiming(segments, playerCount);
+  return ensureNoJudgmentClosing(applyPeakDecompression(timed));
 }
 
 function findDefaultTemplate(vibe: TemplateVibeId, tier: TierMachineId): RunPlanTemplate | undefined {

@@ -152,6 +152,13 @@ export function cleanupPhaseStateForNextPhase(
   state: SocialSessionState,
   completedPhase: SocialIcebreakerPhase,
 ): void {
+  // W3: cross-phase presence scope is always transient — every transition
+  // clears the entry snapshot and the opt-out / silent auto-complete markers
+  // before the next phase captures its own.
+  state.phaseRosterSnapshot = undefined;
+  state.phaseOptOutUserIds = undefined;
+  state.phaseSilentCompletedUserIds = undefined;
+
   switch (completedPhase) {
     case 'warmup':
       state.warmupReadyUserIds = undefined;

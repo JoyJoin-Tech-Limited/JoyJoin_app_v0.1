@@ -165,10 +165,18 @@ export const PHASE_REGISTRY: Record<SocialIcebreakerPhase, PhaseModule> = {
     durationMinutes: 10,
     minPlayers: 2,
     category: 'creative',
-    // Late wind-down (anonymous perception-voting about the group), not an
-    // opener: needs social observation time to be meaningful. 'falling' keeps
-    // sortByEnergyArc from placing it first among non-core phases (2026-08-03).
+    // Late wind-down (group appreciation), not an opener: needs social
+    // observation time to be meaningful. 'falling' keeps sortByEnergyArc from
+    // placing it first among non-core phases (2026-08-03).
+    //
+    // W9 (gm-debrief, AC-W9.1): this was anonymous perception-voting scheduled
+    // as the final act before recap — reading as a judgment closing, not
+    // warmth. It is now appreciation-only (positive superlatives) and remains
+    // the warm falling closer. `perceptionTone: 'appreciation'` is the compiler
+    // contract that lets it occupy the pre-recap slot; any future
+    // `perceptionTone: 'judgment'` phase is rejected as a closer.
     energyArc: 'falling',
+    perceptionTone: 'appreciation',
     requiresGeneration: true,
     generationLeadTimeMinutes: 60,
     canBeSkipped: true,

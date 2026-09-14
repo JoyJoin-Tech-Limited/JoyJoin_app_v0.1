@@ -121,6 +121,9 @@ export const ADMIN_AUDIT_ACTIONS = [
   'MATCHING_WEIGHTS_ROLLED_BACK',
   // Onboarding support (testing-only, not admin-gated; logged via application logger)
   // 'ONBOARDING_FORCE_SKIPPED',
+  // Social Icebreaker host resilience (W1) — operator recovery of a frozen room.
+  'SOCIAL_ICEBREAKER_FORCE_END',
+  'SOCIAL_ICEBREAKER_HOST_TRANSFERRED',
   // Runtime fallback for malformed / untyped callers
   'OTHER',
 ] as const;

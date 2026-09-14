@@ -54,6 +54,14 @@ export interface PhaseModule {
   participation: ParticipationMode;
   /** Soft hint for copy tone */
   tone: 'gentle' | 'playful' | 'neutral' | 'dramatic' | 'competitive';
+  /**
+   * W9 (gm-debrief): how the phase's content treats the group.
+   * `'judgment'` = anonymous passive perception-voting; such a phase must never
+   * be the final act before `recap` (see `isJudgmentPhase` + the compiler's
+   * closing guard). `group_mirror` is `'appreciation'` — appreciation
+   * superlatives, which are safe as a warm wind-down.
+   */
+  perceptionTone?: 'appreciation' | 'neutral' | 'judgment';
 
   // ─── UI tokens (copied from PHASE_CONFIG for client use) ───
   gradient: string;

@@ -334,4 +334,32 @@ describe('event-feedback merged 3-screen flow (2026-08-15)', () => {
     expect(scss).toContain('&__participant-avatar')
     expect(scss).toContain('border-radius: 50%')
   })
+
+  it('feeds the canonical outcome pipeline after the legacy feedback POST (W4 AC-W4.2a)', () => {
+    // The shipping caller that reconnects the feedback fuel line: the feedback
+    // page resolves the matched group from the shared registrations cache and
+    // posts the canonical payload to the group-outcome route.
+    expect(tsx).toContain('getMyPoolRegistrations')
+    expect(tsx).toContain('REGISTRATIONS_QUERY_KEY')
+    expect(tsx).toContain('buildGroupOutcomePayload')
+    expect(tsx).toContain('/api/event-pools/${encodeURIComponent(matchedRegistration.poolId)}/group-outcome')
+    // Fired only after the primary feedback POST succeeded, and fire-and-forget.
+    const submitBlock = tsx.split("const submitGroupOutcome = useCallback")[1] ?? ''
+    expect(submitBlock).toContain('.catch(')
+    const handleSubmitBlock = tsx.split('const handleSubmit = useCallback')[1] ?? ''
+    expect(handleSubmitBlock).toContain('submitGroupOutcome()')
+    // Kept in the callback deps so a stale closure cannot drop the call.
+    expect(handleSubmitBlock).toContain('submitGroupOutcome,')
+  })
+
+  it('does not silently drop the outcome when the registrations cache is cold (W4 review)', () => {
+    const submitBlock = tsx.split('const submitGroupOutcome = useCallback')[1] ?? ''
+    // Unresolved cache → explicit ensureQueryData before deciding, not a bare return.
+    expect(submitBlock).toContain('ensureQueryData')
+    expect(submitBlock).toContain('REGISTRATIONS_QUERY_KEY')
+    expect(submitBlock).toContain('registrations unavailable')
+    // Loaded-but-unmatched and no-signal are distinguished and logged.
+    expect(submitBlock).toContain('no matched group for this event')
+    expect(submitBlock).toContain('no usable feedback signal')
+  })
 })

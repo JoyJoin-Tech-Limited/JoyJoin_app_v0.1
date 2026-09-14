@@ -8,12 +8,24 @@ import path from "path";
  * path is a signal-boundary violation and must be caught.
  */
 
-const sourcePath = path.resolve(import.meta.dirname, "../poolMatchingService.ts");
+// `calculateGroupDiversity` moved verbatim into the group-scoring module
+// (behavior-preserving modularization), so the life-stage boundary is locked
+// against that source too.
+const sourcePath = path.resolve(import.meta.dirname, "../matching/groupScoring.ts");
 const source = fs.readFileSync(sourcePath, "utf-8");
+
+// Behavior-preserving modularization: the pair-dimension helpers (including
+// calculateLifeStageAffinity) moved verbatim into their own cohesive module,
+// so the life-stage signal boundary is locked against that source instead.
+const pairDimensionSourcePath = path.resolve(
+  import.meta.dirname,
+  "../matching/pairDimensionScoring.ts",
+);
+const pairDimensionSource = fs.readFileSync(pairDimensionSourcePath, "utf-8");
 
 describe("life stage signal boundary", () => {
   it("calculateLifeStageAffinity reads lifeStage, not workMode", () => {
-    const match = source.match(
+    const match = pairDimensionSource.match(
       /function calculateLifeStageAffinity\(user1:\s*UserWithProfile,\s*user2:\s*UserWithProfile\):\s*number\s*\{([\s\S]*?)\n\}/
     );
     expect(match).toBeTruthy();

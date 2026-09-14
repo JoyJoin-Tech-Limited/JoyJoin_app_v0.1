@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const routesSource = readFileSync(
   new URL('../routes.ts', import.meta.url),
@@ -11,10 +13,16 @@ const profileRoutesSource = readFileSync(
   'utf8',
 );
 
-const poolMatchingSource = readFileSync(
-  new URL('../poolMatchingService.ts', import.meta.url),
-  'utf8',
-);
+// The matching pipeline was split verbatim into ./matching/* modules
+// (behavior-preserving modularization). Scan the barrel plus every module in the
+// package so the boundary lock still covers all moved source files.
+const MATCHING_DIR = fileURLToPath(new URL('../matching/', import.meta.url));
+const poolMatchingSource = [
+  readFileSync(new URL('../poolMatchingService.ts', import.meta.url), 'utf8'),
+  ...readdirSync(MATCHING_DIR)
+    .filter((file) => file.endsWith('.ts'))
+    .map((file) => readFileSync(path.join(MATCHING_DIR, file), 'utf8')),
+].join('\n');
 
 // Combined route sources for invariant checks — routes may live in domain files.
 const combinedRoutesSource = routesSource + profileRoutesSource;

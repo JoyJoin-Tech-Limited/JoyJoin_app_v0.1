@@ -178,6 +178,7 @@ export async function generateAndAssignEventThemeTitle(
             model: aiSelection.model,
             latencyMs: Date.now() - startTime,
             promptVersion: EVENT_THEME_TITLE_PROMPT_VERSION,
+            enforceReviewVocab: true,
           });
           if (!moderation.safe) {
             logger.warn('Content safety moderation failed, using fallback', { component: 'EventThemeTitleGen', field: moderation.field });

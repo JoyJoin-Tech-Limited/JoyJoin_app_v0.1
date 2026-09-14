@@ -21,7 +21,7 @@ This section maps the three agent systems to what is **actually shipped in the r
 
 | System | Shipped component | Key file(s) | Notes |
 |---|---|---|---|
-| **Event Momentum** | Curated fallback content libraries | `apps/server/src/socialIcebreakerAIService.ts` | `FALLBACK_WARMUP_TOPICS`, `FALLBACK_MICRO_CHALLENGES`, `FALLBACK_LIE_DETECTIVE_STATEMENTS` — activated automatically when model output is invalid |
+| **Event Momentum** | Curated fallback content libraries | `apps/server/src/socialIcebreakerAIService.ts` | `FALLBACK_WARMUP_TOPICS`, `FALLBACK_LIE_DETECTIVE_STATEMENTS` — activated automatically when model output is invalid; micro-challenges use the deterministic `selectMicroChallenges` selector bank instead of a static curated list |
 | **Event Momentum** | Live/fallback generation for all MVP phases | `apps/server/src/socialIcebreakerAIService.ts` | `generateWarmupTopics()`, `generateMicroChallenges()`, `generateLieDetectiveStatements()`, `generateRecapSummary()`, `generatePersonalityDiceChallenges()` |
 | **Event Momentum** | Server-driven phase lifecycle with env-flag feature gates | `apps/server/src/socialIcebreakerPhaseConfig.ts`, `apps/server/src/routes/socialIcebreaker.ts` | `getServerEnabledPhases()` resolves active phases from env vars; `/advance` uses `getNextEligiblePhase()` — the server, not the client, owns phase transitions |
 | **Event Momentum** | Optional phases (auction, mini_script) | `packages/shared/src/socialIcebreaker.ts`, `apps/server/src/socialIcebreakerPhaseConfig.ts` | Phases defined and gate-controlled; off by default (`SOCIAL_ICEBREAKER_ENABLE_AUCTION`, `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` env flags; legacy `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` still honored) |
@@ -511,7 +511,7 @@ These are non-negotiable rules that must be preserved by all future AI work. Rev
 ### 11.3 Curated Fallback Libraries are Required, Not Optional
 
 - Every user-facing AI surface must have a curated deterministic fallback library that activates when the model returns an invalid response, times out, or is unavailable.
-- The pattern established in `socialIcebreakerAIService.ts` (`FALLBACK_WARMUP_TOPICS`, `FALLBACK_MICRO_CHALLENGES`, `FALLBACK_LIE_DETECTIVE_STATEMENTS`) is the canonical example. All future AI surfaces must follow it.
+- The pattern established in `socialIcebreakerAIService.ts` (`FALLBACK_WARMUP_TOPICS`, `FALLBACK_LIE_DETECTIVE_STATEMENTS`; micro-challenges use the deterministic `selectMicroChallenges` selector) is the canonical example. All future AI surfaces must follow it.
 - Fallback must be exercised in tests before the surface ships.
 
 ### 11.4 Server-Driven Lifecycle; AI Generates Content Within Phases

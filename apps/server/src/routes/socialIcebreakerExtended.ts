@@ -27,17 +27,33 @@ import {
   waitForDeferredRecapSnapshot,
   transitionPhase,
   hasWarmupTurnCompleted,
+  // W3 — active-presence guards + honest opt-out
+  reconcilePhasePresence,
+  getPhaseRequiredRosterIds,
+  getPhaseRequiredPlayerCount,
+  markPhaseParticipationComplete,
+  isPhaseRosterComplete,
+  hasFullPhaseQuorum,
 } from './socialIcebreakerHelpers';
+import { getPhaseModule } from '@shared/phaseRegistry';
 import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
   getSessionWithExpiry,
   getParticipant,
+  getParticipantLastSeenAt,
+  transferHost,
   updateSession,
+  updateSessionAtomic,
   listParticipants,
   setLieTruths,
   getLieTruths,
+  PRESENCE_THRESHOLD_MS,
 } from '../lib/socialIcebreakerStore';
+import {
+  getHostClaimGraceMs,
+  evaluateHostClaimEligibility,
+} from '../lib/socialIcebreakerHostResilience';
 import { logger } from '../lib/logger';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
@@ -134,9 +150,10 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   if (!skipGuards && currentPhase === 'micro_challenge') {
-    const everyoneCompleted = hasAllRosterParticipantsResponded(state.challengeCompletedBy, state.playerCount);
-
-    if (!everyoneCompleted) {
+    // W3: scoped to the phase-entry roster snapshot; a silent member is
+    // auto-completed after the timeout so the host never needs `force`.
+    const presence = await reconcilePhasePresence(state, socialSessionId);
+    if (!presence.complete) {
       return res.status(400).json({ error: 'Wait for everyone to finish' });
     }
   }
@@ -150,24 +167,55 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
 
   if (currentPhase === 'lie_detective') {
     if (!skipGuards) {
-      const generatedPlayers = state.lieDetectivePlayers || [];
-      const currentPlayer = getCurrentLieDetectivePlayer(state);
+      // W3: reconcile silent members FIRST so a silent or late player is
+      // removed from the required set before the generation / turn guards run
+      // (a silent player who never generated would otherwise deadlock here).
+      const presence = await reconcilePhasePresence(state, socialSessionId);
+      // Quorum floor: with fewer than MIN_FULL_PHASE_QUORUM required members the
+      // per-turn reveal can never happen (no other voter), so the phase is
+      // structurally complete and the host advances without it (finding 4).
+      if (hasFullPhaseQuorum(state)) {
+        const generatedPlayers = state.lieDetectivePlayers || [];
+        const requiredRoster = getPhaseRequiredRosterIds(state);
+        const hasSnapshot = Boolean(state.phaseRosterSnapshot?.length);
 
-      if (generatedPlayers.length < state.playerCount) {
-        return res.status(400).json({ error: 'All participants must generate statements before leaving lie_detective' });
-      }
+        if (hasSnapshot) {
+          const requiredSet = new Set(requiredRoster);
+          const requiredGenerated = generatedPlayers.filter((player) =>
+            requiredSet.has(player.userId),
+          ).length;
+          if (requiredGenerated < requiredRoster.length) {
+            return res.status(400).json({ error: 'All participants must generate statements before leaving lie_detective' });
+          }
+        } else if (generatedPlayers.length < state.playerCount) {
+          return res.status(400).json({ error: 'All participants must generate statements before leaving lie_detective' });
+        }
 
-      if (!currentPlayer || state.currentLieDetectivePlayerIndex !== generatedPlayers.length - 1) {
-        return res.status(400).json({ error: 'Finish every lie-detective turn before advancing' });
-      }
+        if (requiredRoster.length > 0) {
+          const requiredSet = new Set(requiredRoster);
+          let lastRequiredIndex = -1;
+          for (let i = generatedPlayers.length - 1; i >= 0; i -= 1) {
+            if (requiredSet.has(generatedPlayers[i].userId)) {
+              lastRequiredIndex = i;
+              break;
+            }
+          }
+          const currentIndex = state.currentLieDetectivePlayerIndex ?? 0;
+          if (lastRequiredIndex < 0 || currentIndex < lastRequiredIndex) {
+            return res.status(400).json({ error: 'Finish every lie-detective turn before advancing' });
+          }
+          if (currentIndex === lastRequiredIndex) {
+            const lastRequiredPlayer = generatedPlayers[lastRequiredIndex];
+            const reveal = state.currentLieDetectiveReveal;
+            if (!lastRequiredPlayer || !reveal || reveal.targetUserId !== lastRequiredPlayer.userId) {
+              return res.status(400).json({ error: 'The current lie-detective turn must be revealed before advancing' });
+            }
+          }
+        }
 
-      const reveal = state.currentLieDetectiveReveal;
-      if (!reveal || reveal.targetUserId !== currentPlayer.userId) {
-        return res.status(400).json({ error: 'The current lie-detective turn must be revealed before advancing' });
-      }
-
-      if (!hasAllRosterParticipantsResponded(state.lieDetectiveCompletedUserIds, state.playerCount)) {
-        return res.status(400).json({ error: 'Every lie-detective turn must be completed before advancing' });
+        if (!presence.complete) {
+          return res.status(400).json({ error: 'Every lie-detective turn must be completed before advancing' });
+        }
       }
     }
 
@@ -294,6 +342,104 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   });
 });
 // ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/opt-out
+// W3 honest opt-out (只想听 / 换一个) for participation:'full' phases.
+// Self-scoped ONLY: the authenticated user opts their own turn out; the server
+// marks them complete for the phase so the advance guard passes with no host
+// force and no separate "skipped" badge (they count in the ready/complete
+// counter). Idempotent. Cleared on the next phase transition.
+//
+// Client contract:
+//   Request  body: { phase?: SocialIcebreakerPhase }  (optional; must match current)
+//   Response body: { ok: true, phase, optedOutUserId, state }
+//   Client state field: state.phaseOptOutUserIds: string[]
+//     → render the opted-out player's phase card as state `opt_out` when
+//       state.phaseOptOutUserIds.includes(myUserId).
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/opt-out', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId = req.session?.userId;
+  const { phase: requestedPhase } = (req.body ?? {}) as { phase?: SocialIcebreakerPhase };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  // Self-scoped: the target is always the authenticated session user. A body
+  // userId is deliberately ignored so one player can never complete another's
+  // turn.
+  const participant = await getParticipant(socialSessionId, userId);
+  if (!participant) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
+  if (requestedPhase && requestedPhase !== state.currentPhase) {
+    return res.status(400).json({
+      error: 'Phase mismatch',
+      code: 'PHASE_MISMATCH',
+      currentPhase: state.currentPhase,
+    });
+  }
+
+  const phase = state.currentPhase;
+  if (phase === 'recap' || phase === 'phase_selection' || (phase as string) === 'ended') {
+    return res.status(400).json({ error: 'Cannot opt out of this phase', code: 'OPT_OUT_NOT_APPLICABLE' });
+  }
+
+  if (getPhaseModule(phase).participation !== 'full') {
+    return res.status(400).json({
+      error: 'Opt-out is only available in full-participation phases',
+      code: 'OPT_OUT_NOT_APPLICABLE',
+    });
+  }
+
+  // Atomic self-scoped append: two simultaneous opt-outs must not lose-update
+  // each other's `phaseOptOutUserIds` (W3 finding 2). The row lock re-reads the
+  // freshest state, mutates it, and re-checks the phase so a transition that
+  // landed between the validation above and the lock is reported, not clobbered.
+  const outcome = await updateSessionAtomic(socialSessionId, (fresh) => {
+    if (fresh.currentPhase !== phase) return false;
+
+    const optedOut = new Set(fresh.phaseOptOutUserIds ?? []);
+    optedOut.add(userId);
+    fresh.phaseOptOutUserIds = [...optedOut];
+
+    // Mark complete so the shared ready/complete counter includes the player
+    // and every stage gate for the phase passes without host force.
+    markPhaseParticipationComplete(fresh, phase, userId);
+    return true;
+  });
+
+  if (outcome.outcome === 'not_found') {
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+  if (outcome.outcome === 'aborted') {
+    return res.status(400).json({
+      error: 'Phase mismatch',
+      code: 'PHASE_MISMATCH',
+      currentPhase: outcome.state.currentPhase,
+    });
+  }
+
+  const updatedState = outcome.state;
+
+  logger.info('[SocialIcebreaker] player opted out of full-participation phase', {
+    socialSessionId,
+    userId,
+    phase,
+  });
+
+  return res.json({
+    ok: true,
+    phase,
+    optedOutUserId: userId,
+    state: await buildClientState(updatedState, userId),
+  });
+});
+// ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/early-end
 // Host escape hatch: jump the whole table to recap from any playable phase.
 // The skipped phase is NOT counted as played so recap framing stays honest.
@@ -370,6 +516,156 @@ router.post('/:socialSessionId/stall-nudge/dismiss', async (req: any, res) => {
 
   return res.json({ state: await buildClientState(state, userId) });
 });
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/transfer-host
+// Host-resilience claim: when the current host has been heartbeat-silent past
+// SOCIAL_ICEBREAKER_HOST_CLAIM_GRACE_MS, any remaining participant may take
+// over. Compare-and-swap in the store keeps concurrent claims atomic and makes
+// a repeat claim by the new host idempotent.
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/transfer-host', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  // Idempotent: the caller already holds the host role.
+  if (state.hostUserId === userId) {
+    logger.info('[SocialIcebreaker] host claim no-op (already host)', {
+      request_id: req.requestId,
+      socialSessionId,
+      actorUserId: userId,
+    });
+    return res.json({
+      transferred: false,
+      alreadyHost: true,
+      state: await buildClientState(state, userId),
+    });
+  }
+
+  // Only an existing roster participant may claim — never a stranger.
+  const claimant = await getParticipant(socialSessionId, userId);
+  if (!claimant) {
+    logger.warn('[SocialIcebreaker] host claim rejected (not a participant)', {
+      request_id: req.requestId,
+      socialSessionId,
+      actorUserId: userId,
+    });
+    return res.status(403).json({
+      error: 'Not a participant in this session',
+      code: 'NOT_A_PARTICIPANT',
+    });
+  }
+
+  // A stale roster row is not enough: the claimant must be currently present,
+  // otherwise the role could move to a disengaged user and the room stays frozen.
+  const claimantLastSeenAt = await getParticipantLastSeenAt(socialSessionId, userId);
+  const claimantActive =
+    claimantLastSeenAt !== null &&
+    Date.now() - claimantLastSeenAt.getTime() <= PRESENCE_THRESHOLD_MS;
+  if (!claimantActive) {
+    logger.info('[SocialIcebreaker] host claim denied (claimant not active)', {
+      request_id: req.requestId,
+      socialSessionId,
+      actorUserId: userId,
+      claimantLastSeenAt: claimantLastSeenAt?.toISOString() ?? null,
+      presenceThresholdMs: PRESENCE_THRESHOLD_MS,
+    });
+    return res.status(403).json({
+      error: 'Claimant is not currently active',
+      code: 'CLAIMANT_INACTIVE',
+    });
+  }
+
+  const graceMs = getHostClaimGraceMs();
+  const hostLastSeenAt = await getParticipantLastSeenAt(socialSessionId, state.hostUserId);
+  const observedHostLastSeenAtMs = hostLastSeenAt ? hostLastSeenAt.getTime() : null;
+  const eligibility = evaluateHostClaimEligibility({
+    hostLastSeenAtMs: observedHostLastSeenAtMs,
+    sessionStartedAtMs: state.sessionStartedAt,
+    now: Date.now(),
+    graceMs,
+  });
+
+  if (!eligibility.eligible) {
+    logger.info('[SocialIcebreaker] host claim denied (host still active)', {
+      request_id: req.requestId,
+      socialSessionId,
+      actorUserId: userId,
+      hostUserId: state.hostUserId,
+      hostSilenceMs: eligibility.hostSilenceMs,
+      graceMs,
+    });
+    return res.status(403).json({
+      error: 'Host is still active',
+      code: 'HOST_ACTIVE',
+      hostSilenceMs: eligibility.hostSilenceMs,
+      graceMs,
+    });
+  }
+
+  const transfer = await transferHost(
+    socialSessionId,
+    userId,
+    claimant.displayName,
+    state.hostUserId,
+    observedHostLastSeenAtMs,
+  );
+  if (transfer.outcome === 'not_found') {
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+  if (transfer.outcome === 'conflict') {
+    logger.warn('[SocialIcebreaker] host claim conflict (host changed concurrently)', {
+      request_id: req.requestId,
+      socialSessionId,
+      actorUserId: userId,
+      currentHostUserId: transfer.currentHostUserId,
+    });
+    return res.status(409).json({
+      error: 'Host changed concurrently; retry',
+      code: 'HOST_CLAIM_CONFLICT',
+    });
+  }
+  if (transfer.outcome === 'host_active') {
+    // The host heartbeated after the eligibility read but before the CAS.
+    logger.info('[SocialIcebreaker] host claim denied (host heartbeat advanced mid-claim)', {
+      request_id: req.requestId,
+      socialSessionId,
+      actorUserId: userId,
+      hostUserId: transfer.currentHostUserId,
+      hostLastSeenAt: transfer.hostLastSeenAt?.toISOString() ?? null,
+      graceMs,
+    });
+    return res.status(403).json({
+      error: 'Host is still active',
+      code: 'HOST_ACTIVE',
+    });
+  }
+
+  const alreadyHost = transfer.outcome === 'already_host';
+  logger.info('[SocialIcebreaker] host role claimed after silence', {
+    request_id: req.requestId,
+    socialSessionId,
+    actorUserId: userId,
+    previousHostUserId: state.hostUserId,
+    hostSilenceMs: eligibility.hostSilenceMs,
+    graceMs,
+    alreadyHost,
+  });
+
+  return res.json({
+    transferred: !alreadyHost,
+    alreadyHost,
+    state: await buildClientState(transfer.state, userId),
+  });
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/lie-detective/generate
 // ---------------------------------------------------------------------------
@@ -401,6 +697,21 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
 
   if (!(await getParticipant(socialSessionId, userId))) {
     return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
+  // W3 (AC-W3.4): a player who joins after the phase-entry roster snapshot is
+  // excluded from the turn rotation. Joining now would append them after the
+  // last snapshot member and force their turn, deadlocking the advance guard.
+  if (state.phaseRosterSnapshot?.length && !state.phaseRosterSnapshot.includes(userId)) {
+    logger.info('[SocialIcebreaker] lie-detective generate rejected (joined after phase entry)', {
+      socialSessionId,
+      userId,
+      phase: 'lie_detective',
+    });
+    return res.status(409).json({
+      error: '这一轮已经开始，先旁听吧',
+      code: 'PHASE_ROSTER_LOCKED',
+    });
   }
 
   try {
@@ -544,7 +855,22 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
     return res.status(400).json({ error: 'Votes are only allowed for the active lie-detective player' });
   }
 
-  if ((state.lieDetectivePlayers || []).length < state.playerCount) {
+  // W3: reconcile silent members into the departed set before gating, so an
+  // absent player can never deadlock the vote. Then require every snapshot
+  // member who is still required to have generated statements — a late joiner
+  // outside the snapshot, or an opted-out/silent member, must not gate the
+  // vote. A raw count comparison is fooled by a departed generator and misses
+  // a non-required generator, so compare the required set explicitly.
+  await reconcilePhasePresence(state, socialSessionId);
+  const requiredRosterIds = getPhaseRequiredRosterIds(state);
+  const generatedUserIds = new Set(
+    (state.lieDetectivePlayers || []).map((p: LieDetectivePlayer) => p.userId),
+  );
+  const statementsReady =
+    requiredRosterIds.length > 0
+      ? requiredRosterIds.every((id) => generatedUserIds.has(id))
+      : (state.lieDetectivePlayers || []).length >= state.playerCount;
+  if (!statementsReady) {
     return res.status(400).json({ error: 'All participants must generate statements before voting begins' });
   }
 
@@ -576,7 +902,7 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
   state.votes = votes;
   await updateSession(socialSessionId, state);
 
-  const otherPlayerCount = Math.max(0, state.playerCount - 1);
+  const otherPlayerCount = Math.max(0, getPhaseRequiredPlayerCount(state) - 1);
   const votesForTarget = votes.filter((v: LieDetectiveVote) => v.targetUserId === targetUserId).length;
   const isRevealed = votesForTarget >= otherPlayerCount && otherPlayerCount > 0;
 
@@ -882,7 +1208,7 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   if (state.quipBattleRevealed && Array.isArray(state.quipBattleResults) && state.quipBattleResults.length > 0) {
     return res.json({
       results: state.quipBattleResults,
-      allVoted: hasAllRosterParticipantsResponded(state.quipBattleVotedUserIds, state.playerCount),
+      allVoted: isPhaseRosterComplete(state, state.quipBattleVotedUserIds),
     });
   }
 
@@ -891,11 +1217,16 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
     return res.status(400).json({ error: 'Quip battle prompts not generated' });
   }
 
-  if (!hasAllRosterParticipantsResponded(state.quipBattleSubmittedUserIds, state.playerCount)) {
+  // W3: reconcile silent members into the departed set first, then use the
+  // snapshot-scoped, presence-aware completion check for BOTH stages. The old
+  // raw count against `playerCount` counted an opted-out/silent member as
+  // missing, so a submit-stage opt-out blocked the reveal forever (BLOCKER).
+  await reconcilePhasePresence(state, socialSessionId);
+  if (!isPhaseRosterComplete(state, state.quipBattleSubmittedUserIds)) {
     return res.status(400).json({ error: 'All participants must submit answers before revealing results' });
   }
 
-  if (!hasAllRosterParticipantsResponded(state.quipBattleVotedUserIds, state.playerCount)) {
+  if (!isPhaseRosterComplete(state, state.quipBattleVotedUserIds)) {
     return res.status(400).json({ error: 'All participants must vote before revealing results' });
   }
 
@@ -944,7 +1275,7 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
 
   return res.json({
     results,
-    allVoted: hasAllRosterParticipantsResponded(state.quipBattleVotedUserIds, state.playerCount),
+    allVoted: isPhaseRosterComplete(state, state.quipBattleVotedUserIds),
   });
 });
 // ---------------------------------------------------------------------------

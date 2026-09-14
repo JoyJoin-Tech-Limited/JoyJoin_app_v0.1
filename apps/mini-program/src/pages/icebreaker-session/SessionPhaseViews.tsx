@@ -15,8 +15,10 @@ import { AuctionHeroView } from './phases/AuctionHeroView'
 import { MiniScriptHeroView } from './phases/MiniScriptHeroView'
 import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
+import { PhaseOptOutControl } from './components/PhaseOptOutControl'
 import { FallbackPhaseView, RecapPhaseView, WarmupPhaseView, type SessionPhase } from './phaseViews'
 import type { SessionParticipant } from './phaseUtils'
+import { isPhaseRosterCompleteForClient, type PhaseActionNotice } from './viewModels/phaseOptOutModel'
 import { resolvePersonalityDiceChooseMode } from './viewModels/phaseProgressionModels'
 import type { TopicsRecoveryState } from './viewModels/warmupViewModels'
 import type { SocialRecapResponse } from './icebreakerSessionModel'
@@ -113,6 +115,12 @@ export interface SessionPhaseViewsProps {
   onDiceRevealReady: (ready: boolean) => void
   onNextSpeedFriendingRound: () => void
   onCompleteSpeedFriending: () => void
+  /** W3 honest opt-out: fires the self-scoped opt-out for the current phase. */
+  onOptOut: () => void
+  isOptingOut: boolean
+  optOutNotice: PhaseActionNotice | null
+  /** W3 (AC-W3.4): late joiner refused by the lie-detective roster snapshot. */
+  lieRosterLocked: boolean
   onGoBack: () => void
   onConnectTap: () => void
 }
@@ -188,6 +196,10 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     onDiceRevealReady,
     onNextSpeedFriendingRound,
     onCompleteSpeedFriending,
+    onOptOut,
+    isOptingOut,
+    optOutNotice,
+    lieRosterLocked,
     onGoBack,
     onConnectTap,
   } = props
@@ -280,7 +292,10 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           isHost={isHost}
           onAdvance={onAdvance}
           isAdvancing={pendingAction === 'advance'}
-          canAdvance={new Set(session.challengeCompletedBy ?? []).size >= playerCount}
+          // Snapshot-scoped, mirroring the server's required-set guard: a
+          // mid-phase late joiner grows `playerCount` but not the snapshot, so
+          // they can never disable the host's advance button.
+          canAdvance={isPhaseRosterCompleteForClient(session, 'micro_challenge', playerCount)}
           advanceDisabledReason='还有小伙伴未完成'
           glanceStackEnabled={glanceStackEnabled}
         />
@@ -309,6 +324,8 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           statementsMeta={session.lieDetectiveStatementsMeta}
           onGenerateFromTag={onGenerateLieStatementFromTag}
           isGeneratingFromTag={pendingAction === 'lie-tag-generate'}
+          completedUserIds={session.lieDetectiveCompletedUserIds ?? []}
+          rosterLocked={lieRosterLocked}
         />
       )}
 
@@ -455,6 +472,10 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           onAdvance={onAdvance}
           isAdvancing={pendingAction === 'advance'}
           pairMeta={session.undercoverWordPairMeta}
+          completedUserIds={[
+            ...(session.phaseOptOutUserIds ?? []),
+            ...(session.phaseSilentCompletedUserIds ?? []),
+          ]}
         />
       )}
 
@@ -491,6 +512,22 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           isLoading={pendingAction === 'speed-next' || pendingAction === 'speed-complete'}
           onAdvance={onAdvance}
           isAdvancing={pendingAction === 'advance'}
+        />
+      )}
+
+      {/* W3 honest opt-out (只想听 / 换一个): rendered for every
+          `participation: 'full'` phase by the control's own applicability
+          check. Opted-out/silent players are already counted as complete by
+          each phase card's own completion array — no separate skipped badge. */}
+      {session && (
+        <PhaseOptOutControl
+          phase={phase}
+          state={session}
+          currentUserId={currentUserId}
+          isOptingOut={isOptingOut}
+          rosterLocked={lieRosterLocked}
+          notice={optOutNotice}
+          onOptOut={onOptOut}
         />
       )}
 

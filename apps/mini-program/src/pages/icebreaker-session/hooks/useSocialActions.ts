@@ -27,6 +27,11 @@ import {
   type TopicsRecoveryState,
 } from '../viewModels/warmupViewModels'
 import { getGenerationRetryDelayMs, type GenerationPendingResponse } from '../viewModels/phaseProgressionModels'
+import {
+  classifyPhaseActionError,
+  resolvePhaseOptOutNotice,
+  type PhaseActionNotice,
+} from '../viewModels/phaseOptOutModel'
 import type { TierSheetSelection } from '../components/IcebreakerTierSheet'
 
 // Warmup topic generation is LLM-backed (6s server LLM race + curated-topic
@@ -93,6 +98,10 @@ export interface UseSocialActionsArgs {
   setIsTierSheetOpen: (open: boolean) => void
   setPendingTierSwitch: (selection: TierSheetSelection | null) => void
   setDismissedSuggestionAt: (value: string | null) => void
+  /** W3: inline, code-specific opt-out failure copy (page-owned transient state). */
+  onOptOutNotice: (notice: PhaseActionNotice | null) => void
+  /** W3: a late joiner was refused by the phase-entry roster snapshot. */
+  onLieRosterLocked: () => void
 }
 
 export function useSocialActions(args: UseSocialActionsArgs) {
@@ -121,6 +130,8 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     setIsTierSheetOpen,
     setPendingTierSwitch,
     setDismissedSuggestionAt,
+    onOptOutNotice,
+    onLieRosterLocked,
   } = args
 
   const applyWarmupTopicsToLocalState = useCallback((mood: AtmosphereMood, topics: SocialTopic[], nextState?: SocialSessionState) => {
@@ -791,8 +802,37 @@ export function useSocialActions(args: UseSocialActionsArgs) {
       archetype: currentUserArchetype,
       interests: currentUserInterests,
       ...(statements && lieIndex ? { statements, lieIndex } : {}),
+    }, {
+      suppressErrorToast: true,
+      onError: (error) => {
+        // W3 (AC-W3.4): a late joiner is refused by the phase-entry roster
+        // snapshot — surface the observer state instead of a retry toast.
+        if (classifyPhaseActionError(error) === 'PHASE_ROSTER_LOCKED') {
+          onLieRosterLocked()
+          return
+        }
+        const message = getErrorText(error, '生成没成功，再试试')
+        void Taro.showToast({
+          title: message.length > 12 ? '生成没成功，再试试' : message,
+          icon: 'none',
+          duration: TOAST_MEDIUM_MS,
+        })
+      },
     })
-  }, [performSocialAction, currentUserDisplayName, currentUserArchetype, currentUserInterests])
+  }, [performSocialAction, currentUserDisplayName, currentUserArchetype, currentUserInterests, onLieRosterLocked])
+
+  // W3 honest opt-out (只想听 / 换一个): self-scoped, one-way for the current
+  // phase. Failures are surfaced inline by code (no generic toast) so the user
+  // understands a phase switch vs. a non-applicable phase.
+  const handleOptOut = useCallback((currentPhase: SocialIcebreakerPhase) => {
+    onOptOutNotice(null)
+    void performSocialAction('opt-out', '/opt-out', { phase: currentPhase }, {
+      suppressErrorToast: true,
+      onError: (error) => {
+        onOptOutNotice(resolvePhaseOptOutNotice(error))
+      },
+    })
+  }, [performSocialAction, onOptOutNotice])
 
   const handleGenerateLieStatementFromTag = useCallback(async (tag: string) => {
     const result = await performSocialAction<{ text: string }>(
@@ -980,6 +1020,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     executeTierSwitch,
     handleConfirmTierSwitch,
     handleCompleteChallenge,
+    handleOptOut,
     handleNextSpeedFriendingRound,
     handleCompleteSpeedFriending,
     handleGenerateStatements,

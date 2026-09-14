@@ -10,8 +10,12 @@
 import type { MiniScriptGameModeConfig } from '@shared/miniscriptGameModes';
 import type { MiniScriptStyle, MiniScriptGenre } from '@shared/miniscriptStoryFramework';
 import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
+import { buildRosterTraitLines } from '../lib/icebreakerRosterSignals';
 
-export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.3';
+// v3.4 (2026-09-11, gm-debrief W5): optional 【本组玩家】 roster block weaves a
+// real name + archetype + interest trait per character. Omitted when the
+// matching-aware flag is off → prompt byte-identical to v3.3.
+export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.4';
 
 // ─── Base System Prompt (all modes share) ─────────────────────────────────────
 
@@ -217,6 +221,11 @@ export interface MiniScriptGenerationPromptParams {
   lite?: boolean;
   sessionContext?: { mixText: string };
   selectedLabel?: string;
+  /**
+   * W5: ordered matched roster. When present, characters must weave each
+   * player's real archetype/interest and never fall back to 来客A placeholders.
+   */
+  roster?: Array<{ displayName?: string; archetype?: string; interests?: string[] }>;
 }
 
 export function buildMiniScriptGenerationPrompt(
@@ -257,6 +266,15 @@ export function buildMiniScriptGenerationPrompt(
     ? `\n【主持人已选标签】${params.selectedLabel}\n`
     : '';
 
+  // W5: real-player roster block. Weaves at least one real trait per character
+  // and forbids 来客A-style placeholders when the roster is known.
+  const rosterLines = params.roster?.length ? buildRosterTraitLines(params.roster) : [];
+  const rosterBlock = rosterLines.length
+    ? `\n【本组玩家】（按 slotIndex 顺序一一对应）\n${rosterLines.join('\n')}\n` +
+      `为每个角色编织至少一个来自对应玩家的真实特质（原型或兴趣），让玩家读得出"这写的就是我"。\n` +
+      `角色名必须具体、有画面感，禁止使用「来客A」「来客B」「角色1」这类占位名。\n`
+    : '';
+
   const userMessage =
     `为一场${styleLabels[params.style]}风格的迷你剧本杀生成故事框架。\n\n` +
     `玩家数量：${params.playerCount}人\n` +
@@ -265,7 +283,8 @@ export function buildMiniScriptGenerationPrompt(
     `${genreInstructions}\n\n` +
     `${buildJsonShapeInstructions(params.playerCount, params.config)}` +
     `${selectedLabelBlock}` +
-    `${contextBlock}`;
+    `${contextBlock}` +
+    `${rosterBlock}`;
 
   return {
     system: BASE_SYSTEM,

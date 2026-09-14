@@ -41,7 +41,8 @@ describe('social compliance chat boundary', () => {
     const source = readRoutesSource();
     const handler = extractRouteBlock(
       source,
-      "app.post('/api/events/:eventId/feedback', requireAuth, async (req: any, res) => {",
+      // W8 (AC-W8.8) inserted canonicalEventIdGuard() into this chain.
+      "app.post('/api/events/:eventId/feedback', requireAuth, canonicalEventIdGuard(), async (req: any, res) => {",
       "app.post('/api/insight-feedback',",
     );
 

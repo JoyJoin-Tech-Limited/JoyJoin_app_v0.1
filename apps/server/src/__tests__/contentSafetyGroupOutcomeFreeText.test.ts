@@ -63,6 +63,14 @@ vi.mock("../services/matchHistoryDerivation", () => ({
   deriveMatchHistoryAndRefreshCalibration: vi.fn(() => Promise.resolve()),
 }));
 
+// W4 AC-W4.3: the route now also feeds the adaptive-weights path. Mock it so
+// the moderation test stays isolated from the bandit/DB.
+vi.mock("../matchingWeightsService", () => ({
+  matchingWeightsService: {
+    recordOutcomeFeedback: vi.fn(() => Promise.resolve()),
+  },
+}));
+
 const repoCtx = vi.hoisted(() => ({
   getGroupMembershipContext: vi.fn(),
   upsertEventGroupOutcome: vi.fn(),
@@ -129,6 +137,7 @@ describe("group outcome freeTextSignal content moderation (S2)", () => {
     repoCtx.getGroupMembershipContext.mockResolvedValue({
       isMember: true,
       memberUserIds: ["tester-1", "member-2"],
+      group: { id: "group-1", eventId: "event-1" },
     });
     repoCtx.upsertEventGroupOutcome.mockResolvedValue({
       outcome: { id: "outcome-1", submittedAt: new Date().toISOString() },

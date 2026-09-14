@@ -113,6 +113,47 @@ export const BANNED_WORDS: string[] = [
 ];
 
 /**
+ * Review-blocked vocabulary (🔴 Hard Rule) — WeChat review posture.
+ *
+ * These terms must never appear in user-visible copy on the launch-primary
+ * mini-program. Event-booking vocabulary replaces them:
+ *   匹配 → 排桌/合拍度 · 社交 → 活动/同桌 · 灵魂 → 同频 · 撮合 → 排桌
+ * Machine identifiers and internal code are exempt; this list gates
+ * user-facing strings only.
+ *
+ * Kept separate from `BANNED_WORDS` (which governs internal-commentary style)
+ * so each gate can evolve without changing the other's contract.
+ */
+export const REVIEW_BLOCKED_VOCAB: string[] = [
+  '匹配',
+  '社交',
+  '灵魂',
+  '撮合',
+  'AI',
+];
+
+/**
+ * Check if user-visible copy contains any review-blocked vocabulary.
+ * Case-insensitive for the ASCII token (`AI`/`ai`) and exact-substring for CJK.
+ * Returns the first match or null.
+ */
+export function findReviewBlockedVocab(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const word of REVIEW_BLOCKED_VOCAB) {
+    if (/^[\x00-\x7F]+$/.test(word)) {
+      // ASCII token (e.g. `AI`): require a word boundary so English words such
+      // as "email" / "detail" are not false-positives. CJK neighbours still
+      // satisfy `\b` because they are non-word characters.
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (new RegExp(`\\b${escaped}\\b`, 'i').test(lower)) return word;
+    } else if (lower.includes(word.toLowerCase())) {
+      return word;
+    }
+  }
+  return null;
+}
+
+/**
  * Check if copy contains any 🔴 banned words. Returns the first match or null.
  * NOT a build-time gate yet — used by AI Agent for self-validation.
  */

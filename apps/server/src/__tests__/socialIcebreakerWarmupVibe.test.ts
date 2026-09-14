@@ -754,7 +754,7 @@ describe('campfire-vault-card A4 — safety filter gates brave questions', () =>
       (call) => (call[0] as { feature?: string })?.feature === 'generateWarmupTopics',
     );
     expect(warmupTraces.length).toBeGreaterThan(0);
-    expect((warmupTraces[0][0] as { promptVersion?: string }).promptVersion).toBe('social-warmup-topics-v4');
+    expect((warmupTraces[0][0] as { promptVersion?: string }).promptVersion).toBe('social-warmup-topics-v5');
   });
 
   it('records the v4-chat promptVersion in AITrace for the chat vibe', async () => {
@@ -768,14 +768,14 @@ describe('campfire-vault-card A4 — safety filter gates brave questions', () =>
       (call) => (call[0] as { feature?: string })?.feature === 'generateWarmupTopics',
     );
     expect(warmupTraces.length).toBeGreaterThan(0);
-    expect((warmupTraces[0][0] as { promptVersion?: string }).promptVersion).toBe('social-warmup-topics-v4-chat');
+    expect((warmupTraces[0][0] as { promptVersion?: string }).promptVersion).toBe('social-warmup-topics-v5-chat');
   });
 });
 
 describe('campfire-vault-card A1/A4 — v4 prompt content + version lock', () => {
-  it('prompt versions are bumped to v4', () => {
-    expect(WARMUP_TOPICS_PROMPT_VERSION).toBe('social-warmup-topics-v4');
-    expect(WARMUP_TOPICS_CHAT_PROMPT_VERSION).toBe('social-warmup-topics-v4-chat');
+  it('prompt versions are bumped to v5 (W5 shared-interest hooks)', () => {
+    expect(WARMUP_TOPICS_PROMPT_VERSION).toBe('social-warmup-topics-v5');
+    expect(WARMUP_TOPICS_CHAT_PROMPT_VERSION).toBe('social-warmup-topics-v5-chat');
   });
 
   it('v4 prompt requires a brave-but-safe question for every vibe', () => {
@@ -790,5 +790,51 @@ describe('campfire-vault-card A1/A4 — v4 prompt content + version lock', () =>
       expect(prompt).toContain('reflective');
       expect(prompt).toContain('死亡'); // explicit never-list: death/abuse/self-harm/explicit
     }
+  });
+});
+
+describe('W5 — matching-aware shared-interest hooks (AC-W5.2)', () => {
+  it('renders a 【共同兴趣】 block containing member interest labels when provided', () => {
+    const prompt = buildWarmupTopicsPrompt({
+      eventType: '饭局',
+      participantCount: 4,
+      mood: 'life',
+      sharedInterests: ['咖啡', '徒步'],
+    });
+    expect(prompt).toContain('【共同兴趣】');
+    expect(prompt).toContain('咖啡');
+    expect(prompt).toContain('徒步');
+  });
+
+  it('omits the shared-interest block when no labels are shared (flag-off byte-identical)', () => {
+    const prompt = buildWarmupTopicsPrompt({
+      eventType: '饭局',
+      participantCount: 4,
+      mood: 'life',
+      sharedInterests: [],
+    });
+    expect(prompt).not.toContain('【共同兴趣】');
+  });
+
+  it('generateWarmupTopics threads shared roster interests into the live prompt', async () => {
+    mockLlmTopics([
+      { id: 'ai1', question: '最近有在喝手冲吗？', mood: 'life', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+    ]);
+    await generateWarmupTopics({
+      mood: 'life',
+      eventType: '活动',
+      participantCount: 4,
+      vibe: 'balanced',
+      roster: [
+        { archetype: '慢热龟', interests: ['咖啡', '徒步'] },
+        { archetype: '社牛柯基', interests: ['咖啡', '摄影'] },
+      ],
+    });
+    const lastCall = mockCreate.mock.calls.at(-1)?.[0] as {
+      messages?: Array<{ content?: string }>;
+    };
+    const promptText = lastCall?.messages?.[0]?.content ?? '';
+    expect(promptText).toContain('【共同兴趣】');
+    expect(promptText).toContain('咖啡');
   });
 });

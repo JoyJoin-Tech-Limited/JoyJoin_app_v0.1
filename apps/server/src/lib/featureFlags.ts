@@ -165,6 +165,23 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  M9/M10 locked against the 2026-09-10 Monte Carlo baseline.
    *  Env fallback: COMPOSITION_GATES_ENABLED (default: false). */
   compositionGatesEnabled: "COMPOSITION_GATES_ENABLED",
+  /** W2 (gm-debrief): table-viability floor — R1 无孤立者 (every member has a
+   *  ≥60 strong tie) + R2 能量编排 (≥1 energizer: item5 spark when a complete
+   *  trait vector exists, else ARCHETYPE_ENERGY ≥ 75) enforced at the match
+   *  commit gate and all three redistribution phases, plus the always-on
+   *  odd-roster absorption pass (1–3 stranded absorbed up to maxGroupSize+1
+   *  when R1/R2 still hold; otherwise unmatched → 场次未成行 pipeline).
+   *  Product decision 2026-09-11: ships ON by default. Item5's composition
+   *  gates, when enabled, subsume the same floor. Env fallback:
+   *  TABLE_VIABILITY_FLOOR_ENABLED (default: true). */
+  tableViabilityFloorEnabled: "TABLE_VIABILITY_FLOOR_ENABLED",
+  /** W6 (gm-debrief): anti-clique novelty constraint for returning users. When
+   *  on, a committed group may contain at most MATCH_HISTORY_MAX_REPEAT_PAIRS_PER_GROUP
+   *  intra-group pairs with a positive `wouldMeetAgain` history, so the +5
+   *  re-match bonus cannot pair repeat-likes unopposed. Ships dark (false) until
+   *  calibrated; inert in the gate-off simulation (no match-history lookup is
+   *  supplied there). Env fallback: MATCH_HISTORY_NOVELTY_ENABLED (default: false). */
+  matchHistoryNoveltyEnabled: "MATCH_HISTORY_NOVELTY_ENABLED",
   /** V4 engine upgrade / Item 10: mechanically derived archetype chemistry
    *  (similarity on A/E/C + complementarity on X/P) replaces the hand-authored
    *  matrix as mechanical authority. Ships dark — the ρ ≥ 0.7 validation gate
@@ -224,6 +241,13 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  field test passes (playbook §10 ruling 6 flag-on precondition).
    *  Env fallback: ICEBREAKER_GROUP_BEATS_ENABLED (default: false). */
   icebreakerGroupBeatsEnabled: "ICEBREAKER_GROUP_BEATS_ENABLED",
+  /** W5 (gm-debrief): feed matched-roster signals (archetype composition,
+   *  shared interests, mood, energy arc) into run-plan compilation and the
+   *  warmup / micro-challenge / mini-script generators. When false the whole
+   *  pipeline is byte-identical to pre-W5 behavior (no extra reads, no prompt
+   *  or phase-selection change). Ships dark. Env fallback:
+   *  ICEBREAKER_MATCHING_AWARE_ENABLED (default: false). */
+  icebreakerMatchingAwareEnabled: "ICEBREAKER_MATCHING_AWARE_ENABLED",
   /** S9 audio seasoning: delicate sub-1s ticks mirroring the S1 haptic
    *  grammar, fired alongside the haptic only. Ships dark until S1's grammar
    *  is field-validated (playbook ruling 3/9).
@@ -328,6 +352,13 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   /** Item 5 composition gates ship dark until the Monte Carlo gate-on arm
    *  validates M9/M10; see FLAG_ENV_MAP note. */
   compositionGatesEnabled: false,
+  /** W2 table-viability floor ships ON (product decision 2026-09-11). Kill
+   *  switch: env TABLE_VIABILITY_FLOOR_ENABLED=false or an admin toggle.
+   *  Item5's composition gates subsume the floor when they are on. */
+  tableViabilityFloorEnabled: true,
+  /** W6 anti-clique novelty constraint ships dark (false) until calibrated.
+   *  Inert in the gate-off simulation (no lookup) and behind the flag elsewhere. */
+  matchHistoryNoveltyEnabled: false,
   /** Item 10 derived chemistry ships dark — the ρ ≥ 0.7 validation gate FAILED
    *  (≈0.69 ceiling); see FLAG_ENV_MAP note. Explicit false so the admin toggle
    *  UI and listFeatureFlags() show a stable default. */
@@ -348,6 +379,9 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   icebreakerGlanceStackEnabled: false,
   /** Group beats ship dark until the venue WS field test passes (ruling 6). */
   icebreakerGroupBeatsEnabled: false,
+  /** W5 matching-aware personalization ships dark — flip to true (or set
+   *  ICEBREAKER_MATCHING_AWARE_ENABLED=true) to enable. */
+  icebreakerMatchingAwareEnabled: false,
   /** Audio seasoning ships dark until S1's grammar is field-validated. */
   icebreakerAudioEnabled: false,
   equipmentRewardsEnabled: false,

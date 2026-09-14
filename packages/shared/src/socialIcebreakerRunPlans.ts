@@ -31,9 +31,12 @@ export const GLOW_RUN_PLAN: IcebreakerRunPlan = {
   segments: [
     { phase: 'warmup', allocatedMinutes: 8, energyWeight: 1, participation: 'full', tone: 'gentle' },
     { phase: 'micro_challenge', allocatedMinutes: 8, energyWeight: 2, participation: 'full', tone: 'playful' },
-    { phase: 'lie_detective', allocatedMinutes: 12, energyWeight: 3, participation: 'full', tone: 'playful' },
+    // W9 (AC-W9.2): lie_detective carries the 6-player roster floor (15 min);
+    // the compiler raises it for larger rosters and shaves the delta.
+    { phase: 'lie_detective', allocatedMinutes: 15, energyWeight: 3, participation: 'full', tone: 'playful' },
     { phase: 'personality_dice', allocatedMinutes: 12, energyWeight: 3, participation: 'full', tone: 'playful' },
-    { phase: 'group_mirror', allocatedMinutes: 15, energyWeight: 1, participation: 'full', tone: 'gentle' },
+    // group_mirror stays the warm appreciation closer (AC-W9.1).
+    { phase: 'group_mirror', allocatedMinutes: 12, energyWeight: 1, participation: 'full', tone: 'gentle' },
     { phase: 'recap', allocatedMinutes: 5, energyWeight: 1, participation: 'observe_ok', tone: 'gentle' },
   ],
   totalMinutes: 60,
@@ -46,11 +49,14 @@ export const BLAZE_RUN_PLAN: IcebreakerRunPlan = {
   segments: [
     { phase: 'warmup', allocatedMinutes: 8, energyWeight: 1, participation: 'full', tone: 'gentle' },
     { phase: 'micro_challenge', allocatedMinutes: 8, energyWeight: 2, participation: 'full', tone: 'playful' },
-    { phase: 'lie_detective', allocatedMinutes: 10, energyWeight: 3, participation: 'full', tone: 'playful' },
+    // W9 (AC-W9.2): 6-player roster floor for lie_detective.
+    { phase: 'lie_detective', allocatedMinutes: 15, energyWeight: 3, participation: 'full', tone: 'playful' },
     { phase: 'personality_dice', allocatedMinutes: 10, energyWeight: 3, participation: 'full', tone: 'playful' },
-    { phase: 'auction', allocatedMinutes: 20, energyWeight: 3, participation: 'full', tone: 'playful' },
+    // W9 (AC-W9.3): auction trimmed to 17 so the two competition beats are not
+    // stacked back-to-back; quip_battle (rising) decompresses after it.
+    { phase: 'auction', allocatedMinutes: 17, energyWeight: 3, participation: 'full', tone: 'playful' },
     { phase: 'quip_battle', allocatedMinutes: 17, energyWeight: 3, participation: 'full', tone: 'playful' },
-    { phase: 'group_mirror', allocatedMinutes: 12, energyWeight: 1, participation: 'full', tone: 'gentle' },
+    { phase: 'group_mirror', allocatedMinutes: 10, energyWeight: 1, participation: 'full', tone: 'gentle' },
     { phase: 'recap', allocatedMinutes: 5, energyWeight: 1, participation: 'observe_ok', tone: 'gentle' },
   ],
   totalMinutes: 90,

@@ -18,6 +18,7 @@ import {
 } from "../../lib/matchCompass";
 import { pairMeetsDealbreakers } from "../../poolMatchingService";
 import type { UserWithProfile } from "../../poolMatchingService";
+import { clearNegativeMatchHistoryForUser } from "../../repositories/matchHistoryRepo";
 
 const matchCompassPreferenceSchema = z.object({
   strictness: z.number().min(0).max(100).optional(),
@@ -43,6 +44,14 @@ const preferenceEditLimiter = createRateLimiter({
   keyPrefix: "pref",
 });
 
+// W6 (gm-debrief) AC-W6.6b: match-history reset is a rare, user-initiated
+// appeal — throttle it independently of preference edits.
+const matchHistoryResetLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  maxRequests: 5,
+  keyPrefix: "mh-reset",
+});
+
 function requireAuth(req: Request, res: Response): string | null {
   const userId = getAuthenticatedUserId(req);
   if (!userId) {
@@ -53,6 +62,25 @@ function requireAuth(req: Request, res: Response): string | null {
 }
 
 export function registerMatchCompassRoutes(app: Express): void {
+  // ============ MATCH-HISTORY RESET (W6 AC-W6.6b) ============
+  // Self-scoped appeal/reset: clears ONLY the caller's NEGATIVE pair signals so
+  // a two-strike hard skip is lifted. Positive feedback + connection quality
+  // are preserved. Idempotent (a repeat call clears 0 rows). Auth derives the
+  // user from the session — never from the body — so it cannot target others.
+  app.post("/api/me/match-history/reset", matchHistoryResetLimiter, async (req: Request, res: Response) => {
+    try {
+      const userId = requireAuth(req, res);
+      if (!userId) return;
+
+      const cleared = await clearNegativeMatchHistoryForUser(userId);
+      logger.info("[MatchHistory] user reset negative match history", { userId, cleared });
+      res.json({ reset: true, cleared });
+    } catch (error) {
+      logger.error("Failed to reset match history", { error: String(error) });
+      res.status(500).json({ message: "Failed to reset match history" });
+    }
+  });
+
   // GET /api/event-pools/:id/match-compass
   app.get("/api/event-pools/:id/match-compass", async (req, res) => {
     try {

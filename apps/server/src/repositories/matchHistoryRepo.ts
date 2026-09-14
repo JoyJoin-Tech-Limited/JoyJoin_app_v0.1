@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
   eventGroupOutcomes,
   eventPoolGroups,
@@ -79,10 +79,15 @@ export async function getGroupDerivationSource(
     return null;
   }
 
+  // Deterministic ordering (W4 AC-W4.6): pair derivation must read the same
+  // member and outcome sequence on every run, independent of physical row
+  // order. `buildPairRowsForGroup` sorts the member ids, but the outcome
+  // lookup map and any future order-sensitive consumers rely on stable reads.
   const registrations = await db
     .select({ userId: eventPoolRegistrations.userId })
     .from(eventPoolRegistrations)
-    .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+    .where(eq(eventPoolRegistrations.assignedGroupId, groupId))
+    .orderBy(eventPoolRegistrations.userId);
 
   const outcomes = await db
     .select({
@@ -91,7 +96,8 @@ export async function getGroupDerivationSource(
       atmosphereScore: eventGroupOutcomes.atmosphereScore,
     })
     .from(eventGroupOutcomes)
-    .where(eq(eventGroupOutcomes.groupId, groupId));
+    .where(eq(eventGroupOutcomes.groupId, groupId))
+    .orderBy(eventGroupOutcomes.submittedBy);
 
   return {
     group,
@@ -220,7 +226,30 @@ export async function syncMatchHistoryPairsForGroup(input: {
 export async function listGroupIdsWithSubmittedOutcomes(): Promise<string[]> {
   const rows = await db
     .selectDistinct({ groupId: eventGroupOutcomes.groupId })
-    .from(eventGroupOutcomes);
+    .from(eventGroupOutcomes)
+    .orderBy(eventGroupOutcomes.groupId);
 
   return rows.map((row: { groupId: string }) => row.groupId);
+}
+
+/**
+ * W6 AC-W6.6b — self-scoped reset/appeal. Clears only the NEGATIVE signal
+ * (`would_meet_again = false`) on every pair the caller belongs to. Positive
+ * feedback (`would_meet_again = true`) and `connection_quality` are preserved,
+ * so the +5 re-match bonus survives while the -1 hard skip is lifted.
+ *
+ * Idempotent: a repeated call matches zero rows and returns 0. Returns the
+ * number of cleared rows for observability.
+ */
+export async function clearNegativeMatchHistoryForUser(userId: string): Promise<number> {
+  const result = await db
+    .update(matchHistory)
+    .set({ wouldMeetAgain: null })
+    .where(
+      and(
+        or(eq(matchHistory.user1Id, userId), eq(matchHistory.user2Id, userId)),
+        eq(matchHistory.wouldMeetAgain, false),
+      ),
+    );
+  return result?.rowCount ?? 0;
 }

@@ -203,10 +203,11 @@ export function WarmupCardSlot({
   // statically (deal / sheen / crossfade / ember motion), exactly like RM.
   const { isDegradation } = useDeviceTier()
   const motionReduced = reduceMotion || isDegradation
-  const topicAigcMeta = warmupTopicsMeta?.aigc ?? {
-    aiGenerated: true,
-    labelType: 'ai-generated' as const,
-  }
+  // AIGC label is fail-closed: render only when the server actually marked the
+  // served content as AI-generated. A missing meta (curated fallback / route
+  // heal / legacy payload) must never acquire the label.
+  const showAigcLabel =
+    aigcEnabled && state === 'topic_card' && warmupTopicsMeta?.aigc?.aiGenerated === true
   const currentTopic = topics[Math.min(currentIndex, Math.max(topics.length - 1, 0))]
   const totalTopics = getTotalTopics(topics)
   const cornerText = getDepthCornerText(vibe, currentTopic?.depthLevel)
@@ -621,7 +622,7 @@ export function WarmupCardSlot({
   const backFace = (
     <View className='warmup-card-slot__face warmup-card-slot__face--back'>
       {renderContent()}
-      {aigcEnabled && state === 'topic_card' && (
+      {showAigcLabel && (
         <View className='warmup-card-slot__aigc'>
           <Text className='warmup-card-slot__aigc-text'>内容由 AI 生成</Text>
           <Text className='warmup-card-slot__aigc-sep'>·</Text>

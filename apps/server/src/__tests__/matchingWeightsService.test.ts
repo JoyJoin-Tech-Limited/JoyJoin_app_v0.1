@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { logger } from '../lib/logger';
 
 const {
   matchingWeightsConfigTable,
@@ -568,5 +569,139 @@ describe('MatchingWeightsService', () => {
     } finally {
       consoleErrorSpy.mockRestore();
     }
+  });
+});
+
+/**
+ * W4 AC-W4.3 (OD-1 keep-and-wire): the live-bandit entry point fed by the
+ * canonical outcome route. Dark by default; only learns when BOTH the runtime
+ * consumption flag and an operator-activated adaptive config are present — the
+ * env-vs-admin unification the contract requires.
+ */
+describe('MatchingWeightsService.recordOutcomeFeedback (W4 OD-1 gate)', () => {
+  let service: InstanceType<typeof MatchingWeightsService>;
+  const originalAdaptiveFlag = process.env.ENABLE_ADAPTIVE_WEIGHTS;
+
+  const adaptiveConfig = {
+    id: 'adaptive-1',
+    configName: 'adaptive_live',
+    isActive: true,
+    chemistryWeight: '0.28',
+    interestWeight: '0.28',
+    socialAffinityWeight: '0.20',
+    backgroundDiversityWeight: '0.15',
+    preferenceWeight: '0.05',
+    languageWeight: '0.04',
+    totalMatches: 3,
+    successfulMatches: 1,
+    averageSatisfaction: '4.0000',
+  };
+
+  const signals = {
+    eventId: 'event-1',
+    userId: 'u1',
+    wouldMeetAgain: true,
+    atmosphereScore: 5,
+  };
+
+  function setAdaptiveFlag(value: string | undefined) {
+    if (value === undefined) {
+      delete process.env.ENABLE_ADAPTIVE_WEIGHTS;
+    } else {
+      process.env.ENABLE_ADAPTIVE_WEIGHTS = value;
+    }
+  }
+
+  beforeEach(() => {
+    mockState.configRows = [];
+    mockState.historyRows = [];
+    mockState.updateCalls = [];
+    mockState.insertCalls = [];
+    mockState.transactionCalls = 0;
+    service = new MatchingWeightsService();
+    service.invalidateCache();
+  });
+
+  afterEach(() => {
+    setAdaptiveFlag(originalAdaptiveFlag);
+    vi.restoreAllMocks();
+  });
+
+  it('is a no-op when ENABLE_ADAPTIVE_WEIGHTS is off', async () => {
+    setAdaptiveFlag(undefined);
+    mockState.configRows = [adaptiveConfig];
+
+    await service.recordOutcomeFeedback(signals);
+
+    expect(mockState.updateCalls).toHaveLength(0);
+  });
+
+  it('is a no-op when the active config is not an operator-activated adaptive config', async () => {
+    setAdaptiveFlag('true');
+    mockState.configRows = [
+      {
+        id: 'default-1',
+        configName: 'default',
+        isActive: true,
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
+        totalMatches: 3,
+        successfulMatches: 1,
+        averageSatisfaction: '4.0000',
+      },
+    ];
+
+    await service.recordOutcomeFeedback(signals);
+
+    expect(mockState.updateCalls).toHaveLength(0);
+  });
+
+  it('updates the adaptive config when both gates are open', async () => {
+    setAdaptiveFlag('true');
+    mockState.configRows = [adaptiveConfig];
+
+    await service.recordOutcomeFeedback(signals);
+
+    const configUpdate = mockState.updateCalls.find(
+      (call) => call.table === 'matchingWeightsConfig',
+    );
+    expect(configUpdate).toBeDefined();
+    expect(configUpdate?.values.totalMatches).toBe(4);
+  });
+
+  it('emits a structured success record carrying request correlation', async () => {
+    setAdaptiveFlag('true');
+    mockState.configRows = [adaptiveConfig];
+    const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {});
+
+    await service.recordOutcomeFeedback({ ...signals, requestId: 'req-456' });
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      'Applied outcome feedback to adaptive bandit',
+      expect.objectContaining({ requestId: 'req-456', eventId: 'event-1', userId: 'u1' }),
+    );
+  });
+
+  it('logs a structured error and still resolves when the adaptive update fails', async () => {
+    // The outcome route must never fail because the bandit failed, so the
+    // service swallows — but the swallow must be observable via structured logs
+    // (the route's own .catch does not fire by design).
+    setAdaptiveFlag('true');
+    mockState.configRows = [adaptiveConfig];
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    vi.spyOn(service, 'updateWeightsAfterFeedback').mockRejectedValue(new Error('bandit exploded'));
+
+    await expect(
+      service.recordOutcomeFeedback({ ...signals, requestId: 'req-123' }),
+    ).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Failed to apply outcome feedback to adaptive bandit',
+      expect.objectContaining({ requestId: 'req-123', error: 'bandit exploded' }),
+    );
   });
 });

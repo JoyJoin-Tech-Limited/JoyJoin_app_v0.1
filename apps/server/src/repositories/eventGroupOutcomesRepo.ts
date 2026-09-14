@@ -43,7 +43,10 @@ export const eventGroupOutcomesRepo = {
     const registrations = await db
       .select({ userId: eventPoolRegistrations.userId })
       .from(eventPoolRegistrations)
-      .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+      .where(eq(eventPoolRegistrations.assignedGroupId, groupId))
+      // Deterministic member order (W4 AC-W4.6): the outcome route's radar and
+      // membership checks must not depend on physical row order.
+      .orderBy(eventPoolRegistrations.userId);
 
     const memberUserIds = registrations.map((registration: { userId: string }) => registration.userId);
 

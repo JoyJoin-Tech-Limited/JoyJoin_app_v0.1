@@ -4,8 +4,13 @@ import type { IcebreakerRunPlan } from '@shared/phaseModule';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
 import { compileForSession } from './runPlanService';
 import { seedSingleTestBotsWarmupReady } from './socialIcebreakerBotService';
-import { updateSession, invalidatePreGenerationForSession } from '../lib/socialIcebreakerStore';
+import {
+  updateSession,
+  invalidatePreGenerationForSession,
+  listParticipants,
+} from '../lib/socialIcebreakerStore';
 import { logger } from '../lib/logger';
+import { getFeatureFlag } from '../lib/featureFlags';
 
 export type ResetTierSource = '/start' | '/set-tier';
 
@@ -115,7 +120,14 @@ export async function resetSocialIcebreakerTier(
     if (resolvedVibe) {
       state.vibe = resolvedVibe;
     }
-    const runPlan = await compileForSession(state, newTier);
+    // W5: recompile against the live roster so a shy-heavy table gets the
+    // lower-pressure arc. Flag off → no extra read and no roster is passed
+    // (compileForSession stays byte-identical).
+    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+    const roster = matchingAware
+      ? await listParticipants(state.socialSessionId).catch(() => [])
+      : undefined;
+    const runPlan = await compileForSession(state, newTier, roster);
     state.runPlan = runPlan;
     state.autoAdvanceEnabled = false;
   }

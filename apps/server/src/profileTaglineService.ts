@@ -226,6 +226,7 @@ ${XIAOYUE_CRAFT_LITE}
         model: result.model,
         latencyMs: result.latencyMs,
         promptVersion: meta.promptVersion,
+        enforceReviewVocab: true,
       },
     );
     if (!moderation.safe) {

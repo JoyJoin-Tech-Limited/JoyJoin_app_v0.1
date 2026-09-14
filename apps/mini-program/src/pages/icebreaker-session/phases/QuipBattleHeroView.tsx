@@ -118,9 +118,14 @@ export function QuipBattleHeroView({
     }
   }, [])
 
-  const hasSubmitted = userId ? submittedUserIds.includes(userId) : false
+  // W3: an opted-out / silent player is appended to the phase completion array
+  // (`quipBattleVotedUserIds`) but never submits an answer, so the submit gate
+  // must read submitted ∪ completed — otherwise one opt-out deadlocks everyone
+  // else on "等待其他玩家". Voting implies submitting, so the union is sound.
+  const submittedOrCompleted = new Set([...submittedUserIds, ...votedUserIds])
+  const hasSubmitted = userId ? submittedOrCompleted.has(userId) : false
   const hasVoted = userId ? votedUserIds.includes(userId) : false
-  const allSubmitted = submittedUserIds.length >= playerCount
+  const allSubmitted = submittedOrCompleted.size >= playerCount
   const allVoted = votedUserIds.length >= playerCount
 
   const championResult = revealed && results.length > 0 ? results[0] : null
@@ -292,9 +297,9 @@ export function QuipBattleHeroView({
               ? isHost
                 ? '生成题目后开始作答'
                 : '等待主持人生成题目…'
-              : `已提交 ${submittedUserIds.length}/${playerCount} 人`
+              : `已提交 ${submittedOrCompleted.size}/${playerCount} 人`
           }
-          doneCount={submittedUserIds.length}
+          doneCount={submittedOrCompleted.size}
           totalCount={playerCount}
           actions={
             <>
@@ -390,7 +395,7 @@ export function QuipBattleHeroView({
           phase='quip_battle'
           title='等待其他玩家'
           statusText={`已提交 ${submittedUserIds.length}/${playerCount}`}
-          doneCount={submittedUserIds.length}
+          doneCount={submittedOrCompleted.size}
           totalCount={playerCount}
           actions={
             isHost ? (

@@ -5,6 +5,7 @@ import { logger } from "../../lib/logger";
 import { requireAuthenticatedUserId } from "../../lib/requestAuth";
 import { eventGroupOutcomesRepo } from "../../repositories/eventGroupOutcomesRepo";
 import { deriveMatchHistoryAndRefreshCalibration } from "../../services/matchHistoryDerivation";
+import { matchingWeightsService } from "../../matchingWeightsService";
 import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
 
@@ -129,6 +130,34 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
         });
       });
 
+      // W4 AC-W4.3 (OD-1 keep-and-wire): feed the same outcome into the
+      // adaptive-weights path. `recordOutcomeFeedback` is a no-op unless the
+      // runtime flag ENABLE_ADAPTIVE_WEIGHTS is on AND an operator has
+      // activated the adaptive config, so this does not move live scores by
+      // default. Fire-and-forget — like derivation, a failure here must never
+      // fail the user's outcome submission.
+      //
+      // The service logs+swallows its own failures (structured `logger` records
+      // carrying `requestId`), so this `.catch` is a defensive net that should
+      // not normally fire. `requestId` binds the service log to this request.
+      matchingWeightsService
+        .recordOutcomeFeedback({
+          requestId: req.requestId,
+          eventId: membershipContext.group?.eventId ?? undefined,
+          userId,
+          wouldMeetAgain: outcome.wouldMeetAgain,
+          atmosphereScore: outcome.atmosphereScore,
+          connectionCount: Object.keys(
+            (outcome.connectionRadar ?? {}) as Record<string, unknown>,
+          ).length,
+        })
+        .catch((error) => {
+          reqLogger.error("Outcome feedback bandit update failed after outcome submission", {
+            groupId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+
       logAITrace({
         domain: "event_group_outcomes",
         feature: "submitGroupOutcome",
@@ -146,7 +175,10 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
         submittedAt: outcome.submittedAt,
       });
     } catch (error) {
-      reqLogger.error("Failed to submit event group outcome", {
+      logger.error("Failed to submit event group outcome", {
+        request_id: req.requestId,
+        route: GROUP_OUTCOME_ROUTE,
+        poolId: req.params.poolId,
         error: error instanceof Error ? error.message : String(error),
       });
 

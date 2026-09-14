@@ -125,13 +125,51 @@ function evaluateMatchQuality(
 }
 
 /**
- * 扫描单个活动池并决策是否匹配
- * 
+ * W8 (AC-W8.3): per-pool in-flight guard.
+ *
+ * Every registration previously fired an independent `scanPoolAndMatch`
+ * fire-and-forget, so a burst of N concurrent registrations ran N full O(n²)
+ * matching scans on the same pool. This map ensures only ONE scan runs per pool
+ * at a time; concurrent callers join the in-flight promise and receive its
+ * result instead of duplicating the work. Crash-safety: the entry is released in
+ * `finally`, so a thrown scan never wedges the guard; if the process dies
+ * mid-scan the pool is left `matching` and the W8 stuck-matching watchdog
+ * recovers it.
+ *
+ * Process-local by design (matches the existing scheduled-scan model); the
+ * `saveMatchResults` active→matching CAS remains the cross-instance guard.
+ */
+const inFlightScans = new Map<string, Promise<ScanResult>>();
+
+/**
+ * 扫描单个活动池并决策是否匹配 (wrapped by the per-pool in-flight guard above)
+ *
  * @param poolId 活动池ID
  * @param scanType 扫描类型：realtime | scheduled | manual
  * @param triggeredBy 触发者：user_registration | cron_job | admin_manual
  */
+
 export async function scanPoolAndMatch(
+  poolId: string,
+  scanType: "realtime" | "scheduled" | "manual",
+  triggeredBy: string
+): Promise<ScanResult> {
+  const existing = inFlightScans.get(poolId);
+  if (existing) {
+    logger.info("[Realtime Matching] joining in-flight scan", { poolId, scanType, triggeredBy });
+    return existing;
+  }
+
+  const run = runScanPoolAndMatch(poolId, scanType, triggeredBy).finally(() => {
+    if (inFlightScans.get(poolId) === run) {
+      inFlightScans.delete(poolId);
+    }
+  });
+  inFlightScans.set(poolId, run);
+  return run;
+}
+
+async function runScanPoolAndMatch(
   poolId: string,
   scanType: "realtime" | "scheduled" | "manual",
   triggeredBy: string
@@ -319,6 +357,14 @@ export async function scanPoolAndMatch(
       };
     }
   } catch (error: any) {
+    logger.error("[Realtime Matching] match algorithm failed during scan", {
+      poolId,
+      scanType,
+      triggeredBy,
+      pendingUsersCount,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     await db.insert(poolMatchingLogs).values({
       poolId,
       scanType,
@@ -355,35 +401,41 @@ export async function scanPoolAndMatch(
 
   // 9. 决策：是否立即匹配
   if (evaluation.shouldMatch) {
-    // 立即匹配！保存结果
-    if (predictiveDecisionSummary) {
-      await saveMatchResults(poolId, groups, {
-        predictiveExperimentArm: predictiveDecisionArm ?? null,
-        predictiveRerankApplied,
-        predictiveRerankSummary: predictiveDecisionSummary,
-      });
-    } else {
-      await saveMatchResults(poolId, groups);
-    }
-
     const usersMatched = groups.reduce((sum, g) => sum + g.members.length, 0);
 
-    // 记录日志
-    await db.insert(poolMatchingLogs).values({
-      poolId,
-      scanType,
-      pendingUsersCount,
-      currentThreshold,
-      timeUntilEvent: hoursUntilEvent,
-      groupsFormed: groups.length,
-      usersMatched,
-      avgGroupScore,
-      decision: "matched",
-      reason: evaluation.reason,
-      predictiveExperimentArm: predictiveDecisionArm,
-      predictiveRerankApplied,
-      predictiveRerankSummary: predictiveDecisionSummary,
-      triggeredBy,
+    // 立即匹配！保存结果 + 决策日志在同一显式事务边界内提交。
+    // `saveMatchResults` owns the atomic write of the match rows (its own
+    // internal transaction); this boundary groups the scan's decision-log write
+    // with that persistence so the two related writes are not issued as
+    // independent, unattested statements.
+    await db.transaction(async (tx: any) => {
+      if (predictiveDecisionSummary) {
+        await saveMatchResults(poolId, groups, {
+          predictiveExperimentArm: predictiveDecisionArm ?? null,
+          predictiveRerankApplied,
+          predictiveRerankSummary: predictiveDecisionSummary,
+        });
+      } else {
+        await saveMatchResults(poolId, groups);
+      }
+
+      // 记录日志
+      await tx.insert(poolMatchingLogs).values({
+        poolId,
+        scanType,
+        pendingUsersCount,
+        currentThreshold,
+        timeUntilEvent: hoursUntilEvent,
+        groupsFormed: groups.length,
+        usersMatched,
+        avgGroupScore,
+        decision: "matched",
+        reason: evaluation.reason,
+        predictiveExperimentArm: predictiveDecisionArm,
+        predictiveRerankApplied,
+        predictiveRerankSummary: predictiveDecisionSummary,
+        triggeredBy,
+      });
     });
 
     console.log(`[Realtime Matching] ✓ 池 ${pool.title} 完成匹配: ${groups.length}组, ${usersMatched}人`);

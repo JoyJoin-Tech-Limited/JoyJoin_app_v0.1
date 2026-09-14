@@ -61,6 +61,160 @@ export interface DerivationResult {
   updatedCount: number;
 }
 
+// ── W6 (gm-debrief): match-history integrity ────────────────────────────────
+// OD-2 (CHOSEN 2026-09-12): the negative policy is **two_strike**. A single
+// negative meeting does NOT permanently block a pair; the -1 hard skip fires
+// only after >= 2 negative meetings inside `MATCH_HISTORY_NEGATIVE_WINDOW_DAYS`.
+// Rationale: the existing derivation collapses a meeting to the OR of both
+// members' submissions (W1 contract), so a "both-submit" policy cannot be
+// rebuilt from the aggregate without per-submitter storage — two-strike is the
+// computable, humane option and pairs naturally with an expiry window and a
+// self-scoped reset route. `wouldMeetAgain` keeps its W1 OR semantics; only
+// the hard-skip decision changes.
+
+/** One raw `match_history` read row (one row per pair per event). */
+export interface MatchHistoryRawRow {
+  user1Id: string;
+  user2Id: string;
+  wouldMeetAgain: boolean | null;
+  matchedAt: Date | null;
+}
+
+/**
+ * Aggregated per-pair signal consumed by the scoring path. `negativeCount` is
+ * the number of NEGATIVE meetings inside the active window; `latestNegativeAt`
+ * is the most recent of those (for diagnostics/expiry).
+ */
+export interface MatchHistorySignal {
+  wouldMeetAgain: boolean | null;
+  negativeCount: number;
+  latestNegativeAt: Date | null;
+}
+
+export type MatchHistoryLookup = Map<string, MatchHistorySignal>;
+
+/** Negatives older than this stop counting (expiry, AC-W6.6b). */
+export const MATCH_HISTORY_NEGATIVE_WINDOW_DAYS = 180;
+/** Number of in-window negative meetings that triggers the hard skip. */
+export const MATCH_HISTORY_NEGATIVE_STRIKES = 2;
+export type MatchNeverMeetPolicy = "two_strike";
+export const MATCH_HISTORY_NEGATIVE_POLICY: MatchNeverMeetPolicy = "two_strike";
+
+/**
+ * W6 AC-W6.6c: at most this many intra-group pairs may carry a POSITIVE
+ * `wouldMeetAgain` history. The +5 re-match bonus can then never pair a
+ * returning clique unopposed at the group level.
+ */
+export const MATCH_HISTORY_MAX_REPEAT_PAIRS_PER_GROUP = 1;
+
+function pairKeyForHistory(userA: string, userB: string): string {
+  return [userA, userB].sort().join("|");
+}
+
+/** Deterministic severity tie-break for equal timestamps (false > true > null). */
+function meetAgainSeverity(value: boolean | null): number {
+  if (value === false) return 2;
+  if (value === true) return 1;
+  return 0;
+}
+
+/**
+ * Pure, deterministic aggregation of raw history rows into the pair lookup.
+ * Sorts internally (newest first, then severity) so the result is identical
+ * regardless of the caller's physical row order — this is the W6 AC-W6.6a
+ * determinism guarantee, complementing the SQL `ORDER BY` in the preload
+ * query. Scale: O(rows) grouping + O(k log k) per pair; no extra queries.
+ */
+export function aggregateMatchHistorySignals(
+  rows: MatchHistoryRawRow[],
+  now: Date = new Date(),
+  windowDays: number = MATCH_HISTORY_NEGATIVE_WINDOW_DAYS,
+): MatchHistoryLookup {
+  const windowMs = windowDays * 24 * 60 * 60 * 1000;
+  const byPair = new Map<string, MatchHistoryRawRow[]>();
+  for (const row of rows) {
+    const key = pairKeyForHistory(row.user1Id, row.user2Id);
+    const list = byPair.get(key);
+    if (list) {
+      list.push(row);
+    } else {
+      byPair.set(key, [row]);
+    }
+  }
+
+  const lookup: MatchHistoryLookup = new Map();
+  for (const [key, pairRows] of byPair) {
+    const ordered = [...pairRows].sort((a, b) => {
+      const ta = a.matchedAt ? a.matchedAt.getTime() : 0;
+      const tb = b.matchedAt ? b.matchedAt.getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return meetAgainSeverity(b.wouldMeetAgain) - meetAgainSeverity(a.wouldMeetAgain);
+    });
+
+    let negativeCount = 0;
+    let latestNegativeAt: Date | null = null;
+    for (const row of ordered) {
+      if (row.wouldMeetAgain !== false) continue;
+      // Expiry: unknown timestamps are treated as active (conservative).
+      if (row.matchedAt && now.getTime() - row.matchedAt.getTime() > windowMs) continue;
+      negativeCount++;
+      if (row.matchedAt && (!latestNegativeAt || row.matchedAt > latestNegativeAt)) {
+        latestNegativeAt = row.matchedAt;
+      }
+    }
+
+    lookup.set(key, {
+      wouldMeetAgain: ordered[0]?.wouldMeetAgain ?? null,
+      negativeCount,
+      latestNegativeAt,
+    });
+  }
+
+  return lookup;
+}
+
+/**
+ * W6 AC-W6.6b: named, testable hard-skip policy. Reads the aggregated signal
+ * and decides whether the pair must not be matched again. The caller gates this
+ * behind the `matchNeverMeetSentinel` feature flag (read once per run).
+ */
+export function shouldHardSkipPair(
+  signal: Pick<MatchHistorySignal, "negativeCount"> | undefined,
+  policy: MatchNeverMeetPolicy = MATCH_HISTORY_NEGATIVE_POLICY,
+  threshold: number = MATCH_HISTORY_NEGATIVE_STRIKES,
+): boolean {
+  if (!signal) return false;
+  switch (policy) {
+    case "two_strike":
+      return signal.negativeCount >= threshold;
+    default:
+      return false;
+  }
+}
+
+/**
+ * W6 AC-W6.6c: anti-clique novelty rule. Returns false when a group would seat
+ * more than `maxRepeatPairs` intra-group pairs that previously signalled a
+ * positive re-match. Inert when no lookup is supplied (cold-start / simulation).
+ */
+export function groupSatisfiesRematchNoveltyRule(
+  memberUserIds: string[],
+  lookup: MatchHistoryLookup | undefined,
+  maxRepeatPairs: number = MATCH_HISTORY_MAX_REPEAT_PAIRS_PER_GROUP,
+): boolean {
+  if (!lookup) return true;
+  let repeatPairs = 0;
+  for (let i = 0; i < memberUserIds.length; i++) {
+    for (let j = i + 1; j < memberUserIds.length; j++) {
+      if (lookup.get(pairKeyForHistory(memberUserIds[i], memberUserIds[j]))?.wouldMeetAgain === true) {
+        repeatPairs++;
+        if (repeatPairs > maxRepeatPairs) return false;
+      }
+    }
+  }
+  return true;
+}
+
 /**
  * Pure pair-row builder. Members are de-duplicated and sorted lexicographically
  * so `user1Id|user2Id` matches the scoring path's pair key

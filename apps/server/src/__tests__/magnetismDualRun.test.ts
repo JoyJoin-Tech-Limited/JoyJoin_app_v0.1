@@ -199,7 +199,12 @@ const { archetypeEnergyMock, chemistryFor } = vi.hoisted(() => {
     if (key in OVERRIDES) return OVERRIDES[key];
     const aE = ENERGIZERS.has(a);
     const bE = ENERGIZERS.has(b);
-    if (aE && bE) return 56; // energizer↔energizer: anti-clump by design
+    // W6 (gm-debrief) recalibration: the overlap-coefficient interest metric
+    // raises same-hotpot pairs vs the old Jaccard baseline, which was enough to
+    // clump both Pool-B energizers into one group (starving the second group of
+    // R2 coverage). Strengthen the by-design anti-clump signal so the synthetic
+    // pool still exercises a balanced energizer distribution.
+    if (aE && bE) return 34; // energizer↔energizer: anti-clump by design
     if (aE || bE) return 82; // energizer↔calm: strong
     return 71;               // calm↔calm default
   };
@@ -328,7 +333,7 @@ const POOL_B: PoolUserSpec[] = [
   { id: 'B08', archetype: 'sloth', gender: '男性', lifeStage: '职场老手', education: '本科', industry: 'tech', intent: ['networking'], topics: [['hotpot', 25], ['podcasts', 10], ['career', 10]] },
   { id: 'B09', archetype: 'koala', gender: '女性', lifeStage: '自由职业', education: '本科', industry: 'design', intent: ['fun'], topics: [['hotpot', 25], ['citywalk', 10], ['vintage', 10]] },
   { id: 'B10', archetype: 'panda', gender: '男性', lifeStage: '职场新人', education: '大专', industry: 'media', intent: ['fun'], topics: [['hotpot', 25], ['werewolf', 10], ['live_house', 10]] },
-  { id: 'B11', archetype: 'otter', gender: '女性', lifeStage: '职场新人', education: '本科', industry: 'design', intent: ['fun'], topics: [] },
+  { id: 'B11', archetype: 'owl', gender: '女性', lifeStage: '学生党', education: '大专', industry: 'education', intent: ['fun'], topics: [] },
   { id: 'B12', archetype: 'owl', gender: '男性', lifeStage: '学生党', education: '大专', industry: 'education', intent: ['fun'], topics: [] },
   { id: 'B13', archetype: 'deer', gender: '女性', lifeStage: '自由职业', education: '硕士', industry: 'outdoor', intent: ['explore'], topics: [['sailing', 25], ['climbing', 10], ['extreme_sports', 10]] },
   { id: 'B14', archetype: 'sloth', gender: '男性', lifeStage: '自由职业', education: '本科', industry: 'outdoor', intent: ['explore'], topics: [['sailing', 25], ['climbing', 10], ['camping', 10]] },

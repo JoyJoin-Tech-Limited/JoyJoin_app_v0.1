@@ -275,6 +275,25 @@ export type RuntimeMatchingWeights =
   | AdaptivePairScoreWeights
   | { chemistryWeight: number; interestWeight: number; socialAffinityWeight: number; backgroundDiversityWeight: number; preferenceWeight: number; languageWeight: number };
 
+/**
+ * W6 (gm-debrief) AC-W6.3: per-dimension data availability. `false` means the
+ * pair carries NO usable signal for that dimension, so its weight is dropped
+ * from the denominator and the remaining available dimensions are renormalized
+ * to carry full weight — instead of substituting a neutral value (e.g. interest
+ * 70) that could make a blank profile outrank a declared one.
+ *
+ * `undefined`/omitted flags are treated as available (legacy behavior).
+ */
+export interface PairDimensionAvailability {
+  chemistry?: boolean;
+  interest?: boolean;
+  socialAffinity?: boolean;
+  backgroundDiversity?: boolean;
+  preference?: boolean;
+  language?: boolean;
+  semanticSimilarity?: boolean;
+}
+
 export function calculateWeightedPairScore(
   dimensions: {
     chemistry: number;
@@ -288,6 +307,7 @@ export function calculateWeightedPairScore(
   enableSemanticSimilarity = isSemanticSimilarityEnabled(),
   customWeights?: RuntimeMatchingWeights,
   useWeightProfileV2 = false,
+  availability?: PairDimensionAvailability,
 ): number {
   let weights: PairScoreWeights;
   if (customWeights) {
@@ -332,5 +352,54 @@ export function calculateWeightedPairScore(
       ? (dimensions.semanticSimilarity ?? 50) * (weights.semanticSimilarity ?? 0)
       : 0);
 
-  return Math.round(total);
+  // W6 AC-W6.3: no availability supplied, or every dimension is available →
+  // return the legacy weighted sum EXACTLY (custom/partial weight tables that
+  // do not sum to 1 must not be silently rescaled).
+  if (!availability) {
+    return Math.round(total);
+  }
+
+  const semanticActive = enableSemanticSimilarity && !customWeights;
+  const excludedAny =
+    availability.chemistry === false ||
+    availability.interest === false ||
+    availability.socialAffinity === false ||
+    availability.backgroundDiversity === false ||
+    availability.preference === false ||
+    availability.language === false ||
+    (semanticActive && availability.semanticSimilarity === false);
+  if (!excludedAny) {
+    return Math.round(total);
+  }
+
+  // Renormalize over the available dimensions only (drop-from-denominator).
+  const entries: Array<[value: number, weight: number, included: boolean]> = [
+    [dimensions.chemistry, weights.chemistry, availability.chemistry !== false],
+    [dimensions.interest, weights.interest, availability.interest !== false],
+    [dimensions.socialAffinity, weights.socialAffinity, availability.socialAffinity !== false],
+    [dimensions.backgroundDiversity, weights.backgroundDiversity, availability.backgroundDiversity !== false],
+    [dimensions.preference, weights.preference, availability.preference !== false],
+    [dimensions.language, weights.language, availability.language !== false],
+  ];
+  if (semanticActive) {
+    entries.push([
+      dimensions.semanticSimilarity ?? 50,
+      weights.semanticSimilarity ?? 0,
+      availability.semanticSimilarity !== false,
+    ]);
+  }
+
+  let weightedSum = 0;
+  let weightSum = 0;
+  for (const [value, weight, included] of entries) {
+    if (!included) continue;
+    weightedSum += value * weight;
+    weightSum += weight;
+  }
+  // Reliability: all dims excluded (or zero-weight table) cannot divide by 0.
+  if (weightSum <= 0) {
+    return Math.round(total);
+  }
+
+  return Math.round(weightedSum / weightSum);
 }

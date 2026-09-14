@@ -155,6 +155,54 @@ describe('compileForSession — feature flag integration', () => {
     expect(plan.segments[plan.segments.length - 1]?.phase).toBe('recap');
   });
 
+  it('W5: flag on + shy-heavy roster changes phase selection (composition rule)', async () => {
+    const spy = vi
+      .spyOn(featureFlags, 'getFeatureFlag')
+      .mockImplementation(async (key) => key === 'runPlanTemplatesEnabled');
+    vi.spyOn(runPlanTemplatesRepo, 'getTemplateByVibeAndTier').mockResolvedValue(undefined);
+
+    const roster = [
+      { archetype: '慢热龟' },
+      { archetype: '慢热龟' },
+      { archetype: '小透明猫' },
+      { archetype: '小透明猫' },
+    ];
+
+    const baseline = await compileForSession(makeState('blaze', 'balanced', 4), 'blaze', roster);
+
+    spy.mockImplementation(
+      async (key) =>
+        key === 'runPlanTemplatesEnabled' || key === 'icebreakerMatchingAwareEnabled',
+    );
+    const composed = await compileForSession(makeState('blaze', 'balanced', 4), 'blaze', roster);
+
+    expect(composed.segments.map((s) => s.phase)).not.toEqual(
+      baseline.segments.map((s) => s.phase),
+    );
+    // Shy-heavy tables lead with the structured 1:1 format.
+    expect(composed.segments.map((s) => s.phase)).toContain('speed_friending');
+  });
+
+  it('W5: flag off + roster is byte-identical to the no-roster plan (AC-W5.6)', async () => {
+    vi.spyOn(featureFlags, 'getFeatureFlag').mockImplementation(
+      async (key) => key === 'runPlanTemplatesEnabled',
+    );
+    vi.spyOn(runPlanTemplatesRepo, 'getTemplateByVibeAndTier').mockResolvedValue(undefined);
+
+    const roster = [
+      { archetype: '慢热龟' },
+      { archetype: '慢热龟' },
+      { archetype: '小透明猫' },
+      { archetype: '小透明猫' },
+    ];
+    const withRoster = await compileForSession(makeState('blaze', 'balanced', 4), 'blaze', roster);
+    const withoutRoster = await compileForSession(makeState('blaze', 'balanced', 4), 'blaze');
+
+    expect(withRoster.segments.map((s) => s.phase)).toEqual(
+      withoutRoster.segments.map((s) => s.phase),
+    );
+  });
+
   it('all 9 vibe-tier combos produce valid plans when flag=true', async () => {
     vi.spyOn(featureFlags, 'getFeatureFlag').mockResolvedValue(true);
     vi.spyOn(runPlanTemplatesRepo, 'getTemplateByVibeAndTier').mockResolvedValue(undefined);

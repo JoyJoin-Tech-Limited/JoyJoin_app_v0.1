@@ -506,7 +506,10 @@ $color-warm-rose: #B83A5E;
 
     &-text,
     &-sep {
-      font-size: $font-size-2xs;
+      // G4: the AIGC disclosure is compliance copy, not decorative micro-text —
+      // keep it at/above the 24rpx readable floor ($font-size-sm). $font-size-2xs
+      // (20rpx) is below it.
+      font-size: $font-size-sm;
       line-height: 1.4;
       color: $color-text-secondary;
     }
@@ -523,7 +526,8 @@ $color-warm-rose: #B83A5E;
       }
 
       .aigc-report-button__text {
-        font-size: $font-size-2xs;
+        // G4: same 24rpx readable floor as the AIGC meta label.
+        font-size: $font-size-sm;
         line-height: 1.4;
         color: $color-text-secondary;
         text-decoration: underline;

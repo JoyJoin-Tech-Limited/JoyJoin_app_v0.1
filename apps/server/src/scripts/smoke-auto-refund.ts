@@ -23,6 +23,7 @@ import {
   users,
 } from "@shared/schema";
 import { db } from "../db";
+import { logAdminAudit } from "../lib/adminAuditLogger";
 import { eventCreditsRepo } from "../repositories/eventCreditsRepo";
 import { notificationsRepo } from "../repositories/notificationsRepo";
 import {
@@ -85,6 +86,20 @@ async function main(): Promise<void> {
     .values({ poolId: smokePool.id, userId: smokeUserB.id, matchStatus: "unmatched" })
     .returning({ id: eventPoolRegistrations.id });
   if (!regA || !regB) throw new Error("failed to create registrations");
+
+  // AC-W2.5: a FREE unmatched registration (no payment row, no credit
+  // redemption) — it must still receive the seat-not-allocated notice.
+  console.log("[step] seed…");
+  const [smokeUserC] = await db
+    .insert(users)
+    .values({ phoneNumber: `137${String(ts).slice(-8)}`, firstName: "冒烟", lastName: `免费${String(ts).slice(-4)}` })
+    .returning({ id: users.id });
+  if (!smokeUserC) throw new Error("failed to create free smoke user");
+  const [regC] = await db
+    .insert(eventPoolRegistrations)
+    .values({ poolId: smokePool.id, userId: smokeUserC.id, matchStatus: "unmatched" })
+    .returning({ id: eventPoolRegistrations.id });
+  if (!regC) throw new Error("failed to create free registration");
 
   console.log("[step] seed…");
   // Money payment A (mock order — finalized without WeChat) for registration A's pool.
@@ -180,9 +195,18 @@ async function main(): Promise<void> {
   const [notifB] = await db
     .select({ type: notifications.type })
     .from(notifications)
-    .where(and(eq(notifications.userId, smokeUserB.id), eq(notifications.type, "unmatched_refund")))
+    .where(and(eq(notifications.userId, smokeUserB.id), eq(notifications.type, "seat_not_allocated_refund")))
     .limit(1);
-  check("B: unmatched notification created", Boolean(notifB));
+  check("B: seat-not-allocated notification created", Boolean(notifB));
+
+  // AC-W2.5: the free/unmatched user gets the informational notice even though
+  // there is no payment/credit row for them.
+  const freeNotifs = await db
+    .select({ id: notifications.id, title: notifications.title })
+    .from(notifications)
+    .where(and(eq(notifications.userId, smokeUserC.id), eq(notifications.type, "seat_not_allocated_refund")));
+  check("B: free unmatched user notified exactly once", freeNotifs.length === 1, `count=${freeNotifs.length}`);
+  check("B: free copy is not 场次未成行", !(freeNotifs[0]?.title ?? "").includes("场次未成行"));
 
   // ── Trigger A — pool cancellation (payC already refunded → skipped) ──
   const summaryA = await refundPoolCancellation(smokePool.id, "冒烟测试饭局");
@@ -243,6 +267,43 @@ async function main(): Promise<void> {
     JSON.stringify(summaryB2),
   );
 
+  // AC-W2.5 idempotency: the free user's informational notice is NOT duplicated.
+  const freeNotifsAfter = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(and(eq(notifications.userId, smokeUserC.id), eq(notifications.type, "seat_not_allocated_refund")));
+  check("B: free notice still exactly once after re-run", freeNotifsAfter.length === 1, `count=${freeNotifsAfter.length}`);
+  const notifsBAfter = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(and(eq(notifications.userId, smokeUserB.id), eq(notifications.type, "seat_not_allocated_refund")));
+  check("B: paid notice still exactly once after re-run", notifsBAfter.length === 1, `count=${notifsBAfter.length}`);
+
+  // ── Sensitive-mutation audit ──
+  // The smoke run executes real refund mutations against the dev DB; emit the
+  // same structured `[AdminAudit]` marker the production refund paths use so
+  // the operation is traceable. stdout is synchronous; DB persistence is
+  // best-effort (the audit logger swallows persistence failures).
+  logAdminAudit({
+    action: "PAYMENT_REFUND_INITIATED",
+    adminId: "smoke:auto-refund",
+    targetEntityType: "event_pool",
+    targetEntityId: smokePool.id,
+    context: {
+      source: "smoke-auto-refund",
+      triggerA: {
+        refundedPayments: summaryA.refundedPayments,
+        refundedCredits: summaryA.refundedCredits,
+        failedRefunds: summaryA.failedRefunds.length,
+      },
+      triggerB: {
+        refundedPayments: summaryB.refundedPayments,
+        refundedCredits: summaryB.refundedCredits,
+        failedRefunds: summaryB.failedRefunds.length,
+      },
+    },
+  });
+
   // ── Cleanup (FK-safe order) ──
   const paymentIds = [payA.id, payC.id, packPay.id];
   await db
@@ -257,6 +318,10 @@ async function main(): Promise<void> {
     .delete(notifications)
     .where(and(eq(notifications.userId, smokeUserB.id), eq(notifications.category, "activities")))
     .catch(() => undefined);
+  await db
+    .delete(notifications)
+    .where(and(eq(notifications.userId, smokeUserC.id), eq(notifications.category, "activities")))
+    .catch(() => undefined);
   await db.delete(eventCreditRedemptions).where(eq(eventCreditRedemptions.userId, smokeUser.id)).catch(() => undefined);
   await db.delete(eventCreditGrants).where(eq(eventCreditGrants.userId, smokeUser.id)).catch(() => undefined);
   await db.delete(payments).where(eq(payments.userId, smokeUser.id)).catch(() => undefined);
@@ -265,6 +330,7 @@ async function main(): Promise<void> {
   await db.delete(eventPools).where(eq(eventPools.id, smokePool.id)).catch(() => undefined);
   await db.delete(users).where(eq(users.id, smokeUser.id)).catch(() => undefined);
   await db.delete(users).where(eq(users.id, smokeUserB.id)).catch(() => undefined);
+  await db.delete(users).where(eq(users.id, smokeUserC.id)).catch(() => undefined);
   console.log("\n🧹 cleanup done");
 
   console.log(`\n=== Smoke result: ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

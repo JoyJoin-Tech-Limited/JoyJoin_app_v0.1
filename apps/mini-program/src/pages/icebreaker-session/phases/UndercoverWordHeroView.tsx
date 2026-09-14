@@ -37,6 +37,14 @@ interface UndercoverWordHeroViewProps {
   onAdvance?: () => void
   isAdvancing?: boolean
   pairMeta?: AIResponseMeta
+  /**
+   * W3: viewers who opted out / were auto-completed this phase. They are
+   * appended to `undercoverWordVotedUserIds` server-side but never describe, so
+   * they must count toward the describe gate or one opt-out blocks the host's
+   * 进入投票. Only explicit markers are unioned (NOT round votes — that array is
+   * reused across rounds).
+   */
+  completedUserIds?: string[]
 }
 
 const REACTION_ITEMS = [
@@ -63,6 +71,7 @@ export function UndercoverWordHeroView({
   onAdvance,
   isAdvancing = false,
   pairMeta,
+  completedUserIds = [],
 }: UndercoverWordHeroViewProps) {
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -86,9 +95,15 @@ export function UndercoverWordHeroView({
   const currentRoundData = rounds[currentRound]
   const hasSubmittedDesc = currentRoundData?.descriptions.some((d) => d.userId === userId)
   const hasVoted = userId ? votedUserIds.includes(userId) : false
-  const allDescribed = currentRoundData ? currentRoundData.descriptions.length >= playerCount : false
+  // W3: opted-out / silent players count toward the describe gate (they will
+  // never describe) without reading round votes, which are reused across rounds.
+  const describedUserIds = new Set([
+    ...(currentRoundData?.descriptions.map((d) => d.userId) ?? []),
+    ...completedUserIds,
+  ])
+  const allDescribed = currentRoundData ? describedUserIds.size >= playerCount : false
   const allVoted = votedUserIds.length >= playerCount
-  const describedCount = currentRoundData?.descriptions.length ?? 0
+  const describedCount = currentRoundData ? describedUserIds.size : 0
 
   // ── Effects ──
   useEffect(() => {

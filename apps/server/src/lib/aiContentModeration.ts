@@ -1,6 +1,7 @@
 import { validateContentSafe, type ContentSafetyResult } from './contentSafety';
 import { logAITrace } from './aiTraceLogger';
 import type { AIProvider } from '@shared/types/aiMeta';
+import { findReviewBlockedVocab } from '@shared/copy/terms';
 
 export interface ModerationCheck {
   /** Field name for logging / violation reporting. */
@@ -14,6 +15,8 @@ export interface ModerationFailure {
   field: string;
   message: string;
   violation?: NonNullable<ContentSafetyResult['violation']>;
+  /** Set when the failure was a review-blocked vocabulary hit (not profanity). */
+  blockedWord?: string;
 }
 
 export interface ModerationSuccess {
@@ -30,6 +33,12 @@ export interface ModerationOptions {
   latencyMs?: number;
   promptVersion?: string;
   traceId?: string;
+  /**
+   * Enforce the WeChat review-blocked vocabulary gate (匹配/社交/灵魂/撮合/AI)
+   * in addition to profanity/politics. Opt-in so surfaces with their own copy
+   * regime are not changed implicitly. See `@shared/copy/terms`.
+   */
+  enforceReviewVocab?: boolean;
 }
 
 /**
@@ -79,6 +88,40 @@ export function moderateGeneratedContent(
         message: result.violation?.message ?? '内容安全检测未通过',
         violation: result.violation,
       };
+    }
+
+    // WeChat review posture: banned vocabulary (匹配/社交/灵魂/撮合/AI) must
+    // never reach a visible AI string. Deterministic and fail-closed: any hit
+    // degrades the whole payload to curated fallback via the caller.
+    if (options.enforceReviewVocab) {
+      const blockedWord = findReviewBlockedVocab(text);
+      if (blockedWord) {
+        logAITrace({
+          traceId: options.traceId,
+          domain: options.domain,
+          feature: options.feature,
+          provider: options.provider,
+          model: options.model,
+          latencyMs: options.latencyMs ?? 0,
+          success: false,
+          fallbackUsed: true,
+          fromCache: false,
+          promptVersion: options.promptVersion,
+          errorCode: 'banned_vocab',
+          extra: {
+            field: check.field,
+            blockedWord,
+            // Observability: length only — never log the full AI body.
+            textLength: text.length,
+          },
+        });
+        return {
+          safe: false,
+          field: check.field,
+          message: '内容包含受限词汇',
+          blockedWord,
+        };
+      }
     }
   }
   return { safe: true };

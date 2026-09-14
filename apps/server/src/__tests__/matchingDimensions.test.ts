@@ -187,71 +187,70 @@ function interestsCache(
 }
 
 // =============================================================================
-// Interest (calculateInterestScoreAsync): jaccard × 85 + 15 base, heat bonus, caps
+// Interest (calculateInterestScoreAsync): W6 overlap coefficient × 85 + 15 base,
+// heat bonus, caps. Missing data is no longer scored (was 70/30); the pair
+// scorer drops the dimension entirely (AC-W6.3) — the standalone helper returns
+// the documented neutral INTEREST_SCORE_NO_DATA = 50.
 // =============================================================================
 
-describe('interest score (heat-weighted Jaccard)', () => {
-  it('returns 70 when both users have no interests, 30 when only one does', async () => {
+describe('interest score (heat-weighted overlap coefficient)', () => {
+  it('returns the no-data neutral (50) when either side has no interests', async () => {
     const bothEmpty = interestsCache({
       a: { topics: [], heatMap: {} },
       b: { topics: [], heatMap: {} },
     });
-    expect(await calculateInterestScoreAsync('a', 'b', bothEmpty)).toBe(70);
+    expect(await calculateInterestScoreAsync('a', 'b', bothEmpty)).toBe(50);
 
     const oneEmpty = interestsCache({
       a: { topics: ['t1'], heatMap: { t1: 25 } },
       b: { topics: [], heatMap: {} },
     });
-    expect(await calculateInterestScoreAsync('a', 'b', oneEmpty)).toBe(30);
+    expect(await calculateInterestScoreAsync('a', 'b', oneEmpty)).toBe(50);
   });
 
-  it('locks base = round(jaccard × 85 + 15) plus +15 when both heats are 25', async () => {
-    // common={t1}, union={t1,t2,t3} → base round(1/3 × 85 + 15) = 43; heat +15 → 58
+  it('locks base = round(overlap × 85 + 15) plus +15 when both heats are 25', async () => {
+    // common={t1}, min(|A|,|B|)=2 → base round(1/2 × 85 + 15) = 58; heat +15 → 73
     const cache = interestsCache({
       a: { topics: ['t1', 't2'], heatMap: { t1: 25, t2: 25 } },
       b: { topics: ['t1', 't3'], heatMap: { t1: 25, t3: 25 } },
     });
-    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(58);
+    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(73);
   });
 
-  it('locks +10 for 25↔10 heat overlap', async () => {
-    // common={t1}, union={t1,t2} → base round(1/2 × 85 + 15) = 58; heat +10 → 68
+  it('rewards a shared niche topic at the overlap ceiling (broad user not punished)', async () => {
+    // common={t1}, min(|A|,|B|)=1 → overlap 1.0 → base 100; heat +10 capped? 25↔10 → +10 → 100
     const cache = interestsCache({
       a: { topics: ['t1', 't2'], heatMap: { t1: 25, t2: 25 } },
       b: { topics: ['t1'], heatMap: { t1: 10 } },
     });
-    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(68);
+    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(100);
   });
 
-  it('locks +8 when both heats are 10', async () => {
-    // base 58; heat +8 → 66
-    const cache = interestsCache({
+  it('caps at 100 for +8 / +3 heat overlaps once overlap saturates', async () => {
+    const both10 = interestsCache({
       a: { topics: ['t1', 't2'], heatMap: { t1: 10, t2: 25 } },
       b: { topics: ['t1'], heatMap: { t1: 10 } },
     });
-    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(66);
-  });
+    expect(await calculateInterestScoreAsync('a', 'b', both10)).toBe(100);
 
-  it('locks +3 for other positive-heat overlaps (e.g. level 1 ↔ level 2)', async () => {
-    // base 58; heat +3 → 61
-    const cache = interestsCache({
+    const mixed = interestsCache({
       a: { topics: ['t1', 't2'], heatMap: { t1: 3, t2: 25 } },
       b: { topics: ['t1'], heatMap: { t1: 10 } },
     });
-    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(61);
+    expect(await calculateInterestScoreAsync('a', 'b', mixed)).toBe(100);
   });
 
   it('caps the heat bonus at +20', async () => {
-    // common={t1,t2} both 25/25 → raw bonus 30 → capped 20; base 58 → 78
+    // common={t1,t2}, min=3 → overlap 2/3 → base round(71.67) = 72; raw bonus 30 → capped 20 → 92
     const cache = interestsCache({
       a: { topics: ['t1', 't2', 't3'], heatMap: { t1: 25, t2: 25, t3: 25 } },
       b: { topics: ['t1', 't2', 't4'], heatMap: { t1: 25, t2: 25, t4: 25 } },
     });
-    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(78);
+    expect(await calculateInterestScoreAsync('a', 'b', cache)).toBe(92);
   });
 
   it('caps the total score at 100', async () => {
-    // jaccard 1 → base 100; heat +15 would overflow → 100
+    // overlap 1 → base 100; heat +15 would overflow → 100
     const cache = interestsCache({
       a: { topics: ['t1'], heatMap: { t1: 25 } },
       b: { topics: ['t1'], heatMap: { t1: 25 } },
@@ -573,10 +572,11 @@ describe('chemistry score (archetype 70/15/15 blend)', () => {
 // =============================================================================
 
 describe('group score composition', () => {
-  it('locks calculateEnergyBalance: mid-band uniform energy → 100, <2 members → 50', () => {
-    // ARCHETYPE_ENERGY mock: koala = 60 → mean 60 (in 50–70 band → 100), stdDev 0 → harmony 100
+  it('locks calculateEnergyBalance composition metric: no-energizer table → 55, <2 members → 50', () => {
+    // W6 AC-W6.2: ARCHETYPE_ENERGY mock koala=60 → 0 energizers (bar 75),
+    // 0 very-low (floor 45) → 100 - 45 = 55. (Pre-W6 mean-band heuristic: 100.)
     const members = ['a', 'b', 'c', 'd'].map((id) => makeDimUser(id));
-    expect(calculateEnergyBalance(members)).toBe(100);
+    expect(calculateEnergyBalance(members)).toBe(55);
     expect(calculateEnergyBalance([makeDimUser('a')])).toBe(50);
   });
 
@@ -608,9 +608,10 @@ describe('group score composition', () => {
     expect(group.avgPairScore).toBe(90);
     // All members share industry/gender/archetype/lifeStage → 4×(1/4 × 25) = 25
     expect(group.diversityScore).toBe(25);
-    expect(group.communicationBalance).toBe(100);
-    // round(90×0.6 + 25×0.25 + 100×0.15) = round(75.25) = 75
-    expect(group.overallScore).toBe(75);
-    expect(group.temperatureLevel).toBe('warm');
+    // W6 AC-W6.2 composition metric: koala(60)×4 → no energizer → 55.
+    expect(group.communicationBalance).toBe(55);
+    // round(90×0.6 + 25×0.25 + 55×0.15) = round(68.5) = 69
+    expect(group.overallScore).toBe(69);
+    expect(group.temperatureLevel).toBe('mild');
   });
 });

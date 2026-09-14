@@ -5,8 +5,23 @@ import { PHASE_ORDER } from '@shared/socialIcebreaker';
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest';
 import type { IcebreakerRunPlan, PhaseSegment } from '@shared/phaseModule';
 import { createRunPlan } from '@shared/phaseModule';
-import { compileAgentRunPlan, resolveTemplateSlots, TEMPLATE_DEFAULTS } from '@shared/runPlanCompiler';
-import type { TemplateVibeId, RunPlanTemplate } from '@shared/runPlanCompiler';
+import {
+  compileAgentRunPlan,
+  resolveTemplateSlots,
+  TEMPLATE_DEFAULTS,
+  buildArchetypeMix,
+  deriveArchetypeComposition,
+  deriveLieDetectiveMinutes,
+  getBudgetForTier,
+  normalizeRunPlanTiming,
+  NON_CORE_FLOOR_MINUTES,
+} from '@shared/runPlanCompiler';
+import { getPhaseModule } from '@shared/phaseRegistry';
+import type {
+  TemplateVibeId,
+  RunPlanTemplate,
+  ArchetypeComposition,
+} from '@shared/runPlanCompiler';
 import type { RunPlanTemplateRow } from '@shared/schema';
 import { getRunPlanForTier, BREEZE_RUN_PLAN } from '@shared/socialIcebreakerRunPlans';
 import { getServerEnabledPhases } from '../socialIcebreakerPhaseConfig';
@@ -18,6 +33,148 @@ const RUN_PLAN_COMPILE_BUDGET_MS =
   process.env.NODE_ENV === 'test' ? 25 : 2500;
 
 const MINI_SCRIPT_BONUS_MINUTES = 25;
+/** W9 (AC-W9.4): the bonus is dropped entirely below this — a shorter script is not worth the pause. */
+const MINI_SCRIPT_MIN_MINUTES = 12;
+
+/** Phases whose allocation is fixed by the registry (never rebalanced for the bonus). */
+const FIXED_TIMING_PHASES: ReadonlySet<SocialIcebreakerPhase> = new Set([
+  'warmup',
+  'micro_challenge',
+  'recap',
+]);
+
+export interface MiniScriptBudgetDecision {
+  plan: IcebreakerRunPlan;
+  /** Allocated bonus minutes (0 when no bonus was appended). */
+  miniScriptMinutes: number;
+  /** Over-budget minutes surfaced to logs/observability (0 when reconciled). */
+  overBudgetMinutes: number;
+  /** True when a bonus segment was appended. */
+  accepted: boolean;
+}
+
+/**
+ * Distribute `total` minutes across non-core `phases`, guaranteeing each phase
+ * at least `NON_CORE_FLOOR_MINUTES` and allocating the remainder proportional to
+ * nominal duration (largest-remainder rounding).
+ */
+function distributeNonCoreBudget(
+  phases: SocialIcebreakerPhase[],
+  total: number,
+): Map<SocialIcebreakerPhase, number> {
+  const allocations = new Map<SocialIcebreakerPhase, number>();
+  if (phases.length === 0) return allocations;
+  const floorTotal = phases.length * NON_CORE_FLOOR_MINUTES;
+  const budget = Math.max(total, floorTotal);
+  for (const phase of phases) allocations.set(phase, NON_CORE_FLOOR_MINUTES);
+  const rest = budget - floorTotal;
+  if (rest <= 0) return allocations;
+
+  const nominalSum = phases.reduce((sum, phase) => sum + getPhaseModule(phase).durationMinutes, 0);
+  const raw = phases.map((phase) => {
+    const value = (getPhaseModule(phase).durationMinutes / nominalSum) * rest;
+    return { phase, floor: Math.floor(value), remainder: value - Math.floor(value) };
+  });
+  let assigned = 0;
+  for (const item of raw) {
+    allocations.set(item.phase, (allocations.get(item.phase) ?? 0) + item.floor);
+    assigned += item.floor;
+  }
+  const sorted = [...raw].sort((a, b) => b.remainder - a.remainder);
+  for (let i = 0; i < rest - assigned; i++) {
+    const phase = sorted[i % sorted.length].phase;
+    allocations.set(phase, (allocations.get(phase) ?? 0) + 1);
+  }
+  return allocations;
+}
+
+/**
+ * AC-W9.4: fund the mini_script bonus by shrinking existing non-core phases to
+ * their floors (`lie_detective` never below its roster-derived floor), then size
+ * the bonus to the remainder (≤25, ≥12). Total stays within the booked tier
+ * budget by construction. When there is no room for a meaningful bonus the plan
+ * is returned unchanged (`accepted: false`); if a floor-rounding edge ever
+ * overruns, `overBudgetMinutes` is surfaced for observability.
+ */
+export function reconcileMiniScriptBudget(
+  plan: IcebreakerRunPlan,
+  playerCount: number,
+  budgetMinutes: number,
+): MiniScriptBudgetDecision {
+  const recapIndex = plan.segments.findIndex((s) => s.phase === 'recap');
+  const insertAt = recapIndex >= 0 ? recapIndex : plan.segments.length;
+  const fixed = plan.segments.filter((s) => FIXED_TIMING_PHASES.has(s.phase));
+  const lie = plan.segments.find((s) => s.phase === 'lie_detective');
+  const others = plan.segments.filter(
+    (s) => !FIXED_TIMING_PHASES.has(s.phase) && s.phase !== 'lie_detective',
+  );
+  const coreMinutes = fixed.reduce((sum, s) => sum + s.allocatedMinutes, 0);
+  const lieFloor = lie ? deriveLieDetectiveMinutes(playerCount) : 0;
+  const othersFloorTotal = others.length * NON_CORE_FLOOR_MINUTES;
+  const available = budgetMinutes - coreMinutes - lieFloor - othersFloorTotal;
+
+  if (available < MINI_SCRIPT_MIN_MINUTES) {
+    return { plan, miniScriptMinutes: 0, overBudgetMinutes: 0, accepted: false };
+  }
+
+  const miniMinutes = Math.min(MINI_SCRIPT_BONUS_MINUTES, Math.floor(available));
+  const othersBudget = Math.max(
+    budgetMinutes - coreMinutes - lieFloor - miniMinutes,
+    othersFloorTotal,
+  );
+  const othersAllocations = distributeNonCoreBudget(
+    others.map((s) => s.phase),
+    othersBudget,
+  );
+
+  const resized = new Map<SocialIcebreakerPhase, PhaseSegment>();
+  if (lie) {
+    resized.set('lie_detective', { ...lie, allocatedMinutes: lieFloor });
+  }
+  for (const segment of others) {
+    resized.set(segment.phase, {
+      ...segment,
+      allocatedMinutes: othersAllocations.get(segment.phase) ?? segment.allocatedMinutes,
+    });
+  }
+
+  const baseSegments = plan.segments.map((s) => resized.get(s.phase) ?? s);
+  const bonus: PhaseSegment = {
+    phase: 'mini_script',
+    allocatedMinutes: miniMinutes,
+    energyWeight: 1,
+    participation: 'full',
+    tone: 'playful',
+    rationale: `feature-flagged mini_script bonus funded from non-core (${miniMinutes} min, budget ${budgetMinutes})`,
+  };
+  const segments = [
+    ...baseSegments.slice(0, insertAt),
+    bonus,
+    ...baseSegments.slice(insertAt),
+  ];
+  const totalMinutes = segments.reduce((sum, s) => sum + s.allocatedMinutes, 0);
+
+  logger.info('Mini-script budget reconciled', {
+    compilerId: plan.compilerId,
+    playerCount,
+    budgetMinutes,
+    miniScriptMinutes: miniMinutes,
+    totalMinutes,
+    overBudgetMinutes: Math.max(0, totalMinutes - budgetMinutes),
+  });
+
+  return {
+    plan: {
+      ...plan,
+      segments,
+      totalMinutes,
+      compilerId: `${plan.compilerId}+mini`,
+    },
+    miniScriptMinutes: miniMinutes,
+    overBudgetMinutes: Math.max(0, totalMinutes - budgetMinutes),
+    accepted: true,
+  };
+}
 
 /**
  * The mini_script bonus phase is feature-flagged (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`)
@@ -30,15 +187,25 @@ const MINI_SCRIPT_BONUS_MINUTES = 25;
  * When the flag is on (reflected in `enabledPhases`) and the roster meets the
  * 4-player minimum, splice a bonus segment in immediately before `recap` so the
  * host+player bonus gate fires on advance into it, exactly as designed.
+ *
+ * W9 (AC-W9.4): when `budgetMinutes` is provided, the bonus is *funded* from the
+ * other non-core phases (see `reconcileMiniScriptBudget`) so the plan total stays
+ * within the booked tier budget. Omitting the budget preserves the legacy additive
+ * behavior (callers/tests that pre-date W9).
  */
 export function appendMiniScriptBonusSegment(
   plan: IcebreakerRunPlan,
   enabledPhases: SocialIcebreakerPhase[],
   playerCount: number,
+  budgetMinutes?: number,
 ): IcebreakerRunPlan {
   if (!enabledPhases.includes('mini_script')) return plan;
   if (playerCount < 4) return plan;
   if (plan.segments.some((s) => s.phase === 'mini_script')) return plan;
+
+  if (budgetMinutes !== undefined && budgetMinutes > 0) {
+    return reconcileMiniScriptBudget(plan, playerCount, budgetMinutes).plan;
+  }
 
   const recapIndex = plan.segments.findIndex((s) => s.phase === 'recap');
   const insertAt = recapIndex >= 0 ? recapIndex : plan.segments.length;
@@ -143,17 +310,49 @@ function dbRowToTemplate(row: RunPlanTemplateRow): RunPlanTemplate | null {
 export async function compileForSession(
   state: SocialSessionState,
   tier: TierMachineId,
+  roster?: ReadonlyArray<{ archetype?: string | null }>,
 ): Promise<IcebreakerRunPlan> {
   const basePhases = state.enabledPhases ?? getServerEnabledPhases();
   const enabledPhases: SocialIcebreakerPhase[] = basePhases.includes('recap') ? basePhases : [...basePhases, 'recap'];
   const playerCount = state.playerCount ?? 1;
 
+  // W5 (gm-debrief): feed the matched roster into compilation, behind the
+  // `icebreakerMatchingAwareEnabled` kill switch. Flag off (or no roster)
+  // leaves `composition` null and the compiled plan byte-identical to pre-W5.
+  const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+  const archetypeMix =
+    matchingAware && roster && roster.length > 0 ? buildArchetypeMix(roster) : undefined;
+  const composition = deriveArchetypeComposition(archetypeMix);
+
+  if (composition) {
+    logger.info('Run plan composition profile', {
+      socialSessionId: state.socialSessionId,
+      tier,
+      members: composition.totalMembers,
+      lowEnergyCount: composition.lowEnergyCount,
+      highEnergyCount: composition.highEnergyCount,
+      shyHeavy: composition.shyHeavy,
+      outgoingHeavy: composition.outgoingHeavy,
+    });
+  }
+
   const plan = await compileForSessionWithinBudget(state, tier, {
     enabledPhases,
     playerCount,
+    composition,
+    archetypeMix,
   });
 
-  return appendMiniScriptBonusSegment(plan, enabledPhases, playerCount);
+  // W9: normalize roster-derived timing + energy decompression for every plan
+  // source (compiler, template, static fallback), then fund the feature-flagged
+  // mini_script bonus from the non-core budget (AC-W9.2/W9.3/W9.4).
+  const normalized = normalizeRunPlanTiming(plan, playerCount);
+  return appendMiniScriptBonusSegment(
+    normalized,
+    enabledPhases,
+    playerCount,
+    getBudgetForTier(tier),
+  );
 }
 
 async function compileForSessionWithinBudget(
@@ -162,6 +361,8 @@ async function compileForSessionWithinBudget(
   context: {
     enabledPhases: SocialIcebreakerPhase[];
     playerCount: number;
+    composition: ArchetypeComposition | null;
+    archetypeMix?: Record<string, number>;
   },
 ): Promise<IcebreakerRunPlan> {
   const plan = await withCompileBudget(
@@ -186,9 +387,11 @@ async function compileForSessionUnsafe(
   context: {
     enabledPhases: SocialIcebreakerPhase[];
     playerCount: number;
+    composition: ArchetypeComposition | null;
+    archetypeMix?: Record<string, number>;
   },
 ): Promise<IcebreakerRunPlan> {
-  const { enabledPhases, playerCount } = context;
+  const { enabledPhases, playerCount, composition, archetypeMix } = context;
   const flagEnabled = await getFeatureFlag('runPlanTemplatesEnabled', true);
 
   if (flagEnabled) {
@@ -201,7 +404,14 @@ async function compileForSessionUnsafe(
         template = dbRowToTemplate(dbRow);
       }
 
-      const segments = resolveTemplateSlots(templateVibe, tier, playerCount, enabledPhases, template);
+      const segments = resolveTemplateSlots(
+        templateVibe,
+        tier,
+        playerCount,
+        enabledPhases,
+        template,
+        composition,
+      );
       const plan = createRunPlan(segments, `compiler-template-v1-${templateVibe}-${tier}`);
 
       logger.info('Run plan compiled from template', {
@@ -231,6 +441,7 @@ async function compileForSessionUnsafe(
     playerCount,
     enabledPhases,
     vibe: state.vibe ?? 'balanced',
+    ...(archetypeMix ? { archetypeMix } : {}),
   };
 
   try {

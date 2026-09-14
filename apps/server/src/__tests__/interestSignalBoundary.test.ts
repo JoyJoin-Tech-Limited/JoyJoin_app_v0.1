@@ -136,7 +136,7 @@ describe('Interest Signal Boundary — deterministic pair scoring', () => {
   });
 
   it('returns a deterministic score based solely on user_interests topic overlap', async () => {
-    // Both users share one topic out of three — Jaccard 1/3 (≈33%) → baseScore ~43.
+    // Both users share one of two topics — overlap coefficient 1/2 (=50%) → baseScore 58.
     mockUserInterestsSelect
       .mockReturnValueOnce(makeInterestsRow([
         { topicId: 'food', heat: 10 },
@@ -151,8 +151,8 @@ describe('Interest Signal Boundary — deterministic pair scoring', () => {
 
     expect(score).toBeGreaterThan(0);
     expect(score).toBeLessThanOrEqual(100);
-    // Jaccard 1/3 → baseScore = round(1/3 * 85 + 15) = 43; both heat=10 → +8 heatBonus
-    expect(score).toBe(51);
+    // W6 overlap coefficient 1/2 → baseScore = round(1/2 * 85 + 15) = 58; both heat=10 → +8 heatBonus
+    expect(score).toBe(66);
   });
 
   it('score changes when user_interests data changes — proves interests drive the score', async () => {
@@ -187,22 +187,24 @@ describe('Interest Signal Boundary — deterministic pair scoring', () => {
     expect(highScore).toBeGreaterThan(lowScore);
   });
 
-  it('returns 70 (default) when both users have no interests', async () => {
+  it('returns the no-data neutral (50) when both users have no interests', async () => {
     mockUserInterestsSelect
       .mockReturnValueOnce([{ selections: [] }])
       .mockReturnValueOnce([{ selections: [] }]);
 
     const score = await calculateInterestScoreAsync('u1', 'u2');
-    expect(score).toBe(70);
+    // W6 AC-W6.3: no-data is no longer scored as a neutral 70; the pair scorer
+    // drops the dimension, the standalone helper returns INTEREST_SCORE_NO_DATA.
+    expect(score).toBe(50);
   });
 
-  it('returns 30 when one user has no interests', async () => {
+  it('returns 50 when one user has no interests', async () => {
     mockUserInterestsSelect
       .mockReturnValueOnce(makeInterestsRow([{ topicId: 'food', heat: 10 }]))
       .mockReturnValueOnce([{ selections: [] }]);
 
     const score = await calculateInterestScoreAsync('u1', 'u2');
-    expect(score).toBe(30);
+    expect(score).toBe(50);
   });
 
   it('heat level 3 shared interest applies maximum heat bonus', async () => {

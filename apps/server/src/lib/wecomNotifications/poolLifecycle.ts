@@ -48,7 +48,7 @@ export async function notifyAutoRefundSummary(
 ): Promise<void> {
   const reasonLabels: Record<string, string> = {
     pool_cancelled: "活动取消",
-    unmatched: "场次未成行（未匹配）",
+    seat_not_allocated: "座位未排上（未匹配）",
     collapsed: "同桌人数不足，场次顺延",
   };
   const lines: string[] = [

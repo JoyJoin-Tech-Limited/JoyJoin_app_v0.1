@@ -22,6 +22,8 @@ import {
   DEFAULT_MATCHING_WEIGHTS_RATIO,
   type MatchingWeightsShape
 } from '@joyjoin/shared/matchingWeights';
+import { isAdaptiveWeightsEnabled } from './matchingSemantic';
+import { logger } from './lib/logger';
 
 export type MatchingWeights = MatchingWeightsShape;
 
@@ -52,6 +54,8 @@ export interface ShadowOutcomeSignals {
   eventId?: string;
   feedbackId?: string;
   userId?: string;
+  /** Optional HTTP request correlation id; bound by the outcome route. */
+  requestId?: string;
   source?: string;
   wouldMeetAgain?: boolean | null;
   wouldAttendAgain?: boolean | null;
@@ -521,6 +525,43 @@ export function buildShadowRecommendation(
   };
 }
 
+export interface FeedbackLearningInput {
+  satisfaction: number;
+  dimensionScores: Partial<Record<MatchingDimension, number>>;
+}
+
+/**
+ * Translate a raw outcome submission into the bandit's feedback shape.
+ *
+ * Reuses the exact normalization the shadow recommendation path uses
+ * (`buildOutcomeScore` + `buildDimensionScores`) so the live bandit and the
+ * shadow history never drift. Returns null when the outcome carries no
+ * usable signal.
+ */
+export function buildFeedbackLearningInput(
+  outcomeSignals: ShadowOutcomeSignals,
+): FeedbackLearningInput | null {
+  const outcomeScore = buildOutcomeScore(outcomeSignals);
+  if (outcomeScore === null) {
+    return null;
+  }
+
+  const rawDimensionScores = buildDimensionScores(outcomeSignals);
+  const dimensionScores: Partial<Record<MatchingDimension, number>> = {};
+  for (const [dimension, score] of Object.entries(rawDimensionScores) as Array<
+    [MatchingDimension, number | undefined]
+  >) {
+    if (typeof score === 'number' && Number.isFinite(score)) {
+      dimensionScores[dimension] = Math.round(score);
+    }
+  }
+
+  return {
+    satisfaction: Math.round(clamp(outcomeScore, 1, 5)),
+    dimensionScores,
+  };
+}
+
 export class MatchingWeightsService {
   async getActiveWeights(): Promise<MatchingWeights> {
     const now = Date.now();
@@ -624,7 +665,67 @@ export class MatchingWeightsService {
 
       this.invalidateCache();
     } catch (error) {
-      console.error('[MatchingWeightsService] Failed to update weights:', error);
+      logger.error('Failed to update matching weights after feedback', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Live-bandit entry point fed by the canonical event outcome path
+   * (`POST /api/event-pools/:poolId/group-outcome`).
+   *
+   * OD-1 decision (W4.3): keep-and-wire the Thompson bandit, but only when it
+   * is genuinely enabled end-to-end — the runtime consumption flag
+   * (`ENABLE_ADAPTIVE_WEIGHTS`, the same gate `poolMatchingService` reads) AND
+   * an operator-activated `adaptive_live` config. When either gate is off this
+   * is a no-op, so default behaviour is byte-identical to the previous
+   * zero-caller state; the shadow path (`recordShadowRecommendation`, already
+   * wired from the legacy feedback route) is unaffected.
+   *
+   * MAGNETISM_ENGINE.md §4/§8 still target deleting the Thompson bandit in
+   * Phase 3 (no counterfactual logs). This wiring is deliberately
+   * dark-by-default so that decision stays cheap to reverse.
+   */
+  async recordOutcomeFeedback(outcomeSignals: ShadowOutcomeSignals): Promise<void> {
+    try {
+      if (!isAdaptiveWeightsEnabled()) {
+        return;
+      }
+
+      const config = await this.getActiveConfig();
+      if (!config || !this.isAdaptiveConfig(config)) {
+        return;
+      }
+
+      const feedback = buildFeedbackLearningInput(outcomeSignals);
+      if (!feedback) {
+        return;
+      }
+
+      await this.updateWeightsAfterFeedback(
+        feedback.satisfaction,
+        feedback.dimensionScores as Record<string, number>,
+      );
+
+      logger.info('Applied outcome feedback to adaptive bandit', {
+        requestId: outcomeSignals.requestId,
+        eventId: outcomeSignals.eventId,
+        userId: outcomeSignals.userId,
+        satisfaction: feedback.satisfaction,
+        dimensionCount: Object.keys(feedback.dimensionScores).length,
+      });
+    } catch (error) {
+      // This method is fire-and-forget by contract (the outcome route must not
+      // fail because the bandit failed), so it logs and swallows rather than
+      // rethrowing. Keeping the log structured is what makes the swallow
+      // observable — the route's `.catch` never fires by design.
+      logger.error('Failed to apply outcome feedback to adaptive bandit', {
+        requestId: outcomeSignals.requestId,
+        eventId: outcomeSignals.eventId,
+        userId: outcomeSignals.userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

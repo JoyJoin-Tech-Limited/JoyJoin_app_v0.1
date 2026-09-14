@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 import { getNextEligiblePhase } from '@shared/socialIcebreaker';
-import { appendMiniScriptBonusSegment, compileForSession } from '../services/runPlanService';
+import { appendMiniScriptBonusSegment, compileForSession, reconcileMiniScriptBudget } from '../services/runPlanService';
 import { getNextPhaseFromPlan } from '@shared/phaseModule';
 import type { IcebreakerRunPlan } from '@shared/phaseModule';
+import {
+  BREEZE_RUN_PLAN,
+  GLOW_RUN_PLAN,
+  BLAZE_RUN_PLAN,
+} from '@shared/socialIcebreakerRunPlans';
 
 vi.mock('../lib/featureFlags', () => ({
   getFeatureFlag: vi.fn().mockResolvedValue(false),
@@ -56,7 +61,12 @@ describe('compileForSession mini_script bonus segment', () => {
     const miniIndex = phases.indexOf('mini_script');
     expect(miniIndex).toBeGreaterThanOrEqual(0);
     expect(recapIndex).toBeGreaterThan(miniIndex);
-    expect(plan.segments[miniIndex].allocatedMinutes).toBe(25);
+    // W9 (AC-W9.4): the bonus is funded from the non-core budget (glow = 60),
+    // sized to the leftover then floored at MINI_SCRIPT_MIN_MINUTES (12).
+    const miniMinutes = plan.segments[miniIndex].allocatedMinutes;
+    expect(miniMinutes).toBeGreaterThanOrEqual(12);
+    expect(miniMinutes).toBeLessThanOrEqual(25);
+    expect(plan.totalMinutes).toBeLessThanOrEqual(60);
 
     // The bonus gate fires on advance INTO mini_script — the phase must be the
     // next eligible phase from whatever precedes it.
@@ -131,5 +141,44 @@ describe('appendMiniScriptBonusSegment', () => {
   it('leaves plans untouched when mini_script is not enabled', () => {
     const plan = appendMiniScriptBonusSegment(basePlan, ['recap'], 6);
     expect(plan.segments.map((s) => s.phase)).toEqual(['warmup', 'group_mirror', 'recap']);
+  });
+});
+
+// ─── W9 (AC-W9.4): mini_script budget reconciliation ─────────────────────────
+
+describe('reconcileMiniScriptBudget (W9)', () => {
+  it('funds the bonus from non-core and stays within the glow budget', () => {
+    const decision = reconcileMiniScriptBudget(GLOW_RUN_PLAN, 6, 60);
+    expect(decision.accepted).toBe(true);
+    expect(decision.miniScriptMinutes).toBeGreaterThanOrEqual(12);
+    expect(decision.miniScriptMinutes).toBeLessThanOrEqual(25);
+    expect(decision.overBudgetMinutes).toBe(0);
+    expect(decision.plan.totalMinutes).toBeLessThanOrEqual(60);
+    const lie = decision.plan.segments.find((s) => s.phase === 'lie_detective');
+    expect(lie?.allocatedMinutes).toBeGreaterThanOrEqual(15);
+    // Bonus is spliced immediately before recap.
+    const phases = decision.plan.segments.map((s) => s.phase);
+    expect(phases[phases.length - 1]).toBe('recap');
+    expect(phases[phases.length - 2]).toBe('mini_script');
+  });
+
+  it('fits the full 25-minute bonus inside the blaze budget', () => {
+    const decision = reconcileMiniScriptBudget(BLAZE_RUN_PLAN, 6, 90);
+    expect(decision.accepted).toBe(true);
+    expect(decision.miniScriptMinutes).toBe(25);
+    expect(decision.overBudgetMinutes).toBe(0);
+    expect(decision.plan.totalMinutes).toBeLessThanOrEqual(90);
+  });
+
+  it('refuses the bonus when there is no meaningful room (breeze)', () => {
+    const decision = reconcileMiniScriptBudget(BREEZE_RUN_PLAN, 6, 40);
+    expect(decision.accepted).toBe(false);
+    expect(decision.plan.segments.some((s) => s.phase === 'mini_script')).toBe(false);
+  });
+
+  it('budget-aware append never exceeds the booked budget', () => {
+    const plan = appendMiniScriptBonusSegment(GLOW_RUN_PLAN, ['mini_script', 'recap'], 6, 60);
+    expect(plan.segments.map((s) => s.phase)).toContain('mini_script');
+    expect(plan.totalMinutes).toBeLessThanOrEqual(60);
   });
 });

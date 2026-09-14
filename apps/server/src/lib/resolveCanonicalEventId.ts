@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 import { events, eventPoolGroups, eventPoolRegistrations } from "@shared/schema";
+import { logger } from "./logger";
 
 /**
  * Resolve the canonical events.id for the three event id families the
@@ -57,4 +58,41 @@ export async function resolveCanonicalEventId(
   }
 
   return null;
+}
+
+/** Default route param carrying the client-supplied event id. */
+export const CANONICAL_EVENT_ID_PARAM = "eventId";
+
+/**
+ * W8 (AC-W8.8): centralize canonicalization as a route guard.
+ *
+ * Before W8 every route that wrote an event-FK'd column had to remember to call
+ * `resolveCanonicalEventId` itself — the single-test 局 FK violation happened
+ * because one route forgot. Mount this guard after `requireAuth` on any
+ * `/api/events/:eventId/*` write route: it resolves the three id families, 404s
+ * on an unresolvable id, and exposes the canonical id at
+ * `req.canonicalEventId`. The raw param vs. canonical id stays observable in
+ * the warn log for ops triage.
+ */
+export function canonicalEventIdGuard(paramName: string = CANONICAL_EVENT_ID_PARAM) {
+  return async function canonicalEventIdGuard(req: any, res: any, next: any): Promise<unknown> {
+    const userId: string | undefined = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const rawEventId = req.params?.[paramName];
+    const canonicalEventId = await resolveCanonicalEventId(rawEventId, userId);
+    if (!canonicalEventId) {
+      logger.warn("Canonical event id could not be resolved", {
+        route: req.originalUrl,
+        rawEventId,
+        userId,
+      });
+      return res.status(404).json({ message: "未找到对应的活动" });
+    }
+
+    req.canonicalEventId = canonicalEventId;
+    return next();
+  };
 }

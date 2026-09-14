@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { events, eventPoolGroups, eventPoolRegistrations } from "@shared/schema";
 
 /**
@@ -14,8 +16,7 @@ const mockDb = vi.hoisted(() => ({
 
 vi.mock("../db", () => ({ db: mockDb }));
 
-const { resolveCanonicalEventId } = await import("../lib/resolveCanonicalEventId");
-
+const { resolveCanonicalEventId, canonicalEventIdGuard } = await import("../lib/resolveCanonicalEventId");
 type Row = Record<string, unknown>;
 type QueryBuilder = {
   from: ReturnType<typeof vi.fn>;
@@ -64,5 +65,80 @@ describe("resolveCanonicalEventId", () => {
     buildDbMock([[], [], [], []]);
     const result = await resolveCanonicalEventId("ghost-id", "user-1");
     expect(result).toBeNull();
+  });
+});
+
+/**
+ * W8 (AC-W8.8) — canonicalization is centralized as a route guard so write
+ * routes cannot forget it (the single-test 局 FK violation). New event write
+ * routes mount `canonicalEventIdGuard()` and read `req.canonicalEventId`.
+ */
+describe("canonicalEventIdGuard (W8 AC-W8.8)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function makeRes() {
+    const res: any = {};
+    res.status = vi.fn(() => res);
+    res.json = vi.fn(() => res);
+    return res;
+  }
+
+  it("resolves the id, attaches it to the request, and calls next()", async () => {
+    buildDbMock([[{ id: "event-abc" }]]);
+    const req: any = {
+      params: { eventId: "event-abc" },
+      session: { userId: "user-1" },
+      originalUrl: "/api/events/event-abc/feedback",
+    };
+    const res = makeRes();
+    const next = vi.fn();
+
+    await canonicalEventIdGuard()(req, res, next);
+
+    expect(req.canonicalEventId).toBe("event-abc");
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("404s an unresolvable id and never calls next()", async () => {
+    buildDbMock([[], [], [], []]);
+    const req: any = {
+      params: { eventId: "ghost-id" },
+      session: { userId: "user-1" },
+      originalUrl: "/api/events/ghost-id/feedback",
+    };
+    const res = makeRes();
+    const next = vi.fn();
+
+    await canonicalEventIdGuard()(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("401s when there is no authenticated session", async () => {
+    const req: any = { params: { eventId: "event-abc" } };
+    const res = makeRes();
+    const next = vi.fn();
+
+    await canonicalEventIdGuard()(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("regression: social.ts feedback route uses the guard, not per-route canonicalization", () => {
+    const socialSrc = readFileSync(
+      fileURLToPath(new URL("../routes/domains/social.ts", import.meta.url)),
+      "utf8",
+    );
+    expect(socialSrc).toContain(
+      "app.post('/api/events/:eventId/feedback', requireAuth, canonicalEventIdGuard()",
+    );
+    // Per-route discipline is gone: the raw helper is no longer imported/called
+    // in the route module — the guard is the single canonicalization entry.
+    expect(socialSrc).not.toMatch(/resolveCanonicalEventId\s*\(/);
   });
 });

@@ -11,7 +11,7 @@ import { storage } from "../../storage";
 import { shellCache } from "../../lib/shellCache";
 import { validateContentSafe, validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
-import { resolveCanonicalEventId } from "../../lib/resolveCanonicalEventId";
+import { canonicalEventIdGuard } from "../../lib/resolveCanonicalEventId";
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -300,17 +300,16 @@ export function registerSocialRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/events/:eventId/feedback', requireAuth, async (req: any, res) => {
+  app.post('/api/events/:eventId/feedback', requireAuth, canonicalEventIdGuard(), async (req: any, res) => {
     try {
       const userId = req.session.userId;
+      // W8 (AC-W8.8): the guard resolves all three event id families (events.id,
+      // blind_box_events.id via squad-unboxing redirect, or event_pools.id) and
+      // 404s when unresolvable. event_feedback/connections FKs reference
+      // events.id, so every write below uses the canonical id — a blind-box id
+      // would otherwise violate event_feedback_event_id_events_id_fk.
       const routeEventId = req.params.eventId;
-      // The mini-program can arrive with any of the three event id families
-      // (events.id, blind_box_events.id via squad-unboxing redirect, or
-      // event_pools.id). event_feedback/connections FKs reference events.id,
-      // so the raw id must be canonicalized before insert — otherwise a
-      // blind-box id violates event_feedback_event_id_events_id_fk (single-test
-      // 局 flow). Mirrors the participants route's family resolution.
-      const canonicalEventId = await resolveCanonicalEventId(routeEventId, userId);
+      const canonicalEventId = req.canonicalEventId as string;
       if (!canonicalEventId) {
         logger.warn("Feedback event could not be resolved", { routeEventId, userId });
         return res.status(404).json({ message: "未找到对应的活动" });

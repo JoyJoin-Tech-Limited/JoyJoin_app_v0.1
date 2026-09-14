@@ -12,7 +12,7 @@ function readRepoFile(relativePath: string): string {
 
 describe("pool matching unmatched-marking guard", () => {
   it("only marks truly-stranded registrations as unmatched (assignedGroupId IS NULL)", () => {
-    const source = readRepoFile("apps/server/src/poolMatchingService.ts");
+    const source = readRepoFile("apps/server/src/matching/matchPersistence.ts");
 
     // Regression guard for the operator-review-gate bug: step 2 leaves matched
     // members at matchStatus='pending' when the gate is enabled, and the old

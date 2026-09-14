@@ -5,6 +5,7 @@ import type {
   SocialSessionParticipantSummary,
 } from '@shared/socialIcebreaker';
 import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase } from '@shared/socialIcebreaker';
+import { getPhaseModule } from '@shared/phaseRegistry';
 import { computeMiniScriptVoteProgress } from '@shared/miniscriptStoryFramework';
 import {
   getSessionWithExpiry,
@@ -16,6 +17,7 @@ import {
 import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
+import { inferMicroChallengeEnergyArc } from '../lib/icebreakerRosterSignals';
 import { isCustomMode, computeSelectablePhases, generatePhaseSelectionId } from '../services/customModeService';
 import { mapBotUserIdsToBotIds, buildBotIdByUserId } from '../lib/socialIcebreakerClientIdMapper';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
@@ -64,16 +66,28 @@ export function sanitizeStateForClient(
   const sanitized = { ...state };
   delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
   delete (sanitized as Partial<SocialSessionState>).xiaoyueSessionPackMeta;
+  // perf-W1: `expiresAt` is a server-owned sliding-TTL timestamp with zero
+  // client readers (the client uses `isActive` for presence). It changes on
+  // every heartbeat-driven TTL bump, so it defeated TanStack structural
+  // sharing and starved the idle-poll backoff. Expiry is still enforced
+  // server-side (resolveSession / getSessionWithExpiry); only the client
+  // projection omits it.
+  delete (sanitized as Partial<SocialSessionState>).expiresAt;
   if (requestingUserId && sanitized.hostUserId !== requestingUserId) {
     delete sanitized.miniScriptCandidateFramework;
     delete sanitized.miniScriptCandidateGeneratedAt;
     delete sanitized.miniScriptCandidateGeneratedByUserId;
   }
 
-  // Strip server-only participant profiles before sending to clients
+  // Strip server-only participant profiles + W5 interest hooks before sending
+  // to clients. `interests` is AI prompt context only — never a new exposure.
   if (sanitized.joinedParticipants) {
+    // perf-W1: `lastSeenAt` is a heartbeat-driven ISO timestamp with no client
+    // reader (`isActive` already conveys presence). It changes ~10s while the
+    // session is idle, which broke payload structural sharing and the idle-poll
+    // backoff. Keep it server-side (presence queries) but omit it here.
     sanitized.joinedParticipants = sanitized.joinedParticipants.map(p => {
-      const { profile: _, ...safe } = p;
+      const { profile: _, interests: __, lastSeenAt: ___, ...safe } = p;
       return safe;
     }) as SocialSessionParticipantSummary[];
   }
@@ -325,6 +339,399 @@ export function getUniqueUserCount(userIds?: string[]): number {
 
 export function hasAllRosterParticipantsResponded(userIds: string[] | undefined, playerCount: number): boolean {
   return getUniqueUserCount(userIds) >= playerCount;
+}
+
+// ---------------------------------------------------------------------------
+// W3 — active-presence phase guards + honest opt-out
+//
+// A phase's completion guard is scoped to the roster snapshot captured at phase
+// entry (AC-W3.2), not `playerCount` (everyone who ever joined). That makes a
+// late join mid-phase a non-event (AC-W3.4) and lets a quiet member pass their
+// turn without host `force` (AC-W3.5).
+//
+// Required set = snapshot − departed, where departed = deliberate opt-outs
+// (phaseOptOutUserIds) ∪ silent auto-completes (phaseSilentCompletedUserIds).
+// Both sets are append-only for the lifetime of the phase, so guards are
+// monotonic and can never regress a completed set.
+// ---------------------------------------------------------------------------
+
+/** Default silence window before a non-responding roster member is auto-completed. */
+export const SOCIAL_ICEBREAKER_SILENT_PLAYER_TIMEOUT_MS_DEFAULT = 180_000;
+
+/**
+ * Minimum required participants for a full-participation phase to stay
+ * interactive.
+ *
+ * Intended end condition (W3 quorum floor): when the snapshot minus departed
+ * members drops below this floor — including the empty set when everyone has
+ * left — the phase is DONE, not blocked. Interactive reveals that need at least
+ * one *other* participant (e.g. lie_detective's `otherPlayerCount > 0`) can
+ * never fire below the floor, so guards report the phase complete and the host
+ * advances instead of the session deadlocking.
+ */
+export const MIN_FULL_PHASE_QUORUM = 2;
+
+/** Read the silence timeout (positive integer ms) from env; default 180000. */
+export function getSilentPlayerTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.SOCIAL_ICEBREAKER_SILENT_PLAYER_TIMEOUT_MS;
+  if (!raw) return SOCIAL_ICEBREAKER_SILENT_PLAYER_TIMEOUT_MS_DEFAULT;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : SOCIAL_ICEBREAKER_SILENT_PLAYER_TIMEOUT_MS_DEFAULT;
+}
+
+/**
+ * Snapshot the participation scope for a full-participation phase.
+ *
+ * Only recently-active participants are captured, so a member who already left
+ * the table is not re-required in every subsequent phase (W3 finding 3). When
+ * nobody is currently active — a brief heartbeat gap exactly at the phase
+ * boundary — fall back to the full roster rather than snapshotting an empty
+ * scope, which would make every guard trivially complete.
+ */
+export function buildPhaseRosterSnapshot(
+  roster: SocialSessionParticipantSummary[],
+): string[] {
+  const active = roster.filter((participant) => participant.isActive).map((p) => p.userId);
+  return active.length > 0 ? active : roster.map((p) => p.userId);
+}
+
+/** Snapshot members excluded from the required set (opt-out or silent). */
+export function getPhaseDepartedUserIds(state: SocialSessionState): string[] {
+  return [
+    ...new Set([
+      ...(state.phaseOptOutUserIds ?? []),
+      ...(state.phaseSilentCompletedUserIds ?? []),
+    ]),
+  ];
+}
+
+/**
+ * userIds that must take part in the current phase. Empty when the session
+ * predates the roster snapshot — callers then fall back to `playerCount`.
+ */
+export function getPhaseRequiredRosterIds(state: SocialSessionState): string[] {
+  const snapshot = state.phaseRosterSnapshot?.length
+    ? [...new Set(state.phaseRosterSnapshot)]
+    : undefined;
+  if (!snapshot) return [];
+  const departed = new Set(getPhaseDepartedUserIds(state));
+  return snapshot.filter((userId) => !departed.has(userId));
+}
+
+/** Required participant count for the current phase (snapshot-aware, min 1). */
+export function getPhaseRequiredPlayerCount(state: SocialSessionState): number {
+  if (!state.phaseRosterSnapshot?.length) return state.playerCount;
+  return Math.max(getPhaseRequiredRosterIds(state).length, 1);
+}
+
+export interface PhasePresenceGuardInput {
+  rosterSnapshot?: string[];
+  /** Snapshot members excluded from the required set (opt-out / silent). */
+  departedUserIds?: string[];
+  completedUserIds?: string[];
+  /**
+   * userIds whose heartbeat is inside the presence threshold. Undefined means
+   * "assume everyone is present" so a synchronous caller never auto-completes
+   * anyone (silence is only inferred when presence is actually known).
+   */
+  activeUserIds?: ReadonlySet<string>;
+  phaseStartedAt: number;
+  now: number;
+  timeoutMs: number;
+  /** Legacy fallback when the session has no roster snapshot. */
+  fallbackPlayerCount?: number;
+}
+
+export interface PhasePresenceGuardResult {
+  complete: boolean;
+  /** Required members not complete and currently absent past the timeout. */
+  silentUserIds: string[];
+  requiredUserIds: string[];
+  completedCount: number;
+  requiredCount: number;
+}
+
+/**
+ * Pure presence-guard evaluation. When `rosterSnapshot` exists the guard only
+ * cares about snapshot members; when it is absent (legacy sessions) it keeps
+ * the historical `completed >= playerCount` semantics.
+ *
+ * A required member is auto-completable only once the phase has been running
+ * for at least `timeoutMs` AND they are not currently active. Undefined
+ * `activeUserIds` disables auto-complete entirely.
+ */
+export function evaluatePhasePresenceGuard(
+  input: PhasePresenceGuardInput,
+): PhasePresenceGuardResult {
+  const completed = new Set(input.completedUserIds ?? []);
+  const snapshot = input.rosterSnapshot?.length
+    ? [...new Set(input.rosterSnapshot)]
+    : undefined;
+
+  if (!snapshot) {
+    const total = input.fallbackPlayerCount ?? 0;
+    return {
+      complete: completed.size >= total,
+      silentUserIds: [],
+      requiredUserIds: [],
+      completedCount: completed.size,
+      requiredCount: total,
+    };
+  }
+
+  const departed = new Set(input.departedUserIds ?? []);
+  const required = snapshot.filter((userId) => !departed.has(userId));
+  // Quorum floor: below the minimum required members the phase is structurally
+  // complete (nothing meaningful left to wait for), never a deadlock.
+  if (required.length < MIN_FULL_PHASE_QUORUM) {
+    return {
+      complete: true,
+      silentUserIds: [],
+      requiredUserIds: required,
+      completedCount: completed.size,
+      requiredCount: required.length,
+    };
+  }
+  const canAutoComplete = input.now - input.phaseStartedAt >= input.timeoutMs;
+  const activeUserIds = input.activeUserIds;
+  const silentUserIds =
+    canAutoComplete && activeUserIds !== undefined
+      ? required.filter(
+          (userId) => !completed.has(userId) && !activeUserIds.has(userId),
+        )
+      : [];
+  const effective = new Set([...completed, ...silentUserIds]);
+
+  return {
+    complete: required.every((userId) => effective.has(userId)),
+    silentUserIds,
+    requiredUserIds: required,
+    completedCount: effective.size,
+    requiredCount: required.length,
+  };
+}
+
+/**
+ * SINGLE SOURCE OF TRUTH for the persisted completion arrays each phase's
+ * participation marker (opt-out / silent auto-complete) must write.
+ *
+ * Most phases complete in one stage. `quip_battle` completes in TWO ordered
+ * stages — submit answers, then vote — and its reveal gates BOTH arrays; a
+ * marker that only touched the vote array left a submit-stage opt-out stuck at
+ * "everyone must submit" forever (W3 review BLOCKER). Marking every listed
+ * array keeps the two gates in lockstep.
+ *
+ * Client mirror (read-only, mini-program — keep in sync):
+ *   apps/mini-program/src/pages/icebreaker-session/viewModels/phaseOptOutModel.ts
+ *   `getPhaseCompletionUserIds` returns the primary array (see below) for the
+ *   ready/complete counter; it does not need the secondary stage to render.
+ */
+type PhaseCompletionField =
+  | 'challengeCompletedBy'
+  | 'lieDetectiveCompletedUserIds'
+  | 'warmupReadyUserIds'
+  | 'quipBattleSubmittedUserIds'
+  | 'quipBattleVotedUserIds'
+  | 'groupMirrorSubmittedUserIds'
+  | 'undercoverWordVotedUserIds';
+
+const PHASE_COMPLETION_FIELDS: Partial<
+  Record<SocialIcebreakerPhase, readonly PhaseCompletionField[]>
+> = {
+  micro_challenge: ['challengeCompletedBy'],
+  lie_detective: ['lieDetectiveCompletedUserIds'],
+  warmup: ['warmupReadyUserIds'],
+  quip_battle: ['quipBattleSubmittedUserIds', 'quipBattleVotedUserIds'],
+  group_mirror: ['groupMirrorSubmittedUserIds'],
+  undercover_word: ['undercoverWordVotedUserIds'],
+};
+
+/**
+ * Primary array a phase's ready/complete counter reads. `quip_battle` reads the
+ * vote stage (the later of its two stages), matching the client mirror.
+ */
+const PHASE_PRIMARY_COMPLETION_FIELD: Partial<Record<SocialIcebreakerPhase, PhaseCompletionField>> = {
+  micro_challenge: 'challengeCompletedBy',
+  lie_detective: 'lieDetectiveCompletedUserIds',
+  warmup: 'warmupReadyUserIds',
+  quip_battle: 'quipBattleVotedUserIds',
+  group_mirror: 'groupMirrorSubmittedUserIds',
+  undercover_word: 'undercoverWordVotedUserIds',
+};
+
+function readPhaseCompletionField(
+  state: SocialSessionState,
+  field: PhaseCompletionField,
+): string[] {
+  return ((state as unknown as Record<string, unknown>)[field] as string[] | undefined) ?? [];
+}
+
+function writePhaseCompletionField(
+  state: SocialSessionState,
+  field: PhaseCompletionField,
+  userIds: string[],
+): void {
+  (state as unknown as Record<string, unknown>)[field] = userIds;
+}
+
+/** Map a phase to its primary persisted completion array (undefined when none). */
+export function getPhaseCompletionUserIds(
+  state: SocialSessionState,
+  phase: SocialIcebreakerPhase,
+): string[] | undefined {
+  const field = PHASE_PRIMARY_COMPLETION_FIELD[phase];
+  return field ? readPhaseCompletionField(state, field) : undefined;
+}
+
+/**
+ * Append `userIds` to EVERY persisted completion array owned by the phase
+ * (idempotent). No-op when the phase has no completion array — the caller's
+ * `phaseOptOutUserIds` / `phaseSilentCompletedUserIds` marker still removes them
+ * from the required set.
+ */
+export function markPhaseParticipationUserIdsComplete(
+  state: SocialSessionState,
+  phase: SocialIcebreakerPhase,
+  userIds: readonly string[],
+): void {
+  const fields = PHASE_COMPLETION_FIELDS[phase];
+  if (!fields?.length || userIds.length === 0) return;
+  for (const field of fields) {
+    const merged = [...new Set([...readPhaseCompletionField(state, field), ...userIds])];
+    writePhaseCompletionField(state, field, merged);
+  }
+}
+
+/**
+ * Mark a player complete for the phase's persisted completion array(s) (used by
+ * the honest opt-out route).
+ */
+export function markPhaseParticipationComplete(
+  state: SocialSessionState,
+  phase: SocialIcebreakerPhase,
+  userId: string,
+): void {
+  markPhaseParticipationUserIdsComplete(state, phase, [userId]);
+}
+
+/**
+ * Whether the current phase still has the minimum required participants to run
+ * its interactive reveal. Legacy sessions without a snapshot keep the
+ * `playerCount` fallback (always true). See `MIN_FULL_PHASE_QUORUM`.
+ */
+export function hasFullPhaseQuorum(state: SocialSessionState): boolean {
+  if (!state.phaseRosterSnapshot?.length) return true;
+  return getPhaseRequiredRosterIds(state).length >= MIN_FULL_PHASE_QUORUM;
+}
+
+/**
+ * Synchronous snapshot-scoped completion check. Safe for readiness reporting —
+ * it never auto-completes anyone (presence is unknown), it only honours the
+ * opt-out / prior silent-complete markers.
+ */
+export function isPhaseRosterComplete(
+  state: SocialSessionState,
+  completedUserIds: string[] | undefined,
+): boolean {
+  return evaluatePhasePresenceGuard({
+    rosterSnapshot: state.phaseRosterSnapshot,
+    departedUserIds: getPhaseDepartedUserIds(state),
+    completedUserIds,
+    phaseStartedAt: state.phaseStartedAt,
+    now: Date.now(),
+    timeoutMs: getSilentPlayerTimeoutMs(),
+    fallbackPlayerCount: state.playerCount,
+  }).complete;
+}
+
+export interface ReconcilePhasePresenceOptions {
+  now?: number;
+  timeoutMs?: number;
+  /** Presence set; undefined triggers a roster lookup (tests may inject). */
+  activeUserIds?: Set<string> | undefined;
+  /** Persist silent auto-completes through the store. Default true. */
+  persist?: boolean;
+}
+
+export interface ReconcilePhasePresenceResult extends PhasePresenceGuardResult {
+  autoCompletedUserIds: string[];
+}
+
+/**
+ * Evaluate the presence guard for the current phase and persist any silent
+ * members as complete. Idempotent: completed or already-auto-completed members
+ * are never re-added. Centralized so every phase shares one rule.
+ */
+export async function reconcilePhasePresence(
+  state: SocialSessionState,
+  socialSessionId: string,
+  options: ReconcilePhasePresenceOptions = {},
+): Promise<ReconcilePhasePresenceResult> {
+  const completed = getPhaseCompletionUserIds(state, state.currentPhase);
+  const now = options.now ?? Date.now();
+  const timeoutMs = options.timeoutMs ?? getSilentPlayerTimeoutMs();
+
+  let activeUserIds = options.activeUserIds;
+  if (activeUserIds === undefined) {
+    try {
+      const roster = await listParticipants(socialSessionId);
+      activeUserIds = new Set(
+        roster.filter((participant) => participant.isActive).map((participant) => participant.userId),
+      );
+    } catch (error) {
+      logger.warn('[SocialIcebreaker] presence lookup failed; skipping silent auto-complete', {
+        socialSessionId,
+        phase: state.currentPhase,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      activeUserIds = undefined;
+    }
+  }
+
+  // Keep the client-visible presence count honest with the same threshold the
+  // guard used (activePlayerCount semantics = PRESENCE_THRESHOLD_MS).
+  if (activeUserIds !== undefined) {
+    state.activePlayerCount = activeUserIds.size;
+  }
+
+  const result = evaluatePhasePresenceGuard({
+    rosterSnapshot: state.phaseRosterSnapshot,
+    departedUserIds: getPhaseDepartedUserIds(state),
+    completedUserIds: completed,
+    activeUserIds,
+    phaseStartedAt: state.phaseStartedAt,
+    now,
+    timeoutMs,
+    fallbackPlayerCount: state.playerCount,
+  });
+
+  if (result.silentUserIds.length > 0) {
+    const silentCompleted = new Set(state.phaseSilentCompletedUserIds ?? []);
+    for (const userId of result.silentUserIds) silentCompleted.add(userId);
+    state.phaseSilentCompletedUserIds = [...silentCompleted];
+
+    if (completed !== undefined) {
+      markPhaseParticipationUserIdsComplete(state, state.currentPhase, result.silentUserIds);
+    }
+
+    result.complete = true;
+    result.requiredCount = getPhaseRequiredRosterIds(state).length;
+    logger.info('[SocialIcebreaker] silent players auto-completed', {
+      socialSessionId,
+      phase: state.currentPhase,
+      autoCompletedUserIds: result.silentUserIds,
+      timeoutMs,
+      phaseElapsedMs: now - state.phaseStartedAt,
+    });
+
+    if (options.persist !== false) {
+      await updateSession(socialSessionId, state);
+    }
+  }
+
+  return { ...result, autoCompletedUserIds: result.silentUserIds };
 }
 
 export function recapDisplayNameByUserId(
@@ -646,12 +1053,12 @@ export function isPhaseNaturallyComplete(state: SocialSessionState): boolean {
     case 'micro_challenge':
       return (
         !!state.currentChallenge &&
-        hasAllRosterParticipantsResponded(state.challengeCompletedBy, state.playerCount)
+        isPhaseRosterComplete(state, state.challengeCompletedBy)
       );
     case 'lie_detective':
       return (
-        (state.lieDetectivePlayers || []).length >= state.playerCount &&
-        hasAllRosterParticipantsResponded(state.lieDetectiveCompletedUserIds, state.playerCount)
+        (state.lieDetectivePlayers || []).length >= getPhaseRequiredPlayerCount(state) &&
+        isPhaseRosterComplete(state, state.lieDetectiveCompletedUserIds)
       );
     case 'personality_dice': {
       const done = state.personalityDiceChooseModeEnabled && state.diceRevealOrder
@@ -828,6 +1235,31 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   clearAdvanceScheduling(state);
   state.lastAdvanceTrigger = trigger;
 
+  // W3: lock the participation scope for full-participation phases to the
+  // roster present at entry. Late joiners are excluded (AC-W3.4) and can never
+  // deadlock a guard; departing members are tracked per-phase. Only recently
+  // active members are captured so a long-departed member is not re-required
+  // every subsequent phase (finding 3); an all-idle boundary moment falls back
+  // to the full roster rather than an empty (trivially complete) scope. Non-full
+  // phases and legacy sessions keep the playerCount fallback.
+  if (getPhaseModule(targetPhase).participation === 'full') {
+    try {
+      const snapshotRoster = await listParticipants(socialSessionId);
+      state.phaseRosterSnapshot = buildPhaseRosterSnapshot(snapshotRoster);
+    } catch (error) {
+      state.phaseRosterSnapshot = undefined;
+      logger.warn('[SocialIcebreaker] phase roster snapshot unavailable', {
+        socialSessionId,
+        phase: targetPhase,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  } else {
+    state.phaseRosterSnapshot = undefined;
+  }
+  state.phaseOptOutUserIds = undefined;
+  state.phaseSilentCompletedUserIds = undefined;
+
   // V2 P2: resolve the evidence/motive flag ONCE at mini_script phase entry
   // and snapshot it into session state. Every route and client reads the
   // snapshot — a mid-session admin flip never affects a live session
@@ -863,11 +1295,31 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   let challengeMeta: SocialSessionState['currentChallengeMeta'];
   if (targetPhase === 'micro_challenge') {
     state.challengeCompletedBy = [];
+    // W5 (gm-debrief): feed the matched roster + host mood + energy arc into
+    // selector scoring, behind the matching-aware kill switch. Flag off → the
+    // call args are byte-identical to pre-W5.
+    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+    const microRoster = matchingAware
+      ? await listParticipants(socialSessionId).catch(() => [])
+      : [];
     try {
       const challengeResult = await generateMicroChallenges({
         eventType: state.eventType || '活动',
         participantCount: state.playerCount,
         seed: socialSessionId,
+        ...(matchingAware
+          ? {
+              roster: microRoster.map((p) => ({
+                archetype: p.archetype,
+                interests: p.interests,
+              })),
+              mood: state.selectedMood,
+              energyArc: inferMicroChallengeEnergyArc({
+                roster: microRoster,
+                mood: state.selectedMood,
+              }),
+            }
+          : {}),
       });
       state.currentChallenge = challengeResult.data[0];
       state.currentChallengeMeta = challengeResult.meta;

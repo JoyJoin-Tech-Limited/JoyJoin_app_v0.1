@@ -10,6 +10,7 @@ import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
+import { resolveReadyParticipantIds } from '../viewModels/phaseOptOutModel'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
@@ -50,6 +51,14 @@ export interface LieDetectiveHeroViewProps {
   onGenerateFromTag: (tag: string) => Promise<string | null>
   isGeneratingFromTag: boolean
   statementsMeta?: AIResponseMeta
+  /**
+   * W3: players who opted out / were auto-completed this phase. The server
+   * appends them to `lieDetectiveCompletedUserIds`, so counting them here keeps
+   * the ready counter honest and avoids a separate pass badge.
+   */
+  completedUserIds?: string[]
+  /** W3 (AC-W3.4): late joiner refused by the phase-entry roster snapshot. */
+  rosterLocked?: boolean
 }
 
 export function LieDetectiveHeroView({
@@ -74,8 +83,15 @@ export function LieDetectiveHeroView({
   onGenerateFromTag,
   isGeneratingFromTag,
   statementsMeta,
+  completedUserIds,
+  rosterLocked = false,
 }: LieDetectiveHeroViewProps) {
-  const everyoneGenerated = playerCount > 0 && players.length >= playerCount
+  const completedSet = new Set(completedUserIds ?? [])
+  const { readyCount } = resolveReadyParticipantIds(
+    players.map((player) => player.userId),
+    completedUserIds,
+  )
+  const everyoneGenerated = playerCount > 0 && readyCount >= playerCount
   const currentPlayer = players[currentPlayerIndex]
   const isOwnTurn = currentPlayer?.userId === currentUserId
   const hasVoted = myVoteIndex !== null
@@ -143,7 +159,29 @@ export function LieDetectiveHeroView({
   }, [canSubmitCustomSet, customLieIndex, normalizedCustomStatements, onGenerateStatements])
 
   if (!everyoneGenerated) {
-    const submitted = hasGeneratedStatements
+    const submitted = hasGeneratedStatements || completedSet.has(currentUserId)
+    const optedOut = completedSet.has(currentUserId) && !hasGeneratedStatements
+
+    // W3 (AC-W3.4): a player who joined after phase entry is excluded from the
+    // turn rotation — show an observer state instead of a dead submit button.
+    if (rosterLocked && !hasGeneratedStatements) {
+      return (
+        <View className='lie-detective-hero'>
+          <PhaseHeroCard
+            phase='lie_detective'
+            artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
+            title='这一轮已经开始'
+            statusText='你加入得晚了一点，先看看大家的陈述'
+            doneCount={readyCount}
+            totalCount={playerCount}
+            actions={
+              <Text className='phase-hero-card__ghost-link'>下一轮再加入也不迟</Text>
+            }
+          />
+        </View>
+      )
+    }
+
     return (
       <View className='lie-detective-hero'>
         <PhaseHeroCard
@@ -152,10 +190,12 @@ export function LieDetectiveHeroView({
           title='等待所有玩家提交陈述…'
           statusText={
             submitted
-              ? '你的陈述已提交，等待其他玩家完成'
+              ? optedOut
+                ? '本轮先旁听，等待其他玩家完成'
+                : '你的陈述已提交，等待其他玩家完成'
               : '提交后自动进入投票环节'
           }
-          doneCount={players.length}
+          doneCount={readyCount}
           totalCount={playerCount}
           actions={
             !submitted ? (

@@ -164,6 +164,7 @@ function moderateMiniScriptFramework(
     latencyMs,
     promptVersion: MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION,
     traceId,
+    enforceReviewVocab: true,
   });
 }
 

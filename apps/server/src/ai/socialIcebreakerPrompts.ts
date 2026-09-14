@@ -17,14 +17,18 @@ import type { AtmosphereMood } from '@shared/socialIcebreaker';
 import type { SessionArchetypeContext } from '../lib/contextInjector';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
+import { buildRosterTraitLines } from '../lib/icebreakerRosterSignals';
 
 export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v2';
 // v4 (2026-07-17, campfire-vault-card-pr1): brave-but-safe question guarantee —
 // every generated set must include ≥1 emotionally vulnerable question marked
 // safety:"reflective", never death/abuse/self-harm/explicit. Chat variant keeps
 // its own version string because the prompt shape differs (promptTiers).
-export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v4';
-export const WARMUP_TOPICS_CHAT_PROMPT_VERSION = 'social-warmup-topics-v4-chat';
+// v5 (2026-09-11, gm-debrief W5): matching-aware shared-interest hooks —
+// `sharedInterests` adds a 【共同兴趣】 block when ≥1 label is shared by ≥2
+// roster members. Absent (empty/undefined) → prompt byte-identical to v4.
+export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v5';
+export const WARMUP_TOPICS_CHAT_PROMPT_VERSION = 'social-warmup-topics-v5-chat';
 export const MICRO_CHALLENGES_PROMPT_VERSION = 'social-micro-challenges-v2';
 export const LIE_DETECTIVE_PROMPT_VERSION = 'social-lie-detective-v1';
 export const LIE_DETECTIVE_V2_PROMPT_VERSION = 'social-lie-detective-v2';
@@ -53,6 +57,11 @@ export function buildWarmupTopicsPrompt(params: {
   avoidTopics?: string[];
   _refinementHint?: string;
   sessionContext?: SessionArchetypeContext;
+  /**
+   * W5: labels shared by ≥2 roster members. When present, the prompt asks the
+   * model to anchor at least one question in a real shared interest.
+   */
+  sharedInterests?: string[];
   /** Vibe drives card count, depth curve, and tier generation. */
   vibe?: 'chat' | 'balanced' | 'game';
 }): string {
@@ -115,7 +124,10 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
 
 ${params.sessionContext?.mixText ? `
 
-【本组画像】${params.sessionContext.mixText}` : ''}
+【本组画像】${params.sessionContext.mixText}` : ''}${params.sharedInterests?.length ? `
+
+【共同兴趣】${params.sharedInterests.join('、')}
+（至少围绕其中一个共同兴趣设计话题，让组员一看到就想起"这说的不就是我们吗"。）` : ''}
 
 直接返回JSON数组，不要其他内容。${params._refinementHint ? `
 
@@ -591,7 +603,17 @@ export function buildMiniScriptFrameworkUserMessage(params: {
   playerCount: number;
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
+  /** W5: ordered matched roster — weave a real trait per character. */
+  roster?: Array<{ displayName?: string; archetype?: string; interests?: string[] }>;
 }): string {
+  const rosterLines = params.roster?.length ? buildRosterTraitLines(params.roster) : [];
+  const rosterBlock = rosterLines.length
+    ? `\nRoster (ordered; characters[slotIndex] corresponds to roster[slotIndex]):\n` +
+      `${rosterLines.map((line, i) => `${i}. ${line}`).join('\n')}\n` +
+      `Weave at least one real trait (archetype or interest) into each character. ` +
+      `Never use placeholder names like 来客A / 来客B.\n`
+    : '';
+
   return (
     `Host-locked parameters (must match exactly in output):\n` +
     `- playerCount: ${params.playerCount} — output exactly ${params.playerCount} characters.\n` +
@@ -600,8 +622,9 @@ export function buildMiniScriptFrameworkUserMessage(params: {
     'JSON shape: { "schemaVersion": 1, "style", "genres", "premise", "characters", "act_flow", "ending" }.\n' +
     'characters: ordered slotIndex 0..n-1; roleLabel, sinHook, alibi, secret (playful, not cruel).\n' +
     'act_flow: 2–4 acts with actNumber, title, beats (short strings).\n' +
-    'ending: resolutionSummary, confessionMechanic.\n\n' +
-    'Strict: reply with a single JSON object only — no markdown fences, no commentary before or after.'
+    'ending: resolutionSummary, confessionMechanic.\n' +
+    rosterBlock +
+    '\nStrict: reply with a single JSON object only — no markdown fences, no commentary before or after.'
   );
 }
 

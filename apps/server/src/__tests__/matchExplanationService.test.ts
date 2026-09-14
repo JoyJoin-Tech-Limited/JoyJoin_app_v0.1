@@ -648,6 +648,55 @@ describe('matchExplanationService', () => {
     });
   });
 
+  describe('W7.2 — review-blocked vocabulary degrades pair explanation', () => {
+    it('degrades a banned token to deterministic fallback and logs banned_vocab (non-PII)', async () => {
+      const bannedBody = '系统已经完成匹配，你们会聊得来';
+      vi.mocked(getClientForFunction).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockResolvedValue({
+                choices: [{ message: { content: bannedBody } }],
+              }),
+            },
+          },
+        } as any,
+        model: 'deepseek-v4-flash',
+        provider: 'deepseek',
+      });
+
+      const explanation = await matchExplanationService.generatePairExplanation(
+        mockMember1,
+        mockMember2,
+      );
+
+      // Degraded to the deterministic curated copy naming a concrete hook —
+      // the review-blocked token never reaches a user-visible string.
+      expect(explanation.explanation).not.toContain('匹配');
+      expect(explanation.explanation).toContain('美食');
+
+      // Structured, non-PII trace: blocked word + length, never the raw body.
+      expect(vi.mocked(logAITrace)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          domain: 'match_explanation',
+          feature: 'generatePairExplanation',
+          errorCode: 'banned_vocab',
+          fallbackUsed: true,
+          extra: expect.objectContaining({
+            field: 'explanation',
+            blockedWord: '匹配',
+            textLength: bannedBody.length,
+          }),
+        }),
+      );
+      const bannedTrace = vi.mocked(logAITrace).mock.calls
+        .map(([arg]) => arg as { errorCode?: string; extra?: Record<string, unknown> })
+        .find((arg) => arg.errorCode === 'banned_vocab');
+      expect(bannedTrace).toBeTruthy();
+      expect(JSON.stringify(bannedTrace?.extra)).not.toContain(bannedBody);
+    });
+  });
+
   describe('normalizePairExplanationText (persist boundary guarantee)', () => {
     it('(a) passes plain text through unchanged', () => {
       expect(normalizePairExplanationText('这两位性格互补，会有很多话题聊！')).toBe(

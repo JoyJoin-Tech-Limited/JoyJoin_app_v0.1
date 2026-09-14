@@ -635,6 +635,7 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
           provider: reactionProvider,
           latencyMs: Date.now() - startTime,
           promptVersion: REACTION_PROMPT_VERSION,
+          enforceReviewVocab: true,
         }
       );
 

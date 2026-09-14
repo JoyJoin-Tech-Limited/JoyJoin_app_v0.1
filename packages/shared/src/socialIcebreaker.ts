@@ -143,6 +143,13 @@ export interface SocialSessionParticipantSummary {
   primaryArchetype?: string;
   /** Server-only: AI prompt context. Must be stripped before sending to clients. */
   profile?: SocialSessionParticipantProfile | null;
+  /**
+   * Server-only: top interest labels (from `user_interests`) used to seed
+   * matching-aware AI prompts (W5, gm-debrief). Populated only when
+   * `icebreakerMatchingAwareEnabled` is on, and stripped from client state by
+   * `sanitizeStateForClient` — never exposed to clients.
+   */
+  interests?: string[];
   joinedAt?: string;
   lastSeenAt?: string;
   isActive?: boolean;
@@ -219,7 +226,7 @@ export interface UndercoverWordResult {
 export interface GroupMirrorQuestion {
   id: string;
   questionText: string;
-  category: 'perception' | 'memory' | 'prediction';
+  category: 'appreciation' | 'perception' | 'memory' | 'prediction';
 }
 
 export interface GroupMirrorAnswer {
@@ -533,6 +540,28 @@ export interface SocialSessionState {
   playerCount: number;
   /** Number of participants who have sent a heartbeat in the last 30 seconds. */
   activePlayerCount?: number;
+  /**
+   * W3: userIds present on the roster when the current phase started. Phase
+   * completion guards are scoped to this snapshot, so a late join mid-phase is
+   * excluded and can never deadlock the table. Captured on entry to every
+   * `participation: 'full'` phase; cleared on each transition.
+   */
+  phaseRosterSnapshot?: string[];
+  /**
+   * W3: userIds who chose the honest opt-out (只想听 / 换一个) during the
+   * current full-participation phase. Self-scoped (a player may only opt out
+   * their own turn); opted-out members are removed from the phase's required
+   * set so the guard passes without host force. Cleared on each transition.
+   */
+  phaseOptOutUserIds?: string[];
+  /**
+   * W3: userIds auto-completed server-side after
+   * `SOCIAL_ICEBREAKER_SILENT_PLAYER_TIMEOUT_MS` (default 180000) without a
+   * heartbeat. Excluded from the phase's required set; cleared on each
+   * transition. Kept separate from `phaseOptOutUserIds` so the client can
+   * distinguish a deliberate pass from a server-side timeout.
+   */
+  phaseSilentCompletedUserIds?: string[];
   /** Joined roster with presence metadata for client-side participant rendering. */
   joinedParticipants?: SocialSessionParticipantSummary[];
   phaseStartedAt: number; // timestamp of current phase start

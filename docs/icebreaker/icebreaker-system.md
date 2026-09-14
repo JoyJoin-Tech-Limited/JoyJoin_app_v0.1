@@ -724,7 +724,7 @@ const CLIENT_TO_API_VIBE = {
 | `apps/server/src/socialIcebreakerAICore.ts` | Shared AI core: `AIServiceResult`, `fireAndForgetQualityGate`, `raceWithTimeout`, `isLLMTimeoutError`, `RACE_LLM_TIMEOUT_MS`. |
 | `apps/server/src/socialIcebreakerPersonalityDiceAI.ts` | Personality-dice challenge generation (V1/V4 choose mode). |
 | `apps/server/src/socialIcebreakerAuctionAI.ts` | Auction lot generation. |
-| `apps/server/src/socialIcebreakerMiniScriptAI.ts` | Mini-script framework JSON fetch (MiniMax-first hybrid; owns its own 32s pipeline AbortController + catalog fallback). |
+| `apps/server/src/lib/miniscriptAgent.ts` | Active mini-script framework generation: `generateMiniScriptFrameworkWithMeta` (MiniMax-first hybrid; owns its own 28s `PIPELINE_TIMEOUT_MS` + catalog fallback), mounted at top-level `/api/miniscript/*`. The older `apps/server/src/socialIcebreakerMiniScriptAI.ts` remains on disk but has no importers (unwired WIP). |
 | `apps/server/src/services/runPlanService.ts` | Template-driven run plan compiler with 4-tier fallback chain; feature-flag gated by `RUN_PLAN_TEMPLATES_ENABLED` |
 | `apps/server/src/repositories/runPlanTemplateRepo.ts` | DB queries for `run_plan_templates` table |
 | `packages/shared/src/runPlanCompiler.ts` | `resolveTemplateSlots()` — 9 default templates (3 vibes × 3 tiers), category-spacing enforcement, slot resolution |

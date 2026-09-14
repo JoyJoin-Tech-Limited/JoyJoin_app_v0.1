@@ -63,6 +63,8 @@ vi.mock('drizzle-orm', () => ({
 function makeAwaitable(value: unknown) {
   return {
     limit: () => Promise.resolve(value),
+    // W6 AC-W6.6a: match-history preload chains .orderBy().
+    orderBy: () => Promise.resolve(value),
     then: (resolve: (v: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(value).then(resolve, reject),
   };
@@ -71,8 +73,8 @@ function makeAwaitable(value: unknown) {
 // ============================================================
 // ../db mock
 // ============================================================
-vi.mock('../db', () => ({
-  db: {
+vi.mock('../db', () => {
+  const dbMock: any = {
     select: () => ({
       from: (table: unknown) => ({
         where: (condition: any) => {
@@ -137,8 +139,15 @@ vi.mock('../db', () => ({
         },
       }),
     }),
-  },
-}));
+  };
+
+  // W8: the matched-path match-save + decision-log write now share an explicit
+  // transaction boundary. Forward the callback to dbMock so the existing
+  // insert/update assertions still observe the writes.
+  dbMock.transaction = async (fn: (tx: any) => unknown) => fn(dbMock);
+
+  return { db: dbMock };
+});
 
 // ============================================================
 // ../poolMatchingService mock
@@ -1164,6 +1173,52 @@ describe('poolRealtimeMatchingService', () => {
       mockSaveMatchResults.mockResolvedValueOnce(undefined);
       await scanPoolAndMatch('pool-1', 'scheduled', 'cron_job');
       expect(mockState.logInsertCalls).toHaveLength(1);
+    });
+  });
+
+  // ==========================================================
+  // W8 (AC-W8.3) — per-pool in-flight guard
+  // ==========================================================
+  describe('scanPoolAndMatch — per-pool in-flight guard', () => {
+    it('runs exactly ONE match for 5 concurrent registrations on the same pool', async () => {
+      mockState.poolRows = [makePool()];
+      setupDefaultConfig();
+      setupSufficientRegistrations(6);
+
+      let resolveMatch!: (groups: any[]) => void;
+      const gate = new Promise<any[]>((resolve) => {
+        resolveMatch = resolve;
+      });
+      mockMatchEventPool.mockReturnValueOnce(gate);
+      mockSaveMatchResults.mockResolvedValue(undefined);
+
+      // Fire all five synchronously: the first claims the pool, the other four
+      // join its in-flight promise before any await resolves.
+      const calls = Array.from({ length: 5 }, () =>
+        scanPoolAndMatch('pool-1', 'realtime', 'user_registration'),
+      );
+
+      resolveMatch([makeMatchGroup({ overallScore: 95 })]);
+
+      const results = await Promise.all(calls);
+
+      expect(mockMatchEventPool).toHaveBeenCalledTimes(1);
+      expect(mockSaveMatchResults).toHaveBeenCalledTimes(1);
+      expect(results).toHaveLength(5);
+      expect(results.every((result) => result.decision === 'matched')).toBe(true);
+    });
+
+    it('starts a fresh run once the previous scan settles', async () => {
+      mockState.poolRows = [makePool()];
+      setupDefaultConfig();
+      setupSufficientRegistrations(6);
+      mockMatchEventPool.mockResolvedValue([makeMatchGroup({ overallScore: 95 })]);
+      mockSaveMatchResults.mockResolvedValue(undefined);
+
+      await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
+      await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
+
+      expect(mockMatchEventPool).toHaveBeenCalledTimes(2);
     });
   });
 });

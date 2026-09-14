@@ -12,7 +12,7 @@
  * - Server-only lie-truth storage that is never returned to clients.
  */
 
-import { and, eq, gte, lt, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 import { db } from '../db';
 import {
   socialIcebreakerSessions,
@@ -24,8 +24,11 @@ import {
   momentCardInteractions,
   preGenerationJobs,
   preGenerationResults,
+  userInterests,
   users,
 } from '@shared/schema';
+import { getFeatureFlag } from './featureFlags';
+import { logger } from './logger';
 import type {
   SocialSessionParticipantSummary,
   SocialSessionState,
@@ -44,6 +47,28 @@ import type {
 
 export const SESSION_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 /** A participant is "active" if their last heartbeat is within this window. */export const PRESENCE_THRESHOLD_MS = 30_000; // 30 seconds
+
+/**
+ * W8 (AC-W8.1): marker written into `state_json` when a session passes its TTL.
+ *
+ * Expired sessions are TOMBSTONED rather than hard-deleted so a post-sweep read
+ * reports `expired: true` (410 SESSION_EXPIRED) instead of "never existed"
+ * (404 → `/start` silently creating a fresh session and losing mid-event
+ * progress). Tombstones are hard-deleted after
+ * `SESSION_EXPIRED_TOMBSTONE_RETENTION_MS` so the table stays bounded.
+ */
+export const SESSION_EXPIRED_MARKER = "__sessionExpired";
+/** How long a tombstoned (expired) row is retained before hard delete. */
+export const SESSION_EXPIRED_TOMBSTONE_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+/** True when a persisted `state_json` blob is an expiry tombstone. */
+export function isExpiredSessionState(state: unknown): boolean {
+  return Boolean(
+    state &&
+      typeof state === "object" &&
+      (state as Record<string, unknown>)[SESSION_EXPIRED_MARKER] === true,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // ID helpers
@@ -67,7 +92,13 @@ function withExpiry(
 // Session read helpers
 // ---------------------------------------------------------------------------
 
-/** Returns the full session state, or null if not found. */
+/**
+ * Returns the full session state, or null if not found.
+ *
+ * W8 (AC-W8.1): an expired/tombstoned row is treated as absent here (matching
+ * the in-memory store contract). Routes that must distinguish "expired" from
+ * "never existed" use `getSessionWithExpiry` / `resolveSession`.
+ */
 export async function getSession(
   socialSessionId: string,
 ): Promise<SocialSessionState | null> {
@@ -80,9 +111,11 @@ export async function getSession(
     .where(eq(socialIcebreakerSessions.id, socialSessionId))
     .limit(1);
 
-  return rows[0]
-    ? withExpiry(rows[0].stateJson as SocialSessionState, rows[0].expiresAt)
-    : null;
+  if (!rows[0]) return null;
+  if (rows[0].expiresAt < new Date()) return null;
+  if (isExpiredSessionState(rows[0].stateJson)) return null;
+
+  return withExpiry(rows[0].stateJson as SocialSessionState, rows[0].expiresAt);
 }
 
 /**
@@ -163,7 +196,9 @@ export async function createSession(state: SocialSessionState): Promise<void> {
 // NOTE (C2, 2026-08-31): this is read-modify-write on the whole state_json
 // blob with no version/etag check — two concurrent mutations on the same
 // session can lost-update each other's fields. Callers mitigate by merging
-// only owned fields after a fresh read (see POST /topics). MiniScript V2 added
+// only owned fields after a fresh read (see POST /topics), or by using
+// `updateSessionAtomic` below for non-idempotent appends (see the W3 opt-out
+// route). MiniScript V2 added
 // three more mutation routes (present-evidence, confirm-read, advance-ceremony)
 // on this primitive; the blast radius stays acceptable at 4–6 players because
 // every mutation is guarded by an idempotency window or a self-healing gate:
@@ -185,6 +220,288 @@ export async function updateSession(
       updatedAt: new Date(),
     })
     .where(eq(socialIcebreakerSessions.id, socialSessionId));
+}
+
+/** Outcome of `updateSessionAtomic`. */
+export type UpdateSessionAtomicResult =
+  | { outcome: 'updated'; state: SocialSessionState }
+  | { outcome: 'aborted'; state: SocialSessionState }
+  | { outcome: 'not_found' };
+
+/**
+ * Atomic read-modify-write on one session's `state_json`.
+ *
+ * The session row is locked (`SELECT … FOR UPDATE`) for the whole
+ * read → mutate → write cycle, so two concurrent mutations on the same session
+ * serialize instead of lost-updating each other. Use this for non-idempotent
+ * appends that the plain `updateSession` read-modify-write cannot protect —
+ * e.g. two players tapping opt-out simultaneously (W3 finding 2).
+ *
+ * The mutator runs synchronously on the freshly-read state. Return `false` to
+ * abort the write (e.g. the phase changed between the route's validation and the
+ * lock); the read state is still returned so the caller can report the conflict.
+ */
+export async function updateSessionAtomic(
+  socialSessionId: string,
+  mutator: (state: SocialSessionState) => boolean | void,
+): Promise<UpdateSessionAtomicResult> {
+  return db.transaction(async (tx: any) => {
+    const [row] = await tx
+      .select({
+        stateJson: socialIcebreakerSessions.stateJson,
+        expiresAt: socialIcebreakerSessions.expiresAt,
+      })
+      .from(socialIcebreakerSessions)
+      .where(eq(socialIcebreakerSessions.id, socialSessionId))
+      .limit(1)
+      .for('update');
+
+    if (!row) return { outcome: 'not_found' };
+
+    const state = withExpiry(row.stateJson as SocialSessionState, row.expiresAt);
+    if (mutator(state) === false) {
+      return { outcome: 'aborted', state };
+    }
+
+    await tx
+      .update(socialIcebreakerSessions)
+      .set({
+        currentPhase: state.currentPhase,
+        phaseStartedAt: new Date(state.phaseStartedAt),
+        stateJson: state as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(socialIcebreakerSessions.id, socialSessionId));
+
+    return { outcome: 'updated', state };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Host resilience — atomic host transfer & host-removal recovery (W1)
+// ---------------------------------------------------------------------------
+
+export type TransferHostOutcome =
+  | { outcome: 'transferred'; state: SocialSessionState }
+  | { outcome: 'already_host'; state: SocialSessionState }
+  | { outcome: 'conflict'; currentHostUserId: string | null }
+  /** The host's heartbeat advanced after the caller's eligibility read. */
+  | { outcome: 'host_active'; currentHostUserId: string | null; hostLastSeenAt: Date | null }
+  | { outcome: 'not_found' };
+
+/**
+ * Atomically move the host role to another participant.
+ *
+ * Both `social_icebreaker_sessions.host_user_id` (column) and
+ * `state_json.hostUserId` (the value `isHostAuthorized` reads) are updated
+ * inside one row-locked transaction, so concurrent claims cannot interleave
+ * and leave the two sources of truth diverged.
+ *
+ * Pass `expectedHostUserId` for a compare-and-swap claim (user-initiated,
+ * must still be the host observed by the route). Omit it for an admin
+ * override that intentionally ignores the current host.
+ *
+ * Pass `expectedHostLastSeenAtMs` for a silence-based claim: inside the same
+ * row-locked transaction the host's participant row is re-read and the transfer
+ * is rejected as `host_active` when the heartbeat is newer than the value the
+ * caller observed. This closes the TOCTOU window between the route's grace
+ * check and the CAS, so a host who heartbeats mid-claim cannot be deposed.
+ * Pass `null` when the host had no participant row at observation time.
+ *
+ * Idempotent: re-claiming while already host returns `already_host`.
+ */
+export async function transferHost(
+  socialSessionId: string,
+  newHostUserId: string,
+  newHostDisplayName: string,
+  expectedHostUserId?: string,
+  expectedHostLastSeenAtMs?: number | null,
+): Promise<TransferHostOutcome> {
+  return db.transaction(async (tx: any) => {
+    const [row] = await tx
+      .select({
+        stateJson: socialIcebreakerSessions.stateJson,
+        hostUserId: socialIcebreakerSessions.hostUserId,
+      })
+      .from(socialIcebreakerSessions)
+      .where(eq(socialIcebreakerSessions.id, socialSessionId))
+      .limit(1)
+      .for('update');
+
+    if (!row) return { outcome: 'not_found' };
+
+    const state = row.stateJson as SocialSessionState;
+    const currentHostUserId = state.hostUserId ?? row.hostUserId ?? null;
+
+    // Idempotent no-op: caller already holds the role.
+    if (currentHostUserId === newHostUserId) {
+      return { outcome: 'already_host', state };
+    }
+
+    // Compare-and-swap: a concurrent claimer moved the host first.
+    if (expectedHostUserId !== undefined && currentHostUserId !== expectedHostUserId) {
+      return { outcome: 'conflict', currentHostUserId };
+    }
+
+    // TOCTOU re-verify: the route measured host silence BEFORE entering this
+    // transaction. Re-read the host's heartbeat under the session row lock and
+    // refuse if it advanced, so a host who was briefly silent but heartbeated
+    // between the check and the claim is never deposed while active.
+    if (expectedHostLastSeenAtMs !== undefined && currentHostUserId) {
+      const hostRows = await tx
+        .select({ lastSeenAt: socialIcebreakerParticipants.lastSeenAt })
+        .from(socialIcebreakerParticipants)
+        .where(
+          and(
+            eq(socialIcebreakerParticipants.socialSessionId, socialSessionId),
+            eq(socialIcebreakerParticipants.userId, currentHostUserId),
+          ),
+        )
+        .limit(1)
+        .for('update');
+
+      const currentHostLastSeenAt = hostRows[0]?.lastSeenAt
+        ? new Date(hostRows[0].lastSeenAt)
+        : null;
+      const currentHostLastSeenMs = currentHostLastSeenAt ? currentHostLastSeenAt.getTime() : null;
+
+      const hostHeartbeatAdvanced =
+        expectedHostLastSeenAtMs === null
+          ? currentHostLastSeenMs !== null
+          : currentHostLastSeenMs !== null && currentHostLastSeenMs > expectedHostLastSeenAtMs;
+
+      if (hostHeartbeatAdvanced) {
+        return {
+          outcome: 'host_active',
+          currentHostUserId,
+          hostLastSeenAt: currentHostLastSeenAt,
+        };
+      }
+    }
+
+    state.hostUserId = newHostUserId;
+    state.hostDisplayName = newHostDisplayName;
+
+    await tx
+      .update(socialIcebreakerSessions)
+      .set({
+        hostUserId: newHostUserId,
+        hostDisplayName: newHostDisplayName,
+        stateJson: state as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(socialIcebreakerSessions.id, socialSessionId));
+
+    return { outcome: 'transferred', state };
+  });
+}
+
+/**
+ * Recover every session hosted by a user whose account is being deleted or
+ * banned. Must run inside the caller's transaction (before the departing
+ * user's participant row is removed).
+ *
+ * For each hosted session:
+ *  - if another participant remains, reassign the host to the most recently
+ *    seen one (session is recovered in place);
+ *  - otherwise tombstone it — keep the row so the session is not hard-deleted,
+ *    but move it to `recap` so a dead mid-phase room cannot freeze.
+ */
+export async function reassignOrTombstoneHostedSessions(
+  tx: any,
+  hostUserId: string,
+): Promise<{
+  reassigned: Array<{ sessionId: string; newHostUserId: string }>;
+  tombstoned: string[];
+}> {
+  const rows = await tx
+    .select({
+      id: socialIcebreakerSessions.id,
+      stateJson: socialIcebreakerSessions.stateJson,
+      expiresAt: socialIcebreakerSessions.expiresAt,
+    })
+    .from(socialIcebreakerSessions)
+    .where(eq(socialIcebreakerSessions.hostUserId, hostUserId))
+    .for('update');
+
+  const reassigned: Array<{ sessionId: string; newHostUserId: string }> = [];
+  const tombstoned: string[] = [];
+  const now = new Date();
+
+  for (const row of rows) {
+    const state = row.stateJson as SocialSessionState;
+
+    const candidates: Array<{
+      userId: string;
+      displayName: string;
+      lastSeenAt: Date;
+      isTestBot: boolean;
+    }> = await tx
+      .select({
+        userId: socialIcebreakerParticipants.userId,
+        displayName: socialIcebreakerParticipants.displayName,
+        lastSeenAt: socialIcebreakerParticipants.lastSeenAt,
+        isTestBot: socialIcebreakerParticipants.isTestBot,
+      })
+      .from(socialIcebreakerParticipants)
+      .where(
+        and(
+          eq(socialIcebreakerParticipants.socialSessionId, row.id),
+          ne(socialIcebreakerParticipants.userId, hostUserId),
+          // Never hand the host role to a simulated bot. A single-test
+          // tester+bots session must tombstone rather than let a bot host a
+          // live room with no human able to advance it.
+          eq(socialIcebreakerParticipants.isTestBot, false),
+        ),
+      );
+
+    // Defense in depth: the query already excludes bots; re-filter so a future
+    // query change (or a test double) cannot silently reintroduce a bot host.
+    const humanCandidates = candidates.filter((candidate) => !candidate.isTestBot);
+
+    if (humanCandidates.length > 0) {
+      humanCandidates.sort(
+        (left, right) => new Date(right.lastSeenAt).getTime() - new Date(left.lastSeenAt).getTime(),
+      );
+      const next = humanCandidates[0];
+      state.hostUserId = next.userId;
+      state.hostDisplayName = next.displayName;
+      await tx
+        .update(socialIcebreakerSessions)
+        .set({
+          hostUserId: next.userId,
+          hostDisplayName: next.displayName,
+          stateJson: state as unknown as Record<string, unknown>,
+          updatedAt: now,
+        })
+        .where(eq(socialIcebreakerSessions.id, row.id));
+      reassigned.push({ sessionId: row.id, newHostUserId: next.userId });
+      continue;
+    }
+
+    // No one left to hand the room to. Keep the row (never hard-delete live
+    // sessions) but end it so it is recoverable as history, not a frozen room.
+    const live = new Date(row.expiresAt).getTime() > now.getTime();
+    if (live && state.currentPhase !== 'recap') {
+      state.interruptedAtPhase = state.currentPhase;
+      state.endedEarlyAt = state.endedEarlyAt ?? now.toISOString();
+      state.currentPhase = 'recap';
+      state.phaseStartedAt = now.getTime();
+      state.autoAdvanceEnabled = false;
+      await tx
+        .update(socialIcebreakerSessions)
+        .set({
+          currentPhase: 'recap',
+          phaseStartedAt: now,
+          stateJson: state as unknown as Record<string, unknown>,
+          updatedAt: now,
+        })
+        .where(eq(socialIcebreakerSessions.id, row.id));
+    }
+    tombstoned.push(row.id);
+  }
+
+  return { reassigned, tombstoned };
 }
 
 // ---------------------------------------------------------------------------
@@ -214,6 +531,31 @@ export async function upsertParticipant(
     });
 }
 
+/**
+ * W8 (AC-W8.1): sliding TTL — extend a LIVE session's expiry on activity.
+ *
+ * Returns true when a live session was renewed. Expired/tombstoned sessions are
+ * deliberately NOT revived (a late heartbeat must never resurrect a swept
+ * session into a fresh-looking room).
+ */
+export async function renewSessionTtl(
+  socialSessionId: string,
+  nowMs: number = Date.now(),
+): Promise<boolean> {
+  const now = new Date(nowMs);
+  const updated = await db
+    .update(socialIcebreakerSessions)
+    .set({ expiresAt: new Date(nowMs + SESSION_TTL_MS), updatedAt: now })
+    .where(
+      and(
+        eq(socialIcebreakerSessions.id, socialSessionId),
+        gt(socialIcebreakerSessions.expiresAt, now),
+      ),
+    )
+    .returning({ id: socialIcebreakerSessions.id });
+  return updated.length > 0;
+}
+
 /** Bump lastSeenAt for presence tracking (call from heartbeat endpoint).
  *  Throttled in-memory: presence granularity is 30s, so writes within 10s
  *  are redundant. The 3s client poll would otherwise produce one UPDATE per
@@ -241,6 +583,9 @@ export async function heartbeat(
         eq(socialIcebreakerParticipants.userId, userId),
       ),
     );
+  // W8 (AC-W8.1): slide the session TTL on the same throttle as presence so a
+  // long dinner never expires mid-event. Guarded to LIVE sessions only.
+  await renewSessionTtl(socialSessionId, now);
 }
 
 /** Total number of users who have ever joined this session (roster size). */
@@ -292,6 +637,100 @@ export async function getParticipant(
   return rows[0] ?? null;
 }
 
+/**
+ * Latest heartbeat for a participant, used by the host-claim grace check.
+ * Returns null when the user has never joined the session roster.
+ */
+export async function getParticipantLastSeenAt(
+  socialSessionId: string,
+  userId: string,
+): Promise<Date | null> {
+  const rows = await db
+    .select({ lastSeenAt: socialIcebreakerParticipants.lastSeenAt })
+    .from(socialIcebreakerParticipants)
+    .where(
+      and(
+        eq(socialIcebreakerParticipants.socialSessionId, socialSessionId),
+        eq(socialIcebreakerParticipants.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  return rows[0]?.lastSeenAt ?? null;
+}
+
+/** Max interest labels carried per member into AI prompt context. */
+const ROSTER_INTEREST_LABEL_LIMIT = 5;
+
+/**
+ * Extract the top N interest labels from a `user_interests` row. Prefers the
+ * user's level-3 `topPriorities`, then fills from `selections` ordered by heat
+ * (deterministic tie-break on label) — mirrors the interest pipeline used by
+ * `generateIceBreakers` in matchExplanationService.
+ */
+function extractTopInterestLabels(
+  selections: unknown,
+  topPriorities: unknown,
+  limit = ROSTER_INTEREST_LABEL_LIMIT,
+): string[] {
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: unknown) => {
+    if (typeof value !== 'string') return;
+    const label = value.trim();
+    if (!label || seen.has(label)) return;
+    seen.add(label);
+    labels.push(label);
+  };
+
+  if (Array.isArray(topPriorities)) {
+    for (const item of topPriorities) {
+      if (item && typeof item === 'object') push((item as { label?: unknown }).label);
+    }
+  }
+
+  const rows = Array.isArray(selections) ? [...selections] : [];
+  rows.sort((a, b) => {
+    const heatA = Number((a as { heat?: unknown })?.heat ?? 0);
+    const heatB = Number((b as { heat?: unknown })?.heat ?? 0);
+    if (heatB !== heatA) return heatB - heatA;
+    const labelA = String((a as { label?: unknown })?.label ?? '');
+    const labelB = String((b as { label?: unknown })?.label ?? '');
+    return labelA.localeCompare(labelB);
+  });
+  for (const item of rows) {
+    if (item && typeof item === 'object') push((item as { label?: unknown }).label);
+  }
+
+  return labels.slice(0, limit);
+}
+
+/**
+ * Batch-load top interest labels for a set of users (one query, no N+1) to
+ * seed matching-aware prompts. Only called when the matching-aware flag is on.
+ */
+export async function preloadRosterInterestLabels(
+  userIds: string[],
+): Promise<Map<string, string[]>> {
+  const cache = new Map<string, string[]>();
+  if (userIds.length === 0) return cache;
+
+  const rows = await db
+    .select({
+      userId: userInterests.userId,
+      selections: userInterests.selections,
+      topPriorities: userInterests.topPriorities,
+    })
+    .from(userInterests)
+    .where(inArray(userInterests.userId, userIds));
+
+  for (const row of rows) {
+    const labels = extractTopInterestLabels(row.selections, row.topPriorities);
+    if (labels.length > 0) cache.set(row.userId, labels);
+  }
+  return cache;
+}
+
 export async function listParticipants(
   socialSessionId: string,
   thresholdMs: number = PRESENCE_THRESHOLD_MS,
@@ -318,6 +757,24 @@ export async function listParticipants(
     .leftJoin(users, eq(socialIcebreakerParticipants.userId, users.id))
     .where(eq(socialIcebreakerParticipants.socialSessionId, socialSessionId));
 
+  // W5 (gm-debrief): matching-aware interest hooks, behind the kill switch.
+  // Flag off → no extra query and the participant projection is unchanged.
+  let interestLabelsByUser = new Map<string, string[]>();
+  if (rows.length > 0) {
+    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+    if (matchingAware) {
+      interestLabelsByUser = await preloadRosterInterestLabels(
+        rows.map((r: (typeof rows)[number]) => r.userId),
+      ).catch((error) => {
+        logger.warn('[SocialIcebreaker] roster interest preload failed; continuing without', {
+          socialSessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return new Map<string, string[]>();
+      });
+    }
+  }
+
   const cutoff = Date.now() - thresholdMs;
 
   return rows
@@ -325,16 +782,20 @@ export async function listParticipants(
       (left: (typeof rows)[number], right: (typeof rows)[number]) =>
         left.joinedAt.getTime() - right.joinedAt.getTime(),
     )
-    .map((participant: (typeof rows)[number]) => ({
-      userId: participant.userId,
-      displayName: participant.displayName,
-      joinedAt: participant.joinedAt.toISOString(),
-      lastSeenAt: participant.lastSeenAt.toISOString(),
-      isActive: participant.lastSeenAt.getTime() >= cutoff,
-      archetype: participant.archetype ?? undefined,
-      primaryArchetype: participant.primaryArchetype ?? undefined,
-      profile: participant.archetype ? buildParticipantProfile(participant) : null,
-    }));
+    .map((participant: (typeof rows)[number]) => {
+      const interests = interestLabelsByUser.get(participant.userId);
+      return {
+        userId: participant.userId,
+        displayName: participant.displayName,
+        joinedAt: participant.joinedAt.toISOString(),
+        lastSeenAt: participant.lastSeenAt.toISOString(),
+        isActive: participant.lastSeenAt.getTime() >= cutoff,
+        archetype: participant.archetype ?? undefined,
+        primaryArchetype: participant.primaryArchetype ?? undefined,
+        profile: participant.archetype ? buildParticipantProfile(participant) : null,
+        ...(interests ? { interests } : {}),
+      };
+    });
 }
 
 function buildParticipantProfile(row: Record<string, unknown>): NonNullable<SocialSessionParticipantSummary['profile']> {
@@ -526,11 +987,53 @@ export async function getMiniScriptSecrets(
 // TTL sweep (run periodically from route module)
 // ---------------------------------------------------------------------------
 
-/** Delete sessions whose expiresAt has passed. */
+/**
+ * W8 (AC-W8.1): tombstone sessions whose `expiresAt` has passed instead of
+ * hard-deleting them, so a post-sweep read reports `expired: true` (410) and a
+ * returning client is never silently given a fresh session. Tombstones older
+ * than `SESSION_EXPIRED_TOMBSTONE_RETENTION_MS` are purged (storage bound), and
+ * expired participants are deleted (presence is meaningless once expired).
+ *
+ * Idempotent: the marker guard makes re-running against an already-tombstoned
+ * row a no-op.
+ */
 export async function sweepExpiredSessions(): Promise<void> {
-  await db
-    .delete(socialIcebreakerSessions)
-    .where(lt(socialIcebreakerSessions.expiresAt, new Date()));
+  const now = new Date();
+  const retentionCutoff = new Date(now.getTime() - SESSION_EXPIRED_TOMBSTONE_RETENTION_MS);
+
+  await db.transaction(async (tx: any) => {
+    // 1) Tombstone expired live sessions (idempotent marker guard).
+    await tx
+      .update(socialIcebreakerSessions)
+      .set({ stateJson: { [SESSION_EXPIRED_MARKER]: true }, updatedAt: now })
+      .where(
+        and(
+          lt(socialIcebreakerSessions.expiresAt, now),
+          sql`${socialIcebreakerSessions.stateJson} ->> ${SESSION_EXPIRED_MARKER} IS DISTINCT FROM 'true'`,
+        ),
+      );
+
+    // 2) Drop presence rows for expired sessions (they can never be read again).
+    await tx.delete(socialIcebreakerParticipants).where(
+      inArray(
+        socialIcebreakerParticipants.socialSessionId,
+        tx
+          .select({ id: socialIcebreakerSessions.id })
+          .from(socialIcebreakerSessions)
+          .where(lt(socialIcebreakerSessions.expiresAt, now)),
+      ),
+    );
+
+    // 3) Purge tombstones past the retention window (cascade removes children).
+    await tx
+      .delete(socialIcebreakerSessions)
+      .where(
+        and(
+          lt(socialIcebreakerSessions.expiresAt, retentionCutoff),
+          sql`${socialIcebreakerSessions.stateJson} ->> ${SESSION_EXPIRED_MARKER} = 'true'`,
+        ),
+      );
+  });
 }
 
 // ---------------------------------------------------------------------------
