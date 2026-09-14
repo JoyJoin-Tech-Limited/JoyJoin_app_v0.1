@@ -12,6 +12,7 @@ export * from './adaptiveEngine';
 export * from './consistencyPairs';
 export * from './metaConsistency';
 export * from './traitShrinkage';
+export * from './responseSignalQuality';
 export * from './matcherV2';
 export { archetypeRegistry } from './archetypeRegistry';
 export type { ArchetypeRecord, ArchetypeProfile, ArchetypeNarrative, ArchetypeInsights, ArchetypeDisplayTokens, ArchetypeDisplay } from './archetypeRegistry';

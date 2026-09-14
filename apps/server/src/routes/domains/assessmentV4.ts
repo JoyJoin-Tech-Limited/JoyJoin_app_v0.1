@@ -9,12 +9,46 @@ import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
 import { restoreEngineState } from "../../lib/assessmentEngineState";
 import { annotateOptionsWithCommentary } from "@shared/personality";
+import { assessResponseSignalQuality } from "@shared/personality";
+import type { SignalQualityVerdict } from "@shared/personality";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { shellCache } from "../../lib/shellCache";
 import { buildDefaultPreferencesFromArchetype } from "../../lib/matchCompass";
+import {
+  assessmentV4StartBodySchema,
+  assessmentV4AnswerBodySchema,
+  assessmentV4SkipBodySchema,
+  assessmentV4PreSignupSyncBodySchema,
+  assessmentV4SessionParamsSchema,
+} from "@shared/api";
 import { db } from "../../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+
+/**
+ * Fail-closed request-shape rejection for Assessment V4 routes.
+ *
+ * Shape validation runs through the shared Zod schemas (`@shared/api`) before
+ * any DB or engine work, so malformed input is rejected with 400 +
+ * machine-readable `code`. Field-level `details` are dev-only — production
+ * responses never leak internal shapes.
+ */
+function sendInvalidAssessmentV4Input(
+  res: any,
+  context: string,
+  details: unknown,
+  meta: Record<string, unknown> = {},
+): void {
+  logger.warn(`[Assessment V4] ${context} rejected invalid request shape`, {
+    ...meta,
+    code: 'ASSESSMENT_V4_INVALID_INPUT',
+  });
+  res.status(400).json({
+    message: 'Invalid request',
+    code: 'ASSESSMENT_V4_INVALID_INPUT',
+    ...(process.env.NODE_ENV === 'development' ? { details } : {}),
+  });
+}
 
 /** Writes archetype-derived Match Compass default DNA for a user.
  *  Best-effort / non-blocking: failures are logged but do not interrupt onboarding.
@@ -86,6 +120,39 @@ function validateFinalResult(finalResult: any): { valid: boolean; primaryArchety
   return { valid: true, primaryArchetype: primary };
 }
 
+/**
+ * P5a signal-quality gate (advisory). Computes the pure, deterministic
+ * verdict over the session's answer history and returns the result payload
+ * with `signalQuality` attached. NEVER blocks or alters assignment: any
+ * failure degrades to the bare finalResult (field absent → clients treat as
+ * 'ok'). Logs a PII-free info line when quality is 'low' so retest-prompt
+ * volume is observable.
+ */
+function withSignalQuality<T extends object>(
+  finalResult: T,
+  answerHistory: Array<{ questionId: string; selectedOption: string }>,
+  sessionId: string,
+  logTag: string,
+): T & { signalQuality?: SignalQualityVerdict } {
+  try {
+    const signalQuality = assessResponseSignalQuality(answerHistory);
+    if (signalQuality.quality === 'low') {
+      logger.info(`${logTag} Low response signal quality`, {
+        sessionId,
+        score: signalQuality.score,
+        reasons: signalQuality.reasons,
+      });
+    }
+    return { ...finalResult, signalQuality };
+  } catch (error) {
+    logger.error(`${logTag} Signal-quality computation failed; serving result without it`, {
+      sessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return finalResult;
+  }
+}
+
 function shuffleOptions(options: any[]): any[] {
   const shuffled = [...options];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -103,7 +170,11 @@ function annotatedShuffleOptions(questionId: string, options: any[]): any[] {
 export function registerAssessmentV4Routes(app: Express): void {
   app.post('/api/assessment/v4/start', async (req: any, res) => {
     try {
-      const { preSignupAnswers, sessionId: existingSessionId, forceNew } = req.body;
+      const parsedBody = assessmentV4StartBodySchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        return sendInvalidAssessmentV4Input(res, 'Start', parsedBody.error.flatten());
+      }
+      const { preSignupAnswers, sessionId: existingSessionId, forceNew } = parsedBody.data;
       const userId = req.session?.userId || null;
       
       logger.info("[Assessment V4 Start] Called with", {
@@ -207,11 +278,17 @@ export function registerAssessmentV4Routes(app: Express): void {
           try {
             const userSecondaryData = (session.preSignupData as any)?.secondaryData ?? {};
             const { getFinalResult } = await import('@shared/personality');
-            const finalResult = getFinalResult(engineState, userSecondaryData);
-            const validation = validateFinalResult(finalResult);
+            const rawFinalResult = getFinalResult(engineState, userSecondaryData);
+            const validation = validateFinalResult(rawFinalResult);
             if (!validation.valid) {
-              finalResult.primaryArchetype = validation.primaryArchetype;
+              rawFinalResult.primaryArchetype = validation.primaryArchetype;
             }
+            const finalResult = withSignalQuality(
+              rawFinalResult,
+              engineState.questionHistory,
+              session.id,
+              '[V4 Start]',
+            );
 
             await storage.updateAssessmentSession(session.id, {
               phase: 'completed',
@@ -349,18 +426,23 @@ export function registerAssessmentV4Routes(app: Express): void {
   });
   app.post('/api/assessment/v4/:sessionId/answer', async (req: any, res) => {
     try {
-      const { sessionId } = req.params;
-      const { questionId, selectedOption } = req.body;
+      const parsedParams = assessmentV4SessionParamsSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        return sendInvalidAssessmentV4Input(res, 'Answer', parsedParams.error.flatten());
+      }
+      const { sessionId } = parsedParams.data;
+
+      const parsedBody = assessmentV4AnswerBodySchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        return sendInvalidAssessmentV4Input(res, 'Answer', parsedBody.error.flatten(), { sessionId });
+      }
+      const { questionId, selectedOption } = parsedBody.data;
       
       logger.info("[Assessment V4 Answer] Called with", {
         sessionId,
         questionId,
         selectedOption,
       });
-      
-      if (!questionId || !selectedOption) {
-        return res.status(400).json({ message: 'questionId and selectedOption are required' });
-      }
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
@@ -440,17 +522,23 @@ export function registerAssessmentV4Routes(app: Express): void {
         const userSecondaryData = (freshSession?.preSignupData as any)?.secondaryData ?? {};
 
         // Generate final result
-        const finalResult = getFinalResult(engineState, userSecondaryData);
-        const validation = validateFinalResult(finalResult);
+        const rawFinalResult = getFinalResult(engineState, userSecondaryData);
+        const validation = validateFinalResult(rawFinalResult);
         if (!validation.valid) {
           logger.error('[Assessment V4] finalResult validation failed', {
             sessionId,
             error: validation.error,
-            finalResult: JSON.stringify(finalResult),
+            finalResult: JSON.stringify(rawFinalResult),
           });
           // Fall back to live top match so the user still gets a result
-          finalResult.primaryArchetype = validation.primaryArchetype;
+          rawFinalResult.primaryArchetype = validation.primaryArchetype;
         }
+        const finalResult = withSignalQuality(
+          rawFinalResult,
+          engineState.questionHistory,
+          sessionId,
+          '[Assessment V4]',
+        );
 
         // Analytics: measure expectation mismatch between live top match and final result
         const liveTopArchetype = engineState.currentMatches[0]?.archetype;
@@ -640,9 +728,21 @@ export function registerAssessmentV4Routes(app: Express): void {
 
   app.put('/api/assessment/v4/:sessionId/answer', async (req: any, res) => {
     try {
-      const { sessionId } = req.params;
-      const { questionId, selectedOption } = req.body;
+      const parsedParams = assessmentV4SessionParamsSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        return sendInvalidAssessmentV4Input(res, 'PutAnswer', parsedParams.error.flatten());
+      }
+      const { sessionId } = parsedParams.data;
       const userId = req.session?.userId || null;
+
+      const parsedBody = assessmentV4AnswerBodySchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        return sendInvalidAssessmentV4Input(res, 'PutAnswer', parsedBody.error.flatten(), {
+          sessionId,
+          userId,
+        });
+      }
+      const { questionId, selectedOption } = parsedBody.data;
 
       logger.info('[Assessment V4 PutAnswer] Called with', {
         sessionId,
@@ -650,11 +750,6 @@ export function registerAssessmentV4Routes(app: Express): void {
         selectedOption,
         userId,
       });
-
-      if (!questionId || !selectedOption) {
-        logger.warn('[Assessment V4 PutAnswer] Missing fields', { sessionId, questionId, selectedOption, userId, code: 400 });
-        return res.status(400).json({ message: 'questionId and selectedOption are required' });
-      }
 
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
@@ -752,16 +847,22 @@ export function registerAssessmentV4Routes(app: Express): void {
       if (isComplete) {
         const freshSession = await storage.getAssessmentSession(sessionId);
         const userSecondaryData = (freshSession?.preSignupData as any)?.secondaryData ?? {};
-        const finalResult = getFinalResult(engineState, userSecondaryData);
-        const validation = validateFinalResult(finalResult);
+        const rawFinalResult = getFinalResult(engineState, userSecondaryData);
+        const validation = validateFinalResult(rawFinalResult);
         if (!validation.valid) {
           logger.error('[Assessment V4] finalResult validation failed', {
             sessionId,
             error: validation.error,
-            finalResult: JSON.stringify(finalResult),
+            finalResult: JSON.stringify(rawFinalResult),
           });
-          finalResult.primaryArchetype = validation.primaryArchetype;
+          rawFinalResult.primaryArchetype = validation.primaryArchetype;
         }
+        const finalResult = withSignalQuality(
+          rawFinalResult,
+          engineState.questionHistory,
+          sessionId,
+          '[Assessment V4 PutAnswer]',
+        );
 
         // Analytics: measure expectation mismatch between live top match and final result
         const liveTopArchetype = engineState.currentMatches[0]?.archetype;
@@ -911,17 +1012,22 @@ export function registerAssessmentV4Routes(app: Express): void {
 
   app.post('/api/assessment/v4/:sessionId/skip', async (req: any, res) => {
     try {
-      const { sessionId } = req.params;
-      const { questionId } = req.body;
+      const parsedParams = assessmentV4SessionParamsSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        return sendInvalidAssessmentV4Input(res, 'Skip', parsedParams.error.flatten());
+      }
+      const { sessionId } = parsedParams.data;
+
+      const parsedBody = assessmentV4SkipBodySchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        return sendInvalidAssessmentV4Input(res, 'Skip', parsedBody.error.flatten(), { sessionId });
+      }
+      const { questionId } = parsedBody.data;
       
       logger.info("[Assessment V4 Skip] Called with", {
         sessionId,
         questionId,
       });
-      
-      if (!questionId) {
-        return res.status(400).json({ message: 'questionId is required' });
-      }
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
@@ -999,7 +1105,11 @@ export function registerAssessmentV4Routes(app: Express): void {
   });
   app.get('/api/assessment/v4/:sessionId/result', async (req: any, res) => {
     try {
-      const { sessionId } = req.params;
+      const parsedParams = assessmentV4SessionParamsSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        return sendInvalidAssessmentV4Input(res, 'Result', parsedParams.error.flatten());
+      }
+      const { sessionId } = parsedParams.data;
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
@@ -1018,11 +1128,25 @@ export function registerAssessmentV4Routes(app: Express): void {
         });
         return res.status(500).json({ message: 'Result data is incomplete. Please retake the assessment.' });
       }
-      
+
+      // P5a: sessions completed before the signal-quality gate shipped have
+      // no persisted verdict — compute it on read from the stored answers.
+      // Read-only: never re-persists on a GET.
+      let resultPayload = session.finalResult as Record<string, any>;
+      if (!resultPayload.signalQuality) {
+        const storedAnswers = await storage.getAssessmentAnswers(sessionId);
+        resultPayload = withSignalQuality(
+          resultPayload,
+          storedAnswers.map((a: any) => ({ questionId: a.questionId, selectedOption: a.selectedOption })),
+          sessionId,
+          '[Assessment V4 Result]',
+        );
+      }
+
       res.json({
         sessionId: session.id,
         completedAt: session.completedAt,
-        result: session.finalResult,
+        result: resultPayload,
         traitConfidences: session.traitConfidences,
         topArchetypes: session.topArchetypes,
       });
@@ -1033,7 +1157,11 @@ export function registerAssessmentV4Routes(app: Express): void {
   });
   app.post('/api/assessment/v4/:sessionId/link-user', requireAuth, async (req: any, res) => {
     try {
-      const { sessionId } = req.params;
+      const parsedParams = assessmentV4SessionParamsSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        return sendInvalidAssessmentV4Input(res, 'Link', parsedParams.error.flatten());
+      }
+      const { sessionId } = parsedParams.data;
       const userId = getAuthenticatedUserId(req) as string;
       
       logger.info("[Assessment V4 Link] Called with", {
@@ -1137,10 +1265,16 @@ export function registerAssessmentV4Routes(app: Express): void {
         return res.status(401).json({ message: 'Unauthorized - must be logged in' });
       }
 
-      const { preSignupAnswers } = req.body;
-      if (!preSignupAnswers || !Array.isArray(preSignupAnswers) || preSignupAnswers.length === 0) {
-        return res.status(400).json({ message: 'No pre-signup answers provided' });
+      const parsedBody = assessmentV4PreSignupSyncBodySchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        return sendInvalidAssessmentV4Input(
+          res,
+          'Presignup Sync',
+          parsedBody.error.flatten(),
+          { userId },
+        );
       }
+      const { preSignupAnswers } = parsedBody.data;
 
       logger.info('[Presignup Sync] Syncing answers for user', { count: preSignupAnswers.length, userId });
 

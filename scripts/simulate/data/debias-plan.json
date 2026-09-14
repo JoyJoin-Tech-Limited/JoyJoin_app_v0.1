@@ -1,0 +1,5252 @@
+{
+  "generatedAt": "2026-09-14T13:11:50.828Z",
+  "applied": true,
+  "stats": {
+    "questionsTouched": 145,
+    "optionsChanged": 566,
+    "traitCells": 694,
+    "exactZero": 694,
+    "totalDistortion": 1193.2,
+    "residualCells": []
+  },
+  "modules": {
+    "L1": {
+      "file": "questionsV4L1.ts",
+      "optionsChanged": 61,
+      "changes": [
+        {
+          "question": "Q1",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -2,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q1",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q1",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": 0,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q1",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q2",
+          "option": "A",
+          "set": {
+            "C": -2,
+            "E": -1,
+            "O": 2,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q2",
+          "option": "B",
+          "set": {
+            "C": 4,
+            "E": -1,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q2",
+          "option": "C",
+          "set": {
+            "C": -2,
+            "E": -1,
+            "O": 2,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q2",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": 3,
+            "O": -2,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q3",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q3",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 3,
+            "E": 4,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q3",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": 0,
+            "E": 0,
+            "O": 0,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q3",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -3,
+            "X": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q4",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "O": 1,
+            "X": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q4",
+          "option": "B",
+          "set": {
+            "C": 3,
+            "E": -2,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q4",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": 1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q4",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q5",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": -2
+          }
+        },
+        {
+          "question": "Q5",
+          "option": "B",
+          "set": {
+            "A": 4,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q5",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "E": 3,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q5",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q6",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "E": 0,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q6",
+          "option": "B",
+          "set": {
+            "E": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q6",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q6",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q9",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": -2,
+            "E": -1,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q9",
+          "option": "B",
+          "set": {
+            "O": -1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q9",
+          "option": "C",
+          "set": {
+            "E": -1,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q9",
+          "option": "D",
+          "set": {
+            "E": 0,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q10",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "E": -3
+          }
+        },
+        {
+          "question": "Q10",
+          "option": "B",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "E": 1
+          }
+        },
+        {
+          "question": "Q10",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q10",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q11",
+          "option": "A",
+          "set": {
+            "E": -2,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q11",
+          "option": "B",
+          "set": {
+            "E": 1,
+            "X": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q11",
+          "option": "C",
+          "set": {
+            "E": 1,
+            "X": -3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q11",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q12",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q12",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": 4,
+            "E": -1,
+            "O": -1,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q12",
+          "option": "C",
+          "set": {
+            "C": -2,
+            "E": 1,
+            "O": -1,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q12",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "O": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q13",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -1,
+            "O": -1,
+            "X": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q13",
+          "option": "B",
+          "set": {
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q13",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q13",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q14",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": 3,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q14",
+          "option": "B",
+          "set": {
+            "C": 2,
+            "E": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q14",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": 1
+          }
+        },
+        {
+          "question": "Q14",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q7",
+          "option": "A",
+          "set": {
+            "A": 4,
+            "C": 1,
+            "E": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q7",
+          "option": "B",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": -1,
+            "O": 1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q7",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": 1,
+            "E": 3,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q7",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": 0,
+            "O": -3
+          }
+        },
+        {
+          "question": "Q7",
+          "option": "E",
+          "set": {
+            "A": 1,
+            "C": 0,
+            "E": -1,
+            "O": 4
+          }
+        },
+        {
+          "question": "Q15",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "X": 2,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q15",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q15",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": 3,
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q15",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q8",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q8",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q8",
+          "option": "C",
+          "set": {
+            "A": -2,
+            "C": 3,
+            "E": 0,
+            "O": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q8",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": 0,
+            "X": -2,
+            "P": -1
+          }
+        }
+      ]
+    },
+    "L2": {
+      "file": "questionsV4L2.ts",
+      "optionsChanged": 159,
+      "changes": [
+        {
+          "question": "Q16",
+          "option": "A",
+          "set": {
+            "A": 4,
+            "C": -1,
+            "E": 0,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q16",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 4,
+            "E": 3,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q16",
+          "option": "C",
+          "set": {
+            "A": 1,
+            "C": -1,
+            "E": -1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q16",
+          "option": "D",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "E": -1,
+            "X": -1,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q16",
+          "option": "E",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -1,
+            "O": 0,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q17",
+          "option": "A",
+          "set": {
+            "C": -2,
+            "E": -1,
+            "O": 0,
+            "X": 4,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q17",
+          "option": "B",
+          "set": {
+            "E": -1,
+            "O": 2
+          }
+        },
+        {
+          "question": "Q17",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q17",
+          "option": "D",
+          "set": {
+            "O": -1
+          }
+        },
+        {
+          "question": "Q18",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "E": 1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q18",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": -2,
+            "E": -2,
+            "X": 4
+          }
+        },
+        {
+          "question": "Q18",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q18",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 1
+          }
+        },
+        {
+          "question": "Q19",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "E": -1,
+            "X": 2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q19",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "C": -1,
+            "E": -1,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q19",
+          "option": "C",
+          "set": {
+            "A": 1,
+            "C": 0,
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q19",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q20",
+          "option": "A",
+          "set": {
+            "C": 1,
+            "E": -1,
+            "O": 0,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q20",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q20",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "E": 0,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q20",
+          "option": "D",
+          "set": {
+            "A": -4,
+            "C": 1,
+            "E": -1,
+            "X": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q20",
+          "option": "E",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q21",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "E": -1,
+            "O": 4,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q21",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": 2,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q21",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": -1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q21",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "O": -2,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q21_v1",
+          "option": "A",
+          "set": {
+            "A": -3,
+            "C": 0,
+            "E": -1,
+            "O": 1,
+            "X": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q21_v1",
+          "option": "B",
+          "set": {
+            "A": 4,
+            "C": -1,
+            "E": -1,
+            "O": 1
+          }
+        },
+        {
+          "question": "Q21_v1",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q21_v1",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": 2,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q22",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q22",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "E": 0,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q22",
+          "option": "C",
+          "set": {
+            "A": 1,
+            "C": 0,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q22_v1",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": 0,
+            "E": -1,
+            "O": 3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q22_v1",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": 0,
+            "O": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q22_v1",
+          "option": "C",
+          "set": {
+            "E": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q22_v1",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "O": -2,
+            "X": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q23",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q23",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q23",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q23",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q23_v1",
+          "option": "A",
+          "set": {
+            "A": 2,
+            "C": -1,
+            "E": -1,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q23_v1",
+          "option": "B",
+          "set": {
+            "A": -2,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q23_v1",
+          "option": "C",
+          "set": {
+            "A": 1,
+            "C": -3,
+            "E": 1,
+            "O": 2
+          }
+        },
+        {
+          "question": "Q23_v1",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": 1,
+            "E": 1
+          }
+        },
+        {
+          "question": "Q24",
+          "option": "A",
+          "set": {
+            "A": 2,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q24",
+          "option": "B",
+          "set": {
+            "E": -1
+          }
+        },
+        {
+          "question": "Q24",
+          "option": "D",
+          "set": {
+            "C": -3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q25",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q25",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q25",
+          "option": "C",
+          "set": {
+            "A": 2,
+            "C": -1,
+            "E": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q25",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 3,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q26",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q26",
+          "option": "B",
+          "set": {
+            "C": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q26",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": 1,
+            "O": 4
+          }
+        },
+        {
+          "question": "Q26",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": -2,
+            "E": 0,
+            "O": -2,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q26",
+          "option": "E",
+          "set": {
+            "A": 1,
+            "C": 0,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q27",
+          "option": "A",
+          "set": {
+            "C": -3,
+            "O": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q27",
+          "option": "B",
+          "set": {
+            "O": -2
+          }
+        },
+        {
+          "question": "Q27",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q27",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": 0,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q28",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -3
+          }
+        },
+        {
+          "question": "Q28",
+          "option": "B",
+          "set": {
+            "C": -1
+          }
+        },
+        {
+          "question": "Q28",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q28",
+          "option": "D",
+          "set": {
+            "C": 3
+          }
+        },
+        {
+          "question": "Q29",
+          "option": "A",
+          "set": {
+            "A": 2,
+            "E": -1,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q29",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": -2,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q29",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "E": 3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q29",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "X": -3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q30",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": 4,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q30",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q30",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q30",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": 1,
+            "X": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q31",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": -1,
+            "X": 4,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q31",
+          "option": "B",
+          "set": {
+            "A": 4,
+            "C": 0,
+            "E": 0,
+            "O": -1,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q31",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": 2,
+            "E": -1,
+            "O": 0,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q31",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 2,
+            "O": -1,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q32",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": -2,
+            "O": 0,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q32",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": 0,
+            "X": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q32",
+          "option": "C",
+          "set": {
+            "E": 0,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q32",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "X": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q33",
+          "option": "A",
+          "set": {
+            "A": 1,
+            "C": -1,
+            "E": 2,
+            "X": -2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q33",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q33",
+          "option": "C",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "E": -3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q33",
+          "option": "D",
+          "set": {
+            "E": 1,
+            "O": 0,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q34",
+          "option": "A",
+          "set": {
+            "A": 1,
+            "C": -1,
+            "E": -1,
+            "O": 1,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q34",
+          "option": "B",
+          "set": {
+            "C": 2,
+            "E": -1,
+            "O": 2
+          }
+        },
+        {
+          "question": "Q34",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q34",
+          "option": "D",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "E": 0,
+            "O": -2,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q34",
+          "option": "E",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q35",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -4,
+            "O": -2,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q35",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": 1,
+            "O": 3,
+            "X": 2
+          }
+        },
+        {
+          "question": "Q35",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q35",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q36",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -1,
+            "O": 2
+          }
+        },
+        {
+          "question": "Q36",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 2,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q36",
+          "option": "C",
+          "set": {
+            "A": 2,
+            "C": -1,
+            "E": -1,
+            "O": 0,
+            "X": 2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q36",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q37",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "O": 0,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q37",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q37",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "X": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q37",
+          "option": "D",
+          "set": {
+            "A": -3,
+            "C": 0,
+            "X": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q37",
+          "option": "E",
+          "set": {
+            "A": 1,
+            "C": -1,
+            "X": -1,
+            "P": 4
+          }
+        },
+        {
+          "question": "Q38",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "E": -3,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q38",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q38",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": 0,
+            "E": 0,
+            "O": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q38",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 2,
+            "X": -3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q39",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q39",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 2,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q39",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": 0,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q39",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "X": -3
+          }
+        },
+        {
+          "question": "Q40",
+          "option": "A",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q40",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 1,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q40",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "E": -1,
+            "X": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q40",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "E": 1,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q41",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "E": -1,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q41",
+          "option": "B",
+          "set": {
+            "A": 3,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q41",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q41",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "O": -1,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q42",
+          "option": "A",
+          "set": {
+            "A": 2,
+            "C": 0,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q42",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "C": 3,
+            "X": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q42",
+          "option": "C",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q42",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": -1,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q43",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": -2,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q43",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": 1,
+            "E": 0,
+            "X": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q43",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "X": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q43",
+          "option": "D",
+          "set": {
+            "A": 1,
+            "C": 0,
+            "E": -1,
+            "O": 0,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q44",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "X": 2
+          }
+        },
+        {
+          "question": "Q44",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "C": 0
+          }
+        },
+        {
+          "question": "Q44",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -1
+          }
+        },
+        {
+          "question": "Q44",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": 2
+          }
+        },
+        {
+          "question": "Q45",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": 2,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q45",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "E": -1,
+            "O": 4
+          }
+        },
+        {
+          "question": "Q45",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "E": -1,
+            "O": -1,
+            "X": 2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q45",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q46",
+          "option": "A",
+          "set": {
+            "O": 0
+          }
+        },
+        {
+          "question": "Q46",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q46",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q46",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q47",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "E": -2,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q47",
+          "option": "B",
+          "set": {
+            "A": 2,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q47",
+          "option": "C",
+          "set": {
+            "A": -2,
+            "E": 3
+          }
+        },
+        {
+          "question": "Q47",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q48",
+          "option": "A",
+          "set": {
+            "C": -2,
+            "O": 1
+          }
+        },
+        {
+          "question": "Q48",
+          "option": "B",
+          "set": {
+            "O": 2,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q48",
+          "option": "C",
+          "set": {
+            "E": -2,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q48",
+          "option": "D",
+          "set": {
+            "O": -3
+          }
+        },
+        {
+          "question": "Q49",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": -2,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q49",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 4,
+            "E": 0,
+            "O": -1,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q49",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "E": 0,
+            "O": -1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q49",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "O": -1,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q50",
+          "option": "A",
+          "set": {
+            "A": 0
+          }
+        },
+        {
+          "question": "Q50",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": -2
+          }
+        },
+        {
+          "question": "Q50",
+          "option": "C",
+          "set": {
+            "A": 2
+          }
+        },
+        {
+          "question": "Q50",
+          "option": "D",
+          "set": {
+            "A": -1
+          }
+        },
+        {
+          "question": "Q51_PureX",
+          "option": "D",
+          "set": {
+            "X": -3
+          }
+        },
+        {
+          "question": "Q52_PureO",
+          "option": "D",
+          "set": {
+            "O": -3
+          }
+        },
+        {
+          "question": "Q53_PureC",
+          "option": "D",
+          "set": {
+            "C": -3
+          }
+        },
+        {
+          "question": "Q54_PureP",
+          "option": "D",
+          "set": {
+            "P": -3
+          }
+        }
+      ]
+    },
+    "Extended": {
+      "file": "questionsV4Extended.ts",
+      "optionsChanged": 121,
+      "changes": [
+        {
+          "question": "Q78",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -1,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q78",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q78",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q78",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q79",
+          "option": "A",
+          "set": {
+            "C": -3,
+            "E": -1,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q79",
+          "option": "B",
+          "set": {
+            "C": 1,
+            "O": 0,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q79",
+          "option": "C",
+          "set": {
+            "C": 1,
+            "E": -1,
+            "O": -2,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q79",
+          "option": "D",
+          "set": {
+            "C": 1,
+            "O": -2,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q80",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": -1,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q80",
+          "option": "B",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q80",
+          "option": "C",
+          "set": {
+            "A": 1,
+            "C": 3,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q80",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q81",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "X": 3,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q81",
+          "option": "B",
+          "set": {
+            "E": 0
+          }
+        },
+        {
+          "question": "Q81",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "E": 1
+          }
+        },
+        {
+          "question": "Q81",
+          "option": "D",
+          "set": {
+            "A": -4,
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q82",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "E": -1,
+            "P": 4
+          }
+        },
+        {
+          "question": "Q82",
+          "option": "B",
+          "set": {
+            "P": 0
+          }
+        },
+        {
+          "question": "Q82",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "O": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q82",
+          "option": "D",
+          "set": {
+            "E": -1,
+            "O": -1,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q83",
+          "option": "A",
+          "set": {
+            "E": 3,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q83",
+          "option": "B",
+          "set": {
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q83",
+          "option": "C",
+          "set": {
+            "E": -1,
+            "O": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q83",
+          "option": "D",
+          "set": {
+            "E": -2,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q51",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q51",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q51",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q51",
+          "option": "D",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "E": 3,
+            "O": -3,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q51",
+          "option": "E",
+          "set": {
+            "C": 4,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q52",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q52",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q52",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q52",
+          "option": "D",
+          "set": {
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q53",
+          "option": "A",
+          "set": {
+            "C": -2,
+            "E": -2,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q53",
+          "option": "B",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q53",
+          "option": "C",
+          "set": {
+            "C": 2,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q53",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": 3,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q54",
+          "option": "A",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "E": 0,
+            "X": 3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q54",
+          "option": "B",
+          "set": {
+            "C": 0,
+            "E": -2,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q54",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 3,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q54",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": -2,
+            "E": 0,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q55",
+          "option": "A",
+          "set": {
+            "E": -2,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q55",
+          "option": "B",
+          "set": {
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q55",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q55",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "X": -3
+          }
+        },
+        {
+          "question": "Q56",
+          "option": "A",
+          "set": {
+            "C": -1
+          }
+        },
+        {
+          "question": "Q56",
+          "option": "B",
+          "set": {
+            "C": 4
+          }
+        },
+        {
+          "question": "Q56",
+          "option": "C",
+          "set": {
+            "C": -1
+          }
+        },
+        {
+          "question": "Q56",
+          "option": "D",
+          "set": {
+            "A": -4,
+            "C": -1,
+            "E": 0,
+            "X": -3,
+            "P": -4
+          }
+        },
+        {
+          "question": "Q56",
+          "option": "E",
+          "set": {
+            "C": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q57",
+          "option": "A",
+          "set": {
+            "E": -1
+          }
+        },
+        {
+          "question": "Q57",
+          "option": "B",
+          "set": {
+            "E": -1
+          }
+        },
+        {
+          "question": "Q57",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q57",
+          "option": "D",
+          "set": {
+            "A": -4,
+            "E": 0,
+            "X": -3,
+            "P": -4
+          }
+        },
+        {
+          "question": "Q58",
+          "option": "C",
+          "set": {
+            "X": 0
+          }
+        },
+        {
+          "question": "Q58",
+          "option": "D",
+          "set": {
+            "P": -2
+          }
+        },
+        {
+          "question": "Q59",
+          "option": "A",
+          "set": {
+            "E": -1
+          }
+        },
+        {
+          "question": "Q59",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "O": 0,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q59",
+          "option": "C",
+          "set": {
+            "E": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q59",
+          "option": "D",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "E": 1,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q60",
+          "option": "A",
+          "set": {
+            "A": 5,
+            "C": -1,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q60",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q60",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -1,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q60",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": 5,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q60",
+          "option": "E",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": 1,
+            "O": -3,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q60",
+          "option": "F",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 2
+          }
+        },
+        {
+          "question": "Q61",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "X": -3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q61",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q61",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": 0,
+            "X": 4
+          }
+        },
+        {
+          "question": "Q61",
+          "option": "D",
+          "set": {
+            "C": 3,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q62",
+          "option": "A",
+          "set": {
+            "A": 0
+          }
+        },
+        {
+          "question": "Q62",
+          "option": "B",
+          "set": {
+            "A": 2,
+            "C": 0,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q62",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "E": -1,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q62",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q63",
+          "option": "A",
+          "set": {
+            "E": 4,
+            "X": 2,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q63",
+          "option": "B",
+          "set": {
+            "E": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q63",
+          "option": "C",
+          "set": {
+            "E": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q63",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": -3,
+            "O": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q64",
+          "option": "A",
+          "set": {
+            "P": 2
+          }
+        },
+        {
+          "question": "Q64",
+          "option": "B",
+          "set": {
+            "C": 0
+          }
+        },
+        {
+          "question": "Q64",
+          "option": "C",
+          "set": {
+            "C": -1
+          }
+        },
+        {
+          "question": "Q64",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "E": -3,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q65",
+          "option": "A",
+          "set": {
+            "C": 0,
+            "O": 0,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q65",
+          "option": "B",
+          "set": {
+            "E": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q65",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q65",
+          "option": "D",
+          "set": {
+            "E": -3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q66",
+          "option": "A",
+          "set": {
+            "A": 4,
+            "C": -1,
+            "E": -3
+          }
+        },
+        {
+          "question": "Q66",
+          "option": "B",
+          "set": {
+            "A": -2,
+            "C": 1
+          }
+        },
+        {
+          "question": "Q66",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q66",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": 2
+          }
+        },
+        {
+          "question": "Q67",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q67",
+          "option": "B",
+          "set": {
+            "E": 1
+          }
+        },
+        {
+          "question": "Q67",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q67",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q68",
+          "option": "A",
+          "set": {
+            "A": 3,
+            "C": -2,
+            "O": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q68",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 4,
+            "E": 0,
+            "O": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q68",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "O": 1
+          }
+        },
+        {
+          "question": "Q68",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "O": 2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q70",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -2
+          }
+        },
+        {
+          "question": "Q70",
+          "option": "B",
+          "set": {
+            "E": 0,
+            "O": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q70",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": 1,
+            "O": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q70",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": 1,
+            "O": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q71",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "E": -1,
+            "X": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q71",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": -2,
+            "P": 4
+          }
+        },
+        {
+          "question": "Q71",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q71",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q72",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -2,
+            "O": 0,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q72",
+          "option": "B",
+          "set": {
+            "E": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q72",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "E": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q72",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "E": 1,
+            "X": -3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q73",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -2,
+            "P": 4
+          }
+        },
+        {
+          "question": "Q73",
+          "option": "B",
+          "set": {
+            "E": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q73",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": 1,
+            "O": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q73",
+          "option": "D",
+          "set": {
+            "E": 1,
+            "X": -3,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q74",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": 3,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q74",
+          "option": "B",
+          "set": {
+            "C": 0,
+            "E": -2,
+            "O": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q74",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "O": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q74",
+          "option": "D",
+          "set": {
+            "E": 0,
+            "O": -2,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q151",
+          "option": "A",
+          "set": {
+            "E": 3
+          }
+        },
+        {
+          "question": "Q166",
+          "option": "D",
+          "set": {
+            "C": -3
+          }
+        },
+        {
+          "question": "Q167",
+          "option": "D",
+          "set": {
+            "O": -3
+          }
+        }
+      ]
+    },
+    "Advanced": {
+      "file": "questionsV4Advanced.ts",
+      "optionsChanged": 88,
+      "changes": [
+        {
+          "question": "Q75",
+          "option": "A",
+          "set": {
+            "C": -2,
+            "E": -1,
+            "O": 4,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q75",
+          "option": "B",
+          "set": {
+            "C": 2,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q75",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q75",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": 0,
+            "O": -3
+          }
+        },
+        {
+          "question": "Q76",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "O": 4
+          }
+        },
+        {
+          "question": "Q76",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q76",
+          "option": "C",
+          "set": {
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q76",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "O": -3
+          }
+        },
+        {
+          "question": "Q77",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": 2
+          }
+        },
+        {
+          "question": "Q77",
+          "option": "B",
+          "set": {
+            "C": 1,
+            "E": -1,
+            "O": 1,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q77",
+          "option": "C",
+          "set": {
+            "C": 1,
+            "E": 0,
+            "O": -1,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q77",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q84",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q84",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": 3,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q84",
+          "option": "C",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": -1,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q84",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1
+          }
+        },
+        {
+          "question": "Q85",
+          "option": "A",
+          "set": {
+            "E": -3,
+            "X": 3,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q85",
+          "option": "B",
+          "set": {
+            "E": 1,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q85",
+          "option": "C",
+          "set": {
+            "E": 4,
+            "X": -3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q85",
+          "option": "D",
+          "set": {
+            "C": -2,
+            "E": -2,
+            "O": 0,
+            "X": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q86",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q86",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q86",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": -1,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q86",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "E": -1,
+            "P": 4
+          }
+        },
+        {
+          "question": "Q87",
+          "option": "A",
+          "set": {
+            "E": 0,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q87",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": -3,
+            "E": -1,
+            "O": 4,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q87",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "O": 1
+          }
+        },
+        {
+          "question": "Q87",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "O": -3
+          }
+        },
+        {
+          "question": "Q88",
+          "option": "A",
+          "set": {
+            "E": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q88",
+          "option": "B",
+          "set": {
+            "A": -2,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q88",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 0
+          }
+        },
+        {
+          "question": "Q88",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "X": -4
+          }
+        },
+        {
+          "question": "Q89",
+          "option": "A",
+          "set": {
+            "P": 4
+          }
+        },
+        {
+          "question": "Q89",
+          "option": "B",
+          "set": {
+            "P": -2
+          }
+        },
+        {
+          "question": "Q89",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q89",
+          "option": "D",
+          "set": {
+            "E": -3,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q90",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": -2,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q90",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "C": 1,
+            "E": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q90",
+          "option": "C",
+          "set": {
+            "A": 1,
+            "C": 1,
+            "E": 1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q90",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "X": -3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q91",
+          "option": "A",
+          "set": {
+            "O": -3
+          }
+        },
+        {
+          "question": "Q91",
+          "option": "B",
+          "set": {
+            "O": 2
+          }
+        },
+        {
+          "question": "Q91",
+          "option": "C",
+          "set": {
+            "O": 0,
+            "X": 2
+          }
+        },
+        {
+          "question": "Q91",
+          "option": "D",
+          "set": {
+            "O": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q92",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": -2,
+            "X": 3,
+            "P": 4
+          }
+        },
+        {
+          "question": "Q92",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "E": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q92",
+          "option": "C",
+          "set": {
+            "A": -2,
+            "C": 4,
+            "E": 0,
+            "O": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q92",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": 1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q93",
+          "option": "A",
+          "set": {
+            "A": 4,
+            "C": -2,
+            "E": 0,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q93",
+          "option": "B",
+          "set": {
+            "A": -2,
+            "C": 2,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q93",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q93",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q94",
+          "option": "A",
+          "set": {
+            "C": 1,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q94",
+          "option": "B",
+          "set": {
+            "C": 2,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q94",
+          "option": "C",
+          "set": {
+            "C": -3,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q94",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "O": -1,
+            "X": 2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q95",
+          "option": "A",
+          "set": {
+            "E": -1,
+            "O": 2,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q95",
+          "option": "B",
+          "set": {
+            "E": 2,
+            "O": -3
+          }
+        },
+        {
+          "question": "Q95",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": -3,
+            "O": 2
+          }
+        },
+        {
+          "question": "Q95",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "E": 2,
+            "O": -1,
+            "X": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q96",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": 2,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q96",
+          "option": "B",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "O": -2,
+            "X": 2
+          }
+        },
+        {
+          "question": "Q96",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "O": 0,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q96",
+          "option": "D",
+          "set": {
+            "C": 1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q97",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "X": 2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q97",
+          "option": "B",
+          "set": {
+            "X": -2
+          }
+        },
+        {
+          "question": "Q97",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "X": 2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q97",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "X": -2,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q98",
+          "option": "A",
+          "set": {
+            "O": -2,
+            "X": 2
+          }
+        },
+        {
+          "question": "Q98",
+          "option": "B",
+          "set": {
+            "O": 2,
+            "X": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q98",
+          "option": "C",
+          "set": {
+            "O": 1,
+            "X": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q98",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "E": 0,
+            "O": -1,
+            "X": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q99",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "C": -2,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q99",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "E": 1,
+            "O": 0,
+            "X": 0
+          }
+        },
+        {
+          "question": "Q99",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "E": 0,
+            "X": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q99",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": 2,
+            "E": -1,
+            "X": 2
+          }
+        },
+        {
+          "question": "Q100",
+          "option": "A",
+          "set": {
+            "C": -2,
+            "O": -1,
+            "X": 2,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q100",
+          "option": "B",
+          "set": {
+            "C": 3,
+            "O": 1,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q100",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "O": 0,
+            "X": 1,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q100",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "O": 0,
+            "X": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q101",
+          "option": "A",
+          "set": {
+            "C": -3,
+            "E": -1,
+            "O": 1
+          }
+        },
+        {
+          "question": "Q101",
+          "option": "B",
+          "set": {
+            "C": 2,
+            "E": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q101",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -1,
+            "O": 0,
+            "X": 4
+          }
+        },
+        {
+          "question": "Q101",
+          "option": "D",
+          "set": {
+            "C": 2,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q102",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q102",
+          "option": "B",
+          "set": {
+            "C": 2,
+            "E": 0,
+            "X": 1,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q102",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": 3,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q102",
+          "option": "D",
+          "set": {
+            "C": -1,
+            "E": -3,
+            "X": 1
+          }
+        }
+      ]
+    },
+    "Attractor": {
+      "file": "questionsV4Attractor.ts",
+      "optionsChanged": 137,
+      "changes": [
+        {
+          "question": "Q103",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "O": 3,
+            "X": -4,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q103",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "X": 3,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q103",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "X": 3,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q103",
+          "option": "D",
+          "set": {
+            "E": 0,
+            "O": -1,
+            "X": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q104",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "O": 3,
+            "X": -4,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q104",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "O": -2,
+            "X": 3,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q104",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": 0,
+            "O": 1,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q104",
+          "option": "D",
+          "set": {
+            "O": -2,
+            "X": 2,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q105",
+          "option": "A",
+          "set": {
+            "X": -4,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q105",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "O": -3,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q105",
+          "option": "C",
+          "set": {
+            "O": -2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q105",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "E": 0,
+            "O": 1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q106",
+          "option": "A",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "O": 3,
+            "X": -3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q106",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q106",
+          "option": "C",
+          "set": {
+            "E": 0,
+            "O": -3
+          }
+        },
+        {
+          "question": "Q106",
+          "option": "D",
+          "set": {
+            "C": -2,
+            "O": 1
+          }
+        },
+        {
+          "question": "Q107",
+          "option": "A",
+          "set": {
+            "C": 0,
+            "X": 5,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q107",
+          "option": "B",
+          "set": {
+            "C": 0,
+            "E": 3,
+            "X": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q107",
+          "option": "C",
+          "set": {
+            "C": 0,
+            "O": 1,
+            "X": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q107",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "O": 1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q108",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "O": -2,
+            "X": -1
+          }
+        },
+        {
+          "question": "Q108",
+          "option": "B",
+          "set": {
+            "E": -1,
+            "O": -2,
+            "X": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q108",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "E": -2,
+            "O": 1,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q108",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": 0,
+            "E": -1
+          }
+        },
+        {
+          "question": "Q109",
+          "option": "A",
+          "set": {
+            "C": 0,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q109",
+          "option": "B",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q109",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "X": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q109",
+          "option": "D",
+          "set": {
+            "A": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q110",
+          "option": "A",
+          "set": {
+            "O": -2,
+            "X": -3,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q110",
+          "option": "B",
+          "set": {
+            "C": -2,
+            "E": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q110",
+          "option": "C",
+          "set": {
+            "O": 1,
+            "X": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q110",
+          "option": "D",
+          "set": {
+            "O": 1,
+            "X": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q111",
+          "option": "A",
+          "set": {
+            "E": 0,
+            "O": -1,
+            "X": -3,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q111",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "O": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q111",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "O": 0,
+            "X": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q111",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "O": 2,
+            "X": -2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q112",
+          "option": "A",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "E": -1,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q112",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q112",
+          "option": "C",
+          "set": {
+            "A": -3,
+            "C": 3,
+            "E": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q112",
+          "option": "D",
+          "set": {
+            "A": 1,
+            "C": -1,
+            "E": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q113",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": -1,
+            "E": 3,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q113",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "E": -3
+          }
+        },
+        {
+          "question": "Q113",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "E": -1,
+            "O": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q113",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "E": 1,
+            "X": -3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q114",
+          "option": "A",
+          "set": {
+            "A": -3,
+            "E": 3
+          }
+        },
+        {
+          "question": "Q114",
+          "option": "B",
+          "set": {
+            "E": 0,
+            "X": -4,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q114",
+          "option": "C",
+          "set": {
+            "C": 4,
+            "E": -1,
+            "O": 2,
+            "X": -1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q114",
+          "option": "D",
+          "set": {
+            "E": -2,
+            "X": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q115",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "E": -4,
+            "O": 5
+          }
+        },
+        {
+          "question": "Q115",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 3,
+            "O": -3
+          }
+        },
+        {
+          "question": "Q115",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "E": 0,
+            "O": -1,
+            "X": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q115",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q116",
+          "option": "A",
+          "set": {
+            "A": -1,
+            "E": -2,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q116",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 3,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q116",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "C": -1,
+            "E": -1,
+            "O": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q116",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 0,
+            "O": 0,
+            "X": -3
+          }
+        },
+        {
+          "question": "Q117",
+          "option": "A",
+          "set": {
+            "O": 0
+          }
+        },
+        {
+          "question": "Q117",
+          "option": "B",
+          "set": {
+            "O": 2
+          }
+        },
+        {
+          "question": "Q117",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q117",
+          "option": "D",
+          "set": {
+            "C": 0,
+            "O": -2
+          }
+        },
+        {
+          "question": "Q118",
+          "option": "A",
+          "set": {
+            "O": -1,
+            "X": 5
+          }
+        },
+        {
+          "question": "Q118",
+          "option": "B",
+          "set": {
+            "O": 3,
+            "X": -4
+          }
+        },
+        {
+          "question": "Q118",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "O": -1,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q118",
+          "option": "D",
+          "set": {
+            "O": -1,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q119",
+          "option": "A",
+          "set": {
+            "E": 0
+          }
+        },
+        {
+          "question": "Q119",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q119",
+          "option": "C",
+          "set": {
+            "E": 1,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q119",
+          "option": "D",
+          "set": {
+            "E": -1
+          }
+        },
+        {
+          "question": "Q120",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "C": -1,
+            "E": 0,
+            "P": 5
+          }
+        },
+        {
+          "question": "Q120",
+          "option": "B",
+          "set": {
+            "C": 0,
+            "E": -1,
+            "X": -1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q120",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": 3,
+            "X": -3,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q120",
+          "option": "D",
+          "set": {
+            "E": -2,
+            "X": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q121",
+          "option": "A",
+          "set": {
+            "A": 4,
+            "E": -2,
+            "X": 4,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q121",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "E": 0,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q121",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "E": 1
+          }
+        },
+        {
+          "question": "Q121",
+          "option": "D",
+          "set": {
+            "A": -4,
+            "E": 1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q122",
+          "option": "A",
+          "set": {
+            "A": 3,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q122",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "E": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q122",
+          "option": "C",
+          "set": {
+            "A": -1,
+            "C": 0,
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q122",
+          "option": "D",
+          "set": {
+            "A": -3,
+            "E": 0,
+            "X": -3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q123",
+          "option": "A",
+          "set": {
+            "A": 5,
+            "C": -2,
+            "E": -2,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q123",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "C": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q123",
+          "option": "C",
+          "set": {
+            "A": -2,
+            "E": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q123",
+          "option": "D",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q124",
+          "option": "A",
+          "set": {
+            "E": 0,
+            "O": -2,
+            "X": -3
+          }
+        },
+        {
+          "question": "Q124",
+          "option": "B",
+          "set": {
+            "C": -1,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q124",
+          "option": "C",
+          "set": {
+            "A": -3,
+            "E": 0,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q124",
+          "option": "D",
+          "set": {
+            "E": -2
+          }
+        },
+        {
+          "question": "Q125",
+          "option": "A",
+          "set": {
+            "C": -2,
+            "E": 0,
+            "O": -2,
+            "P": 5
+          }
+        },
+        {
+          "question": "Q125",
+          "option": "B",
+          "set": {
+            "C": 0,
+            "E": 1,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q125",
+          "option": "C",
+          "set": {
+            "C": 1,
+            "E": 0,
+            "X": -3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q125",
+          "option": "D",
+          "set": {
+            "C": 1,
+            "E": -1,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q126",
+          "option": "A",
+          "set": {
+            "E": 0,
+            "O": -1,
+            "X": 3,
+            "P": 5
+          }
+        },
+        {
+          "question": "Q126",
+          "option": "B",
+          "set": {
+            "E": 2,
+            "O": -1,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q126",
+          "option": "C",
+          "set": {
+            "E": -2,
+            "O": 3,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q126",
+          "option": "D",
+          "set": {
+            "E": 0,
+            "O": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q127",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": -2,
+            "E": 0,
+            "X": 1,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q127",
+          "option": "B",
+          "set": {
+            "A": 0,
+            "E": 1,
+            "O": 0,
+            "P": 2
+          }
+        },
+        {
+          "question": "Q127",
+          "option": "C",
+          "set": {
+            "A": 3,
+            "E": 1,
+            "O": -1,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q127",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": -2,
+            "O": -3,
+            "X": -5,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q128",
+          "option": "A",
+          "set": {
+            "C": 0,
+            "E": -2,
+            "O": -1
+          }
+        },
+        {
+          "question": "Q128",
+          "option": "B",
+          "set": {
+            "O": 1,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q128",
+          "option": "C",
+          "set": {
+            "O": 2,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q128",
+          "option": "D",
+          "set": {
+            "A": 2,
+            "O": -2,
+            "X": -4,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q129",
+          "option": "A",
+          "set": {
+            "A": -3,
+            "C": 0,
+            "E": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q129",
+          "option": "B",
+          "set": {
+            "A": 1,
+            "C": -1,
+            "E": 0,
+            "X": 3
+          }
+        },
+        {
+          "question": "Q129",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": 0,
+            "X": 0,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q129",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": 2,
+            "E": 0,
+            "X": 1
+          }
+        },
+        {
+          "question": "Q130",
+          "option": "A",
+          "set": {
+            "E": 3
+          }
+        },
+        {
+          "question": "Q130",
+          "option": "B",
+          "set": {
+            "A": 5,
+            "E": 0,
+            "X": -4
+          }
+        },
+        {
+          "question": "Q130",
+          "option": "C",
+          "set": {
+            "C": 4,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q130",
+          "option": "D",
+          "set": {
+            "E": -3
+          }
+        },
+        {
+          "question": "Q131",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "C": -2,
+            "E": 0,
+            "O": 0,
+            "X": 5,
+            "P": 5
+          }
+        },
+        {
+          "question": "Q131",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q131",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "E": 0,
+            "P": -2
+          }
+        },
+        {
+          "question": "Q131",
+          "option": "D",
+          "set": {
+            "C": -2,
+            "E": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q132",
+          "option": "A",
+          "set": {
+            "A": -2,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q132",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "E": 0,
+            "O": -3,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q132",
+          "option": "C",
+          "set": {
+            "A": 0,
+            "C": -3,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q132",
+          "option": "D",
+          "set": {
+            "E": 0,
+            "X": -2
+          }
+        },
+        {
+          "question": "Q133",
+          "option": "A",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": 1,
+            "X": 4,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q133",
+          "option": "B",
+          "set": {
+            "A": -2,
+            "C": 0,
+            "E": 1,
+            "O": 4,
+            "X": -4,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q133",
+          "option": "C",
+          "set": {
+            "E": 1,
+            "O": -4,
+            "X": -1,
+            "P": -1
+          }
+        },
+        {
+          "question": "Q133",
+          "option": "D",
+          "set": {
+            "C": -2,
+            "E": -1,
+            "O": -1,
+            "X": 1,
+            "P": 1
+          }
+        },
+        {
+          "question": "Q134",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "E": 1,
+            "O": -2,
+            "X": -3,
+            "P": -3
+          }
+        },
+        {
+          "question": "Q134",
+          "option": "B",
+          "set": {
+            "A": -1,
+            "C": 1,
+            "E": 1,
+            "O": 0,
+            "X": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q134",
+          "option": "C",
+          "set": {
+            "C": -1,
+            "E": -1,
+            "O": -1,
+            "X": 3,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q134",
+          "option": "D",
+          "set": {
+            "A": -2,
+            "C": -4,
+            "E": -1,
+            "O": 3,
+            "X": 0,
+            "P": 3
+          }
+        },
+        {
+          "question": "Q135",
+          "option": "A",
+          "set": {
+            "A": 0,
+            "E": -2
+          }
+        },
+        {
+          "question": "Q135",
+          "option": "B",
+          "set": {
+            "E": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q135",
+          "option": "C",
+          "set": {
+            "A": -3,
+            "E": 1
+          }
+        },
+        {
+          "question": "Q135",
+          "option": "D",
+          "set": {
+            "A": -1,
+            "E": 1,
+            "O": 3
+          }
+        },
+        {
+          "question": "Q_PLAYFUL_EMOJI",
+          "option": "popcorn",
+          "set": {
+            "A": -3,
+            "C": -1,
+            "O": 0
+          }
+        },
+        {
+          "question": "Q_PLAYFUL_EMOJI",
+          "option": "dm",
+          "set": {
+            "A": 3,
+            "C": -1
+          }
+        },
+        {
+          "question": "Q_PLAYFUL_EMOJI",
+          "option": "leave",
+          "set": {
+            "A": -1,
+            "C": -1,
+            "E": 0
+          }
+        },
+        {
+          "question": "Q_PLAYFUL_EMOJI",
+          "option": "dove",
+          "set": {
+            "A": 1,
+            "C": 0,
+            "P": 0
+          }
+        },
+        {
+          "question": "Q_PLAYFUL_EMOJI",
+          "option": "direct",
+          "set": {
+            "A": 0,
+            "C": 3,
+            "X": 4
+          }
+        }
+      ]
+    }
+  }
+}

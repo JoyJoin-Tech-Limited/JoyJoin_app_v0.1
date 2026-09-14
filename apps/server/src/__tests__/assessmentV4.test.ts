@@ -828,3 +828,156 @@ describe("POST /api/assessment/v4/:sessionId/skip", () => {
     });
   });
 });
+
+// ── P5a signal-quality gate ────────────────────────────────────────────────
+// The gate is advisory: signalQuality rides INSIDE the result object on
+// completion responses and GET /result; it must never block assignment.
+describe("P5a signal-quality gate", () => {
+  beforeEach(() => {
+    mockStorage = createMockStorage();
+    vi.clearAllMocks();
+  });
+
+  function expectSignalQualityShape(sq: any) {
+    expect(sq).toBeDefined();
+    expect(["ok", "low"]).toContain(sq.quality);
+    expect(typeof sq.score).toBe("number");
+    expect(Array.isArray(sq.reasons)).toBe(true);
+  }
+
+  it("attaches signalQuality to the completion payload and persisted finalResult (PUT path)", async () => {
+    await withServer(async (baseUrl) => {
+      const session = await mockStorage.createAssessmentSession({
+        phase: "pre_signup",
+        userId: null,
+      });
+
+      // Seed every question so the engine has no next question
+      for (const q of questionsV4) {
+        await mockStorage.createAssessmentAnswer({
+          sessionId: session.id,
+          questionId: q.id,
+          questionLevel: q.level,
+          selectedOption: q.options[0].value,
+          traitScores: {},
+        });
+      }
+
+      const response = await fetch(
+        `${baseUrl}/api/assessment/v4/${session.id}/answer`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questionId: "Q1", selectedOption: "A" }),
+        }
+      );
+
+      expect(response.status).toBe(200);
+      const body: any = await response.json();
+      expect(body.isComplete).toBe(true);
+      expectSignalQualityShape(body.result?.signalQuality);
+
+      expect(mockStorage.updateAssessmentSession).toHaveBeenCalledWith(
+        session.id,
+        expect.objectContaining({
+          finalResult: expect.objectContaining({
+            primaryArchetype: expect.any(String),
+            signalQuality: expect.objectContaining({
+              quality: expect.stringMatching(/^(ok|low)$/),
+              score: expect.any(Number),
+              reasons: expect.any(Array),
+            }),
+          }),
+        })
+      );
+
+      // GET /result serves the persisted verdict (no recompute needed)
+      const resultRes = await fetch(`${baseUrl}/api/assessment/v4/${session.id}/result`);
+      expect(resultRes.status).toBe(200);
+      const resultBody: any = await resultRes.json();
+      expectSignalQualityShape(resultBody.result?.signalQuality);
+    });
+  });
+
+  it("computes signalQuality on read for legacy completed sessions that lack it", async () => {
+    await withServer(async (baseUrl) => {
+      const session = await mockStorage.createAssessmentSession({
+        phase: "completed",
+        userId: null,
+      });
+      // Legacy finalResult: no signalQuality field
+      await mockStorage.updateAssessmentSession(session.id, {
+        phase: "completed",
+        completedAt: new Date(),
+        finalResult: {
+          primaryArchetype: "corgi",
+          traitScores: { A: 50, C: 50, E: 50, O: 50, X: 50, P: 50 },
+        },
+      });
+      for (const q of questionsV4.slice(0, 14)) {
+        await mockStorage.createAssessmentAnswer({
+          sessionId: session.id,
+          questionId: q.id,
+          questionLevel: q.level,
+          selectedOption: q.options[0].value,
+          traitScores: {},
+        });
+      }
+
+      const resultRes = await fetch(`${baseUrl}/api/assessment/v4/${session.id}/result`);
+      expect(resultRes.status).toBe(200);
+      const body: any = await resultRes.json();
+      expectSignalQualityShape(body.result?.signalQuality);
+    });
+  });
+
+  it("logs a PII-free info line when a content-random session completes with quality 'low'", async () => {
+    await withServer(async (baseUrl) => {
+      const session = await mockStorage.createAssessmentSession({
+        phase: "pre_signup",
+        userId: null,
+      });
+
+      // Content-random answer pattern: deterministic cyclic option picks
+      for (const [i, q] of questionsV4.entries()) {
+        await mockStorage.createAssessmentAnswer({
+          sessionId: session.id,
+          questionId: q.id,
+          questionLevel: q.level,
+          selectedOption: q.options[i % q.options.length].value,
+          traitScores: {},
+        });
+      }
+
+      const response = await fetch(
+        `${baseUrl}/api/assessment/v4/${session.id}/answer`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questionId: "Q1", selectedOption: "A" }),
+        }
+      );
+      expect(response.status).toBe(200);
+      const body: any = await response.json();
+      expect(body.isComplete).toBe(true);
+
+      // The gate flagged this pattern (and crucially did NOT block the result)
+      expect(body.result?.signalQuality?.quality).toBe("low");
+      expect(body.result?.primaryArchetype).toBeTruthy();
+
+      const lowCall = mockLoggerInfo.mock.calls.find(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("Low response signal quality")
+      );
+      expect(lowCall).toBeDefined();
+      const meta = lowCall![1] as any;
+      expect(meta.sessionId).toBe(session.id);
+      expect(Array.isArray(meta.reasons)).toBe(true);
+      expect(meta.reasons.length).toBeGreaterThan(0);
+      // PII guard: no userId / answers / trait content in the log payload
+      expect(meta).not.toHaveProperty("userId");
+      expect(meta).not.toHaveProperty("answers");
+    });
+  });
+});
