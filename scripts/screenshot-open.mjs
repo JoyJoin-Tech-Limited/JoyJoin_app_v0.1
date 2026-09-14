@@ -64,6 +64,8 @@ const PAGES = {
   'profile-guidance-tip': { url: 'http://localhost:9000/profile-guidance-tip.png', altPort: 9003 },
   'personality-test-return-interstitial': { url: 'http://localhost:9000/personality-test-return-interstitial.png', altPort: 9003 },
   'personality-results-detail': { url: 'http://localhost:9000/personality-results-detail.png', altPort: 9003 },
+  'personality-results-detail-partners': { url: 'http://localhost:9000/personality-results-detail-partners.png', altPort: 9003 },
+  'personality-results-signal-retest': { url: 'http://localhost:9000/personality-results-signal-retest.png', altPort: 9003 },
 }
 
 const page = process.argv[2] || 'events'

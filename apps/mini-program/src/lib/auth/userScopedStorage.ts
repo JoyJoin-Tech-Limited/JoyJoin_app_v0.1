@@ -87,6 +87,7 @@ const USER_SCOPED_PREFIX_KEYS = [
   'jj_arrival_seen_',         // arrival migration seen per user
   'jj_full_pool_dismissed_',  // full-pool banner dismissed per pool
   'jj_duo_share_',            // duo share timestamps per pool
+  'joyjoin_signal_retest_dismissed', // P5a signal-quality retest prompt dismissed per session
 ] as const
 
 // ─── Device-level keys (NOT cleared on user reset) ─────────────────────────

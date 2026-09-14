@@ -48,6 +48,7 @@ import {
   getProfilePersonalityActionLabel,
   getProfileV17DataPolicy,
   isProfileV17Enabled,
+  MILESTONES,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
 
@@ -357,6 +358,15 @@ export default function ProfilePage() {
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
 
+  // P6b milestones collapse (2026-09-14): the badge grid folds into a single
+  // entry row; no dedicated milestones route exists in the app, so the row
+  // expands the unlocked badges inline (accordion) instead of navigating.
+  const [milestonesOpen, setMilestonesOpen] = useState(false)
+  const unlockedMilestones = useMemo(
+    () => MILESTONES.filter((milestone) => joinedEventsCount >= milestone.threshold),
+    [joinedEventsCount],
+  )
+
   const archetypeTagline = useMemo(() => {
     if (!archetype || !(archetype in archetypeRegistry)) return null
     return archetypeRegistry[archetype as keyof typeof archetypeRegistry]?.narrative.tagline ?? null
@@ -561,14 +571,57 @@ export default function ProfilePage() {
                       )}
                     </View>
                     {displayBio && <Text className='profile-page__identity-bio'>{displayBio}</Text>}
-                    <View className='profile-page__identity-affordance' aria-hidden='true'>
-                      <Text className='profile-page__identity-affordance-text'>
-                        {archetypeName ? '回看报告' : '测测你的社交原型'}
-                      </Text>
-                      <View className='profile-page__identity-affordance-chevron' />
-                    </View>
+                    {!showBioPrompt && (
+                      <View className='profile-page__identity-affordance' aria-hidden='true'>
+                        <Text className='profile-page__identity-affordance-text'>
+                          {archetypeName ? '回看报告' : '测测你的社交原型'}
+                        </Text>
+                        <View className='profile-page__identity-affordance-chevron' />
+                      </View>
+                    )}
                   </View>
                 </View>
+
+                {/* P6b density redesign (2026-09-14): the bio nudge is merged
+                    into the identity card as a full-width footer action strip,
+                    replacing the 回看报告 affordance line while active — no
+                    standalone banner section below the stats. Full-width (not
+                    inside the narrow text column) so the pill and the dismiss
+                    × both fit without truncation. stopPropagation keeps the
+                    card's own report navigation from firing on nudge taps. */}
+                {showBioPrompt && (
+                  <View
+                    className='profile-page__identity-nudge'
+                    data-testid='profile-bio-prompt'
+                  >
+                    <View
+                      className='profile-page__identity-nudge-action'
+                      hoverClass='profile-page__identity-nudge-action--pressed'
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleBioPromptTap()
+                      }}
+                      role='button'
+                      aria-label='去写一句聚会签名'
+                      data-testid='profile-bio-prompt-cta'
+                    >
+                      <Text className='profile-page__identity-nudge-text'>写一句聚会签名</Text>
+                      <View className='profile-page__identity-nudge-chevron' aria-hidden='true' />
+                    </View>
+                    <View
+                      className='profile-page__identity-nudge-dismiss'
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleBioPromptDismiss()
+                      }}
+                      role='button'
+                      aria-label='暂时不用，关闭提示'
+                      data-testid='profile-bio-prompt-dismiss'
+                    >
+                      <View className='profile-page__identity-nudge-dismiss-icon' aria-hidden='true' />
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Readable glass card for growth stats (bottom-left) */}
@@ -770,8 +823,6 @@ export default function ProfilePage() {
               {isLoadingStats ? '—' : joinedEventsCount}
             </Text>
             <Text className='profile-page__stat-label'>已参加活动</Text>
-            <Text className='profile-page__stat-caption'>去浏览</Text>
-            <View className='profile-page__chevron profile-page__chevron--stat' />
           </Card>
 
           <Card
@@ -786,8 +837,6 @@ export default function ProfilePage() {
               {profileShellQuery.isLoading || connectionsCount == null ? '—' : connectionsCount}
             </Text>
             <Text className='profile-page__stat-label'>我的连接</Text>
-            <Text className='profile-page__stat-caption'>去看看</Text>
-            <View className='profile-page__chevron profile-page__chevron--stat' />
           </Card>
 
           <Card
@@ -800,45 +849,14 @@ export default function ProfilePage() {
             <JoyJoinIcon emoji='📄' tier='ui' size={40} className='profile-page__stat-icon' />
             <Text className='profile-page__stat-value'>{profileCompletion}%</Text>
             <Text className='profile-page__stat-label'>资料完成度</Text>
-            <Text className='profile-page__stat-caption'>{profileCompletion >= 100 ? '查看资料' : '去完善'}</Text>
             <View className='profile-page__stat-progress'>
               <View
                 className='profile-page__stat-progress-bar'
                 style={{ transform: `scaleX(${profileCompletion / 100})` }}
               />
             </View>
-            <View className='profile-page__chevron profile-page__chevron--stat' />
           </Card>
         </View>
-
-        {showBioPrompt && (
-          <View
-            className={`profile-page__bio-prompt${hasEntered ? ' profile-page__bio-prompt--entered' : ''}`}
-            data-testid='profile-bio-prompt'
-          >
-            <View
-              className='profile-page__bio-prompt-main'
-              hoverClass='profile-page__bio-prompt-main--pressed'
-              onClick={handleBioPromptTap}
-              role='button'
-              aria-label='去写一句聚会签名'
-              data-testid='profile-bio-prompt-cta'
-            >
-              <Text className='profile-page__bio-prompt-title'>悦仔还想多认识你一点</Text>
-              <Text className='profile-page__bio-prompt-copy'>写一句聚会签名，让新朋友更快记住你。</Text>
-              <Text className='profile-page__bio-prompt-cta'>去写一句</Text>
-            </View>
-            <View
-              className='profile-page__bio-prompt-dismiss'
-              onClick={handleBioPromptDismiss}
-              role='button'
-              aria-label='暂时不用，关闭提示'
-              data-testid='profile-bio-prompt-dismiss'
-            >
-              <View className='profile-page__bio-prompt-dismiss-icon' aria-hidden='true' />
-            </View>
-          </View>
-        )}
 
         {profileV17DataPolicy.personalStoryEnabled && (
           <View
@@ -888,43 +906,66 @@ export default function ProfilePage() {
 
         {profileV17Enabled && !isLoadingStats && joinedEventsCount >= 1 && (
           <View className='profile-page__milestones'>
-            <Text className='profile-page__milestones-title'>成就徽章</Text>
-            <View className='profile-page__milestones-row'>
-              {joinedEventsCount >= 1 && (
-                <View
-                  className='profile-page__milestone'
-                  hoverClass='profile-page__milestone--pressed'
-                  onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
-                  role='button'
-                  aria-label='已参加 1 场活动'
-                >
-                  <Image
-                    className='profile-page__milestone-img'
-                    mode='aspectFit'
-                    src={MILESTONE_BADGES.firstEvent}
-                    lazyLoad
-                  />
-                  <Text className='profile-page__milestone-label'>初次见面</Text>
-                </View>
-              )}
-              {joinedEventsCount >= 3 && (
-                <View
-                  className='profile-page__milestone'
-                  hoverClass='profile-page__milestone--pressed'
-                  onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
-                  role='button'
-                  aria-label='已参加 3 场活动'
-                >
-                  <Image
-                    className='profile-page__milestone-img'
-                    mode='aspectFit'
-                    src={MILESTONE_BADGES.streak3}
-                    lazyLoad
-                  />
-                  <Text className='profile-page__milestone-label'>三场连击</Text>
-                </View>
-              )}
+            {/* P6b density redesign: badge grid collapsed to a single entry
+                row (icon + title + unlock summary + chevron). No dedicated
+                milestones route exists in the app, so the row expands the
+                unlocked badge cards inline as an accordion. */}
+            <View
+              className='profile-page__milestones-entry'
+              hoverClass='profile-page__milestones-entry--pressed'
+              onClick={() => {
+                haptics('light')
+                const nextOpen = !milestonesOpen
+                profileAnalytics.track('profile_milestone_tap', {
+                  action: nextOpen ? 'expand' : 'collapse',
+                })
+                setMilestonesOpen(nextOpen)
+              }}
+              role='button'
+              aria-expanded={milestonesOpen}
+              aria-label={`成就徽章，已解锁 ${unlockedMilestones.length} 枚，共 ${MILESTONES.length} 枚`}
+              data-testid='profile-milestones-entry'
+            >
+              <Image
+                className='profile-page__milestones-entry-icon'
+                src={MILESTONE_BADGES.firstEvent}
+                mode='aspectFit'
+                lazyLoad
+                aria-hidden='true'
+              />
+              <View className='profile-page__milestones-entry-text'>
+                <Text className='profile-page__milestones-entry-title'>成就徽章</Text>
+                <Text className='profile-page__milestones-entry-summary'>
+                  {`已解锁 ${unlockedMilestones.length}/${MILESTONES.length} 枚`}
+                </Text>
+              </View>
+              <View
+                className={`profile-page__milestones-entry-chevron${milestonesOpen ? ' profile-page__milestones-entry-chevron--open' : ''}`}
+                aria-hidden='true'
+              />
             </View>
+            {milestonesOpen && (
+              <View className='profile-page__milestones-row'>
+                {unlockedMilestones.map((milestone) => (
+                  <View
+                    key={milestone.key}
+                    className='profile-page__milestone'
+                    hoverClass='profile-page__milestone--pressed'
+                    onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+                    role='button'
+                    aria-label={`已参加 ${milestone.threshold} 场活动`}
+                  >
+                    <Image
+                      className='profile-page__milestone-img'
+                      mode='aspectFit'
+                      src={milestone.badge}
+                      lazyLoad
+                    />
+                    <Text className='profile-page__milestone-label'>{milestone.label}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 

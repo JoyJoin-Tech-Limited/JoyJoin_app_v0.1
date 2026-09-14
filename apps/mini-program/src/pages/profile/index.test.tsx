@@ -520,18 +520,26 @@ describe('Profile approved V4 layout', () => {
     )
   })
 
-  it('shows the bio prompt after onboarding when the bio is empty, and taps through to edit-profile', () => {
+  it('shows the bio nudge inside the identity card after onboarding when the bio is empty, and taps through to edit-profile', () => {
     state.user = { ...makeUser(true), hasSeenProfileReview: true }
     state.navigateTo.mockClear()
 
-    const { getByTestId, getByText } = render(<ProfilePage />)
+    const { getByTestId, getByText, queryByText } = render(<ProfilePage />)
 
-    expect(getByText('悦仔还想多认识你一点')).toBeTruthy()
+    // P6b: the nudge is the identity card's action line while active — the
+    // 回看报告 affordance returns only after the nudge is gone.
+    expect(getByTestId('profile-bio-prompt')).toBeTruthy()
+    expect(getByText('写一句聚会签名')).toBeTruthy()
+    expect(queryByText('回看报告')).toBeNull()
+
     fireEvent.click(getByTestId('profile-bio-prompt-cta'))
+    // stopPropagation: the card's own personality-report navigation must not
+    // fire when the nudge action is tapped.
+    expect(state.navigateTo).toHaveBeenCalledTimes(1)
     expect(state.navigateTo).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.editProfile })
   })
 
-  it('hides the bio prompt when the bio exists or onboarding is incomplete', () => {
+  it('hides the bio nudge when the bio exists or onboarding is incomplete', () => {
     state.user = { ...makeUser(true), hasSeenProfileReview: true, bio: '正在寻找探店搭子' }
     const { queryByTestId, rerender } = render(<ProfilePage />)
     expect(queryByTestId('profile-bio-prompt')).toBeNull()
@@ -541,30 +549,61 @@ describe('Profile approved V4 layout', () => {
     expect(queryByTestId('profile-bio-prompt')).toBeNull()
   })
 
-  it('dismisses the bio prompt and persists the dismissal per user', () => {
+  it('dismisses the bio nudge, restores the affordance, and persists the dismissal per user', () => {
     state.user = { ...makeUser(true), hasSeenProfileReview: true }
+    state.navigateTo.mockClear()
 
-    const { getByTestId, queryByTestId } = render(<ProfilePage />)
+    const { getByTestId, queryByTestId, getByText } = render(<ProfilePage />)
     fireEvent.click(getByTestId('profile-bio-prompt-dismiss'))
 
     expect(queryByTestId('profile-bio-prompt')).toBeNull()
     expect(state.storage.get('joyjoin_profile_bio_prompt_dismissed:profile-user')).toBe(true)
+    // stopPropagation: dismissing must not open the personality report, and
+    // the card's 回看报告 affordance returns once the nudge is dismissed.
+    expect(state.navigateTo).not.toHaveBeenCalled()
+    expect(getByText('回看报告')).toBeTruthy()
   })
 
-  it('uses a state-aware edit-profile caption on the completion stat card', () => {
+  it('collapses milestones into a single entry row that expands the unlocked badges inline', () => {
+    state.queryStates.set('mini-program/shell/profile', {
+      data: { stats: { eventsJoined: 4, connectionsCount: 0 } },
+    })
+    state.navigateTo.mockClear()
+    ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
+
+    const { getByTestId, getByText, queryByText } = render(<ProfilePage />)
+
+    expect(getByText('成就徽章')).toBeTruthy()
+    expect(getByText('已解锁 2/2 枚')).toBeTruthy()
+    // Badge cards stay collapsed until the entry row is tapped.
+    expect(queryByText('初次见面')).toBeNull()
+
+    fireEvent.click(getByTestId('profile-milestones-entry'))
+
+    expect(getByText('初次见面')).toBeTruthy()
+    expect(getByText('三场连击')).toBeTruthy()
+    expect(profileAnalytics.track).toHaveBeenCalledWith(
+      'profile_milestone_tap',
+      { action: 'expand' },
+    )
+  })
+
+  it('uses a state-aware edit-profile action on the completion stat card', () => {
     state.queryStates.set('mini-program/shell/profile', {
       data: { stats: { connectionsCount: 0 } },
     })
 
-    const { getByText, rerender } = render(<ProfilePage />)
-    expect(getByText('去完善')).toBeTruthy()
+    // P6b: stat tiles are icon + number + label one-liners — the state-aware
+    // action now lives on the tile's aria-label instead of a caption line.
+    const { getByRole, rerender } = render(<ProfilePage />)
+    expect(getByRole('button', { name: /去完善资料/ })).toBeTruthy()
 
     state.user = { ...state.user, profileEssentialComplete: true, profileExtendedComplete: true }
     state.queryStates.set('mini-program/shell/profile', {
       data: { stats: { connectionsCount: 0 } },
     })
     rerender(<ProfilePage />)
-    expect(getByText('查看资料')).toBeTruthy()
+    expect(getByRole('button', { name: /查看资料/ })).toBeTruthy()
   })
 
   it('emits the fallback-row analytics source when the compact personality action is used', () => {

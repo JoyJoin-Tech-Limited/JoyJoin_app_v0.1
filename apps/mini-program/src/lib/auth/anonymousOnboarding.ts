@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import type { SignalQualityVerdict } from '@shared/personality/responseSignalQuality'
 
 export const ANONYMOUS_ASSESSMENT_SESSION_STORAGE_KEY = 'joyjoin_v4_assessment_session'
 export const ANONYMOUS_ASSESSMENT_ANSWERS_STORAGE_KEY = 'joyjoin_v4_presignup_answers'
@@ -18,6 +19,13 @@ export interface AnonymousAssessmentResult {
   totalQuestionsAnswered?: number
   archetypeConfidence?: number
   isDecisive?: boolean
+  /**
+   * P5a signal-quality verdict (2026-09-14): advisory only, carried through
+   * from the server's final-result payload so anonymous completers get the
+   * same retest prompt as the server-fetch path. Absent on pre-P5a snapshots
+   * or degraded compute — treat as 'ok' (render nothing).
+   */
+  signalQuality?: SignalQualityVerdict
 }
 
 export interface AnonymousAssessmentAnswer {

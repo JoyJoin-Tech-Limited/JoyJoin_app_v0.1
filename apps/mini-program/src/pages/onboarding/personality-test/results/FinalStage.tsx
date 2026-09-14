@@ -14,6 +14,7 @@ import { haptics } from '../../../../lib/utils/haptics'
 import { cdnAsset } from '../../../../lib/utils/cdnAssets'
 import XiaoyueChatBubble from '../../../../components/mascot/XiaoyueChatBubble'
 import XiaoyueInlineError from '../../../../components/mascot/XiaoyueInlineError'
+import ArchetypeHead from '../../../../components/mascot/ArchetypeHead'
 import { PERSONALITY_TEST_XIAOYUE_EXPRESSION } from '../../../../lib/mascot/xiaoyueExpressions'
 import AIGCLabel from '../../../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../../../components/ai-content/AIContentReportButton'
@@ -21,6 +22,7 @@ import { useAIGCLabelsEnabled } from '../../../../hooks/useAIGCLabelsEnabled'
 import { ONBOARDING_MASCOT_SIZE } from '../../../../lib/onboarding/onboardingRoutes'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 import { normalizeMatchScore, type TypicalityLabel } from './resultHelpers'
+import SignalRetestPrompt from './SignalRetestPrompt'
 
 /** Warm cream gradient midpoint — shared between dynamic card backgrounds.
  *  Extracted from hardcoded hex literals for brand token discipline. */
@@ -82,6 +84,17 @@ interface FinalStageProps {
   isGeneratingClip?: boolean
   onGenerateClip?: () => void
   posterError?: boolean
+  /**
+   * P5a signal-quality retest prompt (2026-09-14): quiet secondary banner
+   * rendered below the result cards when the session's answer pattern carried
+   * too little signal. Wired by the page via useSignalRetestPrompt; omit the
+   * prop (or visible=false) to render nothing.
+   */
+  signalRetestPrompt?: {
+    visible: boolean
+    onRetest: () => void
+    onDismiss: () => void
+  }
 }
 
 export function hasReadableXiaoyueCopy(value?: string | null): boolean {
@@ -138,6 +151,7 @@ export default function FinalStage({
   isGeneratingClip = false,
   onGenerateClip,
   posterError = false,
+  signalRetestPrompt,
 }: FinalStageProps) {
   const [heroImgError, setHeroImgError] = useState(false)
   const [pokemonImgError, setPokemonImgError] = useState(false)
@@ -328,9 +342,11 @@ export default function FinalStage({
     [],
   )
 
-  // Build partner data for detail sheet (memoized)
+  // Build partner data for detail sheet (memoized). P2: cap at 4 (was 3) so a
+  // 4th card peeks ~44rpx at the trailing edge when more matches exist,
+  // signalling horizontal scroll; with ≤3 matches the strip fits flush.
   const partnerData = useMemo(() => {
-    return topMatches.slice(0, 3).map((match) => {
+    return topMatches.slice(0, 4).map((match) => {
       const rawScore = Number(match.score)
       const displayScore = normalizeMatchScore(rawScore)
       const chemistryLabel = displayScore >= 85 ? '满分合拍' : displayScore >= 70 ? '默契搭档' : displayScore >= 55 ? '互补组合' : '潜力搭档'
@@ -717,6 +733,17 @@ export default function FinalStage({
           </Text>
         </Card>
 
+        {/* P5a (2026-09-14): signal-quality retest prompt — quiet secondary
+            banner near the bottom CTA area, shown at most once per session
+            result (suppression persisted by useSignalRetestPrompt). Never
+            blocking; the primary result stays fully readable above it. */}
+        {signalRetestPrompt?.visible ? (
+          <SignalRetestPrompt
+            onRetest={signalRetestPrompt.onRetest}
+            onDismiss={signalRetestPrompt.onDismiss}
+          />
+        ) : null}
+
         <View className='personality-results__stack-actions personality-results__stack-actions--spacious personality-results__stagger--6'>
           {/* Slice 6 (2026-07-19): next-horizon return hook — plants the pending thread.
               Copy is deliberately soft-truth: guests get the login-gated promise,
@@ -894,25 +921,51 @@ export default function FinalStage({
                 <View className='personality-results__detail-section'>
                   <View className='personality-results__detail-section-head personality-results__detail-section-head--solo'>
                     <Text className='personality-results__detail-section-label'>默契搭档</Text>
-                    <Text className='personality-results__detail-section-hint'>右滑看更多 →</Text>
+                    {/* Scroll hint only renders when the strip actually
+                        overflows (a 4th card peeking); with ≤3 cards the row
+                        fits flush and there is nothing more to see. */}
+                    {partnerData.length > 3 && (
+                      <Text className='personality-results__detail-section-hint'>右滑看更多 →</Text>
+                    )}
                   </View>
                   <ScrollView
-                    className='personality-results__detail-partner-scroll'
+                    className={`personality-results__detail-partner-scroll ${partnerData.length <= 2 ? 'personality-results__detail-partner-scroll--center' : ''}`}
                     scrollX
                     enhanced
                     showScrollbar={false}
                   >
-                    <View className='personality-results__detail-partner-row'>
-                      {partnerData.map((partner) => (
+                    <View
+                      className={`personality-results__detail-partner-row ${partnerData.length <= 2 ? 'personality-results__detail-partner-row--center' : ''}`}
+                    >
+                      {partnerData.map((partner, index) => (
                         <View
                           key={partner.archetype}
                           className='personality-results__detail-partner'
                           style={{ borderColor: `${partner.chemistryColor}33` }}
                         >
+                          {/* P2: archetype head art replaces the chemistry dot —
+                              the art carries the "person" identity while the
+                              tinted border + tier pill keep the chemistry
+                              color. ArchetypeHead already falls back
+                              local → CDN → initial letter, so a missing asset
+                              never renders a broken image box. First sheet
+                              open defers the fade until the slide-up completes
+                              (+60ms stagger per card); re-opens render
+                              instantly, same contract as the bubble sentences. */}
                           <View
-                            className='personality-results__detail-partner-dot'
-                            style={{ background: partner.chemistryColor }}
-                          />
+                            className={`personality-results__detail-partner-art ${detailDeferEntrance ? 'personality-results__detail-partner-art--deferred' : ''}`}
+                            style={
+                              detailDeferEntrance
+                                ? { animationDelay: `${DETAIL_SHEET_SLIDE_UP_MS + index * 60}ms` }
+                                : undefined
+                            }
+                          >
+                            <ArchetypeHead
+                              archetype={partner.archetype}
+                              size={72}
+                              fallbackText={ARCHETYPE_BY_ID[partner.archetype]?.nameCn ?? partner.archetype}
+                            />
+                          </View>
                           <Text
                             className='personality-results__detail-partner-name'
                             style={{ color: partner.accent }}

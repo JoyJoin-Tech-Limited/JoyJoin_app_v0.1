@@ -1,4 +1,5 @@
 import { Image } from '@tarojs/components'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 
 const LOCAL_LOGO_PATH = '/assets/joyjoin-logo-tab.png'
 
@@ -26,11 +27,12 @@ interface BrandLogoProps {
   ariaLabel?: string
 }
 
-const SIZE_MAP: Record<BrandLogoSize, { width: string; height: string }> = {
-  sm: { width: '74rpx', height: '74rpx' },
-  md: { width: '152rpx', height: '152rpx' },
-  lg: { width: '240rpx', height: '240rpx' },
-  xl: { width: '520rpx', height: '520rpx' },
+/** Preset dimensions in rpx (converted to computed px at render — see below). */
+const SIZE_MAP: Record<BrandLogoSize, { width: number; height: number }> = {
+  sm: { width: 74, height: 74 },
+  md: { width: 152, height: 152 },
+  lg: { width: 240, height: 240 },
+  xl: { width: 520, height: 520 },
 }
 
 /**
@@ -54,15 +56,23 @@ export default function BrandLogo({
   ariaLabel = '悦聚 JoyJoin',
 }: BrandLogoProps) {
   const dims = SIZE_MAP[size]
+  // H5's style parser silently drops inline rpx (AGENTS.md §3), collapsing the
+  // image to taro-image's 320×240 default. Emit computed px instead —
+  // px = rpx × windowWidth / 750 is pixel-identical on WeChat native at any
+  // device width. Same convention as JoyJoinIcon (2026-09-14): fresh
+  // getWindowInfoCompat() read per render — window metrics are intentionally
+  // not memoized; see lib/utils/systemInfo.ts.
+  const windowWidth = getWindowInfoCompat().windowWidth || 375
+  const rpxToPx = (rpx: number) => `${Math.round((rpx * windowWidth) / 750)}px`
   const style: React.CSSProperties =
     width !== undefined || height !== undefined
       ? {
-          width: width !== undefined ? `${width}rpx` : dims.width,
-          height: height !== undefined ? `${height}rpx` : dims.height,
+          width: rpxToPx(width !== undefined ? width : dims.width),
+          height: rpxToPx(height !== undefined ? height : dims.height),
         }
       : {
-          width: dims.width,
-          height: dims.height,
+          width: rpxToPx(dims.width),
+          height: rpxToPx(dims.height),
         }
 
   return (

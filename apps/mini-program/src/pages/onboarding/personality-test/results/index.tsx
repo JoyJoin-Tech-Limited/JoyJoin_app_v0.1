@@ -58,6 +58,7 @@ import { useResultShareActions } from './useResultShareActions'
 import { useResultsRevealSequence } from './hooks/useResultsRevealSequence'
 import { useResultsXiaoyueAnalysis } from './hooks/useResultsXiaoyueAnalysis'
 import { useResultsLoginHandoff } from './hooks/useResultsLoginHandoff'
+import { useSignalRetestPrompt } from './hooks/useSignalRetestPrompt'
 import './index.scss'
 import { getSystemReducedMotionCompat } from '../../../../lib/utils/systemInfo'
 
@@ -243,6 +244,26 @@ export default function PersonalityTestResultsPage() {
   const secondaryDisplayName = secondaryArchetypeId
     ? (ARCHETYPE_BY_ID[secondaryArchetypeId]?.nameCn ?? '')
     : undefined
+
+  /**
+   * P5a signal-quality retest prompt (2026-09-14): the verdict rides INSIDE
+   * the result object on both paths — anonymous (snapshot written at
+   * completion) and the server result response re-saved into the
+   * snapshot by the reveal hook). Absent verdict (legacy snapshots, degraded
+   * compute, or the auth-user fallback) → hook renders nothing.
+   */
+  const signalQuality = resultState?.result.signalQuality ?? sessionSnapshot?.result?.signalQuality ?? null
+  const signalSessionId = resultState?.sessionId ?? sessionSnapshot?.sessionId ?? null
+  const {
+    showSignalRetestPrompt,
+    handleSignalRetest,
+    handleSignalRetestDismiss,
+  } = useSignalRetestPrompt({
+    sessionId: signalSessionId,
+    signalQuality,
+    analytics,
+    onRestart: handleRestart,
+  })
 
   const visual = useMemo(() => getArchetypeVisual(displayArchetype), [displayArchetype])
   const summary = useMemo(() => visual.summary, [visual.summary])
@@ -578,6 +599,11 @@ export default function PersonalityTestResultsPage() {
             shareAnimatedClipEnabled={shareAnimatedClipEnabled}
             isGeneratingClip={isGeneratingClip}
             onGenerateClip={handleGenerateClip}
+            signalRetestPrompt={{
+              visible: showSignalRetestPrompt,
+              onRetest: handleSignalRetest,
+              onDismiss: handleSignalRetestDismiss,
+            }}
           />
         )
       case 'loading':

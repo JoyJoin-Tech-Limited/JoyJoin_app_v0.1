@@ -1272,6 +1272,9 @@ const RESULTS_SESSION_SNAPSHOT = {
       { archetype: 'dolphin_calm', score: 92, confidence: 0.9 },
       { archetype: 'corgi', score: 78, confidence: 0.7 },
       { archetype: 'fox', score: 61, confidence: 0.5 },
+      // P2: 4th match so the 默契搭档 strip overflows and the peek affordance
+      // (~44rpx of the 4th card at the trailing edge) is visible in capture.
+      { archetype: 'koala', score: 36, confidence: 0.3 },
     ],
     totalQuestionsAnswered: 12,
     archetypeConfidence: 0.9,
@@ -1281,9 +1284,21 @@ const RESULTS_SESSION_SNAPSHOT = {
     { archetype: 'dolphin_calm', score: 92, confidence: 0.9 },
     { archetype: 'corgi', score: 78, confidence: 0.7 },
     { archetype: 'fox', score: 61, confidence: 0.5 },
+    { archetype: 'koala', score: 36, confidence: 0.3 },
   ],
   // Replay fast-path: skips the slot animation entirely.
   resultSequenceCompletedAt: new Date().toISOString(),
+}
+
+// P5a (2026-09-14): low-signal variant for the retest-prompt capture — the
+// verdict rides INSIDE the result object (AssessmentV4FinalResult.signalQuality).
+const RESULTS_SESSION_SNAPSHOT_LOW_SIGNAL = {
+  ...RESULTS_SESSION_SNAPSHOT,
+  sessionId: 'mock-results-session-low-signal',
+  result: {
+    ...RESULTS_SESSION_SNAPSHOT.result,
+    signalQuality: { quality: 'low', score: 40, reasons: ['choice_incoherence'] },
+  },
 }
 
 const RESULTS_XIAOYUE_ANALYSIS = {
@@ -1305,7 +1320,95 @@ const RESULTS_XIAOYUE_ANALYSIS = {
   cached: true,
 }
 
+async function openPersonalityResultsDetailSheet(page) {
+  await page.route('**/api/xiaoyue/analysis', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(RESULTS_XIAOYUE_ANALYSIS),
+    }),
+  )
+  // Safety net only — the replay fast-path never fetches the result.
+  await page.route('**/api/assessment/v4/*/result', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        sessionId: RESULTS_SESSION_SNAPSHOT.sessionId,
+        completedAt: RESULTS_SESSION_SNAPSHOT.completedAt,
+        result: RESULTS_SESSION_SNAPSHOT.result,
+        topArchetypes: RESULTS_SESSION_SNAPSHOT.topArchetypes,
+      }),
+    }),
+  )
+  await page.goto(`${H5_BASE_URL}/#/pages/onboarding/personality-test/results/index?motion=reduce`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000,
+  })
+  // Taro H5 getStorageSync only returns values written via Taro.setStorage —
+  // the raw localStorage entry must carry the {"data": ...} wrapper or the
+  // app reads '' and falls back to the auth user's archetype.
+  await page.evaluate((snapshot) => {
+    localStorage.clear()
+    sessionStorage.clear()
+    localStorage.setItem(
+      'joyjoin_v4_assessment_session',
+      JSON.stringify({ data: JSON.stringify(snapshot) }),
+    )
+  }, RESULTS_SESSION_SNAPSHOT)
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+  // Replay fast-path lands on the result stage; the hero CTA (查看悦仔完整
+  // 解读) renders once the intercepted analysis resolves.
+  await page.waitForSelector('.personality-results__hero-xiaoyue-cta', {
+    state: 'visible',
+    timeout: 20000,
+  })
+  await page.waitForTimeout(1000)
+  await page.click('.personality-results__hero-xiaoyue-cta')
+
+  await page.waitForSelector('.personality-results__detail-sheet', {
+    state: 'visible',
+    timeout: 10000,
+  })
+  // 350ms slide-up + deferred bubble sentence stagger — let it fully settle.
+  await page.waitForFunction(() => {
+    const sheet = document.querySelector('.personality-results__detail-sheet')
+    const traits = document.querySelectorAll('.personality-results__trait-row').length
+    const partners = document.querySelectorAll('.personality-results__detail-partner').length
+    return Boolean(sheet) && traits === 6 && partners === 4
+  }, undefined, { timeout: 10000 })
+  await page.waitForTimeout(2000)
+}
+
 async function capturePersonalityResultsDetail() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await openPersonalityResultsDetailSheet(page)
+    return screenshotViewport(page)
+  })
+}
+register('personality-results-detail', capturePersonalityResultsDetail)
+
+// P2 默契搭档 strip capture: same sheet, scrolled so the partner cards
+// (archetype head art + 4th-card peek at the trailing edge) sit in frame.
+async function capturePersonalityResultsDetailPartners() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await openPersonalityResultsDetailSheet(page)
+    await page.evaluate(() => {
+      const strip = document.querySelector('.personality-results__detail-partner-scroll')
+      strip?.scrollIntoView({ block: 'center', behavior: 'instant' })
+    })
+    await page.waitForTimeout(600)
+    return screenshotViewport(page)
+  })
+}
+register('personality-results-detail-partners', capturePersonalityResultsDetailPartners)
+
+// P5a retest-prompt capture (2026-09-14): seeds the low-signal snapshot on the
+// replay fast-path so the quiet 「悦仔有点拿不准你的风格」 banner renders on the
+// FinalStage surface, then scrolls it into frame (it sits just above the
+// bottom CTA stack, outside the default viewport).
+async function capturePersonalityResultsSignalRetest() {
   return withBrowserPage(V17_VIEWPORT, async (page) => {
     await page.route('**/api/xiaoyue/analysis', (route) =>
       route.fulfill({
@@ -1314,16 +1417,15 @@ async function capturePersonalityResultsDetail() {
         body: JSON.stringify(RESULTS_XIAOYUE_ANALYSIS),
       }),
     )
-    // Safety net only — the replay fast-path never fetches the result.
     await page.route('**/api/assessment/v4/*/result', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          sessionId: RESULTS_SESSION_SNAPSHOT.sessionId,
-          completedAt: RESULTS_SESSION_SNAPSHOT.completedAt,
-          result: RESULTS_SESSION_SNAPSHOT.result,
-          topArchetypes: RESULTS_SESSION_SNAPSHOT.topArchetypes,
+          sessionId: RESULTS_SESSION_SNAPSHOT_LOW_SIGNAL.sessionId,
+          completedAt: RESULTS_SESSION_SNAPSHOT_LOW_SIGNAL.completedAt,
+          result: RESULTS_SESSION_SNAPSHOT_LOW_SIGNAL.result,
+          topArchetypes: RESULTS_SESSION_SNAPSHOT_LOW_SIGNAL.topArchetypes,
         }),
       }),
     )
@@ -1331,9 +1433,8 @@ async function capturePersonalityResultsDetail() {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
-    // Taro H5 getStorageSync only returns values written via Taro.setStorage —
-    // the raw localStorage entry must carry the {"data": ...} wrapper or the
-    // app reads '' and falls back to the auth user's archetype.
+    // Taro H5 getStorageSync requires the {"data": ...} wrapper — see the
+    // detail-sheet generator above.
     await page.evaluate((snapshot) => {
       localStorage.clear()
       sessionStorage.clear()
@@ -1341,34 +1442,24 @@ async function capturePersonalityResultsDetail() {
         'joyjoin_v4_assessment_session',
         JSON.stringify({ data: JSON.stringify(snapshot) }),
       )
-    }, RESULTS_SESSION_SNAPSHOT)
+    }, RESULTS_SESSION_SNAPSHOT_LOW_SIGNAL)
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
-    // Replay fast-path lands on the result stage; the hero CTA (查看悦仔完整
-    // 解读) renders once the intercepted analysis resolves.
-    await page.waitForSelector('.personality-results__hero-xiaoyue-cta', {
+    await page.waitForSelector('.personality-results__signal-retest', {
       state: 'visible',
       timeout: 20000,
     })
-    await page.waitForTimeout(1000)
-    await page.click('.personality-results__hero-xiaoyue-cta')
-
-    await page.waitForSelector('.personality-results__detail-sheet', {
-      state: 'visible',
-      timeout: 10000,
+    await page.waitForTimeout(600)
+    await page.evaluate(() => {
+      document
+        .querySelector('.personality-results__signal-retest')
+        ?.scrollIntoView({ block: 'center', behavior: 'instant' })
     })
-    // 350ms slide-up + deferred bubble sentence stagger — let it fully settle.
-    await page.waitForFunction(() => {
-      const sheet = document.querySelector('.personality-results__detail-sheet')
-      const traits = document.querySelectorAll('.personality-results__trait-row').length
-      const partners = document.querySelectorAll('.personality-results__detail-partner').length
-      return Boolean(sheet) && traits === 6 && partners === 3
-    }, undefined, { timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(400)
     return screenshotViewport(page)
   })
 }
-register('personality-results-detail', capturePersonalityResultsDetail)
+register('personality-results-signal-retest', capturePersonalityResultsSignalRetest)
 
 
 const server = app.listen(PORT, '127.0.0.1', () => {

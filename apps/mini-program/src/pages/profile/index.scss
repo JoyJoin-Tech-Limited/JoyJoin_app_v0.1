@@ -338,148 +338,88 @@
     line-height: $line-height-normal;
   }
 
-  &__stat-caption {
-    font-size: $font-size-2xs;
-    font-family: $font-ui;
-    font-weight: $font-weight-medium;
-    color: $color-primary-dark;
-    line-height: $line-height-normal;
-  }
-
-  &__chevron {
-    width: 12rpx;
-    height: 12rpx;
-    border-top: 2rpx solid var(--profile-text-tertiary);
-    border-right: 2rpx solid var(--profile-text-tertiary);
-    transform: rotate(45deg);
-    opacity: 0.55;
-    flex-shrink: 0;
-
-    &--stat {
-      position: absolute;
-      right: $spacing-sm;
-      bottom: $spacing-sm;
-    }
-
-  }
-
-  // Post-onboarding bio nudge (2026-08-18): a light dismissible card shown
-  // while the 社交签名 is empty; taps through to edit-profile.
-  &__bio-prompt {
-    position: relative;
-    display: flex;
-    align-items: center;
-    // P6 density pass: section gap normalized to $spacing-md (24rpx).
-    margin: 0 $container-padding $spacing-md;
-    padding: $spacing-md;
-    padding-right: 88rpx;
-    background: $color-bg-tint-purple;
-    border: 1rpx solid rgba($color-primary, 0.18);
-    border-radius: $card-radius-sm;
-    box-shadow: $shadow-card;
-    opacity: 0;
-    transform: translateY(16rpx);
-    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.12s,
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.12s;
-
-    &--entered {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  &__bio-prompt-main {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-
-    &--pressed {
-      opacity: 0.75;
-    }
-  }
-
-  &__bio-prompt-title {
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: var(--profile-text-primary);
-    line-height: $line-height-normal;
-  }
-
-  &__bio-prompt-copy {
-    margin-top: 4rpx;
-    font-size: $font-size-sm;
-    color: var(--profile-text-secondary);
-    line-height: $line-height-relaxed;
-  }
-
-  &__bio-prompt-cta {
-    margin-top: $spacing-xs;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary-dark;
-    line-height: $line-height-normal;
-  }
-
-  &__bio-prompt-dismiss {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 88rpx;
-    height: 88rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  // CSS-drawn close glyph — no inline emoji/symbols in TSX.
-  &__bio-prompt-dismiss-icon {
-    position: relative;
-    width: 24rpx;
-    height: 24rpx;
-
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 24rpx;
-      height: 2rpx;
-      border-radius: 2rpx;
-      background: var(--profile-text-tertiary);
-    }
-
-    &::before {
-      transform: translate(-50%, -50%) rotate(45deg);
-    }
-
-    &::after {
-      transform: translate(-50%, -50%) rotate(-45deg);
-    }
-  }
-
-  // Milestones
+  // Milestones — P6b density redesign (2026-09-14): the badge grid is
+  // collapsed into a single entry row; the unlocked badge cards expand inline
+  // below it (accordion) since no dedicated milestones route exists.
   &__milestones {
     padding: 0 $container-padding;
     // P6 density pass: section gap normalized to $spacing-md (24rpx).
     margin-bottom: $spacing-md;
   }
 
-  &__milestones-title {
+  // Single entry row — same chrome family as the settings entry below so the
+  // collapsed section reads as one quiet list row, not a section of its own.
+  &__milestones-entry {
+    min-height: $cta-min-tap;
+    padding: $spacing-sm $spacing-md;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.985);
+      background: var(--profile-primary-06);
+    }
+  }
+
+  &__milestones-entry-icon {
+    width: 56rpx;
+    height: 56rpx;
+    flex-shrink: 0;
     display: block;
-    font-family: $font-cn-display;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
+  }
+
+  &__milestones-entry-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    // 4rpx hairline — optical only; the two text lines already carry air via
+    // their line-heights, an 8rpx gap reads detached at this density.
+    gap: 4rpx;
+  }
+
+  &__milestones-entry-title {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     line-height: $line-height-normal;
     color: var(--profile-text-primary);
-    margin-bottom: $spacing-sm;
+  }
+
+  &__milestones-entry-summary {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    line-height: $line-height-normal;
+    color: var(--profile-text-tertiary);
+  }
+
+  // Right-pointing chevron that rotates down while the accordion is open.
+  &__milestones-entry-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    margin-right: 4rpx;
+    border-top: 3rpx solid $color-primary;
+    border-right: 3rpx solid $color-primary;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+
+    &--open {
+      transform: rotate(135deg);
+    }
   }
 
   &__milestones-row {
     display: flex;
     gap: $spacing-sm;
+    margin-top: $spacing-sm;
   }
 
   &__milestone {
@@ -727,6 +667,98 @@
     border-top: 2rpx solid $color-primary-dark;
     border-right: 2rpx solid $color-primary-dark;
     transform: rotate(45deg);
+  }
+
+  // P6b density redesign (2026-09-14): the post-onboarding 聚会签名 nudge
+  // lives inside the identity card as a full-width footer strip while the bio
+  // is empty (replacing the affordance line, so the card grows by only ~29rpx
+  // and the 728rpx stage geometry is preserved). A hairline divider + soft
+  // primary-tint pill keep it native to the glass card; dismissal keeps the
+  // existing per-user localStorage key.
+  &__identity-nudge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1rpx solid var(--profile-primary-08);
+    min-height: 48rpx;
+    box-sizing: border-box;
+  }
+
+  &__identity-nudge-action {
+    display: flex;
+    align-items: center;
+    gap: 4rpx;
+    min-height: 48rpx;
+    padding: 4rpx $spacing-sm;
+    box-sizing: border-box;
+    border-radius: $radius-pill;
+    background: var(--profile-primary-08);
+    transition: transform 0.12s ease, opacity 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.97);
+      opacity: 0.82;
+    }
+  }
+
+  &__identity-nudge-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+    color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
+  &__identity-nudge-chevron {
+    width: 10rpx;
+    height: 10rpx;
+    border-top: 2rpx solid $color-primary-dark;
+    border-right: 2rpx solid $color-primary-dark;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
+  // Compact inline dismiss on the footer strip: 56rpx-wide hit area stretched
+  // to the strip's 48rpx height — a deliberate exception to the 88rpx
+  // tap-target guideline so the nudge stays a one-line footer action.
+  &__identity-nudge-dismiss {
+    width: 56rpx;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  // CSS-drawn close glyph — no inline emoji/symbols in TSX.
+  &__identity-nudge-dismiss-icon {
+    position: relative;
+    width: 20rpx;
+    height: 20rpx;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 20rpx;
+      height: 2rpx;
+      border-radius: 2rpx;
+      background: var(--profile-text-tertiary);
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
   }
 
   &__partner-visual {
@@ -1395,7 +1427,6 @@
 @media (prefers-reduced-motion: reduce) {
   .profile-page__identity-stage,
   .profile-page__stats,
-  .profile-page__bio-prompt,
   .profile-page__archive {
     opacity: 1;
     transform: none;
@@ -1413,6 +1444,12 @@
     transform: none;
     transition: none;
     animation: none;
+  }
+
+  // The accordion chevron's rotate() IS the glyph shape — only the open/close
+  // transition is motion, so disable just that (never `transform: none`).
+  .profile-page__milestones-entry-chevron {
+    transition: none;
   }
 
   // The XP sheen has no static pose — under reduced-motion it is removed

@@ -189,6 +189,16 @@ export default function TraitRadarChart({
   }
 
   // ── Fallback: simple 2×3 stat grid if canvas fails ──
+  // H5's style parser silently drops inline rpx (AGENTS.md §3), collapsing
+  // these DOM sizes. Emit computed px instead — px = rpx × windowWidth / 750
+  // is pixel-identical on WeChat native at any device width. Same convention
+  // as JoyJoinIcon (2026-09-14): fresh getWindowInfoCompat() read per render.
+  // NOTE: only DOM inline styles are converted here — the canvas drawing math
+  // above runs in its own coordinate space and is intentionally unchanged.
+  const windowWidth = getWindowInfoCompat().windowWidth || 375
+  const rpxToPx = (rpx: number) => `${Math.round((rpx * windowWidth) / 750)}px`
+  const chartSizePx = rpxToPx(size)
+
   if (canvasError) {
     return (
       <View
@@ -196,9 +206,9 @@ export default function TraitRadarChart({
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '16rpx',
-          width: `${size}rpx`,
-          padding: '24rpx',
+          gap: rpxToPx(16),
+          width: chartSizePx,
+          padding: rpxToPx(24),
         }}
       >
         {values.map((v, i) => (
@@ -208,16 +218,16 @@ export default function TraitRadarChart({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '8rpx',
-              padding: '16rpx 8rpx',
-              borderRadius: '16rpx',
+              gap: rpxToPx(8),
+              padding: `${rpxToPx(16)} ${rpxToPx(8)}`,
+              borderRadius: rpxToPx(16),
               background: 'rgba(139, 92, 246, 0.06)',
             }}
           >
-            <Text style={{ fontSize: '22rpx', color: '#6b7280', fontWeight: 600 }}>
+            <Text style={{ fontSize: rpxToPx(22), color: '#6b7280', fontWeight: 600 }}>
               {labels[i]}
             </Text>
-            <Text style={{ fontSize: '32rpx', color: accentColor, fontWeight: 900 }}>
+            <Text style={{ fontSize: rpxToPx(32), color: accentColor, fontWeight: 900 }}>
               {Math.round(v)}
             </Text>
           </View>
@@ -230,7 +240,7 @@ export default function TraitRadarChart({
     <Canvas
       type='2d'
       id={canvasId}
-      style={{ width: `${size}rpx`, height: `${size}rpx` }}
+      style={{ width: chartSizePx, height: chartSizePx }}
     />
   )
 }

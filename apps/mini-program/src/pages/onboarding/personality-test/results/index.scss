@@ -160,6 +160,67 @@ $color-skill-cool: #7c3aed;
     }
   }
 
+  /* P5a signal-quality retest prompt (2026-09-14): quiet secondary banner
+     below the result cards, near the bottom CTA stack. Muted surface + hairline
+     primary border keeps it visibly gentler than the primary CTAs — it must
+     read as an optional aside, never as a blocker. No entrance motion: the
+     banner is static so reduced-motion tiers need no override. */
+  &__signal-retest {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    margin: 0 $container-padding;
+    padding: $spacing-md;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-primary, 0.14);
+    border-radius: $card-radius;
+    box-shadow: 0 8rpx 32rpx rgba($color-text-primary, 0.05);
+  }
+
+  &__signal-retest-avatar {
+    width: 72rpx;
+    height: 72rpx;
+    flex-shrink: 0;
+  }
+
+  &__signal-retest-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__signal-retest-copy {
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  &__signal-retest-dismiss {
+    position: absolute;
+    top: $spacing-xs;
+    right: $spacing-xs;
+    width: 64rpx;
+    height: 64rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-circle;
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__signal-retest-dismiss-icon {
+    opacity: 0.45;
+  }
+
   &__retry-with-tooltip {
     display: flex;
     flex-direction: column;
@@ -2158,6 +2219,13 @@ $color-skill-cool: #7c3aed;
     // ScrollView element, so the insets live on the inner row (same canon as
     // pages/icebreaker-session, pages/matching-status, pages/event-detail).
     margin: 0 (-$container-padding);
+
+    // ≤2 cards never scroll; drop the bleed so the centred pair references
+    // the sheet content box (H5 keeps the strip at width:100% despite the
+    // negative margins, which would otherwise shift the pair 40rpx left).
+    &--center {
+      margin: 0;
+    }
   }
 
   &__detail-partner-row {
@@ -2169,10 +2237,19 @@ $color-skill-cool: #7c3aed;
     padding: 0 $container-padding;
     min-height: 200rpx;
     align-items: flex-start;
+
+    // 1-2 partners: centre the single card / pair instead of left-hugging.
+    &--center {
+      justify-content: center;
+    }
   }
 
   &__detail-partner {
-    flex: 0 0 220rpx;
+    // 208rpx keeps the 8rpx rhythm and makes a 4th card peek ~44rpx at the
+    // trailing edge (40 inset + 4×208 + 3×14 gap = 914 → 4th card starts at
+    // 706 of the 750 viewport), signalling horizontal scroll. With ≤3 cards
+    // the row fits flush (732 ≤ 750) and no peek is needed.
+    flex: 0 0 208rpx;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -2189,11 +2266,45 @@ $color-skill-cool: #7c3aed;
     }
   }
 
-  &__detail-partner-dot {
-    width: 16rpx;
-    height: 16rpx;
-    border-radius: 999rpx;
+  &__detail-partner-art {
+    width: 72rpx;
+    height: 72rpx;
     flex: 0 0 auto;
+
+    // H5 drops inline rpx styles (2026-09-14 trap), collapsing ArchetypeHead
+    // to taro-image's 320×240 default. These rules mirror the component's
+    // inline values (72rpx root, 0.9× image = 65rpx) so the H5 preview
+    // matches WeChat native — LandingPage bubble-field__head precedent; no
+    // !important needed because the values equal the inline ones.
+    .archetype-head {
+      width: 72rpx;
+      height: 72rpx;
+    }
+
+    .archetype-head__image {
+      width: 65rpx;
+      height: 65rpx;
+    }
+
+    // First sheet open only: hold invisible until the slide-up completes,
+    // then fade/rise in. The delay is set inline (DETAIL_SHEET_SLIDE_UP_MS +
+    // 60ms per-card stagger); re-opens skip this modifier entirely.
+    &--deferred {
+      opacity: 0;
+      animation: personality-results-partner-art-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  }
+
+  @keyframes personality-results-partner-art-in {
+    from {
+      opacity: 0;
+      transform: translateY(8rpx);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   &__detail-partner-name {
@@ -2359,6 +2470,12 @@ $color-skill-cool: #7c3aed;
       transform: none;
     }
 
+    &__detail-partner-art--deferred {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
     &__hero-badge {
       transition: none !important;
       opacity: 1;
@@ -2420,6 +2537,12 @@ $color-skill-cool: #7c3aed;
 
     .personality-results__detail-overlay,
     .personality-results__detail-sheet {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    .personality-results__detail-partner-art--deferred {
       animation: none !important;
       opacity: 1;
       transform: none;
