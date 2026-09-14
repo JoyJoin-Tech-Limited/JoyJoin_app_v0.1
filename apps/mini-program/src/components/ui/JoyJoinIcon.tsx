@@ -10,7 +10,7 @@ import {
 } from '@joyjoin/shared/iconSystem'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { logError, logWarn } from '../../lib/utils/logger'
-import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
+import { getSystemReducedMotionCompat, getWindowInfoCompat } from '../../lib/utils/systemInfo'
 
 interface JoyJoinIconProps {
   emoji: string
@@ -138,7 +138,13 @@ export default function JoyJoinIcon({
   }
 
   const displaySize = size ?? mapping.size
-  const sizeStr = `${displaySize}rpx`
+  // H5's style parser silently drops inline rpx (AGENTS.md §3), collapsing the
+  // image to taro-image's 320×240 default. Emit computed px instead —
+  // px = rpx × windowWidth / 750 is pixel-identical on WeChat native at any
+  // device width. Follows the repo convention (getWindowInfoCompat, fresh
+  // read — window metrics are intentionally not memoized; see systemInfo.ts).
+  const windowWidth = getWindowInfoCompat().windowWidth || 375
+  const sizeStr = `${Math.round((displaySize * windowWidth) / 750)}px`
 
   if (resolvedAsset.error) {
     logError('[JoyJoinIcon] Asset path resolution failed, falling back to emoji', {
