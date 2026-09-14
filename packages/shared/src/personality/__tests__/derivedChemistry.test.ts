@@ -142,7 +142,10 @@ describe("derivedChemistry", () => {
     });
 
     it("calibrateDerivedChemistry clamps into [0,100]", () => {
-      expect(calibrateDerivedChemistry(-1)).toBe(0);
+      // P5c (2026-09-14): the affine map re-fit to the recalibrated centroids
+      // (rawMean 61.33, rawSd 17.52, scale 0.415, offset 54.56) — the input that
+      // crosses the lower clamp moved from -1 to -2. Upper clamp unchanged at 2.
+      expect(calibrateDerivedChemistry(-2)).toBe(0);
       expect(calibrateDerivedChemistry(2)).toBe(100);
     });
   });
@@ -176,7 +179,11 @@ describe("derivedChemistry", () => {
       // The gate FAILED, so the flag ships dark; this test locks the finding so
       // an accidental formula change cannot silently rewrite the disposition
       // report. Re-validate (and update the report + contract) before changing.
-      expect(rho).toBeCloseTo(0.57, 1);
+      // P5c (2026-09-14): re-measured after the centroid recalibration to the
+      // debiased scale — rho moved 0.57 → 0.489 (the derived matrix derives from
+      // the registry traitProfiles, which changed). The M12 disposition is
+      // unchanged: derived chemistry remains below the 0.7 gate and ships dark.
+      expect(rho).toBeCloseTo(0.49, 1);
       expect(rho).toBeLessThan(0.7);
     });
   });

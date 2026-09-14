@@ -1,0 +1,1042 @@
+{
+  "generatedAt": "2026-09-14T14:14:43.521Z",
+  "method": {
+    "estimator": "per-trait mean of K idealized-member measured vectors (clean end-to-end, natural termination)",
+    "kPerArchetype": 80,
+    "memberSampling": "N(oldCentroid, sd=10) truncated [5, 95] (Item-6 contract)",
+    "seed": 20260914,
+    "fixedPointCheck": "one re-estimation pass around the proposed centroid, fresh sample",
+    "populationBaselineFit": "n=600 clean sessions over 60% centroid-mixture (CURRENT on-disk centroids) + 40% general N(50,15²)"
+  },
+  "oldCentroids": {
+    "corgi": {
+      "A": 60,
+      "C": 50,
+      "E": 60,
+      "O": 65,
+      "X": 95,
+      "P": 85
+    },
+    "rooster": {
+      "A": 70,
+      "C": 78,
+      "E": 88,
+      "O": 55,
+      "X": 78,
+      "P": 92
+    },
+    "hamster_praise": {
+      "A": 95,
+      "C": 50,
+      "E": 65,
+      "O": 62,
+      "X": 82,
+      "P": 88
+    },
+    "fox": {
+      "A": 40,
+      "C": 50,
+      "E": 60,
+      "O": 92,
+      "X": 78,
+      "P": 58
+    },
+    "dolphin_calm": {
+      "A": 70,
+      "C": 70,
+      "E": 85,
+      "O": 65,
+      "X": 65,
+      "P": 68
+    },
+    "spider": {
+      "A": 70,
+      "C": 85,
+      "E": 65,
+      "O": 70,
+      "X": 60,
+      "P": 60
+    },
+    "koala": {
+      "A": 90,
+      "C": 65,
+      "E": 80,
+      "O": 60,
+      "X": 48,
+      "P": 70
+    },
+    "octopus": {
+      "A": 50,
+      "C": 28,
+      "E": 55,
+      "O": 95,
+      "X": 52,
+      "P": 70
+    },
+    "owl": {
+      "A": 45,
+      "C": 80,
+      "E": 75,
+      "O": 88,
+      "X": 40,
+      "P": 50
+    },
+    "elephant": {
+      "A": 70,
+      "C": 90,
+      "E": 86,
+      "O": 50,
+      "X": 40,
+      "P": 60
+    },
+    "turtle": {
+      "A": 55,
+      "C": 90,
+      "E": 82,
+      "O": 58,
+      "X": 28,
+      "P": 45
+    },
+    "cat": {
+      "A": 40,
+      "C": 55,
+      "E": 65,
+      "O": 72,
+      "X": 22,
+      "P": 42
+    }
+  },
+  "newCentroids": {
+    "corgi": {
+      "A": 41,
+      "C": 38,
+      "E": 37,
+      "O": 79,
+      "X": 96,
+      "P": 83
+    },
+    "rooster": {
+      "A": 56,
+      "C": 63,
+      "E": 72,
+      "O": 43,
+      "X": 83,
+      "P": 83
+    },
+    "hamster_praise": {
+      "A": 67,
+      "C": 46,
+      "E": 48,
+      "O": 58,
+      "X": 95,
+      "P": 86
+    },
+    "fox": {
+      "A": 37,
+      "C": 39,
+      "E": 40,
+      "O": 87,
+      "X": 92,
+      "P": 78
+    },
+    "dolphin_calm": {
+      "A": 56,
+      "C": 63,
+      "E": 75,
+      "O": 54,
+      "X": 76,
+      "P": 77
+    },
+    "spider": {
+      "A": 69,
+      "C": 75,
+      "E": 55,
+      "O": 57,
+      "X": 67,
+      "P": 59
+    },
+    "koala": {
+      "A": 84,
+      "C": 59,
+      "E": 62,
+      "O": 45,
+      "X": 54,
+      "P": 73
+    },
+    "octopus": {
+      "A": 41,
+      "C": 31,
+      "E": 36,
+      "O": 87,
+      "X": 81,
+      "P": 78
+    },
+    "owl": {
+      "A": 36,
+      "C": 74,
+      "E": 71,
+      "O": 73,
+      "X": 47,
+      "P": 36
+    },
+    "elephant": {
+      "A": 64,
+      "C": 76,
+      "E": 68,
+      "O": 32,
+      "X": 42,
+      "P": 47
+    },
+    "turtle": {
+      "A": 40,
+      "C": 77,
+      "E": 74,
+      "O": 38,
+      "X": 24,
+      "P": 27
+    },
+    "cat": {
+      "A": 37,
+      "C": 54,
+      "E": 70,
+      "O": 62,
+      "X": 22,
+      "P": 29
+    }
+  },
+  "exactOldCentroidProbe": {
+    "corgi": {
+      "measured": {
+        "A": 41,
+        "C": 37,
+        "E": 37,
+        "O": 89,
+        "X": 94,
+        "P": 80
+      },
+      "assigned": "octopus"
+    },
+    "rooster": {
+      "measured": {
+        "A": 50,
+        "C": 61,
+        "E": 84,
+        "O": 35,
+        "X": 80,
+        "P": 86
+      },
+      "assigned": "rooster"
+    },
+    "hamster_praise": {
+      "measured": {
+        "A": 76,
+        "C": 48,
+        "E": 48,
+        "O": 50,
+        "X": 100,
+        "P": 89
+      },
+      "assigned": "hamster_praise"
+    },
+    "fox": {
+      "measured": {
+        "A": 37,
+        "C": 37,
+        "E": 37,
+        "O": 89,
+        "X": 94,
+        "P": 80
+      },
+      "assigned": "octopus"
+    },
+    "dolphin_calm": {
+      "measured": {
+        "A": 44,
+        "C": 59,
+        "E": 93,
+        "O": 45,
+        "X": 78,
+        "P": 86
+      },
+      "assigned": "rooster"
+    },
+    "spider": {
+      "measured": {
+        "A": 65,
+        "C": 86,
+        "E": 54,
+        "O": 56,
+        "X": 65,
+        "P": 50
+      },
+      "assigned": "spider"
+    },
+    "koala": {
+      "measured": {
+        "A": 89,
+        "C": 61,
+        "E": 67,
+        "O": 41,
+        "X": 50,
+        "P": 80
+      },
+      "assigned": "rooster"
+    },
+    "octopus": {
+      "measured": {
+        "A": 37,
+        "C": 29,
+        "E": 37,
+        "O": 89,
+        "X": 92,
+        "P": 80
+      },
+      "assigned": "octopus"
+    },
+    "owl": {
+      "measured": {
+        "A": 35,
+        "C": 83,
+        "E": 65,
+        "O": 75,
+        "X": 48,
+        "P": 20
+      },
+      "assigned": "owl"
+    },
+    "elephant": {
+      "measured": {
+        "A": 46,
+        "C": 86,
+        "E": 69,
+        "O": 41,
+        "X": 50,
+        "P": 39
+      },
+      "assigned": "turtle"
+    },
+    "turtle": {
+      "measured": {
+        "A": 35,
+        "C": 86,
+        "E": 69,
+        "O": 41,
+        "X": 30,
+        "P": 24
+      },
+      "assigned": "cat"
+    },
+    "cat": {
+      "measured": {
+        "A": 39,
+        "C": 43,
+        "E": 71,
+        "O": 74,
+        "X": 22,
+        "P": 35
+      },
+      "assigned": "cat"
+    }
+  },
+  "reachableRange": {
+    "A": {
+      "ceiling": 90,
+      "floor": 22
+    },
+    "C": {
+      "ceiling": 83,
+      "floor": 27
+    },
+    "E": {
+      "ceiling": 81,
+      "floor": 24
+    },
+    "O": {
+      "ceiling": 88,
+      "floor": 23
+    },
+    "X": {
+      "ceiling": 90,
+      "floor": 17
+    },
+    "P": {
+      "ceiling": 87,
+      "floor": 21
+    }
+  },
+  "moves": {
+    "corgi": {
+      "A": -19,
+      "C": -12,
+      "E": -23,
+      "O": 14,
+      "X": 1,
+      "P": -2
+    },
+    "rooster": {
+      "A": -14,
+      "C": -15,
+      "E": -16,
+      "O": -12,
+      "X": 5,
+      "P": -9
+    },
+    "hamster_praise": {
+      "A": -28,
+      "C": -4,
+      "E": -17,
+      "O": -4,
+      "X": 13,
+      "P": -2
+    },
+    "fox": {
+      "A": -3,
+      "C": -11,
+      "E": -20,
+      "O": -5,
+      "X": 14,
+      "P": 20
+    },
+    "dolphin_calm": {
+      "A": -14,
+      "C": -7,
+      "E": -10,
+      "O": -11,
+      "X": 11,
+      "P": 9
+    },
+    "spider": {
+      "A": -1,
+      "C": -10,
+      "E": -10,
+      "O": -13,
+      "X": 7,
+      "P": -1
+    },
+    "koala": {
+      "A": -6,
+      "C": -6,
+      "E": -18,
+      "O": -15,
+      "X": 6,
+      "P": 3
+    },
+    "octopus": {
+      "A": -9,
+      "C": 3,
+      "E": -19,
+      "O": -8,
+      "X": 29,
+      "P": 8
+    },
+    "owl": {
+      "A": -9,
+      "C": -6,
+      "E": -4,
+      "O": -15,
+      "X": 7,
+      "P": -14
+    },
+    "elephant": {
+      "A": -6,
+      "C": -14,
+      "E": -18,
+      "O": -18,
+      "X": 2,
+      "P": -13
+    },
+    "turtle": {
+      "A": -15,
+      "C": -13,
+      "E": -8,
+      "O": -20,
+      "X": -4,
+      "P": -18
+    },
+    "cat": {
+      "A": -3,
+      "C": -1,
+      "E": 5,
+      "O": -10,
+      "X": 0,
+      "P": -13
+    }
+  },
+  "estimates": {
+    "corgi": {
+      "A": {
+        "mean": 40.9,
+        "median": 41,
+        "sd": 5.32,
+        "se": 0.59
+      },
+      "C": {
+        "mean": 38.11,
+        "median": 37,
+        "sd": 2.76,
+        "se": 0.31
+      },
+      "E": {
+        "mean": 36.5,
+        "median": 37,
+        "sd": 7.05,
+        "se": 0.79
+      },
+      "O": {
+        "mean": 79.24,
+        "median": 89,
+        "sd": 11.53,
+        "se": 1.29
+      },
+      "X": {
+        "mean": 95.64,
+        "median": 94,
+        "sd": 2.51,
+        "se": 0.28
+      },
+      "P": {
+        "mean": 82.54,
+        "median": 80,
+        "sd": 3.83,
+        "se": 0.43
+      }
+    },
+    "rooster": {
+      "A": {
+        "mean": 55.89,
+        "median": 53,
+        "sd": 13.74,
+        "se": 1.54
+      },
+      "C": {
+        "mean": 62.64,
+        "median": 61,
+        "sd": 9.51,
+        "se": 1.06
+      },
+      "E": {
+        "mean": 71.78,
+        "median": 75,
+        "sd": 13.35,
+        "se": 1.49
+      },
+      "O": {
+        "mean": 43.34,
+        "median": 38,
+        "sd": 13.46,
+        "se": 1.51
+      },
+      "X": {
+        "mean": 83.26,
+        "median": 84,
+        "sd": 9.15,
+        "se": 1.02
+      },
+      "P": {
+        "mean": 83.45,
+        "median": 86,
+        "sd": 3.82,
+        "se": 0.43
+      }
+    },
+    "hamster_praise": {
+      "A": {
+        "mean": 66.51,
+        "median": 69,
+        "sd": 11.22,
+        "se": 1.25
+      },
+      "C": {
+        "mean": 45.73,
+        "median": 47,
+        "sd": 4.5,
+        "se": 0.5
+      },
+      "E": {
+        "mean": 48.21,
+        "median": 49,
+        "sd": 7.2,
+        "se": 0.8
+      },
+      "O": {
+        "mean": 57.6,
+        "median": 50,
+        "sd": 15.15,
+        "se": 1.69
+      },
+      "X": {
+        "mean": 95.3,
+        "median": 97,
+        "sd": 6.2,
+        "se": 0.69
+      },
+      "P": {
+        "mean": 86.19,
+        "median": 86,
+        "sd": 2.92,
+        "se": 0.33
+      }
+    },
+    "fox": {
+      "A": {
+        "mean": 37.16,
+        "median": 37,
+        "sd": 4.12,
+        "se": 0.46
+      },
+      "C": {
+        "mean": 38.79,
+        "median": 37,
+        "sd": 5.88,
+        "se": 0.66
+      },
+      "E": {
+        "mean": 40.08,
+        "median": 37,
+        "sd": 9.86,
+        "se": 1.1
+      },
+      "O": {
+        "mean": 87.24,
+        "median": 89,
+        "sd": 5.26,
+        "se": 0.59
+      },
+      "X": {
+        "mean": 91.93,
+        "median": 94,
+        "sd": 8.28,
+        "se": 0.93
+      },
+      "P": {
+        "mean": 77.99,
+        "median": 80,
+        "sd": 7.25,
+        "se": 0.81
+      }
+    },
+    "dolphin_calm": {
+      "A": {
+        "mean": 55.58,
+        "median": 50,
+        "sd": 16.55,
+        "se": 1.85
+      },
+      "C": {
+        "mean": 62.54,
+        "median": 61,
+        "sd": 10.61,
+        "se": 1.19
+      },
+      "E": {
+        "mean": 74.7,
+        "median": 75,
+        "sd": 14.08,
+        "se": 1.57
+      },
+      "O": {
+        "mean": 53.61,
+        "median": 50,
+        "sd": 17.14,
+        "se": 1.92
+      },
+      "X": {
+        "mean": 76.35,
+        "median": 78,
+        "sd": 10.46,
+        "se": 1.17
+      },
+      "P": {
+        "mean": 76.66,
+        "median": 80,
+        "sd": 12.63,
+        "se": 1.41
+      }
+    },
+    "spider": {
+      "A": {
+        "mean": 69.2,
+        "median": 72,
+        "sd": 19.82,
+        "se": 2.22
+      },
+      "C": {
+        "mean": 74.65,
+        "median": 78,
+        "sd": 10.19,
+        "se": 1.14
+      },
+      "E": {
+        "mean": 55.13,
+        "median": 54,
+        "sd": 11.15,
+        "se": 1.25
+      },
+      "O": {
+        "mean": 56.79,
+        "median": 56,
+        "sd": 16.85,
+        "se": 1.88
+      },
+      "X": {
+        "mean": 66.54,
+        "median": 65,
+        "sd": 17.2,
+        "se": 1.92
+      },
+      "P": {
+        "mean": 59.18,
+        "median": 65,
+        "sd": 16.71,
+        "se": 1.87
+      }
+    },
+    "koala": {
+      "A": {
+        "mean": 84.1,
+        "median": 89,
+        "sd": 12.07,
+        "se": 1.35
+      },
+      "C": {
+        "mean": 58.58,
+        "median": 61,
+        "sd": 10.66,
+        "se": 1.19
+      },
+      "E": {
+        "mean": 61.55,
+        "median": 61,
+        "sd": 9.62,
+        "se": 1.08
+      },
+      "O": {
+        "mean": 45.2,
+        "median": 41,
+        "sd": 12.83,
+        "se": 1.43
+      },
+      "X": {
+        "mean": 54.04,
+        "median": 50,
+        "sd": 18.38,
+        "se": 2.06
+      },
+      "P": {
+        "mean": 73.22,
+        "median": 80,
+        "sd": 13.4,
+        "se": 1.5
+      }
+    },
+    "octopus": {
+      "A": {
+        "mean": 41.3,
+        "median": 36,
+        "sd": 11,
+        "se": 1.23
+      },
+      "C": {
+        "mean": 30.94,
+        "median": 29,
+        "sd": 3.91,
+        "se": 0.44
+      },
+      "E": {
+        "mean": 36.08,
+        "median": 37,
+        "sd": 11.01,
+        "se": 1.23
+      },
+      "O": {
+        "mean": 86.99,
+        "median": 89,
+        "sd": 7.33,
+        "se": 0.82
+      },
+      "X": {
+        "mean": 80.74,
+        "median": 89,
+        "sd": 17.11,
+        "se": 1.91
+      },
+      "P": {
+        "mean": 78.43,
+        "median": 80,
+        "sd": 8.68,
+        "se": 0.97
+      }
+    },
+    "owl": {
+      "A": {
+        "mean": 36.28,
+        "median": 35,
+        "sd": 5.42,
+        "se": 0.61
+      },
+      "C": {
+        "mean": 74.36,
+        "median": 76.5,
+        "sd": 9.05,
+        "se": 1.01
+      },
+      "E": {
+        "mean": 71.28,
+        "median": 65,
+        "sd": 11.46,
+        "se": 1.28
+      },
+      "O": {
+        "mean": 73.18,
+        "median": 75,
+        "sd": 11.93,
+        "se": 1.33
+      },
+      "X": {
+        "mean": 46.84,
+        "median": 48,
+        "sd": 14.45,
+        "se": 1.62
+      },
+      "P": {
+        "mean": 35.6,
+        "median": 30.5,
+        "sd": 15.01,
+        "se": 1.68
+      }
+    },
+    "elephant": {
+      "A": {
+        "mean": 63.8,
+        "median": 63,
+        "sd": 19.17,
+        "se": 2.14
+      },
+      "C": {
+        "mean": 75.84,
+        "median": 76,
+        "sd": 8.45,
+        "se": 0.94
+      },
+      "E": {
+        "mean": 68.2,
+        "median": 69,
+        "sd": 10.73,
+        "se": 1.2
+      },
+      "O": {
+        "mean": 31.65,
+        "median": 28,
+        "sd": 7.52,
+        "se": 0.84
+      },
+      "X": {
+        "mean": 42.31,
+        "median": 43.5,
+        "sd": 17.84,
+        "se": 2
+      },
+      "P": {
+        "mean": 46.5,
+        "median": 45,
+        "sd": 19.07,
+        "se": 2.13
+      }
+    },
+    "turtle": {
+      "A": {
+        "mean": 40.19,
+        "median": 35,
+        "sd": 11.16,
+        "se": 1.25
+      },
+      "C": {
+        "mean": 77.43,
+        "median": 80,
+        "sd": 7.38,
+        "se": 0.83
+      },
+      "E": {
+        "mean": 74,
+        "median": 69,
+        "sd": 8.13,
+        "se": 0.91
+      },
+      "O": {
+        "mean": 37.8,
+        "median": 40.5,
+        "sd": 8.03,
+        "se": 0.9
+      },
+      "X": {
+        "mean": 24.19,
+        "median": 18,
+        "sd": 12.29,
+        "se": 1.37
+      },
+      "P": {
+        "mean": 26.78,
+        "median": 24,
+        "sd": 7.06,
+        "se": 0.79
+      }
+    },
+    "cat": {
+      "A": {
+        "mean": 36.67,
+        "median": 35,
+        "sd": 4.84,
+        "se": 0.54
+      },
+      "C": {
+        "mean": 53.98,
+        "median": 52.5,
+        "sd": 13.71,
+        "se": 1.53
+      },
+      "E": {
+        "mean": 70.46,
+        "median": 71,
+        "sd": 13.97,
+        "se": 1.56
+      },
+      "O": {
+        "mean": 61.71,
+        "median": 64,
+        "sd": 17.85,
+        "se": 2
+      },
+      "X": {
+        "mean": 22.05,
+        "median": 20,
+        "sd": 5.72,
+        "se": 0.64
+      },
+      "P": {
+        "mean": 29.29,
+        "median": 29,
+        "sd": 5.64,
+        "se": 0.63
+      }
+    }
+  },
+  "directionalSummary": {
+    "perTraitMeanMove": {
+      "A": -10.583333333333334,
+      "C": -8,
+      "E": -13.166666666666666,
+      "O": -9.75,
+      "X": 7.583333333333333,
+      "P": -2.6666666666666665
+    },
+    "aceOMeanMove": -10.375,
+    "xpMeanMove": 2.458333333333333
+  },
+  "guards": {
+    "radicalMoveThreshold": 15,
+    "radicalViolations": [
+      "corgi.A: 60 → 41 (move -19)",
+      "corgi.E: 60 → 37 (move -23)",
+      "rooster.E: 88 → 72 (move -16)",
+      "hamster_praise.A: 95 → 67 (move -28)",
+      "hamster_praise.E: 65 → 48 (move -17)",
+      "fox.E: 60 → 40 (move -20)",
+      "fox.P: 58 → 78 (move +20)",
+      "koala.E: 80 → 62 (move -18)",
+      "octopus.E: 55 → 36 (move -19)",
+      "octopus.X: 52 → 81 (move +29)",
+      "elephant.E: 86 → 68 (move -18)",
+      "elephant.O: 50 → 32 (move -18)",
+      "turtle.O: 58 → 38 (move -20)",
+      "turtle.P: 45 → 27 (move -18)"
+    ],
+    "skewFlags": [
+      "corgi.O: mean 79.2 vs median 89.0",
+      "corgi.P: mean 82.5 vs median 80.0",
+      "rooster.A: mean 55.9 vs median 53.0",
+      "rooster.E: mean 71.8 vs median 75.0",
+      "rooster.O: mean 43.3 vs median 38.0",
+      "rooster.P: mean 83.5 vs median 86.0",
+      "hamster_praise.A: mean 66.5 vs median 69.0",
+      "hamster_praise.O: mean 57.6 vs median 50.0",
+      "fox.E: mean 40.1 vs median 37.0",
+      "fox.X: mean 91.9 vs median 94.0",
+      "fox.P: mean 78.0 vs median 80.0",
+      "dolphin_calm.A: mean 55.6 vs median 50.0",
+      "dolphin_calm.O: mean 53.6 vs median 50.0",
+      "dolphin_calm.P: mean 76.7 vs median 80.0",
+      "spider.A: mean 69.2 vs median 72.0",
+      "spider.C: mean 74.7 vs median 78.0",
+      "spider.P: mean 59.2 vs median 65.0",
+      "koala.A: mean 84.1 vs median 89.0",
+      "koala.C: mean 58.6 vs median 61.0",
+      "koala.O: mean 45.2 vs median 41.0",
+      "koala.X: mean 54.0 vs median 50.0",
+      "koala.P: mean 73.2 vs median 80.0",
+      "octopus.A: mean 41.3 vs median 36.0",
+      "octopus.O: mean 87.0 vs median 89.0",
+      "octopus.X: mean 80.7 vs median 89.0",
+      "owl.C: mean 74.4 vs median 76.5",
+      "owl.E: mean 71.3 vs median 65.0",
+      "owl.P: mean 35.6 vs median 30.5",
+      "elephant.O: mean 31.6 vs median 28.0",
+      "turtle.A: mean 40.2 vs median 35.0",
+      "turtle.C: mean 77.4 vs median 80.0",
+      "turtle.E: mean 74.0 vs median 69.0",
+      "turtle.O: mean 37.8 vs median 40.5",
+      "turtle.X: mean 24.2 vs median 18.0",
+      "turtle.P: mean 26.8 vs median 24.0",
+      "cat.O: mean 61.7 vs median 64.0",
+      "cat.X: mean 22.1 vs median 20.0"
+    ],
+    "maxFixedPointDrift": 21.39
+  },
+  "trialGates": {
+    "matcherIsolation": "9/12",
+    "isolationMisses": [
+      "corgi → fox",
+      "dolphin_calm → rooster",
+      "octopus → fox"
+    ],
+    "endToEndFidelity": 37.8,
+    "endToEndExact": 17,
+    "endToEndSimilar": 13,
+    "personaCount": 45,
+    "e2eMisses": [
+      "centroid-corgi exp=corgi got=fox",
+      "centroid-hamster_praise exp=hamster_praise got=corgi",
+      "centroid-dolphin_calm exp=dolphin_calm got=fox",
+      "centroid-spider exp=spider got=rooster",
+      "boundary-01 exp=corgi got=fox",
+      "boundary-02 exp=rooster got=fox",
+      "boundary-07 exp=dolphin_calm got=corgi",
+      "boundary-08 exp=hamster_praise got=corgi",
+      "boundary-09 exp=hamster_praise got=corgi",
+      "boundary-13 exp=dolphin_calm got=rooster",
+      "boundary-14 exp=koala got=rooster",
+      "boundary-15 exp=koala got=rooster",
+      "boundary-18 exp=spider got=dolphin_calm",
+      "boundary-23 exp=owl got=fox",
+      "boundary-24 exp=owl got=fox"
+    ],
+    "note": "Seeded personas (mulberry32 noise). run:all after `simulate:personas:generate` redraws persona noise with Math.random, so the committed-suite number will differ by the noise draw."
+  },
+  "populationBaseline": {
+    "mean": {
+      "A": 51,
+      "C": 55,
+      "E": 56,
+      "O": 55,
+      "X": 60,
+      "P": 58
+    },
+    "std": {
+      "A": 21,
+      "C": 17,
+      "E": 19,
+      "O": 22,
+      "X": 30,
+      "P": 24
+    }
+  }
+}

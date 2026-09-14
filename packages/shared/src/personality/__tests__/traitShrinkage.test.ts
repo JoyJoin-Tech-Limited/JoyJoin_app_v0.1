@@ -426,7 +426,14 @@ describe('Plan Item 3 — confidence-weighted trait shrinkage', () => {
       // shrinkage-mechanics regression: composition order, state purity, and
       // the w-bounds are unchanged and locked by the other tests. The set is
       // locked so NEW divergences fail loudly.
-      const KNOWN_PATH_DIVERGENCES = new Set(['dolphin_calm']);
+      //
+      // RESOLVED 2026-09-14 (P5c centroid recalibration): with the debiased-scale
+      // centroids the dolphin session no longer passes the mid-session
+      // near-boundary — paired flag-off/flag-on sessions are path-identical for
+      // all 12 archetypes (measured pathDivergences = []). The carve-out is
+      // retired; the lock is TIGHTENED to an empty set so any FUTURE divergence
+      // fails loudly again.
+      const KNOWN_PATH_DIVERGENCES = new Set<string>();
       let maxDelta = 0;
       const tieFlips: string[] = [];
       const pathDivergences: string[] = [];
@@ -469,9 +476,10 @@ describe('Plan Item 3 — confidence-weighted trait shrinkage', () => {
       // so the tie-flip set is now empty. Locked: any NEW tie flip fails
       // loudly.
       expect(tieFlips).toEqual([]);
-      // The only known path divergence is the dolphin session (documented
-      // above); lock the set so NEW divergences fail loudly.
-      expect(pathDivergences).toEqual(['dolphin_calm']);
+      // The dolphin path divergence was RESOLVED by the P5c centroid
+      // recalibration (2026-09-14, see above): all 12 paired sessions are
+      // path-identical. Locked EMPTY — any NEW divergence fails loudly.
+      expect(pathDivergences).toEqual([]);
       // Locked bound from the contract; the 2026-09-10 probe measured ≈ 1.56
       // at K = 75 (worst: high-deviation moderate-confidence traits).
       expect(maxDelta).toBeLessThan(2);

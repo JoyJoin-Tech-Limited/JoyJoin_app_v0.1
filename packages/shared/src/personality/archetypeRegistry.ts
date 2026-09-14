@@ -7,6 +7,33 @@
  * - archetypes.ts (description, nickname, tagline, epicDescription)
  * - archetypeInsights.ts (counterIntuitive, scenarioSimulation, hiddenStrength)
  * - archetypeAvatars.ts (gradients, bgColors)
+ *
+ * ── traitProfile scale: DEBIASED measurement scale (recalibrated 2026-09-14, P5c) ──
+ * The traitProfile centroids below are the positions the DEBIASED V4 pipeline
+ * (P5b, commit d5ab60f95 — zero-sum question bank, 50-centered measurement)
+ * actually measures for true members of each archetype. Estimator: per-trait
+ * MEAN of K=80 idealized members per archetype (latent ~ N(old centroid, σ=10)
+ * truncated [5,95], the Item-6 population contract) run through full
+ * natural-termination clean end-to-end sessions (instrument:
+ * scripts/simulate/recalibrate-centroids.ts; evidence:
+ * scripts/simulate/data/centroid-recalibration-latest.json). The matcher gate
+ * layer (matcherV2Gates.ts, matcherV2.ts vetoes/classifiers) was retuned to the
+ * same scale in the same change. Pre/post table (old biased-scale → new):
+ *   corgi          A60→41 C50→38 E60→37 O65→79 X95→96 P85→83
+ *   rooster        A70→56 C78→63 E88→72 O55→43 X78→83 P92→83
+ *   hamster_praise A95→67 C50→46 E65→48 O62→58 X82→95 P88→86
+ *   fox            A40→37 C50→39 E60→40 O92→87 X78→92 P58→78
+ *   dolphin_calm   A70→56 C70→63 E85→75 O65→54 X65→76 P68→77
+ *   spider         A70→69 C85→75 E65→55 O70→57 X60→67 P60→59
+ *   koala          A90→84 C65→59 E80→62 O60→45 X48→54 P70→73
+ *   octopus        A50→41 C28→31 E55→36 O95→87 X52→81 P70→78
+ *   owl            A45→36 C80→74 E75→71 O88→73 X40→47 P50→36
+ *   elephant       A70→64 C90→76 E86→68 O50→32 X40→42 P60→47
+ *   turtle         A55→40 C90→77 E82→74 O58→38 X28→24 P45→27
+ *   cat            A40→37 C55→54 E65→70 O72→62 X22→22 P42→29
+ * Do NOT hand-tune individual cells without re-running the estimator — the
+ * gate constants in matcherV2Gates.ts / matcherV2.ts are calibrated against
+ * these exact values.
  */
 
 import { TraitKey } from './types';
@@ -92,7 +119,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "社牛柯基",
     assetKey: "corgi",
     profile: {
-      traitProfile: { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 },
+      traitProfile: { A: 35, C: 35, E: 24, O: 78, X: 98, P: 88 },
       energyLevel: 95,
       secondaryDifferentiators: {
         motivationDirection: 'external',
@@ -149,7 +176,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "小太阳鸡",
     assetKey: "rooster",
     profile: {
-      traitProfile: { A: 70, C: 78, E: 88, O: 55, X: 78, P: 92 },
+      traitProfile: { A: 56, C: 63, E: 72, O: 43, X: 83, P: 83 },
       energyLevel: 90,
       secondaryDifferentiators: {
         motivationDirection: 'external',
@@ -206,7 +233,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "夸夸仓鼠",
     assetKey: "hamster_praise",
     profile: {
-      traitProfile: { A: 95, C: 50, E: 65, O: 62, X: 82, P: 88 },
+      traitProfile: { A: 44, C: 40, E: 25, O: 74, X: 97, P: 86 },
       energyLevel: 85,
       secondaryDifferentiators: {
         motivationDirection: 'external',
@@ -263,7 +290,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "寻宝狐",
     assetKey: "fox",
     profile: {
-      traitProfile: { A: 40, C: 50, E: 60, O: 92, X: 78, P: 58 },
+      traitProfile: { A: 35, C: 35, E: 44, O: 85, X: 95, P: 82 },
       energyLevel: 82,
       secondaryDifferentiators: {
         motivationDirection: 'external',
@@ -320,7 +347,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "机灵海豚",
     assetKey: "dolphin_calm",
     profile: {
-      traitProfile: { A: 70, C: 70, E: 85, O: 65, X: 65, P: 68 },
+      traitProfile: { A: 35, C: 65, E: 82, O: 56, X: 77, P: 83 },
       energyLevel: 75,
       secondaryDifferentiators: {
         motivationDirection: 'balanced',
@@ -377,7 +404,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "人脉蛛",
     assetKey: "spider",
     profile: {
-      traitProfile: { A: 70, C: 85, E: 65, O: 70, X: 60, P: 60 },
+      traitProfile: { A: 76, C: 75, E: 55, O: 55, X: 72, P: 64 },
       energyLevel: 72,
       secondaryDifferentiators: {
         motivationDirection: 'balanced',
@@ -434,7 +461,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "树洞考拉",
     assetKey: "koala",
     profile: {
-      traitProfile: { A: 90, C: 65, E: 80, O: 60, X: 48, P: 70 },
+      traitProfile: { A: 84, C: 59, E: 62, O: 45, X: 54, P: 73 },
       energyLevel: 70,
       secondaryDifferentiators: {
         motivationDirection: 'internal',
@@ -491,7 +518,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "脑洞章鱼",
     assetKey: "octopus",
     profile: {
-      traitProfile: { A: 50, C: 28, E: 55, O: 95, X: 52, P: 70 },
+      traitProfile: { A: 32, C: 28, E: 24, O: 87, X: 97, P: 88 },
       energyLevel: 68,
       secondaryDifferentiators: {
         motivationDirection: 'internal',
@@ -548,7 +575,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "好奇猫头鹰",
     assetKey: "owl",
     profile: {
-      traitProfile: { A: 45, C: 80, E: 75, O: 88, X: 40, P: 50 },
+      traitProfile: { A: 36, C: 74, E: 71, O: 73, X: 47, P: 36 },
       energyLevel: 55,
       secondaryDifferentiators: {
         motivationDirection: 'internal',
@@ -605,7 +632,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "靠谱大象",
     assetKey: "elephant",
     profile: {
-      traitProfile: { A: 70, C: 90, E: 86, O: 50, X: 40, P: 60 },
+      traitProfile: { A: 64, C: 76, E: 68, O: 32, X: 42, P: 47 },
       energyLevel: 52,
       secondaryDifferentiators: {
         motivationDirection: 'internal',
@@ -662,7 +689,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "慢热龟",
     assetKey: "turtle",
     profile: {
-      traitProfile: { A: 55, C: 90, E: 82, O: 58, X: 28, P: 45 },
+      traitProfile: { A: 40, C: 77, E: 74, O: 38, X: 24, P: 27 },
       energyLevel: 38,
       secondaryDifferentiators: {
         motivationDirection: 'internal',
@@ -719,7 +746,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     name: "小透明猫",
     assetKey: "cat",
     profile: {
-      traitProfile: { A: 40, C: 55, E: 65, O: 72, X: 22, P: 42 },
+      traitProfile: { A: 33, C: 61, E: 84, O: 35, X: 16, P: 25 },
       energyLevel: 30,
       secondaryDifferentiators: {
         motivationDirection: 'internal',

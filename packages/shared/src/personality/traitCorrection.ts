@@ -10,10 +10,29 @@ const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 /**
  * Population baseline statistics (based on simulation data)
  * 人群基线统计（基于模拟数据）
+ *
+ * RE-FIT 2026-09-14 (P5c, post-debias scale): the previous constants were
+ * fit on the PRE-debias (positively-keyed) measurement scale and are stale
+ * after the P5b question-bank debias (commit d5ab60f95). Re-fit method:
+ * n=600 clean (honest trait-faithful argmax) natural-termination sessions
+ * over the documented Item-6 2-component mixture population (60%
+ * centroid-mixture σ=10 around the CURRENT registry centroids, 40% general
+ * N(50,15²), truncated [5,95]), per-trait mean/std of the measured vectors
+ * the debiased engine reports. Instrument: scripts/simulate/recalibrate-centroids.ts
+ * (phase 5), artifact scripts/simulate/data/centroid-recalibration-latest.json.
+ *
+ * NOTE 1 — capping remains DISABLED at both call sites (matcherV2.ts
+ * correctTraits, adaptiveEngine.ts SDI block); these constants are
+ * documentation/future-use only and have no live behavior.
+ * NOTE 2 — the std values are much larger than the old fit (17–30 vs 11–15)
+ * because the 60% centroid-mixture component makes the marginal per-trait
+ * distribution multimodal (e.g. X spans cat 22 → corgi 95). If capping is
+ * ever re-enabled, re-derive std on the GENERAL-population component only
+ * (a unimodal baseline) rather than this mixture fit.
  */
 export const POPULATION_BASELINE = {
-  mean: { A: 62, C: 55, E: 60, O: 65, X: 58, P: 60 } as Record<TraitKey, number>,
-  std: { A: 12, C: 11, E: 13, O: 14, X: 15, P: 13 } as Record<TraitKey, number>,
+  mean: { A: 51, C: 55, E: 56, O: 55, X: 60, P: 58 } as Record<TraitKey, number>,
+  std: { A: 21, C: 17, E: 19, O: 22, X: 30, P: 24 } as Record<TraitKey, number>,
 };
 
 /**

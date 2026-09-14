@@ -143,98 +143,96 @@ export const PROTOTYPE_SOUL_TRAITS: Record<string, {
  * 原型专属调整规则 (返回乘数 0.3-1.3)
  * 1.0 = 中性, <1.0 = 惩罚, >1.0 = 加成
  * 规则更简单，依赖灵魂特质权重做主要区分
- */
-/**
- * V2.2 校准版：根据10k用户模拟的实际分数分布调整阈值
- * 实际分数范围约55-80，原阈值基于理想化的85+分数，需降低10-15点
+ *
+ * ── P5c recalibration (2026-09-14, debiased measurement scale) ──
+ * All user-trait thresholds re-derived from the measured per-archetype
+ * distributions of the DEBIASED pipeline (K=80 members/archetype, clean
+ * end-to-end; scripts/simulate/data/centroid-recalibration-latest.json).
+ * Multiplier values and rule topology UNCHANGED — thresholds only.
  */
 export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, number>) => number> = {
   "rooster": (t) => {
-    // P是rooster的灵魂 - 实际P分布: 61-74-88
-    // 降低阈值：85→75, 80→70
-    if (t.P >= 78) return 1.25;
-    if (t.P >= 72) return 1.1;
-    if (t.P < 60) return 0.5;
+    // P是rooster的灵魂 — measured rooster P 83.5±3.8; P blows up to 86+ for non-rooster boundary members (P5c round 2): 87/82/68 → 88/85/68
+    if (t.P >= 88) return 1.25;
+    if (t.P >= 85) return 1.1;
+    if (t.P < 68) return 0.5;
     return 1.0;
   },
   "dolphin_calm": (t) => {
-    // dolphin_calm: 高E + 低X + 适中P（实际X分布: 33-42-70）
-    if (t.P >= 78) return 0.5; // 高P更像rooster
-    if (t.E >= 75 && t.X < 55 && t.P < 65) return 1.25; // 强化低X信号
-    if (t.E >= 72 && t.P < 68) return 1.1;
+    // measured dolphin P 76.7 / E 74.7 / X 76.3, rooster P 83.5 (P5c): P≥78→88 (P blows up to 86 for dolphin's own boundary members — the suppression must sit above the blow-up), boost E≥75&&X<55&&P<65 → E≥72&&X<80&&P<74, E≥72&&P<68 → E≥70&&P<76
+    if (t.P >= 88) return 0.5; // 高P更像rooster
+    if (t.E >= 72 && t.X < 80 && t.P < 74) return 1.25; // 强化低X信号
+    if (t.E >= 70 && t.P < 76) return 1.1;
     return 1.0;
   },
   "owl": (t) => {
-    // 猫头鹰核心: 高O + 低X - 实际O分布: 65-75-83
-    if (t.O >= 75 && t.X < 45) return 1.35;
-    if (t.O >= 70) return 1.15;
-    if (t.O < 65) return 0.5;
-    if (t.X > 55) return 0.6;
+    // 猫头鹰核心: 高O + 低X — measured owl O 73.2±11.9 / X 46.8±14.4 (P5c): O 75/70/65 → 68/62/50, X<45→40, X>55→60; O<50→0.5 → O<42→0.5 (round 2: the 50/50 owl-octopus blend measures O≈45 and must not be crushed)
+    if (t.O >= 68 && t.X < 40) return 1.35;
+    if (t.O >= 62) return 1.15;
+    if (t.O < 42) return 0.5;
+    if (t.X > 60) return 0.6;
     return 1.0;
   },
   "turtle": (t) => {
-    // 龟核心: 高E+C + 低X + 低O - 实际O分布: 45-53-65
-    if (t.O > 72) return 0.4; // 高O更像猫头鹰
-    if (t.O > 68) return 0.6;
-    if (t.X < 38 && t.O < 60) return 1.3;
+    // 龟核心: 高E+C + 低X + 低O — measured turtle O 37.8 / X 24.2 (P5c): O>72/>68 → >60/>50, X<38&&O<60 → X<30&&O<45
+    if (t.O > 60) return 0.4; // 高O更像猫头鹰
+    if (t.O > 50) return 0.6;
+    if (t.X < 30 && t.O < 45) return 1.3;
     return 1.0;
   },
-  "fox": (t) => t.O >= 75 ? 1.15 : (t.O < 60 ? 0.5 : 1.0),
+  "fox": (t) => t.O >= 88 ? 1.15 : (t.O < 72 ? 0.5 : 1.0), // P5c round 2: measured fox O 78–87 (mean 87.2±5.3); O≥88 keeps the boost off octopus's centroid (O=87) so octopus wins its own isolation past the 100-clamp tie
   "octopus": (t) => {
-    // 实际O分布: 83-89-95, C分布: 40-50-60
-    if (t.O >= 82 && t.C < 60) return 1.2;
-    if (t.C > 65) return 0.7;
+    // measured octopus O 78–87 / C 28–31 (C is the distinctive channel; fox C=35, corgi C=35): O≥82&&C<60 → O≥78&&C<34, C>65→62
+    if (t.O >= 78 && t.C < 34) return 1.2;
+    if (t.C > 62) return 0.7;
     return 1.0;
   },
   "cat": (t) => {
-    // 实际X分布: 25-28-32
-    if (t.X < 35 && t.A < 60) return 1.2;
-    if (t.X > 50) return 0.5;
+    // measured cat X 22.1±5.7 / A 36.7 (P5c): X<35&&A<60 → X<28&&A<48, X>50→40
+    if (t.X < 28 && t.A < 48) return 1.2;
+    if (t.X > 40) return 0.5;
     return 1.0;
   },
   "koala": (t) => {
-    // V2.3 FIX: HARD VETO for high-X users - koala has X:48
-    // High-X users (X >= 65) should NEVER match koala
-    if (t.X >= 75) return 0.15; // Near-VETO for very high-X users
-    if (t.X >= 70) return 0.25; // Severe penalty
-    if (t.X >= 65) return 0.35; // Strong penalty
-    if (t.X >= 60) return 0.5; // Moderate penalty
+    // measured koala X 54.0±18.4 / A 84.1±12.1 vs high-X archetypes 92–98 (P5c): X 85/75/65/58 → 95/88/78/68 (blown-X boundary members reach 86–92 — veto targets the true high-X cluster); A<68→0.6 → A<70→0.45 (P5c round 2: center-cloud koala basin 17.7% > 13% drift-gate cap — stronger center rejection; ~12% of genuine koala members sit below 70 and retain their base-distance advantage)
+    if (t.X >= 95) return 0.15; // Near-VETO for very high-X users
+    if (t.X >= 88) return 0.25; // Severe penalty
+    if (t.X >= 78) return 0.35; // Strong penalty
+    if (t.X >= 68) return 0.5; // Moderate penalty
     // Only give bonus for A if X is appropriate (low-X users)
-    if (t.A >= 78 && t.X < 55) return 1.15;
-    if (t.A < 65) return 0.6;
+    if (t.A >= 78 && t.X < 50) return 1.15;
+    if (t.A < 70) return 0.45;
     return 1.0;
   },
   "hamster_praise": (t) => {
-    // 实际A分布: 65-74-88, X分布: 73-83-88
-    if (t.A >= 72 && t.X >= 78) return 1.2;
-    if (t.A >= 68 && t.X >= 72) return 1.1;
+    // measured hamster A 44–67 (A saturates under high X) / X 95.3 (P5c): A≥70&&X≥88 → A≥42&&X≥92, A≥64&&X≥80 → A≥38&&X≥85 → A≥42&&X≥85 (round 2: the A≥38 tier boosted hamster for rooster's own blown-X persona, A=39)
+    if (t.A >= 42 && t.X >= 92) return 1.2;
+    if (t.A >= 42 && t.X >= 85) return 1.1;
     return 1.0;
   },
   "corgi": (t) => {
-    // V2.3 FIX: Lower thresholds - corgi X:95, P:85
-    // Users with high X should match even if P is moderate
-    if (t.X >= 75 && t.P >= 70) return 1.3; // Strong match for high-X + good-P
-    if (t.X >= 70 && t.P >= 65) return 1.2; // Good match
-    if (t.X >= 65 && t.P >= 60) return 1.1; // Moderate match
-    if (t.X >= 60) return 1.05; // Slight boost for extroverts
+    // measured corgi X 95.6±2.5 / P 82.5±3.8 (P5c): X 75/70/65/60 → 92/88/82/70, P 70/65/60 → 78/72/68, X<55 → X<55 (low-X penalty region unchanged — nobody measures below 55 on the new scale except turtle/cat/owl X)
+    if (t.X >= 92 && t.P >= 78) return 1.3; // Strong match for high-X + good-P
+    if (t.X >= 88 && t.P >= 72) return 1.2; // Good match
+    if (t.X >= 82 && t.P >= 68) return 1.1; // Moderate match
+    if (t.X >= 70) return 1.05; // Slight boost for extroverts
     if (t.X < 55) return 0.6; // Penalty for low-X users
     return 1.0;
   },
   "elephant": (t) => {
-    // 实际E分布: 76-79-81, P分布: 35-35-55 (很低!)
-    // 区分于turtle：大象有更高A和P, 且X不能过低
-    if (t.X < 32) return 0.5; // Very low X is turtle territory
-    if (t.P < 38) return 0.6; // Very low P is turtle territory
-    if (t.E >= 76 && t.A >= 70 && t.P >= 40) return 1.25;
-    if (t.E >= 75) return 1.1;
-    if (t.E < 72) return 0.6;
+    // measured elephant E 68.2±10.7 / A 63.8±19.2 / P 46.5±19.1 / X 42.3, turtle X 24.2 / P 26.8 (P5c): X<32→30, P<38→35, E≥76&&A≥70&&P≥40 → E≥72&&A≥68&&P≥42, E≥75→68, E<72→58
+    if (t.X < 30) return 0.5; // Very low X is turtle territory
+    if (t.P < 35) return 0.6; // Very low P is turtle territory
+    if (t.E >= 72 && t.A >= 68 && t.P >= 42) return 1.25;
+    if (t.E >= 68) return 1.1;
+    if (t.E < 58) return 0.6;
     return 1.0;
   },
   "spider": (t) => {
-    // 区分于dolphin_calm: spider is higher-C, lower-E
-    if (t.E >= 78) return 0.5; // Very high E is dolphin_calm territory
-    if (t.C >= 73) return 1.1;
-    if (t.C < 60) return 0.6;
+    // measured spider C 74.7±10.2 / E 55.1, dolphin E 74.7 (P5c): E≥78→72, C≥73→74, C<60→64
+    if (t.E >= 72) return 0.5; // Very high E is dolphin_calm territory
+    if (t.C >= 74) return 1.1;
+    if (t.C < 64) return 0.6;
     return 1.0;
   }
 };
@@ -745,11 +743,16 @@ export class PrototypeMatcher {
     const sunnyChicken = results.find(r => r.archetype === 'rooster');
     const dolphin = results.find(r => r.archetype === 'dolphin_calm');
     if (!sunnyChicken || !dolphin) return;
-    
-    // Primary trait: P (rooster=92, dolphin_calm=68)
-    const pBonus = this.calculateGradualBonus(t.P, 92, 68, 5);
-    // Secondary trait: X (rooster=85, dolphin_calm=55)
-    const xBonus = this.calculateGradualBonus(t.X, 85, 55, 3);
+
+    // P5c (2026-09-14): reference values now sourced from the registry (debiased
+    // measured scale) instead of hard-coded old-scale constants — was P (92, 68),
+    // X (85, 55); measured: rooster P 83.5 / X 83.3, dolphin P 76.7 / X 76.3.
+    const roosterProfile = archetypePrototypes['rooster'].traitProfile;
+    const dolphinProfile = archetypePrototypes['dolphin_calm'].traitProfile;
+    // Primary trait: P (rooster higher on both scales)
+    const pBonus = this.calculateGradualBonus(t.P, roosterProfile.P, dolphinProfile.P, 5);
+    // Secondary trait: X (rooster higher on both scales)
+    const xBonus = this.calculateGradualBonus(t.X, roosterProfile.X, dolphinProfile.X, 3);
     
     // Combined bonus: primary has more weight
     const totalBonus = pBonus + xBonus * 0.5;
@@ -782,11 +785,16 @@ export class PrototypeMatcher {
     const owl = results.find(r => r.archetype === 'owl');
     const turtle = results.find(r => r.archetype === 'turtle');
     if (!owl || !turtle) return;
-    
-    // Primary trait: O (猫头鹰=88, 龟=65)
-    const oBonus = this.calculateGradualBonus(t.O, 88, 65, 5);
-    // Secondary trait: E (猫头鹰=75, 龟=85) - note: turtle has higher E
-    const eBonus = this.calculateGradualBonus(t.E, 75, 85, 3);
+
+    // P5c (2026-09-14): reference values from the registry (debiased measured
+    // scale) — was O (88, 65), E (75, 85); measured: owl O 73.2 / E 71.3,
+    // turtle O 37.8 / E 74.0. Order preserved on both traits.
+    const owlProfile = archetypePrototypes['owl'].traitProfile;
+    const turtleProfile = archetypePrototypes['turtle'].traitProfile;
+    // Primary trait: O (owl higher on both scales)
+    const oBonus = this.calculateGradualBonus(t.O, owlProfile.O, turtleProfile.O, 5);
+    // Secondary trait: E (turtle higher on both scales)
+    const eBonus = this.calculateGradualBonus(t.E, owlProfile.E, turtleProfile.E, 3);
     
     // Combined bonus
     const totalBonus = oBonus + eBonus * 0.5;
@@ -818,11 +826,18 @@ export class PrototypeMatcher {
     const bear = results.find(r => r.archetype === 'koala');
     const dolphin = results.find(r => r.archetype === 'dolphin_calm');
     if (!bear || !dolphin) return;
-    
-    // Primary trait: A (koala=88, dolphin_calm=70)
-    const aBonus = this.calculateGradualBonus(t.A, 88, 70, 5);
-    // Secondary trait: E (koala=80, dolphin_calm=75) - bear slightly higher
-    const eBonus = this.calculateGradualBonus(t.E, 80, 75, 2);
+
+    // P5c (2026-09-14): A reference values from the registry (debiased measured
+    // scale) — was A (88, 70); measured: koala A 84.1, dolphin A 55.6.
+    const koalaProfile = archetypePrototypes['koala'].traitProfile;
+    const dolphinProfile = archetypePrototypes['dolphin_calm'].traitProfile;
+    // Primary trait: A (koala higher on both scales)
+    const aBonus = this.calculateGradualBonus(t.A, koalaProfile.A, dolphinProfile.A, 5);
+    // Secondary trait E REMOVED (was maxBonus 2 on (80, 75)): on the debiased
+    // scale the E order FLIPPED — measured koala E 61.5 < dolphin 74.7 — and the
+    // "positive favors koala" bonus convention cannot reward koala for a trait
+    // it now trails; keeping it would actively misclassify.
+    const eBonus = 0;
     
     // Combined bonus
     const totalBonus = aBonus + eBonus * 0.5;
@@ -855,12 +870,17 @@ export class PrototypeMatcher {
     const turtle = results.find(r => r.archetype === 'turtle');
     if (!elephant || !turtle) return;
 
-    // Primary trait: A (elephant=70, turtle=55)
-    const aBonus = this.calculateGradualBonus(t.A, 70, 55, 5);
-    // Secondary trait: P (elephant=60, turtle=45)
-    const pBonus = this.calculateGradualBonus(t.P, 60, 45, 4);
-    // Tertiary trait: X (elephant=40, turtle=28)
-    const xBonus = this.calculateGradualBonus(t.X, 40, 28, 2);
+    // P5c (2026-09-14): reference values from the registry (debiased measured
+    // scale) — was A (70, 55), P (60, 45), X (40, 28); measured: elephant
+    // A 63.8 / P 46.5 / X 42.3, turtle A 40.2 / P 26.8 / X 24.2.
+    const elephantProfile = archetypePrototypes['elephant'].traitProfile;
+    const turtleProfile = archetypePrototypes['turtle'].traitProfile;
+    // Primary trait: A (elephant higher on both scales)
+    const aBonus = this.calculateGradualBonus(t.A, elephantProfile.A, turtleProfile.A, 5);
+    // Secondary trait: P (elephant higher on both scales)
+    const pBonus = this.calculateGradualBonus(t.P, elephantProfile.P, turtleProfile.P, 4);
+    // Tertiary trait: X (elephant higher on both scales)
+    const xBonus = this.calculateGradualBonus(t.X, elephantProfile.X, turtleProfile.X, 2);
 
     // Combined bonus: positive favors elephant, negative favors turtle
     const totalBonus = aBonus + pBonus * 0.6 + xBonus * 0.3;
@@ -891,12 +911,17 @@ export class PrototypeMatcher {
     const spider = results.find(r => r.archetype === 'spider');
     if (!dolphin || !spider) return;
 
-    // Primary trait: E (dolphin_calm=85, spider=65)
-    const eBonus = this.calculateGradualBonus(t.E, 85, 65, 5);
-    // Secondary trait: C (dolphin_calm=70, spider=85)
-    const cBonus = this.calculateGradualBonus(t.C, 70, 85, 4);
-    // Tertiary trait: X (dolphin_calm=65, spider=60)
-    const xBonus = this.calculateGradualBonus(t.X, 65, 60, 2);
+    // P5c (2026-09-14): reference values from the registry (debiased measured
+    // scale) — was E (85, 65), C (70, 85), X (65, 60); measured: dolphin
+    // E 74.7 / C 62.5 / X 76.3, spider E 55.1 / C 74.7 / X 66.5.
+    const dolphinProfile = archetypePrototypes['dolphin_calm'].traitProfile;
+    const spiderProfile = archetypePrototypes['spider'].traitProfile;
+    // Primary trait: E (dolphin higher on both scales)
+    const eBonus = this.calculateGradualBonus(t.E, dolphinProfile.E, spiderProfile.E, 5);
+    // Secondary trait: C (spider higher on both scales)
+    const cBonus = this.calculateGradualBonus(t.C, dolphinProfile.C, spiderProfile.C, 4);
+    // Tertiary trait: X (dolphin higher on both scales)
+    const xBonus = this.calculateGradualBonus(t.X, dolphinProfile.X, spiderProfile.X, 2);
 
     // Combined bonus: positive favors dolphin, negative favors spider
     const totalBonus = eBonus + cBonus * 0.6 + xBonus * 0.3;
@@ -926,9 +951,17 @@ export class PrototypeMatcher {
     const octopus = results.find(r => r.archetype === 'octopus');
     if (!fox || !octopus) return;
 
-    const xBonus = this.calculateGradualBonus(t.X, 78, 52, 6);
-    const cBonus = this.calculateGradualBonus(t.C, 50, 28, 4);
-    const pBonus = this.calculateGradualBonus(t.P, 58, 70, 3);
+    // P5c (2026-09-14): C is the only reliable differentiator on the debiased
+    // scale — measured fox C 38.8 / octopus C 30.9 (estimator), and the mode
+    // centroids preserve the direction (fox C 35 > octopus C 28). X SATURATES
+    // (both measure ≈92–98) and the P order is unstable, so the X (was
+    // maxBonus 6) and P (was maxBonus 3) components are zeroed rather than
+    // allowed to fire in the wrong direction. Reference values from the registry.
+    const foxProfile = archetypePrototypes['fox'].traitProfile;
+    const octopusProfile = archetypePrototypes['octopus'].traitProfile;
+    const xBonus = 0;
+    const cBonus = this.calculateGradualBonus(t.C, foxProfile.C, octopusProfile.C, 4);
+    const pBonus = 0;
 
     const totalBonus = xBonus + cBonus * 0.5 + pBonus * 0.3;
 

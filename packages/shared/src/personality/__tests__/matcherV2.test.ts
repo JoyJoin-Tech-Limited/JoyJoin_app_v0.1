@@ -17,7 +17,12 @@ describe('PrototypeMatcher', () => {
 
   describe('known-vector assignment', () => {
     it('high-A + high-X + high-P user should match hamster_praise or corgi', () => {
-      const userTraits: Record<TraitKey, number> = { A: 90, C: 50, E: 60, O: 60, X: 90, P: 90 };
+      // P5c (2026-09-14): vector updated to the debiased measured scale — was the
+      // old-scale idealized { A: 90, C: 50, E: 60, O: 60, X: 90, P: 90 }, which is
+      // unreachable on the recalibrated scale (A saturates ≈44–67 under high X) and
+      // now assigns spider. New vector sits inside hamster's measured cluster
+      // (hamster centroid { A: 44, C: 40, E: 25, O: 74, X: 97, P: 86 }).
+      const userTraits: Record<TraitKey, number> = { A: 50, C: 42, E: 30, O: 72, X: 95, P: 85 };
       const results = matcher.findBestMatches(userTraits, undefined, 3);
 
       expect(results.length).toBeGreaterThan(0);
@@ -29,8 +34,12 @@ describe('PrototypeMatcher', () => {
 
   describe('confusion-pair tie-breaker', () => {
     it('high-X user between corgi and koala should strongly favor corgi', () => {
-      // corgi: X=95, koala: X=48. High X is the decisive differentiator.
-      const userTraits: Record<TraitKey, number> = { A: 70, C: 55, E: 70, O: 60, X: 88, P: 80 };
+      // P5c (2026-09-14): vector updated to the debiased measured scale — was
+      // { A: 70, C: 55, E: 70, O: 60, X: 88, P: 80 } (old scale; now assigns spider).
+      // New vector sits inside corgi's measured cluster (centroid
+      // { A: 35, C: 35, E: 24, O: 78, X: 98, P: 88 }); X remains the decisive
+      // differentiator (corgi X=98, koala X=54).
+      const userTraits: Record<TraitKey, number> = { A: 40, C: 38, E: 30, O: 75, X: 93, P: 84 };
       const results = matcher.findBestMatches(userTraits, undefined, 3);
 
       expect(results.length).toBeGreaterThanOrEqual(2);
