@@ -22,9 +22,14 @@ import type { AIProvider } from "@shared/types/aiMeta";
 const AI_TIMEOUT_MS = 6000;
 const REACTION_TIMEOUT_MS = 4000;
 const TOTAL_ROUTE_BUDGET_MS = 12000;
-// Occupation resolution must never blow the route budget: embeddings degrade
-// to `null` (exact-match-only) when this bound is hit.
+// Occupation resolution must never blow the route budget. The deterministic
+// exact-match + candidate mapping always completes; only the embedding
+// top-up is time-boxed (aborted at OCCUPATION_RESOLUTION_EMBED_BUDGET_MS), so
+// a slow/hung embedding degrades to the deterministic result. The outer
+// withTimeout is a last-ditch guard: EMPTY is returned only if the
+// deterministic computation itself fails.
 const OCCUPATION_RESOLUTION_TIMEOUT_MS = 1500;
+const OCCUPATION_RESOLUTION_EMBED_BUDGET_MS = 1200;
 
 const EMPTY_OCCUPATION_RESOLUTION: ProfessionOccupationResolution = {
   standardizedOccupationId: null,
@@ -597,11 +602,14 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
       );
 
       // Kick off deterministic occupation resolution in parallel with reaction
-      // generation. It may embed the raw input for the vector-index branch /
-      // candidate top-up; the bound keeps it from delaying the response, and
-      // any failure degrades to exact-match-only (never a guessed id).
+      // generation. The embedding top-up inside is bounded by
+      // OCCUPATION_RESOLUTION_EMBED_BUDGET_MS (< the outer bound) and aborts
+      // to the deterministic result on timeout, so the outer catch below only
+      // fires when the deterministic computation itself fails.
       const occupationResolutionPromise = withTimeout(
-        resolveProfessionOccupation(description, classification),
+        resolveProfessionOccupation(description, classification, {
+          embeddingTimeoutMs: OCCUPATION_RESOLUTION_EMBED_BUDGET_MS,
+        }),
         OCCUPATION_RESOLUTION_TIMEOUT_MS,
         "Occupation resolution"
       ).catch(() => EMPTY_OCCUPATION_RESOLUTION);

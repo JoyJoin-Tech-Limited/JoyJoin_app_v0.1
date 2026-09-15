@@ -13,12 +13,17 @@
  *     topping up the occupation group from the existing vector index.
  *
  * No LLM call is made here. The embedding call (Granite, not an LLM) is the
- * only network dependency and degrades to `null` on missing config/failure.
+ * only network dependency; it is skipped entirely when the vector index is
+ * absent, is bounded by an abort budget, and degrades to `null` on missing
+ * config/failure/timeout — the deterministic result is always preserved.
  *
- * τ provenance: the runtime threshold is read from the committed calibration
- * report (`occupation-threshold-report.json`) so `τ_code === τ_script` by
- * construction. When no report exists the value is `null` and the embedding
- * branch is disabled (fail-closed — only deterministic exact matches resolve).
+ * τ provenance: the offline calibration script writes
+ * `occupation-threshold-report.json`, but `apps/server/data/.gitignore`
+ * excludes `*.json`, so a git deploy never carries the report and the runtime
+ * τ is `null` — the embedding resolution branch is disabled (fail-closed;
+ * only exact/synonym matches resolve). The report is consumed only when ops
+ * explicitly mounts it into `apps/server/data/`; it is never generated at
+ * runtime. The calibration script is an offline tool and is unused at runtime.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -28,6 +33,7 @@ import { OCCUPATIONS } from '@shared/occupations';
 import type { IndustryClassificationResult } from '../inference/industryClassifier';
 import { embeddingClient } from '../embeddingClient';
 import { cosine, safeLoadIndex, type VectorEntry } from './occupationVectorIndex';
+import { logger } from './logger';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -68,9 +74,10 @@ function dataDirCandidates(): string[] {
 }
 
 /**
- * Read the offline-calibrated threshold from the committed report. Returns
- * `null` (embedding resolution disabled) unless the report proves the AC-11
- * bar: finite τ > 0.35, precision ≥ 0.90, held-out N ≥ 100.
+ * Read the offline-calibrated threshold from the calibration report when it
+ * is present (ops-mounted; the file is gitignored, so it is absent on git
+ * deploys). Returns `null` (embedding resolution disabled) unless the report
+ * proves the AC-11 bar: finite τ > 0.35, precision ≥ 0.90, held-out N ≥ 100.
  */
 function readCalibratedThreshold(): number | null {
   for (const dir of dataDirCandidates()) {
@@ -99,7 +106,8 @@ function readCalibratedThreshold(): number | null {
 /**
  * Runtime occupation-resolution threshold τ (raw cosine).
  *
- * `null` = no valid calibration report committed → embedding resolution is
+ * `null` = no valid calibration report mounted (the normal case on git
+ * deploys, since the report is gitignored) → embedding resolution is
  * disabled and only exact/synonyms matches produce a canonical id.
  */
 export const OCCUPATION_RESOLUTION_THRESHOLD: number | null = readCalibratedThreshold();
@@ -233,11 +241,45 @@ export interface ResolveProfessionOccupationOptions {
   threshold?: number | null;
   /** Precomputed query embedding, to avoid a duplicate embedding call. */
   queryVector?: number[] | null;
+  /**
+   * Abort budget for the embedding call. On expiry the call is aborted and
+   * resolution continues with the deterministic result. Defaults to
+   * `DEFAULT_EMBEDDING_TIMEOUT_MS`; callers on a request path should pass a
+   * budget comfortably below their own outer timeout.
+   */
+  embeddingTimeoutMs?: number;
+}
+
+/**
+ * Default abort budget for the embedding call. Kept below the route-level
+ * occupation-resolution bound (1500ms) so a slow/hung embedding degrades to
+ * the deterministic result instead of tripping the outer timeout.
+ */
+export const DEFAULT_EMBEDDING_TIMEOUT_MS = 1200;
+
+// Fix C: the production Docker image ships without `occupation-vectors.json`,
+// so an empty index is the expected steady state there — surface it once per
+// process instead of spamming per request.
+let emptyIndexWarned = false;
+function warnEmptyIndexOnce(): void {
+  if (emptyIndexWarned) return;
+  emptyIndexWarned = true;
+  logger.warn(
+    '[occupationResolution] Occupation vector index missing/empty — embedding resolution and candidate top-up disabled; falling back to deterministic exact-match-only resolution',
+  );
 }
 
 /**
  * Resolve the canonical occupation id and build correction candidates.
  * Deterministic: identical input + identical index ⇒ identical output.
+ *
+ * Control flow (Fix A + Fix B):
+ *  1. The deterministic exact/synonym match and the `generateCandidates()`
+ *     group mapping are computed first and are never gated on the network.
+ *  2. The embedding call is a bounded best-effort: it is skipped entirely
+ *     when the vector index is empty (no quota/latency spent), and an
+ *     abort/timeout/failure resolves to `null` so the deterministic result
+ *     above is returned unchanged — never discarded.
  */
 export async function resolveProfessionOccupation(
   rawInput: string,
@@ -246,18 +288,31 @@ export async function resolveProfessionOccupation(
 ): Promise<ProfessionOccupationResolution> {
   const threshold =
     options.threshold === undefined ? OCCUPATION_RESOLUTION_THRESHOLD : options.threshold;
+  const embeddingTimeoutMs = options.embeddingTimeoutMs ?? DEFAULT_EMBEDDING_TIMEOUT_MS;
+
+  // Snapshot the index once: every embedding/index decision below keys off it.
+  const index = safeLoadIndex();
+  const hasIndex = index.length > 0;
+  if (!hasIndex) warnEmptyIndexOnce();
 
   let queryVector: number[] | null = options.queryVector ?? null;
   let vectorResolved = queryVector !== null;
 
+  // Bounded best-effort embedding. Skipped without an index; abort/timeout
+  // or provider failure yields `null`, preserving the deterministic result.
   const getQueryVector = async (): Promise<number[] | null> => {
+    if (!hasIndex) return null;
     if (vectorResolved) return queryVector;
     vectorResolved = true;
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), embeddingTimeoutMs);
     try {
-      const result = await embeddingClient.embed(rawInput);
+      const result = await embeddingClient.embed(rawInput, { signal: abort.signal });
       queryVector = result?.vector ?? null;
     } catch {
       queryVector = null;
+    } finally {
+      clearTimeout(timer);
     }
     return queryVector;
   };
@@ -266,7 +321,7 @@ export async function resolveProfessionOccupation(
   if (!standardizedOccupationId && typeof threshold === 'number') {
     const vector = await getQueryVector();
     if (vector) {
-      standardizedOccupationId = findIndexMatch(vector, safeLoadIndex(), threshold)?.occupationId ?? null;
+      standardizedOccupationId = findIndexMatch(vector, index, threshold)?.occupationId ?? null;
     }
   }
 
@@ -282,7 +337,7 @@ export async function resolveProfessionOccupation(
       correctionCandidates.occupation = topUpOccupationCandidates(
         correctionCandidates.occupation,
         vector,
-        safeLoadIndex(),
+        index,
         standardizedOccupationId,
       );
     }

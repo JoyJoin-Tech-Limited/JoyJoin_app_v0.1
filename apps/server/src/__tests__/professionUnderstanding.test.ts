@@ -33,6 +33,15 @@ const h = vi.hoisted(() => ({
   // Spy seam: the mocked deepseek client routes every call through this spy and
   // still throws ("ai offline") so existing fail-closed behavior is unchanged.
   deepseekCreate: null as any,
+  // Spy seam for the embedding client: tests control resolve/hang behaviour.
+  embed: null as any,
+  // Spy seam for safeLoadIndex: undefined → real implementation; a function
+  // return value overrides the loaded index (e.g. `() => []` simulates the
+  // production Docker image, which ships without occupation-vectors.json).
+  safeLoadIndexImpl: null as null | (() => VectorEntry[]),
+  // Captured by the occupationVectorIndex mock factory (avoids TDZ on a
+  // module-level `let`, since vi.mock factories are hoisted).
+  realSafeLoadIndex: null as null | typeof import("../lib/occupationVectorIndex").safeLoadIndex,
   // Allows a test to use a distinct rate-limit bucket (the route limiter is
   // keyed by user id, 10 calls/min).
   authenticatedUserId: "test-user",
@@ -57,8 +66,18 @@ vi.mock("../lib/aiContentModeration", () => ({
   moderateGeneratedContent: () => ({ safe: true, field: null }),
 }));
 vi.mock("../embeddingClient", () => ({
-  embeddingClient: { embed: async () => null },
+  embeddingClient: { embed: (...args: unknown[]) => h.embed(...args) },
 }));
+// Keep the real index machinery (loadIndex/cosine) but let a test override
+// what safeLoadIndex() returns — production ships without the artifact.
+vi.mock("../lib/occupationVectorIndex", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/occupationVectorIndex")>();
+  h.realSafeLoadIndex = actual.safeLoadIndex;
+  return {
+    ...actual,
+    safeLoadIndex: () => (h.safeLoadIndexImpl ?? h.realSafeLoadIndex!)(),
+  };
+});
 vi.mock("../lib/requestAuth", () => ({
   getAuthenticatedUserId: () => h.authenticatedUserId,
 }));
@@ -144,6 +163,8 @@ beforeEach(() => {
   h.deepseekCreate = vi.fn(async () => {
     throw new Error("ai offline");
   });
+  h.embed = vi.fn(async () => null);
+  h.safeLoadIndexImpl = null;
   h.authenticatedUserId = "test-user";
 });
 
@@ -207,6 +228,134 @@ describe("resolveProfessionOccupation (D2)", () => {
 
     const unresolved = await resolveProfessionOccupation("完全不存在的东西xyz", classification);
     expect(unresolved.standardizedOccupationId).toBeNull();
+  });
+});
+
+describe("resolveProfessionOccupation — missing vector index (Fix A, production posture)", () => {
+  // Production Docker images ship without apps/server/data/occupation-vectors.json,
+  // so safeLoadIndex() returns []. No embedding quota/latency may be spent then.
+  const classification = {
+    category: { id: "tech", label: "科技互联网" },
+    segment: { id: "software_dev", label: "软件开发" },
+    niche: { id: "backend", label: "后端开发" },
+    candidates: seedCatalogResult().candidates,
+  };
+
+  it("never calls the embedding client when the index is empty (no exact match)", async () => {
+    h.safeLoadIndexImpl = () => [];
+    const resolved = await resolveProfessionOccupation("完全不存在的东西xyz", classification, {
+      threshold: 0.5,
+    });
+    expect(h.embed).not.toHaveBeenCalled();
+    expect(resolved.standardizedOccupationId).toBeNull();
+    // Deterministic candidate mapping is preserved unchanged.
+    expect(resolved.correctionCandidates.occupation).toEqual([
+      { id: "investor", label: "投资人" },
+      { id: "product_manager", label: "产品经理" },
+    ]);
+  });
+
+  it("never calls the embedding client when the index is empty (exact match, top-up needed)", async () => {
+    h.safeLoadIndexImpl = () => [];
+    const resolved = await resolveProfessionOccupation("前端工程师", classification, {
+      threshold: 0.5,
+    });
+    expect(h.embed).not.toHaveBeenCalled();
+    expect(resolved.standardizedOccupationId).toBe("frontend_engineer");
+    expect(resolved.correctionCandidates.occupation).toEqual([
+      { id: "investor", label: "投资人" },
+      { id: "product_manager", label: "产品经理" },
+    ]);
+  });
+});
+
+describe("resolveProfessionOccupation — bounded embedding (Fix B)", () => {
+  const classification = {
+    category: { id: "tech", label: "科技互联网" },
+    segment: { id: "software_dev", label: "软件开发" },
+    niche: { id: "backend", label: "后端开发" },
+    candidates: seedCatalogResult().candidates,
+  };
+  const fakeIndex: VectorEntry[] = [
+    { id: "backend_engineer", displayName: "后端工程师", industryId: "tech", vector: [1, 0] },
+  ];
+
+  it("preserves the deterministic result when the embedding call hangs past its budget", async () => {
+    h.safeLoadIndexImpl = () => fakeIndex;
+    // Simulate a hung provider: never settles unless the abort signal fires
+    // (mirrors how the real OpenAI client rejects on AbortSignal).
+    h.embed = vi.fn(
+      (_text: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+        }),
+    );
+
+    const startedAt = Date.now();
+    const resolved = await resolveProfessionOccupation("前端工程师", classification, {
+      threshold: 0.5,
+      embeddingTimeoutMs: 25,
+    });
+    const elapsedMs = Date.now() - startedAt;
+
+    // The exact-match id and the deterministic candidates survive the timeout —
+    // previously the route's outer catch discarded them as EMPTY.
+    expect(resolved.standardizedOccupationId).toBe("frontend_engineer");
+    expect(resolved.correctionCandidates.occupation).toEqual([
+      { id: "investor", label: "投资人" },
+      { id: "product_manager", label: "产品经理" },
+    ]);
+    // The abort budget bounded the wait — no 1500ms+ hang reached the route.
+    expect(elapsedMs).toBeLessThan(1000);
+  });
+
+  it("returns null id (no guess) but keeps deterministic candidates on embedding timeout without an exact match", async () => {
+    h.safeLoadIndexImpl = () => fakeIndex;
+    h.embed = vi.fn(
+      (_text: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+        }),
+    );
+
+    const resolved = await resolveProfessionOccupation("完全不存在的东西xyz", classification, {
+      threshold: 0.5,
+      embeddingTimeoutMs: 25,
+    });
+
+    expect(h.embed).toHaveBeenCalledTimes(1);
+    expect(resolved.standardizedOccupationId).toBeNull();
+    expect(resolved.correctionCandidates.occupation).toEqual([
+      { id: "investor", label: "投资人" },
+      { id: "product_manager", label: "产品经理" },
+    ]);
+  });
+});
+
+describe("resolveProfessionOccupation — empty-index observability (Fix C)", () => {
+  it("warns once per process when the vector index is missing/empty", async () => {
+    h.safeLoadIndexImpl = () => [];
+    // Fresh module instance so the memoized "already logged" flag starts false
+    // regardless of what earlier tests triggered on the shared instance.
+    vi.resetModules();
+    const [{ logger }, fresh] = await Promise.all([
+      import("../lib/logger"),
+      import("../lib/occupationResolution"),
+    ]);
+    const classification = {
+      category: { id: "tech", label: "科技互联网" },
+      segment: { id: "software_dev", label: "软件开发" },
+      niche: { id: "backend", label: "后端开发" },
+      candidates: [],
+    };
+
+    await fresh.resolveProfessionOccupation("前端工程师", classification);
+    await fresh.resolveProfessionOccupation("产品经理", classification);
+
+    const warnCalls = (logger.warn as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (args: unknown[]) => String(args[0]).includes("vector index"),
+    );
+    expect(warnCalls).toHaveLength(1);
   });
 });
 

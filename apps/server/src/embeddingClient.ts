@@ -48,7 +48,7 @@ export class EmbeddingClient {
     return this.client;
   }
 
-  async embed(text: string): Promise<EmbeddingResult | null> {
+  async embed(text: string, options?: { signal?: AbortSignal }): Promise<EmbeddingResult | null> {
     const input = text.trim();
     if (!input) {
       return null;
@@ -61,11 +61,14 @@ export class EmbeddingClient {
 
     try {
       const modelId = resolveEmbeddingModel();
-      const response = await client.embeddings.create({
-        model: modelId,
-        input,
-        encoding_format: 'float',
-      });
+      const response = await client.embeddings.create(
+        {
+          model: modelId,
+          input,
+          encoding_format: 'float',
+        },
+        options?.signal ? { signal: options.signal } : undefined,
+      );
 
       const vector = response.data[0]?.embedding;
       if (!Array.isArray(vector) || vector.length === 0) {
