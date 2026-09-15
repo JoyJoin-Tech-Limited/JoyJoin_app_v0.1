@@ -514,7 +514,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 48rpx;
+    min-height: $cta-min-tap; // §6.6 — 88rpx tap floor (Chip compact can be shorter)
     padding: 6rpx 20rpx;
     border-radius: 999rpx;
     border: 2rpx dashed rgba($color-text-muted, 0.45);
@@ -524,6 +524,12 @@
     &--active {
       background: rgba($color-primary, 0.06);
       border-color: rgba($color-primary, 0.45);
+    }
+
+    // No candidates → non-interactive (mirrors 换一个 --disabled)
+    &--disabled {
+      opacity: 0.35;
+      pointer-events: none;
     }
   }
 
@@ -566,6 +572,31 @@
     flex-wrap: wrap;
     gap: $spacing-sm;
     padding: $spacing-sm 0 $spacing-xs 80rpx;
+    animation: profession-hint-fade-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  // §6.5 选中确认 — brief inline acknowledgment under the corrected row
+  &__ladder-ack-block {
+    display: flex;
+    flex-direction: column;
+    padding-left: 80rpx; // align with the pill column (64rpx label + $spacing-sm gap)
+  }
+
+  &__ladder-ack {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    line-height: 1.4;
+    display: block;
+    animation: profession-hint-fade-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  &__ladder-cascade-hint {
+    margin-top: 4rpx; // optical micro-gap under the ack line
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.4;
+    display: block;
     animation: profession-hint-fade-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
@@ -761,7 +792,9 @@
 
   .profession-overlay__ladder-row,
   .profession-overlay__ladder-tray,
-  .profession-overlay__ladder-tray-chip {
+  .profession-overlay__ladder-tray-chip,
+  .profession-overlay__ladder-ack,
+  .profession-overlay__ladder-cascade-hint {
     animation: none;
     opacity: 1;
     transform: none;
@@ -828,7 +861,9 @@
 
   .profession-overlay__ladder-row,
   .profession-overlay__ladder-tray,
-  .profession-overlay__ladder-tray-chip {
+  .profession-overlay__ladder-tray-chip,
+  .profession-overlay__ladder-ack,
+  .profession-overlay__ladder-cascade-hint {
     animation: none;
     opacity: 1;
     transform: none;
@@ -863,7 +898,9 @@
 
   .profession-overlay__ladder-row,
   .profession-overlay__ladder-tray,
-  .profession-overlay__ladder-tray-chip {
+  .profession-overlay__ladder-tray-chip,
+  .profession-overlay__ladder-ack,
+  .profession-overlay__ladder-cascade-hint {
     animation: none;
     opacity: 1;
     transform: none;

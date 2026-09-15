@@ -431,3 +431,128 @@ describe('ProfessionChatOverlay · corrected role id (AC-09)', () => {
     expect(payload.industryNiche).not.toBe(payload.standardizedOccupationId)
   })
 })
+
+// ── Pre-ship review fixes (2026-09-15) ──────────────────────────────────────
+
+describe('ProfessionChatOverlay · one-shot scroll targets (tray scroll-yank fix)', () => {
+  it('never falls back to bottom-anchor when the ladder target clears', () => {
+    // The old memo `scrollTrigger > 0 ? 'bottom-anchor' : ''` latched: once the
+    // 600ms timer cleared the ladder target, the prop flipped back to
+    // 'bottom-anchor' and the re-triggered scroll yanked the open tray away.
+    expect(OVERLAY_SOURCE).not.toContain("scrollTrigger > 0 ? 'bottom-anchor'")
+    // bottom-anchor is its own one-shot with the same 600ms clear pattern
+    expect(OVERLAY_SOURCE).toContain("setBottomScrollTarget('bottom-anchor')")
+    expect(OVERLAY_SOURCE).toMatch(/setTimeout\(\(\) => setBottomScrollTarget\(''\), 600\)/)
+    // clearing the ladder target now yields '' — no competing anchor
+    expect(OVERLAY_SOURCE).toContain('ladderScrollTarget || bottomScrollTarget')
+  })
+})
+
+describe('ProfessionChatOverlay · stale candidate re-scoping (REL-01)', () => {
+  beforeEach(() => {
+    apiRequestMock.mockReset()
+    apiRequestMock.mockResolvedValue(CLASSIFY_RESPONSE)
+  })
+
+  it('drops pre-correction segment/occupation candidates after a 类别 correction', async () => {
+    const { view } = await reachRevealCard()
+
+    fireEvent.click(screen.getByLabelText('更换类别'))
+    selectTrayChip(view.container, TIER_FIXTURES.category.choice.label)
+
+    // §6.5 选中确认 + cascade explainer appear under the corrected row
+    expect(screen.getByText('好，记下了')).toBeTruthy()
+    expect(screen.getByText('下面两行也要再确认一下')).toBeTruthy()
+
+    // the segment/occupation candidates were scoped to 科技互联网 — after the
+    // correction both child trays are honestly empty and non-interactive
+    const segmentChange = screen.getByLabelText('更换细分')
+    expect(segmentChange.className).toContain('profession-overlay__ladder-change--disabled')
+    fireEvent.click(segmentChange)
+    expect(trayChips(view.container).length).toBe(0)
+
+    const pendingSegment = screen.getByLabelText('补充细分')
+    expect(pendingSegment.getAttribute('aria-disabled')).toBe('true')
+    fireEvent.click(pendingSegment)
+    expect(trayChips(view.container).length).toBe(0)
+  })
+})
+
+describe('ProfessionChatOverlay · pending-pill affordance (false-affordance fix)', () => {
+  beforeEach(() => {
+    apiRequestMock.mockReset()
+  })
+
+  it('renders 待补充 non-interactive when the row has no candidates, and hides the benefit hint', async () => {
+    apiRequestMock.mockResolvedValue({
+      ...CLASSIFY_RESPONSE,
+      classification: {
+        category: { id: 'tech', label: '科技互联网' },
+        segment: null,
+        niche: null,
+        standardizedOccupationId: null,
+      },
+      correctionCandidates: undefined,
+    })
+    const { view } = await reachRevealCard()
+
+    for (const label of ['补充细分', '补充角色']) {
+      const pill = screen.getByLabelText(label)
+      expect(pill.getAttribute('aria-disabled')).toBe('true')
+      expect(pill.className).toContain('profession-overlay__ladder-pending--disabled')
+      fireEvent.click(pill)
+      // dead tap removed: no tray opens
+      expect(trayChips(view.container).length).toBe(0)
+    }
+
+    // no row is fillable → the benefit hint must not invite an impossible action
+    expect(screen.queryByText('补上职业方向，之后能进更对味的局')).toBeNull()
+  })
+
+  it('keeps 待补充 interactive and shows the benefit hint when candidates exist', async () => {
+    apiRequestMock.mockResolvedValue({
+      ...CLASSIFY_RESPONSE,
+      classification: {
+        category: { id: 'tech', label: '科技互联网' },
+        segment: null,
+        niche: null,
+        standardizedOccupationId: null,
+      },
+      correctionCandidates: {
+        segment: [
+          { id: 'ai_ml', label: '人工智能' },
+          { id: 'software_dev', label: '软件开发' },
+        ],
+      },
+    })
+    const { view } = await reachRevealCard()
+
+    const pill = screen.getByLabelText('补充细分')
+    expect(pill.getAttribute('aria-disabled')).toBe('false')
+    expect(pill.className).not.toContain('profession-overlay__ladder-pending--disabled')
+
+    fireEvent.click(pill)
+    expect(trayChips(view.container).length).toBe(2)
+
+    // at least one row is fillable → the benefit hint shows
+    expect(screen.getByText('补上职业方向，之后能进更对味的局')).toBeTruthy()
+  })
+
+  it('keeps the 88rpx tap floor and disabled styling for the pending pill', () => {
+    expect(OVERLAY_STYLES).toMatch(/&__ladder-pending\s*\{[\s\S]*?min-height: \$cta-min-tap/)
+    expect(OVERLAY_STYLES).toMatch(/&__ladder-pending[\s\S]*?&--disabled\s*\{[\s\S]*?pointer-events: none/)
+  })
+})
+
+describe('ProfessionChatOverlay · selection acknowledgment (§6.5)', () => {
+  it('ships the ack + cascade copy and reduced-motion coverage for the new elements', () => {
+    expect(OVERLAY_SOURCE).toContain("const LADDER_ACK_COPY = '好，记下了'")
+    expect(OVERLAY_SOURCE).toContain("'下面两行也要再确认一下'")
+    expect(OVERLAY_SOURCE).toContain('profession-overlay__ladder-ack')
+    expect(OVERLAY_SOURCE).not.toContain('showToast({ title: \'好，记下了')
+    // new classes are defined and killed under reduced-motion / low-end tiers
+    expect(OVERLAY_STYLES).toContain('&__ladder-ack')
+    expect(OVERLAY_STYLES).toContain('&__ladder-cascade-hint')
+    expect(OVERLAY_STYLES.match(/profession-overlay__ladder-ack,/g)?.length ?? 0).toBeGreaterThanOrEqual(3)
+  })
+})

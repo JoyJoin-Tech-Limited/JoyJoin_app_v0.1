@@ -22,6 +22,13 @@ export interface LadderValue {
   label: string
 }
 
+/** ≤3 single-select correction options per tier (mirrors the component contract). */
+export interface CorrectionCandidateMap {
+  category?: LadderValue[]
+  segment?: LadderValue[]
+  occupation?: LadderValue[]
+}
+
 export interface ProfessionLadderState {
   category: LadderValue | null
   segment: LadderValue | null
@@ -129,7 +136,8 @@ export function deriveTiersFromOccupation(
 /**
  * AC-05 cascade (§7.5):
  *  - change 类别 → clears segment / niche / role (→ 待补充)
- *  - change 细分 → clears niche / role
+ *  - change 细分 → clears niche / role; REJECTED when the segment does not
+ *    belong to the current 类别 (mixed-parent guard, REL-01)
  *  - change 角色 → role + canonical id only; upper tiers are reconciled from
  *    the occupation's canonical `seedMappings` when available (rules 1–2 of
  *    §7.5 — same source, so the triple never mixes a user parent with an
@@ -153,7 +161,14 @@ export function applyTierCorrection(
         standardizedOccupationId: null,
         corrected: true,
       }
-    case 'segment':
+    case 'segment': {
+      // Mixed-parent guard (REL-01): a 细分 must belong to the CURRENT 类别.
+      // After a 类别 correction the tray could still offer segments scoped to
+      // the old category — persisting one would mix a user parent with a
+      // stale child (e.g. category=金融 + segment=<tech segment>). Reject.
+      if (state.category && !findSegmentById(state.category.id, choice.id)) {
+        return state
+      }
       return {
         ...state,
         segment: nextChoice,
@@ -162,6 +177,7 @@ export function applyTierCorrection(
         standardizedOccupationId: null,
         corrected: true,
       }
+    }
     case 'occupation': {
       const derived = deriveTiersFromOccupation(choice.id)
       if (!derived) {
@@ -214,6 +230,47 @@ export function createLadderStateFromClassification(
     standardizedOccupationId,
     corrected: false,
   }
+}
+
+/**
+ * Re-scope tray candidates after a parent-tier correction (REL-01 companion).
+ *
+ * The server ships `correctionCandidates` scoped to the ORIGINAL classification.
+ * Once the user corrects 类别 (or 细分), the child-tier candidates are stale —
+ * offering them would let the user persist a mixed parent/child pair. Anything
+ * that cannot be proven to belong to the new parent is dropped (never guessed),
+ * so the tray honestly shows no options rather than wrong ones.
+ */
+export function rescopeCorrectionCandidates(
+  candidates: CorrectionCandidateMap | null,
+  tier: LadderTier,
+  choice: LadderValue,
+): CorrectionCandidateMap | null {
+  if (!candidates) return candidates
+  if (tier === 'category') {
+    return {
+      ...candidates,
+      segment: (candidates.segment ?? []).filter(
+        (candidate) => !!findSegmentById(choice.id, candidate.id),
+      ),
+      occupation: (candidates.occupation ?? []).filter(
+        (candidate) =>
+          OCCUPATIONS.find((occupation) => occupation.id === candidate.id)?.seedMappings
+            ?.category === choice.id,
+      ),
+    }
+  }
+  if (tier === 'segment') {
+    return {
+      ...candidates,
+      occupation: (candidates.occupation ?? []).filter(
+        (candidate) =>
+          OCCUPATIONS.find((occupation) => occupation.id === candidate.id)?.seedMappings
+            ?.segment === choice.id,
+      ),
+    }
+  }
+  return candidates
 }
 
 /** Number of resolved (non-待补充) rows — drives analytics + the honest checkmark. */

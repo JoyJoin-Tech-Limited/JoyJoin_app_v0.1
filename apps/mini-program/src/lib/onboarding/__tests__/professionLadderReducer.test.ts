@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { OCCUPATIONS } from '@shared/occupations'
+import { findSegmentById } from '@shared/industryTaxonomy'
 import {
   applyTierCorrection,
   countResolvedTiers,
   createLadderStateFromClassification,
   deriveTiersFromOccupation,
   normalizeLabelForDedup,
+  rescopeCorrectionCandidates,
   resolveVisibleLadderRows,
   shouldMergeSegmentAndRole,
   toPersistedClassificationFields,
+  type LadderTier,
   type LadderValue,
   type ProfessionLadderState,
 } from '../professionLadderReducer'
@@ -98,12 +101,41 @@ describe('professionLadderReducer · cascade (AC-05 / REL-01)', () => {
   })
 
   it('is total — every tier correction produces a non-null state', () => {
-    const tiers = ['category', 'segment', 'occupation'] as const
-    for (const tier of tiers) {
-      const next = applyTierCorrection(fullState(), tier, { id: 'x', label: 'X' })
+    // 细分 must belong to the current 类别 (mixed-parent guard) — use a valid pair
+    const choices: Record<LadderTier, LadderValue> = {
+      category: { id: 'finance', label: '金融服务' },
+      segment: { id: 'ai_ml', label: '人工智能' },
+      occupation: { id: 'x', label: 'X' },
+    }
+    for (const tier of ['category', 'segment', 'occupation'] as const) {
+      const next = applyTierCorrection(fullState(), tier, choices[tier])
       expect(next).toBeTruthy()
       expect(next.corrected).toBe(true)
     }
+  })
+
+  it('rejects a 细分 that does not belong to the current 类别 (mixed-parent guard)', () => {
+    // pe_vc is a finance segment; the current 类别 is tech
+    expect(findSegmentById('tech', 'pe_vc')).toBeUndefined()
+    expect(findSegmentById('finance', 'pe_vc')).toBeTruthy()
+
+    const state = fullState()
+    const rejected = applyTierCorrection(state, 'segment', { id: 'pe_vc', label: 'PE/VC' })
+
+    // state returned untouched — no mixed category=tech + segment=pe_vc pair,
+    // and the corrected flag is not flipped by a rejected choice
+    expect(rejected).toBe(state)
+    expect(rejected.segment).toEqual(segment)
+    expect(rejected.corrected).toBe(false)
+
+    // after correcting 类别 to finance the same segment is legitimately accepted
+    const correctedCategory = applyTierCorrection(state, 'category', {
+      id: 'finance',
+      label: '金融服务',
+    })
+    const accepted = applyTierCorrection(correctedCategory, 'segment', { id: 'pe_vc', label: 'PE/VC' })
+    expect(accepted.segment).toEqual({ id: 'pe_vc', label: 'PE/VC' })
+    expect(accepted.corrected).toBe(true)
   })
 })
 
@@ -304,5 +336,73 @@ describe('professionLadderReducer · classification state + persistence', () => 
     expect(createLadderStateFromClassification(undefined)).toBeNull()
     expect(resolveVisibleLadderRows(null)).toEqual([])
     expect(countResolvedTiers(null)).toBe(0)
+  })
+})
+
+describe('professionLadderReducer · candidate re-scoping (REL-01)', () => {
+  const candidates = {
+    category: [
+      { id: 'finance', label: '金融服务' },
+      { id: 'tech', label: '科技互联网' },
+    ],
+    segment: [
+      { id: 'ai_ml', label: '人工智能' }, // tech
+      { id: 'software_dev', label: '软件开发' }, // tech
+    ],
+    occupation: [
+      { id: 'frontend_engineer', label: '前端工程师' }, // seeded tech/software_dev
+      { id: 'data_analyst', label: '数据分析师' }, // unseeded — unverifiable
+    ],
+  }
+
+  it('drops child-tier candidates of the old 类别 after a 类别 correction', () => {
+    const next = rescopeCorrectionCandidates(candidates, 'category', {
+      id: 'finance',
+      label: '金融服务',
+    })
+
+    // every pre-correction segment/occupation candidate was scoped to tech —
+    // nothing provably belongs to finance, so the trays honestly show none
+    expect(next?.segment).toEqual([])
+    expect(next?.occupation).toEqual([])
+    // the parent-tier candidates stay untouched
+    expect(next?.category).toEqual(candidates.category)
+  })
+
+  it('keeps child-tier candidates that provably belong to the new 类别', () => {
+    const withFinanceChild = {
+      ...candidates,
+      occupation: [
+        ...candidates.occupation,
+        { id: 'investment_banker', label: '投行(IBD)' }, // seeded finance/investment_banking
+      ],
+    }
+    const next = rescopeCorrectionCandidates(withFinanceChild, 'category', {
+      id: 'finance',
+      label: '金融服务',
+    })
+
+    expect(next?.occupation).toEqual([{ id: 'investment_banker', label: '投行(IBD)' }])
+  })
+
+  it('drops 角色 candidates of the old 细分 after a 细分 correction', () => {
+    const next = rescopeCorrectionCandidates(candidates, 'segment', {
+      id: 'ai_ml',
+      label: '人工智能',
+    })
+
+    // frontend_engineer is seeded under software_dev; data_analyst is unverifiable
+    expect(next?.occupation).toEqual([])
+    expect(next?.segment).toEqual(candidates.segment)
+  })
+
+  it('passes candidates through for 角色 corrections and null input', () => {
+    expect(
+      rescopeCorrectionCandidates(candidates, 'occupation', {
+        id: 'frontend_engineer',
+        label: '前端工程师',
+      }),
+    ).toBe(candidates)
+    expect(rescopeCorrectionCandidates(null, 'category', { id: 'finance', label: '金融服务' })).toBeNull()
   })
 })

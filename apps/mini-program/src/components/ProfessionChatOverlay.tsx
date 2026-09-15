@@ -46,6 +46,7 @@ import {
   applyTierCorrection,
   countResolvedTiers,
   createLadderStateFromClassification,
+  rescopeCorrectionCandidates,
   resolveVisibleLadderRows,
   toPersistedClassificationFields,
   type LadderTier,
@@ -95,6 +96,14 @@ const LADDER_PENDING_COPY = '待补充'
 const LADDER_CHANGE_COPY = '换一个'
 const LADDER_BENEFIT_HINT = '补上职业方向，之后能进更对味的局'
 const LADDER_FALLBACK_HINT = '网络有点慢，悦仔先记下了。等信号好了再帮你细细分析～'
+/** §6.5 选中确认 — brief inline acknowledgment after a chip select (never a toast). */
+const LADDER_ACK_COPY = '好，记下了'
+/** Cascade explainer after a parent-tier correction clears the child rows. */
+const LADDER_CASCADE_COPY: Record<'category' | 'segment', string> = {
+  category: '下面两行也要再确认一下',
+  segment: '角色这行也要再确认一下',
+}
+const CORRECTION_ACK_DURATION_MS = 2400
 
 export interface ProfessionChatOverlayProps {
   visible: boolean
@@ -192,6 +201,12 @@ export default function ProfessionChatOverlay({
   const [correctionCandidates, setCorrectionCandidates] = useState<ProfessionCorrectionCandidates | null>(null)
   const [aigcMeta, setAigcMeta] = useState<AIGCMeta | undefined>(undefined)
   const [ladderScrollTarget, setLadderScrollTarget] = useState('')
+  const [bottomScrollTarget, setBottomScrollTarget] = useState('')
+  const [correctionAck, setCorrectionAck] = useState<{
+    tier: LadderTier
+    cascade: 'category' | 'segment' | null
+  } | null>(null)
+  const correctionAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ladderViewedRef = useRef(false)
   const correctedTiersRef = useRef<Set<LadderTier>>(new Set())
   // REL-04 — the overlay lives on a tab-less page kept alive across swipe-back;
@@ -199,6 +214,7 @@ export default function ProfessionChatOverlay({
   const resetLadderTrayOnShow = useCallback((_visible: boolean) => {
     setOpenTier(null)
     setLadderScrollTarget('')
+    setBottomScrollTarget('')
   }, [])
   useResetOnShow(resetLadderTrayOnShow)
   const rejectLowQualityProfessionInput = useCallback((rawText: string) => {
@@ -266,6 +282,9 @@ export default function ProfessionChatOverlay({
       setCorrectionCandidates(null)
       setAigcMeta(undefined)
       setLadderScrollTarget('')
+      setBottomScrollTarget('')
+      setCorrectionAck(null)
+      if (correctionAckTimerRef.current) clearTimeout(correctionAckTimerRef.current)
       correctedTiersRef.current = new Set()
 
       // Check network status on open
@@ -295,6 +314,7 @@ export default function ProfessionChatOverlay({
       if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
       if (maxSendDismissTimerRef.current) clearTimeout(maxSendDismissTimerRef.current)
       if (placeholderTimerRef.current) clearInterval(placeholderTimerRef.current)
+      if (correctionAckTimerRef.current) clearTimeout(correctionAckTimerRef.current)
       clearThinkingTimers()
     }
   }, [clearThinkingTimers])
@@ -355,6 +375,17 @@ export default function ProfessionChatOverlay({
     const timer = setTimeout(() => setLadderScrollTarget(''), 600)
     return () => clearTimeout(timer)
   }, [ladderScrollTarget])
+
+  // The bottom-anchor target is a one-shot too (same 600ms pattern). If it
+  // latched on `scrollTrigger > 0`, clearing the ladder target would fall back
+  // to `bottom-anchor` and re-trigger the scroll — yanking the just-opened
+  // correction tray out of view.
+  useEffect(() => {
+    if (scrollTrigger === 0) return
+    setBottomScrollTarget('bottom-anchor')
+    const timer = setTimeout(() => setBottomScrollTarget(''), 600)
+    return () => clearTimeout(timer)
+  }, [scrollTrigger])
 
   // Abandoned correction — tray left open when the overlay closes
   useEffect(() => {
@@ -760,6 +791,7 @@ export default function ProfessionChatOverlay({
     if (!ladderState) return
     const previous = ladderState[tier]
     const next = applyTierCorrection(ladderState, tier, choice)
+    if (next === ladderState) return // mixed-parent guard rejected the choice
 
     correctedTiersRef.current.add(tier)
     setLadderState(next)
@@ -767,8 +799,15 @@ export default function ProfessionChatOverlay({
       if (!current) return current
       return { ...current, ...toPersistedClassificationFields(next) }
     })
+    // REL-01 — child-tier candidates were scoped to the pre-correction parent;
+    // re-scope them so a stale segment/occupation can never be picked.
+    setCorrectionCandidates((current) => rescopeCorrectionCandidates(current, tier, choice))
     setOpenTier(null)
     haptics('light')
+    // §6.5 选中确认 + cascade explainer — subtle inline feedback, never a toast
+    if (correctionAckTimerRef.current) clearTimeout(correctionAckTimerRef.current)
+    setCorrectionAck({ tier, cascade: tier === 'occupation' ? null : tier })
+    correctionAckTimerRef.current = setTimeout(() => setCorrectionAck(null), CORRECTION_ACK_DURATION_MS)
     analytics.interaction('profession_chat_tier_corrected', {
       tier,
       from: previous?.id ?? 'none',
@@ -810,14 +849,16 @@ export default function ProfessionChatOverlay({
   const ladderRows = useMemo(() => resolveVisibleLadderRows(ladderState), [ladderState])
   const isFallbackSource = !!classificationData?.industrySource?.includes('fallback')
   const hasUnresolvedTier = ladderRows.some((row) => !row.value)
+  // A row is fillable only when it is unresolved AND the tray has candidates —
+  // otherwise the benefit hint invites an action the UI cannot complete.
+  const hasFillableTier = ladderRows.some(
+    (row) => !row.value && (correctionCandidates?.[row.tier]?.length ?? 0) > 0,
+  )
   // AC-21 — honest, benefit-led hint whenever a row is still 待补充 (partial/fallback)
-  const showBenefitHint = isFallbackSource || hasUnresolvedTier
+  const showBenefitHint = (isFallbackSource || hasUnresolvedTier) && hasFillableTier
   // One soft check only when every visible row resolved — never a false success claim
   const showSoftCheck = !isFallbackSource && !hasUnresolvedTier && ladderRows.length > 0
-  const scrollIntoView = useMemo(() => {
-    if (ladderScrollTarget) return ladderScrollTarget
-    return scrollTrigger > 0 ? 'bottom-anchor' : ''
-  }, [ladderScrollTarget, scrollTrigger])
+  const scrollIntoView = ladderScrollTarget || bottomScrollTarget
 
   const messageList = useMemo(() => messages.map((msg) => (
     <ProfessionChatMessage key={msg.id} message={msg} />
@@ -919,10 +960,14 @@ export default function ProfessionChatOverlay({
                         ) : (
                           <View className='profession-overlay__ladder-pill-wrap'>
                             <View
-                              className='profession-overlay__ladder-pending'
-                              onClick={() => handleOpenCorrection(row.tier)}
+                              className={[
+                                'profession-overlay__ladder-pending',
+                                hasCandidates ? '' : 'profession-overlay__ladder-pending--disabled',
+                              ].filter(Boolean).join(' ')}
+                              onClick={hasCandidates ? () => handleOpenCorrection(row.tier) : undefined}
                               aria-label={`补充${row.label}`}
-                              hoverClass='profession-overlay__ladder-pending--active'
+                              aria-disabled={!hasCandidates}
+                              hoverClass={hasCandidates ? 'profession-overlay__ladder-pending--active' : undefined}
                               hoverStartTime={0}
                               hoverStayTime={100}
                             >
@@ -944,6 +989,16 @@ export default function ProfessionChatOverlay({
                           <Text className='profession-overlay__ladder-change-text'>{LADDER_CHANGE_COPY}</Text>
                         </View>
                       </View>
+                      {correctionAck?.tier === row.tier && (
+                        <View className='profession-overlay__ladder-ack-block' aria-live='polite'>
+                          <Text className='profession-overlay__ladder-ack'>{LADDER_ACK_COPY}</Text>
+                          {correctionAck.cascade && (
+                            <Text className='profession-overlay__ladder-cascade-hint'>
+                              {LADDER_CASCADE_COPY[correctionAck.cascade]}
+                            </Text>
+                          )}
+                        </View>
+                      )}
                       {isOpen && hasCandidates && (
                         <View className='profession-overlay__ladder-tray'>
                           {candidates.slice(0, MAX_CORRECTION_CANDIDATES).map((candidate) => (
