@@ -1,0 +1,14 @@
+{
+  "$comment": "Schema fixture (contract sprint_20260915_profession_chips_ladder, AC-10). Pins the SHAPE of POST /api/inference/understand-profession -> correctionCandidates per parent spec §7.1 — it does NOT pin exact values, which depend on classifier input. Keys prefixed with '$' are fixture metadata and are ignored by the shape assertion in professionUnderstanding.test.ts. Each group is an array of <=3 entries of { id: string, label: string }.",
+  "category": [
+    { "id": "finance", "label": "金融投资" }
+  ],
+  "segment": [
+    { "id": "pe_vc", "label": "投资" },
+    { "id": "product", "label": "产品" }
+  ],
+  "occupation": [
+    { "id": "product_manager", "label": "产品经理" },
+    { "id": "backend_engineer", "label": "后端工程师" }
+  ]
+}

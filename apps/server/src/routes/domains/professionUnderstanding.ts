@@ -8,6 +8,11 @@ import { getDeepseekClient, getDeepseekModel } from "../../ai/deepseekClient";
 import { logger } from "../../lib/logger";
 import { classifyIndustryUnified, classifyIndustry } from "../../inference/industryClassifier";
 import type { IndustryClassificationResult } from "../../inference/industryClassifier";
+import {
+  resolveProfessionOccupation,
+  OCCUPATION_RESOLUTION_THRESHOLD,
+  type ProfessionOccupationResolution,
+} from "../../lib/occupationResolution";
 import { archetypeRegistry } from "@shared/personality";
 import { XIAOYUE_CRAFT_PRINCIPLES } from "../../prompts/craft";
 import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from "@shared/types/aiMeta";
@@ -17,6 +22,14 @@ import type { AIProvider } from "@shared/types/aiMeta";
 const AI_TIMEOUT_MS = 6000;
 const REACTION_TIMEOUT_MS = 4000;
 const TOTAL_ROUTE_BUDGET_MS = 12000;
+// Occupation resolution must never blow the route budget: embeddings degrade
+// to `null` (exact-match-only) when this bound is hit.
+const OCCUPATION_RESOLUTION_TIMEOUT_MS = 1500;
+
+const EMPTY_OCCUPATION_RESOLUTION: ProfessionOccupationResolution = {
+  standardizedOccupationId: null,
+  correctionCandidates: { category: [], segment: [], occupation: [] },
+};
 
 // Simple in-memory rate limiter: 10 requests per minute per user
 const professionRateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -112,6 +125,16 @@ interface UnderstandProfessionResponse {
   };
   source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy";
   confidence: number;
+  /**
+   * Inline correction chips for the result card ladder. Populated from the
+   * classifier's existing `generateCandidates()` output, with the occupation
+   * group topped up from the occupation vector index. Omitted when empty.
+   */
+  correctionCandidates?: {
+    category: Array<{ id: string; label: string }>;
+    segment: Array<{ id: string; label: string }>;
+    occupation: Array<{ id: string; label: string }>;
+  };
   archetypeContext?: {
     primaryArchetype: string | null;
     traits: string[];
@@ -286,7 +309,7 @@ async function generateAIReaction(
   classification: IndustryClassificationResult,
   archetype: ArchetypeTraitContext,
   signal?: AbortSignal
-): Promise<{ reaction: string; displayTags: string[] }> {
+): Promise<{ reaction: string; displayTags: string[]; fallbackUsed: boolean }> {
   const traitContext = archetype.traits.length > 0
     ? `用户的社交人格特质包含：${archetype.traits.join("、")}。请在回复中自然地融入这些特质，但不要直接说出人格类型的名称。`
     : "";
@@ -346,9 +369,15 @@ ${traitContext}
     }
 
     const parsed = JSON.parse(content);
+    // Fail-closed AIGC attribution: if EITHER the reaction text or the tags
+    // fell back to deterministic copy, the response must not claim
+    // "AI-generated". Partial fallback still counts as fallback.
+    const reactionIsAi = typeof parsed.reaction === "string";
+    const tagsAreAi = Array.isArray(parsed.displayTags);
     return {
-      reaction: typeof parsed.reaction === "string" ? parsed.reaction : buildFallbackReaction(rawText, classification, archetype.traits),
-      displayTags: Array.isArray(parsed.displayTags) ? parsed.displayTags.slice(0, 5) : buildFallbackTags(classification),
+      reaction: reactionIsAi ? parsed.reaction : buildFallbackReaction(rawText, classification, archetype.traits),
+      displayTags: tagsAreAi ? parsed.displayTags.slice(0, 5) : buildFallbackTags(classification),
+      fallbackUsed: !reactionIsAi || !tagsAreAi,
     };
   } catch (error) {
     logger.warn("AI reaction generation failed, using fallback", {
@@ -358,6 +387,7 @@ ${traitContext}
       return {
         reaction: buildFallbackReaction(rawText, classification, archetype.traits),
         displayTags: buildFallbackTags(classification, archetype.traits),
+        fallbackUsed: true,
       };
   }
 }
@@ -566,6 +596,16 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         aiResult
       );
 
+      // Kick off deterministic occupation resolution in parallel with reaction
+      // generation. It may embed the raw input for the vector-index branch /
+      // candidate top-up; the bound keeps it from delaying the response, and
+      // any failure degrades to exact-match-only (never a guessed id).
+      const occupationResolutionPromise = withTimeout(
+        resolveProfessionOccupation(description, classification),
+        OCCUPATION_RESOLUTION_TIMEOUT_MS,
+        "Occupation resolution"
+      ).catch(() => EMPTY_OCCUPATION_RESOLUTION);
+
       // Budget-aware reaction generation:
       // - If classification already timed out, skip AI and use deterministic fallback
       //   so the client receives a fast response instead of cascading delays.
@@ -602,6 +642,13 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
           );
           reaction = aiReaction.reaction;
           displayTags = aiReaction.displayTags;
+          if (aiReaction.fallbackUsed) {
+            // generateAIReaction resolved, but its content is deterministic
+            // fallback (internal LLM/parse failure). Fail closed so the AIGC
+            // label is not shown on non-AI content.
+            reactionFallbackUsed = true;
+            reactionProvider = null;
+          }
         } catch (timeoutError) {
           logger.warn("[understand-profession] Reaction generation timed out, using fallback", {
             elapsedMs,
@@ -651,6 +698,12 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
 
       const finalHint = (!moderation.safe || reactionFallbackUsed) ? '' : reactionHint;
 
+      const resolved = await occupationResolutionPromise;
+      const hasCorrectionCandidates =
+        resolved.correctionCandidates.category.length > 0 ||
+        resolved.correctionCandidates.segment.length > 0 ||
+        resolved.correctionCandidates.occupation.length > 0;
+
       const response: UnderstandProfessionResponse = {
         reaction,
         reactionHint: finalHint,
@@ -665,8 +718,11 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
           niche: classification.niche
             ? { id: classification.niche.id, label: classification.niche.label }
             : null,
-          standardizedOccupationId: classification.niche?.id ?? null,
+          // Canonical OCCUPATIONS[].id (or null) — intentionally NOT
+          // classification.niche.id. See lib/occupationResolution.ts.
+          standardizedOccupationId: resolved.standardizedOccupationId,
         },
+        ...(hasCorrectionCandidates ? { correctionCandidates: resolved.correctionCandidates } : {}),
         source,
         confidence: classification.confidence,
         archetypeContext: {
@@ -691,6 +747,13 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         hadFollowUp: reactionHint !== "",
         processingTimeMs: Date.now() - startTime,
         hasArchetype: archetypeContext.primaryArchetype !== null,
+        hasStandardizedOccupationId: resolved.standardizedOccupationId !== null,
+        occupationResolutionThreshold: OCCUPATION_RESOLUTION_THRESHOLD,
+        correctionCandidateCounts: {
+          category: resolved.correctionCandidates.category.length,
+          segment: resolved.correctionCandidates.segment.length,
+          occupation: resolved.correctionCandidates.occupation.length,
+        },
       });
 
       res.json(response);
