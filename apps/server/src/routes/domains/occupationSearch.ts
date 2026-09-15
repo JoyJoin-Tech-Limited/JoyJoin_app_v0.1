@@ -1,13 +1,25 @@
 import { Router, type Request, type Response } from 'express';
+import { z } from 'zod';
 import { embeddingClient } from '../../embeddingClient.js';
 import { OCCUPATIONS } from '@shared/occupations';
 import { requireAuth } from '../../middleware/auth';
-import { cosine, loadIndex } from '../../lib/occupationVectorIndex.js';
+import { cosine, safeLoadIndex } from '../../lib/occupationVectorIndex.js';
+import { logger } from '../../lib/logger';
+
+const occupationSearchSchema = z.object({
+  query: z.string().max(200).optional(),
+});
 
 export function registerOccupationSearchRoutes(router: Router): void {
   router.post('/api/occupation/search', requireAuth, async (req: Request, res: Response) => {
     try {
-      const query = (req.body?.query ?? '').trim();
+      const parsed = occupationSearchSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid request', code: 'INVALID_SEARCH_QUERY' });
+        return;
+      }
+
+      const query = (parsed.data.query ?? '').trim();
       if (!query) {
         res.json({ query, matches: [], matchSource: 'none' });
         return;
@@ -31,8 +43,13 @@ export function registerOccupationSearchRoutes(router: Router): void {
         return;
       }
 
-      // Step 2: embedding search
-      const index = loadIndex();
+      // Step 2: embedding search. Degrade to "no matches" when the generated
+      // vector index is absent (e.g. a clean checkout) instead of 500-ing.
+      const index = safeLoadIndex();
+      if (index.length === 0) {
+        res.json({ query, matches: [], matchSource: 'none' });
+        return;
+      }
       const queryVec = await embeddingClient.embed(query);
       if (!queryVec) {
         res.json({ query, matches: [], matchSource: 'none' });
@@ -58,6 +75,7 @@ export function registerOccupationSearchRoutes(router: Router): void {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'search failed';
+      logger.error('Occupation search failed', { error: message });
       res.status(500).json({ error: message });
     }
   });
