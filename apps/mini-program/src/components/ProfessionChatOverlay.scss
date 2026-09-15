@@ -292,29 +292,6 @@
     color: $color-text-white;
   }
 
-  &__retry-hint {
-    margin-top: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    background: rgba($color-primary, 0.06);
-    border-radius: $card-radius;
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: $cta-min-tap;
-
-    &:active,
-    &--active {
-      background: rgba($color-primary, 0.12);
-    }
-  }
-
-  &__retry-hint-text {
-    font-size: $font-size-xs;
-    color: $color-primary;
-    font-weight: $font-weight-medium;
-  }
-
   &__offline-banner {
     flex-shrink: 0;
     min-height: 64rpx;
@@ -374,44 +351,6 @@
     display: block;
   }
 
-  &__celebration {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    overflow: hidden;
-    border-radius: $card-radius-sm;
-  }
-
-  &__sparkle {
-    position: absolute;
-    width: 6rpx;
-    height: 6rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.6);
-    animation: profession-sparkle-burst 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-
-    &--1 { top: 20%; left: 15%; animation-delay: 0.1s; }
-    &--2 { top: 15%; left: 50%; animation-delay: 0.2s; background: rgba($color-secondary, 0.6); }
-    &--3 { top: 25%; left: 80%; animation-delay: 0.15s; }
-    &--4 { top: 60%; left: 20%; animation-delay: 0.25s; background: rgba($color-secondary, 0.5); }
-    &--5 { top: 55%; left: 75%; animation-delay: 0.3s; }
-
-    // Muted amber sparkles for fallback path — still celebratory, not punitive
-    &--fallback {
-      background: rgba($color-warning, 0.5);
-      animation: profession-sparkle-burst 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-  }
-
-  @keyframes profession-sparkle-burst {
-    0% { opacity: 0; transform: scale(0) translateY(0); }
-    30% { opacity: 1; transform: scale(1.5) translateY(-8rpx); }
-    100% { opacity: 0; transform: scale(0.5) translateY(-24rpx); }
-  }
-
   @keyframes profession-hint-fade-in {
     from { opacity: 0; transform: translateY(4rpx); }
     to { opacity: 1; transform: translateY(0); }
@@ -435,15 +374,16 @@
     }
   }
 
+  // Mixed-size same-line pair (avatar + title + AIGC) — flex row, center aligned (L2)
   &__reveal-title-row {
     display: flex;
     align-items: center;
-    gap: $spacing-xs;
+    gap: $spacing-sm;
     margin-bottom: $spacing-md;
-    flex-wrap: wrap;
   }
 
   &__reveal-aigc {
+    flex-shrink: 0;
     margin-left: auto;
   }
 
@@ -452,24 +392,34 @@
     align-self: flex-start;
   }
 
-  &__reveal-checkmark {
+  // Single soft check — one element, no hand-built two-piece tick (§6.1)
+  &__reveal-check {
     width: 28rpx;
     height: 28rpx;
-    position: relative;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.12);
     animation: profession-checkmark-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     animation-delay: 0.2s;
     opacity: 0;
   }
 
+  &__reveal-check-icon {
+    font-size: 18rpx;
+    line-height: 1;
+    color: $color-primary;
+  }
+
   &__reveal-mascot {
-    width: 40rpx;
-    height: 40rpx;
+    width: 64rpx;
+    height: 64rpx;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
     background: rgba($color-primary, 0.08);
-    margin-left: $spacing-xs;
   }
 
   &__reveal-mascot-img {
@@ -478,74 +428,161 @@
     display: block;
   }
 
-  &__reveal-checkmark-stem {
-    position: absolute;
-    width: 4rpx;
-    height: 16rpx;
-    background: $color-primary;
-    border-radius: 2rpx;
-    left: 14rpx;
-    top: 4rpx;
-    transform: rotate(45deg);
-  }
-
-  &__reveal-checkmark-kick {
-    position: absolute;
-    width: 4rpx;
-    height: 8rpx;
-    background: $color-primary;
-    border-radius: 2rpx;
-    left: 6rpx;
-    top: 14rpx;
-    transform: rotate(-45deg);
-  }
-
   @keyframes profession-checkmark-pop {
     from { opacity: 0; transform: scale(0.5); }
     to { opacity: 1; transform: scale(1); }
   }
 
   &__reveal-title {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
-    font-weight: $font-weight-medium;
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
     display: block;
     word-break: keep-all;
   }
 
-  &__reveal-tags {
+  // ── 职业坐标阶梯 (类别 › 细分 › 角色) ─────────────────────────────────
+  &__ladder {
     display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-    margin-bottom: $spacing-lg;
+    flex-direction: column;
+    margin-bottom: $spacing-md;
   }
 
-  &__reveal-tag-wrap {
-    position: relative;
-    animation: profession-tag-pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  // Row entrance: 60ms stagger, total ≤360ms (§6.4 envelope)
+  &__ladder-row {
+    display: flex;
+    flex-direction: column;
+    animation: profession-ladder-row-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     opacity: 0;
-    transform: scale(0.6);
-    transition: transform 0.15s ease, opacity 0.15s ease;
 
-    &:nth-child(1) { animation-delay: 0.05s; }
-    &:nth-child(2) { animation-delay: 0.12s; }
-    &:nth-child(3) { animation-delay: 0.19s; }
-    &:nth-child(4) { animation-delay: 0.26s; }
-    &:nth-child(5) { animation-delay: 0.33s; }
+    &:nth-child(1) { animation-delay: 0s; }
+    &:nth-child(2) { animation-delay: 0.06s; }
+    &:nth-child(3) { animation-delay: 0.12s; }
 
-    &:active {
-      transform: scale(0.92);
-      opacity: 0.7;
+    & + & {
+      margin-top: $spacing-xs;
+    }
+
+    &--open {
+      opacity: 1;
     }
   }
 
-  &__tag-feedback {
+  // Row line — ≥88rpx tap height, flex row so mixed sizes align on center (L2)
+  &__ladder-row-main {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: $cta-min-tap;
+  }
+
+  &__ladder-label {
+    width: 64rpx;
+    flex-shrink: 0;
     font-size: $font-size-xs;
     color: $color-text-muted;
-    line-height: 1.5;
-    margin-bottom: $spacing-md;
+    line-height: 1.4;
     display: block;
-    animation: profession-hint-fade-in 0.3s ease-out forwards;
+  }
+
+  &__ladder-pill-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  // Single-line pill with ellipsis (§6.1) — fills the middle column, field-like
+  &__ladder-pill {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+
+    .chip__label {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__ladder-pending {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48rpx;
+    padding: 6rpx 20rpx;
+    border-radius: 999rpx;
+    border: 2rpx dashed rgba($color-text-muted, 0.45);
+    background: transparent;
+
+    &:active,
+    &--active {
+      background: rgba($color-primary, 0.06);
+      border-color: rgba($color-primary, 0.45);
+    }
+  }
+
+  &__ladder-pending-text {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.2;
+  }
+
+  &__ladder-change {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: $cta-min-tap;
+    min-width: $cta-min-tap;
+    padding-left: $spacing-sm;
+    flex-shrink: 0;
+
+    &:active,
+    &--active {
+      opacity: 0.6;
+    }
+
+    &--disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+  }
+
+  &__ladder-change-text {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    line-height: 1.3;
+  }
+
+  // Inline tray — NOT a modal / sheet (§6.3)
+  &__ladder-tray {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    padding: $spacing-sm 0 $spacing-xs 80rpx;
+    animation: profession-hint-fade-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  // Tray chips are the tap target — 88rpx min height (Chip compact is only 48rpx)
+  &__ladder-tray-chip {
+    min-height: $cta-min-tap;
+    opacity: 0;
+    animation: profession-hint-fade-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+    &:nth-child(1) { animation-delay: 0s; }
+    &:nth-child(2) { animation-delay: 0.04s; }
+    &:nth-child(3) { animation-delay: 0.08s; }
+  }
+
+  @keyframes profession-ladder-row-enter {
+    from { opacity: 0; transform: translateY(12rpx); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   &__reveal-bridge {
@@ -600,6 +637,17 @@
     line-height: 1.5;
     margin-bottom: $spacing-md;
     display: block;
+
+    // AC-21 — benefit-led, honest (never claims successful recognition)
+    &--benefit {
+      color: $color-text-secondary;
+    }
+
+    // Legacy network line demoted to a secondary tier (§6.5)
+    &--secondary {
+      color: rgba($color-text-muted, 0.75);
+      font-size: $font-size-2xs;
+    }
   }
 
   &__retry-bar {
@@ -643,18 +691,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes profession-tag-pop-in {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -723,17 +759,15 @@
     transform: none;
   }
 
-  .profession-overlay__reveal-tag-wrap {
+  .profession-overlay__ladder-row,
+  .profession-overlay__ladder-tray,
+  .profession-overlay__ladder-tray-chip {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
-  .profession-overlay__celebration {
-    display: none;
-  }
-
-  .profession-overlay__reveal-checkmark {
+  .profession-overlay__reveal-check {
     animation: none;
     opacity: 1;
   }
@@ -747,18 +781,12 @@
     opacity: 0.5;
   }
 
-  .profession-overlay__sparkle {
-    animation: none;
-    opacity: 0;
-  }
-
   .profession-overlay__short-hint {
     animation: none;
     opacity: 1;
   }
 
   .profession-overlay__typing-label,
-  .profession-overlay__tag-feedback,
   .profession-overlay__offline-banner,
   .profession-overlay__max-send-hint {
     animation: none;
@@ -785,7 +813,6 @@
   }
 
   .profession-overlay__typing-label,
-  .profession-overlay__tag-feedback,
   .profession-overlay__offline-banner,
   .profession-overlay__max-send-hint,
   .profession-overlay__short-hint {
@@ -799,24 +826,17 @@
     transform: none;
   }
 
-  .profession-overlay__reveal-tag-wrap {
+  .profession-overlay__ladder-row,
+  .profession-overlay__ladder-tray,
+  .profession-overlay__ladder-tray-chip {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
-  .profession-overlay__celebration {
-    display: none;
-  }
-
-  .profession-overlay__reveal-checkmark {
+  .profession-overlay__reveal-check {
     animation: none;
     opacity: 1;
-  }
-
-  .profession-overlay__sparkle {
-    animation: none;
-    opacity: 0;
   }
 }
 
@@ -841,17 +861,15 @@
     transform: none;
   }
 
-  .profession-overlay__reveal-tag-wrap {
+  .profession-overlay__ladder-row,
+  .profession-overlay__ladder-tray,
+  .profession-overlay__ladder-tray-chip {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
-  .profession-overlay__celebration {
-    display: none;
-  }
-
-  .profession-overlay__reveal-checkmark {
+  .profession-overlay__reveal-check {
     animation: none;
     opacity: 1;
   }
@@ -865,14 +883,8 @@
     opacity: 0.5;
   }
 
-  .profession-overlay__sparkle {
-    animation: none;
-    opacity: 0;
-  }
-
   .profession-overlay__short-hint,
   .profession-overlay__typing-label,
-  .profession-overlay__tag-feedback,
   .profession-overlay__offline-banner,
   .profession-overlay__max-send-hint {
     animation: none;

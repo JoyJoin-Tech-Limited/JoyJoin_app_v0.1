@@ -1,24 +1,57 @@
-import { View, Text, Input, ScrollView, Image, CustomWrapper } from '@tarojs/components'
+import { View, Text, Input, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import type { AIGCMeta, AIResponseMeta } from '@shared/types/aiMeta'
 import Chip from './ui/Chip'
 import { haptics } from '../lib/utils/haptics'
-import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../lib/mascot/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset } from '../lib/mascot/xiaoyueExpressions'
 import { apiRequest } from '../lib/api/api'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
+import { useResetOnShow } from '../hooks/useResetOnShow'
 import { useAIGCLabelsEnabled } from '../hooks/useAIGCLabelsEnabled'
 import AIGCLabel from './ai-content/AIGCLabel'
 import AIContentReportButton from './ai-content/AIContentReportButton'
+import ProfessionChatMessage, { ProfessionTypingBubble } from './profession/ProfessionChatMessage'
+import ProfessionExpressionPreloader from './profession/ProfessionExpressionPreloader'
+import ProfessionOverlayStatusHints from './profession/ProfessionOverlayStatusHints'
 import { evaluateProfessionInputQuality } from '../lib/onboarding/professionInputQuality'
 import { getLocalProfessionClassification } from '../lib/onboarding/localProfessionClassification'
 import {
-  dedupeProfessionTags,
+  INVALID_PROFESSION_MESSAGE,
+  OPENING_MESSAGES_ARCHETYPE,
+  OPENING_MESSAGES_GENERIC,
+  ROTATING_PLACEHOLDERS,
+  SKIP_RESPONSE_GENERIC,
+  SKIP_RESPONSE_MEMORY,
+} from '../lib/onboarding/professionOverlayCopy'
+import {
+  API_TIMEOUT_MS,
+  DEBOUNCE_MS,
+  MAX_SENDS_PER_SESSION,
+  generateId,
+  getAnticipationExpression,
+  getReactionForProfession,
+  mapFallbackExpression,
+  mapSuccessExpression,
+  type ChatMessage,
+} from '../lib/onboarding/professionOverlayHelpers'
+import {
   isDuplicateProfessionSubmission,
   isUsableProfessionResponse,
   isUsableStoredProfessionClassification,
 } from '../lib/onboarding/professionSubmissionGuard'
+import {
+  applyTierCorrection,
+  countResolvedTiers,
+  createLadderStateFromClassification,
+  resolveVisibleLadderRows,
+  toPersistedClassificationFields,
+  type LadderTier,
+  type LadderValue,
+  type ProfessionLadderState,
+} from '../lib/onboarding/professionLadderReducer'
 import './ProfessionChatOverlay.scss'
 import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
@@ -33,7 +66,35 @@ export interface ProfessionClassificationData {
   industryNiche: string | null
   industrySource: string
   industryConfidence: number
+  /**
+   * AIGC compliance meta extracted from the server response (`meta.aigc`).
+   * Reflects reaction-generation fallback (`reactionFallbackUsed`), NOT the
+   * classification `source` fallback. Absent on the local/deterministic path
+   * → no label (fail-closed, AC-12).
+   */
+  meta?: AIGCMeta
 }
+
+/** ≤3 single-select correction options per tier, carried on the classify response. */
+export interface ProfessionCorrectionCandidate {
+  id: string
+  label: string
+}
+
+export interface ProfessionCorrectionCandidates {
+  category?: ProfessionCorrectionCandidate[]
+  segment?: ProfessionCorrectionCandidate[]
+  occupation?: ProfessionCorrectionCandidate[]
+}
+
+const MAX_CORRECTION_CANDIDATES = 3
+
+/** Title shared by all three card states (Q1 — unified, never state-branched). */
+const LADDER_TITLE = '悦仔记下了你的职业'
+const LADDER_PENDING_COPY = '待补充'
+const LADDER_CHANGE_COPY = '换一个'
+const LADDER_BENEFIT_HINT = '补上职业方向，之后能进更对味的局'
+const LADDER_FALLBACK_HINT = '网络有点慢，悦仔先记下了。等信号好了再帮你细细分析～'
 
 export interface ProfessionChatOverlayProps {
   visible: boolean
@@ -43,37 +104,6 @@ export interface ProfessionChatOverlayProps {
   userArchetype?: string
   onSubmit: (value: string, classificationData?: ProfessionClassificationData) => void
   onSkip: () => void
-}
-
-const OPENING_MESSAGES_GENERIC: readonly string[] = [
-  '先好奇一下：你平时做什么工作呀？',
-  '设计师、产品经理、教师、自由职业都可以说。越具体，悦仔越能帮你挑到聊得来的局。',
-]
-
-const OPENING_MESSAGES_ARCHETYPE = (archetypeName: string): readonly string[] => [
-  `作为「${archetypeName}」的你，平时做什么工作呀？`,
-  '设计师、产品经理、教师、自由职业都可以说。越具体，悦仔越能帮你挑到聊得来的局。',
-]
-
-const SKIP_RESPONSE_GENERIC = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
-
-const SKIP_RESPONSE_MEMORY = '你刚才说的悦仔也记着呢～等你想完善了，随时可以在个人主页里补充'
-
-const INVALID_PROFESSION_MESSAGE = '我还没看懂这个职业/身份，可以换成「产品经理」「做设计」「学生」「自由职业」这类描述，或者点跳过。'
-
-// Profession-specific placeholder examples that rotate
-const ROTATING_PLACEHOLDERS = [
-  '告诉我你的职业，比如产品经理、设计师、程序员～',
-  '不知道怎么描述？试试说「我帮人解决什么问题」～',
-  '全职、自由职业、学生都可以说，没有标准答案～',
-]
-
-interface ChatMessage {
-  id: string
-  sender: 'xiaoyue' | 'user'
-  text: string
-  expressionId?: XiaoyueExpressionId
-  isFallback?: boolean
 }
 
 interface UnderstandProfessionResponse {
@@ -88,228 +118,18 @@ interface UnderstandProfessionResponse {
   }
   source: string
   confidence: number
+  /**
+   * AI observability envelope. Only the nested `aigc` flag is consumed for the
+   * compliance label (server may not ship it yet → absent = no label).
+   */
+  meta?: AIResponseMeta
+  /** Optional while the backend contract lands in parallel — absent → 「待补充」 only. */
+  correctionCandidates?: ProfessionCorrectionCandidates
   archetypeContext?: {
     primaryArchetype: string | null
     traits: string[]
   }
 }
-
-const PROFESSION_REACTION_ENTRIES: [string, string][] = [
-    ['产品经理','哇！产品经理的洞察力通常很强，活动里很容易成为话题发起人'],
-    ['程序员','程序员逻辑好、脑洞大，跟艺术/创意型的人配在一起常常有意外火花'],
-    ['设计师','设计师的审美和观察力，在局里常常是最早发现氛围变化的人'],
-    ['运营','运营的网感和沟通能力，天然适合破冰和串联全场'],
-    ['销售','销售出身的雷达超灵敏，大概率会成为局里的气氛担当'],
-    ['市场','市场人嗅觉敏锐、表达有感染力，很容易在局里找到同频搭子'],
-    ['教师','老师的倾听和引导能力，是局里最让人安心的存在'],
-    ['医生','医务工作者的细腻和责任感，常常能建立很深的信任连接'],
-    ['律师','律师的逻辑和表达都很 sharp，跟脑洞型的人碰撞起来特别有意思'],
-    ['咨询','咨询背景的框架思维，很容易把散乱的聊天串成高质量对话'],
-    ['金融','金融圈的信息密度高，跟文化/艺术背景的人搭配会很有反差张力'],
-    ['创业','创业者自带故事感，一聊起经历就很容易引发共鸣'],
-    ['学生','学生党的好奇心是局里最亮的入场券，保持开放就好'],
-    ['自由','自由职业的多元经历，本身就是最好的破冰话题'],
-    ['freelance','自由职业的多元经历，本身就是最好的破冰话题'],
-    ['经理','管理岗的协调力在局里很吃香，你很可能自然地成为小组粘合剂'],
-    ['主管','管理岗的协调力在局里很吃香，你很可能自然地成为小组粘合剂'],
-    ['总监','管理层看人的眼光通常很准，排桌时我们会重点参考你的气场偏好'],
-    ['工程师','工程师的务实和创意并存，跟表达型的人互补度很高'],
-    ['研究员','研究型人格的深度思考，很容易在局里找到愿意认真对话的人'],
-    ['编辑','编辑的文字敏感度和信息整合力，会让你成为局里的高质量听众'],
-    ['记者','记者的好奇心和提问力，天然适合把浅聊带向深聊'],
-    ['hr','HR 看人的直觉超准，你在局里可能会最快发现谁和自己最合拍'],
-    ['人力','HR 看人的直觉超准，你在局里可能会最快发现谁和自己最合拍'],
-    ['行政','行政的细致和周到，是局里最让人感到被照顾的存在'],
-    ['翻译','双语/多语背景的你在局里可是稀缺资源，语言搭配会优先考虑你'],
-    ['策划','策划人的创意和节奏感，很容易让一场对话变得有层次'],
-    ['开发','开发者的专注力和解决问题的能力，在深度话题上特别圈粉'],
-    ['数据分析','数据人的理性 + 好奇，常常能把感性话题聊出新鲜角度'],
-    ['品牌','品牌人对情绪和趋势的敏感，让你很容易在局里找到共鸣点'],
-    ['公关','公关人的情商和应变力，简直是聚会局的隐藏 MVP'],
-    ['采购','采购的谈判力和资源意识，很容易把弱关系变成强连接'],
-    ['物流','供应链人的全局观，让你在看人看事上都更有系统性'],
-    ['建筑','建筑/设计背景的空间感和审美，很容易在文化类局里遇到同好'],
-    ['土木','工程师的务实和创意并存，跟表达型的人互补度很高'],
-    ['会计','财务人的严谨和细节控，在局里是那种让人很安心的存在'],
-    ['财务','财务人的严谨和细节控，在局里是那种让人很安心的存在'],
-    ['公务员','体制内背景的稳定性和表达分寸感，排桌时会优先考虑温和型搭子'],
-    ['艺术家','艺术家的感知力是稀缺资源，我们一定会帮你找到能接住你表达的人'],
-    ['摄影师','摄影师的观察力和审美，在局里很容易成为被关注的亮点'],
-    ['作家','作家的表达深度和内心世界，值得被真正懂的人发现'],
-    ['音乐人','音乐人的情绪感染力，是局里最天然的破冰器'],
-    ['厨师','美食爱好者的共情力很强，「吃」本身就是最好的聚会语言'],
-    ['餐饮','餐饮人的服务意识和共情力，很容易让人感到被照顾'],
-    ['美容','美业人的审美力和亲和力，在局里很容易建立第一印象的好感'],
-    ['健身','健身/运动背景的自律和活力，排桌时会优先考虑同样高能量的搭子'],
-    ['教练','教练的引导和激励能力，很容易在局里成为小组的隐形 leader'],
-    ['瑜伽','瑜伽人的平和和觉察力，适合跟同样向内探索的人深聊'],
-    ['心理','心理学背景的洞察力和倾听质量，是深度聚会局里的宝藏'],
-    ['社工','社工的共情和利他心，让你在局里很容易收获真诚的反馈'],
-    ['志愿者','公益人的利他心和行动力，排桌时会优先考虑价值观相近的搭子'],
-    ['科学家','科研人的好奇心和严谨，很容易在知识型话题上找到深度连接'],
-    ['教授','学术背景的深度和表达逻辑，在高质量对话局里特别受欢迎'],
-    ['博士','学术背景的深度和表达逻辑，在高质量对话局里特别受欢迎'],
-    ['博士后','学术背景的深度和表达逻辑，在高质量对话局里特别受欢迎'],
-    ['护士','医务工作者的细腻和责任感，常常能建立很深的信任连接'],
-    ['药剂','医药背景的理性和关怀并存，很容易让人产生信任感'],
-    ['证券','金融圈的信息密度高，跟文化/艺术背景的人搭配会很有反差张力'],
-    ['投资','投资人的判断力和好奇心，在局里很容易引发高质量的思辨'],
-    ['保险','保险人的风险意识和长期思维，很适合跟稳重型的人建立连接'],
-    ['房地产','地产人的资源整合力和表达力，很容易在局里快速打开局面'],
-    ['中介','中介人的信息敏感度和连接力，天然适合破冰和串联'],
-    ['司机','运输/服务行业的阅历和观察力，常常能聊出很有深度的故事'],
-    ['服务员','服务行业的共情力和细节观察，很容易让人感到被照顾'],
-    ['客服','客服的情绪管理和沟通技巧，在局里很容易成为让人舒服的存在'],
-    ['前台','前台/接待的第一印象力和礼仪感，很容易在局里建立好感'],
-    ['秘书','秘书的细致和协调能力，是局里最让人感到顺畅的存在'],
-    ['助理','助理的执行力和观察力，很容易在局里找到互补型搭子'],
-    ['主播','主播的表达力和镜头感，在局里很容易成为话题中心'],
-    ['网红','内容创作者的表达力和网感，很容易在局里找到同频的有趣搭子'],
-    ['模特','时尚/表演行业的审美力和表现力，很容易在局里吸引注意力'],
-    ['演员','表演行业的人的共情力和表现力，很容易在局里创造深刻连接'],
-    ['导演','导演的全局观和审美力，很容易把一场闲聊聊出层次感'],
-    ['制片','制片人的统筹力和资源整合力，在局里很容易成为隐形组织者'],
-    ['编剧','编剧的故事力和观察力，很容易让对话变得有画面感'],
-    ['电竞','电竞人的反应力和团队协作意识，很容易在游戏/竞技局里发光'],
-    ['动漫','二次元/动漫爱好者的纯粹和创造力，值得被真正懂的人发现'],
-    ['游戏','游戏人的策略思维和创造力，在互动型局里特别受欢迎'],
-    ['宠物','宠物行业的温柔和耐心，很容易在局里建立轻松信任的氛围'],
-    ['花艺','花艺/美学行业的感知力和审美，很容易在文化局里遇到同好'],
-    ['手工','手工/匠人的专注力和创造力，很容易在深度话题局里被欣赏'],
-    ['烘焙','烘焙人的细腻和分享欲，「美食」本身就是最好的社交语言'],
-    ['咖啡','咖啡人的品味和节奏感，很容易在慢聊局里找到舒适的位置'],
-    ['茶艺','茶艺人的平和和仪式感，适合跟同样向内探索的人深聊'],
-    ['红酒','品酒/侍酒师的品味和知识储备，很容易在高端局里建立话题'],
-    ['导游','导游的表达力和知识储备，很容易在局里成为天然的话题发起者'],
-    ['空乘','空乘的服务意识和礼仪感，很容易在局里建立良好的第一印象'],
-    ['飞行员','飞行员的决断力和视野，很容易在局里引发别人的好奇'],
-    ['军人','军人的纪律性和担当感，很容易在局里建立可靠的信任形象'],
-    ['警察','警务背景的正义感和观察力，很容易在局里建立可靠的信任形象'],
-    ['消防员','应急行业的勇敢和责任感，很容易让人产生敬佩和信任'],
-    ['律师助理','法律背景的严谨和逻辑力，很容易在思辨型话题局里被欣赏'],
-    ['法务','法律背景的严谨和逻辑力，很容易在思辨型话题局里被欣赏'],
-    ['法官','法律背景的严谨和逻辑力，很容易在思辨型话题局里被欣赏'],
-    ['检察官','法律背景的严谨和逻辑力，很容易在思辨型话题局里被欣赏'],
-    ['coder','程序员逻辑好、脑洞大，跟艺术/创意型的人配在一起常常有意外火花'],
-    ['dev','程序员逻辑好、脑洞大，跟艺术/创意型的人配在一起常常有意外火花'],
-    ['engineer','工程师的务实和创意并存，跟表达型的人互补度很高'],
-    ['teacher','老师的倾听和引导能力，是局里最让人安心的存在'],
-    ['doctor','医务工作者的细腻和责任感，常常能建立很深的信任连接'],
-    ['nurse','医务工作者的细腻和责任感，常常能建立很深的信任连接'],
-    ['student','学生党的好奇心是局里最亮的入场券，保持开放就好'],
-    ['manager','管理岗的协调力在局里很吃香，你很可能自然地成为小组粘合剂'],
-    ['sales','销售出身的雷达超灵敏，大概率会成为局里的气氛担当'],
-    ['marketing','市场人嗅觉敏锐、表达有感染力，很容易在局里找到同频搭子'],
-    ['designer','设计师的审美和观察力，在局里常常是最早发现氛围变化的人'],
-    ['artist','艺术家的感知力是稀缺资源，我们一定会帮你找到能接住你表达的人'],
-    ['writer','作家的表达深度和内心世界，值得被真正懂的人发现'],
-    ['researcher','研究型人格的深度思考，很容易在局里找到愿意认真对话的人'],
-    ['consultant','咨询背景的框架思维，很容易把散乱的聊天串成高质量对话'],
-    ['entrepreneur','创业者自带故事感，一聊起经历就很容易引发共鸣'],
-    ['founder','创业者自带故事感，一聊起经历就很容易引发共鸣'],
-    ['startup','创业者自带故事感，一聊起经历就很容易引发共鸣'],
-    ['data','数据人的理性 + 好奇，常常能把感性话题聊出新鲜角度'],
-    ['phd','学术背景的深度和表达逻辑，在高质量对话局里特别受欢迎'],
-    ['lawyer','法律背景的严谨和逻辑力，很容易在思辨型话题局里被欣赏'],
-    ['musician','音乐人的情绪感染力，是局里最天然的破冰器'],
-    ['chef','美食爱好者的共情力很强，「吃」本身就是最好的聚会语言'],
-    ['photographer','摄影师的观察力和审美，在局里很容易成为被关注的亮点'],
-    ['trainer','教练的引导和激励能力，很容易在局里成为小组的隐形 leader'],
-    ['coach','教练的引导和激励能力，很容易在局里成为小组的隐形 leader'],
-    ['psychologist','心理学背景的洞察力和倾听质量，是深度聚会局里的宝藏'],
-    ['therapist','心理学背景的洞察力和倾听质量，是深度聚会局里的宝藏'],
-    ['blogger','内容创作者的表达力和网感，很容易在局里找到同频的有趣搭子'],
-    ['influencer','内容创作者的表达力和网感，很容易在局里找到同频的有趣搭子'],
-    ['streamer','主播的表达力和镜头感，在局里很容易成为话题中心'],
-    ['actor','表演行业的人的共情力和表现力，很容易在局里创造深刻连接'],
-    ['pilot','飞行员的决断力和视野，很容易在局里引发别人的好奇'],
-    ['flight attendant','空乘的服务意识和礼仪感，很容易在局里建立良好的第一印象'],
-    ['soldier','军人的纪律性和担当感，很容易在局里建立可靠的信任形象'],
-    ['judge','法律背景的严谨和逻辑力，很容易在思辨型话题局里被欣赏'],
-    ['editor','编辑的文字敏感度和信息整合力，会让你成为局里的高质量听众'],
-    ['journalist','记者的好奇心和提问力，天然适合把浅聊带向深聊'],
-    ['reporter','记者的好奇心和提问力，天然适合把浅聊带向深聊'],
-    ['brand manager','品牌人对情绪和趋势的敏感，让你很容易在局里找到共鸣点'],
-    ['pr','公关人的情商和应变力，简直是聚会局的隐藏 MVP'],
-    ['buyer','采购的谈判力和资源意识，很容易把弱关系变成强连接'],
-    ['logistics','供应链人的全局观，让你在看人看事上都更有系统性'],
-    ['architect','建筑/设计背景的空间感和审美，很容易在文化类局里遇到同好'],
-    ['accountant','财务人的严谨和细节控，在局里是那种让人很安心的存在'],
-    ['civil servant','体制内背景的稳定性和表达分寸感，排桌时会优先考虑温和型搭子'],
-    ['social worker','社工的共情和利他心，让你在局里很容易收获真诚的反馈'],
-    ['professor','学术背景的深度和表达逻辑，在高质量对话局里特别受欢迎'],
-    ['security','安保/应急行业的责任感和观察力，很容易让人产生信任感'],
-    ['waitress','服务行业的共情力和细节观察，很容易让人感到被照顾'],
-    ['bartender','调酒师的控场力和氛围营造力，在酒局里简直是天然主场'],
-    ['sommelier','品酒/侍酒师的品味和知识储备，很容易在高端局里建立话题'],
-    ['receptionist','前台/接待的第一印象力和礼仪感，很容易在局里建立良好的第一印象'],
-    ['broadcaster','主播的表达力和镜头感，在局里很容易成为话题中心'],
-    ['screenwriter','编剧的故事力和观察力，很容易让对话变得有画面感'],
-    ['gamer','游戏人的策略思维和创造力，在互动型局里特别受欢迎'],
-    ['vet','宠物行业的温柔和耐心，很容易在局里建立轻松信任的氛围'],
-    ['florist','花艺/美学行业的感知力和审美，很容易在文化局里遇到同好'],
-    ['craftsman','手工/匠人的专注力和创造力，很容易在深度话题局里被欣赏'],
-    ['baker','烘焙人的细腻和分享欲，「美食」本身就是最好的社交语言'],
-    ['tea master','茶艺人的平和和仪式感，适合跟同样向内探索的人深聊'],
-  ]
-
-function getReactionForProfession(text: string): string {
-  const lower = text.toLowerCase()
-  for (const [keyword, reaction] of PROFESSION_REACTION_ENTRIES) {
-    if (lower.includes(keyword.toLowerCase())) {
-      return reaction
-    }
-  }
-  return `「${text.trim()}」——这个背景挺有意思的，我先帮你收进档案了。等会儿让悦仔再仔细品一品，看看能挖出什么有趣的连接～`
-}
-
-function mapFallbackExpression(reaction: string): XiaoyueExpressionId {
-  if (reaction.includes('洞察力') || reaction.includes('逻辑')) return 'testCurious'
-  if (reaction.includes('倾听') || reaction.includes('细腻')) return 'testListening'
-  if (reaction.includes('故事') || reaction.includes('共鸣')) return 'matchSuccess'
-  return 'homeWelcome'
-}
-
-function mapSuccessExpression(reaction: string): XiaoyueExpressionId {
-  if (reaction.includes('有趣') || reaction.includes('好奇') || reaction.includes('惊喜')) return 'testCurious'
-  if (reaction.includes('温暖') || reaction.includes('安心') || reaction.includes('舒服')) return 'testListening'
-  if (reaction.includes('棒') || reaction.includes('厉害') || reaction.includes('赞')) return 'matchSuccess'
-  return 'coachGuide'
-}
-
-/** Anticipate expression based on profession keywords before API responds */
-function getAnticipationExpression(text: string): XiaoyueExpressionId {
-  const lower = text.toLowerCase()
-  // Creative / artistic professions → curious face
-  if (['设计', '艺术', '摄影', '音乐', '写作', '导演', '编剧', '画家', '创意', '美术', '画画', '舞蹈', '表演', '模特', '主播', '网红', '博主', '自媒体'].some((k) => lower.includes(k)))
-    return 'testCurious'
-  if (['designer', 'artist', 'photographer', 'musician', 'writer', 'director', 'actor', 'creative', 'model', 'streamer', 'blogger'].some((k) => lower.includes(k)))
-    return 'testCurious'
-  // Technical / analytical professions → listening face
-  if (['程序', '工程', '数据', '开发', '技术', '算法', '科研', '研究', '学术', '博士', '教授', '科学家', '分析', '架构', '运维', '测试', '码农', '人工智能'].some((k) => lower.includes(k)))
-    return 'testListening'
-  if (['engineer', 'programmer', 'developer', 'data scientist', 'scientist', 'researcher', 'analyst', 'architect', 'coder', 'dev', 'phd', 'professor', 'tech'].some((k) => lower.includes(k)))
-    return 'testListening'
-  // Social / people-facing professions → coach guide face
-  if (['销售', '老师', '教师', '人力', 'hr', '培训', '教练', '咨询', '顾问', '主持', '公关', '市场', '运营', '客服', '社工', '志愿者', '导游'].some((k) => lower.includes(k)))
-    return 'coachGuide'
-  if (['sales', 'teacher', 'hr', 'trainer', 'coach', 'consultant', 'host', 'marketing', 'operation', 'customer service', 'social worker', 'volunteer', 'guide'].some((k) => lower.includes(k)))
-    return 'coachGuide'
-  // Business / leadership → success face
-  if (['经理', '总监', '主管', '创业', '创始人', '老板', '合伙', '投资', '金融', '银行', '证券', '保险', '地产', '管理', 'leader', 'executive'].some((k) => lower.includes(k)))
-    return 'matchSuccess'
-  if (['manager', 'director', 'founder', 'entrepreneur', 'partner', 'investor', 'finance', 'banking', 'executive', 'ceo', 'cfo', 'cto'].some((k) => lower.includes(k)))
-    return 'matchSuccess'
-  return 'loadingSystem'
-}
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-}
-
-const DEBOUNCE_MS = 2000
-const MAX_SENDS_PER_SESSION = 5
-const API_TIMEOUT_MS = 14000
 
 export default function ProfessionChatOverlay({
   visible,
@@ -327,7 +147,6 @@ export default function ProfessionChatOverlay({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasSent, setHasSent] = useState(false)
   const [showRevealCard, setShowRevealCard] = useState(false)
-  const [revealTags, setRevealTags] = useState<string[]>([])
   const [classificationData, setClassificationData] = useState<ProfessionClassificationData | null>(null)
   const [thinkingLabel, setThinkingLabel] = useState<string | null>(null)
   const [retryMessageId, setRetryMessageId] = useState<string | null>(null)
@@ -367,10 +186,21 @@ export default function ProfessionChatOverlay({
   // Rotating placeholder index
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const placeholderTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  // Tag removal state
-  const [removedTags, setRemovedTags] = useState<string[]>([])
-  const [tagFeedback, setTagFeedback] = useState<string | null>(null)
-  const revealCardViewedRef = useRef(false)
+  // 职业坐标阶梯 correction state — one row open at a time (§6.3)
+  const [ladderState, setLadderState] = useState<ProfessionLadderState | null>(null)
+  const [openTier, setOpenTier] = useState<LadderTier | null>(null)
+  const [correctionCandidates, setCorrectionCandidates] = useState<ProfessionCorrectionCandidates | null>(null)
+  const [aigcMeta, setAigcMeta] = useState<AIGCMeta | undefined>(undefined)
+  const [ladderScrollTarget, setLadderScrollTarget] = useState('')
+  const ladderViewedRef = useRef(false)
+  const correctedTiersRef = useRef<Set<LadderTier>>(new Set())
+  // REL-04 — the overlay lives on a tab-less page kept alive across swipe-back;
+  // collapse any open tray when the page is re-shown.
+  const resetLadderTrayOnShow = useCallback((_visible: boolean) => {
+    setOpenTier(null)
+    setLadderScrollTarget('')
+  }, [])
+  useResetOnShow(resetLadderTrayOnShow)
   const rejectLowQualityProfessionInput = useCallback((rawText: string) => {
     const quality = evaluateProfessionInputQuality(rawText)
     if (quality.valid) return false
@@ -378,7 +208,10 @@ export default function ProfessionChatOverlay({
     const text = quality.normalized
     setShowShortHint(true)
     setShowRevealCard(false)
-    setRevealTags([])
+    setLadderState(null)
+    setOpenTier(null)
+    setCorrectionCandidates(null)
+    setAigcMeta(undefined)
     setClassificationData(null)
     setRetryMessageId(null)
     setThinkingLabel(null)
@@ -419,7 +252,6 @@ export default function ProfessionChatOverlay({
       setIsSubmitting(false)
       setHasSent(false)
       setShowRevealCard(false)
-      setRevealTags([])
       setClassificationData(null)
       setRetryMessageId(null)
       setShowMaxSendHint(false)
@@ -428,8 +260,13 @@ export default function ProfessionChatOverlay({
       lastUserTextRef.current = ''
       previousUserTextRef.current = ''
       setShowShortHint(false)
-      setRemovedTags([])
-      setTagFeedback(null)
+      // REL-04 — tray/ladder state must not survive a hide/show (swipe-back) cycle
+      setLadderState(null)
+      setOpenTier(null)
+      setCorrectionCandidates(null)
+      setAigcMeta(undefined)
+      setLadderScrollTarget('')
+      correctedTiersRef.current = new Set()
 
       // Check network status on open
       Taro.getNetworkType({
@@ -497,12 +334,37 @@ export default function ProfessionChatOverlay({
   }, [visible, isSubmitting, inputValue])
 
   useEffect(() => {
-    if (showRevealCard && !revealCardViewedRef.current) {
-      revealCardViewedRef.current = true
-      analytics.interaction('profession_chat_reveal_card_viewed')
+    if (showRevealCard && ladderState && !ladderViewedRef.current) {
+      ladderViewedRef.current = true
+      // Replaces profession_chat_reveal_card_viewed (spec §11 P7 — one event per card)
+      analytics.interaction('profession_chat_ladder_viewed', {
+        tierCount: countResolvedTiers(ladderState),
+        source: classificationData?.industrySource ?? 'unknown',
+        confidence: classificationData?.industryConfidence ?? 0,
+      })
+      // The card mounts after the reaction bubble — pull it into view once.
+      setScrollTrigger((c) => c + 1)
     }
-    if (!visible) revealCardViewedRef.current = false
-  }, [showRevealCard, visible, analytics])
+    if (!visible) ladderViewedRef.current = false
+  }, [showRevealCard, ladderState, visible, analytics, classificationData])
+
+  // Keep the expanded row in viewport (AC-04). `pageScrollTo` is a no-op inside
+  // ScrollView — ScrollView.scrollIntoView (id, no `#`) is the only mechanism.
+  useEffect(() => {
+    if (!ladderScrollTarget) return
+    const timer = setTimeout(() => setLadderScrollTarget(''), 600)
+    return () => clearTimeout(timer)
+  }, [ladderScrollTarget])
+
+  // Abandoned correction — tray left open when the overlay closes
+  useEffect(() => {
+    if (!visible && openTier) {
+      analytics.interaction('profession_chat_correction_abandoned', {
+        tier: openTier,
+        reason: 'closed',
+      })
+    }
+  }, [visible, openTier, analytics])
 
   const handleSendNew = useCallback(async (overrideText?: string) => {
     const rawText = (overrideText ?? inputValue).trim()
@@ -521,7 +383,7 @@ export default function ProfessionChatOverlay({
       isDuplicateProfessionSubmission(text, classificationData)
     ) {
       setInputValue('')
-      if (revealTags.length > 0) {
+      if (ladderState) {
         setShowRevealCard(true)
       }
       Taro.showToast({ title: '这个职业已经分析过啦', icon: 'none', duration: 1800 })
@@ -605,10 +467,7 @@ export default function ProfessionChatOverlay({
         clearThinkingTimers()
         setThinkingLabel(null)
 
-        const tags = dedupeProfessionTags(localClassification.displayTags)
-        setRevealTags(tags)
-        setShowRevealCard(tags.length > 0)
-        setClassificationData({
+        const localData: ProfessionClassificationData = {
           occupationId: localClassification.occupationId,
           standardizedOccupationId: localClassification.standardizedOccupationId,
           industryCategoryLabel: localClassification.industryCategoryLabel,
@@ -619,11 +478,18 @@ export default function ProfessionChatOverlay({
           industryNiche: localClassification.industryNiche,
           industrySource: localClassification.industrySource,
           industryConfidence: localClassification.industryConfidence,
-        })
+        }
+        const localLadder = createLadderStateFromClassification(localData)
+        setClassificationData(localData)
+        setLadderState(localLadder)
+        // Deterministic local path carries no server meta → no AIGC label (AC-12)
+        setAigcMeta(undefined)
+        setCorrectionCandidates(null)
+        setShowRevealCard(localLadder !== null)
         haptics('success')
         analytics.interaction('profession_chat_local_classification_success', {
           kind: 'student_identity',
-          tagCount: tags.length,
+          tierCount: countResolvedTiers(localLadder),
           confidence: localClassification.industryConfidence,
         })
       }, 400)
@@ -678,9 +544,12 @@ export default function ProfessionChatOverlay({
           setIsSubmitting(false)
           clearThinkingTimers()
           setThinkingLabel(null)
-          setRevealTags([])
+          setLadderState(null)
+          setOpenTier(null)
           setShowRevealCard(false)
           setClassificationData(null)
+          setCorrectionCandidates(null)
+          setAigcMeta(undefined)
           analytics.interaction('profession_chat_low_confidence_blocked', {
             confidence: data.confidence,
             source: data.source,
@@ -699,23 +568,10 @@ export default function ProfessionChatOverlay({
         clearThinkingTimers()
         setThinkingLabel(null)
 
-        const tags = dedupeProfessionTags([
-          ...(data.displayTags ?? []),
-          data.classification.category?.label ?? '',
-          data.classification.segment?.label ?? '',
-          data.classification.niche?.label ?? '',
-        ])
-        if (tags.length > 0) {
-          setRevealTags(tags)
-          setShowRevealCard(true)
-          haptics('success')
-          analytics.interaction('profession_chat_classification_success', {
-            tagCount: tags.length,
-            confidence: data.confidence,
-            source: data.source,
-          })
-        }
-        setClassificationData({
+        // AC-12 — the compliance flag lives at `meta.aigc`; it reflects the
+        // reaction-generation fallback, not the classification `source`.
+        const aigc = data.meta?.aigc
+        const nextClassification: ProfessionClassificationData = {
           occupationId: text,
           standardizedOccupationId: data.classification.standardizedOccupationId,
           industryCategoryLabel: data.classification.category?.label ?? null,
@@ -726,7 +582,23 @@ export default function ProfessionChatOverlay({
           industryNiche: data.classification.niche?.id ?? null,
           industrySource: data.source,
           industryConfidence: data.confidence,
-        })
+          meta: aigc,
+        }
+        const nextLadder = createLadderStateFromClassification(nextClassification)
+        setClassificationData(nextClassification)
+        setLadderState(nextLadder)
+        setCorrectionCandidates(data.correctionCandidates ?? null)
+        setAigcMeta(aigc)
+        // Render on row data, not tag count (§6.7 / AC-14)
+        setShowRevealCard(nextLadder !== null)
+        if (nextLadder) {
+          haptics('success')
+          analytics.interaction('profession_chat_classification_success', {
+            tierCount: countResolvedTiers(nextLadder),
+            confidence: data.confidence,
+            source: data.source,
+          })
+        }
       }, 400)
     } catch (_err) {
       // Drop stale error response — a newer send superseded this one
@@ -754,7 +626,10 @@ export default function ProfessionChatOverlay({
       setIsSubmitting(false)
       setThinkingLabel(null)
       setClassificationData(null)
-      setRevealTags([])
+      setLadderState(null)
+      setOpenTier(null)
+      setCorrectionCandidates(null)
+      setAigcMeta(undefined)
       setShowRevealCard(false)
     }
   }, [
@@ -765,7 +640,7 @@ export default function ProfessionChatOverlay({
     rejectLowQualityProfessionInput,
     smartProfession,
     classificationData,
-    revealTags.length,
+    ladderState,
   ])
 
   const handleSendLegacy = useCallback((overrideText?: string) => {
@@ -854,6 +729,53 @@ export default function ProfessionChatOverlay({
     }, 400)
   }, [onSkip, analytics, messages])
 
+  /** Open / collapse the inline correction tray for one row (§6.3 — one row at a time). */
+  const handleOpenCorrection = useCallback((tier: LadderTier) => {
+    const candidates = correctionCandidates?.[tier] ?? []
+    if (candidates.length === 0) return
+
+    if (openTier === tier) {
+      setOpenTier(null)
+      analytics.interaction('profession_chat_correction_abandoned', { tier, reason: 'collapsed' })
+      return
+    }
+    if (openTier) {
+      analytics.interaction('profession_chat_correction_abandoned', {
+        tier: openTier,
+        reason: 'switched',
+      })
+    }
+    haptics('light')
+    setOpenTier(tier)
+    // Keep the expanded row in viewport (AC-04)
+    setLadderScrollTarget(`ladder-row-${tier}`)
+    analytics.interaction('profession_chat_correction_opened', {
+      tier,
+      candidateCount: candidates.length,
+    })
+  }, [correctionCandidates, openTier, analytics])
+
+  /** Single-select: update the row, cascade, collapse the tray (AC-03 / AC-05). */
+  const handleSelectCorrection = useCallback((tier: LadderTier, choice: LadderValue) => {
+    if (!ladderState) return
+    const previous = ladderState[tier]
+    const next = applyTierCorrection(ladderState, tier, choice)
+
+    correctedTiersRef.current.add(tier)
+    setLadderState(next)
+    setClassificationData((current) => {
+      if (!current) return current
+      return { ...current, ...toPersistedClassificationFields(next) }
+    })
+    setOpenTier(null)
+    haptics('light')
+    analytics.interaction('profession_chat_tier_corrected', {
+      tier,
+      from: previous?.id ?? 'none',
+      to: choice.id,
+    })
+  }, [ladderState, analytics])
+
   const handleConfirm = useCallback(() => {
     if (inputValue.trim() && rejectLowQualityProfessionInput(inputValue)) {
       return
@@ -866,57 +788,40 @@ export default function ProfessionChatOverlay({
       })
       return
     }
+    const correctedTiers = Array.from(correctedTiersRef.current)
+    if (correctedTiers.length > 0) {
+      analytics.interaction('profession_chat_correction_confirmed', { correctedTiers })
+    }
     analytics.interaction('profession_chat_confirmed', {
       hasClassification: !!classificationData,
       source: classificationData?.industrySource ?? 'legacy',
-      tagCount: revealTags.length,
+      tierCount: countResolvedTiers(ladderState),
     })
     if (smartProfession && classificationData) {
       onSubmit(classificationData.occupationId.trim(), classificationData)
     } else {
       onSubmit(inputValue.trim() || lastUserTextRef.current.trim())
     }
-  }, [smartProfession, classificationData, inputValue, onSubmit, analytics, revealTags.length, rejectLowQualityProfessionInput])
+  }, [smartProfession, classificationData, inputValue, onSubmit, analytics, ladderState, rejectLowQualityProfessionInput])
 
   const canSubmit = inputValue.trim().length > 0 || hasSent
   const canShowFooterConfirm = !smartProfession && canSubmit
 
+  const ladderRows = useMemo(() => resolveVisibleLadderRows(ladderState), [ladderState])
+  const isFallbackSource = !!classificationData?.industrySource?.includes('fallback')
+  const hasUnresolvedTier = ladderRows.some((row) => !row.value)
+  // AC-21 — honest, benefit-led hint whenever a row is still 待补充 (partial/fallback)
+  const showBenefitHint = isFallbackSource || hasUnresolvedTier
+  // One soft check only when every visible row resolved — never a false success claim
+  const showSoftCheck = !isFallbackSource && !hasUnresolvedTier && ladderRows.length > 0
   const scrollIntoView = useMemo(() => {
+    if (ladderScrollTarget) return ladderScrollTarget
     return scrollTrigger > 0 ? 'bottom-anchor' : ''
-  }, [scrollTrigger])
+  }, [ladderScrollTarget, scrollTrigger])
 
   const messageList = useMemo(() => messages.map((msg) => (
-    <CustomWrapper key={msg.id}>
-      <View
-        id={`msg-${msg.id}`}
-        className={`profession-overlay__message profession-overlay__message--${msg.sender}`}
-      >
-        {msg.sender === 'xiaoyue' && (
-          <View className='profession-overlay__avatar' aria-label='悦仔'>
-            <Image
-              className='profession-overlay__avatar-img'
-              src={getXiaoyueExpressionAsset(msg.expressionId ?? 'coachGuide')}
-              mode='aspectFill'
-              lazyLoad
-            />
-          </View>
-        )}
-        <View className={[
-          'profession-overlay__bubble',
-          `profession-overlay__bubble--${msg.sender}`,
-          msg.isFallback ? 'profession-overlay__bubble--fallback' : '',
-        ].filter(Boolean).join(' ')}
-        >
-          <Text className='profession-overlay__bubble-text'>{msg.text}</Text>
-          {msg.isFallback && msg.id === retryMessageId && (
-            <View className='profession-overlay__retry-hint' onClick={handleRetry} hoverClass='profession-overlay__retry-hint--active' hoverStayTime={100}>
-              <Text className='profession-overlay__retry-hint-text'>没识别准确？点击重新分析</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </CustomWrapper>
-  )), [messages, retryMessageId, handleRetry])
+    <ProfessionChatMessage key={msg.id} message={msg} />
+  )), [messages])
 
   if (!visible && !isClosing) return null
 
@@ -953,122 +858,123 @@ export default function ProfessionChatOverlay({
         <View className='profession-overlay__chat-inner'>
           {messageList}
           {isSubmitting && (
-            <View className='profession-overlay__message profession-overlay__message--xiaoyue'>
-              <View className='profession-overlay__avatar'>
-                <Image
-                  className='profession-overlay__avatar-img'
-                  src={getXiaoyueExpressionAsset(getAnticipationExpression(lastUserTextRef.current))}
-                  mode='aspectFill'
-                  lazyLoad
-                />
-              </View>
-              <View className='profession-overlay__bubble profession-overlay__bubble--xiaoyue'>
-                <View className='profession-overlay__typing'>
-                  <View className='profession-overlay__typing-dot' />
-                  <View className='profession-overlay__typing-dot' />
-                  <View className='profession-overlay__typing-dot' />
-                  {thinkingLabel && (
-                    <Text className='profession-overlay__typing-label' aria-live='polite'>{thinkingLabel}</Text>
-                  )}
-                </View>
-              </View>
-            </View>
+            <ProfessionTypingBubble
+              expressionId={getAnticipationExpression(lastUserTextRef.current)}
+              thinkingLabel={thinkingLabel}
+            />
           )}
-          {showRevealCard && revealTags.length > 0 && (
+          {showRevealCard && ladderState && (
             <View
               className={[
                 'profession-overlay__reveal-card',
-                classificationData?.industrySource?.includes('fallback') ? 'profession-overlay__reveal-card--fallback' : '',
+                isFallbackSource ? 'profession-overlay__reveal-card--fallback' : '',
               ].filter(Boolean).join(' ')}
               role='region'
               aria-label='职业分析结果'
             >
-              {/* Success celebration sparkles — CSS-only, GPU-composited */}
-              {/* Fallback gets muted amber sparkles; success gets primary sparkles */}
-              <View className='profession-overlay__celebration' aria-hidden='true'>
-                <View className={[
-                  'profession-overlay__sparkle',
-                  `profession-overlay__sparkle--1${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')}
-                />
-                <View className={[
-                  'profession-overlay__sparkle',
-                  `profession-overlay__sparkle--2${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')}
-                />
-                <View className={[
-                  'profession-overlay__sparkle',
-                  `profession-overlay__sparkle--3${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')}
-                />
-                <View className={[
-                  'profession-overlay__sparkle',
-                  `profession-overlay__sparkle--4${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')}
-                />
-                <View className={[
-                  'profession-overlay__sparkle',
-                  `profession-overlay__sparkle--5${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')}
-                />
-              </View>
               <View className='profession-overlay__reveal-title-row'>
-                {!classificationData?.industrySource?.includes('fallback') ? (
-                  <>
-                    <View className='profession-overlay__reveal-checkmark'>
-                      <View className='profession-overlay__reveal-checkmark-stem' />
-                      <View className='profession-overlay__reveal-checkmark-kick' />
-                    </View>
-                    <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
-                      <Image
-                        className='profession-overlay__reveal-mascot-img'
-                        src={getXiaoyueExpressionAsset('matchSuccess')}
-                        mode='aspectFill'
-                      />
-                    </View>
-                  </>
-                ) : (
-                  <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
-                    <Image
-                      className='profession-overlay__reveal-mascot-img'
-                      src={getXiaoyueExpressionAsset('coachGuide')}
-                      mode='aspectFill'
-                    />
+                <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
+                  <Image
+                    className='profession-overlay__reveal-mascot-img'
+                    src={getXiaoyueExpressionAsset(isFallbackSource ? 'coachGuide' : 'matchSuccess')}
+                    mode='aspectFill'
+                  />
+                </View>
+                {showSoftCheck && (
+                  <View className='profession-overlay__reveal-check' aria-hidden='true'>
+                    <Text className='profession-overlay__reveal-check-icon'>✓</Text>
                   </View>
                 )}
-                <Text className='profession-overlay__reveal-title'>
-                  {classificationData?.industrySource?.includes('fallback') ? '已收进档案，悦仔正在细品' : '你的活动画像已更新'}
+                {/* Unified across all 3 states (Q1) — honesty lives in the ladder rows */}
+                <Text className='profession-overlay__reveal-title'>{LADDER_TITLE}</Text>
+                <AIGCLabel meta={aigcMeta} className='profession-overlay__reveal-aigc' />
+              </View>
+
+              {/* 职业坐标阶梯 — 类别 › 细分 › 角色 (§6.1) */}
+              <View className='profession-overlay__ladder'>
+                {ladderRows.map((row) => {
+                  const candidates = correctionCandidates?.[row.tier] ?? []
+                  const isOpen = openTier === row.tier
+                  const hasCandidates = candidates.length > 0
+                  return (
+                    <View
+                      key={row.tier}
+                      id={`ladder-row-${row.tier}`}
+                      className={[
+                        'profession-overlay__ladder-row',
+                        isOpen ? 'profession-overlay__ladder-row--open' : '',
+                      ].filter(Boolean).join(' ')}
+                    >
+                      <View className='profession-overlay__ladder-row-main'>
+                        <Text className='profession-overlay__ladder-label'>{row.label}</Text>
+                        {row.value ? (
+                          <View className='profession-overlay__ladder-pill-wrap'>
+                            <Chip
+                              label={row.value.label}
+                              level={1}
+                              compact
+                              className='profession-overlay__ladder-pill'
+                            />
+                          </View>
+                        ) : (
+                          <View className='profession-overlay__ladder-pill-wrap'>
+                            <View
+                              className='profession-overlay__ladder-pending'
+                              onClick={() => handleOpenCorrection(row.tier)}
+                              aria-label={`补充${row.label}`}
+                              hoverClass='profession-overlay__ladder-pending--active'
+                              hoverStartTime={0}
+                              hoverStayTime={100}
+                            >
+                              <Text className='profession-overlay__ladder-pending-text'>{LADDER_PENDING_COPY}</Text>
+                            </View>
+                          </View>
+                        )}
+                        <View
+                          className={[
+                            'profession-overlay__ladder-change',
+                            hasCandidates ? '' : 'profession-overlay__ladder-change--disabled',
+                          ].filter(Boolean).join(' ')}
+                          onClick={() => handleOpenCorrection(row.tier)}
+                          aria-label={`更换${row.label}`}
+                          hoverClass='profession-overlay__ladder-change--active'
+                          hoverStartTime={0}
+                          hoverStayTime={100}
+                        >
+                          <Text className='profession-overlay__ladder-change-text'>{LADDER_CHANGE_COPY}</Text>
+                        </View>
+                      </View>
+                      {isOpen && hasCandidates && (
+                        <View className='profession-overlay__ladder-tray'>
+                          {candidates.slice(0, MAX_CORRECTION_CANDIDATES).map((candidate) => (
+                            <Chip
+                              key={candidate.id}
+                              label={candidate.label}
+                              compact
+                              selected={candidate.id === row.value?.id}
+                              className='profession-overlay__ladder-tray-chip'
+                              onClick={() => handleSelectCorrection(row.tier, candidate)}
+                            />
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )
+                })}
+              </View>
+
+              {showBenefitHint && (
+                <Text className='profession-overlay__reveal-hint profession-overlay__reveal-hint--benefit'>
+                  {LADDER_BENEFIT_HINT}
                 </Text>
-                <AIGCLabel
-                  meta={{ aiGenerated: true, labelType: 'ai-assisted' }}
-                  className='profession-overlay__reveal-aigc'
-                />
-              </View>
-              <View className='profession-overlay__reveal-tags'>
-                {revealTags.filter((t) => !removedTags.includes(t)).map((tag) => (
-                  <View
-                    key={tag}
-                    className='profession-overlay__reveal-tag-wrap'
-                    onClick={() => {
-                      haptics('light')
-                      setRemovedTags((prev) => [...prev, tag])
-                      setTagFeedback(null)
-                      // Force animation replay by clearing then setting
-                      requestAnimationFrame(() => {
-                        setTagFeedback('好，这个标签不要了～还有想调整的吗？')
-                      })
-                      analytics.interaction('profession_chat_tag_removed', { tag })
-                    }}
-                  >
-                    <Chip label={tag} selected level={1} compact />
-                  </View>
-                ))}
-              </View>
-              {tagFeedback && revealTags.filter((t) => !removedTags.includes(t)).length > 0 && (
-                <Text className='profession-overlay__tag-feedback'>{tagFeedback}</Text>
               )}
-              {/* Social proof + chemistry bridge lines */}
-              {!classificationData?.industrySource?.includes('fallback') && classificationData?.industryCategoryLabel && (
+              {isFallbackSource && (
+                <Text className='profession-overlay__reveal-hint profession-overlay__reveal-hint--secondary'>
+                  {LADDER_FALLBACK_HINT}
+                </Text>
+              )}
+              {/* Social proof + chemistry bridge lines (demoted to a secondary tier) */}
+              {!isFallbackSource && classificationData?.industryCategoryLabel && (
                 <View className='profession-overlay__reveal-bridge'>
                   <Text className='profession-overlay__reveal-bridge-line'>
                     {`JoyJoin 里还有很多${classificationData.industryCategoryLabel}方向的小伙伴，你们应该很有共鸣～`}
@@ -1080,9 +986,8 @@ export default function ProfessionChatOverlay({
                   )}
                 </View>
               )}
-              {classificationData?.industrySource?.includes('fallback') && (
-                <Text className='profession-overlay__reveal-hint'>网络有点慢，悦仔先记下了。等信号好了再帮你细细分析～</Text>
-              )}
+              {/* AC-13 — the card's confirm is the only primary CTA while the ladder shows
+                  (the footer CTA below stays gated by `!showRevealCard`). */}
               <View className='profession-overlay__reveal-confirm' onClick={() => { haptics('success'); handleConfirm() }} aria-label='确认并继续' hoverClass='profession-overlay__reveal-confirm--active' hoverStartTime={0} hoverStayTime={100}>
                 <Text className='profession-overlay__reveal-confirm-text'>确认并继续</Text>
               </View>
@@ -1100,6 +1005,9 @@ export default function ProfessionChatOverlay({
         </View>
       </ScrollView>
 
+      {/* §6.7 / AC-14 — once the ladder shows the chat input is hidden. Sending
+          again would silently discard corrections; 换一个 is the only edit path. */}
+      {!showRevealCard && (
       <View
         className='profession-overlay__input-bar'
         style={{ transform: `translateY(-${keyboardHeight}px)` }}
@@ -1130,44 +1038,20 @@ export default function ProfessionChatOverlay({
           </View>
         ) : null}
       </View>
+      )}
 
       {/* Preload common Xiaoyue expressions to eliminate first-render flicker — only while overlay is open */}
-      {visible && !isClosing && !deviceTier.isDegradation && (
-        <View style={{ position: 'absolute', left: '-9999rpx', top: 0, width: '2rpx', height: '2rpx', opacity: 0, pointerEvents: 'none' }}>
-          <Image src={getXiaoyueExpressionAsset('coachGuide')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
-          <Image src={getXiaoyueExpressionAsset('loadingSystem')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
-          <Image src={getXiaoyueExpressionAsset('homeWelcome')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
-          <Image src={getXiaoyueExpressionAsset('testCurious')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
-          <Image src={getXiaoyueExpressionAsset('testListening')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
-          <Image src={getXiaoyueExpressionAsset('matchSuccess')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
-        </View>
-      )}
+      {visible && !isClosing && !deviceTier.isDegradation && <ProfessionExpressionPreloader />}
 
-      {!isOnline && (
-        <View className='profession-overlay__offline-banner'>
-          <Text className='profession-overlay__offline-banner-text'>网络已断开，请检查连接</Text>
-        </View>
-      )}
-
-      {showShortHint && !isSubmitting && (
-        <View className='profession-overlay__short-hint'>
-          <Text className='profession-overlay__short-hint-text'>多写一点，悦仔才能更懂你～</Text>
-        </View>
-      )}
-
-      {showMaxSendHint && (
-        <View className='profession-overlay__max-send-hint'>
-          <Text className='profession-overlay__max-send-hint-text'>已达到最大重试次数，先继续吧～</Text>
-        </View>
-      )}
-
-      {retryMessageId && !isSubmitting && !showRevealCard && (
-        <View className='profession-overlay__retry-bar'>
-          <View className='profession-overlay__retry-btn' onClick={() => { haptics('medium'); handleRetry() }} aria-label='重试' hoverClass='profession-overlay__retry-btn--active' hoverStartTime={0} hoverStayTime={100}>
-            <Text className='profession-overlay__retry-btn-text'>重试</Text>
-          </View>
-        </View>
-      )}
+      <ProfessionOverlayStatusHints
+        isOnline={isOnline}
+        showShortHint={showShortHint}
+        isSubmitting={isSubmitting}
+        showMaxSendHint={showMaxSendHint}
+        retryMessageId={retryMessageId}
+        showRevealCard={showRevealCard}
+        onRetry={handleRetry}
+      />
 
       {canShowFooterConfirm && !isSubmitting && !showRevealCard && (
         <View
