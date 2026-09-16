@@ -1,5 +1,5 @@
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
-import { getTiersForEventType } from '@shared/budgetTiers'
+import { BUDGET_TIER_BY_ID, formatBudgetTier, getTiersForEventType } from '@shared/budgetTiers'
 import { INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
 
 export type PoolEventType = '饭局' | '酒局'
@@ -52,9 +52,19 @@ const BUDGET_TIER_DESCRIPTIONS: Record<string, string> = {
 function buildBudgetOptions(eventType: PoolEventType): FlowOption[] {
   return getTiersForEventType(eventType).map((tier) => ({
     value: tier.id,
-    label: tier.label,
+    label: formatBudgetTier(tier),
     description: BUDGET_TIER_DESCRIPTIONS[tier.id],
   }))
+}
+
+/**
+ * Resolve a stored tier id back to its display label (`150-200/人`). Unknown
+ * values (legacy labels, the unmapped blind-box `100-200`) fall back to the
+ * raw value so mascot copy never renders a bare id.
+ */
+function getBudgetTierLabel(value: string): string {
+  const tier = BUDGET_TIER_BY_ID.get(value)
+  return tier ? formatBudgetTier(tier) : value
 }
 
 export const DINNER_BUDGET_OPTIONS: FlowOption[] = buildBudgetOptions('饭局')
@@ -116,10 +126,10 @@ export function buildFallbackBrief(input: {
   if (input.eventType === '酒局') {
     return {
       insight: '你更适合在节奏舒服的酒局里，先放松一点，再慢慢熟起来。',
-      matchingPromise: '我们会把你的预算、语言和酒局氛围偏好一起放进匹配里，为你找更同频的酒搭子。',
+      matchingPromise: '我们会把你的预算、语言和酒局氛围偏好一起放进排桌里，为你找更同频的酒搭子。',
       reasons: [
         `${areaReasonPrefix}更容易遇到顺路也顺节奏的人`,
-        '预算和主题偏好会一起参与匹配',
+        '预算和主题偏好会一起参与排桌',
         '喝酒舒适度会帮我们控制整桌节奏',
       ],
     }
@@ -147,8 +157,10 @@ export function getMascotStepIntro(step: number): string {
 }
 
 /**
- * Reaction bubble line shown while the one-shot nod plays. Steps 1–2 reuse
- * the previously approved reaction copy verbatim.
+ * Reaction bubble line shown while the one-shot nod plays. Copy stays on the
+ * approved 排桌 vocabulary (WeChat review posture — the legacy matching
+ * vocabulary is banned in visible copy) and renders the tier display label,
+ * never a raw tier id.
  */
 export function getStepReactionLine(
   step: number,
@@ -156,14 +168,14 @@ export function getStepReactionLine(
 ): string {
   if (step === 1) {
     return input.selectedBudget
-      ? `收到！${input.selectedBudget} 的预算，悦仔按这个区间帮你配对`
-      : '收到！悦仔会按这个预算帮你配对'
+      ? `收到！${getBudgetTierLabel(input.selectedBudget)} 的预算，悦仔按这个区间帮你排桌`
+      : '收到！悦仔会按这个预算帮你排桌'
   }
   const intents = input.intents ?? []
   if (intents.includes(INTENT_FLEXIBLE_OPTION.value)) {
     return '没问题，把期待交给悦仔，我来帮你挑一个舒服的组合。'
   }
   return intents.length > 0
-    ? `收到！${intents.length} 个期待，悦仔按这个方向帮你匹配`
-    : '收到！悦仔会按这些期待帮你匹配'
+    ? `收到！${intents.length} 个期待，悦仔按这个方向帮你排桌`
+    : '收到！悦仔会按这些期待帮你排桌'
 }
