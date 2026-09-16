@@ -9,9 +9,10 @@
  * `scripts/build-occupation-vectors.mts` (`apps/server/data/occupation-vectors.json`).
  * Loading is lazy and memoized: the file is read at most once per process.
  *
- * ESM note: `src/lib` and `src/routes/domains` are both two levels below
- * `apps/server`, so the `resolve(__dirname, '..', '..', 'data', ...)` math
- * preserves the original dev-time resolution exactly.
+ * Path resolution must work in BOTH layouts:
+ *  - dev (tsx): module at `apps/server/src/lib`  → `../../data`
+ *  - bundled:  esbuild inlines this into `apps/server/dist/index.js` → `../data`
+ * so `dataDirCandidates()` tries both (shared with `occupationResolution.ts`).
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -19,6 +20,20 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const INDEX_FILENAME = 'occupation-vectors.json';
+
+/**
+ * Candidate `data/` directories across source and bundle layouts. The bundle
+ * collapses every module to `dist/index.js`, so `__dirname` there is
+ * `apps/server/dist` and the index sits one level up in `apps/server/data`.
+ */
+export function dataDirCandidates(): string[] {
+  return [
+    resolve(__dirname, '..', '..', 'data'),
+    resolve(__dirname, '..', 'data'),
+  ];
+}
 
 export interface VectorEntry {
   id: string;
@@ -40,14 +55,15 @@ let vectorIndex: VectorEntry[] | null = null;
 export function loadIndex(): VectorEntry[] {
   if (vectorIndex) return vectorIndex;
 
-  const path = resolve(__dirname, '..', '..', 'data', 'occupation-vectors.json');
-  if (!existsSync(path)) {
-    throw new Error('occupation-vectors.json not found. Run: npx tsx scripts/build-occupation-vectors.mts');
+  for (const dir of dataDirCandidates()) {
+    const path = resolve(dir, INDEX_FILENAME);
+    if (!existsSync(path)) continue;
+    const raw = readFileSync(path, 'utf-8');
+    vectorIndex = JSON.parse(raw) as VectorEntry[];
+    return vectorIndex;
   }
 
-  const raw = readFileSync(path, 'utf-8');
-  vectorIndex = JSON.parse(raw) as VectorEntry[];
-  return vectorIndex;
+  throw new Error('occupation-vectors.json not found. Run: npx tsx scripts/build-occupation-vectors.mts');
 }
 
 /**

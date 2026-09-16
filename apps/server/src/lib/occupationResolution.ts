@@ -27,15 +27,12 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { OCCUPATIONS } from '@shared/occupations';
 import type { IndustryClassificationResult } from '../inference/industryClassifier';
 import { embeddingClient } from '../embeddingClient';
-import { cosine, safeLoadIndex, type VectorEntry } from './occupationVectorIndex';
+import { cosine, safeLoadIndex, dataDirCandidates, type VectorEntry } from './occupationVectorIndex';
 import { logger } from './logger';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const MAX_CORRECTION_CANDIDATES = 3;
 
@@ -64,14 +61,8 @@ export interface IndexMatch {
   confidence: number;
 }
 
-function dataDirCandidates(): string[] {
-  // dev (tsx): apps/server/src/lib        → ../../data
-  // bundled:   apps/server/dist/index.js  → ../data
-  return [
-    resolve(__dirname, '..', '..', 'data'),
-    resolve(__dirname, '..', 'data'),
-  ];
-}
+// dataDirCandidates() is imported from ./occupationVectorIndex (shared; handles
+// both the source and the bundled dist/index.js layouts).
 
 /**
  * Read the offline-calibrated threshold from the calibration report when it

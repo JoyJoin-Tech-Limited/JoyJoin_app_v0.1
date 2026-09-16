@@ -52,6 +52,10 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 
+# Copy runtime data (occupation vector index) — needed by occupation
+# correction-candidate resolution; the bundle reads it from apps/server/data.
+COPY --from=builder /app/apps/server/data ./apps/server/data
+
 # Copy shared package (needed at runtime)
 COPY --from=builder /app/packages/shared ./packages/shared
 
