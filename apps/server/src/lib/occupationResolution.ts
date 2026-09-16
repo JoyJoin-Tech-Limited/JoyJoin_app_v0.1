@@ -248,15 +248,15 @@ export interface ResolveProfessionOccupationOptions {
  */
 export const DEFAULT_EMBEDDING_TIMEOUT_MS = 1200;
 
-// Fix C: the production Docker image ships without `occupation-vectors.json`,
-// so an empty index is the expected steady state there — surface it once per
-// process instead of spamming per request.
+// Safety net: `occupation-vectors.json` is committed and copied into the runtime
+// image, so an empty index now signals a *misbuilt/misconfigured* deploy rather
+// than the expected steady state. Surface it once per process (not per request).
 let emptyIndexWarned = false;
 function warnEmptyIndexOnce(): void {
   if (emptyIndexWarned) return;
   emptyIndexWarned = true;
   logger.warn(
-    '[occupationResolution] Occupation vector index missing/empty — embedding resolution and candidate top-up disabled; falling back to deterministic exact-match-only resolution',
+    '[occupationResolution] Occupation vector index missing/empty — embedding resolution and candidate top-up disabled; falling back to deterministic exact-match-only resolution. Check that apps/server/data/occupation-vectors.json is present in the image.',
   );
 }
 

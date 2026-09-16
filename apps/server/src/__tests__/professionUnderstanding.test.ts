@@ -36,8 +36,8 @@ const h = vi.hoisted(() => ({
   // Spy seam for the embedding client: tests control resolve/hang behaviour.
   embed: null as any,
   // Spy seam for safeLoadIndex: undefined → real implementation; a function
-  // return value overrides the loaded index (e.g. `() => []` simulates the
-  // production Docker image, which ships without occupation-vectors.json).
+  // return value overrides the loaded index (e.g. `() => []` simulates a
+  // misbuilt/misconfigured image that is missing occupation-vectors.json).
   safeLoadIndexImpl: null as null | (() => VectorEntry[]),
   // Captured by the occupationVectorIndex mock factory (avoids TDZ on a
   // module-level `let`, since vi.mock factories are hoisted).
@@ -69,7 +69,7 @@ vi.mock("../embeddingClient", () => ({
   embeddingClient: { embed: (...args: unknown[]) => h.embed(...args) },
 }));
 // Keep the real index machinery (loadIndex/cosine) but let a test override
-// what safeLoadIndex() returns — production ships without the artifact.
+// what safeLoadIndex() returns — e.g. `() => []` for a misbuilt image.
 vi.mock("../lib/occupationVectorIndex", async (importActual) => {
   const actual = await importActual<typeof import("../lib/occupationVectorIndex")>();
   h.realSafeLoadIndex = actual.safeLoadIndex;
