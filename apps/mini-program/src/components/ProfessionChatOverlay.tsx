@@ -856,6 +856,16 @@ export default function ProfessionChatOverlay({
   )
   // AC-21 — honest, benefit-led hint whenever a row is still 待补充 (partial/fallback)
   const showBenefitHint = (isFallbackSource || hasUnresolvedTier) && hasFillableTier
+  // C2 — a cascade hint is only honest when the child tiers it references are
+  // fillable; otherwise it invites a fill the trays cannot deliver.
+  const cascadeTargetsFillable = (() => {
+    if (!correctionAck?.cascade) return false
+    if (correctionAck.cascade === 'category') {
+      return (correctionCandidates?.segment?.length ?? 0) > 0
+        || (correctionCandidates?.occupation?.length ?? 0) > 0
+    }
+    return (correctionCandidates?.occupation?.length ?? 0) > 0
+  })()
   // One soft check only when every visible row resolved — never a false success claim
   const showSoftCheck = !isFallbackSource && !hasUnresolvedTier && ladderRows.length > 0
   const scrollIntoView = ladderScrollTarget || bottomScrollTarget
@@ -992,7 +1002,7 @@ export default function ProfessionChatOverlay({
                       {correctionAck?.tier === row.tier && (
                         <View className='profession-overlay__ladder-ack-block' aria-live='polite'>
                           <Text className='profession-overlay__ladder-ack'>{LADDER_ACK_COPY}</Text>
-                          {correctionAck.cascade && (
+                          {correctionAck.cascade && cascadeTargetsFillable && (
                             <Text className='profession-overlay__ladder-cascade-hint'>
                               {LADDER_CASCADE_COPY[correctionAck.cascade]}
                             </Text>

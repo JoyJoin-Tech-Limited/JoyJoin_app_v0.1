@@ -355,21 +355,22 @@ describe('professionLadderReducer · candidate re-scoping (REL-01)', () => {
     ],
   }
 
-  it('drops child-tier candidates of the old 类别 after a 类别 correction', () => {
+  it('drops seeded child-tier candidates of the old 类别 but keeps unseeded ones', () => {
     const next = rescopeCorrectionCandidates(candidates, 'category', {
       id: 'finance',
       label: '金融服务',
     })
 
-    // every pre-correction segment/occupation candidate was scoped to tech —
-    // nothing provably belongs to finance, so the trays honestly show none
+    // segment candidates ai_ml/software_dev belong to tech, not finance -> dropped.
     expect(next?.segment).toEqual([])
-    expect(next?.occupation).toEqual([])
+    // frontend_engineer is seeded under tech -> dropped; data_analyst has no
+    // seedMappings, so it is legitimate (spec §7.5 r3) and must be kept.
+    expect(next?.occupation).toEqual([{ id: 'data_analyst', label: '数据分析师' }])
     // the parent-tier candidates stay untouched
     expect(next?.category).toEqual(candidates.category)
   })
 
-  it('keeps child-tier candidates that provably belong to the new 类别', () => {
+  it('keeps child-tier candidates that provably belong to the new 类别 (and unseeded ones)', () => {
     const withFinanceChild = {
       ...candidates,
       occupation: [
@@ -382,17 +383,23 @@ describe('professionLadderReducer · candidate re-scoping (REL-01)', () => {
       label: '金融服务',
     })
 
-    expect(next?.occupation).toEqual([{ id: 'investment_banker', label: '投行(IBD)' }])
+    // investment_banker (finance) survives; data_analyst (unseeded) survives;
+    // frontend_engineer (seeded tech) is dropped.
+    expect(next?.occupation).toEqual([
+      { id: 'data_analyst', label: '数据分析师' },
+      { id: 'investment_banker', label: '投行(IBD)' },
+    ])
   })
 
-  it('drops 角色 candidates of the old 细分 after a 细分 correction', () => {
+  it('drops seeded 角色 candidates of the old 细分 but keeps unseeded ones', () => {
     const next = rescopeCorrectionCandidates(candidates, 'segment', {
       id: 'ai_ml',
       label: '人工智能',
     })
 
-    // frontend_engineer is seeded under software_dev; data_analyst is unverifiable
-    expect(next?.occupation).toEqual([])
+    // frontend_engineer is seeded under software_dev (not ai_ml) -> dropped;
+    // data_analyst is unseeded -> kept.
+    expect(next?.occupation).toEqual([{ id: 'data_analyst', label: '数据分析师' }])
     expect(next?.segment).toEqual(candidates.segment)
   })
 

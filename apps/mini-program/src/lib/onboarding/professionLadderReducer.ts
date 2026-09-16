@@ -237,9 +237,10 @@ export function createLadderStateFromClassification(
  *
  * The server ships `correctionCandidates` scoped to the ORIGINAL classification.
  * Once the user corrects 类别 (or 细分), the child-tier candidates are stale —
- * offering them would let the user persist a mixed parent/child pair. Anything
- * that cannot be proven to belong to the new parent is dropped (never guessed),
- * so the tray honestly shows no options rather than wrong ones.
+ * offering them would let the user persist a mixed parent/child pair. A candidate
+ * is dropped only when it is PROVEN to belong to a *different* parent; candidates
+ * with no `seedMappings` are kept (spec §7.5 rule 3 — the occupation↔industry
+ * paths are decoupled, so an unseeded occupation is legitimate, not a mixed pair).
  */
 export function rescopeCorrectionCandidates(
   candidates: CorrectionCandidateMap | null,
@@ -253,21 +254,19 @@ export function rescopeCorrectionCandidates(
       segment: (candidates.segment ?? []).filter(
         (candidate) => !!findSegmentById(choice.id, candidate.id),
       ),
-      occupation: (candidates.occupation ?? []).filter(
-        (candidate) =>
-          OCCUPATIONS.find((occupation) => occupation.id === candidate.id)?.seedMappings
-            ?.category === choice.id,
-      ),
+      occupation: (candidates.occupation ?? []).filter((candidate) => {
+        const seed = OCCUPATIONS.find((occupation) => occupation.id === candidate.id)?.seedMappings
+        return !seed || seed.category === choice.id
+      }),
     }
   }
   if (tier === 'segment') {
     return {
       ...candidates,
-      occupation: (candidates.occupation ?? []).filter(
-        (candidate) =>
-          OCCUPATIONS.find((occupation) => occupation.id === candidate.id)?.seedMappings
-            ?.segment === choice.id,
-      ),
+      occupation: (candidates.occupation ?? []).filter((candidate) => {
+        const seed = OCCUPATIONS.find((occupation) => occupation.id === candidate.id)?.seedMappings
+        return !seed || seed.segment === choice.id
+      }),
     }
   }
   return candidates
