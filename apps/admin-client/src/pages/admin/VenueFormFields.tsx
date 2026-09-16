@@ -18,6 +18,8 @@ import {
   ALCOHOL_OPTIONS,
   RESTAURANT_PRICE_RANGES,
   BAR_PRICE_RANGES,
+  RESTAURANT_LEGACY_PRICE_RANGES,
+  BAR_LEGACY_PRICE_RANGES,
 } from "./venueConstants";
 import { shenzhenClusters, getDistrictsByCluster } from "@shared/districts";
 
@@ -178,11 +180,11 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
           <Input id={`${prefix}commissionRate`} type="number" min="0" max="100" value={formData.commissionRate} onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value })} data-testid={`input-${testIdPrefix}commission-rate`} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${prefix}priceRange`}>{formData.type === "bar" ? "人均消费(每杯)" : "人均消费"}</Label>
+          <Label htmlFor={`${prefix}priceRange`}>人均消费</Label>
           <Select value={formData.priceRange} onValueChange={(v) => setFormData({ ...formData, priceRange: v })}>
             <SelectTrigger data-testid={`select-${testIdPrefix}price-range`}><SelectValue /></SelectTrigger>
             <SelectContent>
-              {(formData.type === "bar" ? BAR_PRICE_RANGES : RESTAURANT_PRICE_RANGES).map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+              {(formData.type === "bar" ? BAR_LEGACY_PRICE_RANGES : RESTAURANT_LEGACY_PRICE_RANGES).map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

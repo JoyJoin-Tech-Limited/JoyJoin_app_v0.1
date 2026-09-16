@@ -11,6 +11,7 @@ import {
   type UserCouponSummary,
 } from '@shared/api'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { BUDGET_TIER_BY_ID, formatBudgetTier } from '@shared/budgetTiers'
 import JoyButton from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import FirstTimeCouponBanner from '../../../components/FirstTimeCouponBanner'
@@ -236,10 +237,18 @@ function isPoolRegistrationReturnContext(
   return Boolean(context && context.kind === 'pool-registration')
 }
 
+/**
+ * Budget pill label for the registration return-context. Draft values are
+ * canonical tier ids after the cutover, so resolve them to the registry label
+ * (which carries the per-person unit) instead of leaking the raw id.
+ */
 function getRegistrationContextBudget(
   context: MiniProgramPoolRegistrationReturnContext,
 ): string {
-  return context.draft.barBudgetRange?.[0] ?? context.draft.budgetRange?.[0] ?? ''
+  const raw = context.draft.barBudgetRange?.[0] ?? context.draft.budgetRange?.[0] ?? ''
+  if (!raw) return ''
+  const tier = BUDGET_TIER_BY_ID.get(raw)
+  return tier ? formatBudgetTier(tier) : raw
 }
 
 function getRegistrationContextNote(

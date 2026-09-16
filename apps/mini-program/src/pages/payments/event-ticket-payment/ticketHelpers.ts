@@ -1,4 +1,5 @@
 import type { UserCouponSummary } from '@shared/api'
+import { BUDGET_TIER_BY_ID, formatBudgetTier } from '@shared/budgetTiers'
 import { getIntentLabel } from '@shared/constants'
 
 /** Pricing-plan DTO from GET /api/payments/ritual-context. */
@@ -12,9 +13,16 @@ export function formatPrice(cents: number): string {
   return `¥${(cents / 100).toFixed(0)}`
 }
 
+/**
+ * Budget chip label. Draft values are canonical tier ids after the tier
+ * cutover, so resolve them to the registry display label (which carries the
+ * required per-person unit, e.g. `150-200/人`). Legacy labels keep their old
+ * `¥`-prefixed rendering.
+ */
 export function formatBudgetLabel(budget: string): string {
   if (!budget || budget.startsWith('¥')) return budget
-  return `¥${budget}`
+  const tier = BUDGET_TIER_BY_ID.get(budget)
+  return `¥${tier ? formatBudgetTier(tier) : budget}`
 }
 
 export function getBestCoupon(coupons: UserCouponSummary[], originalAmount: number): UserCouponSummary | null {

@@ -1,4 +1,11 @@
 import { Percent, CircleDollarSign, Gift } from "lucide-react";
+import {
+  BUDGET_TIER_BY_ID,
+  LEGACY_BUDGET_LABEL_TO_TIER_ID,
+  formatBudgetTier,
+  getTiersForEventType,
+  type BudgetEventType,
+} from "@shared/budgetTiers";
 
 export interface VenueTimeSlot {
   id: string;
@@ -72,17 +79,49 @@ export const CITIES = [
   { value: "香港", label: "香港" },
 ];
 
-export const RESTAURANT_PRICE_RANGES = [
-  { value: "150以下", label: "¥150以下/人" },
-  { value: "150-200", label: "¥150-200/人" },
-  { value: "200-300", label: "¥200-300/人" },
-  { value: "300-500", label: "¥300-500/人" },
-];
+/**
+ * Canonical budget-tier options derived from the shared registry
+ * (`packages/shared/src/budgetTiers.ts`). `value` is the canonical tier id —
+ * this is what the admin form writes into `venues.budget_categories`
+ * (retagged to ids by migration 0093). Every tier is per-person, so the label
+ * reads `/人` (Q3 revision — never `/杯`).
+ */
+function buildPriceRanges(eventType: BudgetEventType): { value: string; label: string }[] {
+  return getTiersForEventType(eventType).map((tier) => ({
+    value: tier.id,
+    label: `¥${formatBudgetTier(tier)}`,
+  }));
+}
 
-export const BAR_PRICE_RANGES = [
-  { value: "80以下", label: "¥80以下/杯" },
-  { value: "80-150", label: "¥80-150/杯" },
-];
+export const RESTAURANT_PRICE_RANGES = buildPriceRanges("饭局");
+
+export const BAR_PRICE_RANGES = buildPriceRanges("酒局");
+
+/**
+ * Legacy-label twins for the deprecated `venues.price_range` control.
+ * `price_range` / `bar_price_range` are explicitly excluded from the tier
+ * retag (budget-tier spec §14.8 — "do not dual-write"), so that select keeps
+ * emitting the legacy vocabulary. Derived from the registry's own legacy map
+ * so no budget label is hand-copied here; only the unit is corrected to the
+ * per-person semantics.
+ */
+function buildLegacyPriceRangeOptions(
+  eventType: BudgetEventType,
+): { value: string; label: string }[] {
+  return Object.entries(LEGACY_BUDGET_LABEL_TO_TIER_ID[eventType]).map(
+    ([legacyLabel, tierId]) => {
+      const tier = BUDGET_TIER_BY_ID.get(tierId);
+      return {
+        value: legacyLabel,
+        label: tier ? `¥${formatBudgetTier(tier)}` : `¥${legacyLabel}`,
+      };
+    },
+  );
+}
+
+export const RESTAURANT_LEGACY_PRICE_RANGES = buildLegacyPriceRangeOptions("饭局");
+
+export const BAR_LEGACY_PRICE_RANGES = buildLegacyPriceRangeOptions("酒局");
 
 export const PRICE_RANGES = RESTAURANT_PRICE_RANGES;
 

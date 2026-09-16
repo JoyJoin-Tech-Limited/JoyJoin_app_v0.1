@@ -1,4 +1,5 @@
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
+import { getTiersForEventType } from '@shared/budgetTiers'
 import { INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
 
 export type PoolEventType = '饭局' | '酒局'
@@ -33,17 +34,32 @@ export const LANGUAGE_OPTIONS: FlowOption[] = [
   { value: '英语', label: 'English', description: '适合双语或国际化局' },
 ]
 
-export const DINNER_BUDGET_OPTIONS: FlowOption[] = [
-  { value: '150以下', label: '150以下', description: '轻松吃顿舒服的' },
-  { value: '150-200', label: '150-200', description: '平衡预算和体验' },
-  { value: '200-300', label: '200-300', description: '更精致一点的饭局' },
-  { value: '300-500', label: '300-500', description: '把这次吃得更讲究' },
-]
+/**
+ * Voice line per budget tier, keyed by canonical tier id from
+ * `packages/shared/src/budgetTiers.ts`. The registry owns ids, labels, units
+ * and order; this map only supplies the JoyJoin-voice helper copy, so a
+ * registry label change can never desync the option value.
+ */
+const BUDGET_TIER_DESCRIPTIONS: Record<string, string> = {
+  dining_150_below: '轻松吃顿舒服的',
+  dining_150_200: '平衡预算和体验',
+  dining_200_300: '更精致一点的饭局',
+  dining_300_500: '把这次吃得更讲究',
+  drinks_80_below: '轻松小酌就好',
+  drinks_80_150: '更偏精品调酒或氛围',
+}
 
-export const DRINKS_BUDGET_OPTIONS: FlowOption[] = [
-  { value: '80以下', label: '80以下', description: '轻松小酌就好' },
-  { value: '80-150', label: '80-150', description: '更偏精品调酒或氛围' },
-]
+function buildBudgetOptions(eventType: PoolEventType): FlowOption[] {
+  return getTiersForEventType(eventType).map((tier) => ({
+    value: tier.id,
+    label: tier.label,
+    description: BUDGET_TIER_DESCRIPTIONS[tier.id],
+  }))
+}
+
+export const DINNER_BUDGET_OPTIONS: FlowOption[] = buildBudgetOptions('饭局')
+
+export const DRINKS_BUDGET_OPTIONS: FlowOption[] = buildBudgetOptions('酒局')
 
 export const BAR_THEME_OPTIONS: FlowOption[] = [
   { value: '精酿', label: '精酿', description: '偏啤酒和轻松聊天' },
@@ -68,7 +84,7 @@ export function resolvePoolEventType(rawValue?: string | null): PoolEventType {
 }
 
 export function getBudgetOptions(eventType: PoolEventType): FlowOption[] {
-  return eventType === '酒局' ? DRINKS_BUDGET_OPTIONS : DINNER_BUDGET_OPTIONS
+  return buildBudgetOptions(eventType)
 }
 
 // Phase 2 (registration-ceremony-spec-20260817 §6): details folded into the

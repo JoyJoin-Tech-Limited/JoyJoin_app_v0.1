@@ -136,7 +136,18 @@ const budgetOptions = [
   { value: "150-200", label: "150-200" },
   { value: "200-300", label: "200-300" },
   { value: "300-500", label: "300-500" },
-];
+] as const;
+
+/**
+ * Split the stored blind-box budget vocabulary. `blindBoxEventsRepo` writes
+ * `budget.join('/')`, so a row can carry several tiers ("150-200/200-300") and
+ * an exact string compare would silently match none of them.
+ */
+const splitBudgetTiers = (raw: string | null | undefined): string[] =>
+  (raw ?? "")
+    .split("/")
+    .map((value) => value.trim())
+    .filter(Boolean);
 
 const formatEventDateTime = (dateTimeStr: string) =>
   safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { locale: zhCN, fallback: dateTimeStr });
@@ -168,7 +179,9 @@ interface StartMatchResponse {
 type StatusFilter = "all" | "pending_match" | "matched" | "in_progress" | "completed";
 type CityFilter = "all" | "深圳" | "香港";
 type EventTypeFilter = "all" | "饭局" | "酒局" | "其他";
-type BudgetFilter = "all" | "150以下" | "150-200" | "200-300" | "300-500";
+// Derived from `budgetOptions` so the filter union can never carry a value the
+// select does not expose (the earlier unreachable-option defect).
+type BudgetFilter = "all" | (typeof budgetOptions)[number]["value"];
 type LanguageFilter = "all" | "中文（国语）" | "中文（粤语）" | "英语";
 type TasteFilter = "all" | "爱吃辣" | "不辣/清淡为主";
 type CuisineFilter =
@@ -318,8 +331,12 @@ export default function AdminEventsPage() {
       if (eventTypeFilter !== "all" && e.eventType !== eventTypeFilter)
         return false;
 
-      // 按预算筛选
-      if (budgetFilter !== "all" && e.budgetTier !== budgetFilter) return false;
+      // 按预算筛选：存储值可能是 "/" 连接的多个档位（blindBoxEventsRepo 写入
+      // `budget.join('/')`），因此按成员匹配而不是整串相等——整串相等会静默地
+      // 一个都不匹配。没有注册表对应值的档位（盲盒词汇 `100-200`）按设计保持
+      // 不匹配：其映射是未决产品决策 B3，不得在此猜测。
+      if (budgetFilter !== "all" && !splitBudgetTiers(e.budgetTier).includes(budgetFilter))
+        return false;
 
       // 按语言偏好筛选（活动要求该语言时才会显示）
       if (
@@ -406,7 +423,7 @@ export default function AdminEventsPage() {
           onOpenChange={setShowCreateDialog}
           pools={pools}
           formatDateTime={formatEventDateTime}
-          budgetOptions={budgetOptions}
+          budgetOptions={[...budgetOptions]}
           languageOptions={languageOptions}
           tasteIntensityOptions={tasteIntensityOptions}
           cuisineOptions={cuisineOptions}

@@ -2,6 +2,7 @@ import type {
   EventPoolRegistrationPayload,
   NormalizedEventPoolRegistrationPayload,
 } from '@shared/api'
+import { normalizeBudgetTierIds } from '@shared/budgetTiers'
 import type { PoolEventType } from './flowConfig'
 
 // Phase 2 (registration-ceremony-spec-20260817 §6): the all-optional details
@@ -44,6 +45,32 @@ export function hasAnyDetailSelection(
   return hasLanguage
 }
 
+/**
+ * Canonicalize stored budget values to registry tier ids
+ * (`packages/shared/src/budgetTiers.ts`).
+ *
+ * `budgetRange` is always the dining namespace and `barBudgetRange` the drinks
+ * namespace — the columns are namespaced by field, not by pool type. Legacy
+ * labels from drafts persisted before the tier cutover map onto ids so a
+ * restored selection still matches the id-valued options.
+ *
+ * Values with no registry counterpart are kept verbatim instead of dropped:
+ * the server tolerates legacy/unknown values on write, and silently discarding
+ * a user's selection would be the worse failure. The blind-box `100-200` is
+ * deliberately left unmapped — that is open decision B3.
+ */
+function canonicalizeTierValues(
+  raw: string[] | undefined,
+  eventType: PoolEventType,
+): string[] | undefined {
+  if (!raw || raw.length === 0) {
+    return raw
+  }
+
+  const { ids, unknown } = normalizeBudgetTierIds(raw, { eventType })
+  return [...ids, ...unknown]
+}
+
 export function buildRegistrationPayload(
   formState: RegistrationFormState,
   eventType: PoolEventType,
@@ -54,12 +81,12 @@ export function buildRegistrationPayload(
     invitationCode: formState.invitationCode || undefined,
     ...(eventType === '酒局'
       ? {
-          barBudgetRange: formState.barBudgetRange,
+          barBudgetRange: canonicalizeTierValues(formState.barBudgetRange, '酒局'),
           barThemes: formState.barThemes,
           alcoholComfort: formState.alcoholComfort ? [formState.alcoholComfort] : undefined,
         }
       : {
-          budgetRange: formState.budgetRange,
+          budgetRange: canonicalizeTierValues(formState.budgetRange, '饭局'),
         }),
   }
 }
@@ -74,10 +101,10 @@ export function buildFormStateFromDraft(
   return {
     eventIntent: draft.eventIntent ?? [],
     preferredLanguages: draft.preferredLanguages ?? [],
-    budgetRange: draft.budgetRange?.slice(0, 1),
+    budgetRange: canonicalizeTierValues(draft.budgetRange ?? undefined, '饭局')?.slice(0, 1),
     barThemes: draft.barThemes ?? [],
     alcoholComfort,
-    barBudgetRange: draft.barBudgetRange?.slice(0, 1),
+    barBudgetRange: canonicalizeTierValues(draft.barBudgetRange ?? undefined, '酒局')?.slice(0, 1),
     invitationCode: draft.invitationCode,
   }
 }

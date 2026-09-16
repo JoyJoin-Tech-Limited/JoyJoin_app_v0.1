@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { getBudgetOptions } from './flowConfig'
 import {
+  buildFormStateFromDraft,
   buildRegistrationPayload,
   getPoolRegistrationAdvanceBlocker,
   getPoolRegistrationSubmitBlocker,
@@ -41,16 +43,21 @@ describe('poolRegistrationForm', () => {
     ).toBeNull()
   })
 
-  it('buildRegistrationPayload branches on 饭局 vs 酒局', () => {
+  it('buildRegistrationPayload emits canonical registry tier ids', () => {
     const base = {
       eventIntent: ['a'],
       preferredLanguages: ['粤语'],
       barThemes: [],
     }
+    // Legacy labels in form state are canonicalized to registry ids on the way out.
     expect(buildRegistrationPayload({ ...base, budgetRange: ['150-200'] }, '饭局')).toMatchObject({
-      budgetRange: ['150-200'],
+      budgetRange: ['dining_150_200'],
     })
     expect(buildRegistrationPayload({ ...base, budgetRange: ['150-200'] }, '饭局').dietaryRestrictions).toBeUndefined()
+    // Canonical ids pass through untouched.
+    expect(buildRegistrationPayload({ ...base, budgetRange: ['dining_300_500'] }, '饭局')).toMatchObject({
+      budgetRange: ['dining_300_500'],
+    })
     expect(
       buildRegistrationPayload(
         {
@@ -62,9 +69,29 @@ describe('poolRegistrationForm', () => {
         '酒局',
       ),
     ).toMatchObject({
-      barBudgetRange: ['80-150'],
+      barBudgetRange: ['drinks_80_150'],
       alcoholComfort: ['微醺就好'],
     })
+  })
+
+  it('budget options are sourced from the canonical registry ids', () => {
+    expect(getBudgetOptions('饭局').map((option) => option.value)).toEqual([
+      'dining_150_below',
+      'dining_150_200',
+      'dining_200_300',
+      'dining_300_500',
+    ])
+    expect(getBudgetOptions('酒局').map((option) => option.value)).toEqual([
+      'drinks_80_below',
+      'drinks_80_150',
+    ])
+  })
+
+  it('buildFormStateFromDraft canonicalizes legacy draft budgets to registry ids', () => {
+    expect(buildFormStateFromDraft({ budgetRange: ['200-300'] }).budgetRange).toEqual(['dining_200_300'])
+    expect(buildFormStateFromDraft({ barBudgetRange: ['80以下'] }).barBudgetRange).toEqual(['drinks_80_below'])
+    // Unmapped values are preserved verbatim, never silently dropped.
+    expect(buildFormStateFromDraft({ budgetRange: ['100-200'] }).budgetRange).toEqual(['100-200'])
   })
 
   it('hasAnyDetailSelection is false when nothing is selected', () => {
