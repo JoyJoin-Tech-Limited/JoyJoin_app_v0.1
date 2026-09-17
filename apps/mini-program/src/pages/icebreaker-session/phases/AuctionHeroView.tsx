@@ -8,6 +8,7 @@ import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
@@ -273,7 +274,9 @@ export function AuctionHeroView({
               </Button>
             ) : undefined
           }
-        />
+        >
+          {!roleControls.canHostControl ? <WaitingBeat variant='host' /> : null}
+        </PhaseHeroCard>
       </View>
     )
   }

@@ -1,0 +1,56 @@
+@use '../../../styles/variables' as *;
+
+.waiting-beat {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 8rpx 0;
+
+  &__mascot {
+    width: 96rpx;
+    height: 96rpx;
+    flex-shrink: 0;
+    animation: waiting-beat-breathe 2.4s ease-in-out infinite;
+
+    &--rm {
+      animation: none;
+    }
+  }
+
+  &__whisper {
+    font-size: 24rpx;
+    line-height: 1.6;
+    color: $color-text-tertiary-on-light;
+    opacity: 1;
+    transition: opacity 240ms ease-out;
+
+    &--hidden {
+      opacity: 0;
+    }
+  }
+}
+
+@keyframes waiting-beat-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4rpx);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting-beat {
+    &__mascot {
+      animation: none;
+    }
+
+    &__whisper {
+      transition: none;
+    }
+  }
+}

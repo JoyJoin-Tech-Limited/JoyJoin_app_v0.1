@@ -1,8 +1,7 @@
-import { Image } from '@tarojs/components'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Button from '../../../components/ui/Button'
 import { type SessionPhase } from '../phaseUtils'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { PHASE_ACCENTS } from './phaseAccents'
 import type { SocialIcebreakerPhase } from '@shared/socialIcebreaker'
 
@@ -40,11 +39,7 @@ export function FallbackPhaseView({
         </>
       }
     >
-      <Image
-        src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-        mode='aspectFit'
-        style={{ width: '160rpx', height: '160rpx', alignSelf: 'center' }}
-      />
+      <WaitingBeat variant='host' expression='coachGuide' />
     </PhaseHeroCard>
   )
 }

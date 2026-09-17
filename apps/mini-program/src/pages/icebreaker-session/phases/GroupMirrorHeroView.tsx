@@ -6,6 +6,7 @@ import { buildSocialPath } from '../icebreakerSessionModel'
 import { ParticleBurst } from '../../../components/reveal'
 import { TapReaction } from '../../../components/gesture'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { haptics } from '../../../lib/utils/haptics'
 import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
@@ -164,6 +165,7 @@ export function GroupMirrorHeroView({
             ) : undefined
           }
         >
+          {!isHost ? <WaitingBeat variant='host' /> : null}
           {error ? <View className='group-mirror-hero__error' role='alert'><Text>{error}</Text></View> : null}
         </PhaseHeroCard>
       </View>

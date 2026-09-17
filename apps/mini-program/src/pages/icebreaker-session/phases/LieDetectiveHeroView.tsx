@@ -9,6 +9,7 @@ import type { AIResponseMeta } from '@shared/types/aiMeta'
 import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { resolveReadyParticipantIds } from '../viewModels/phaseOptOutModel'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
@@ -281,7 +282,9 @@ export function LieDetectiveHeroView({
                 <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
               ) : null}
             </View>
-          ) : null}
+          ) : (
+            <WaitingBeat variant='peers' />
+          )}
         </PhaseHeroCard>
       </View>
     )
@@ -294,7 +297,9 @@ export function LieDetectiveHeroView({
           phase='lie_detective'
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
           title='等待侦探回合开启…'
-        />
+        >
+          <WaitingBeat variant='host' />
+        </PhaseHeroCard>
       </View>
     )
   }

@@ -8,6 +8,7 @@ import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
 import { SwipeCard, TapReaction } from '../../../components/gesture'
 import { ParticleBurst } from '../../../components/reveal'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { haptics } from '../../../lib/utils/haptics'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
@@ -316,6 +317,7 @@ export function QuipBattleHeroView({
             </>
           }
         >
+          {prompts.length === 0 && !isHost ? <WaitingBeat variant='host' /> : null}
           {prompts.length > 0 && (
             <View className='quip-battle-hero__prompts'>
               {prompts.map((prompt, i) => (

@@ -10,6 +10,7 @@ import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
 import { CardFlip, ParticleBurst } from '../../../components/reveal'
 import { SwipeCard } from '../../../components/gesture'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { haptics } from '../../../lib/utils/haptics'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
@@ -515,6 +516,7 @@ export function PersonalityDiceHeroView({
           </>
         }
       >
+        {!hasContent && !isHost ? <WaitingBeat variant='host' /> : null}
         {hasContent && !chooseModeEnabled ? (
           <View className={`personality-dice-hero__card${shakeCard ? ' personality-dice-hero__card--shake' : ''}`}>
             <CardFlip

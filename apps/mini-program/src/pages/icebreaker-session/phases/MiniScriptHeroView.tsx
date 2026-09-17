@@ -20,6 +20,7 @@ import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { CardFlip, ParticleBurst } from '../../../components/reveal'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { TOAST_DEFAULT_MS } from '../../../lib/utils/uiConstants'
 import type { SessionParticipant } from '../phaseUtils'
@@ -1674,6 +1675,7 @@ export function MiniScriptHeroView({
         actions={heroActions}
       >
         <View key={`${subPhase}:${currentAct}`} className='miniscript-hero__content'>
+          {subPhase === 'empty' && !isHost ? <WaitingBeat variant='host' /> : null}
           {subPhase !== 'empty' ? <Text className='miniscript-hero__identity'>{identityLine}</Text> : null}
           {!showCeremony && instruction ? (
             <View className='miniscript-hero__instruction'>

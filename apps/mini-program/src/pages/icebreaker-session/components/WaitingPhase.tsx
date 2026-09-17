@@ -7,6 +7,7 @@ import type { VibeId } from '../../../lib/vibeMapping'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import IcebreakerTierSelector from './IcebreakerTierSelector'
+import WaitingBeat from './WaitingBeat'
 import { GLANCE_L1_WORD_WAITING } from '../viewModels/glanceStackModel'
 
 export interface WaitingPhaseProps {
@@ -75,12 +76,7 @@ export default function WaitingPhase({
   return (
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
-        <Image
-          src={localAsset('/assets/icons/status-icons/status-waiting.webp')}
-          style={{ width: '80rpx', height: '80rpx' }}
-          lazyLoad
-          className='icebreaker__waiting-emoji'
-        />
+        <WaitingBeat variant='join' />
         <Text className='icebreaker__waiting-title'>等待更多玩家加入…</Text>
         <Text className='icebreaker__waiting-count'>
           当前 {playerCount} 人已加入

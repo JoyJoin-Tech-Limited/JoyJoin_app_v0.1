@@ -4,6 +4,7 @@ import type { AIResponseMeta } from '@shared/types/aiMeta'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
+import WaitingBeat from '../components/WaitingBeat'
 import { TapRhythm } from '../../../components/gesture'
 import { ParticleBurst } from '../../../components/reveal'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
@@ -93,7 +94,9 @@ export function MicroChallengeHeroView({
           phase='micro_challenge'
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-micro-challenge.webp')}
           title='挑战准备中…'
-        />
+        >
+          <WaitingBeat variant='host' />
+        </PhaseHeroCard>
       </View>
     )
   }
@@ -162,6 +165,7 @@ export function MicroChallengeHeroView({
           </>
         }
       >
+        {hasCompleted ? <WaitingBeat variant='peers' /> : null}
         {aigcEnabled ? <PhaseAigcRow meta={challengeMeta} reason='AI 生成微挑战' /> : null}
       </PhaseHeroCard>
 
