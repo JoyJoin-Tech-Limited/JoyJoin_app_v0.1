@@ -97,6 +97,28 @@
   }
 }
 
+@keyframes matching-overlay-swap-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matching-status__overlay-swap-dot {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .matching-status__overlay--stage-swap .matching-status__overlay-card {
+    animation-delay: 0ms;
+  }
+}
+
 @keyframes mascot-bounce-in {
   from {
     opacity: 0;

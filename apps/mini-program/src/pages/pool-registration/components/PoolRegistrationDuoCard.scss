@@ -5,6 +5,7 @@
 // shadow), one volume below the 小信 letter card. Height budgets (A'-10):
 // collapsed ≤104rpx, expanded ≤256rpx, waiting ≤200rpx, bound ≤148rpx.
 .pool-reg-duo {
+  position: relative;
   margin-bottom: $spacing-md;
   padding: $spacing-md;
   border-radius: $card-radius;
@@ -15,6 +16,12 @@
 
   &--bound {
     background: rgba($color-success, 0.08);
+  }
+
+  // Live bound flip celebration (2026-09-16): one-shot warm glow ring,
+  // transform/paint-free expansion via shadow spread only, 900ms.
+  &--bound-celebrate {
+    animation: pool-reg-duo-bound-glow 900ms ease-out;
   }
 
   &__row {
@@ -197,6 +204,20 @@
     @include text-truncate;
   }
 
+  // Fresh-bound reassurance whisper (2026-09-16): absolutely positioned so
+  // the ≤148rpx bound height budget never shifts; auto-dismissed by the
+  // component after 2.6s.
+  &__bound-whisper {
+    position: absolute;
+    right: $spacing-md;
+    bottom: 6rpx;
+    font-size: 20rpx;
+    line-height: 1.4;
+    color: $color-success-text-on-light;
+    opacity: 0.85;
+    animation: fade-slide-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   &__skeleton {
     display: flex;
     flex-direction: column;
@@ -239,9 +260,23 @@
   }
 }
 
+@keyframes pool-reg-duo-bound-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba($color-success, 0.35);
+  }
+
+  100% {
+    box-shadow: 0 0 0 24rpx rgba($color-success, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pool-reg-duo {
     transition: none;
+
+    &--bound-celebrate {
+      animation: none;
+    }
 
     &__segmented-thumb {
       transition: none;

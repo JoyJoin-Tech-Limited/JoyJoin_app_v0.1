@@ -1,7 +1,7 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import type { PoolGroupDetailsResponse } from '@shared/api'
 import type { GroupAnalysisResponse, PairExplanation } from '@shared/types/groupAnalysis'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import {
   type ChemistryTokens,
@@ -363,6 +363,23 @@ export function MatchingStatusLiveOverlay({
   const showPuzzlePrelude = puzzlePreludeEnabled && !hasRevealed && effectiveGroupDetails != null
   const memberCount = effectiveGroupDetails?.members.length ?? 0
 
+  // Stage-swap beat (2026-09-16): match → members → theme used to hard-cut.
+  // During a stage change the incoming card's entrance is delayed 110ms while
+  // a three-dot pulse plays on the constant backdrop, reading as one
+  // continuous shot instead of three separate cards.
+  const [stageSwapping, setStageSwapping] = useState(false)
+  const prevLiveStageRef = useRef(liveStage)
+  useEffect(() => {
+    const prev = prevLiveStageRef.current
+    prevLiveStageRef.current = liveStage
+    if (shouldReduceMotion || prev === liveStage || prev === 'idle' || liveStage === 'idle') {
+      return undefined
+    }
+    setStageSwapping(true)
+    const timer = setTimeout(() => setStageSwapping(false), 400)
+    return () => clearTimeout(timer)
+  }, [liveStage, shouldReduceMotion])
+
   useEffect(() => {
     if (showPuzzlePrelude) {
       squadUnboxingAnalytics.track('match_reveal_prelude_started', {
@@ -381,8 +398,15 @@ export function MatchingStatusLiveOverlay({
   const resolvedGroupNumber = matchedGroupNumber ?? effectiveGroupDetails?.group.groupNumber ?? null
 
   return (
-    <View className='matching-status__overlay'>
+    <View className={`matching-status__overlay${stageSwapping ? ' matching-status__overlay--stage-swap' : ''}`}>
       <View className='matching-status__overlay-backdrop' />
+      {stageSwapping ? (
+        <View className='matching-status__overlay-swap-dots' aria-hidden='true'>
+          <View className='matching-status__overlay-swap-dot' />
+          <View className='matching-status__overlay-swap-dot' />
+          <View className='matching-status__overlay-swap-dot' />
+        </View>
+      ) : null}
 
       {liveStage === 'match' && !liveRevealError ? (
         <View className='matching-status__overlay-card' key='match'>

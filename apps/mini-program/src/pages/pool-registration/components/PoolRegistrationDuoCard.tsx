@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import type { DuoCardState } from '../../../lib/duo/duoState'
 import Button from '../../../components/ui/Button'
+import { haptics } from '../../../lib/utils/haptics'
 
 interface PoolRegistrationDuoCardProps {
   state: DuoCardState
@@ -38,6 +40,23 @@ export default function PoolRegistrationDuoCard({
   // code lives on the server; switching back locally would be a lie.
   const segmentedLocked = state === 'waiting'
   const thumbDuo = mode === 'duo' || state === 'waiting'
+
+  // Live bound flip (waiting → bound while the page is open) IS an
+  // achievement beat — unlike the waiting state, it earns a one-shot
+  // celebration: success haptic + glow pulse + a short reassurance whisper.
+  // Initial mount already bound stays quiet (no replay on revisit).
+  const prevStateRef = useRef<DuoCardState | null>(null)
+  const [justBound, setJustBound] = useState(false)
+  useEffect(() => {
+    const prev = prevStateRef.current
+    prevStateRef.current = state
+    if (state !== 'bound' || !prev || prev === 'bound') return undefined
+    haptics('success')
+    if (reduceMotion) return undefined
+    setJustBound(true)
+    const timer = setTimeout(() => setJustBound(false), 2600)
+    return () => clearTimeout(timer)
+  }, [state, reduceMotion])
 
   const handleSelect = (nextMode: 'solo' | 'duo') => {
     if (segmentedLocked || isCreatingInvite || nextMode === mode) return
@@ -130,7 +149,7 @@ export default function PoolRegistrationDuoCard({
 
   if (state === 'bound') {
     return (
-      <View className='pool-reg-duo pool-reg-duo--bound'>
+      <View className={`pool-reg-duo pool-reg-duo--bound${justBound ? ' pool-reg-duo--bound-celebrate' : ''}`}>
         <View className='pool-reg-duo__row pool-reg-duo__row--bound'>
           <View
             className={`pool-reg-duo__check${reduceMotion ? ' pool-reg-duo__check--static' : ''}`}
@@ -140,6 +159,11 @@ export default function PoolRegistrationDuoCard({
             {partnerName ?? '朋友'} 已报名，同桌安排上了
           </Text>
         </View>
+        {justBound ? (
+          <Text className='pool-reg-duo__bound-whisper' aria-live='polite'>
+            悦仔会把你们安排在同桌
+          </Text>
+        ) : null}
       </View>
     )
   }

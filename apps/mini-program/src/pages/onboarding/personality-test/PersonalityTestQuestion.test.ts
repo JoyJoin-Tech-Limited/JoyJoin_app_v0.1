@@ -9,10 +9,27 @@ import {
 } from './idleWhispers'
 
 describe('getQuestionMascotPose', () => {
-  it('keeps the original compact curious pose for every question', () => {
-    const poses = Array.from({ length: 20 }, (_, index) => getQuestionMascotPose(`question-${index}`))
+  it('maps slider and emoji_tap questions to their dedicated poses', () => {
+    expect(getQuestionMascotPose('Q_S1', 'slider')).toBe(PERSONALITY_TEST_QUESTION_EXPRESSION.slider)
+    expect(getQuestionMascotPose('Q_E1', 'emoji_tap')).toBe(PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap)
+  })
 
-    expect(poses).toEqual(Array(20).fill(PERSONALITY_TEST_QUESTION_EXPRESSION.choice))
+  it('is deterministic for the same choice question id', () => {
+    expect(getQuestionMascotPose('Q_L1_001')).toBe(getQuestionMascotPose('Q_L1_001'))
+  })
+
+  it('rotates choice poses across questions so the mascot visibly reacts', () => {
+    const poses = new Set(
+      Array.from({ length: 20 }, (_, index) => getQuestionMascotPose(`question-${index}`)),
+    )
+    expect(poses.size).toBeGreaterThan(1)
+    for (const pose of poses) {
+      expect([
+        PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
+        PERSONALITY_TEST_QUESTION_EXPRESSION.milestone,
+        PERSONALITY_TEST_QUESTION_EXPRESSION.acknowledged,
+      ]).toContain(pose)
+    }
   })
 })
 

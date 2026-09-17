@@ -6,11 +6,16 @@ import {
   PERSONALITY_TEST_QUESTION_EXPRESSION,
 } from './visuals'
 
-// Only the expressions actually rendered on this page: the per-question mascot
-// pose is always `choice` (getQuestionMascotPose), and `loading` appears in the
-// submission echo overlay.
+// Only the expressions actually rendered on this page: the per-question
+// mascot poses (getQuestionMascotPose — curious/nod/surprised rotation plus
+// the slider and emoji-tap dedicated poses), and `loading` in the submission
+// echo overlay.
 const PRELOAD_EXPRESSIONS: XiaoyueExpressionId[] = [
   PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.acknowledged,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.milestone,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap,
   PERSONALITY_TEST_QUESTION_EXPRESSION.loading,
 ]
 

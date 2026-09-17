@@ -9,6 +9,7 @@ import QuestionTransition from './QuestionTransition'
 import { HalfwayMilestone } from './HalfwayMilestone'
 import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import { getXiaoyueExpressionAsset, PERSONALITY_TEST_QUESTION_EXPRESSION } from './visuals'
+import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import type {
   Phase,
   AssessmentQuestion,
@@ -35,9 +36,30 @@ function getQuestionType(
   return question.questionType
 }
 
-/** Keep the original compact corgi pose stable across every question. */
-export function getQuestionMascotPose(_questionId: string): typeof PERSONALITY_TEST_QUESTION_EXPRESSION.choice {
-  return PERSONALITY_TEST_QUESTION_EXPRESSION.choice
+/**
+ * Pose grammar (2026-09-16): the mascot visibly attends to each question
+ * instead of holding one frozen pose. Slider and emoji-tap questions use
+ * their dedicated listening/welcoming poses; choice questions rotate
+ * deterministically (curious → surprised → nod) keyed by question id, so a
+ * given question always wears the same pose within and across sessions.
+ */
+const CHOICE_POSES: readonly XiaoyueExpressionId[] = [
+  PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.milestone,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.acknowledged,
+]
+
+export function getQuestionMascotPose(
+  questionId: string,
+  questionType: Exclude<AssessmentQuestionType, 'ipsative'> = 'choice',
+): XiaoyueExpressionId {
+  if (questionType === 'slider') return PERSONALITY_TEST_QUESTION_EXPRESSION.slider
+  if (questionType === 'emoji_tap') return PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap
+  let hash = 0
+  for (let i = 0; i < questionId.length; i += 1) {
+    hash = (hash * 31 + questionId.charCodeAt(i)) >>> 0
+  }
+  return CHOICE_POSES[hash % CHOICE_POSES.length]
 }
 
 export type SpeechBubbleMode = 'idle' | 'commentary' | 'review' | 'none'
@@ -248,7 +270,7 @@ export default function PersonalityTestQuestion({
       <View className='personality-test__mascot-zone'>
         {currentQuestion ? (
           (() => {
-            const pose = getQuestionMascotPose(currentQuestion.id)
+            const pose = getQuestionMascotPose(currentQuestion.id, questionType)
             return (
               <View className='personality-test__mascot-row'>
                 <View className='personality-test__mascot-avatar'>
