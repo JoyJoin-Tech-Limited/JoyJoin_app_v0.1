@@ -21,6 +21,7 @@ export type DiscoverAnalyticsEventType =
   | 'registration_terminal_state_view'
   | 'registration_terminal_cta_tap'
   | 'registration_terminal_notify_tap'
+  | 'subscribe_grant_result'
   | 'promo_banner_impression'
   | 'promo_banner_cta_tap'
   | 'promo_banner_image_error'

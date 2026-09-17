@@ -140,7 +140,7 @@ function PoolRegistrationSuccessCeremony({
             我们会按照你刚刚填写的预算、活动期待和偏好完成排桌，有结果会第一时间通知你。
           </Text>
           <Text className='registration-ceremony__hint'>
-            {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你排桌完成时收到微信提醒？点一下授权（可在微信授权弹窗中选择）。`}
+            {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你排桌完成、活动当天和回顾生成时收到微信提醒？点一下授权（可在微信授权弹窗中勾选「总是保持以上选择」）。`}
           </Text>
           <Button
             variant='secondary'
@@ -149,7 +149,7 @@ function PoolRegistrationSuccessCeremony({
             loading={isEnablingNotifications}
             disabled={notificationsEnabled}
           >
-            {notificationsEnabled ? '已开启提醒' : '开启排桌结果通知'}
+            {notificationsEnabled ? '已开启提醒' : '开启活动消息提醒'}
           </Button>
           {showPills ? (
             <View className='registration-ceremony__pills'>

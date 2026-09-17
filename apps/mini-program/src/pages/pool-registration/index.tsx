@@ -35,7 +35,7 @@ import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
 import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
-import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
+import { TOAST_LONG_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
@@ -738,12 +738,20 @@ export default function PoolRegistrationPage() {
     if (isEnablingNotifications || notificationsEnabled) return
     setIsEnablingNotifications(true)
     try {
-      await requestPoolMatchSubscribeMessage()
-      setNotificationsEnabled(true)
+      const grant = await requestPoolMatchSubscribeMessage()
+      if (grant) {
+        // 三态授权计量（通知策略批次 1b）：拒绝率 >40% 是北极星前置警报。
+        discoverAnalytics.track('subscribe_grant_result', poolId, {
+          accepted: grant.accepted.length,
+          rejected: grant.rejected.length,
+          banned: grant.banned.length,
+        })
+        setNotificationsEnabled(grant.accepted.length > 0)
+      }
     } finally {
       setIsEnablingNotifications(false)
     }
-  }, [isEnablingNotifications, notificationsEnabled])
+  }, [isEnablingNotifications, notificationsEnabled, poolId])
 
   const handleBack = useCallback(() => {
     if (step === STEP_BRIEF) {
@@ -832,9 +840,8 @@ export default function PoolRegistrationPage() {
       discoverAnalytics.track('registration_complete', poolId)
       if (shouldShowFlow('blind-box-lifecycle', user?.id) && user?.features?.flowLifecycleEnabled !== false) {
         setShowBlindBoxFlow(true)
-      } else {
-        Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
       }
+      // 成功语义唯一归属 RegistrationSuccessCeremony（已留座印章）——不再叠加系统 toast。
     } catch (err) {
       const entitlementCode = getEntitlementCode(err)
 
@@ -878,7 +885,6 @@ export default function PoolRegistrationPage() {
           step,
           ...describeSubmitError(err),
         })
-        Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
         return
       }
 
