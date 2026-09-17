@@ -133,6 +133,11 @@ const DISCOVER_EVENT_TYPES = [
   "registration_terminal_state_view",
   "registration_terminal_cta_tap",
   "registration_terminal_notify_tap",
+  // Subscribe-grant 3-state metering (notification strategy 2026-09-16):
+  // per-template accept/reject/ban counts from the ceremony grant prompt.
+  // Reject rate >40% is the pre-北极星 alarm for grant UX. Metadata: three
+  // integers only.
+  "subscribe_grant_result",
   "registration_submit_error",
   // Terminal-joined recovery signal (2026-09-10): submit rejected with
   // ALREADY_REGISTERED converted to the joined surface client-side.

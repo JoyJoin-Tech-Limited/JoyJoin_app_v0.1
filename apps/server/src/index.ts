@@ -15,6 +15,7 @@ import { startPoolCardCopyWorker } from "./ai/workers/poolCardCopyWorker";
 import { startPersonalStoryWorker } from "./jobs/personalStoryWorker";
 import { startPoolMatchingWatchdog } from "./lib/poolMatchingWatchdog";
 import { startVenueTbdRetryScheduler } from "./lib/venueTbdRetryScheduler";
+import { startSubscribeReminderScheduler } from "./lib/subscribeReminderScheduler";
 import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
@@ -185,6 +186,9 @@ app.use((req, res, next) => {
       startPoolMatchingWatchdog();
       // W8 (AC-W8.5): retry TBD venue assignment + escalate before T-2h.
       startVenueTbdRetryScheduler();
+      // Notification strategy (2026-09-16): event-day morning + T+1 recap
+      // subscribe pushes; dark until template env vars are configured.
+      startSubscribeReminderScheduler();
     });
   } catch (error) {
     logger.error("Failed to start server", { error: String(error) });

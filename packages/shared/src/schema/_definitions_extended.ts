@@ -124,6 +124,35 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
+// WeChat subscribe-message send ledger (2026-09-16, notification strategy):
+// one row per (user, moment, pool) push. The unique key is the idempotency
+// claim — schedulers and event hooks insert BEFORE/AFTER sending via
+// tryRecordSend (onConflictDoNothing) so restarts/retries never double-send.
+// moment: match_success | refund | event_day | recap
+export const subscribeMessageSends = pgTable(
+  "subscribe_message_sends",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id),
+    poolId: varchar("pool_id").notNull(),
+    moment: varchar("moment").notNull(),
+    templateId: varchar("template_id").notNull(),
+    // WeChat API errcode; null = transport failure (send not confirmed).
+    errcode: integer("errcode"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => ({
+    uniqUserMomentPool: unique("subscribe_message_sends_user_moment_pool_uniq").on(
+      table.userId,
+      table.moment,
+      table.poolId,
+    ),
+    poolIdx: index("subscribe_message_sends_pool_idx").on(table.poolId),
+  }),
+);
+
+export type SubscribeMessageSend = typeof subscribeMessageSends.$inferSelect;
+
 // Notification count response type
 export type NotificationCounts = {
   discover: number;

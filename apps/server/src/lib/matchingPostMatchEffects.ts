@@ -8,6 +8,7 @@ import { generateAndSaveEventTheme } from "../eventThemeGeneratorService";
 import { processInvitationRewards } from "../poolMatchingInvitationRewards";
 import { assignVenuesToGroups, saveVenueAssignments } from "../venueAssignmentService";
 import { notifyPoolMatched, notifyVenueAssignmentResult } from "./wecomNotifications/matching";
+import { sendMatchSuccessSubscribeMessages } from "./wechatSubscribeMessage";
 import type { MatchGroup } from "../poolMatchingService";
 
 /**
@@ -85,6 +86,15 @@ export async function executePostMatchCommitSideEffects(
         error: notificationError instanceof Error ? notificationError.message : String(notificationError),
       });
     }
+
+    // WeChat subscribe-message push (四-1): reaches users who are OFF the
+    // mini-program — previously match success only incremented a tab badge.
+    // Fail-open and no-op until WECHAT_SUBSCRIBE_TMPL_MATCH_SUCCESS is set.
+    void sendMatchSuccessSubscribeMessages(memberUserIds, {
+      poolId,
+      poolTitle: notificationData.poolTitle,
+      eventTime: pool?.dateTime ? new Date(pool.dateTime) : null,
+    });
   }
 
   // 1.5 Generate and save event themes (fire-and-forget)

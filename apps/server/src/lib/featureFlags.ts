@@ -115,6 +115,21 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  with reason 'feature_disabled'.
    *  Env fallback: VENUE_ASSIGNMENT_ENABLED (default: true). */
   venueAssignmentEnabled: "VENUE_ASSIGNMENT_ENABLED",
+  /** T7 budget-aware assignment degradation (budget-tier spec §6). When false
+   *  (default), `scoreVenueForGroup` runs the exact legacy budget path
+   *  (proportional exact-overlap 40 pts, zero-overlap hard fail, empty
+   *  consensus → flat +40). When true, budget is scored by registry `order`
+   *  distance — exact 40 / one tier away 20 / ≥2 tiers away NOT placeable —
+   *  with a two-pass rescue and the legacy empty-consensus bypass replaced by
+   *  a neutral 0. Ships dark; enable per environment via this flag.
+   *  Env fallback: BUDGET_ADJACENCY_ENABLED (default: false). */
+  budgetAdjacencyEnabled: "BUDGET_ADJACENCY_ENABLED",
+  /** Master kill-switch for the subscribe-message reminder scheduler
+   *  (event-day morning + T+1 recap pushes). Individual moments additionally
+   *  stay dark until their WECHAT_SUBSCRIBE_TMPL_* env var is set; sends are
+   *  ledger-idempotent via subscribe_message_sends. Env fallback:
+   *  SUBSCRIBE_REMINDERS_ENABLED (default: true). */
+  subscribeRemindersEnabled: "SUBSCRIBE_REMINDERS_ENABLED",
   /** Pool registration persona snapshot card kill-switch. When false, the
    *  mini-program hides the aggregate persona puzzle preview on the first
    *  screen of pool registration. Env fallback: PERSONA_SNAPSHOT_ENABLED
@@ -329,6 +344,17 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  with no evidence surface. Env fallback:
    *  MINISCRIPT_EVIDENCE_VOTE_V2_ENABLED (default: false). */
   miniscriptEvidenceVoteV2Enabled: "MINISCRIPT_EVIDENCE_VOTE_V2_ENABLED",
+  /** Lie Detective V2 (2026-09-16, sprint wave1-2-lieDetectiveV2Enabled):
+   *  DB-backed successor to the env-only LIE_DETECTIVE_MODE gate. Resolved
+   *  ONCE at lie_detective phase entry and snapshotted into session state
+   *  (state.lieDetectiveMode) — mid-session flips never affect a live
+   *  session. Resolution order: single-test session override → this flag →
+   *  legacy env LIE_DETECTIVE_MODE fallback → 'v1'. Flag-off === today's
+   *  exact V1-default behavior. OPS PRECONDITION (contract AC-09): before
+   *  setting this flag true in any environment, confirm that environment's
+   *  LIE_DETECTIVE_MODE is unset or 'v1', or flag-OFF will not equal V1.
+   *  Env fallback: LIE_DETECTIVE_V2_ENABLED (default: false). */
+  lieDetectiveV2Enabled: "LIE_DETECTIVE_V2_ENABLED",
 };
 
 /**
@@ -419,6 +445,14 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   /** MiniScript V2 P2 ships dark; explicit false so the admin toggle UI and
    *  listFeatureFlags() show a stable default. */
   miniscriptEvidenceVoteV2Enabled: false,
+  /** Lie Detective V2 ships dark (V1 stays the default) until the 游戏性大版本
+   *  release train flips it; explicit false so the admin toggle UI and
+   *  listFeatureFlags() show a stable default. */
+  lieDetectiveV2Enabled: false,
+  /** T7 budget-aware assignment degradation ships dark; explicit false so the
+   *  admin toggle UI and listFeatureFlags() show a stable default. Flag-off is
+   *  byte-for-byte the legacy budget path (see FLAG_ENV_MAP note). */
+  budgetAdjacencyEnabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

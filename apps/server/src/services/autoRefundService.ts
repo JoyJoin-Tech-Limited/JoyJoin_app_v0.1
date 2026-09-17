@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
-import { eventCreditRedemptions, eventPoolRegistrations, notifications, payments } from "@shared/schema";
+import { eventCreditRedemptions, eventPoolRegistrations, eventPools, notifications, payments } from "@shared/schema";
 import { db } from "../db";
 import { getFeatureFlag } from "../lib/featureFlags";
 import { logger } from "../lib/logger";
+import { sendRefundSubscribeMessages } from "../lib/wechatSubscribeMessage";
 import { paymentService } from "../paymentService";
 import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
 import { eventCreditsRepo } from "../repositories/eventCreditsRepo";
@@ -44,6 +45,8 @@ interface RefundContext {
    *  claim. Omitted → the money variant is used. */
   notificationTitleNeutral?: string;
   notificationMessageNeutral?: string;
+  /** 温馨提示 for the subscribe-message push (result template, ≤20 chars). */
+  pushHint: string;
 }
 
 /**
@@ -69,6 +72,7 @@ export const REFUND_CONTEXTS = {
     notificationTitleCredit: "活动取消，次数已退回",
     notificationMessageMoney: "报名费已原路退回，预计 1-3 个工作日到账。",
     notificationMessageCredit: "消耗的活动次数已退回你的次数包。",
+    pushHint: "活动取消，报名费已退回",
     // No neutral variant: pool_cancelled refunds EVERY paid registration and
     // its unmatched-filter path (the only `neutral=true` caller) never runs for
     // this context, so a neutral copy string here would be dead config.
@@ -88,6 +92,7 @@ export const REFUND_CONTEXTS = {
     notificationMessageCredit: "本轮排桌未能为你安排到合适的座位。消耗的活动次数已退回你的次数包。",
     notificationTitleNeutral: "本次座位未排上",
     notificationMessageNeutral: "本轮排桌未能为你安排到合适的座位，你无需额外操作，欢迎报名下一场。",
+    pushHint: "座位未排上，报名费已退回",
   },
   /** Phase 0 安心补位 (2026-08-27, sprint post-reveal-phase0 M2/Amendment 3):
    *  post-reveal cancel dropped a matched group below the minimum size — the
@@ -111,6 +116,7 @@ export const REFUND_CONTEXTS = {
     notificationTitleNeutral: "这次没能成行",
     notificationMessageNeutral:
       "有伙伴临时退出，人数不足。已为你优先保留下一场的排桌资格。",
+    pushHint: "人数不足未成行，已退款",
   },
 } as const satisfies Record<RefundContextKey, RefundContext>;
 
@@ -324,6 +330,10 @@ async function refundPoolPaidRegistrations(
   // AC-W2.5: in-run notification dedup — a user refunded via money AND credits
   // (or already covered by the all-paths notice below) is told exactly once.
   const notifiedUserIds = new Set<string>();
+  // Users notified THIS run — the subscribe-push recipient set (the
+  // hasExistingRefundNotification guard path adds users notified by an
+  // earlier run, whose push was already attempted then).
+  const notifiedThisRunUserIds = new Set<string>();
   // Users whose money refund and/or credit reversal FAILED. They must never
   // receive the neutral "你无需额外操作" notice — their refund is still
   // pending/failed, and that copy would be false reassurance. Ops is alerted
@@ -345,6 +355,7 @@ async function refundPoolPaidRegistrations(
       summary.refundedPayments += 1;
       if (!notifiedUserIds.has(payment.userId)) {
         notifiedUserIds.add(payment.userId);
+        notifiedThisRunUserIds.add(payment.userId);
         notificationsAttempted += 1;
         await notifyUserSafely(payment.userId, ctx, false, poolTitle, poolId);
       }
@@ -381,6 +392,7 @@ async function refundPoolPaidRegistrations(
       summary.refundedCredits += 1;
       if (!notifiedUserIds.has(redemption.userId)) {
         notifiedUserIds.add(redemption.userId);
+        notifiedThisRunUserIds.add(redemption.userId);
         notificationsAttempted += 1;
         await notifyUserSafely(redemption.userId, ctx, true, poolTitle, poolId);
       }
@@ -416,9 +428,39 @@ async function refundPoolPaidRegistrations(
         continue;
       }
       notifiedUserIds.add(reg.userId);
+      notifiedThisRunUserIds.add(reg.userId);
       notificationsAttempted += 1;
       await notifyUserSafely(reg.userId, ctx, false, poolTitle, poolId, true);
     }
+  }
+
+  // Notification-strategy batch 1a: push the refund outcome via the
+  // 报名结果提醒 subscribe template to users notified this run — the
+  // 未成行全退 trust promise must be HEARD, not silently landed. Result
+  // template is mutually exclusive with match_success per registration, so
+  // this never double-spends the user's grant. Fail-open, ledger-keyed
+  // (user, 'refund', pool).
+  if (notifiedThisRunUserIds.size > 0) {
+    void (async () => {
+      try {
+        const [poolRow]: Array<{ dateTime: Date | null }> = await db
+          .select({ dateTime: eventPools.dateTime })
+          .from(eventPools)
+          .where(eq(eventPools.id, poolId))
+          .limit(1);
+        await sendRefundSubscribeMessages([...notifiedThisRunUserIds], {
+          poolId,
+          poolTitle,
+          eventTime: poolRow?.dateTime ? new Date(poolRow.dateTime) : null,
+          hint: ctx.pushHint,
+        });
+      } catch (error) {
+        logger.warn("[AutoRefund] refund subscribe push failed (fail-open)", {
+          poolId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })();
   }
 
   logger.info("[AutoRefund] run complete", {

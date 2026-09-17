@@ -1,5 +1,6 @@
 export {
   notifications,
+  subscribeMessageSends,
   kpiSnapshots,
   userEngagementMetrics,
   eventSatisfactionSummary,
@@ -13,6 +14,7 @@ export {
 
 export type {
   Notification,
+  SubscribeMessageSend,
   NotificationCounts,
   InsertNotification,
   KpiSnapshot,
