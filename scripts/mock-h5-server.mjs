@@ -1369,14 +1369,19 @@ app.post('/api/social-icebreaker/start', (req, res) => {
 
 app.get('/api/social-icebreaker/:socialSessionId/recap', (req, res) => {
   const state = buildIcebreakerState(req.params.socialSessionId)
+  // Wave 4 glow variants carry recapSnapshot (server dual-write canon:
+  // recapSnapshot.medals === recapSnapshot.glow.medals). Prefer the snapshot
+  // so share lines / legacy fallbacks stay consistent with the glow block;
+  // legacy variants without a snapshot keep the fixed fixtures below.
+  const snapshot = state.recapSnapshot
   res.json({
-    meta: mockAigcMeta('social-recap-summary-v1'),
-    summary: {
+    meta: snapshot?.meta ?? mockAigcMeta('social-recap-summary-v1'),
+    summary: snapshot?.recapSummary ?? {
       headline: '今晚到这儿，刚刚好',
       closingLine: '悦仔的任务完成啦，接下来的故事，你们当面接着讲～',
       moments: ['小鹿猜中了老周的谎言，全场惊呼', '桃桃的儿歌拍卖拍出了 85 币高价', '眠眠说她是全桌最会倾听的人，没人反对'],
     },
-    medals: [
+    medals: snapshot?.medals ?? [
       { emoji: '🕵️', title: '最佳侦探', recipientDisplayName: '小鹿', description: '猜对谎言次数最多' },
       { emoji: '🎯', title: '挑战先锋', recipientDisplayName: '悦仔测试', description: '最快完成微挑战' },
       { emoji: '💬', title: '话题王', recipientDisplayName: '阿澈', description: '贡献了最多有趣话题' },

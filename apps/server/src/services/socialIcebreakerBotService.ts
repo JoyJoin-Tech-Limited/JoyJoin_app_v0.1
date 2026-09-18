@@ -526,7 +526,15 @@ function simulateAuctionBots(
   }
 }
 
-function simulatePersonalityDiceBots(
+/**
+ * wave1-3 (AC-02 site 6, sync): consumes the session snapshot first so bot
+ * simulation of a specific session matches the mode that session actually ran;
+ * the env read is the fallback for legacy sessions whose state predates the
+ * snapshot field (and for sessions resolved by older workers). Exported for the
+ * personalityDiceChooseModeFlag contract tests, which must exercise the REAL
+ * implementation rather than an inlined replica.
+ */
+export function simulatePersonalityDiceBots(
   state: SocialSessionState,
   bots: BotInfo[],
   rng: () => number,

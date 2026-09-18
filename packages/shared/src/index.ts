@@ -14,6 +14,7 @@ export * from './topicCards';
 export * from './wsEvents';
 export * from './interests';
 export * from './matchingWeights';
+export * from './budgetTiers';
 export { 
   type Industry,
   type Occupation,

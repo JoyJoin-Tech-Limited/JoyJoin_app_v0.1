@@ -1,6 +1,7 @@
 import { View, Text, Input } from '@tarojs/components'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { haptics } from '../../../lib/utils/haptics'
+import { useQueryClient } from '@tanstack/react-query'
+import { haptics, socialHaptics } from '../../../lib/utils/haptics'
 import type { SocialSessionState } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import Button from '../../../components/ui/Button'
@@ -16,6 +17,31 @@ import {
   resolveAuctionRoleControls,
   type AuctionPreviewRole,
 } from '../viewModels/phaseProgressionModels'
+import { AuctionFinaleView } from './AuctionFinaleView'
+import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
+import {
+  AUCTION_V2_ALL_IN_LABEL,
+  AUCTION_V2_LOW_BALANCE_HINT,
+  auctionV2CollectionHint,
+  auctionV2HostAllInHint,
+  auctionV2OutbidToast,
+} from '../../../lib/copy/auctionV2'
+import {
+  AUCTION_COLLECTION_HINT_THRESHOLD,
+  AuctionAllInOneShot,
+  AuctionV2BeatCoordinator,
+  buildAllInEventKey,
+  buildOutbidEventKey,
+  computeAuctionLadder,
+  countLotsWonBy,
+  readAuctionLotResults,
+  resolveAllInCeremonyEffects,
+  resolveAuctionBidInputMode,
+  subscribeAuctionV2Beats,
+  wasLastHighBidMine,
+  type AuctionBidClientMeta,
+} from '../viewModels/auctionV2Model'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 export interface AuctionBidRecordLocal {
@@ -23,6 +49,7 @@ export interface AuctionBidRecordLocal {
   displayName: string
   amount: number
   at: number
+  isAllIn?: boolean
 }
 
 interface AuctionHeroViewProps {
@@ -30,7 +57,7 @@ interface AuctionHeroViewProps {
   currentUserId: string
   isHost: boolean
   onGenerateLots: () => void
-  onPlaceBid: (amount: number) => void
+  onPlaceBid: (amount: number, meta?: AuctionBidClientMeta) => void
   onCloseLot: () => void
   onAdvance: () => void
   isAdvancing: boolean
@@ -39,6 +66,8 @@ interface AuctionHeroViewProps {
   isClosingLot: boolean
   isSingleTest?: boolean
   lotsMeta?: AIResponseMeta
+  /** S1 haptic grammar flag — gates every V2 social-pattern firing. */
+  hapticGrammarEnabled?: boolean
 }
 
 function lotEmoji(lot: { emoji?: string; title?: string }): string {
@@ -73,6 +102,7 @@ export function AuctionHeroView({
   isClosingLot,
   isSingleTest = false,
   lotsMeta,
+  hapticGrammarEnabled = false,
 }: AuctionHeroViewProps) {
   const [bidText, setBidText] = useState('10')
   const [bidError, setBidError] = useState('')
@@ -133,14 +163,157 @@ export function AuctionHeroView({
     prevAllClosedRef.current = allClosed
   }, [allClosed, currentUserId, fireWinnerBurst])
 
+  // ── Auction V2 (Wave 2): snapshot-gated branch ─────────────────────────
+  // When the server snapshotted `auctionV2Enabled` OFF/absent at auction
+  // phase entry, `v2Enabled` is false and every branch below falls through
+  // to today's V1 UI byte-for-byte.
+  const v2Enabled = resolveAuctionBidInputMode(session) === 'ladder'
+  const { shouldReduceMotion } = useMiniRevealMotion()
+  const queryClient = useQueryClient()
+  const lotResults = useMemo(() => readAuctionLotResults(session), [session])
+  // Shared `AuctionHighBid.isAllIn` (contract AC-03) — undefined on V1 states.
+  const highV2 = session.auctionHighBid
+  const [showAllInBurst, setShowAllInBurst] = useState(false)
+  const allInBurstTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const sessionIdRef = useRef(session.socialSessionId)
+  sessionIdRef.current = session.socialSessionId
+  const icebreakerSessionIdRef = useRef(session.icebreakerSessionId)
+  icebreakerSessionIdRef.current = session.icebreakerSessionId
+  // Last-known high bid — the state-free self-check target for beat arrivals
+  // ("was the last-known high bid mine?"; beats carry no targetUserId).
+  const lastKnownHighRef = useRef(session.auctionHighBid)
+  lastKnownHighRef.current = session.auctionHighBid
+  const announcedOutbidKeyRef = useRef<string | null>(null)
+  const allInOneShotRef = useRef<AuctionAllInOneShot | null>(null)
+  if (allInOneShotRef.current === null) allInOneShotRef.current = new AuctionAllInOneShot()
+  const beatCoordinatorRef = useRef<AuctionV2BeatCoordinator | null>(null)
+  if (beatCoordinatorRef.current === null) {
+    beatCoordinatorRef.current = new AuctionV2BeatCoordinator({
+      onRefresh: () => {
+        const sid = sessionIdRef.current
+        if (sid) {
+          void queryClient.invalidateQueries({
+            queryKey: ['mini-program', 'social-icebreaker-session', sid],
+          })
+        }
+      },
+    })
+  }
+
+  // V2: react to rerouted auction beats (nudge = outbid, reveal = all-in).
+  // The page's GroupBeatTracker already deduped nonces + owns the 6500ms
+  // suppression window; this subscription only wires the view's reaction.
+  useEffect(() => {
+    if (!v2Enabled) return
+    return subscribeAuctionV2Beats((pattern) => {
+      const coordinator = beatCoordinatorRef.current
+      if (!coordinator) return
+      if (pattern === 'nudge') {
+        const buzzNow = coordinator.handleOutbidBeat(
+          wasLastHighBidMine(lastKnownHighRef.current, currentUserId),
+        )
+        if (buzzNow && hapticGrammarEnabled) socialHaptics('socialNudge')
+      } else {
+        const buzzNow = coordinator.handleAllInBeat()
+        if (buzzNow && hapticGrammarEnabled) socialHaptics('socialReveal')
+      }
+    })
+  }, [v2Enabled, currentUserId, hapticGrammarEnabled])
+
+  // V2: coordinator + one-shot lifecycles (session rebind gets a fresh slate).
+  useEffect(
+    () => () => {
+      beatCoordinatorRef.current?.dispose()
+      if (allInBurstTimerRef.current) clearTimeout(allInBurstTimerRef.current)
+    },
+    [],
+  )
+  useEffect(() => {
+    beatCoordinatorRef.current?.reset()
+    allInOneShotRef.current?.reset()
+    announcedOutbidKeyRef.current = null
+  }, [session.socialSessionId])
+
+  const fireAllInBurst = useCallback(() => {
+    setShowAllInBurst(true)
+    if (allInBurstTimerRef.current) clearTimeout(allInBurstTimerRef.current)
+    allInBurstTimerRef.current = setTimeout(() => {
+      setShowAllInBurst(false)
+      allInBurstTimerRef.current = undefined
+    }, 900)
+  }, [])
+
+  // V2: all-in ceremony — one-shot per all-in event (lotIndex+bidder+amount),
+  // never re-fired by poll re-renders carrying the same state. RM → the
+  // static seal badge renders anyway; zero particles.
+  useEffect(() => {
+    if (!v2Enabled || !highV2?.isAllIn) return
+    const key = buildAllInEventKey({ lotIndex: idx, userId: highV2.userId, amount: highV2.amount })
+    if (!allInOneShotRef.current?.consume(key)) return
+    const fx = resolveAllInCeremonyEffects({
+      reducedMotion: shouldReduceMotion,
+      hapticGrammarEnabled,
+      beatAlreadyBuzzed: beatCoordinatorRef.current?.consumeAllInBeatBuzzed() ?? false,
+    })
+    if (fx.fireHaptic) socialHaptics('socialReveal')
+    if (fx.fireBurst) fireAllInBurst()
+    socialIcebreakerAnalytics.track(
+      'auction_all_in_fired',
+      sessionIdRef.current || undefined,
+      icebreakerSessionIdRef.current || undefined,
+      'auction',
+      { lotIndex: idx, amount: highV2.amount },
+    )
+  }, [v2Enabled, highV2?.isAllIn, highV2?.userId, highV2?.amount, idx, shouldReduceMotion, hapticGrammarEnabled, fireAllInBurst])
+
+  // V2: bid ladder (D1) — pure view-model math; total-price labels.
+  const ladder = useMemo(
+    () =>
+      v2Enabled
+        ? computeAuctionLadder({
+            high: high?.amount ?? 0,
+            balance,
+            ownEscrowedBid: high?.userId === currentUserId ? high.amount : 0,
+          })
+        : null,
+    [v2Enabled, high?.amount, high?.userId, balance, currentUserId],
+  )
+  // V2: soft endgame hint (D5) — pure UI, never blocks bidding.
+  const lotsWonByMe = useMemo(
+    () => (v2Enabled ? countLotsWonBy(lotResults, currentUserId) : 0),
+    [v2Enabled, lotResults, currentUserId],
+  )
+
   // ── Outbid notification ──
   useEffect(() => {
     const prev = prevHighRef.current
     const curr = session.auctionHighBid
     if (prev && curr && prev.userId === currentUserId && curr.userId !== currentUserId) {
-      setOutbidNotice(`被 ${nameOf(curr.userId)} 以 ${curr.amount} 币超价！`)
-      if (outbidTimerRef.current) clearTimeout(outbidTimerRef.current)
-      outbidTimerRef.current = setTimeout(() => setOutbidNotice(''), 3000)
+      if (v2Enabled) {
+        // V2: exactly one announcement per outbid event across the two
+        // channels (beat = acceleration, poll = truth). The beat path buzzed
+        // at beat time; the poll path buzzes here.
+        const key = buildOutbidEventKey({ lotIndex: idx, userId: curr.userId, amount: curr.amount })
+        if (announcedOutbidKeyRef.current !== key) {
+          announcedOutbidKeyRef.current = key
+          const channel = beatCoordinatorRef.current?.consumeOutbidChannel() ?? 'poll'
+          setOutbidNotice(auctionV2OutbidToast(nameOf(curr.userId), curr.amount))
+          if (outbidTimerRef.current) clearTimeout(outbidTimerRef.current)
+          outbidTimerRef.current = setTimeout(() => setOutbidNotice(''), 3000)
+          if (channel === 'poll' && hapticGrammarEnabled) socialHaptics('socialNudge')
+          socialIcebreakerAnalytics.track(
+            'auction_outbid_notified',
+            sessionIdRef.current || undefined,
+            icebreakerSessionIdRef.current || undefined,
+            'auction',
+            { channel, lotIndex: idx },
+          )
+        }
+      } else {
+        setOutbidNotice(`被 ${nameOf(curr.userId)} 以 ${curr.amount} 币超价！`)
+        if (outbidTimerRef.current) clearTimeout(outbidTimerRef.current)
+        outbidTimerRef.current = setTimeout(() => setOutbidNotice(''), 3000)
+      }
     }
     prevHighRef.current = curr
     return () => {
@@ -149,7 +322,7 @@ export function AuctionHeroView({
         outbidTimerRef.current = null
       }
     }
-  }, [session.auctionHighBid, currentUserId, nameOf])
+  }, [session.auctionHighBid, currentUserId, nameOf, v2Enabled, hapticGrammarEnabled, idx])
 
   const bidHistory: AuctionBidRecordLocal[] = useMemo(() => {
     const history = session.auctionBidHistory || []
@@ -160,6 +333,7 @@ export function AuctionHeroView({
         displayName: nameOf(b.userId),
         amount: b.amount,
         at: b.at,
+        isAllIn: b.isAllIn === true,
       }))
       .reverse()
   }, [session.auctionBidHistory, idx, nameOf])
@@ -283,6 +457,27 @@ export function AuctionHeroView({
 
   // ── All closed ──
   if (allClosed) {
+    // V2: two-act finale (awards reveal + table bill) replaces the static
+    // 「拍卖结束」 card. Flag-OFF keeps today's card byte-for-byte below.
+    if (v2Enabled) {
+      return (
+        <View className='auction-hero'>
+          {roleSwitcher}
+          {showWinBurst ? (
+            <View className='auction-hero__burst'>
+              <ParticleBurst trigger type='confetti' count={24} />
+            </View>
+          ) : null}
+          <AuctionFinaleView
+            session={session}
+            currentUserId={currentUserId}
+            canHostControl={roleControls.canHostControl}
+            onAdvance={onAdvance}
+            isAdvancing={isAdvancing}
+          />
+        </View>
+      )
+    }
     return (
       <View className='auction-hero'>
         {roleSwitcher}
@@ -319,6 +514,11 @@ export function AuctionHeroView({
           <ParticleBurst trigger type='confetti' count={24} />
         </View>
       )}
+      {showAllInBurst && (
+        <View className='auction-hero__burst'>
+          <ParticleBurst trigger type='coins' count={24} />
+        </View>
+      )}
 
       {outbidNotice ? (
         <View className='auction-hero__outbid'>
@@ -339,6 +539,41 @@ export function AuctionHeroView({
         actions={
           <>
             {showBidControls ? (
+              v2Enabled && ladder ? (
+                <View className='auction-hero__bid-zone'>
+                  <View className='auction-hero__ladder'>
+                    {ladder.tiers.map((tierState) => (
+                      <Button
+                        key={tierState.tier}
+                        variant={tierState.tier === 'all_in' ? 'primary' : 'secondary'}
+                        onClick={() => {
+                          if (tierState.disabled || isPlacingBid) return
+                          haptics('medium')
+                          onPlaceBid(tierState.amount, {
+                            tier: tierState.tier,
+                            lotIndex: idx,
+                            isAllIn: tierState.tier === 'all_in',
+                          })
+                        }}
+                        disabled={tierState.disabled || isPlacingBid}
+                      >
+                        <View className='auction-hero__ladder-btn'>
+                          <Text className='auction-hero__ladder-name'>{tierState.name}</Text>
+                          <Text className='auction-hero__ladder-amount'>{tierState.label}</Text>
+                        </View>
+                      </Button>
+                    ))}
+                  </View>
+                  {ladder.allTiersDisabled ? (
+                    <Text className='auction-hero__ladder-low'>{AUCTION_V2_LOW_BALANCE_HINT}</Text>
+                  ) : null}
+                  {lotsWonByMe >= AUCTION_COLLECTION_HINT_THRESHOLD ? (
+                    <Text className='auction-hero__ladder-hint'>
+                      {auctionV2CollectionHint(lotsWonByMe)}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : (
               <View className='auction-hero__bid-zone'>
                 <View className='auction-hero__quick-bids'>
                   <Button
@@ -397,8 +632,10 @@ export function AuctionHeroView({
                   {isPlacingBid ? '提交中…' : '出价'}
                 </Button>
               </View>
+              )
             ) : null}
             {roleControls.canHostControl ? (
+              <>
               <Button
                 variant='secondary'
                 onClick={onCloseLot}
@@ -407,6 +644,12 @@ export function AuctionHeroView({
               >
                 {isClosingLot ? '处理中…' : '关闭本标（落槌）'}
               </Button>
+              {v2Enabled && highV2?.isAllIn ? (
+                <Text className='auction-hero__host-allin-hint'>
+                  {auctionV2HostAllInHint(nameOf(highV2.userId))}
+                </Text>
+              ) : null}
+              </>
             ) : null}
           </>
         }
@@ -419,9 +662,21 @@ export function AuctionHeroView({
         {high && (
           <View className='auction-hero__high-bidder'>
             <Text className='auction-hero__high-bidder-label'>当前领先</Text>
-            <Text className='auction-hero__high-bidder-value'>
-              {nameOf(high.userId)} · {high.amount} 币
-            </Text>
+            {v2Enabled && highV2?.isAllIn ? (
+              <View className='auction-hero__high-bidder-row'>
+                <Text className='auction-hero__high-bidder-value'>
+                  {nameOf(high.userId)} · {high.amount} 币
+                </Text>
+                <View className='auction-hero__allin-badge'>
+                  <JoyJoinIcon emoji='🔥' tier='reaction' size={24} />
+                  <Text className='auction-hero__allin-badge-text'>{AUCTION_V2_ALL_IN_LABEL}</Text>
+                </View>
+              </View>
+            ) : (
+              <Text className='auction-hero__high-bidder-value'>
+                {nameOf(high.userId)} · {high.amount} 币
+              </Text>
+            )}
           </View>
         )}
 
@@ -434,6 +689,9 @@ export function AuctionHeroView({
               <View key={`${bid.userId}-${bid.amount}-${i}`} className='auction-hero__history-row'>
                 <Text className='auction-hero__history-name'>{bid.displayName}</Text>
                 <Text className='auction-hero__history-amount'><Text className='auction-hero__numeral'>{bid.amount}</Text> 币</Text>
+                {v2Enabled && bid.isAllIn ? (
+                  <Text className='auction-hero__history-allin'>{AUCTION_V2_ALL_IN_LABEL}</Text>
+                ) : null}
               </View>
             ))}
           </View>

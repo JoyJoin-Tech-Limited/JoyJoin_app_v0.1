@@ -3,8 +3,14 @@ import type {
   SocialIcebreakerPhase,
   LieDetectivePlayer,
   SocialSessionParticipantSummary,
+  AuctionLotResult,
 } from '@shared/socialIcebreaker';
 import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase } from '@shared/socialIcebreaker';
+import {
+  getAuctionBiggestSpenderLine,
+  getAuctionBargainHunterLine,
+  getAuctionHottestLotLine,
+} from '@shared/copy/auctionV2';
 import { getPhaseModule } from '@shared/phaseRegistry';
 import { computeMiniScriptVoteProgress } from '@shared/miniscriptStoryFramework';
 import {
@@ -22,10 +28,21 @@ import { isCustomMode, computeSelectablePhases, generatePhaseSelectionId } from 
 import { mapBotUserIdsToBotIds, buildBotIdByUserId } from '../lib/socialIcebreakerClientIdMapper';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { curateMedals } from '../lib/medalCuration';
-import { generateRecapSummary, buildLieDetectiveV2RecapData, generateMicroChallenges } from '../socialIcebreakerAIService';
+import {
+  accumulateGlowForPhase,
+  deriveGlowTiers,
+  selectGlowTableLine,
+} from '../lib/sessionGlow';
+import { generateRecapSummary, buildLieDetectiveV2RecapData, generateMicroChallenges, getLieDetectiveMode } from '../socialIcebreakerAIService';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
 import { seedSingleTestBotsWarmupReady } from '../services/socialIcebreakerBotService';
 import { getFeatureFlag } from '../lib/featureFlags';
+import { createAiCorrelationId, logAITrace } from '../lib/aiTraceLogger';
+import {
+  extractHighlightsForPhase,
+  mergeSessionHighlights,
+  HIGHLIGHTS_EXTRACTOR_PROMPT_VERSION,
+} from '../lib/sessionHighlights';
 
 function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
@@ -73,6 +90,27 @@ export function sanitizeStateForClient(
   // server-side (resolveSession / getSessionWithExpiry); only the client
   // projection omits it.
   delete (sanitized as Partial<SocialSessionState>).expiresAt;
+  // Wave 3 (contract AC-10): highlights are prompt-context ONLY — aggregate
+  // but never a client surface in Wave 3 (no client reader, no auth-user
+  // exposure). Strip both the body and the flag snapshot for everyone.
+  delete (sanitized as Partial<SocialSessionState>).highlights;
+  delete (sanitized as Partial<SocialSessionState>).highlightsInjectorEnabled;
+  // Wave 4 (contract AC-09): glow participation marks + banked markers are
+  // server-only derivation state — stripped for EVERYONE (highlights
+  // precedent above). glowPoints is projected to the REQUESTING user's own
+  // breakdown only: other players' per-source numbers never leave the
+  // server. Tier words + medals stay visible to all via recapSnapshot.glow
+  // (word-level only — no totals, no per-source counts for others).
+  delete (sanitized as Partial<SocialSessionState>).glowParticipation;
+  delete (sanitized as Partial<SocialSessionState>).glowBanked;
+  if (sanitized.glowPoints) {
+    const own = requestingUserId ? sanitized.glowPoints[requestingUserId] : undefined;
+    if (own && requestingUserId) {
+      sanitized.glowPoints = { [requestingUserId]: own };
+    } else {
+      delete (sanitized as Partial<SocialSessionState>).glowPoints;
+    }
+  }
   if (requestingUserId && sanitized.hostUserId !== requestingUserId) {
     delete sanitized.miniScriptCandidateFramework;
     delete sanitized.miniScriptCandidateGeneratedAt;
@@ -764,7 +802,15 @@ export function buildLieDetectiveRecapHighlights(
 }
 
 export function buildPersonalityDiceRecapLines(state: SocialSessionState): string[] {
-  if (isEnabled(process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED, true) &&
+  // wave1-3 (AC-02 site 5, sync): consume the session snapshot first so the
+  // recap shape always agrees with the mode the session actually ran; the env
+  // read is retained ONLY as a fallback for legacy sessions whose `state_json`
+  // predates the snapshot field. The DB tier reaches recap via the `/start`
+  // snapshot, never via an async read on this sync path.
+  const chooseModeEnabled =
+    state.personalityDiceChooseModeEnabled ??
+    isEnabled(process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED, true);
+  if (chooseModeEnabled &&
       state.personalityDiceChallengeGroups && state.diceSelectedOption) {
     return state.personalityDiceChallengeGroups.slice(0, 6).map((group) => {
       const chosenIdx = state.diceSelectedOption![group.userId];
@@ -816,6 +862,49 @@ export function buildAuctionRecapLines(state: SocialSessionState): string[] {
   const lines = state.auctionRecapLines;
   if (!Array.isArray(lines) || lines.length === 0) return [];
   return lines.map((l) => (l.length > 120 ? `${l.slice(0, 119)}…` : l)).slice(0, 8);
+}
+
+/**
+ * Auction V2 (sprint wave2-auctionV2, contract AC-06, spec D4): deterministic
+ * award-summary lines appended to auctionRecapLines when the final lot closes.
+ * ≤3 lines （今晚最敢花 / 捡漏王 / 全场最热）, each ≤120 chars, zero LLM — the
+ * AIGC-badge pipeline is never involved. Empty-state rules per spec D4:
+ * all-unsold skips 最敢花 AND 捡漏王； a single sold lot still awards 捡漏王
+ * with praise-framing copy; 全场最热 ties resolve to the earliest lot and an
+ * all-zero-bid auction skips it. 最稳的手 is computed client-side for the
+ * finale (AC-13) and intentionally absent from recap lines (≤3 budget).
+ */
+export function buildAuctionAwardRecapLines(
+  results: AuctionLotResult[],
+  nameOf: (userId: string) => string,
+): string[] {
+  const lines: string[] = [];
+  const sold = results.filter(
+    (r): r is AuctionLotResult & { winnerUserId: string; winningAmount: number } =>
+      r.winnerUserId !== null && r.winningAmount !== null,
+  );
+  if (sold.length > 0) {
+    // Ties resolve to the EARLIER lot (strict comparison keeps the first).
+    const biggest = sold.reduce((a, b) => (b.winningAmount > a.winningAmount ? b : a));
+    lines.push(getAuctionBiggestSpenderLine(nameOf(biggest.winnerUserId), biggest.winningAmount, biggest.title));
+    const bargain = sold.reduce((a, b) => (b.winningAmount < a.winningAmount ? b : a));
+    lines.push(
+      getAuctionBargainHunterLine(
+        nameOf(bargain.winnerUserId),
+        bargain.winningAmount,
+        bargain.title,
+        sold.length === 1,
+      ),
+    );
+  }
+  const hottest = results.reduce<AuctionLotResult | null>(
+    (acc, r) => (r.bidCount > 0 && (acc === null || r.bidCount > acc.bidCount) ? r : acc),
+    null,
+  );
+  if (hottest) {
+    lines.push(getAuctionHottestLotLine(hottest.title, hottest.bidCount));
+  }
+  return lines.map((l) => (l.length > 120 ? `${l.slice(0, 119)}…` : l)).slice(0, 3);
 }
 
 export function buildRecapParticipants(
@@ -928,6 +1017,19 @@ export async function ensureRecapSnapshot(
     const roster = await listParticipants(socialSessionId);
     const medals = curateMedals(state, roster);
 
+    // Wave 4 (contract AC-07): derive the glow reveal payload from the SAME
+    // honest medal computation (one computation, dual write — verifier N5)
+    // plus server-side tier totals and a deterministic 3-variant table line
+    // (verifier M3). NO recap LLM wiring (V-4 locked): glow never enters
+    // the prompt path; the 「今晚的高光」 block renders structured data only.
+    const glow = state.sessionGlowEnabled === true
+      ? {
+          tiers: deriveGlowTiers(state, roster.map((entry) => entry.userId)),
+          medals,
+          tableLine: selectGlowTableLine(state, roster.length),
+        }
+      : undefined;
+
     const durationMinutes = Math.round(
       (Date.now() - (state.sessionStartedAt || state.phaseStartedAt || Date.now())) / 60000
     );
@@ -947,12 +1049,19 @@ export async function ensureRecapSnapshot(
       miniScriptRecapLine,
       auctionRecapLines: auctionRecapLines.length ? auctionRecapLines : undefined,
       durationMinutes,
+      // Wave 3 (contract AC-07): the dual-written highlights body rides the
+      // (pre-cleanup) source state into the recap prompt as 【本场高光】.
+      highlights: state.highlights,
     });
 
     state.recapSnapshot = {
       recapSummary: summaryResult.data,
       medals,
       meta: summaryResult.meta,
+      // Wave 4 (contract AC-07): flag-off snapshots carry NO `glow` key
+      // (byte-identity, AC-08); flag-on snapshots dual-write the same
+      // honest medal array (verifier N5).
+      ...(glow ? { glow } : {}),
       ...(state.endedEarlyAt && state.interruptedAtPhase
         ? {
             interrupted: {
@@ -1140,6 +1249,173 @@ export interface TransitionPhaseResult {
 }
 
 /**
+ * Lie Detective V2 (sprint wave1-2-lieDetectiveV2Enabled, contract AC-02/AC-03):
+ * resolve the effective lie-detective mode ONCE at lie_detective phase entry
+ * and snapshot it into session state (`state.lieDetectiveMode`). Resolution
+ * order: (1) existing state value — the single-test in-phase override from
+ * POST /:socialSessionId/lie-detective/mode → (2) DB flag
+ * `lieDetectiveV2Enabled` → (3) legacy env `LIE_DETECTIVE_MODE` fallback →
+ * (4) default 'v1'. A mid-session admin flip never mutates a live session;
+ * the `=== undefined` guard preserves a post-entry single-test overwrite on
+ * phase re-entry. Flag-off === exact legacy V1-default behavior.
+ */
+export async function resolveLieDetectiveModeSnapshot(
+  state: SocialSessionState,
+  socialSessionId?: string,
+): Promise<'v1' | 'v2'> {
+  if (state.lieDetectiveMode !== undefined) return state.lieDetectiveMode;
+  const flagOn = await getFeatureFlag('lieDetectiveV2Enabled');
+  const mode: 'v1' | 'v2' = flagOn ? 'v2' : getLieDetectiveMode();
+  state.lieDetectiveMode = mode;
+  logger.info('[SocialIcebreaker] lie detective mode snapshot', {
+    socialSessionId,
+    lieDetectiveMode: mode,
+    resolutionSource: flagOn ? 'db-flag' : 'env-fallback',
+  });
+  return mode;
+}
+
+/**
+ * Auction V2 (sprint wave2-auctionV2, contract AC-02): resolve the
+ * `auctionV2Enabled` DB flag ONCE at auction phase entry and snapshot it into
+ * session state (`state.auctionV2Enabled`). Every auction route reads the
+ * snapshot — a mid-session admin flip never mutates a live session, and the
+ * `=== undefined` guard keeps the first snapshot on phase re-entry. Legacy
+ * sessions that entered auction before this deploy keep undefined ≡ false ≡
+ * exact V1 behavior (contract AC-09); getFeatureFlag's own DB→env→default
+ * chain fails closed to false.
+ */
+export async function resolveAuctionV2Snapshot(
+  state: SocialSessionState,
+  socialSessionId?: string,
+): Promise<boolean> {
+  if (state.auctionV2Enabled !== undefined) return state.auctionV2Enabled;
+  const enabled = await getFeatureFlag('auctionV2Enabled');
+  state.auctionV2Enabled = enabled;
+  logger.info('[SocialIcebreaker] auction v2 flag snapshot', {
+    socialSessionId,
+    auctionV2Enabled: enabled,
+    resolutionSource: enabled ? 'db-flag' : 'env-fallback',
+  });
+  return enabled;
+}
+
+/**
+ * Personality Dice Choose-Your-Prompt (sprint wave1-3-personalityDiceChooseMode,
+ * contract AC-03): resolve the effective choose-mode flag ONCE at session start
+ * and snapshot it into session state (`state.personalityDiceChooseModeEnabled`).
+ * Resolution order: (1) existing state value (preserves a value already written
+ * by a prior resolve) → (2) DB flag `personalityDiceChooseModeEnabled` → env
+ * `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` → default `true`. A mid-session admin
+ * flip never mutates a live session.
+ *
+ * `pendingFlagRead` lets the caller start the DB read early (verifier N3:
+ * "initiate the /start flag read concurrently rather than serialized") and hand
+ * the in-flight promise in — the resolver then contributes zero additional
+ * latency to the `/start` critical path.
+ */
+/**
+ * Wave 3 (contract AC-02): resolve the highlights-injector flag ONCE per
+ * session at POST /start and snapshot it into session state. The DB read is
+ * started early by the caller (wave1-3 N3 lesson) and handed in as an
+ * in-flight promise so it overlaps the /start critical path instead of
+ * serialising a round-trip onto it. Mid-session admin flips never mutate a
+ * live session (snapshot canon). Sessions that bypass /start (single-test
+ * creation paths) leave the field undefined → falsy → extraction and
+ * injection stay off (fail-open to pre-Wave-3 behavior, verifier N3).
+ */
+export async function resolveHighlightsInjectorSnapshot(
+  state: SocialSessionState,
+  socialSessionId?: string,
+  pendingFlagRead?: Promise<boolean>,
+): Promise<boolean> {
+  if (state.highlightsInjectorEnabled !== undefined) {
+    return state.highlightsInjectorEnabled;
+  }
+  const enabled = pendingFlagRead
+    ? await pendingFlagRead
+    : await getFeatureFlag('highlightsInjectorEnabled', false);
+  state.highlightsInjectorEnabled = enabled;
+  logger.info('[SocialIcebreaker] highlights injector snapshot', {
+    socialSessionId,
+    highlightsInjectorEnabled: enabled,
+  });
+  return enabled;
+}
+
+/**
+ * Session Glow 高光值 (sprint wave4-sessionGlow, contract AC-02): resolve
+ * the `sessionGlowEnabled` DB flag ONCE at session start and snapshot it
+ * into session state (`state.sessionGlowEnabled`). Immutable for the
+ * session lifetime — a mid-session admin flip never mutates a live session.
+ * undefined (legacy / single-test-bypass sessions) is falsy → accumulation
+ * stays off and the recap is byte-for-byte pre-Wave-4 behavior (fail-open,
+ * verifier N6). getFeatureFlag's own DB→env→default chain fails closed to
+ * false = today's behavior. `pendingFlagRead` lets /start start the DB read
+ * concurrently (wave1-3 N3 pattern) so the resolver adds zero serialized
+ * latency to the /start critical path.
+ */
+export async function resolveSessionGlowSnapshot(
+  state: SocialSessionState,
+  socialSessionId?: string,
+  pendingFlagRead?: Promise<boolean>,
+): Promise<boolean> {
+  if (state.sessionGlowEnabled !== undefined) {
+    return state.sessionGlowEnabled;
+  }
+  const enabled = pendingFlagRead
+    ? await pendingFlagRead
+    : await getFeatureFlag('sessionGlowEnabled', false);
+  state.sessionGlowEnabled = enabled;
+  logger.info('[SocialIcebreaker] session glow snapshot', {
+    socialSessionId,
+    sessionGlowEnabled: enabled,
+    resolutionSource: enabled ? 'db-flag' : 'env-fallback',
+  });
+  return enabled;
+}
+
+export async function resolvePersonalityDiceChooseModeSnapshot(
+  state: SocialSessionState,
+  socialSessionId?: string,
+  pendingFlagRead?: Promise<boolean>,
+): Promise<boolean> {
+  if (state.personalityDiceChooseModeEnabled !== undefined) {
+    return state.personalityDiceChooseModeEnabled;
+  }
+  const enabled = pendingFlagRead
+    ? await pendingFlagRead
+    : await getFeatureFlag('personalityDiceChooseModeEnabled', true);
+  state.personalityDiceChooseModeEnabled = enabled;
+  logger.info('[SocialIcebreaker] personality dice choose-mode snapshot', {
+    socialSessionId,
+    personalityDiceChooseModeEnabled: enabled,
+    resolutionSource: resolveDiceChooseModeSource(enabled),
+  });
+  return enabled;
+}
+
+/**
+ * Recover the most likely resolution tier for the AC-02 observability log.
+ * `getFeatureFlag` collapses DB → env → default(true) into a boolean, so we
+ * infer: an explicit env value that agrees with the result is `env-fallback`;
+ * an unset env whose result equals the shipped default is `default`; anything
+ * else implies a DB override (`db-flag`). The single ambiguous case — a DB row
+ * explicitly equal to the default with the env unset — is reported as
+ * `default`, indistinguishable without a second redundant DB probe (the value
+ * is still correct either way). The default is hardcoded `true` rather than read
+ * from `DEFAULT_FLAG_VALUES` because several tests mock `../lib/featureFlags`
+ * as `{ getFeatureFlag }` only; see the flag registration in `featureFlags.ts`.
+ */
+function resolveDiceChooseModeSource(enabled: boolean): 'db-flag' | 'env-fallback' | 'default' {
+  const envRaw = process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED;
+  const envBool = envRaw === undefined ? undefined : envRaw.toLowerCase() === 'true';
+  if (envBool !== undefined && envBool === enabled) return 'env-fallback';
+  if (envBool === undefined && enabled === true) return 'default';
+  return 'db-flag';
+}
+
+/**
  * Single pipeline for EVERY phase transition: host advance, early-end,
  * stall recovery, early-end, custom select/end. Owns completion bookkeeping,
  * dwell metrics, per-phase cleanup, bonus-gate pause, next-phase seeding
@@ -1182,6 +1458,84 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   // just-left phase's content (auction lines, dice lines, undercover result,
   // mirror highlights, lie votes, miniscript premise).
   const preCleanupState: SocialSessionState = { ...state };
+
+  // Wave 3 (contract AC-06): extract aggregate highlights from the just-left
+  // phase BEFORE cleanup — cleanupPhaseStateForNextPhase wipes quipBattleVotes
+  // /quipBattleResults, so this placement is load-bearing for the quip
+  // section. Sync, rule-based, ZERO awaits and zero LLM calls on the
+  // transition path (the flag is snapshotted at /start). The merge dual-writes
+  // BOTH state.highlights and preCleanupState.highlights: preCleanupState is
+  // a shallow spread taken above (primitives copied by value) and BOTH recap
+  // paths consume it — deferred scheduleDeferredRecapSnapshot and inline
+  // ensureRecapSnapshot — so a direct X→recap transition (end-early, custom
+  // order, single-test skip) would otherwise silently drop the just-extracted
+  // section from the highest-value consumer (verifier M2; mirrors the O1
+  // recapData dual-write below). try/catch fail-open: an extractor throw
+  // logs (no PII) and leaves highlights unchanged — today's behavior.
+  if (state.highlightsInjectorEnabled === true) {
+    try {
+      const incoming = extractHighlightsForPhase(state, currentPhase);
+      const extractedKeys = (Object.keys(incoming) as Array<keyof typeof incoming>)
+        .filter((key) => Boolean(incoming[key]));
+      if (extractedKeys.length > 0) {
+        const merged = mergeSessionHighlights(state.highlights, incoming);
+        if (merged !== state.highlights) {
+          state.highlights = merged;
+          preCleanupState.highlights = merged;
+        }
+        // AC-11 / RN2 / RN3: one trace per CALL when sections were extracted
+        // (the bonus-gate pause pass fires extraction idempotently — trace
+        // assertions count calls, not logical transitions). Counts/keys only
+        // in extras — never content, never PII.
+        logAITrace({
+          traceId: createAiCorrelationId(),
+          domain: 'icebreaker',
+          feature: 'highlightsExtractor',
+          provider: null,
+          model: 'n/a',
+          latencyMs: 0,
+          success: true,
+          fallbackUsed: false,
+          fromCache: false,
+          promptVersion: HIGHLIGHTS_EXTRACTOR_PROMPT_VERSION,
+          extra: { sections: extractedKeys, totalChars: merged?.length ?? 0 },
+        });
+      }
+    } catch (error) {
+      logger.warn('[SocialIcebreaker] highlights extraction failed; continuing without highlights', {
+        socialSessionId,
+        fromPhase: currentPhase,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // Wave 4 (contract AC-05): accumulate glow points + participation marks
+  // from the just-left phase BEFORE cleanup — the same load-bearing choke
+  // point as the Wave 3 extractor above. cleanupPhaseStateForNextPhase
+  // wipes the quip/mirror/undercover/miniscript/dice/lie sources
+  // (socialIcebreakerPhaseConfig.ts), so this placement is load-bearing.
+  // Sync, rule-based, ZERO awaits and zero LLM calls on the transition
+  // path (the flag is snapshotted at /start). Dual-writes BOTH state.* and
+  // preCleanupState.*: preCleanupState is a shallow spread taken above and
+  // BOTH recap paths consume it — deferred scheduleDeferredRecapSnapshot
+  // and inline ensureRecapSnapshot (verifier M2 lesson; mirrors the
+  // highlights dual-write). try/catch fail-open: an accumulation throw
+  // logs (no PII) and NEVER blocks the phase transition (contract AC-05).
+  if (state.sessionGlowEnabled === true) {
+    try {
+      accumulateGlowForPhase(state, currentPhase);
+      preCleanupState.glowPoints = state.glowPoints;
+      preCleanupState.glowParticipation = state.glowParticipation;
+      preCleanupState.glowBanked = state.glowBanked;
+    } catch (error) {
+      logger.warn('[SocialIcebreaker] glow accumulation failed; continuing without glow', {
+        socialSessionId,
+        fromPhase: currentPhase,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   cleanupPhaseStateForNextPhase(state, currentPhase);
 
@@ -1273,6 +1627,25 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
     });
   }
 
+  // Lie V2 (sprint wave1-2, contract AC-03): resolve the lie-detective mode
+  // ONCE at lie_detective phase entry and snapshot it into session state.
+  // Every lie-detective route reads the snapshot via
+  // getLieDetectiveMode(state.lieDetectiveMode) — a mid-session admin flip
+  // never affects a live session. The undefined guard preserves a single-test
+  // in-phase override (which can only be written post-entry) on re-entry.
+  if (targetPhase === 'lie_detective' && state.lieDetectiveMode === undefined) {
+    await resolveLieDetectiveModeSnapshot(state, socialSessionId);
+  }
+
+  // Auction V2 (sprint wave2-auctionV2, contract AC-02): resolve the flag
+  // ONCE at auction phase entry and snapshot it into session state. Every
+  // auction route reads state.auctionV2Enabled — a mid-session admin flip
+  // never affects a live session. Legacy sessions that entered auction
+  // before this deploy keep undefined ≡ false ≡ exact V1 behavior.
+  if (targetPhase === 'auction' && state.auctionV2Enabled === undefined) {
+    await resolveAuctionV2Snapshot(state, socialSessionId);
+  }
+
   if (targetPhase === 'warmup') {
     state.warmupReadyUserIds = [];
     // Single-test bot attendees default to ready when warmup restarts.
@@ -1307,6 +1680,8 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
         eventType: state.eventType || '活动',
         participantCount: state.playerCount,
         seed: socialSessionId,
+        // wave3 (AC-07): thread aggregate session highlights into the prompt.
+        highlights: state.highlights,
         ...(matchingAware
           ? {
               roster: microRoster.map((p) => ({

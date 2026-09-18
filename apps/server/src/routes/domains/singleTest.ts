@@ -28,10 +28,16 @@ export function registerSingleTestRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/test/single-test/reset", async (_req: any, res: any) => {
+  app.post("/api/test/single-test/reset", async (req: any, res: any) => {
     if (!isSingleTestMode()) {
       return res.status(403).json({ error: "Only available in single test mode" });
     }
+
+    // Security finding N1 (2026-09-16): /reset previously had no auth at all —
+    // any anonymous caller could delete single-test data whenever the mode flag
+    // was on. Mirror /start's authenticated-user requirement.
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) return;
 
     try {
       const result = await cleanupSingleTestData();

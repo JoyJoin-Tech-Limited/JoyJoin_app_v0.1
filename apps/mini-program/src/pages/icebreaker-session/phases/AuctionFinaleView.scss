@@ -1,0 +1,173 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$af-accent: $phase-accent-auction;
+$af-deep: $phase-accent-auction-deep;
+
+// Wave 2 Auction V2 finale (D4) — pure CSS + existing icon/asset体系, zero
+// new heavy assets (spec D8.3). BEM block: auction-finale.
+.auction-finale {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-md 0;
+  }
+
+  &__hero-icon {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__hero-title {
+    @include type-heading;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__hero-sub {
+    @include type-caption;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__awards {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__award {
+    width: 100%;
+  }
+
+  &__award-front,
+  &__award-back {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-md;
+    min-height: 200rpx;
+    border-radius: $radius-md;
+  }
+
+  &__award-front {
+    background: rgba($af-accent, 0.1);
+    border: 2rpx dashed rgba($af-deep, 0.35);
+  }
+
+  &__award-front-title {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $af-deep;
+  }
+
+  &__award-front-hint {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__award-back {
+    background: rgba($af-deep, 0.1);
+    border: 2rpx solid rgba($af-deep, 0.4);
+  }
+
+  &__award-title {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $af-deep;
+  }
+
+  &__award-headline {
+    @include type-heading;
+    color: $color-text-primary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__award-detail {
+    @include type-body;
+    color: $color-text-secondary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__bill {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($af-accent, 0.16);
+  }
+
+  &__bill-title {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $af-deep;
+  }
+
+  &__bill-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: 8rpx 0;
+  }
+
+  &__bill-name {
+    @include type-body;
+    color: $color-text-primary;
+    flex-shrink: 0;
+    max-width: 200rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__bill-lots {
+    @include type-caption;
+    color: $color-text-secondary;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__bill-coins {
+    @include type-label;
+    font-family: $font-mono;
+    color: $af-deep;
+    flex-shrink: 0;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__applause {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm 0;
+  }
+
+  &__applause-hint {
+    @include type-caption;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+}

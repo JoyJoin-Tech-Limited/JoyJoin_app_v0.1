@@ -7,6 +7,7 @@ import { buildFallbackAIMeta, buildLiveAIMeta } from '@shared/types/aiMeta';
 import {
   buildRecapSummaryPrompt,
   RECAP_SUMMARY_PROMPT_VERSION,
+  RECAP_SUMMARY_PROMPT_VERSION_HL,
 } from '../ai/socialIcebreakerPrompts';
 import { getClientForFunction } from '../ai/socialModelRouter';
 import { createAiCorrelationId, logAITrace } from '../lib/aiTraceLogger';
@@ -49,13 +50,22 @@ export async function generateRecapSummary(params: {
   /** Bounded one-liners after auction phase, e.g. lot titles + winners */
   auctionRecapLines?: string[];
   durationMinutes: number;
+  /** Wave 3 (contract AC-07): aggregate session highlights body (state.highlights).
+   *  Threaded into the prompt as a 【本场高光】 block when non-empty; also drives
+   *  the paired *_HL promptVersion selection (AC-08). */
+  highlights?: string;
 }): Promise<AIServiceResult<{ headline: string; moments: string[]; closingLine: string }>> {
   const aiCorrelationId = createAiCorrelationId();
+  // Wave 3 (contract AC-08): paired version selected pre-build, never post-hoc.
+  const highlightsInjected = Boolean(params.highlights?.trim());
+  const promptVersion = highlightsInjected
+    ? RECAP_SUMMARY_PROMPT_VERSION_HL
+    : RECAP_SUMMARY_PROMPT_VERSION;
 
   // If AI is disabled, return deterministic default recap immediately
   if (!isRecapLlmEnabled()) {
-    const meta = buildFallbackAIMeta('disabled', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    const meta = buildFallbackAIMeta('disabled', promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     return attachAIGC({ data: getDefaultRecap(params), meta });
   }
 
@@ -83,8 +93,8 @@ export async function generateRecapSummary(params: {
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
-      const meta = buildFallbackAIMeta('empty_response', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      const meta = buildFallbackAIMeta('empty_response', promptVersion, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
       return attachAIGC({ data: getDefaultRecap(params), meta });
     }
 
@@ -92,8 +102,8 @@ export async function generateRecapSummary(params: {
     if (parsed.headline && parsed.moments && parsed.closingLine) {
       const latencyMs = Date.now() - t0;
       logger.info(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms`);
-      const meta = buildLiveAIMeta(provider, RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion, extra: { highlightsInjected } });
       fireAndForgetQualityGate(content, 'icebreaker_recap', aiCorrelationId, 'recap');
       const liveRecap: { headline: string; moments: string[]; closingLine: string } = parsed;
       return moderateAndAttachAIGC(
@@ -102,7 +112,7 @@ export async function generateRecapSummary(params: {
           provider,
           model,
           latencyMs,
-          promptVersion: RECAP_SUMMARY_PROMPT_VERSION,
+          promptVersion,
           aiCorrelationId,
           feature: 'generateRecapSummary',
           fallbackData: getDefaultRecap(params),
@@ -112,14 +122,14 @@ export async function generateRecapSummary(params: {
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
-    const meta = buildFallbackAIMeta('parse_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     return attachAIGC({ data: getDefaultRecap(params), meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateRecapSummary error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
-    const meta = buildFallbackAIMeta('llm_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    const meta = buildFallbackAIMeta('llm_error', promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     return attachAIGC({ data: getDefaultRecap(params), meta });
   }
 }

@@ -104,6 +104,10 @@ router.post('/:socialSessionId/set-tier', async (req: Request, res: Response) =>
       {
         participantCount: rosterAfterTierChange.length,
         eventType: state.eventType,
+        // wave1-3 (AC-10): the tier-change re-enqueue carries the SAME session
+        // choose-mode snapshot, so a kill-switched session's replacement pregen
+        // is never choose-mode-shaped.
+        personalityDiceChooseMode: state.personalityDiceChooseModeEnabled,
         participants: rosterAfterTierChange.map((p) => ({
           userId: p.userId,
           displayName: p.displayName,

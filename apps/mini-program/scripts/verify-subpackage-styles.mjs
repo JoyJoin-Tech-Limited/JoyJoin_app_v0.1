@@ -254,6 +254,13 @@ const REQUIREMENTS = [
       'warmup-welcome__',
       'icebreaker__recap-hero{',
       'icebreaker__recap-connect-btn{',
+      // Wave 4 Session Glow (2026-09-18, contract AC-16): the 「今晚的高光」
+      // block SCSS is @use'd by the page SCSS and must reach this page WXSS —
+      // same subpackage style-splitting guard as the families above.
+      'recap-glow__card{',
+      'recap-glow__card--self{',
+      'recap-glow__tier--blazing{',
+      'recap-glow__detail-toggle{',
       // MiniScript V2 P2 (2026-08-28, contract AC-08/09): the evidence tray
       // and clue drawer SCSS are @use'd by the page SCSS and must reach this
       // page WXSS — same subpackage style-splitting trap guard as the
@@ -265,6 +272,11 @@ const REQUIREMENTS = [
       'miniscript-clues__surface{',
       'miniscript-hero__hint{',
       'miniscript-hero__honor{',
+      // Wave 2 Auction V2 (2026-09-17, contract AC-15): the ladder UI and the
+      // finale view SCSS are @use'd by the page SCSS and must reach this page
+      // WXSS — same subpackage style-splitting guard as the families above.
+      'auction-hero__ladder{',
+      'auction-finale__award-front{',
     ],
   },
   {

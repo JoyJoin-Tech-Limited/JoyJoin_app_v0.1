@@ -1,7 +1,9 @@
 import type { Router } from 'express';
 import type { SocialSessionState, SocialIcebreakerPhase, LieDetectivePlayer, LieDetectiveVote, LieDetectiveReveal } from '@shared/socialIcebreaker';
 import { z } from 'zod';
-import { AUCTION_STARTING_COINS } from '@shared/socialIcebreaker';
+import { AUCTION_STARTING_COINS, AUCTION_LOT_COUNT_MIN, AUCTION_MAX_LOTS } from '@shared/socialIcebreaker';
+import { getAuctionUnsoldLotLine } from '@shared/copy/auctionV2';
+import { resolveAuctionLotsPromptVersion } from '../socialIcebreakerAuctionAI';
 import {
   generateXiaoYueComment,
   generateAuctionLots,
@@ -34,9 +36,10 @@ import {
   markPhaseParticipationComplete,
   isPhaseRosterComplete,
   hasFullPhaseQuorum,
+  buildAuctionAwardRecapLines,
 } from './socialIcebreakerHelpers';
 import { getPhaseModule } from '@shared/phaseRegistry';
-import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
+import { emitSocialGroupBeat, emitAuctionOutbidBeatRateLimited } from '../lib/socialGroupBeats';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
   getSessionWithExpiry,
@@ -48,6 +51,8 @@ import {
   listParticipants,
   setLieTruths,
   getLieTruths,
+  computeRecapDwellMs,
+  recordRecapDwellMetric,
   PRESENCE_THRESHOLD_MS,
 } from '../lib/socialIcebreakerStore';
 import {
@@ -993,7 +998,10 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
   if ((state.auctionLots || []).length > 0) {
     const cachedMeta =
       state.auctionLotsMeta ??
-      buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-auction-lots-v1');
+      // Auction V2 (contract AC-07(f), verifier M1/N3): per-snapshot version
+      // resolver — legacy/flag-off stamps v2 (fixing the old hardcoded-v1
+      // drift), V2 sessions stamp v3. Meta-only, client-inert.
+      buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, resolveAuctionLotsPromptVersion(state.auctionV2Enabled));
     return res.json({
       lots: state.auctionLots,
       meta: cachedMeta,
@@ -1006,10 +1014,20 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
   try {
     const roster = await listParticipants(socialSessionId);
     const archetypeCtx = buildArchetypeContext(roster);
+    // Auction V2 (contract AC-07): flag OFF → args byte-identical to legacy
+    // (no vibe, no targetLotCount, no session seed, participantCount as-is).
+    const auctionV2 = state.auctionV2Enabled === true;
+    const bidderCount = roster.filter((p) => p.userId !== state.hostUserId).length;
+    const targetLotCount = auctionV2
+      ? Math.min(Math.max(bidderCount, AUCTION_LOT_COUNT_MIN), AUCTION_MAX_LOTS)
+      : undefined;
     const lotResult = await generateAuctionLots({
       participantCount: Math.max(state.playerCount, roster.length || 1),
       eventType: state.eventType,
       sessionContext: archetypeCtx.mixText ? { mixText: archetypeCtx.mixText } : undefined,
+      ...(auctionV2
+        ? { auctionV2: true, vibe: state.vibe, targetLotCount, sessionId: socialSessionId }
+        : {}),
     });
     const balances: Record<string, number> = {};
     for (const p of roster) {
@@ -1089,6 +1107,11 @@ router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
   }
 
   const previousHighBidder = high?.userId ?? null;
+  // Auction V2 (contract AC-04): all-in = bid commits the full spendable
+  // balance (balance + own escrowed high bid). Flag OFF → isAllIn never
+  // computed, records byte-identical to legacy.
+  const auctionV2 = state.auctionV2Enabled === true;
+  const isAllIn = auctionV2 && amount === spendable;
 
   if (high) {
     balances[high.userId] = (balances[high.userId] ?? 0) + high.amount;
@@ -1096,15 +1119,30 @@ router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
 
   balances[userId] = spendable - amount;
   state.auctionBalances = balances;
-  state.auctionHighBid = { userId, amount };
+  state.auctionHighBid = isAllIn ? { userId, amount, isAllIn: true } : { userId, amount };
 
   // Persist bid to history (D5)
   const bidHistory = [...(state.auctionBidHistory || [])];
   const currentLotIndex = state.auctionCurrentLotIndex ?? 0;
-  bidHistory.push({ userId, amount, at: Date.now(), lotIndex: currentLotIndex });
+  const bidRecord = { userId, amount, at: Date.now(), lotIndex: currentLotIndex };
+  bidHistory.push(isAllIn ? { ...bidRecord, isAllIn: true } : bidRecord);
   state.auctionBidHistory = bidHistory.slice(0, 200); // cap at 200 entries
 
   await updateSession(socialSessionId, state);
+
+  // Auction V2 (contract AC-05): fire-and-forget group beats — the 3s poll
+  // stays the sole state truth; beats only buzz early. Dual-gated: the
+  // session snapshot here + icebreakerGroupBeatsEnabled inside the emitter.
+  if (auctionV2) {
+    if (previousHighBidder && previousHighBidder !== userId) {
+      void emitAuctionOutbidBeatRateLimited(state.icebreakerSessionId);
+    }
+    // All-in beat dedupe: same bidder re-firing while already holding an
+    // all-in high bid does not re-buzz (spec D3.2).
+    if (isAllIn && !(high?.userId === userId && high?.isAllIn === true)) {
+      void emitSocialGroupBeat(state.icebreakerSessionId, 'auction_all_in');
+    }
+  }
 
   return res.json({
     highBid: state.auctionHighBid,
@@ -1150,18 +1188,68 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
   const roster = await listParticipants(socialSessionId);
   const nameOf = (uid: string) =>
     recapDisplayNameByUserId(roster, state, uid);
+  const auctionV2 = state.auctionV2Enabled === true;
+
+  // Auction V2 (contract AC-06, verifier M6): concurrent-duplicate guard. Two
+  // parallel close-lot requests can read the same idx; the second one to
+  // observe a settled result for this lotIndex no-ops instead of appending a
+  // duplicate auctionLotResults entry or recap line. (A sequential same-lot
+  // retry is unreachable — the first call advances auctionCurrentLotIndex;
+  // the sequential middle-lot double-tap footgun is a pre-existing behavior
+  // ruled out of scope by verifier R2.)
+  if (auctionV2 && (state.auctionLotResults || []).some((r) => r.lotIndex === idx)) {
+    return res.json({
+      currentLotIndex: state.auctionCurrentLotIndex ?? 0,
+      allLotsClosed: state.auctionAllLotsClosed ?? false,
+      recapLines: state.auctionRecapLines,
+      duplicate: true,
+      state: await buildClientState(state, userId),
+    });
+  }
 
   const lines = [...(state.auctionRecapLines || [])];
   if (high) {
     lines.push(`${lot.title}由${nameOf(high.userId)}以${high.amount}虚拟币拍下`);
   } else {
-    lines.push(`${lot.title}流拍（无人出价）`);
+    // Auction V2 softens the unsold copy (spec D7.4); flag OFF keeps the
+    // legacy 「流拍（无人出价）」 byte-identical.
+    lines.push(auctionV2 ? getAuctionUnsoldLotLine(lot.title) : `${lot.title}流拍（无人出价）`);
   }
 
-  state.auctionRecapLines = lines.slice(0, 16);
+  // Auction V2 (contract AC-06): per-lot settlement record — the finale's
+  // sole data source. bidCount includes bot records (verifier M3: bot bids
+  // carry lotIndex but no isAllIn — optional field, wasAllIn stays false).
+  if (auctionV2) {
+    const results = [...(state.auctionLotResults || [])];
+    const lotBids = (state.auctionBidHistory || []).filter((b) => b.lotIndex === idx);
+    const winningRecord = high
+      ? [...lotBids].reverse().find((b) => b.userId === high.userId && b.amount === high.amount)
+      : undefined;
+    results.push({
+      lotIndex: idx,
+      lotId: lot.id,
+      title: lot.title,
+      winnerUserId: high?.userId ?? null,
+      winningAmount: high?.amount ?? null,
+      bidCount: lotBids.length,
+      wasAllIn: winningRecord?.isAllIn === true,
+    });
+    state.auctionLotResults = results;
+  }
+
+  const isFinalLot = idx >= lots.length - 1;
+  if (auctionV2 && isFinalLot) {
+    // Recap v2 (contract AC-06): ≤3 deterministic award lines on the final
+    // hammer. Budget: keep the newest 8 lines so award lines REPLACE the
+    // earliest per-lot lines when over budget (never dropped themselves).
+    lines.push(...buildAuctionAwardRecapLines(state.auctionLotResults ?? [], nameOf));
+    state.auctionRecapLines = lines.slice(-8);
+  } else {
+    state.auctionRecapLines = lines.slice(0, 16);
+  }
   state.auctionHighBid = null;
 
-  if (idx >= lots.length - 1) {
+  if (isFinalLot) {
     state.auctionAllLotsClosed = true;
   } else {
     state.auctionCurrentLotIndex = idx + 1;
@@ -1350,6 +1438,28 @@ router.post('/:socialSessionId/force-end', async (req: any, res) => {
   const flagEnabled = await getFeatureFlag('socialIcebreakerClientForceEnd', false);
   if (!flagEnabled) {
     return res.status(503).json({ error: 'Force-end is not enabled', code: 'FORCE_END_DISABLED' });
+  }
+
+  // Wave 5 T-2 (G3 recap-dwell leg): force-end is a terminal exit that
+  // bypasses transitionPhase, so a table sitting in recap would never get a
+  // recap dwell row. Write it here (fire-and-forget, first-write-wins via
+  // onConflictDoNothing — the TTL sweep writes the same row for sessions
+  // that expire in recap, never a duplicate or overwrite).
+  if (state.currentPhase === 'recap') {
+    const recapDwellMs = computeRecapDwellMs(state.phaseStartedAt, Date.now());
+    if (recapDwellMs !== null) {
+      recordRecapDwellMetric(socialSessionId, {
+        dwellTimeMs: recapDwellMs,
+        startedAt: new Date(state.phaseStartedAt as number),
+        endedAt: new Date(),
+        participantCount: state.playerCount,
+      }).catch((err) => {
+        logger.warn('[PhaseMetrics] recap dwell save failed on force-end', {
+          socialSessionId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
   }
 
   state.currentPhase = 'ended' as SocialIcebreakerPhase;

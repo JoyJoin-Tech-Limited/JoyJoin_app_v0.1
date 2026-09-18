@@ -9,6 +9,7 @@
 // phase/component stylesheet of this subpackage is therefore @use'd here and
 // the matching `import './X.scss'` side effects are removed from the TSX.
 @use './phases/AuctionHeroView';
+@use './phases/AuctionFinaleView';
 @use './phases/GroupMirrorHeroView';
 @use './phases/LieDetectiveHeroView';
 @use './phases/MicroChallengeHeroView';
@@ -17,6 +18,7 @@
 @use './phases/MiniScriptHeroView';
 @use './phases/PersonalityDiceHeroView';
 @use './phases/QuipBattleHeroView';
+@use './phases/RecapGlowBlock';
 @use './phases/RecapPhaseView';
 @use './phases/SpeedFriendingHeroView';
 @use './phases/UndercoverWordHeroView';

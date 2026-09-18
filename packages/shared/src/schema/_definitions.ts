@@ -27,6 +27,7 @@ import {
   CHILDREN_OPTIONS,
   PRONOUNS_OPTIONS,
 } from "../constants";
+import { isValidTierId, UNMAPPABLE_BLIND_BOX_BUDGET_LABEL } from "../budgetTiers.js";
 
 // Session storage table (required for Replit Auth)
 export const sessions = pgTable(
@@ -930,6 +931,36 @@ export const insertEventPoolSchema = createInsertSchema(eventPools).omit({
   minMaleCount: z.number().int().min(0).max(20).optional(),
 });
 
+/**
+ * Budget-tier value allow-lists (T6-strict). Registry-derived — never hardcode
+ * tier ids/labels here (ratchet: scripts/check/check-budget-tiers.mjs).
+ *
+ * - `budgetTierIdSchema` is the strict allow-list: only canonical ids from
+ *   `packages/shared/src/budgetTiers.ts` pass. Used by admin venue writes whose
+ *   `budget_categories` column was retagged to canonical ids by migration 0093.
+ * - `budgetTierRegistrationValueSchema` additionally tolerates the blind-box
+ *   unmappable label (`UNMAPPABLE_BLIND_BOX_BUDGET_LABEL`), which has no
+ *   registry counterpart (decision B3 is OPEN).
+ *   Do NOT reject it here — see UNMAPPABLE_BLIND_BOX_BUDGET_LABEL. The
+ *   registration funnel's explicit rejection (lib/eventPoolRegistration.ts)
+ *   applies the same exemption.
+ *
+ * Array length is intentionally NOT capped (`max(1)` rejected): budget tiers
+ * are documented multi-select (PRODUCT_REQUIREMENTS.md / _definitions column
+ * comments). `min(1)` required-ness lives at the route/funnel boundary, not on
+ * this table insert schema — see sprint-contract.budget-t6-strict-20260916 §3.
+ */
+export const budgetTierIdSchema = z.string().refine(isValidTierId, {
+  message: "预算档位不在可选范围内",
+});
+
+export const budgetTierRegistrationValueSchema = z
+  .string()
+  .refine(
+    (value) => isValidTierId(value) || value === UNMAPPABLE_BLIND_BOX_BUDGET_LABEL,
+    { message: "预算档位不在可选范围内" },
+  );
+
 export const insertEventPoolRegistrationSchema = createInsertSchema(eventPoolRegistrations).omit({
   id: true,
   matchStatus: true,
@@ -940,12 +971,14 @@ export const insertEventPoolRegistrationSchema = createInsertSchema(eventPoolReg
 }).extend({
   poolId: z.string().min(1),
   userId: z.string().min(1),
-  budgetRange: z.array(z.string()).optional(),
+  budgetRange: z.array(budgetTierRegistrationValueSchema).optional(),
   preferredLanguages: z.array(z.string()).optional(),
   socialGoals: z.array(z.string()).optional(),
   cuisinePreferences: z.array(z.string()).optional(),
   dietaryRestrictions: z.array(z.string()).optional(),
   tasteIntensity: z.array(z.string()).optional(),
+  // 酒局 budget field — allow-listed for the same reason as budgetRange above.
+  barBudgetRange: z.array(budgetTierRegistrationValueSchema).optional(),
 });
 
 export const insertEventPoolGroupSchema = createInsertSchema(eventPoolGroups).omit({

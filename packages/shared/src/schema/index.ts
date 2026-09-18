@@ -12,6 +12,13 @@ export * from './venues.js';
 export * from './equipment.js';
 export * from './personalStory.js';
 export * from './flash.js';
+// T6-strict budget-tier allow-lists (registry-derived). Surfaced explicitly so
+// server consumers (registration funnel, admin venue schema) can import them
+// from the `@shared/schema` barrel without reaching into _definitions.
+export {
+  budgetTierIdSchema,
+  budgetTierRegistrationValueSchema,
+} from './_definitions.js';
 export {
   userCityInterests,
   cityUnlockProgress,

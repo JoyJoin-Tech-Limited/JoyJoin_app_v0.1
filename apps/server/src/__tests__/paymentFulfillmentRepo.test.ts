@@ -195,7 +195,8 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
     expect(
       insertValuesCalls.some(({ values }) =>
         values?.poolId === "pool-1" &&
-        values?.budgetRange?.[0] === "150-200" &&
+        // L1 write normalization: legacy 饭局 label persisted as its canonical id.
+        values?.budgetRange?.[0] === "dining_150_200" &&
         values?.preferredLanguages?.[0] === "普通话" &&
         values?.eventIntent?.[0] === "交朋友",
       ),

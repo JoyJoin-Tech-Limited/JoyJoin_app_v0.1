@@ -23,6 +23,7 @@ import { db } from "../../db";
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { getFeatureFlag } from "../../lib/featureFlags";
 import { getTestPriceCents } from "../../lib/paymentTestPrice";
+import { normalizeBudgetRangeForWrite, resolveBudgetEventType } from "../../lib/budgetTierWrite";
 
 const getRequestClientIp = (req: Request): string => {
   const forwardedFor = req.headers["x-forwarded-for"];
@@ -137,7 +138,16 @@ function normalizeEventRegistrationPayload(payload: unknown): NormalizedEventReg
   const budgetRange = toStringArray(source.budgetRange);
   const budgetTier = toStringArray(source.budgetTier);
   const budget = toStringArray(source.budget);
-  const normalizedBudgetRange = budgetRange.length > 0 ? budgetRange : budgetTier.length > 0 ? budgetTier : budget;
+  const rawBudgetRange = budgetRange.length > 0 ? budgetRange : budgetTier.length > 0 ? budgetTier : budget;
+
+  // L1 write normalization: this checkout payload feeds the event registration
+  // `budget_range` column. Namespace follows the request event type (defaults to
+  // the 饭局 dining namespace, which is where blind-box `100-200` lives).
+  const normalizedBudgetRange = normalizeBudgetRangeForWrite(
+    rawBudgetRange,
+    resolveBudgetEventType(getNonEmptyString(source.eventType)),
+    "payments.eventRegistrationPayload.budgetRange",
+  );
 
   if (normalizedBudgetRange.length === 0) {
     return null;

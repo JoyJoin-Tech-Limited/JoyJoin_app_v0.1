@@ -166,6 +166,14 @@ export interface AIResponseMeta {
   aigc?: AIGCMeta;
 
   /**
+   * Auction V2 (sprint wave2-auctionV2, verifier M2): number of lots padded
+   * from the curated fallback bank into an otherwise-live LLM generation.
+   * Present only when > 0; fallbackUsed is true whenever this is set, so the
+   * AIGC label stays fail-closed on mixed live+curated payloads.
+   */
+  paddedCount?: number;
+
+  /**
    * AI Quality Gate scores (optional — populated when the quality judge ran).
    * See apps/server/src/ai/aiQualityGate.ts for dimensions and thresholds.
    */

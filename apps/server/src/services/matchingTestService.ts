@@ -25,7 +25,7 @@ import { logAdminAudit } from "../lib/adminAuditLogger";
 import { ARCHETYPE_DEFINITIONS } from "@shared/personality/archetypeNames";
 import { INTEREST_TAXONOMY } from "@shared/interests";
 import { isMatchingTestMode } from "../lib/isSingleTestMode";
-import { parseEventDate } from "../venueAssignmentService";
+import { parseEventDate, toBusinessLocalWallClock, fromBusinessLocalWallClock } from "../lib/eventDateTime";
 import { cascadeDeleteByIds } from "../lib/fkCascadeDelete";
 
 type DbTransaction = NodePgDatabase<typeof schema>;
@@ -147,20 +147,28 @@ function assertMatchingTestMode() {
 }
 
 /**
- * Next Friday dinner slot (18:59). Used for pool.dateTime so the mini-program
- * 今晚这桌 brief renders a realistic dinner time instead of "now + 7 days"
- * (which landed at whatever time-of-day the test was started, e.g. 14:23).
+ * Next Friday dinner slot (18:59) **business-local (UTC+8)**.
+ *
+ * Returns a true UTC instant — the same convention `date_time` columns use — computed
+ * with UTC getters so the result is independent of the server's ambient timezone.
+ * Used for pool.dateTime so the mini-program 今晚这桌 brief renders a realistic dinner
+ * time instead of "now + 7 days" (which landed at whatever time-of-day the test was
+ * started, e.g. 14:23).
  */
 export function nextDinnerDateTime(): Date {
-  const now = new Date();
-  const d = new Date(now);
-  d.setHours(18, 59, 0, 0);
-  const delta = (5 - d.getDay() + 7) % 7; // 5 = Friday
-  d.setDate(d.getDate() + delta);
-  if (d.getTime() <= now.getTime()) {
-    d.setDate(d.getDate() + 7);
+  const localNow = toBusinessLocalWallClock(new Date());
+  const target = new Date(Date.UTC(
+    localNow.getUTCFullYear(),
+    localNow.getUTCMonth(),
+    localNow.getUTCDate(),
+    18, 59, 0, 0,
+  ));
+  const delta = (5 - target.getUTCDay() + 7) % 7; // 5 = Friday
+  target.setUTCDate(target.getUTCDate() + delta);
+  if (target.getTime() <= localNow.getTime()) {
+    target.setUTCDate(target.getUTCDate() + 7);
   }
-  return d;
+  return fromBusinessLocalWallClock(target);
 }
 
 /**

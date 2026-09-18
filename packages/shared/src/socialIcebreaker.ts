@@ -184,6 +184,10 @@ export interface AuctionLot {
 export interface AuctionHighBid {
   userId: string;
   amount: number;
+  /** Auction V2 (sprint wave2-auctionV2, contract AC-03): true when this bid
+   *  committed the bidder's full spendable balance. Present only on V2
+   *  sessions; absent on legacy/flag-off records. */
+  isAllIn?: boolean;
 }
 
 /** Persistent bid record for cross-session rejoin (D5) */
@@ -192,6 +196,29 @@ export interface AuctionBidRecord {
   amount: number;
   at: number;
   lotIndex: number;
+  /** Auction V2 (contract AC-03): see AuctionHighBid.isAllIn. */
+  isAllIn?: boolean;
+}
+
+/**
+ * Auction V2 (sprint wave2-auctionV2, contract AC-03/AC-06): per-lot
+ * settlement record, written by `close-lot` (one per lot, idempotent by
+ * lotIndex). Sole data source for the two-act finale and directly consumable
+ * by the Wave 4 高光值 workstream. Session-ephemeral — never persisted to
+ * any profile.
+ */
+export interface AuctionLotResult {
+  lotIndex: number;
+  lotId: string;
+  /** Snapshot at close time, immune to later auctionLots mutation. */
+  title: string;
+  /** null = 流拍 (unsold). */
+  winnerUserId: string | null;
+  winningAmount: number | null;
+  /** Total bids on this lot (auctionBidHistory filtered by lotIndex). */
+  bidCount: number;
+  /** true when the winning bid was an all-in. */
+  wasAllIn: boolean;
 }
 
 // ─── Undercover Word (谁是卧底) ────────────────────────────────────────────
@@ -358,6 +385,11 @@ export const AUCTION_MIN_LOTS = 2;
 
 export const AUCTION_MAX_LOTS = 5;
 
+/** Auction V2 (contract AC-03): deterministic lot-count target LOWER bound
+ *  (clamp(bidderCount, AUCTION_LOT_COUNT_MIN, AUCTION_MAX_LOTS)). Distinct
+ *  from AUCTION_MIN_LOTS, which stays the LLM payload schema constraint. */
+export const AUCTION_LOT_COUNT_MIN = 3;
+
 export const auctionLotSchema = z.object({
   id: z.string().min(1).max(48),
   title: z.string().min(1).max(100),
@@ -453,6 +485,26 @@ export interface Medal {
   recipientDisplayName: string;
   description: string;
 }
+
+/** Wave 4 高光值 Session Glow (sprint wave4-sessionGlow, contract AC-03):
+ *  per-source glow-point breakdown. Points are server-side derivation inputs
+ *  (medals + tier assignment) — numbers are NEVER rendered on any client
+ *  surface; other players' breakdowns never leave the server. */
+export interface GlowPointBreakdown {
+  quip: number;
+  mirror: number;
+  auction: number;
+  miniscript: number;
+  undercover: number;
+  challenge: number;
+  dice: number;
+  lie: number;
+}
+
+/** Wave 4 (contract AC-03, verifier R1): tier machine values — lowercase
+ *  English, persisted in state. Chinese display words 微光/暖心/闪闪发光
+ *  live in the copy layer (packages/shared/src/copy/sessionGlow.ts). */
+export type GlowTier = 'ember' | 'warm' | 'blazing';
 
 export interface MiniScriptPlayerRuntimeView {
   slotIndex: number;
@@ -660,6 +712,13 @@ export interface SocialSessionState {
   auctionRecapLines?: string[];
   /** Persistent bid history across the whole auction phase (D5) */
   auctionBidHistory?: AuctionBidRecord[];
+  /** Auction V2 (contract AC-03/AC-06): per-lot settlement records written by
+   *  close-lot; sole data source for the finale. Absent on V1 sessions. */
+  auctionLotResults?: AuctionLotResult[];
+  /** Auction V2 (contract AC-02): DB flag `auctionV2Enabled` resolved ONCE at
+   *  auction phase entry (transitionPhase). undefined ≡ false ≡ exact V1
+   *  behavior; mid-session flag flips never mutate a live session. */
+  auctionV2Enabled?: boolean;
   // Quip Battle phase data
   quipBattlePrompts?: Array<{ id: string; promptText: string; category: string }>;
   quipBattlePromptsMeta?: AIResponseMeta;
@@ -713,6 +772,44 @@ export interface SocialSessionState {
       fooledEveryone: number;
     };
   };
+  /** Wave 3 Context Injector (sprint wave3-highlightsInjector): aggregate-only
+   *  session highlight body (≤300 chars, NO 【本场高光】 header — the header is
+   *  prepended at prompt-injection time). Rule-based extraction on every
+   *  transitionPhase out of a signal-bearing phase (quip_battle / lie_detective
+   *  V2 / warmup). Privacy canon: no userId, no displayName, no
+   *  archetype→player mapping. Prompt-context ONLY — stripped from client
+   *  payloads by sanitizeStateForClient. */
+  highlights?: string;
+  /** Session-start snapshot of the `highlightsInjectorEnabled` DB flag.
+   *  Resolved ONCE at POST /start; immutable for the session lifetime.
+   *  undefined (legacy/single-test-bypass sessions) is falsy → extraction and
+   *  injection stay off (fail-open to pre-Wave-3 behavior). */
+  highlightsInjectorEnabled?: boolean;
+  /** Wave 4 高光值 (sprint wave4-sessionGlow, contract AC-02): session-start
+   *  snapshot of the `sessionGlowEnabled` DB flag. Resolved ONCE at POST
+   *  /start; immutable for the session lifetime. undefined (legacy /
+   *  single-test-bypass sessions) is falsy → accumulation stays off and the
+   *  recap payload is byte-for-byte pre-Wave-4 behavior. */
+  sessionGlowEnabled?: boolean;
+  /** Wave 4 (contract AC-03/AC-04): per-player glow points by source.
+   *  Server-authoritative, banked at the transitionPhase PRE-CLEANUP choke
+   *  point (cleanup wipes most vote sources). sanitizeStateForClient
+   *  projects this record to the REQUESTING user's own entry only — other
+   *  players' breakdowns never leave the server (contract AC-09). */
+  glowPoints?: Record<string, GlowPointBreakdown>;
+  /** Wave 4 (contract AC-03/AC-04, verifier R2): per-player participation
+   *  marks per offered phase — drives the honest 全勤小可爱 medal. Points
+   *  ≠ participation: a submitted-but-unvoted quip earns 0 points but still
+   *  counts as participation. Server-only — fully stripped from client
+   *  payloads by sanitizeStateForClient. */
+  glowParticipation?: Record<string, SocialIcebreakerPhase[]>;
+  /** Wave 4 (contract AC-04, verifier N4): per-phase-instance banked
+   *  markers for sources that SURVIVE cleanup — counts of entries already
+   *  accumulated, so a bonus-gate double-fire never double-counts and an
+   *  honest phase re-run still banks its newly appended entries. Wiped
+   *  sources need no marker: cleanup runs in the same transitionPhase pass,
+   *  so a repeated exit reads empty data and adds nothing. */
+  glowBanked?: { auctionLots?: number; challengeCompleted?: number };
   /** Cached AI-generated recap summary and medals when session enters recap phase. */
   recapSnapshot?: {
     recapSummary?: RecapSummary;
@@ -750,6 +847,18 @@ export interface SocialSessionState {
       topVotedDisplayName: string;
       questionText: string;
       voteCount: number;
+    };
+    /** Wave 4 高光值 (sprint wave4-sessionGlow, contract AC-07): server-
+     *  derived glow reveal payload. Present only on sessionGlowEnabled
+     *  sessions — flag-off snapshots carry no `glow` key. `medals` is the
+     *  SAME array as `recapSnapshot.medals` (one honest computation, dual
+     *  write — the 「今晚的高光」 block reads from `glow.medals`, legacy
+     *  consumers keep reading `recapSnapshot.medals`). Word-level only:
+     *  tier words + medals + table line — never point numbers. */
+    glow?: {
+      tiers: Record<string, GlowTier>;
+      medals: Medal[];
+      tableLine: string;
     };
   };
   /** 迷你剧本杀 — generated story framework (JSON), host-only mutation via POST /api/miniscript/generate */
@@ -823,9 +932,18 @@ export interface SocialSessionState {
   /** Xiaoyue Adaptive Suggestion — latest pulse-check-driven host nudge */
   xiaoyueAdaptiveSuggestion?: XiaoyueAdaptiveSuggestion;
   xiaoyueAdaptiveSuggestionMeta?: AIResponseMeta;
-  /** Lie detective mode: v1 = AI generates all 3 statements; v2 = players submit 2 tags, AI expands + inserts 1 fake. */
+  /** Lie detective mode: v1 = AI generates all 3 statements; v2 = players submit 2 tags, AI expands + inserts 1 fake.
+   *  Snapshot semantics (sprint wave1-2-lieDetectiveV2Enabled): written ONCE at lie_detective phase entry by
+   *  resolveLieDetectiveModeSnapshot (single-test override → DB flag lieDetectiveV2Enabled → env LIE_DETECTIVE_MODE
+   *  fallback → 'v1'); mid-session flag flips never mutate a live session. */
   lieDetectiveMode?: 'v1' | 'v2';
-  /** Server-owned Personality Dice renderer/generation contract. */
+  /** Server-owned Personality Dice renderer/generation contract.
+   *  Snapshot semantics (sprint wave1-3-personalityDiceChooseMode): resolved
+   *  ONCE at session start by resolvePersonalityDiceChooseModeSnapshot
+   *  (DB flag personalityDiceChooseModeEnabled → env
+   *  PERSONALITY_DICE_CHOOSE_MODE_ENABLED fallback → default true) and
+   *  persisted in state_json; mid-session flag flips never mutate a live
+   *  session. Flag-off returns NEW sessions to the single-dare shape. */
   personalityDiceChooseModeEnabled?: boolean;
   /** V2: tag submissions per userId — each player submits exactly 2 tags. */
   lieDetectiveV2Tags?: Record<string, [string, string]>;

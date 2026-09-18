@@ -1,4 +1,4 @@
-import { eventPoolGroups, eventPools, venues, venueTimeSlotBookings, venueTimeSlots } from "@shared/schema";
+import { budgetTierIdSchema, eventPoolGroups, eventPools, venues, venueTimeSlotBookings, venueTimeSlots } from "@shared/schema";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Express } from "express";
 import { z } from "zod";
@@ -46,7 +46,11 @@ const venueSchema = z.object({
   tags: z.array(z.string()).optional(),
   cuisines: z.array(z.string()).optional(),
   priceRange: z.string().optional(),
-  budgetCategories: z.array(z.string()).optional(),
+  // T6-strict: registry allow-list (canonical tier ids). The column was
+  // retagged to canonical ids by migration 0093 and the admin form only emits
+  // registry values (venueConstants.ts). Derived from the registry — no
+  // hardcoded tier literals (ratchet: check-budget-tiers.mjs).
+  budgetCategories: z.array(budgetTierIdSchema).optional(),
   maxConcurrentEvents: z.number().int().min(1).optional(),
   seatingCapacity: z.number().int().min(1).optional(),
   decorStyle: z.array(z.string()).optional(),
@@ -1369,14 +1373,8 @@ export function registerVenueRoutes(app: Express): void {
           eq(venueTimeSlotBookings.status, 'confirmed')
         ));
 
-      // Find matching time slot for new venue at event datetime
-      const eventDateTime = pool.dateTime;
-      const dayOfWeek = eventDateTime.getDay();
-      const timeStr = eventDateTime.toTimeString().substring(0, 5);
-      const year = eventDateTime.getFullYear();
-      const month = String(eventDateTime.getMonth() + 1).padStart(2, '0');
-      const day = String(eventDateTime.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      // Find matching time slot for new venue at event datetime (business-local UTC+8)
+      const { dateStr, timeStr, dayOfWeek } = parseEventDate(pool.dateTime);
 
       const weeklySlots = await db
         .select()

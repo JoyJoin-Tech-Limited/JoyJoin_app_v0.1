@@ -2,7 +2,9 @@ import type { Express } from "express";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { logger } from "../../lib/logger";
-import { requireAdmin } from "../../adminAuth";
+import { requireAdmin, requireSuperAdmin } from "../../adminAuth";
+import { getActingAdminId } from "../../lib/getActingAdminId";
+import { logAdminAudit } from "../../lib/adminAuditLogger";
 import {
   createTestUser,
   createTestEventPool,
@@ -63,7 +65,12 @@ const forcePhaseSchema = z.object({
 });
 
 export function registerTestAdminRoutes(app: Express): void {
-  app.get("/api/test/admin/status", (_req, res) => {
+  // Security finding N1 (2026-09-16): this whole family was registered in every
+  // environment with bare handlers. Every route is now fail-closed behind
+  // requireAdmin + requireSuperAdmin (the gate documented in
+  // docs/operations/test-mode-operations.md §B), so staging — which is publicly
+  // reachable — no longer exposes test-data mutation to anonymous callers.
+  app.get("/api/test/admin/status", requireAdmin, requireSuperAdmin, (_req, res) => {
     getTestStatus()
       .then((status) => res.json(status))
       .catch((error) => {
@@ -72,7 +79,7 @@ export function registerTestAdminRoutes(app: Express): void {
       });
   });
 
-  app.post("/api/test/admin/users", async (req, res) => {
+  app.post("/api/test/admin/users", requireAdmin, requireSuperAdmin, async (req, res) => {
     try {
       const parsed = createUserSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -81,6 +88,15 @@ export function registerTestAdminRoutes(app: Express): void {
 
       const user = await createTestUser(parsed.data);
       logger.info("[TestAdmin] User created via API", { userId: user.id, phone: user.phoneNumber });
+      logAdminAudit({
+        action: "TEST_USER_CREATED",
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: "user",
+        targetEntityId: user.id,
+        // Password is never logged.
+        context: { phoneNumber: user.phoneNumber, displayName: user.displayName },
+      });
       res.status(201).json(user);
     } catch (error: any) {
       logger.error("[TestAdmin] create user error", { error: String(error) });
@@ -88,7 +104,7 @@ export function registerTestAdminRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/test/admin/event-pools", async (req, res) => {
+  app.post("/api/test/admin/event-pools", requireAdmin, requireSuperAdmin, async (req, res) => {
     try {
       const parsed = createPoolSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -103,6 +119,14 @@ export function registerTestAdminRoutes(app: Express): void {
 
       const pool = await createTestEventPool(data);
       logger.info("[TestAdmin] Event pool created via API", { poolId: pool.id });
+      logAdminAudit({
+        action: "TEST_EVENT_POOL_CREATED",
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: "event_pool",
+        targetEntityId: pool.id,
+        context: { title: pool.title, city: pool.city, status: pool.status },
+      });
       res.status(201).json(pool);
     } catch (error: any) {
       logger.error("[TestAdmin] create pool error", { error: String(error) });
@@ -110,7 +134,7 @@ export function registerTestAdminRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/test/admin/registrations", async (req, res) => {
+  app.post("/api/test/admin/registrations", requireAdmin, requireSuperAdmin, async (req, res) => {
     try {
       const parsed = registerSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -122,6 +146,14 @@ export function registerTestAdminRoutes(app: Express): void {
         return res.status(409).json({ message: "Registration already exists or failed" });
       }
 
+      logAdminAudit({
+        action: "TEST_REGISTRATION_CREATED",
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: "event_pool_registration",
+        targetEntityId: registration.id,
+        context: { userId: parsed.data.userId, poolId: parsed.data.poolId },
+      });
       res.status(201).json(registration);
     } catch (error: any) {
       logger.error("[TestAdmin] register error", { error: String(error) });
@@ -129,10 +161,17 @@ export function registerTestAdminRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/test/admin/reset", async (_req, res) => {
+  app.post("/api/test/admin/reset", requireAdmin, requireSuperAdmin, async (req, res) => {
     try {
       const result = await resetTestData();
       logger.info("[TestAdmin] Data reset via API", result);
+      logAdminAudit({
+        action: "TEST_DATA_RESET",
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: "test_data",
+        context: { deletedUsers: result.deletedUsers, deletedPools: result.deletedPools },
+      });
       res.json({ message: "Test data reset complete", ...result });
     } catch (error: any) {
       logger.error("[TestAdmin] reset error", { error: String(error) });
@@ -140,7 +179,7 @@ export function registerTestAdminRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/test/social-icebreaker/:icebreakerSessionId/force-phase", async (req, res) => {
+  app.post("/api/test/social-icebreaker/:icebreakerSessionId/force-phase", requireAdmin, async (req, res) => {
     if (process.env.NODE_ENV === "production") {
       return res.status(403).json({ message: "Forbidden - not available in production" });
     }
@@ -184,6 +223,14 @@ export function registerTestAdminRoutes(app: Express): void {
         socialSessionId: existing.socialSessionId,
         phase: targetPhase,
       });
+      logAdminAudit({
+        action: "TEST_ICEBREAKER_FORCE_PHASE",
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: "social_icebreaker_session",
+        targetEntityId: existing.socialSessionId,
+        context: { icebreakerSessionId, phase: targetPhase },
+      });
 
       res.json({ phase: targetPhase, socialSessionId: existing.socialSessionId });
     } catch (error: any) {
@@ -192,7 +239,7 @@ export function registerTestAdminRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/test/social-icebreaker/:icebreakerSessionId/cleanup", async (req, res) => {
+  app.post("/api/test/social-icebreaker/:icebreakerSessionId/cleanup", requireAdmin, async (req, res) => {
     if (process.env.NODE_ENV === "production") {
       return res.status(403).json({ message: "Forbidden - not available in production" });
     }
@@ -202,6 +249,14 @@ export function registerTestAdminRoutes(app: Express): void {
       await db.delete(socialIcebreakerSessions)
         .where(eq(socialIcebreakerSessions.icebreakerSessionId, icebreakerSessionId));
       logger.info("[TestAdmin] Cleanup icebreaker session", { icebreakerSessionId });
+      logAdminAudit({
+        action: "TEST_ICEBREAKER_CLEANED",
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: "social_icebreaker_session",
+        targetEntityId: icebreakerSessionId,
+        context: { deleted: true },
+      });
       res.json({ deleted: true, icebreakerSessionId });
     } catch (error: any) {
       logger.error("[TestAdmin] cleanup error", { error: String(error) });

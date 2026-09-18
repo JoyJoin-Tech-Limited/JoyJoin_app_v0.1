@@ -18,12 +18,22 @@ import { logger } from "./logger";
 
 /** Choke-point kinds → S1 pattern vocabulary. Config-level by design: merging
  *  or re-mapping beats is a one-record edit (§10 ruling 3 philosophy). */
-export type SocialGroupBeatKind = "phase_advanced" | "session_recap" | "reveal";
+export type SocialGroupBeatKind =
+  | "phase_advanced"
+  | "session_recap"
+  | "reveal"
+  | "auction_outbid"
+  | "auction_all_in";
 
 export const GROUP_BEAT_KIND_PATTERN: Record<SocialGroupBeatKind, SocialGroupBeatPattern> = {
   phase_advanced: "nudge",
   session_recap: "celebration",
   reveal: "reveal",
+  // Auction V2 (sprint wave2-auctionV2, contract AC-05): kinds are server-only
+  // vocabulary — the wire payload still carries ONLY pattern+nonce+sentAt, so
+  // packages/shared/src/wsEvents.ts needs zero changes (contract-asserted).
+  auction_outbid: "nudge",
+  auction_all_in: "reveal",
 };
 
 let beatCounter = 0;
@@ -75,4 +85,35 @@ export async function emitSocialGroupBeat(
     });
     return false;
   }
+}
+
+// ─── Auction V2 (sprint wave2-auctionV2, contract AC-05) ────────────────────
+
+/** Same-session `auction_outbid` beats merge at ≥5s intervals: a 6-person bid
+ *  war buzzes once per window, never continuously (spec D2 rate-limit). */
+export const AUCTION_OUTBID_BEAT_MIN_INTERVAL_MS = 5000;
+
+const auctionOutbidBeatLastEmitAt = new Map<string, number>();
+
+/**
+ * Rate-limited outbid beat. The timestamp is recorded synchronously BEFORE
+ * the async emission so two in-flight bids in the same window cannot both
+ * pass the check. Inherits the `icebreakerGroupBeatsEnabled` gate inside
+ * emitSocialGroupBeat; fire-and-forget, never throws.
+ */
+export async function emitAuctionOutbidBeatRateLimited(
+  icebreakerSessionId: string,
+  now = Date.now(),
+): Promise<boolean> {
+  const last = auctionOutbidBeatLastEmitAt.get(icebreakerSessionId);
+  if (last !== undefined && now - last < AUCTION_OUTBID_BEAT_MIN_INTERVAL_MS) {
+    return false;
+  }
+  auctionOutbidBeatLastEmitAt.set(icebreakerSessionId, now);
+  return emitSocialGroupBeat(icebreakerSessionId, "auction_outbid");
+}
+
+/** Test hook: clear rate-limit bookkeeping so cases are independent. */
+export function __resetAuctionBeatRateLimitForTests(): void {
+  auctionOutbidBeatLastEmitAt.clear();
 }

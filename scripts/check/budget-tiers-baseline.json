@@ -1,0 +1,953 @@
+{
+  "$comment": "Grandfathered budget-tier literal occurrences (spec §8.2, decision Q9). Every entry was reviewed per-entry; entries are expected to be BURNED DOWN, not grown. Regenerate counts with: node scripts/check/check-budget-tiers.mjs --write-baseline (preserves justifications).",
+  "entries": [
+    {
+      "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
+      "literal": "100-200",
+      "count": 1,
+      "justification": "Comment referencing the unmappable blind-box label in the filter-splitting logic (decision B3). Documentation-only occurrence."
+    },
+    {
+      "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
+      "literal": "150-200",
+      "count": 2,
+      "justification": "Blind-box budget filter option list on the admin events page — blind-box rows store the legacy vocabulary by design until B3 resolves. Burns down when the filter derives options from the registry legacy map."
+    },
+    {
+      "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "Blind-box budget filter option list on the admin events page — blind-box rows store the legacy vocabulary by design until B3 resolves. Burns down when the filter derives options from the registry legacy map."
+    },
+    {
+      "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
+      "literal": "200-300",
+      "count": 2,
+      "justification": "Blind-box budget filter option list on the admin events page — blind-box rows store the legacy vocabulary by design until B3 resolves. Burns down when the filter derives options from the registry legacy map."
+    },
+    {
+      "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "Blind-box budget filter option list on the admin events page — blind-box rows store the legacy vocabulary by design until B3 resolves. Burns down when the filter derives options from the registry legacy map."
+    },
+    {
+      "file": "apps/admin-client/src/pages/admin/AdminVenuesPage.tsx",
+      "literal": "150以下",
+      "count": 3,
+      "justification": "Deprecated venues.price_range control default/fallback values — price_range is explicitly excluded from the tier retag (spec §14.8, no dual-write). Burns down when the legacy column control is removed."
+    },
+    {
+      "file": "apps/mini-program/src/lib/payment/paymentPendingOrder.test.ts",
+      "literal": "150-200",
+      "count": 2,
+      "justification": "Payment pending-order test fixture: legacy label inside a serialized draft payload covering the mixed-state read path. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/mini-program/src/pages/payments/event-ticket-payment/ticketHelpers.ts",
+      "literal": "150-200",
+      "count": 1,
+      "justification": "Doc comment on formatBudgetLabel showing the registry display-label format (e.g. 150-200/人). Documentation-only occurrence in the budget-label formatter."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "100-200",
+      "count": 1,
+      "justification": "Doc comments describing the display-label format and the unmapped blind-box fallback (B3). Documentation-only occurrences."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "150-200",
+      "count": 1,
+      "justification": "Doc comments describing the display-label format and the unmapped blind-box fallback (B3). Documentation-only occurrences."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "dining_150_200",
+      "count": 1,
+      "justification": "Per-tier mascot copy map (T5a / AC-10) keyed by canonical tier id — keys must equal registry ids by contract. Reviewed copy surface; may be permanent by design (a typed Record keeps the same literal keys)."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "dining_150_below",
+      "count": 1,
+      "justification": "Per-tier mascot copy map (T5a / AC-10) keyed by canonical tier id — keys must equal registry ids by contract. Reviewed copy surface; may be permanent by design (a typed Record keeps the same literal keys)."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "dining_200_300",
+      "count": 1,
+      "justification": "Per-tier mascot copy map (T5a / AC-10) keyed by canonical tier id — keys must equal registry ids by contract. Reviewed copy surface; may be permanent by design (a typed Record keeps the same literal keys)."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "dining_300_500",
+      "count": 1,
+      "justification": "Per-tier mascot copy map (T5a / AC-10) keyed by canonical tier id — keys must equal registry ids by contract. Reviewed copy surface; may be permanent by design (a typed Record keeps the same literal keys)."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "drinks_80_150",
+      "count": 1,
+      "justification": "Per-tier mascot copy map (T5a / AC-10) keyed by canonical tier id — keys must equal registry ids by contract. Reviewed copy surface; may be permanent by design (a typed Record keeps the same literal keys)."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/flowConfig.ts",
+      "literal": "drinks_80_below",
+      "count": 1,
+      "justification": "Per-tier mascot copy map (T5a / AC-10) keyed by canonical tier id — keys must equal registry ids by contract. Reviewed copy surface; may be permanent by design (a typed Record keeps the same literal keys)."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "100-200",
+      "count": 1,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "150-200",
+      "count": 2,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "80-150",
+      "count": 1,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "80以下",
+      "count": 1,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "dining_150_200",
+      "count": 2,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "dining_150_below",
+      "count": 1,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "dining_200_300",
+      "count": 2,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "dining_300_500",
+      "count": 3,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "drinks_80_150",
+      "count": 2,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/mini-program/src/pages/pool-registration/poolRegistrationForm.test.ts",
+      "literal": "drinks_80_below",
+      "count": 2,
+      "justification": "Pool-registration form tests: payload/draft fixtures covering legacy→id normalization and the blind-box 100-200 pass-through. Grandfathered per Q9; burns down when legacy input support is removed."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "150-200",
+      "count": 2,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "80-150",
+      "count": 2,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "80以下",
+      "count": 1,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "dining_150_200",
+      "count": 1,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0092_budget_tier_venue_activation.sql",
+      "literal": "drinks_80_150",
+      "count": 1,
+      "justification": "T1a activation migration: column COMMENT references both vocabularies while values are still legacy labels. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "150-200",
+      "count": 6,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "200-300",
+      "count": 3,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "300-500",
+      "count": 3,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "80-150",
+      "count": 6,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "80以下",
+      "count": 1,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "dining_150_200",
+      "count": 3,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "dining_150_below",
+      "count": 1,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "dining_200_300",
+      "count": 3,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "dining_300_500",
+      "count": 1,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0093_budget_tier_venue_categories_retag.sql",
+      "literal": "drinks_80_150",
+      "count": 13,
+      "justification": "T1b venue retag migration: the legacy→id mapping IS the migration payload (reviewed per-venue). SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "100-200",
+      "count": 3,
+      "justification": "T1b registration retag migration: deliberate documentation of unmappable values (blind-box 100-200, withheld drinks_150_200) that the migration must NOT touch. Frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "150-200",
+      "count": 10,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "150以下",
+      "count": 5,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "200-300",
+      "count": 5,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "300-500",
+      "count": 5,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "80-150",
+      "count": 5,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "80以下",
+      "count": 5,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "dining_150_200",
+      "count": 4,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "dining_150_below",
+      "count": 4,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "dining_200_300",
+      "count": 4,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "dining_300_500",
+      "count": 4,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "drinks_150_200",
+      "count": 1,
+      "justification": "T1b registration retag migration: deliberate documentation of unmappable values (blind-box 100-200, withheld drinks_150_200) that the migration must NOT touch. Frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "drinks_80_150",
+      "count": 4,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/0094_budget_tier_registration_retag.sql",
+      "literal": "drinks_80_below",
+      "count": 4,
+      "justification": "T1b registration retag migration: legacy→id CASE mapping + verification queries are the migration payload. SQL cannot import the TS registry; frozen applied history."
+    },
+    {
+      "file": "apps/server/migrations/20260127084348_add_budget_restrictions_to_event_pools.sql",
+      "literal": "150-200",
+      "count": 1,
+      "justification": "Historical pre-registry migration: COMMENT example values in legacy vocabulary. Frozen applied history; superseded by the registry."
+    },
+    {
+      "file": "apps/server/migrations/20260127084348_add_budget_restrictions_to_event_pools.sql",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "Historical pre-registry migration: COMMENT example values in legacy vocabulary. Frozen applied history; superseded by the registry."
+    },
+    {
+      "file": "apps/server/migrations/20260127084348_add_budget_restrictions_to_event_pools.sql",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Historical pre-registry migration: COMMENT example values in legacy vocabulary. Frozen applied history; superseded by the registry."
+    },
+    {
+      "file": "apps/server/migrations/20260127084348_add_budget_restrictions_to_event_pools.sql",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "Historical pre-registry migration: COMMENT example values in legacy vocabulary. Frozen applied history; superseded by the registry."
+    },
+    {
+      "file": "apps/server/migrations/20260203000000_add_venue_budget_categories.sql",
+      "literal": "150-200",
+      "count": 1,
+      "justification": "Historical venues.budget_categories COMMENT in legacy vocabulary — plan §7.7 flags this exact comment as a residual second source of truth; burns down with the T1 comment update."
+    },
+    {
+      "file": "apps/server/migrations/20260203000000_add_venue_budget_categories.sql",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "Historical venues.budget_categories COMMENT in legacy vocabulary — plan §7.7 flags this exact comment as a residual second source of truth; burns down with the T1 comment update."
+    },
+    {
+      "file": "apps/server/migrations/20260203000000_add_venue_budget_categories.sql",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Historical venues.budget_categories COMMENT in legacy vocabulary — plan §7.7 flags this exact comment as a residual second source of truth; burns down with the T1 comment update."
+    },
+    {
+      "file": "apps/server/migrations/20260203000000_add_venue_budget_categories.sql",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "Historical venues.budget_categories COMMENT in legacy vocabulary — plan §7.7 flags this exact comment as a residual second source of truth; burns down with the T1 comment update."
+    },
+    {
+      "file": "apps/server/migrations/20260203000000_add_venue_budget_categories.sql",
+      "literal": "80-150",
+      "count": 1,
+      "justification": "Historical venues.budget_categories COMMENT in legacy vocabulary — plan §7.7 flags this exact comment as a residual second source of truth; burns down with the T1 comment update."
+    },
+    {
+      "file": "apps/server/migrations/20260203000000_add_venue_budget_categories.sql",
+      "literal": "80以下",
+      "count": 1,
+      "justification": "Historical venues.budget_categories COMMENT in legacy vocabulary — plan §7.7 flags this exact comment as a residual second source of truth; burns down with the T1 comment update."
+    },
+    {
+      "file": "apps/server/migrations/seed_venue_batch_and_co_20260608.sql",
+      "literal": "80-150",
+      "count": 1,
+      "justification": "One-off venue seed script (applied 2026-06-08): legacy label as inserted data. Frozen history; the venue was retagged by migration 0093."
+    },
+    {
+      "file": "apps/server/migrations/seed_venue_partners_20260602.sql",
+      "literal": "150-200",
+      "count": 2,
+      "justification": "One-off partner-venue seed script (applied 2026-06-02): legacy labels as inserted data. Frozen history; venues were retagged by migration 0093."
+    },
+    {
+      "file": "apps/server/migrations/seed_venue_partners_20260602.sql",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "One-off partner-venue seed script (applied 2026-06-02): legacy labels as inserted data. Frozen history; venues were retagged by migration 0093."
+    },
+    {
+      "file": "apps/server/migrations/seed_venue_partners_20260602.sql",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "One-off partner-venue seed script (applied 2026-06-02): legacy labels as inserted data. Frozen history; venues were retagged by migration 0093."
+    },
+    {
+      "file": "apps/server/migrations/seed_venue_partners_20260602.sql",
+      "literal": "80-150",
+      "count": 1,
+      "justification": "One-off partner-venue seed script (applied 2026-06-02): legacy labels as inserted data. Frozen history; venues were retagged by migration 0093."
+    },
+    {
+      "file": "apps/server/src/__tests__/adminMatchingReview.test.ts",
+      "literal": "100-200",
+      "count": 1,
+      "justification": "Admin matching-review fixture: blind-box 100-200 vocabulary on a registration row. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/adminOutcomeAnalyticsRepo.test.ts",
+      "literal": "150-200",
+      "count": 2,
+      "justification": "Outcome-analytics fixtures: legacy labels on registration rows covering pre-cutover data. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/adminOutcomeAnalyticsRepo.test.ts",
+      "literal": "200-300",
+      "count": 2,
+      "justification": "Outcome-analytics fixtures: legacy labels on registration rows covering pre-cutover data. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/adminSmartVenues.test.ts",
+      "literal": "100-200",
+      "count": 2,
+      "justification": "Smart-venues fixture: blind-box 100-200 vocabulary on priceRange/budgetCategories. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "100-200",
+      "count": 5,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "150-200",
+      "count": 5,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "200-300",
+      "count": 3,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "80-150",
+      "count": 5,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "80以下",
+      "count": 1,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "dining_150_200",
+      "count": 3,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "dining_150_below",
+      "count": 1,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "dining_200_300",
+      "count": 3,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "dining_300_500",
+      "count": 1,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "drinks_150_200",
+      "count": 1,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "drinks_80_150",
+      "count": 4,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/budgetTierWrite.test.ts",
+      "literal": "drinks_80_below",
+      "count": 1,
+      "justification": "Write-normalizer contract tests: legacy labels, canonical ids, the withheld reserved id, and the blind-box label are the test vectors for normalizeBudgetRangeForWrite. Burns down when legacy write support is removed (post-cutover R4)."
+    },
+    {
+      "file": "apps/server/src/__tests__/eventPoolRegistration.test.ts",
+      "literal": "80-150",
+      "count": 1,
+      "justification": "Registration route fixture: legacy/id bar-budget values on the registration payload. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/eventPoolRegistration.test.ts",
+      "literal": "drinks_80_150",
+      "count": 1,
+      "justification": "Registration route fixture: legacy/id bar-budget values on the registration payload. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/eventThemeTitleGenerator.test.ts",
+      "literal": "150-200",
+      "count": 1,
+      "justification": "Event theme generator fixture: legacy label on a registration row. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/matchCompassDefaults.test.ts",
+      "literal": "100-200",
+      "count": 2,
+      "justification": "Match Compass defaults fixture: blind-box 100-200 pass-through assertion. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/paymentFulfillmentRepo.test.ts",
+      "literal": "150-200",
+      "count": 1,
+      "justification": "Payment fulfillment fixture: covers both legacy-label and canonical-id conventions on the registration write path. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/paymentFulfillmentRepo.test.ts",
+      "literal": "dining_150_200",
+      "count": 1,
+      "justification": "Payment fulfillment fixture: covers both legacy-label and canonical-id conventions on the registration write path. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/paymentService.test.ts",
+      "literal": "150-200",
+      "count": 1,
+      "justification": "Payment service fixture: legacy label on a registration payload. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/sharedApiContracts.test.ts",
+      "literal": "80-150",
+      "count": 2,
+      "justification": "Shared API contract fixture: legacy bar label on a DTO sample. Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "100-200",
+      "count": 4,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "150-200",
+      "count": 7,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "200-300",
+      "count": 13,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "300-500",
+      "count": 2,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "80-150",
+      "count": 10,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "dining_150_200",
+      "count": 1,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "dining_150_below",
+      "count": 1,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "dining_200_300",
+      "count": 10,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "dining_300_500",
+      "count": 1,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "drinks_150_200",
+      "count": 1,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueAssignmentService.test.ts",
+      "literal": "drinks_80_150",
+      "count": 4,
+      "justification": "Assignment read-normalization mixed-state matrix (spec AC-9): legacy labels and canonical ids are the test vectors. Burns down post-cutover when the mixed state no longer exists."
+    },
+    {
+      "file": "apps/server/src/__tests__/venueDataQuality.test.ts",
+      "literal": "150-200",
+      "count": 6,
+      "justification": "Venue data-quality fixtures: legacy venue vocabulary (priceRange/budgetCategories). Test fixture grandfathered per Q9."
+    },
+    {
+      "file": "apps/server/src/lib/budgetTierWrite.ts",
+      "literal": "100-200",
+      "count": 2,
+      "justification": "Doc comments in the write normalizer describing the blind-box 100-200 pass-through rule (B3). Documentation-only occurrences."
+    },
+    {
+      "file": "apps/server/src/routes/domains/blindBoxEvents.ts",
+      "literal": "100-200",
+      "count": 1,
+      "justification": "Comment documenting the blind-box 100-200 pass-through at the registration insert (B3). Documentation-only occurrence."
+    },
+    {
+      "file": "apps/server/src/routes/domains/demo.ts",
+      "literal": "150以下",
+      "count": 1,
+      "justification": "Demo-seed domain route: legacy label in demo data fields (budgetTier / priceRange). Demo surface grandfathered per Q9; burns down when demo data is registry-driven."
+    },
+    {
+      "file": "apps/server/src/routes/domains/demo.ts",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Demo-seed domain route: legacy label in demo data fields (budgetTier / priceRange). Demo surface grandfathered per Q9; burns down when demo data is registry-driven."
+    },
+    {
+      "file": "apps/server/src/routes/domains/payments.ts",
+      "literal": "100-200",
+      "count": 1,
+      "justification": "Comment documenting the blind-box 100-200 namespace at checkout payload normalization (B3). Documentation-only occurrence."
+    },
+    {
+      "file": "apps/server/src/services/botFillService.ts",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Bot-fill service: legacy label in bot registration payloads. Burn-down candidate — bots should emit registry ids (mechanical swap)."
+    },
+    {
+      "file": "apps/server/src/services/matchingTestService.ts",
+      "literal": "150-200",
+      "count": 2,
+      "justification": "Matching-test (single-test) service: BUDGET_RANGES fixture vocabulary + a venue priceRange. Demo/test surface grandfathered per Q9; burn-down candidate (derive from the registry legacy map)."
+    },
+    {
+      "file": "apps/server/src/services/matchingTestService.ts",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Matching-test (single-test) service: BUDGET_RANGES fixture vocabulary + a venue priceRange. Demo/test surface grandfathered per Q9; burn-down candidate (derive from the registry legacy map)."
+    },
+    {
+      "file": "apps/server/src/services/matchingTestService.ts",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "Matching-test (single-test) service: BUDGET_RANGES fixture vocabulary + a venue priceRange. Demo/test surface grandfathered per Q9; burn-down candidate (derive from the registry legacy map)."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "100-200",
+      "count": 5,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "150-200",
+      "count": 7,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "150以下",
+      "count": 3,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "80-150",
+      "count": 6,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "80以下",
+      "count": 4,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "dining_150_200",
+      "count": 12,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "dining_150_below",
+      "count": 5,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "dining_200_300",
+      "count": 4,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "dining_300_500",
+      "count": 2,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "drinks_150_200",
+      "count": 1,
+      "justification": "Registry contract test: asserts the reserved id is NOT yet valid (isValidTierId=false). Burns down when the reserved tier is appended."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "drinks_80_150",
+      "count": 9,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/__tests__/budgetTiers.test.ts",
+      "literal": "drinks_80_below",
+      "count": 5,
+      "justification": "Registry contract tests: fixtures intentionally mirror the registry vocabulary to lock the legacy→id mapping and formatting. Burns down with the registry legacy map post-cutover."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "100-200",
+      "count": 2,
+      "justification": "Canonical registry: UNMAPPABLE_BLIND_BOX_BUDGET_LABEL constant + B3 open-decision comment — the registry itself documenting the unmappable blind-box label. Permanent by design until B3 resolves."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "150-200",
+      "count": 4,
+      "justification": "Canonical registry: this legacy label is DEFINED here (tier labels + LEGACY_BUDGET_LABEL_TO_TIER_ID). Single allowed source; burns down when the legacy map is deleted post-cutover."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "150以下",
+      "count": 3,
+      "justification": "Canonical registry: this legacy label is DEFINED here (tier labels + LEGACY_BUDGET_LABEL_TO_TIER_ID). Single allowed source; burns down when the legacy map is deleted post-cutover."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "200-300",
+      "count": 1,
+      "justification": "Canonical registry: this legacy label is DEFINED here (tier labels + LEGACY_BUDGET_LABEL_TO_TIER_ID). Single allowed source; burns down when the legacy map is deleted post-cutover."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "300-500",
+      "count": 1,
+      "justification": "Canonical registry: this legacy label is DEFINED here (tier labels + LEGACY_BUDGET_LABEL_TO_TIER_ID). Single allowed source; burns down when the legacy map is deleted post-cutover."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "80-150",
+      "count": 1,
+      "justification": "Canonical registry: this legacy label is DEFINED here (tier labels + LEGACY_BUDGET_LABEL_TO_TIER_ID). Single allowed source; burns down when the legacy map is deleted post-cutover."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "80以下",
+      "count": 1,
+      "justification": "Canonical registry: this legacy label is DEFINED here (tier labels + LEGACY_BUDGET_LABEL_TO_TIER_ID). Single allowed source; burns down when the legacy map is deleted post-cutover."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "dining_150_200",
+      "count": 2,
+      "justification": "Canonical registry: this id is DEFINED here (BUDGET_TIERS + legacy lookup map). The registry is the single allowed source of the vocabulary (spec §4)."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "dining_150_below",
+      "count": 2,
+      "justification": "Canonical registry: this id is DEFINED here (BUDGET_TIERS + legacy lookup map). The registry is the single allowed source of the vocabulary (spec §4)."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "dining_200_300",
+      "count": 2,
+      "justification": "Canonical registry: this id is DEFINED here (BUDGET_TIERS + legacy lookup map). The registry is the single allowed source of the vocabulary (spec §4)."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "dining_300_500",
+      "count": 2,
+      "justification": "Canonical registry: this id is DEFINED here (BUDGET_TIERS + legacy lookup map). The registry is the single allowed source of the vocabulary (spec §4)."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "drinks_150_200",
+      "count": 1,
+      "justification": "Canonical registry: comment documenting the deliberately-withheld reserved tier id. Burns down when the tier is appended to the registry."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "drinks_80_150",
+      "count": 2,
+      "justification": "Canonical registry: this id is DEFINED here (BUDGET_TIERS + legacy lookup map). The registry is the single allowed source of the vocabulary (spec §4)."
+    },
+    {
+      "file": "packages/shared/src/budgetTiers.ts",
+      "literal": "drinks_80_below",
+      "count": 2,
+      "justification": "Canonical registry: this id is DEFINED here (BUDGET_TIERS + legacy lookup map). The registry is the single allowed source of the vocabulary (spec §4)."
+    },
+    {
+      "file": "packages/shared/src/schema/_definitions.ts",
+      "literal": "100-200",
+      "count": 1,
+      "justification": "Drizzle column comments documenting legacy example values (budget_range / bar_budget_range / price_range / budget_categories / budget_tier). Known residual second source of truth tracked for the T1 comment update (plan §7.7) — burns down with that migration."
+    },
+    {
+      "file": "packages/shared/src/schema/_definitions.ts",
+      "literal": "150-200",
+      "count": 3,
+      "justification": "Drizzle column comments documenting legacy example values (budget_range / bar_budget_range / price_range / budget_categories / budget_tier). Known residual second source of truth tracked for the T1 comment update (plan §7.7) — burns down with that migration."
+    },
+    {
+      "file": "packages/shared/src/schema/_definitions.ts",
+      "literal": "150以下",
+      "count": 3,
+      "justification": "Drizzle column comments documenting legacy example values (budget_range / bar_budget_range / price_range / budget_categories / budget_tier). Known residual second source of truth tracked for the T1 comment update (plan §7.7) — burns down with that migration."
+    },
+    {
+      "file": "packages/shared/src/schema/_definitions.ts",
+      "literal": "200-300",
+      "count": 3,
+      "justification": "Drizzle column comments documenting legacy example values (budget_range / bar_budget_range / price_range / budget_categories / budget_tier). Known residual second source of truth tracked for the T1 comment update (plan §7.7) — burns down with that migration."
+    },
+    {
+      "file": "packages/shared/src/schema/_definitions.ts",
+      "literal": "300-500",
+      "count": 3,
+      "justification": "Drizzle column comments documenting legacy example values (budget_range / bar_budget_range / price_range / budget_categories / budget_tier). Known residual second source of truth tracked for the T1 comment update (plan §7.7) — burns down with that migration."
+    },
+    {
+      "file": "packages/shared/src/schema/_definitions.ts",
+      "literal": "80-150",
+      "count": 3,
+      "justification": "Drizzle column comments documenting legacy example values (budget_range / bar_budget_range / price_range / budget_categories / budget_tier). Known residual second source of truth tracked for the T1 comment update (plan §7.7) — burns down with that migration."
+    },
+    {
+      "file": "packages/shared/src/schema/_definitions.ts",
+      "literal": "80以下",
+      "count": 3,
+      "justification": "Drizzle column comments documenting legacy example values (budget_range / bar_budget_range / price_range / budget_categories / budget_tier). Known residual second source of truth tracked for the T1 comment update (plan §7.7) — burns down with that migration."
+    }
+  ]
+}

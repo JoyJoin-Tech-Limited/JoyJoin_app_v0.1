@@ -127,7 +127,13 @@ function isLieDetectiveLlmEnabled(): boolean {
   return v.toLowerCase() === 'true';
 }
 
-/** Determine the effective lie-detective mode. */
+/** Determine the effective lie-detective mode. Synchronous fast path covering
+ *  resolution tiers (1) session-state override, (3) legacy env
+ *  `LIE_DETECTIVE_MODE` fallback, and (4) default 'v1'. Tier (2) — the
+ *  DB-backed `lieDetectiveV2Enabled` flag — is resolved once at lie_detective
+ *  phase entry by `resolveLieDetectiveModeSnapshot` in
+ *  routes/socialIcebreakerHelpers.ts and snapshotted into
+ *  `state.lieDetectiveMode`, which then flows in here as `sessionMode`. */
 export function getLieDetectiveMode(sessionMode?: 'v1' | 'v2'): 'v1' | 'v2' {
   if (sessionMode) return sessionMode;
   const envMode = process.env.LIE_DETECTIVE_MODE;

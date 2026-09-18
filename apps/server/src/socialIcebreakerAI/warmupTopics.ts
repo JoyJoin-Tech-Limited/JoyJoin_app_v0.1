@@ -17,6 +17,8 @@ import {
   buildWarmupTopicsPrompt,
   WARMUP_TOPICS_PROMPT_VERSION,
   WARMUP_TOPICS_CHAT_PROMPT_VERSION,
+  WARMUP_TOPICS_PROMPT_VERSION_HL,
+  WARMUP_TOPICS_CHAT_PROMPT_VERSION_HL,
 } from '../ai/socialIcebreakerPrompts';
 import { getClientForFunction } from '../ai/socialModelRouter';
 import { createAiCorrelationId, logAITrace } from '../lib/aiTraceLogger';
@@ -329,7 +331,13 @@ function selectFallbackTopics(
   return ensureBraveTopic(topics, mood, undefined, excluded);
 }
 
-function getPromptVersionForVibe(vibe?: 'chat' | 'balanced' | 'game'): string {
+function getPromptVersionForVibe(vibe?: 'chat' | 'balanced' | 'game', highlightsInjected = false): string {
+  // Wave 3 (contract AC-08, verifier Q1): the highlights pair is selected
+  // HERE, pre-build — the trace meta is never post-hoc overridden. Flag-off /
+  // highlights-empty runs keep the legacy constants byte-identically.
+  if (highlightsInjected) {
+    return vibe === 'chat' ? WARMUP_TOPICS_CHAT_PROMPT_VERSION_HL : WARMUP_TOPICS_PROMPT_VERSION_HL;
+  }
   return vibe === 'chat' ? WARMUP_TOPICS_CHAT_PROMPT_VERSION : WARMUP_TOPICS_PROMPT_VERSION;
 }
 
@@ -359,9 +367,14 @@ export async function generateWarmupTopics(params: {
    * Omit to disable cross-session dedup (test/one-off callers).
    */
   dedupeKey?: string;
+  /** Wave 3 (contract AC-07): aggregate session highlights body (state.highlights).
+   *  Threaded into the prompt as a 【本场高光】 block when non-empty; also drives
+   *  the paired *_HL promptVersion selection (AC-08). */
+  highlights?: string;
 }): Promise<AIServiceResult<SocialTopic[]>> {
   const aiCorrelationId = createAiCorrelationId();
-  const promptVersion = getPromptVersionForVibe(params.vibe);
+  const highlightsInjected = Boolean(params.highlights?.trim());
+  const promptVersion = getPromptVersionForVibe(params.vibe, highlightsInjected);
 
   // W5/W7.3: shared-interest hooks (labels declared by ≥2 members). Empty when
   // the roster carries no interests (flag off). Also drives fallback
@@ -376,7 +389,7 @@ export async function generateWarmupTopics(params: {
   // If AI is disabled, return curated fallback immediately
   if (!isWarmupLlmEnabled()) {
     const meta = buildFallbackAIMeta('disabled', promptVersion, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe, fallbackOptions), meta });
   }
 
@@ -401,6 +414,7 @@ export async function generateWarmupTopics(params: {
       fromCache: false,
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
+      extra: { highlightsInjected },
     });
     return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe, fallbackOptions), meta });
   }
@@ -451,7 +465,7 @@ export async function generateWarmupTopics(params: {
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', promptVersion, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
       return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe, fallbackOptions), meta });
     }
 
@@ -460,7 +474,7 @@ export async function generateWarmupTopics(params: {
       const latencyMs = Date.now() - t0;
       logger.info(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms vibe=${params.vibe ?? 'balanced'}`);
       const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion, extra: { highlightsInjected } });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'warmup', params.eventType);
       const targetCount = getTargetTopicCount(params.vibe);
       const normalizedTopics: SocialTopic[] = parsed.slice(0, targetCount + 1).map((topic, index) => normalizeSocialTopic(topic, params.mood, index));
@@ -496,14 +510,14 @@ export async function generateWarmupTopics(params: {
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
     const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe, fallbackOptions), meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     const isTimeout = isLLMTimeoutError(error);
     logger.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
     const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', promptVersion, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe, fallbackOptions), meta });
   } finally {
     clearTimeout(timeoutId);

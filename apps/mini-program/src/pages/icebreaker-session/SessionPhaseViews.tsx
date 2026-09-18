@@ -20,6 +20,9 @@ import { FallbackPhaseView, RecapPhaseView, WarmupPhaseView, type SessionPhase }
 import type { SessionParticipant } from './phaseUtils'
 import { isPhaseRosterCompleteForClient, type PhaseActionNotice } from './viewModels/phaseOptOutModel'
 import { resolvePersonalityDiceChooseMode } from './viewModels/phaseProgressionModels'
+import type { AuctionBidClientMeta } from './viewModels/auctionV2Model'
+import type { SessionGlowSnapshot } from './viewModels/sessionGlowModel'
+import type { GlowPointBreakdown } from '@shared/socialIcebreaker'
 import type { TopicsRecoveryState } from './viewModels/warmupViewModels'
 import type { SocialRecapResponse } from './icebreakerSessionModel'
 
@@ -39,6 +42,8 @@ export interface SessionPhaseViewsProps {
   pendingAction: string | null
   canChangeTier: boolean
   glanceStackEnabled: boolean
+  /** S1 haptic grammar flag — gates the auction V2 social-pattern haptics. */
+  hapticGrammarEnabled: boolean
   supportedPhases: SessionPhase[]
   mascotDisplayName: string
   personalityDiceChooseMode: boolean | undefined
@@ -71,6 +76,11 @@ export interface SessionPhaseViewsProps {
   } | null
   recapMedals: Array<{ emoji: string; title: string; recipientDisplayName: string; description: string }>
   recapMeta: SocialRecapResponse['meta'] | null
+  /** Wave 4 高光值 (locked contract AC-12): present only on sessionGlowEnabled
+   *  sessions; RecapPhaseView swaps the medal grid for the glow block. */
+  recapGlow?: SessionGlowSnapshot
+  /** Viewer-only per-source glow breakdown (server trims everyone else's). */
+  ownGlowBreakdown?: GlowPointBreakdown
   onOpenTierSheet: () => void
   onOpenMiniScript: () => void
   onMiniScriptClose: () => void
@@ -93,7 +103,7 @@ export interface SessionPhaseViewsProps {
   onNextLieDetectivePlayer: () => void
   onGenerateLieStatementFromTag: (tag: string) => Promise<string | null>
   onGenerateAuctionLots: () => void
-  onAuctionBid: (amount: number) => void
+  onAuctionBid: (amount: number, meta?: AuctionBidClientMeta) => void
   onCloseAuctionLot: () => void
   onAssignRoles: () => void
   onRevealAct: (act: number) => void
@@ -136,6 +146,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     pendingAction,
     canChangeTier,
     glanceStackEnabled,
+    hapticGrammarEnabled,
     supportedPhases,
     mascotDisplayName,
     personalityDiceChooseMode,
@@ -156,6 +167,8 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     recapSummary,
     recapMedals,
     recapMeta,
+    recapGlow,
+    ownGlowBreakdown,
     onOpenTierSheet,
     onOpenMiniScript,
     onMiniScriptClose,
@@ -344,6 +357,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           isPlacingBid={pendingAction === 'auction-bid'}
           isClosingLot={pendingAction === 'auction-close'}
           isSingleTest={session.isTestModeSkip ?? false}
+          hapticGrammarEnabled={hapticGrammarEnabled}
         />
       )}
 
@@ -543,6 +557,11 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           recapMeta={recapMeta}
           phasesCompleted={(session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length}
           isEarlyEnd={Boolean(session.endedEarlyAt) || session.lastAdvanceTrigger === 'early_end_jump'}
+          glow={recapGlow}
+          participants={participants}
+          currentUserId={currentUserId}
+          ownGlowBreakdown={ownGlowBreakdown}
+          hapticGrammarEnabled={hapticGrammarEnabled}
         />
       )}
 

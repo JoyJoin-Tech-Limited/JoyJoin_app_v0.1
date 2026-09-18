@@ -49,6 +49,8 @@ import { useKeepScreenOn } from './hooks/useKeepScreenOn'
 import { useIdlePollBackoff } from './hooks/useIdlePollBackoff'
 import { MOOD_FIELD_BLOOM_MS, deriveMoodField } from './viewModels/ambientFieldModel'
 import { GroupBeatTracker, parseSocialGroupBeat } from './viewModels/groupBeatModel'
+import { isLiveAuctionV2Session, publishAuctionV2Beat } from './viewModels/auctionV2Model'
+import { readOwnGlowBreakdown, readRecapGlow } from './viewModels/sessionGlowModel'
 import { SessionPhaseViews, type SessionPhaseViewsProps } from './SessionPhaseViews'
 import { CEREMONY_IDS, enterCeremony, exitCeremony } from '../../lib/guidance/ceremonyState'
 import {
@@ -290,6 +292,11 @@ export default function IcebreakerSessionPage() {
   if (groupBeatTrackerRef.current === null) {
     groupBeatTrackerRef.current = new GroupBeatTracker()
   }
+  // Wave 2 auction V2: true while a live V2 auction is on screen — the only
+  // window in which nudge/reveal beats are rerouted to the auction view.
+  // Assigned below once `session` is derived (render-time assignment, same
+  // pattern as phaseRef).
+  const auctionV2LiveRef = useRef(false)
   // N4: re-bind a fresh tracker when the session changes so a previous
   // session's nonces/suppression window never leak into the new room.
   useEffect(() => {
@@ -309,7 +316,19 @@ export default function IcebreakerSessionPage() {
       resetIdlePoll()
       const pattern = groupBeatTrackerRef.current?.registerBeat(beat)
       if (pattern) {
-        if (socialHaptics(pattern)) playPattern(pattern)
+        // Wave 2 auction V2: during a live V2 auction the auction view owns
+        // the reaction to nudge/reveal beats (self-checked outbid buzz /
+        // table-wide all-in buzz), so the generic dispatch is skipped — the
+        // two channels can never double-fire. Host-paced canon makes this
+        // window collision-free: the host cannot advance (phase_advanced)
+        // before `auctionAllLotsClosed`, so every nudge/reveal beat arriving
+        // here IS an auction beat. Outside this window (and for every V1
+        // session) today's dispatch runs unchanged.
+        if (auctionV2LiveRef.current && (beat.pattern === 'nudge' || beat.pattern === 'reveal')) {
+          publishAuctionV2Beat(beat.pattern)
+        } else if (socialHaptics(pattern)) {
+          playPattern(pattern)
+        }
       }
     },
     [resolvedSessionId, playPattern, resetIdlePoll],
@@ -376,6 +395,7 @@ export default function IcebreakerSessionPage() {
   // regenerate topics after the host already advanced the session).
   const phaseRef = useRef(phase)
   phaseRef.current = phase
+  auctionV2LiveRef.current = isLiveAuctionV2Session(session)
 
   // W3: an opt-out failure notice and the roster-locked observer flag are
   // phase-scoped — clear them the moment the phase changes so a stale notice
@@ -651,6 +671,19 @@ export default function IcebreakerSessionPage() {
     enabled: (phase === 'recap' || phase === 'ended') && !!socialSessionId && !authLoading,
     staleTime: 0,
   })
+
+  // Wave 4 高光值 (locked contract AC-12): the server-derived glow snapshot
+  // and the viewer's own per-source breakdown ride the recap state (the
+  // server trims everyone else's breakdowns, AC-09). Absent → legacy medal
+  // grid renders byte-identical (AC-08); readers are defensive/fail-open.
+  const recapGlow = useMemo(
+    () => readRecapGlow(recapQuery.data?.state?.recapSnapshot ?? session?.recapSnapshot),
+    [recapQuery.data?.state?.recapSnapshot, session?.recapSnapshot],
+  )
+  const ownGlowBreakdown = useMemo(
+    () => readOwnGlowBreakdown(recapQuery.data?.state ?? session, currentUserId),
+    [recapQuery.data?.state, session, currentUserId],
+  )
 
   const myVoteIndex = useMemo(() => {
     const currentPlayer = session?.lieDetectivePlayers?.[session.currentLieDetectivePlayerIndex ?? 0]
@@ -998,6 +1031,7 @@ export default function IcebreakerSessionPage() {
     pendingAction,
     canChangeTier,
     glanceStackEnabled,
+    hapticGrammarEnabled,
     supportedPhases,
     mascotDisplayName: getMascotDisplayName(user),
     personalityDiceChooseMode: features?.personalityDiceChooseMode,
@@ -1018,6 +1052,8 @@ export default function IcebreakerSessionPage() {
     recapSummary: recapQuery.data?.summary ?? null,
     recapMedals: recapQuery.data?.medals ?? [],
     recapMeta: recapQuery.data?.meta ?? null,
+    recapGlow,
+    ownGlowBreakdown,
     onOpenTierSheet: () => setIsTierSheetOpen(true),
     onOpenMiniScript: () => {
       resetMiniScriptGeneration()

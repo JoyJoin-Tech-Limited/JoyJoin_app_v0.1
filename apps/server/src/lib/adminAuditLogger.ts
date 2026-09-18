@@ -124,6 +124,15 @@ export const ADMIN_AUDIT_ACTIONS = [
   // Social Icebreaker host resilience (W1) — operator recovery of a frozen room.
   'SOCIAL_ICEBREAKER_FORCE_END',
   'SOCIAL_ICEBREAKER_HOST_TRANSFERRED',
+  // Test-mode admin surface (/api/test/**, super_admin-gated QA tooling).
+  // Distinct actions so test-data mutations are filterable in the audit log
+  // rather than being buried under a generic context bag.
+  'TEST_USER_CREATED',
+  'TEST_EVENT_POOL_CREATED',
+  'TEST_REGISTRATION_CREATED',
+  'TEST_DATA_RESET',
+  'TEST_ICEBREAKER_FORCE_PHASE',
+  'TEST_ICEBREAKER_CLEANED',
   // Runtime fallback for malformed / untyped callers
   'OTHER',
 ] as const;

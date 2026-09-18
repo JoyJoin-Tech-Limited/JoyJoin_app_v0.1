@@ -119,6 +119,10 @@ describe('S6 group beats — emitter', () => {
       phase_advanced: 'nudge',
       session_recap: 'celebration',
       reveal: 'reveal',
+      // Auction V2 (sprint wave2-auctionV2, contract AC-05): additive kinds
+      // reusing the closed pattern vocabulary — wsEvents.ts stays untouched.
+      auction_outbid: 'nudge',
+      auction_all_in: 'reveal',
     });
   });
 

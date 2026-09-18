@@ -1,0 +1,207 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RecapGlowBlock — Wave 4 「今晚的高光」(sessionGlowEnabled ON path)
+// Cozy, zero-competition: tier words + medals only, numbers never on screen.
+// ═══════════════════════════════════════════════════════════════════════════
+
+.recap-glow {
+  width: 100%;
+}
+
+.recap-glow__table-line {
+  display: block;
+  margin-top: $spacing-sm;
+  @include type-body;
+  color: $color-text-secondary;
+  text-align: center;
+  line-height: 1.6;
+}
+
+// Floor-tier positive framing (spec D2/D5: 「静静发光也是光」 direction).
+.recap-glow__floor-line {
+  display: block;
+  margin-top: $spacing-xs;
+  @include type-body;
+  color: $color-archetype-fire;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.recap-glow__cards {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+  width: 100%;
+}
+
+.recap-glow__card {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-md;
+  border-radius: $card-radius-sm;
+  border: 2rpx solid rgba($color-border, 0.7);
+  background: $color-surface;
+}
+
+// Reveal rhythm (spec D3): stagger fade-in, transform/opacity only.
+// Delay comes from the inline style (per-card index × GLOW_CARD_STAGGER_MS).
+.recap-glow__card--stagger {
+  opacity: 0;
+  animation: recap-glow-card-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes recap-glow-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Self card: highlight outline + soft brand glow (spec D3 自己的卡片高亮描边).
+.recap-glow__card--self {
+  border-color: rgba($color-primary, 0.55);
+  box-shadow:
+    0 8rpx 24rpx rgba($color-primary, 0.14),
+    inset 0 0 0 1rpx rgba($color-primary, 0.18);
+}
+
+.recap-glow__card-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.recap-glow__card-name {
+  @include type-body-emphasis;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recap-glow__self-badge {
+  margin-left: $spacing-xs;
+  padding: 0 12rpx;
+  border-radius: 999rpx;
+  background: rgba($color-primary, 0.12);
+  color: $color-primary;
+  font-size: $font-size-xs;
+}
+
+// Tier chips — qualitative words only (微光 / 暖心 / 闪闪发光).
+.recap-glow__tier {
+  flex-shrink: 0;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: $font-size-xs;
+  line-height: 1.6;
+}
+
+.recap-glow__tier--ember {
+  background: rgba($color-text-secondary, 0.1);
+  color: $color-text-secondary;
+}
+
+.recap-glow__tier--warm {
+  background: rgba($color-landed-gold, 0.18);
+  color: $color-archetype-fire;
+}
+
+.recap-glow__tier--blazing {
+  background: rgba($color-primary, 0.12);
+  color: $color-primary;
+}
+
+// Medals embedded in the recipient's card (spec D3 — no standalone grid).
+.recap-glow__medals {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.recap-glow__medal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  border-radius: $card-radius-sm;
+  background: rgba($color-landed-gold, 0.08);
+  text-align: center;
+}
+
+.recap-glow__medal-title {
+  @include type-body-emphasis;
+  color: $color-text-primary;
+}
+
+.recap-glow__medal-desc {
+  @include type-caption;
+  color: $color-text-secondary;
+  line-height: 1.6;
+}
+
+// Self-only per-source breakdown — collapsed by default (spec D4).
+.recap-glow__detail {
+  width: 100%;
+}
+
+.recap-glow__detail-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64rpx;
+  border-radius: $card-radius-sm;
+  transition: background 0.12s ease;
+}
+
+.recap-glow__detail-toggle--hover {
+  background: rgba($color-primary, 0.07);
+}
+
+.recap-glow__detail-toggle-text {
+  @include type-body;
+  color: $color-primary;
+}
+
+.recap-glow__detail-body {
+  padding-top: $spacing-xs;
+}
+
+.recap-glow__detail-sources {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.recap-glow__detail-source {
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba($color-primary, 0.08);
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  line-height: 1.6;
+}
+
+// prefers-reduced-motion (spec D3/AC-13): every card static, no stagger.
+@media (prefers-reduced-motion: reduce) {
+  .recap-glow__card--stagger {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

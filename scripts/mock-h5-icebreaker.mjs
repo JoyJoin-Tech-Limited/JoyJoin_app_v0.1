@@ -33,6 +33,51 @@ const IB_LIE_STATEMENTS = [
   { index: 2, text: '我曾经在沙漠里住过一个月的帐篷' },
 ]
 
+// ─── Wave 2 / Wave 4 flag-gated preview fixtures (2026-09-18) ─────
+// Shapes mirror packages/shared/src/socialIcebreaker.ts exactly:
+// AuctionLotResult { lotIndex, lotId, title, winnerUserId|null,
+// winningAmount|null, bidCount, wasAllIn }; recapSnapshot.glow
+// { tiers: Record<userId, 'ember'|'warm'|'blazing'>, medals, tableLine }.
+
+const AUCTION_V2_LOTS = [
+  { id: 'v2-lot-1', title: '当众唱一句儿歌', teaser: '跑调也要唱完，大家投票打分', emoji: '🎤' },
+  { id: 'v2-lot-2', title: '爆料一个自己的小怪癖', teaser: '越具体越好笑', emoji: '🤫' },
+  { id: 'v2-lot-3', title: '请全桌喝一杯', teaser: '今晚的豪气担当就是你', emoji: '🍜' },
+]
+
+const AUCTION_V2_FINALE_LOTS = [
+  ...AUCTION_V2_LOTS,
+  { id: 'v2-lot-4', title: '模仿主持人说一句绕口令', teaser: '嘴瓢也算节目效果', emoji: '🎭' },
+]
+
+// Four awards computable: biggest_spend (桃桃 85), bargain (小鹿 25),
+// hottest (《爆料一个自己的小怪癖》 5 bids), steadiest (老周, no wins + 100
+// remaining). Lot 4 is 流拍 (winnerUserId: null) — the honest unsold row.
+const AUCTION_V2_FINALE_LOT_RESULTS = [
+  { lotIndex: 0, lotId: 'v2-lot-1', title: '当众唱一句儿歌', winnerUserId: 'ib-p4', winningAmount: 85, bidCount: 4, wasAllIn: false },
+  { lotIndex: 1, lotId: 'v2-lot-2', title: '爆料一个自己的小怪癖', winnerUserId: 'ib-p3', winningAmount: 80, bidCount: 5, wasAllIn: true },
+  { lotIndex: 2, lotId: 'v2-lot-3', title: '请全桌喝一杯', winnerUserId: 'ib-p2', winningAmount: 25, bidCount: 2, wasAllIn: false },
+  { lotIndex: 3, lotId: 'v2-lot-4', title: '模仿主持人说一句绕口令', winnerUserId: null, winningAmount: null, bidCount: 0, wasAllIn: false },
+]
+
+function AUCTION_V2_FINALE_BID_HISTORY(now) {
+  return [
+    { userId: 'ib-p2', amount: 40, at: now - 16 * 60_000, lotIndex: 0 },
+    { userId: 'ib-p4', amount: 85, at: now - 15 * 60_000, lotIndex: 0 },
+    { userId: 'ib-p2', amount: 30, at: now - 12 * 60_000, lotIndex: 1 },
+    { userId: IB_HOST_ID, amount: 55, at: now - 11 * 60_000, lotIndex: 1 },
+    { userId: 'ib-p3', amount: 80, at: now - 10 * 60_000, lotIndex: 1, isAllIn: true },
+    { userId: 'ib-p2', amount: 25, at: now - 7 * 60_000, lotIndex: 2 },
+  ]
+}
+
+const RECAP_SUMMARY_FIXTURE = {
+  headline: '今晚到这儿，刚刚好',
+  closingLine: '悦仔的任务完成啦，接下来的故事，你们当面接着讲～',
+  moments: ['小鹿猜中了阿澈的谎言，全场惊呼', '桃桃拍下了「请全桌喝一杯」，豪气拉满', '悦仔测试接梗三连，桌上的笑声没停过'],
+}
+
+
 export function buildIcebreakerState(sessionId) {
   const variant = sessionId.replace('mock-', '')
   const now = Date.now()
@@ -171,6 +216,146 @@ export function buildIcebreakerState(sessionId) {
           { userId: 'ib-p2', amount: 45, at: now - 30_000, lotIndex: 0 },
         ],
       }
+    case 'auction-v2-live':
+    case 'auction-v2-live-host': {
+      // Wave 2 (AC-11/AC-12): live V2 bidding, mid-lot (2/3), one all-in
+      // badge case. `-live` is the PARTICIPANT view (host = 老周, so the
+      // viewer sees the 3-tier ladder); `-live-host` keeps the default host
+      // viewer (close-lot CTA + host all-in hint, no ladder).
+      const participantView = variant === 'auction-v2-live'
+      return {
+        ...base,
+        hostUserId: participantView ? 'ib-p5' : IB_HOST_ID,
+        hostDisplayName: participantView ? '老周' : base.hostDisplayName,
+        currentPhase: 'auction',
+        auctionV2Enabled: true,
+        auctionLots: AUCTION_V2_LOTS,
+        auctionCurrentLotIndex: 1,
+        auctionLotResults: [
+          { lotIndex: 0, lotId: 'v2-lot-1', title: '当众唱一句儿歌', winnerUserId: 'ib-p4', winningAmount: 30, bidCount: 3, wasAllIn: false },
+        ],
+        auctionBalances: {
+          [IB_HOST_ID]: 100,
+          'ib-p2': 75,
+          'ib-p3': 0, // 阿澈 went all-in on the current lot
+          'ib-p4': 70,
+          'ib-p5': 100,
+          'ib-p6': 95,
+        },
+        // All-in badge case: 阿澈 committed their full spendable balance.
+        auctionHighBid: { userId: 'ib-p3', amount: 80, isAllIn: true },
+        auctionLotStartedAt: now - 10_000,
+        auctionAllLotsClosed: false,
+        auctionLotsMeta: mockAigcMeta('social-auction-lots-v1'),
+        auctionBidHistory: [
+          { userId: 'ib-p2', amount: 15, at: now - 5 * 60_000, lotIndex: 0 },
+          { userId: 'ib-p4', amount: 30, at: now - 4 * 60_000, lotIndex: 0 },
+          { userId: IB_HOST_ID, amount: 45, at: now - 40_000, lotIndex: 1 },
+          { userId: 'ib-p3', amount: 80, at: now - 15_000, lotIndex: 1, isAllIn: true },
+        ],
+      }
+    }
+    case 'auction-v2-finale':
+      // Wave 2 (AC-13): two-act finale. auctionLotResults drives all four
+      // awards (今晚最敢花=桃桃 85 / 捡漏王=小鹿 25 / 全场最热=《爆料…》 5 bids /
+      // 最稳的手=老周 100 remaining) + one 流拍 lot; the bill lists the five
+      // bidders (host excluded by the view-model).
+      return {
+        ...base,
+        currentPhase: 'auction',
+        auctionV2Enabled: true,
+        auctionLots: AUCTION_V2_FINALE_LOTS,
+        auctionCurrentLotIndex: AUCTION_V2_FINALE_LOTS.length - 1,
+        auctionHighBid: null,
+        auctionAllLotsClosed: true,
+        auctionLotsMeta: mockAigcMeta('social-auction-lots-v1'),
+        auctionLotResults: AUCTION_V2_FINALE_LOT_RESULTS,
+        auctionBalances: {
+          [IB_HOST_ID]: 100,
+          'ib-p2': 50,
+          'ib-p3': 0,
+          'ib-p4': 15,
+          'ib-p5': 100,
+          'ib-p6': 40,
+        },
+        auctionBidHistory: AUCTION_V2_FINALE_BID_HISTORY(now),
+      }
+    case 'recap-glow': {
+      // Wave 4 (AC-12/AC-13): 4-player table, mixed tiers, 3 data medals.
+      // recapSnapshot.glow is the dual-write canon (medals === glow.medals);
+      // glowPoints carries ONLY the viewer's own breakdown (server trims the
+      // rest, AC-09) so the self card renders the collapsed source detail.
+      const roster = IB_PARTICIPANTS.slice(0, 4)
+      const medals = [
+        { emoji: '🎤', title: '接梗王', recipientDisplayName: '悦仔测试', description: '接住的每个梗都让这桌更热了一点' },
+        { emoji: '💗', title: '暖心雷达', recipientDisplayName: '小鹿', description: '总能看见同桌身上的闪光点' },
+        { emoji: '🔨', title: '豪气担当', recipientDisplayName: '桃桃', description: '出手果断，把喜欢的那件拍回家' },
+      ]
+      return {
+        ...base,
+        playerCount: 4,
+        activePlayerCount: 4,
+        joinedParticipants: roster,
+        archetypeMixText: '柯基 × 狐狸 × 海豚 × 仓鼠',
+        currentPhase: 'recap',
+        completedPhases: ['warmup', 'micro_challenge', 'quip_battle', 'auction', 'group_mirror'],
+        lastAdvanceTrigger: 'auto_all_ready',
+        sessionGlowEnabled: true,
+        glowPoints: {
+          [IB_HOST_ID]: { quip: 3, mirror: 0, auction: 1, miniscript: 0, undercover: 0, challenge: 2, dice: 1, lie: 0 },
+        },
+        recapSnapshot: {
+          recapSummary: RECAP_SUMMARY_FIXTURE,
+          medals,
+          meta: mockAigcMeta('social-recap-summary-v1'),
+          glow: {
+            tiers: {
+              [IB_HOST_ID]: 'blazing',
+              'ib-p2': 'warm',
+              'ib-p3': 'ember',
+              'ib-p4': 'warm',
+            },
+            medals,
+            tableLine: '这桌今晚越走越热，高光一个接一个',
+          },
+        },
+      }
+    }
+    case 'recap-glow-zero': {
+      // Wave 4 (AC-12, spec D5): honest all-zero table — every card on the
+      // 微光 floor, zero medals, quiet table line + 静静发光也是光 floor line.
+      // Viewer breakdown is all zeros → no detail toggle (no fabrication).
+      const roster = IB_PARTICIPANTS.slice(0, 4)
+      return {
+        ...base,
+        playerCount: 4,
+        activePlayerCount: 4,
+        joinedParticipants: roster,
+        archetypeMixText: '柯基 × 狐狸 × 海豚 × 仓鼠',
+        currentPhase: 'recap',
+        completedPhases: ['warmup', 'micro_challenge'],
+        lastAdvanceTrigger: 'auto_all_ready',
+        sessionGlowEnabled: true,
+        glowPoints: {
+          [IB_HOST_ID]: { quip: 0, mirror: 0, auction: 0, miniscript: 0, undercover: 0, challenge: 0, dice: 0, lie: 0 },
+        },
+        recapSnapshot: {
+          recapSummary: RECAP_SUMMARY_FIXTURE,
+          medals: [],
+          meta: mockAigcMeta('social-recap-summary-v1'),
+          glow: {
+            tiers: {
+              [IB_HOST_ID]: 'ember',
+              'ib-p2': 'ember',
+              'ib-p3': 'ember',
+              'ib-p4': 'ember',
+            },
+            medals: [],
+            tableLine: '今晚这桌更像静静相处的一桌',
+          },
+        },
+      }
+    }
     case 'personality_dice':
       return {
         ...base,

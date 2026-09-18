@@ -13,6 +13,7 @@ import { validateContentSafeAsync, contentViolationResponse } from "../../lib/co
 import { recordViolation } from "../../abuseDetection";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { cancelPoolRegistrationWithPolicy } from "../../lib/poolRegistrationCancel";
+import { normalizeBudgetRangeForWrite, resolveBudgetEventType } from "../../lib/budgetTierWrite";
 
 const patchPreferencesSchema = z.object({
   budget: z.array(z.string()).optional(),
@@ -651,6 +652,20 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       } else if (Array.isArray(budget)) {
         budgetRange = budget.map((b: any) => String(b));
       }
+
+      // L1 write normalization: map legacy labels to canonical ids before the
+      // registration insert. The blind-box vocabulary `100-200` has no registry
+      // counterpart (decision B3) — it is preserved verbatim and logged, never
+      // guessed. Namespace follows the request event type (default 饭局).
+      //
+      // T6-strict (budget-tier mainline) intentionally does NOT apply the
+      // registration funnel's allow-list here: the blind-box path keeps its
+      // tolerant write behaviour pending decision B3 (do not decide B3).
+      budgetRange = normalizeBudgetRangeForWrite(
+        budgetRange,
+        resolveBudgetEventType(eventType),
+        "blindBoxEvents.budgetRange",
+      );
 
       if (budgetRange.length === 0) {
         logger.warn("[BlindBoxPayment] missing budget info");

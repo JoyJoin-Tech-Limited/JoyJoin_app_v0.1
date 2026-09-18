@@ -20,7 +20,9 @@ import { formatAge } from "@shared/utils";
 import { getArchetypeFamily } from "@shared/archetypeColors";
 import { storage } from "../../storage";
 import {
+  assertBudgetTierSupplied,
   buildEventPoolRegistrationInsert,
+  BudgetTierValidationError,
   isSessionPendingReferralCode,
   resolveOptionalRegistrationAttribution,
   type EventPoolRegistrationPreferenceDNA,
@@ -40,6 +42,7 @@ import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { getFeatureFlag, getFeatureFlagSync } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
+import { resolveBudgetOptions } from "../../lib/budgetOptionsResolver";
 import { broadcastAttendanceStatusUpdated, broadcastUserConfirmed } from "../../eventBroadcast";
 import { wsService } from "../../wsService";
 import { aiEndpointLimiter } from "../../rateLimiter";
@@ -459,6 +462,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
         now: new Date(),
       });
 
+      // ── T7 / B6: city-level offered budget tiers (annotated with coverage).
+      //    Additive field; client consumption is a follow-up dispatch. The
+      //    resolver is fail-open, so this never blocks or empties the payload. ──
+      const budgetOptions = await resolveBudgetOptions(pool.city, pool.eventType);
+
       res.json({
         ...pool,
         registrationCount: registrations.length,
@@ -470,6 +478,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         accentFamily,
         aiHeadline: null,
         hasUserArchetypeMatch,
+        budgetOptions,
         ...oracleFields,
       });
     } catch (error) {
@@ -617,6 +626,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
         preferredDistricts: dna.preferredDistricts,
         kolComfort: dna.kolComfort,
       };
+
+      // T6-strict required-budget gate (decision B5: min(1) = yes). Enforced at
+      // the funnel, not on the shared insert schema — legitimate direct-Drizzle
+      // writers omit budget. See sprint-contract.budget-t6-strict-20260916 §3.
+      assertBudgetTierSupplied(req.body);
 
       const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
         poolId,
@@ -937,6 +951,13 @@ export function registerUserEventPoolRoutes(app: Express): void {
         error: error instanceof Error ? error.message : String(error),
       });
 
+      // T6-strict: budget validation failures carry their own machine code.
+      // Mapping them to REGISTRATION_FAILED ("提交没成功，再试一次") was wrong —
+      // retrying the same invalid value can never succeed (2026-09-10 class).
+      if (error instanceof BudgetTierValidationError) {
+        return res.status(400).json({ message: error.message, code: error.code });
+      }
+
       if (error?.code === "23505" || error?.cause?.code === "23505") {
         // Unique-violation on (pool_id, user_id) — same terminal-joined
         // contract as the pre-check above (code required for client mapping).
@@ -989,6 +1010,10 @@ export function registerUserEventPoolRoutes(app: Express): void {
           code: "PAYMENTS_DISABLED",
         });
       }
+
+      // T6-strict required-budget gate (decision B5: min(1) = yes) — same
+      // funnel policy as /register above.
+      assertBudgetTierSupplied(req.body);
 
       const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
         poolId,
@@ -1133,8 +1158,15 @@ export function registerUserEventPoolRoutes(app: Express): void {
         route: "/api/event-pools/:poolId/register-with-payment",
         poolId: req.params.poolId,
         userId: (req.user as User | undefined)?.id,
+        code: typeof error?.code === "string" ? error.code : undefined,
         error: error instanceof Error ? error.message : String(error),
       });
+
+      // T6-strict: surface budget validation codes verbatim instead of
+      // collapsing to PAYMENT_CREATION_FAILED (retry cannot succeed).
+      if (error instanceof BudgetTierValidationError) {
+        return res.status(400).json({ message: error.message, code: error.code });
+      }
 
       if (error?.code === "23505" || error?.cause?.code === "23505") {
         return res.status(400).json({ message: "你已经报名过这个活动了", code: "ALREADY_REGISTERED" });

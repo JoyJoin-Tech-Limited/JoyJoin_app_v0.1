@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "style": "modern_urban",
+  "genres": [
+    "light_reasoning"
+  ],
+  "title": "消失的加湿器",
+  "gameModeConfig": {
+    "clueCountRange": [
+      2,
+      4
+    ],
+    "hasRedHerrings": false,
+    "hasHiddenAgendas": false,
+    "votingStyle": "consensus",
+    "winCondition": "solve_mystery",
+    "targetPlayMinutes": 12,
+    "difficulty": "easy"
+  },
+  "premise": "周五晚上的共享自习室里，角落那台大家凑钱买的加湿器不见了。门窗都锁着，今晚只有四个人进出过。",
+  "characters": [
+    {
+      "slotIndex": 0,
+      "roleLabel": "做手账的学姐",
+      "sinHook": "被「较真」绊了一下——连加湿器水位都要记进手账，今晚却有一页空着。",
+      "alibi": "一直在前排座位整理手账素材，只去接过一次水。",
+      "secret": "你上周不小心把加湿器的电线绊松过一次，偷偷插回去了，谁都没告诉。"
+    },
+    {
+      "slotIndex": 1,
+      "roleLabel": "备考的学弟",
+      "sinHook": "被「嘴硬」绊了一下——明明感冒鼻塞，偏说是自习室太闷。",
+      "alibi": "戴着耳机刷题一晚上，没注意周围发生了什么。",
+      "secret": "你嫌加湿器吵，动过把它关掉的念头，但最终只是调小了档位。"
+    },
+    {
+      "slotIndex": 2,
+      "roleLabel": "爱养多肉的室友",
+      "sinHook": "被「心软」绊了一下——看不得多肉干着，总偷偷给别人的植物浇水。",
+      "alibi": "在窗边给多肉擦叶子，顺带着发了会儿呆。",
+      "secret": "你把加湿器搬到自己桌边给多肉加了半小时湿，用完又放回去了——至少你以为放回去了。"
+    },
+    {
+      "slotIndex": 3,
+      "roleLabel": "值夜的管理员",
+      "sinHook": "被「好面子」绊了一下——第一次值班，什么事都想显得自己在掌控之中。",
+      "alibi": "十点巡过一次场，之后都在前台整理登记表。",
+      "secret": "你巡场时发现加湿器挡了过道，顺手挪到了储物柜顶上，怕被认为多管闲事没说。"
+    }
+  ],
+  "act_flow": [
+    {
+      "actNumber": 1,
+      "title": "开场：角落空了",
+      "beats": [
+        "学姐发现加湿器不见了",
+        "每人交代今晚的行踪",
+        "前台登记表被翻出来传看"
+      ],
+      "cliffhanger": "登记表的背面，有一行被划掉的字。"
+    },
+    {
+      "actNumber": 2,
+      "title": "升温：储物柜顶",
+      "beats": [
+        "检查加湿器的电源线",
+        "有人踮脚看了一眼储物柜顶",
+        "每人可以私下向一个人提一个问题"
+      ],
+      "cliffhanger": "储物柜顶上，有一圈圆圆的水渍印。"
+    },
+    {
+      "actNumber": 3,
+      "title": "收束：一圈水渍",
+      "beats": [
+        "公开投票指认",
+        "管理员复述巡场路线",
+        "学姐补上那页空着的手账"
+      ]
+    }
+  ],
+  "ending": {
+    "resolutionSummary": "真相是：管理员巡场时嫌加湿器挡道，把它挪到了储物柜顶上；室友中途把它搬到桌边给多肉加湿，放回去时也没放回原位。两层「顺手」叠在一起，加湿器就像凭空消失了。",
+    "confessionMechanic": "主持人请管理员说说第一次值班的心情，再请每个人分享一个自己「顺手而为」却闹出误会的小故事。"
+  },
+  "clues": [
+    {
+      "clueId": "c1",
+      "text": "登记表背面有一行被划掉的字，隐约能认出「柜子」两个字，笔迹和前台的登记笔迹一致。",
+      "revealedInAct": 1,
+      "implies": [
+        "c2"
+      ]
+    },
+    {
+      "clueId": "c2",
+      "text": "储物柜顶有一圈新鲜的水渍印，大小和加湿器底座正好吻合。",
+      "revealedInAct": 2,
+      "implies": [
+        "c3"
+      ]
+    },
+    {
+      "clueId": "c3",
+      "text": "加湿器电源线的折痕很新，是今晚被桌角压出来的，和窗边多肉架的角度对得上。",
+      "revealedInAct": 3,
+      "implies": []
+    }
+  ],
+  "solution": {
+    "who": "值夜的管理员",
+    "what": "巡场时嫌加湿器挡道，把它挪到了储物柜顶上，又因为好面子没有声张",
+    "why": "第一次值班想显得一切尽在掌控，怕承认多管闲事会被笑话",
+    "whoSlot": 4
+  },
+  "playerKnowledge": [
+    {
+      "slotIndex": 0,
+      "knownFacts": [
+        "我上周绊松过电源线",
+        "今晚手账空了一页",
+        "加湿器昨晚还在角落"
+      ],
+      "secretAgenda": "我不想让人知道我弄松过电源线——怕被当成嫌疑人",
+      "truthfulAlibi": "一直在前排整理手账，只去接过一次水"
+    },
+    {
+      "slotIndex": 1,
+      "knownFacts": [
+        "我嫌加湿器吵",
+        "我调小过它的档位",
+        "我整晚没离开过座位区"
+      ],
+      "secretAgenda": "不能让人知道我动过档位——本来就够可疑了",
+      "truthfulAlibi": "戴耳机刷题一晚上，只调小过档位"
+    },
+    {
+      "slotIndex": 2,
+      "knownFacts": [
+        "我把加湿器搬到过桌边",
+        "用完后我放回去了",
+        "电源线的折痕是我压的"
+      ],
+      "secretAgenda": "我不想承认搬过加湿器——给多肉加湿这种理由太丢人了",
+      "truthfulAlibi": "在窗边照顾多肉，中途把加湿器搬来用了半小时"
+    },
+    {
+      "slotIndex": 3,
+      "knownFacts": [
+        "我把加湿器挪到了储物柜顶",
+        "登记表背面那行字是我划掉的",
+        "我十点巡过场"
+      ],
+      "secretAgenda": "我不能承认是我挪的——第一次值班就出这种岔子太没面子了",
+      "truthfulAlibi": "十点巡场时挪了加湿器，之后都在前台"
+    }
+  ],
+  "deductionChain": [
+    {
+      "stepNumber": 1,
+      "fromClues": [
+        "c1"
+      ],
+      "conclusion": "划掉的字出自前台笔迹——管理员知道柜子的什么事"
+    },
+    {
+      "stepNumber": 2,
+      "fromClues": [
+        "c1",
+        "c2"
+      ],
+      "conclusion": "加湿器被放到了柜顶，而写下又划掉「柜子」的正是管理员"
+    }
+  ],
+  "voteOptions": {
+    "what": [
+      "顺手挪了位置",
+      "借走忘了还",
+      "只是误会一场",
+      "藏进了柜顶"
+    ],
+    "why": [
+      "好面子",
+      "善意",
+      "嘴硬",
+      "心软"
+    ]
+  }
+}

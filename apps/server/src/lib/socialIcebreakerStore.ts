@@ -1001,6 +1001,26 @@ export async function sweepExpiredSessions(): Promise<void> {
   const now = new Date();
   const retentionCutoff = new Date(now.getTime() - SESSION_EXPIRED_TOMBSTONE_RETENTION_MS);
 
+  // Wave 5 T-2 (G3 recap-dwell leg): sessions expiring while in recap get a
+  // terminal recap phase-metric row BEFORE tombstoning (the purge below
+  // cascade-deletes metric children, so this is the only chance). Fail-open:
+  // telemetry must never break housekeeping — a failure logs and the sweep
+  // proceeds unchanged.
+  try {
+    const recapRows = await recordRecapDwellForExpiringSessions(now);
+    if (recapRows > 0) {
+      logger.info('[PhaseMetrics] recap dwell recorded for expiring sessions', {
+        component: 'social_icebreaker_ttl_sweep',
+        rowsWritten: recapRows,
+      });
+    }
+  } catch (error) {
+    logger.warn('[PhaseMetrics] recap dwell sweep write failed; continuing sweep', {
+      component: 'social_icebreaker_ttl_sweep',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   await db.transaction(async (tx: any) => {
     // 1) Tombstone expired live sessions (idempotent marker guard).
     await tx
@@ -1096,6 +1116,123 @@ export async function getPhaseMetrics(
 }
 
 // ---------------------------------------------------------------------------
+// Recap dwell on session termination (Wave 5 T-2, release-train §2-f G3-b)
+// ---------------------------------------------------------------------------
+
+/**
+ * `savePhaseMetric` only fires when LEAVING a phase via `transitionPhase`;
+ * recap is terminal and has no outgoing transition, so without these helpers
+ * the recap dwell leg of launch gate G3 has no data source.
+ *
+ * Dwell 口径 (kept deliberately simple and honest): the recap AVAILABILITY
+ * window — `terminatedAt − state.phaseStartedAt` where phaseStartedAt is the
+ * moment the session entered recap and terminatedAt is the moment the
+ * session closed (TTL `expiresAt` on the sweep path; wall-clock now on the
+ * force-end path). This measures "recap was the live phase for this long",
+ * NOT active viewing time; the §2-d baseline SQL compares like-for-like.
+ *
+ * Idempotency: `idx_phase_metrics_session_phase` (unique session+phase)
+ * + `onConflictDoNothing` — the first termination write wins; a later sweep
+ * after a force-end (or a repeated sweep) never overwrites or duplicates.
+ */
+
+/** Minimum recap dwell worth persisting — mirrors the transitionPhase floor. */
+export const RECAP_DWELL_MIN_MS = 1000;
+
+/** Pure dwell computation: null when the row should be skipped. */
+export function computeRecapDwellMs(
+  phaseStartedAtMs: number | null | undefined,
+  terminatedAtMs: number,
+): number | null {
+  if (typeof phaseStartedAtMs !== 'number' || !Number.isFinite(phaseStartedAtMs)) return null;
+  const dwell = terminatedAtMs - phaseStartedAtMs;
+  if (dwell < RECAP_DWELL_MIN_MS) return null;
+  return dwell;
+}
+
+/**
+ * Write the terminal recap-phase metric for one session. First write wins
+ * (onConflictDoNothing on the session+phase unique index).
+ */
+export async function recordRecapDwellMetric(
+  socialSessionId: string,
+  metric: {
+    dwellTimeMs: number;
+    startedAt: Date;
+    endedAt: Date;
+    participantCount?: number;
+  },
+): Promise<void> {
+  await db
+    .insert(socialIcebreakerPhaseMetrics)
+    .values({
+      socialSessionId,
+      phase: 'recap',
+      dwellTimeMs: metric.dwellTimeMs,
+      startedAt: metric.startedAt,
+      endedAt: metric.endedAt,
+      participantCount: metric.participantCount ?? null,
+    })
+    .onConflictDoNothing({
+      target: [socialIcebreakerPhaseMetrics.socialSessionId, socialIcebreakerPhaseMetrics.phase],
+    });
+}
+
+/**
+ * Sweep path: sessions expiring while sitting in recap get their terminal
+ * recap dwell row before tombstoning. Termination time is the session's own
+ * `expiresAt` (the moment it became unavailable), not the sweep run time.
+ * Returns the number of rows written.
+ */
+export async function recordRecapDwellForExpiringSessions(now: Date): Promise<number> {
+  const rows = await db
+    .select({
+      id: socialIcebreakerSessions.id,
+      expiresAt: socialIcebreakerSessions.expiresAt,
+      phaseStartedAtMs: sql<string | null>`(${socialIcebreakerSessions.stateJson} ->> 'phaseStartedAt')`,
+      playerCount: sql<string | null>`(${socialIcebreakerSessions.stateJson} ->> 'playerCount')`,
+    })
+    .from(socialIcebreakerSessions)
+    .where(
+      and(
+        lt(socialIcebreakerSessions.expiresAt, now),
+        sql`${socialIcebreakerSessions.stateJson} ->> ${SESSION_EXPIRED_MARKER} IS DISTINCT FROM 'true'`,
+        sql`${socialIcebreakerSessions.stateJson} ->> 'currentPhase' = 'recap'`,
+      ),
+    );
+
+  const values = rows.flatMap((row: {
+    id: string;
+    expiresAt: Date;
+    phaseStartedAtMs: string | null;
+    playerCount: string | null;
+  }) => {
+    const phaseStartedAtMs = row.phaseStartedAtMs ? Number(row.phaseStartedAtMs) : null;
+    const dwellTimeMs = computeRecapDwellMs(phaseStartedAtMs, row.expiresAt.getTime());
+    if (dwellTimeMs === null || phaseStartedAtMs === null) return [];
+    const playerCount = row.playerCount ? Number(row.playerCount) : NaN;
+    return [{
+      socialSessionId: row.id,
+      phase: 'recap',
+      dwellTimeMs,
+      startedAt: new Date(phaseStartedAtMs),
+      endedAt: row.expiresAt,
+      participantCount: Number.isFinite(playerCount) ? playerCount : null,
+    }];
+  });
+
+  if (values.length === 0) return 0;
+
+  await db
+    .insert(socialIcebreakerPhaseMetrics)
+    .values(values)
+    .onConflictDoNothing({
+      target: [socialIcebreakerPhaseMetrics.socialSessionId, socialIcebreakerPhaseMetrics.phase],
+    });
+  return values.length;
+}
+
+// ---------------------------------------------------------------------------
 // Pulse checks
 // ---------------------------------------------------------------------------
 
@@ -1143,7 +1280,7 @@ export async function getPhaseRatings(
 // Moment Card interactions
 // ---------------------------------------------------------------------------
 
-/** Log a Moment Card interaction (save, share, qr_scan). */
+/** Log a Moment Card interaction (save, share, qr_scan, generate — Wave 5 T-1). */
 export async function logMomentCardInteraction(
   socialSessionId: string,
   userId: string,

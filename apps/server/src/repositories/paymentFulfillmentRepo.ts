@@ -17,6 +17,7 @@ import { db } from "../db";
 import { eventCreditsRepo } from "./eventCreditsRepo";
 import { resolveEffectivePreferenceDNA } from "../lib/matchCompass";
 import { resolveOptionalRegistrationAttribution } from "../lib/eventPoolRegistration";
+import { normalizeBudgetRangeForWrite } from "../lib/budgetTierWrite";
 import { logger } from "../lib/logger"; 
 import { users } from "@shared/schema";
 
@@ -103,7 +104,15 @@ function normalizeEventRegistrationPayload(payload: unknown) {
 
   const source = payload as Record<string, unknown>;
   return {
-    budgetRange: toStringArray(source.budgetRange),
+    // L1 write normalization: payment rows created before the cutover, or by
+    // channels that inject legacy labels, must still land canonical ids in
+    // `budget_range` (饭局) / `bar_budget_range` (酒局). Idempotent for rows that
+    // already carry ids; unmappable values are preserved+logged.
+    budgetRange: normalizeBudgetRangeForWrite(
+      toStringArray(source.budgetRange),
+      "饭局",
+      "paymentFulfillment.budgetRange",
+    ),
     preferredLanguages: toStringArray(source.preferredLanguages),
     tasteIntensity: toStringArray(source.tasteIntensity),
     cuisinePreferences: toStringArray(source.cuisinePreferences),
@@ -111,7 +120,11 @@ function normalizeEventRegistrationPayload(payload: unknown) {
     dietaryRestrictions: toStringArray(source.dietaryRestrictions),
     barThemes: toStringArray(source.barThemes),
     alcoholComfort: toStringArray(source.alcoholComfort),
-    barBudgetRange: toStringArray(source.barBudgetRange),
+    barBudgetRange: normalizeBudgetRangeForWrite(
+      toStringArray(source.barBudgetRange),
+      "酒局",
+      "paymentFulfillment.barBudgetRange",
+    ),
     // 双人成行: optional invitation/duo code carried over the payment hop.
     invitationCode:
       typeof source.invitationCode === "string" && source.invitationCode.trim() !== ""

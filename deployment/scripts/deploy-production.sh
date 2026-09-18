@@ -520,6 +520,53 @@ fi
 echo "   Nginx route response headers:"
 curl -sSI -H "Host: joyjoinapp.com" http://127.0.0.1/api/health || true
 
+echo "   Checking Admin portal content (local container)..."
+# The admin SPA must serve real HTML (id="root" mount point from
+# apps/admin-client/index.html). A bare TCP/HTTP 200 is not enough — a broken
+# image can serve an nginx error page and still return a status line.
+admin_local_body=""
+admin_local_ok=false
+for attempt in 1 2 3 4 5; do
+  admin_local_body=$(curl -sS --max-time 10 http://127.0.0.1:3001/ 2>/dev/null || true)
+  if [[ "$admin_local_body" == *'id="root"'* ]]; then
+    admin_local_ok=true
+    break
+  fi
+  echo "   ⏳ Admin content not ready (attempt $attempt/5)..."
+  sleep 3
+done
+if [[ "$admin_local_ok" != "true" ]]; then
+  echo "❌ Admin portal content check failed: http://127.0.0.1:3001/ (missing id=\"root\")"
+  echo "📋 Container status:"
+  docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  echo "📋 Admin container logs:"
+  docker logs joyjoin-admin --tail 120 || true
+  exit 1
+fi
+
+echo "   Checking Admin portal content (public via Nginx + SNI)..."
+# Port 80 is a 301 redirect, so the public probe must use HTTPS with SNI.
+admin_public_body=""
+admin_public_ok=false
+for attempt in 1 2 3 4 5; do
+  admin_public_body=$(curl -sS --max-time 10 --resolve admin.joyjoinapp.com:443:127.0.0.1 https://admin.joyjoinapp.com/ 2>/dev/null || true)
+  if [[ "$admin_public_body" == *'id="root"'* ]]; then
+    admin_public_ok=true
+    break
+  fi
+  echo "   ⏳ Admin public route not ready (attempt $attempt/5)..."
+  sleep 3
+done
+if [[ "$admin_public_ok" != "true" ]]; then
+  echo "❌ Admin public route check failed: https://admin.joyjoinapp.com/ (missing id=\"root\")"
+  echo "📋 Socket listeners (80/443/3001):"
+  ss -ltnp | rg ':80|:443|:3001' || true
+  echo "📋 Response headers:"
+  curl -sSI --resolve admin.joyjoinapp.com:443:127.0.0.1 https://admin.joyjoinapp.com/ || true
+  exit 1
+fi
+echo "   ✅ Admin portal serving real content (local + public)"
+
 # --- 6) Post-deploy cleanup ---
 reclaim_unused_docker_data
 

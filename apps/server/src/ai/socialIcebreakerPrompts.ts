@@ -36,8 +36,25 @@ export const RECAP_SUMMARY_PROMPT_VERSION = 'social-recap-summary-v3';
 export const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v3';
 export const PERSONALITY_DICE_CHOOSE_PROMPT_VERSION = 'social-personality-dice-v4';
 export const AUCTION_LOTS_PROMPT_VERSION = 'social-auction-lots-v2';
+/** Auction V2 (sprint wave2-auctionV2, verifier M1): v3 is selected PER
+ *  SESSION SNAPSHOT (state.auctionV2Enabled === true) — the v2 constant above
+ *  stays the legacy value so flag-off meta + AITrace stay byte-identical. */
+export const AUCTION_LOTS_PROMPT_VERSION_V3 = 'social-auction-lots-v3';
 export const MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION = 'social-miniscript-framework-v1';
 export const SESSION_PACK_PROMPT_VERSION = 'social-session-pack-v2';
+
+/** Wave 3 Highlights Injector (sprint wave3-highlightsInjector, contract
+ *  AC-08): paired versions recorded ONLY when a 【本场高光】 block was actually
+ *  injected into the prompt. The base constants above stay the legacy values
+ *  so flag-off / highlights-empty runs keep byte-identical prompt text AND
+ *  byte-identical AITrace/meta promptVersions (same discipline as the
+ *  AUCTION_LOTS_PROMPT_VERSION_V3 pair above). */
+export const WARMUP_TOPICS_PROMPT_VERSION_HL = 'social-warmup-topics-v6';
+export const WARMUP_TOPICS_CHAT_PROMPT_VERSION_HL = 'social-warmup-topics-v6-chat';
+export const MICRO_CHALLENGES_PROMPT_VERSION_HL = 'social-micro-challenges-v3';
+export const RECAP_SUMMARY_PROMPT_VERSION_HL = 'social-recap-summary-v4';
+export const PERSONALITY_DICE_PROMPT_VERSION_HL = 'social-personality-dice-v5';
+export const PERSONALITY_DICE_CHOOSE_PROMPT_VERSION_HL = 'social-personality-dice-v5-choose';
 
 // ─── Warmup Topics ───────────────────────────────────────────────────────────
 
@@ -64,6 +81,11 @@ export function buildWarmupTopicsPrompt(params: {
   sharedInterests?: string[];
   /** Vibe drives card count, depth curve, and tier generation. */
   vibe?: 'chat' | 'balanced' | 'game';
+  /** Wave 3 (contract AC-07): aggregate session highlights body (≤300 chars,
+   *  no header). When non-empty a 【本场高光】 block is appended before the
+   *  trailing 直接返回 instruction; when absent/empty the prompt string is
+   *  byte-identical to pre-Wave-3. */
+  highlights?: string;
 }): string {
   const moodMap: Record<AtmosphereMood, string> = {
     relaxed: '轻松',
@@ -127,7 +149,9 @@ ${params.sessionContext?.mixText ? `
 【本组画像】${params.sessionContext.mixText}` : ''}${params.sharedInterests?.length ? `
 
 【共同兴趣】${params.sharedInterests.join('、')}
-（至少围绕其中一个共同兴趣设计话题，让组员一看到就想起"这说的不就是我们吗"。）` : ''}
+（至少围绕其中一个共同兴趣设计话题，让组员一看到就想起"这说的不就是我们吗"。）` : ''}${params.highlights?.trim() ? `
+
+【本场高光】${params.highlights}` : ''}
 
 直接返回JSON数组，不要其他内容。${params._refinementHint ? `
 
@@ -141,6 +165,8 @@ export function buildMicroChallengesPrompt(params: {
   participantCount: number;
   _refinementHint?: string;
   sessionContext?: SessionArchetypeContext;
+  /** Wave 3 (contract AC-07): see buildWarmupTopicsPrompt.highlights. */
+  highlights?: string;
 }): string {
   return `你是JoyJoin的社交破冰专家。请为一个${params.eventType}活动（${params.participantCount}人）生成3个有趣的微挑战。
 
@@ -162,7 +188,9 @@ export function buildMicroChallengesPrompt(params: {
 
 ${params.sessionContext?.mixText ? `
 
-【本组画像】${params.sessionContext.mixText}` : ''}
+【本组画像】${params.sessionContext.mixText}` : ''}${params.highlights?.trim() ? `
+
+【本场高光】${params.highlights}` : ''}
 
 直接返回JSON数组，不要其他内容。${params._refinementHint ? `
 
@@ -381,6 +409,8 @@ export function buildRecapSummaryPrompt(params: {
   auctionRecapLines?: string[];
   durationMinutes: number;
   sessionContext?: SessionArchetypeContext;
+  /** Wave 3 (contract AC-07): see buildWarmupTopicsPrompt.highlights. */
+  highlights?: string;
 }): string {
   const diceBlock =
     params.personalityDiceRecapLines?.length
@@ -421,6 +451,8 @@ ${XIAOYUE_CRAFT_LITE}
 
 ${params.sessionContext?.mixText ? `【本组画像】${params.sessionContext.mixText}
 
+` : ''}${params.highlights?.trim() ? `【本场高光】${params.highlights}
+
 ` : ''}直接返回JSON，不要其他内容。`;
 }
 
@@ -434,6 +466,8 @@ export function buildPersonalityDicePrompt(params: {
   }>;
   _refinementHint?: string;
   sessionContext?: SessionArchetypeContext;
+  /** Wave 3 (contract AC-07): see buildWarmupTopicsPrompt.highlights. */
+  highlights?: string;
 }): string {
   const participantList = params.participants.map((p) => ({
     displayName: p.displayName,
@@ -479,7 +513,9 @@ ${JSON.stringify(participantList, null, 2)}
 
 请以JSON数组返回（顺序与输入一致）：
 [{"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard","passLine":"认怂台词","passConsequence":"认怂后果"}]
-
+${params.highlights?.trim() ? `
+【本场高光】${params.highlights}
+` : ''}
 直接返回JSON数组，不要其他内容。${params._refinementHint ? `
 
 【改进建议】${params._refinementHint}` : ''}`;
@@ -495,6 +531,8 @@ export function buildPersonalityDicePromptV4(params: {
   }>;
   _refinementHint?: string;
   sessionContext?: SessionArchetypeContext;
+  /** Wave 3 (contract AC-07): see buildWarmupTopicsPrompt.highlights. */
+  highlights?: string;
 }): string {
   const participantList = params.participants.map((p) => ({
     displayName: p.displayName,
@@ -550,7 +588,9 @@ ${JSON.stringify(participantList, null, 2)}
   ...
 ]
 
-难度标记顺序必须为 easy / medium / hard，不得颠倒。
+难度标记顺序必须为 easy / medium / hard，不得颠倒。${params.highlights?.trim() ? `
+
+【本场高光】${params.highlights}` : ''}
 直接返回JSON二维数组，不要其他内容。${params._refinementHint ? `
 
 【改进建议】${params._refinementHint}` : ''}`;
@@ -563,11 +603,49 @@ export function buildAuctionLotsPrompt(params: {
   eventType?: string;
   _refinementHint?: string;
   mixText?: string;
+  /** Auction V2 (contract AC-07): table vibe drives lot style mix. When BOTH
+   *  this and targetLotCount are absent, the prompt is byte-identical to v2. */
+  vibe?: 'chat' | 'balanced' | 'game';
+  /** Auction V2 (spec D5): exact lot-count target (clamp(bidders,3,5)). */
+  targetLotCount?: number;
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '';
   const mixBlock = params.mixText
     ? `\n【本组画像】${params.mixText}。请根据这组性格画像调整竞拍条目的风格与难度，让不同性格的人都能找到舒适的参与方式。`
     : '';
+  const isV3 = params.targetLotCount !== undefined || params.vibe !== undefined;
+  if (isV3) {
+    const target = params.targetLotCount ?? 4;
+    const vibeGuide =
+      params.vibe === 'chat'
+        ? '本桌氛围偏「深聊」：条目全部偏分享/故事型，语气温和，绝不要整活或表演任务。'
+        : params.vibe === 'game'
+          ? '本桌氛围偏「暢玩」：条目偏表演/整活型，节奏轻快，可以适度搞怪。'
+          : '本桌氛围偏「均衡」：分享型与表演型混合，深浅搭配。';
+    return `你是JoyJoin的社交破冰主持人。为一场线下小局（约${params.participantCount}人）设计${eventLabel}虚拟脑洞拍卖的竞拍条目。
+
+（你是纯数字助手，不身处现场——不要承诺任何物理世界的行动，不要涉及金钱交易。）
+${mixBlock}
+${vibeGuide}
+
+语气要求（活人感）：
+- title像朋友间随口抛出的脑洞，不是正式拍卖品
+- teaser带点挑逗或悬念（"敢不敢...""今晚限定..."）
+- 善用语气词和口语化
+- 当代网络用语每3条最多用1个（如：整活、绝了、拿捏、栓Q）
+- 禁止："恭喜获得...""起拍价..."等正式拍卖口吻
+
+内容规则：
+- 好条目的标准：桌边1-2分钟内可完成；零道具零准备；低压力、可优雅跳过；全桌都能接话，不只是赢家表演；有悬念钩（让人想听答案）
+- 不要涉及金钱、酒精、恋爱隐私、政治、宗教、身体伤害
+- 必须生成且只生成 ${target} 条竞拍品
+- 为每条竞拍品选一个贴合主题的emoji（如 🎭、🎤、🍀、🔮），放在 emoji 字段
+
+请以 JSON 对象返回（仅此对象，不要 markdown）：
+{"lots":[{"id":"lot_1","title":"竞拍标题（≤20字）","teaser":"一句话说明（≤40字，可选）","emoji":"🎭"}]}${params._refinementHint ? `
+
+【改进建议】${params._refinementHint}` : ''}`;
+  }
   return `你是JoyJoin的社交破冰主持人。为一场线下小局（约${params.participantCount}人）设计${eventLabel}虚拟脑洞拍卖的竞拍条目。
 
 （你是纯数字助手，不身处现场——不要承诺任何物理世界的行动，不要涉及金钱交易。）

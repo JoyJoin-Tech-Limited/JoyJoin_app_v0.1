@@ -36,7 +36,6 @@ import {
   generateUndercoverWordPair,
   generateGroupMirrorQuestions,
   validateLieDetectiveV2Tags,
-  getLieDetectiveMode,
   getDynamicDifficulty,
 } from '../socialIcebreakerAIService';
 import { buildCachedAIMeta, buildFallbackAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
@@ -108,6 +107,9 @@ import {
   getCurrentLieDetectivePlayer,
   resolveSession,
   isHostAuthorized,
+  resolvePersonalityDiceChooseModeSnapshot,
+  resolveHighlightsInjectorSnapshot,
+  resolveSessionGlowSnapshot,
 } from './socialIcebreakerHelpers';
 import { registerExtendedRoutes } from './socialIcebreakerExtended';
 import { enqueueRunPlanPreGeneration, shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
@@ -218,6 +220,11 @@ function scheduleStartBackgroundGeneration(params: {
         {
           participantCount: roster.length,
           eventType,
+          // wave1-3 (AC-10): thread the session's choose-mode SNAPSHOT into the
+          // pre-generation payload so a kill-switched session never receives
+          // choose-mode-shaped dice content. Legacy queued jobs lack the field
+          // and degrade to the worker's env fallback.
+          personalityDiceChooseMode: state.personalityDiceChooseModeEnabled,
           participants: roster.map((p) => ({
             userId: p.userId,
             displayName: p.displayName,
@@ -249,6 +256,9 @@ function scheduleStartBackgroundGeneration(params: {
           vibe: state.vibe,
           // W7.4: dedupe warmup topics per pool/group across sessions.
           dedupeKey: state.icebreakerSessionId,
+          // wave3 (AC-07): thread session highlights (vacuous on a brand-new
+          // session — verifier N1 — but required on warmup re-entry).
+          highlights: state.highlights,
         }),
         new Promise<null>((resolve) => {
           warmupBudgetTimer = setTimeout(() => resolve(null), warmupBudgetMs);
@@ -516,6 +526,22 @@ router.post('/start', async (req: any, res) => {
   const resolvedTier: TierMachineId = resolveIncomingTier(eventTier) ?? 'breeze';
   const resolvedVibe: 'chat' | 'balanced' | 'game' = resolveIncomingVibe(vibe) ?? 'balanced';
 
+  // wave1-3 (AC-02 site 1 / verifier N3): initiate the DB-backed choose-mode
+  // read as early as possible so it overlaps the custom-mode check and the
+  // single-test lookup below instead of serialising a DB round-trip onto the
+  // /start critical path. The 500ms warm-up-budget assertion in
+  // socialIcebreakerRoutes.test.ts is the tripwire for any latency regression —
+  // fix the code, never loosen the assertion.
+  const personalityDiceChooseModePromise = getFeatureFlag('personalityDiceChooseModeEnabled', true);
+  // wave3 (AC-02): same parallelized pattern — the highlights-injector read
+  // starts here and is awaited beside the choose-mode snapshot below, adding
+  // no serialised round-trip to the /start budget.
+  const highlightsInjectorPromise = getFeatureFlag('highlightsInjectorEnabled', false);
+  // wave4 (AC-02): same parallelized pattern — the session-glow read starts
+  // here and is awaited beside the snapshots below, adding no serialised
+  // round-trip to the /start budget (wave1-3 N3 lesson).
+  const sessionGlowPromise = getFeatureFlag('sessionGlowEnabled', false);
+
   if (resolvedTier === 'custom') {
     const customModeEnabled = await getFeatureFlag('socialIcebreakerCustomModeEnabled', true);
     if (!customModeEnabled) {
@@ -592,10 +618,35 @@ router.post('/start', async (req: any, res) => {
     // Countdown-driven phase advancement is intentionally disabled. The host
     // decides when the table has had enough time to react and recap.
     autoAdvanceEnabled: false,
-    personalityDiceChooseModeEnabled:
-      (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true',
     ...(singleTestMeta ? { singleTest: singleTestMeta } : {}),
   };
+
+  // wave1-3 (AC-03): snapshot the choose-mode flag ONCE per session. The DB
+  // read was started above (N3) and is handed in as an in-flight promise; the
+  // resolver writes the field and emits the one-per-session audit log.
+  await resolvePersonalityDiceChooseModeSnapshot(
+    newState,
+    socialSessionId,
+    personalityDiceChooseModePromise,
+  );
+
+  // wave3 (AC-02): snapshot the highlights-injector flag ONCE per session,
+  // reusing the in-flight read started above. Immutable for the session
+  // lifetime; a mid-session admin flip never affects this session (AC-13).
+  await resolveHighlightsInjectorSnapshot(
+    newState,
+    socialSessionId,
+    highlightsInjectorPromise,
+  );
+
+  // wave4 (AC-02): snapshot the session-glow flag ONCE per session, reusing
+  // the in-flight read started above. Immutable for the session lifetime; a
+  // mid-session admin flip never affects this session.
+  await resolveSessionGlowSnapshot(
+    newState,
+    socialSessionId,
+    sessionGlowPromise,
+  );
 
   let runPlan: IcebreakerRunPlan | undefined;
   if (resolvedTier === 'custom') {
@@ -854,6 +905,9 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
       vibe: state.vibe,
       // W7.4: dedupe warmup topics per pool/group across sessions.
       dedupeKey: state.icebreakerSessionId,
+      // wave3 (AC-07): thread session highlights (typically empty during the
+      // first warmup run — verifier N1 — live on warmup re-entry).
+      highlights: state.highlights,
     });
   } catch (error) {
     logger.error('[SocialIcebreaker] topics generation failed; serving curated fallback topics', {
@@ -1107,8 +1161,12 @@ router.post('/:socialSessionId/moment-card-event', async (req: any, res) => {
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-  if (!action || !['save', 'share', 'qr_scan'].includes(action)) {
-    return res.status(400).json({ error: 'action must be save, share, or qr_scan' });
+  // Wave 5 T-1: 'generate' records the G3 numerator — a participant actually
+  // opened the moment-highlights card from recap (client dedupes to once per
+  // session view). Column is varchar (no pgEnum) so this whitelist is the
+  // only validation surface.
+  if (!action || !['save', 'share', 'qr_scan', 'generate'].includes(action)) {
+    return res.status(400).json({ error: 'action must be save, share, qr_scan, or generate' });
   }
 
   const state = await resolveSession(socialSessionId, res);

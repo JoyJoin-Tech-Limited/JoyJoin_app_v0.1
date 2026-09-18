@@ -39,7 +39,7 @@ Before any file edits on non-trivial work, classify the task:
 ## Auto-Trigger Classification
 
 ```bash
-node scripts/harness-auto-trigger.mjs --prompt="<user request>" --proposed-files=<files>
+node scripts/harness/harness-auto-trigger.mjs --prompt="<user request>" --proposed-files=<files>
 ```
 
 Output format to announce:

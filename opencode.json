@@ -51,16 +51,33 @@
     },
     "kimi-for-coding": {
       "models": {
-        "kimi-k2.7-code": {
+        "kimi-for-coding": {
+          "name": "K2.8 Preview",
           "limit": {
-            "context": 262144,
-            "output": 32768
+            "context": 1048576,
+            "output": 65536
+          },
+          "modalities": {
+            "input": ["text", "image", "video"],
+            "output": ["text"]
           },
           "options": {
-            "maxTokens": 32768
+            "maxTokens": 65536
+          },
+          "variants": {
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
           }
         },
-        "kimi-k2.7-code-highspeed": {
+        "kimi-for-coding-highspeed": {
+          "name": "K2.7 Code HighSpeed",
           "limit": {
             "context": 262144,
             "output": 32768
@@ -84,6 +101,41 @@
           },
           "options": {
             "maxTokens": 65536
+          },
+          "variants": {
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
+          }
+        },
+        "k3-256k": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "options": {
+            "maxTokens": 65536
+          },
+          "variants": {
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
           }
         }
       }

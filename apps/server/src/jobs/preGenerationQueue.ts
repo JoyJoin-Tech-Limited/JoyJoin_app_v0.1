@@ -68,6 +68,10 @@ export async function enqueueRunPlanPreGeneration(
   sessionPayload: {
     participantCount?: number;
     eventType?: string;
+    /** wave1-3 (AC-10): the session's choose-mode SNAPSHOT. Threaded into the
+     *  per-phase job payload so the worker's dice generator/fallback matches the
+     *  mode the session actually runs. Absent on legacy callers → env fallback. */
+    personalityDiceChooseMode?: boolean;
     participants?: Array<{
       userId: string;
       displayName: string;
@@ -88,6 +92,9 @@ export async function enqueueRunPlanPreGeneration(
       participantCount: sessionPayload.participantCount,
       eventType: sessionPayload.eventType,
       participants: sessionPayload.participants,
+      // wave1-3 (AC-10): persisted per-job so the worker is session-authoritative
+      // even if the DB flag flips between enqueue and processing.
+      personalityDiceChooseMode: sessionPayload.personalityDiceChooseMode,
       seed: `${socialSessionId}-${entry.phase}`,
     };
 

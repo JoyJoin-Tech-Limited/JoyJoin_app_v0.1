@@ -77,6 +77,11 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     onboardingForceSkip?: boolean
     matchingLiveReveal?: boolean
     socialIcebreakerClientForceEnd?: boolean
+    /** Personality Dice Choose-Your-Prompt (sprint wave1-3, 2026-09-17;
+     *  live-by-default). Wired from the DB flag `personalityDiceChooseModeEnabled`
+     *  via GET /api/auth/user. The per-session snapshot
+     *  `session.personalityDiceChooseModeEnabled` remains the runtime authority;
+     *  this field only backstops legacy sessions whose state predates it. */
     personalityDiceChooseMode?: boolean
     /** When true, the server uses template-driven run plan compilation (3×3 vibe×tier grid +
      *  deep_chat/play_fun/balanced vibes). When false, legacy compileAgentRunPlan() runs unchanged. */
@@ -200,6 +205,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** B3 in-test gather-glow on answer submit. Registered dark in W1,
      *  consumed in W4. Default: false. */
     testGatherGlowEnabled?: boolean
+    /** Lie Detective V2 (user tags + AI fake, "Spot-the-Bot"). Server-side
+     *  snapshot authority lives in session state; this flag is exposure for
+     *  future client affordances only. Default: false (V1). */
+    lieDetectiveV2Enabled?: boolean
   }
 }
 

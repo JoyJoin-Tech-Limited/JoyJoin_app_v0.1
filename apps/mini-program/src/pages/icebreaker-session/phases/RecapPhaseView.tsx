@@ -19,21 +19,13 @@ import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { haptics } from '../../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
+import { emitMomentCardGenerateOnce } from '../momentCardTelemetry'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
+import { MedalIcon, RecapGlowBlock } from './RecapGlowBlock'
+import type { SessionGlowSnapshot } from '../viewModels/sessionGlowModel'
+import type { GlowPointBreakdown } from '@shared/socialIcebreaker'
+import type { SessionParticipant } from '../phaseUtils'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
-
-function MedalIcon({ title, emoji }: { title: string; emoji: string }) {
-  switch (title) {
-    case '最佳侦探':
-      return <PhaseHeaderIcon phase='lie_detective' size={48} />
-    case '挑战先锋':
-      return <PhaseHeaderIcon phase='micro_challenge' size={48} />
-    case '话题王':
-      return <PhaseHeaderIcon phase='warmup' size={48} />
-    default:
-      return <JoyJoinIcon emoji={emoji} size={48} />
-  }
-}
 
 function RecapAiFeedbackBar({
   socialSessionId,
@@ -109,6 +101,10 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
         setPanel(res.panel)
         setPanelMeta(res.meta ?? null)
         setShowPanel(true)
+        // Wave 5 T-1 (G3 numerator): the panel only opens on a successful
+        // generation, so this is the honest "card generated" signal. Deduped
+        // once per session; fire-and-forget (never blocks the panel).
+        emitMomentCardGenerateOnce(socialSessionId)
       }
     } catch {
       void Taro.showToast({ title: '高光整理没成功，再试一次', icon: 'none' })
@@ -226,6 +222,20 @@ interface RecapPhaseViewProps {
   phasesCompleted?: number
   /** True when the host jumped the table to recap via 提前进入总结. */
   isEarlyEnd?: boolean
+  /**
+   * Wave 4 高光值 (locked contract AC-12): present only when the session
+   * snapshot ran with sessionGlowEnabled. When present, the standalone
+   * medals grid is replaced by the 「今晚的高光」 block; when absent the
+   * grid renders byte-identical to today (AC-08).
+   */
+  glow?: SessionGlowSnapshot
+  /** Roster in table order — drives the glow card order (never glow order). */
+  participants?: SessionParticipant[]
+  currentUserId?: string
+  /** Viewer-only per-source glow breakdown (server trims everyone else's). */
+  ownGlowBreakdown?: GlowPointBreakdown
+  /** S1 haptic grammar flag — gates the glow block's entrance celebration. */
+  hapticGrammarEnabled?: boolean
 }
 
 export function RecapPhaseView({
@@ -239,6 +249,11 @@ export function RecapPhaseView({
   recapMeta,
   phasesCompleted,
   isEarlyEnd,
+  glow,
+  participants,
+  currentUserId,
+  ownGlowBreakdown,
+  hapticGrammarEnabled,
 }: RecapPhaseViewProps) {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
@@ -349,8 +364,20 @@ export function RecapPhaseView({
         ) : null}
       </View>
 
-      {/* Medals section */}
-      {medals.length > 0 && (
+      {/* Medals section — Wave 4 高光值 (locked contract AC-12): flag-ON
+          sessions render the 「今晚的高光」 glow block; flag-OFF renders
+          today's standalone medal grid byte-identical (AC-08). */}
+      {glow && participants ? (
+        <RecapGlowBlock
+          glow={glow}
+          roster={participants}
+          currentUserId={currentUserId}
+          ownBreakdown={ownGlowBreakdown}
+          socialSessionId={socialSessionId}
+          hapticGrammarEnabled={hapticGrammarEnabled ?? false}
+        />
+      ) : (
+        medals.length > 0 && (
         <Card className='icebreaker__recap-section'>
           <Text className='icebreaker__recap-section-title icebreaker__recap-section-title--center'>
             <JoyJoinIcon emoji='🏆' size={28} /> 今晚奖项
@@ -371,6 +398,7 @@ export function RecapPhaseView({
             ))}
           </View>
         </Card>
+        )
       )}
 
       {/* V2 Data cards */}
@@ -536,8 +564,9 @@ export function RecapPhaseView({
         </View>
       )}
 
-      {/* Empty state */}
-      {!recapData && medals.length === 0 && recapMoments.length === 0 && (
+      {/* Empty state — suppressed on glow sessions: the glow block already
+          carries the honest all-zero framing (flag-off condition unchanged). */}
+      {!glow && !recapData && medals.length === 0 && recapMoments.length === 0 && (
         <Card className='icebreaker__recap-section'>
           <Text className='icebreaker__recap-section-title'>感谢参与今晚的破冰！</Text>
           <Text className='icebreaker__recap-item'>

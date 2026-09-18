@@ -37,6 +37,7 @@ import { selectMicroChallenges } from '@shared/microChallengeTemplates';
 import { getDaresForArchetype } from '@shared/personalityDiceDares';
 import { getFallbackUndercoverPair } from '@shared/undercoverWord';
 import { getFallbackGroupMirrorQuestions } from '@shared/groupMirror';
+import { selectAuctionFallbackLots } from '@shared/socialIcebreakerAuctionFallback';
 import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge, GroupMirrorQuestion, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker';
 import { selectPermissionLineForTopic } from '@shared/socialIcebreakerYuezaiCopy';
 import { logger } from '../lib/logger';
@@ -112,15 +113,36 @@ function getFallbackLieDetectiveStatements(): LieDetectiveStatement[] {
   return [...sets].sort(() => Math.random() - 0.5)[0];
 }
 
+/**
+ * wave2-auctionV2 (verifier M4): delegates to the canonical 12-item bank —
+ * the former stale 3-item duplicate was retired in the same sprint that born
+ * the canonical bank. NOTE (contract Proposed Files): the auction pregen
+ * output is currently UNCONSUMED (no getPreGenerationResult call in
+ * socialIcebreakerExtended.ts); any future consumption must thread the
+ * session's auctionV2Enabled snapshot + vibe instead of this legacy call.
+ */
 function getFallbackAuctionLots(): AuctionLot[] {
-  return [
-    { id: 'lot_fb_1', title: '分享一个无伤大雅的社死瞬间', teaser: '越离谱越好，反正大家都不认识' },
-    { id: 'lot_fb_2', title: '用三句话编一个离谱旅行故事', teaser: '现场即兴，瞎编也行' },
-    { id: 'lot_fb_3', title: '爆料一个今晚之前没人知道的小习惯', teaser: '说完就翻篇，不截图' },
-  ];
+  return selectAuctionFallbackLots({ count: 3 });
 }
 
-function getFallbackForPhase(
+/**
+ * wave1-3 (AC-02 sites 7–8 / AC-10): resolve choose-mode from the per-job
+ * payload FIRST (threaded from the session snapshot at enqueue time), falling
+ * back to the legacy env read for jobs enqueued before the field existed.
+ * Synchronous by design — `getFallbackForPhase` is a sync function and a
+ * session without a payload snapshot is semantically a legacy session.
+ * Exported for the personalityDiceChooseModeFlag contract tests; pure.
+ */
+export function resolvePersonalityDiceChooseModeFromPayload(
+  payload: Record<string, unknown>,
+): boolean {
+  return typeof payload.personalityDiceChooseMode === 'boolean'
+    ? payload.personalityDiceChooseMode
+    : (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+}
+
+/** Exported for the wave1-3 contract tests (worker output-shape assertions). */
+export function getFallbackForPhase(
   phase: string,
   payload: Record<string, unknown>,
 ): { data: unknown; meta: Record<string, unknown> } {
@@ -149,7 +171,8 @@ function getFallbackForPhase(
     }
     case 'personality_dice': {
       const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string }>) || [];
-      const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+      // wave1-3 (AC-02 site 7): payload-first; legacy jobs fall back to env.
+      const chooseModeEnabled = resolvePersonalityDiceChooseModeFromPayload(payload);
       if (chooseModeEnabled) {
         const groups: PersonalityDiceChallengeGroup[] = participants.map((p) => {
           const dares = getDaresForArchetype(p.archetype || 'corgi');
@@ -229,6 +252,12 @@ type GeneratorFn = (socialSessionId: string, payload: Record<string, unknown>) =
   meta: Record<string, unknown>;
 }>;
 
+// NOTE (sprint wave3-highlightsInjector, contract Out-of-Scope): pregen runs
+// SESSION-FREE — there is no social-icebreaker session state at job time, so
+// no generator below receives `highlights` and none ever should invent one.
+// Session highlights (state.highlights) only exist after real transitions;
+// any future pregen consumption of the highlights-injector feature must stay
+// silent-by-design (the in-session on-demand paths re-ask with state anyway).
 const PHASE_GENERATORS: Record<string, GeneratorFn> = {
   warmup: async (_sessionId, payload) => {
     const result = await generateWarmupTopics({
@@ -252,6 +281,14 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
     return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };
   },
 
+  // NOTE (sprint wave1-2-lieDetectiveV2Enabled, verifier hole 4-1): this path
+  // resolves the lie-detective mode env-only (generateLieDetectiveStatements
+  // falls back to getLieDetectiveMode() with no session mode) and BYPASSES the
+  // DB-backed lieDetectiveV2Enabled flag + phase-entry snapshot. Safe today
+  // only because lie_detective pregen output is currently UNCONSUMED (no
+  // getPreGenerationResult reader for this phase). Any future pregen
+  // consumption for lie_detective MUST thread the session's snapshotted
+  // state.lieDetectiveMode through as `mode` first.
   lie_detective: async (_sessionId, payload) => {
     const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string; interests?: string[] }>) || [];
     const results = await Promise.all(
@@ -273,7 +310,8 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
 
   personality_dice: async (_sessionId, payload) => {
     const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>) || [];
-    const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+    // wave1-3 (AC-02 site 8): payload-first; legacy jobs fall back to env.
+    const chooseModeEnabled = resolvePersonalityDiceChooseModeFromPayload(payload);
     if (chooseModeEnabled) {
       const result = await generatePersonalityDiceChallengeGroups({ participants, _refinementHint: payload._refinementHint as string | undefined });
       return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };

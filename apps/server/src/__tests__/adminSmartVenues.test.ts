@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 import { createWithServer } from '../test-utils/withServer';
 import express from "express";
 import session from "express-session";
@@ -82,6 +83,11 @@ vi.mock("@shared/schema", () => ({
   venueTimeSlotBookings: venueTimeSlotBookingsTable,
   eventPoolGroups: Symbol("eventPoolGroups"),
   eventPools: Symbol("eventPools"),
+  // T6-strict: venues.ts builds its `budgetCategories` allow-list from this
+  // registry-derived schema. These route-wiring tests don't exercise budget
+  // validation, so a permissive stub keeps the venues route importable under
+  // the table mocks (the real allow-list is covered in budgetTierWrite.test.ts).
+  budgetTierIdSchema: z.string(),
 }));
 
 vi.mock("drizzle-orm", () => ({

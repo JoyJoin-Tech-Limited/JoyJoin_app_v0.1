@@ -254,6 +254,8 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
     participantCount: roster.length || state.playerCount || 1,
     eventType: state.eventType || '活动',
     roster: roster.map((p) => ({ archetype: p.archetype, interests: p.interests })),
+    // wave3 (AC-07): thread aggregate session highlights into the prompt.
+    highlights: state.highlights,
     ...(matchingAware
       ? {
           mood: state.selectedMood,
@@ -406,9 +408,12 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     return res.status(400).json({ error: 'Not in personality_dice phase' });
   }
 
+  // wave1-3 (AC-02 site 2): snapshot-first; only the fallback tier changes from
+  // a raw env read to the DB flag chain (DB row → env → default true). The
+  // write-back below is preserved for legacy sessions predating the snapshot.
   const chooseModeEnabled =
     state.personalityDiceChooseModeEnabled ??
-    (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+    (await getFeatureFlag('personalityDiceChooseModeEnabled', true));
   state.personalityDiceChooseModeEnabled = chooseModeEnabled;
 
   // ── Choose-Mode branch ──
@@ -471,7 +476,11 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     }
 
     try {
-      const groupResult = await generatePersonalityDiceChallengeGroups({ participants: participants || [] });
+      const groupResult = await generatePersonalityDiceChallengeGroups({
+        participants: participants || [],
+        // wave3 (AC-07): thread aggregate session highlights into the prompt.
+        highlights: state.highlights,
+      });
       const enrichedGroups = groupResult.data.map((g) => ({
         ...g,
         archetypeColor: getArchetypeHSL(g.archetype),
@@ -548,7 +557,11 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
   }
 
   try {
-    const challengeResult = await generatePersonalityDiceChallenges({ participants: participants || [] });
+    const challengeResult = await generatePersonalityDiceChallenges({
+      participants: participants || [],
+      // wave3 (AC-07): thread aggregate session highlights into the prompt.
+      highlights: state.highlights,
+    });
     const enrichedChallenges = challengeResult.data.map((c) => ({
       ...c,
       archetypeColor: getArchetypeHSL(c.archetype),
@@ -599,9 +612,10 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  // wave1-3 (AC-02 site 3): snapshot-first; DB-flag fallback tier, read-only.
   const chooseModeEnabled =
     state.personalityDiceChooseModeEnabled ??
-    (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+    (await getFeatureFlag('personalityDiceChooseModeEnabled', true));
   if (!chooseModeEnabled) {
     return res.status(400).json({ error: 'Choose-Your-Prompt mode is not enabled' });
   }
@@ -724,9 +738,10 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
     return res.status(400).json({ error: 'Not in personality_dice phase' });
   }
 
+  // wave1-3 (AC-02 site 4): snapshot-first; DB-flag fallback tier, read-only.
   const chooseModeEnabled =
     state.personalityDiceChooseModeEnabled ??
-    (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+    (await getFeatureFlag('personalityDiceChooseModeEnabled', true));
 
   // Choose mode keeps selection editable until the player explicitly readies.
   if (chooseModeEnabled && state.personalityDiceChallengeGroups) {

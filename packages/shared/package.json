@@ -17,6 +17,7 @@
     "./icebreakerGames": "./src/icebreakerGames.ts",
     "./microChallengeTemplates": "./src/microChallengeTemplates.ts",
     "./socialIcebreaker": "./src/socialIcebreaker.ts",
+    "./socialIcebreakerAuctionFallback": "./src/socialIcebreakerAuctionFallback.ts",
     "./occupations": "./src/occupations.ts",
     "./topicCards": "./src/topicCards.ts",
     "./atmospherePrediction": "./src/atmospherePrediction.ts",
@@ -29,6 +30,7 @@
     "./hongKongTime": "./src/hongKongTime.ts",
     "./centerTabRouting": "./src/centerTabRouting.ts",
     "./matchingWeights": "./src/matchingWeights.ts",
+    "./budgetTiers": "./src/budgetTiers.ts",
     "./personality": "./src/personality/index.ts",
     "./personality/assessmentProfile": "./src/personality/assessmentProfile.ts",
     "./personality/confidenceCalibration": "./src/personality/confidenceCalibration.ts",
@@ -71,7 +73,9 @@
     "./copy/exceptions": "./src/copy/exceptions.ts",
     "./copy/poolTeaserCopy": "./src/copy/poolTeaserCopy.ts",
     "./copy/poolRegistrationInclusionsCopy": "./src/copy/poolRegistrationInclusionsCopy.ts",
-    "./copy/guidanceCopy": "./src/copy/guidanceCopy.ts"
+    "./copy/guidanceCopy": "./src/copy/guidanceCopy.ts",
+    "./copy/auctionV2": "./src/copy/auctionV2.ts",
+    "./copy/sessionGlow": "./src/copy/sessionGlow.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

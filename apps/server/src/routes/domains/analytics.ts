@@ -393,6 +393,17 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   "phase_view",
   "lie_vote_cast",
   "auction_bid_placed",
+  // Auction V2 (sprint wave2-auctionV2, contract AC-14)
+  "auction_outbid_notified",
+  "auction_all_in_fired",
+  "auction_finale_viewed",
+  "auction_award_revealed",
+  // Session Glow 高光值 (sprint wave4-sessionGlow, contract AC-10). The
+  // medal-honesty health metric is computed from glow_medal_awarded rows
+  // (dataDerived is always true on the flag-ON path — any <100% = P1).
+  "glow_recap_revealed",
+  "glow_medal_awarded",
+  "glow_detail_expanded",
   "dice_option_chosen",
   "micro_challenge_completed",
   "recap_connections_tap",

@@ -32,6 +32,8 @@ import {
   resolvePhaseOptOutNotice,
   type PhaseActionNotice,
 } from '../viewModels/phaseOptOutModel'
+import { isAuctionV2SnapshotOn } from '../viewModels/auctionV2Model'
+import type { AuctionBidClientMeta } from '../viewModels/auctionV2Model'
 import type { TierSheetSelection } from '../components/IcebreakerTierSheet'
 
 // Warmup topic generation is LLM-backed (6s server LLM race + curated-topic
@@ -953,17 +955,37 @@ export function useSocialActions(args: UseSocialActionsArgs) {
   }, [performSocialAction])
 
   const handleAuctionBid = useCallback(
-    (amount: number) => {
+    (amount: number, meta?: AuctionBidClientMeta) => {
       socialIcebreakerAnalytics.track(
         'auction_bid_placed',
         socialSessionId ?? undefined,
         session?.icebreakerSessionId,
         'auction',
-        { amount, playerCount },
+        {
+          amount,
+          playerCount,
+          ...(meta ? { tier: meta.tier, lotIndex: meta.lotIndex, isAllIn: meta.isAllIn } : {}),
+        },
       )
-      void performSocialAction('auction-bid', '/auction/bid', { amount })
+      // Wave 2 V2 concurrent-400 path (「须高于当前最高」): the existing toast
+      // path surfaces the server message; the ladder additionally refreshes
+      // immediately so tiers re-price against the newest high bid instead of
+      // waiting out the 3s poll. V1 (snapshot off/absent) keeps poll-only.
+      const v2SnapshotOn = isAuctionV2SnapshotOn(session)
+      void performSocialAction(
+        'auction-bid',
+        '/auction/bid',
+        { amount },
+        v2SnapshotOn
+          ? {
+              onError: () => {
+                void refetchSession()
+              },
+            }
+          : undefined,
+      )
     },
-    [performSocialAction, socialSessionId, session?.icebreakerSessionId, playerCount],
+    [performSocialAction, socialSessionId, session, playerCount, refetchSession],
   )
 
   const handleCloseAuctionLot = useCallback(() => {

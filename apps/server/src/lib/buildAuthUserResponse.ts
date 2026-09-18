@@ -152,6 +152,8 @@ const [
     landingStepLoopEnabled,
     testIntroWhyLineEnabled,
     testGatherGlowEnabled,
+    lieDetectiveV2Enabled,
+    personalityDiceChooseModeEnabled,
     entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
@@ -204,6 +206,13 @@ const [
     getFeatureFlag('landingStepLoopEnabled', false),
     getFeatureFlag('testIntroWhyLineEnabled', false),
     getFeatureFlag('testGatherGlowEnabled', false),
+    // Lie Detective V2 (sprint wave1-2, 2026-09-16): DB-backed, ships dark;
+    // session-state snapshot is the runtime authority — this is exposure only.
+    getFeatureFlag('lieDetectiveV2Enabled', false),
+    // Personality Dice Choose-Your-Prompt (sprint wave1-3, 2026-09-17):
+    // live-by-default kill switch; the session snapshot is the runtime
+    // authority — this is legacy-session backstop exposure only.
+    getFeatureFlag('personalityDiceChooseModeEnabled', true),
     // Server-resolved entitlement signal (pool-registration gate semantics via
     // lib/entitlement.ts), joined into the flag batch so the cold-start auth
     // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
@@ -304,6 +313,11 @@ const [
       landingStepLoopEnabled,
       testIntroWhyLineEnabled,
       testGatherGlowEnabled,
+      /** Lie Detective V2 (ships dark; session snapshot is runtime authority). */
+      lieDetectiveV2Enabled,
+      /** Personality Dice Choose-Your-Prompt (live-by-default; session snapshot
+       *  is the runtime authority — backstops legacy sessions only). */
+      personalityDiceChooseMode: personalityDiceChooseModeEnabled,
     },
   };
 

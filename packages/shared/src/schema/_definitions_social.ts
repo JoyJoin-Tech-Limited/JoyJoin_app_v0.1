@@ -122,12 +122,12 @@ export const socialIcebreakerPhasePulseChecks = pgTable("social_icebreaker_phase
 
 export type SocialIcebreakerPhasePulseCheckRow = typeof socialIcebreakerPhasePulseChecks.$inferSelect;
 
-/** Moment Card interaction log: save, share, qr_scan */
+/** Moment Card interaction log: save, share, qr_scan, generate (Wave 5 T-1) */
 export const momentCardInteractions = pgTable("moment_card_interactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   socialSessionId: varchar("social_session_id").notNull().references(() => socialIcebreakerSessions.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
-  action: varchar("action").notNull(), // save, share, qr_scan
+  action: varchar("action").notNull(), // save, share, qr_scan, generate — plain varchar, whitelist enforced in routes/socialIcebreaker.ts moment-card-event
   deviceInfo: jsonb("device_info"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [

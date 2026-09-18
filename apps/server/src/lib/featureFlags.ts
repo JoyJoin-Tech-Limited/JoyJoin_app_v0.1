@@ -355,6 +355,77 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  LIE_DETECTIVE_MODE is unset or 'v1', or flag-OFF will not equal V1.
    *  Env fallback: LIE_DETECTIVE_V2_ENABLED (default: false). */
   lieDetectiveV2Enabled: "LIE_DETECTIVE_V2_ENABLED",
+  /** Personality Dice Choose-Your-Prompt (2026-09-17, sprint
+   *  wave1-3-personalityDiceChooseMode): DB-backed kill switch over an
+   *  ALREADY-LIVE behavior. Resolved ONCE at session start (POST /start) and
+   *  snapshotted into session state
+   *  (state.personalityDiceChooseModeEnabled) — mid-session flips never affect
+   *  a live session. Resolution order: session snapshot → this DB flag → env
+   *  PERSONALITY_DICE_CHOOSE_MODE_ENABLED → default true. Flag-off returns all
+   *  NEW sessions to single-dare mode (legacy shape).
+   *  OPS PRECONDITION (contract AC-09, INVERTED vs wave1-2): before creating
+   *  the first DB row in an environment, record that environment's
+   *  PERSONALITY_DICE_CHOOSE_MODE_ENABLED posture and confirm with product that
+   *  choose-mode is intended ON there — an accidental DB false row kills a LIVE
+   *  feature; an accidental DB true row silently overrides an intentional env
+   *  false.
+   *  Env fallback: PERSONALITY_DICE_CHOOSE_MODE_ENABLED (default: true). */
+  personalityDiceChooseModeEnabled: "PERSONALITY_DICE_CHOOSE_MODE_ENABLED",
+  /** Auction V2 (2026-09-17, sprint wave2-auctionV2): DB-backed kill switch
+   *  for the auction redesign — tap-only bid ladder, outbid/all-in group
+   *  beats, isAllIn ceremony, two-act finale via auctionLotResults, economy
+   *  clamp + vibe-aware prompt v3 + 12-item rotated fallback bank. Resolved
+   *  ONCE at auction phase entry and snapshotted into session state
+   *  (state.auctionV2Enabled) — mid-session flips never affect a live
+   *  session. undefined ≡ flag-off === today's exact V1 auction behavior.
+   *  OPS PRECONDITIONS (contract AC-10): before setting true in any
+   *  environment, record that environment's SOCIAL_ICEBREAKER_ENABLE_AUCTION
+   *  posture, capture the Wave 0.6 bid-participation baseline, land the
+   *  fallback-bank + award-name human copy reviews, and confirm the
+   *  mini-program build carrying the client ACs is live there.
+   *  Env fallback: AUCTION_V2_ENABLED (default: false). */
+  auctionV2Enabled: "AUCTION_V2_ENABLED",
+  /** Highlights Injector (2026-09-17, sprint wave3-highlightsInjector): Wave 3
+   *  Context Injector Phase 2 — rule-based extraction of aggregate session
+   *  highlights (quip_battle most-upvoted quip, lie_detective V2 closest
+   *  finish, warmup discussed topics) on every transitionPhase, injected as
+   *  a 【本场高光】 block into warmup / micro_challenge / personality_dice /
+   *  recap prompts. Resolved ONCE at session start (POST /start) and
+   *  snapshotted into session state (state.highlightsInjectorEnabled) —
+   *  mid-session flips never affect a live session. undefined ≡ flag-off ===
+   *  today's exact behavior in prompt text AND AITrace promptVersions
+   *  (paired *_HL constants are selected only when highlights are actually
+   *  injected). Privacy canon: aggregate-only — no userId/displayName.
+   *  OPS NOTE: before setting true in any environment, confirm that
+   *  environment's HIGHLIGHTS_INJECTOR_ENABLED is unset (recorded in the
+   *  Wave 1.5 flag matrix).
+   *  Env fallback: HIGHLIGHTS_INJECTOR_ENABLED (default: false). */
+  highlightsInjectorEnabled: "HIGHLIGHTS_INJECTOR_ENABLED",
+  /** Session Glow 高光值 (2026-09-18, sprint wave4-sessionGlow): Wave 4 cozy
+   *  meta — silent server-authoritative glow-point accumulation at the
+   *  transitionPhase PRE-CLEANUP choke point, honest data-derived medals
+   *  (shuffle fallback structurally unreachable when ON), server-derived
+   *  recapSnapshot.glow (tiers/medals/tableLine, NO recap LLM wiring), and
+   *  the recap 「今晚的高光」 client block. Resolved ONCE at session start
+   *  (POST /start) and snapshotted into session state
+   *  (state.sessionGlowEnabled) — mid-session flips never affect a live
+   *  session. undefined ≡ flag-off ≡ byte-for-byte today's recap (payload,
+   *  medals, prompt text/versions). Named `sessionGlow` (NOT
+   *  `icebreakerHighlightsMeta`) to stay visually distinct from
+   *  `highlightsInjectorEnabled` in the admin flag list (spec §1.3 — the
+   *  two flags are independently killable and must never be confused).
+   *  Privacy canon: other players' point breakdowns never leave the server
+   *  (sanitizeStateForClient projection); numbers never render on screen.
+   *  OPS NOTE (contract AC-11): before setting true in any environment —
+   *  (a) 🔴 copy sign-off on tier words / floor / empty-state / tableLine /
+   *  breakdown labels (packages/shared/src/copy/sessionGlow.ts);
+   *  (b) the mini-program build carrying the client ACs is live there;
+   *  (c) confirm that environment's SESSION_GLOW_ENABLED is unset;
+   *  (d) Wave 5 baselines captured (recap dwell, moment-card rate,
+   *  floor-tier share). Health metric: medal honesty rate MUST be 100% when
+   *  ON (any <100% = P1, spec D6).
+   *  Env fallback: SESSION_GLOW_ENABLED (default: false). */
+  sessionGlowEnabled: "SESSION_GLOW_ENABLED",
 };
 
 /**
@@ -449,6 +520,30 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  release train flips it; explicit false so the admin toggle UI and
    *  listFeatureFlags() show a stable default. */
   lieDetectiveV2Enabled: false,
+  /** Personality Dice Choose-Your-Prompt is LIVE-BY-DEFAULT: all 8 read sites
+   *  default ON, `.env.example` ships =true, and the deploy scripts write the
+   *  env var only when the GitHub repo variable is non-empty, so an unset var
+   *  yields today's choose-mode behavior. Explicit true so the admin toggle UI
+   *  and listFeatureFlags() show a stable default AND an unset env preserves
+   *  the live feature. Any other value would silently turn a live feature off.
+   *  See the FLAG_ENV_MAP note for the AC-09 ops precondition. */
+  personalityDiceChooseModeEnabled: true,
+  /** Auction V2 ships dark (V1 stays the default) until the 游戏性大版本
+   *  release train flips it; explicit false so the admin toggle UI and
+   *  listFeatureFlags() show a stable default. Flag-off === today's exact
+   *  auction behavior. See the FLAG_ENV_MAP note for the AC-10 preconditions. */
+  auctionV2Enabled: false,
+  /** Highlights Injector ships dark until the 游戏性大版本 release train flips
+   *  it; explicit false so the admin toggle UI and listFeatureFlags() show a
+   *  stable default. Flag-off === today's exact prompt text, session state,
+   *  and AITrace promptVersions (contract AC-08/AC-09). */
+  highlightsInjectorEnabled: false,
+  /** Session Glow 高光值 ships dark until the 游戏性大版本 release train
+   *  flips it; explicit false so the admin toggle UI and listFeatureFlags()
+   *  show a stable default. Flag-off === byte-for-byte today's recap payload,
+   *  medal behavior (shuffle fallback intact), and prompt text/versions
+   *  (contract AC-08). See the FLAG_ENV_MAP note for the AC-11 preconditions. */
+  sessionGlowEnabled: false,
   /** T7 budget-aware assignment degradation ships dark; explicit false so the
    *  admin toggle UI and listFeatureFlags() show a stable default. Flag-off is
    *  byte-for-byte the legacy budget path (see FLAG_ENV_MAP note). */

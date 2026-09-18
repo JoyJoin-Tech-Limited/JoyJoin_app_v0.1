@@ -40,6 +40,19 @@ type EventType =
   | 'phase_view'
   | 'lie_vote_cast'
   | 'auction_bid_placed'
+  // Wave 2 Auction V2 (locked contract AC-14) — server whitelist lands with
+  // the parallel backend workstream; emission here is fire-and-forget and a
+  // whitelist miss is silently dropped server-side, never a client crash.
+  | 'auction_outbid_notified'
+  | 'auction_all_in_fired'
+  | 'auction_finale_viewed'
+  | 'auction_award_revealed'
+  // Wave 4 Session Glow (locked contract AC-15, verifier M1) — recap 「今晚的
+  // 高光」 block events. Fire-and-forget; the server whitelist lands with the
+  // parallel backend workstream and a whitelist miss is silently dropped.
+  | 'glow_recap_revealed'
+  | 'glow_medal_awarded'
+  | 'glow_detail_expanded'
   | 'dice_option_chosen'
   | 'micro_challenge_completed'
   | 'recap_connections_tap'

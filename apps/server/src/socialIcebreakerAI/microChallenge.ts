@@ -15,6 +15,7 @@ import { getClientForFunction } from '../ai/socialModelRouter';
 import {
   buildMicroChallengesPrompt,
   MICRO_CHALLENGES_PROMPT_VERSION,
+  MICRO_CHALLENGES_PROMPT_VERSION_HL,
 } from '../ai/socialIcebreakerPrompts';
 import { createAiCorrelationId, logAITrace } from '../lib/aiTraceLogger';
 import type { ModerationCheck } from '../lib/aiContentModeration';
@@ -73,8 +74,17 @@ export async function generateMicroChallenges(params: {
   mood?: 'relaxed' | 'funny' | 'life' | 'emotional';
   /** W5: phase energy-arc hint — drives `inferTargetEnergy` in the selector. */
   energyArc?: 'start' | 'build' | 'peak' | 'winddown';
+  /** Wave 3 (contract AC-07): aggregate session highlights body (state.highlights).
+   *  Threaded into the prompt as a 【本场高光】 block when non-empty; also drives
+   *  the paired *_HL promptVersion selection (AC-08). */
+  highlights?: string;
 }): Promise<AIServiceResult<MicroChallenge[]>> {
   const aiCorrelationId = createAiCorrelationId();
+  // Wave 3 (contract AC-08): paired version selected pre-build, never post-hoc.
+  const highlightsInjected = Boolean(params.highlights?.trim());
+  const promptVersion = highlightsInjected
+    ? MICRO_CHALLENGES_PROMPT_VERSION_HL
+    : MICRO_CHALLENGES_PROMPT_VERSION;
 
   // W5: build the archetype context once so it is observable on every path
   // (including the AI-disabled selector path) — production callers must pass
@@ -85,6 +95,7 @@ export async function generateMicroChallenges(params: {
     rosterSize: params.roster?.length ?? 0,
     mood: params.mood ?? null,
     energyArc: params.energyArc ?? null,
+    highlightsInjected,
   };
 
   // 1. Always build the deterministic selector baseline. Passing mood +
@@ -156,8 +167,8 @@ export async function generateMicroChallenges(params: {
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
-      const meta = buildFallbackAIMeta('empty_response', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      const meta = buildFallbackAIMeta('empty_response', promptVersion, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
       return attachAIGC({ data: selectorResult, meta });
     }
 
@@ -167,14 +178,14 @@ export async function generateMicroChallenges(params: {
     } catch {
       const latencyMs = Date.now() - t0;
       logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using selector fallback`);
-      const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
       return attachAIGC({ data: selectorResult, meta });
     }
     if (Array.isArray(parsed) && parsed.length > 0) {
       const latencyMs = Date.now() - t0;
       logger.info(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms`);
-      const meta = buildLiveAIMeta(provider, MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
+      const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion, extra: rosterSignalExtra });
       fireAndForgetQualityGate(content, 'icebreaker_micro_challenge', aiCorrelationId, 'micro_challenge', params.eventType);
       const liveChallenges: MicroChallenge[] = parsed.slice(0, 3);
@@ -184,7 +195,7 @@ export async function generateMicroChallenges(params: {
           provider,
           model,
           latencyMs,
-          promptVersion: MICRO_CHALLENGES_PROMPT_VERSION,
+          promptVersion,
           aiCorrelationId,
           feature: 'generateMicroChallenges',
           fallbackData: selectorResult,
@@ -194,15 +205,15 @@ export async function generateMicroChallenges(params: {
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape, using selector fallback`);
-    const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     return attachAIGC({ data: selectorResult, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     const isTimeout = isLLMTimeoutError(error);
     logger.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
-    const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
-    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason, extra: { highlightsInjected } });
     if (selectorResult.length === 0) throw error;
     return attachAIGC({ data: selectorResult, meta });
   } finally {

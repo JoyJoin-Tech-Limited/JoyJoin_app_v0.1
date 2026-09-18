@@ -58,7 +58,13 @@ export type ErrorCode =
   | 'NO_ACTIVE_ENTITLEMENT'
   | 'NO_AVAILABLE_EVENT_PACK_CREDITS'
   | 'PAYMENT_CREATION_FAILED'
-  | 'WECHAT_BINDING_REQUIRED';
+  | 'WECHAT_BINDING_REQUIRED'
+  // T6-strict budget-tier funnel validation. Without these two templates a
+  // rejected/missing budget collapsed to the generic
+  // "出了点问题，稍后再试" toast — and a retry with the same invalid value can
+  // never succeed, so the generic copy was actively wrong (2026-09-10 class).
+  | 'INVALID_BUDGET_TIER'
+  | 'BUDGET_TIER_REQUIRED';
 
 interface ErrorTemplate {
   /** Surface type — determines tone mode */
@@ -267,6 +273,17 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   WECHAT_BINDING_REQUIRED: {
     surface: 'toast-error',
     default: '请重新登录后再试',
+  },
+  // T6-strict registration-funnel budget codes. Copy stays zero-emoji,
+  // particle-free (system-ui toast), and avoids WeChat-review vocabulary.
+  // "区间不在可选范围内" is accurate: the value was not a registry tier.
+  INVALID_BUDGET_TIER: {
+    surface: 'toast-error',
+    default: '预算区间不在可选范围内',
+  },
+  BUDGET_TIER_REQUIRED: {
+    surface: 'toast-error',
+    default: '请先选择预算区间',
   },
 };
 
