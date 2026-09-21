@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { resolvePoolReminderMoment } from "../lib/subscribeReminderScheduler";
 
@@ -39,5 +40,13 @@ describe("resolvePoolReminderMoment", () => {
     expect(resolvePoolReminderMoment(at(19, 19), at(20, 10))).toBeNull(); // 15h ago
     expect(resolvePoolReminderMoment(at(18, 19), at(20, 10))).toBeNull(); // 39h ago
     expect(resolvePoolReminderMoment(at(19, 19), at(20, 22))).toBeNull(); // after 21:00
+  });
+
+  it("locks the pool scan to exclude cancelled pools (regression: a cancelled matched pool must never receive 今天见/回顾 pushes)", () => {
+    const source = readFileSync(
+      new URL("../lib/subscribeReminderScheduler.ts", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain('ne(eventPools.status, "cancelled")');
   });
 });

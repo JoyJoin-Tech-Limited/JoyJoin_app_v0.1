@@ -298,7 +298,7 @@ export function LieDetectiveHeroView({
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
           title='等待侦探回合开启…'
         >
-          <WaitingBeat variant='host' />
+          {!isHost ? <WaitingBeat variant='host' /> : null}
         </PhaseHeroCard>
       </View>
     )

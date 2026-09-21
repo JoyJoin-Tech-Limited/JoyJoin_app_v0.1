@@ -26,6 +26,11 @@ interface PoolRegistrationDuoCardProps {
  * surface only — no border, no shadow, no icon next to the title (小信 is the
  * visual anchor of this step; this card deliberately stays one volume lower).
  */
+// Module-level celebration cooldown: a bouncing duo-status poll can flap
+// waiting→bound rapidly; without this, each flip fires a success haptic.
+const CELEBRATION_COOLDOWN_MS = 30_000;
+let lastBoundCelebrationAt = 0;
+
 export default function PoolRegistrationDuoCard({
   state,
   mode,
@@ -48,9 +53,11 @@ export default function PoolRegistrationDuoCard({
   const prevStateRef = useRef<DuoCardState | null>(null)
   const [justBound, setJustBound] = useState(false)
   useEffect(() => {
-    const prev = prevStateRef.current
+    const prev = prevStateRef.current;
     prevStateRef.current = state
     if (state !== 'bound' || !prev || prev === 'bound') return undefined
+    if (Date.now() - lastBoundCelebrationAt < CELEBRATION_COOLDOWN_MS) return undefined
+    lastBoundCelebrationAt = Date.now()
     haptics('success')
     if (reduceMotion) return undefined
     setJustBound(true)

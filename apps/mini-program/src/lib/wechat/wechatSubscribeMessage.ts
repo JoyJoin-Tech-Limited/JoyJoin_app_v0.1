@@ -18,27 +18,31 @@ export interface SubscribeGrantResult {
   banned: string[]
 }
 
+/** Discriminated outcome so callers can meter WHY no grant happened. */
+export type SubscribeGrantOutcome =
+  | { kind: 'granted'; result: SubscribeGrantResult }
+  | { kind: 'skipped'; reason: 'non-weapp' | 'no-templates' | 'api-error' }
+
 /**
  * Requests subscription to pool / match–related service messages (WeChat only).
- * Must be invoked from a user gesture (e.g. button tap). No-op when no template IDs
- * are configured or when not running in the WeChat mini program.
- * Returns the per-template verdicts so callers can meter accept/reject/ban rates.
+ * Must be invoked from a user gesture (e.g. button tap). Returns the per-template
+ * verdicts (or the skip reason) so callers can meter accept/reject/ban rates.
  */
-export async function requestPoolMatchSubscribeMessage(): Promise<SubscribeGrantResult | null> {
+export async function requestPoolMatchSubscribeMessage(): Promise<SubscribeGrantOutcome> {
   if (process.env.TARO_ENV !== 'weapp') {
-    return null
+    return { kind: 'skipped', reason: 'non-weapp' }
   }
 
   const tmplIds = getWeChatSubscribeTemplateIds()
 
   if (tmplIds.length === 0) {
     logInfo('[Subscribe] Skipped — TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS not set')
-    return null
+    return { kind: 'skipped', reason: 'no-templates' }
   }
 
   if (typeof Taro.requestSubscribeMessage !== 'function') {
     logWarn('[Subscribe] requestSubscribeMessage not available on this runtime')
-    return null
+    return { kind: 'skipped', reason: 'non-weapp' }
   }
 
   try {
@@ -58,10 +62,10 @@ export async function requestPoolMatchSubscribeMessage(): Promise<SubscribeGrant
       rejected: result.rejected.length,
       banned: result.banned.length,
     })
-    return result
+    return { kind: 'granted', result }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     logWarn('[Subscribe] requestSubscribeMessage failed', { message })
-    return null
+    return { kind: 'skipped', reason: 'api-error' }
   }
 }

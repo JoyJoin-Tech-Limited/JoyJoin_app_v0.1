@@ -95,7 +95,7 @@ export function MicroChallengeHeroView({
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-micro-challenge.webp')}
           title='挑战准备中…'
         >
-          <WaitingBeat variant='host' />
+          {!isHost ? <WaitingBeat variant='host' /> : null}
         </PhaseHeroCard>
       </View>
     )

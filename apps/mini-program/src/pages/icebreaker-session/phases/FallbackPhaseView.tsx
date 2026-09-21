@@ -39,7 +39,9 @@ export function FallbackPhaseView({
         </>
       }
     >
-      <WaitingBeat variant='host' expression='coachGuide' />
+      {/* Waiting whisper only for players — the host holds the advance CTA
+       * and "主持人就位" copy would read backwards to them. */}
+      {!isHost ? <WaitingBeat variant='host' expression='coachGuide' /> : null}
     </PhaseHeroCard>
   )
 }

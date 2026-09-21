@@ -738,8 +738,9 @@ export default function PoolRegistrationPage() {
     if (isEnablingNotifications || notificationsEnabled) return
     setIsEnablingNotifications(true)
     try {
-      const grant = await requestPoolMatchSubscribeMessage()
-      if (grant) {
+      const outcome = await requestPoolMatchSubscribeMessage()
+      if (outcome.kind === 'granted') {
+        const grant = outcome.result
         // 三态授权计量（通知策略批次 1b）：拒绝率 >40% 是北极星前置警报。
         discoverAnalytics.track('subscribe_grant_result', poolId, {
           accepted: grant.accepted.length,
@@ -747,6 +748,11 @@ export default function PoolRegistrationPage() {
           banned: grant.banned.length,
         })
         setNotificationsEnabled(grant.accepted.length > 0)
+      } else {
+        // 弹窗未触发的可观测性：区分 环境未配置 / 非微信运行时 / API 失败。
+        discoverAnalytics.track('subscribe_grant_prompt_skipped', poolId, {
+          reason: outcome.reason,
+        })
       }
     } finally {
       setIsEnablingNotifications(false)

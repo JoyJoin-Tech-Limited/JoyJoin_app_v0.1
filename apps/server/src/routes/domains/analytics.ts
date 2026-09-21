@@ -138,6 +138,9 @@ const DISCOVER_EVENT_TYPES = [
   // Reject rate >40% is the pre-北极星 alarm for grant UX. Metadata: three
   // integers only.
   "subscribe_grant_result",
+  // Grant prompt never fired (2026-09-17): distinguishes 环境未配置 / 非微信
+  // 运行时 / API 失败 from user rejection. Metadata: reason enum only.
+  "subscribe_grant_prompt_skipped",
   "registration_submit_error",
   // Terminal-joined recovery signal (2026-09-10): submit rejected with
   // ALREADY_REGISTERED converted to the joined surface client-side.

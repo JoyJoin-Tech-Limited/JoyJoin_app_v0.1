@@ -1,4 +1,4 @@
-import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, eq, gte, isNotNull, lte, ne } from "drizzle-orm";
 import { eventPoolGroups, eventPoolRegistrations, eventPools } from "@shared/schema";
 import { db } from "../db";
 import { getFeatureFlag } from "./featureFlags";
@@ -88,7 +88,9 @@ interface PoolRow {
   dateTime: Date | null;
 }
 
-/** Superset scan: matched pools whose dateTime falls inside either window. */
+/** Superset scan: matched pools whose dateTime falls inside either window.
+ *  Cancelled pools are excluded (a "今天见" push for a cancelled event is
+ *  wrong information — the refund push is that moment's channel instead). */
 async function findMatchedPoolsInReminderRange(now: Date): Promise<PoolRow[]> {
   const rows: PoolRow[] = await db
     .select({ id: eventPools.id, title: eventPools.title, dateTime: eventPools.dateTime })
@@ -96,6 +98,7 @@ async function findMatchedPoolsInReminderRange(now: Date): Promise<PoolRow[]> {
     .where(
       and(
         isNotNull(eventPools.matchedAt),
+        ne(eventPools.status, "cancelled"),
         gte(eventPools.dateTime, new Date(now.getTime() - RECAP_MAX_AGO_MS)),
         lte(eventPools.dateTime, new Date(now.getTime() + EVENT_DAY_MAX_AHEAD_MS)),
       ),
