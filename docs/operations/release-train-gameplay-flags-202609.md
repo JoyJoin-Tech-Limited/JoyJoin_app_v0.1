@@ -199,8 +199,19 @@ ORDER BY s.created_at DESC;
 | H2 | MiniScript 桂花糕 e5（团圆饼 露骨边界） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ⏳ pending |
 | H3 | MiniScript 胸针 e2（伯爵夫人 proto-defensive） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ⏳ pending |
 | H4 | 3 个未映射 iconKeys 的 Lovart 资产决策 | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ⏳ pending |
-| H5 | Lie 兜底既有 set：spider fake「组织过百人相亲」（约会词汇） | Wave 1.6 | `lieDetectiveV2Enabled`（内容层面；不阻塞 flag 机制本身，但建议同窗处理） | ⏳ pending |
-| H6 | Lie 兜底既有 set：koala fake「养过一只考拉」（不合常理） | Wave 1.6 | 同上 | ⏳ pending |
+| H5 | ~~Lie 兜底既有 set：spider fake「组织过百人相亲」（约会词汇）~~ → 已修复为「我组织过百人同城观影会」（commit `bfadb052a`） | Wave 1.6 | `lieDetectiveV2Enabled` | ✅ fixed 2026-09-18 |
+| H6 | ~~Lie 兜底既有 set：koala fake「养过一只考拉」（不合常理）~~ → 已修复为「我的手写信在图书馆展出过」（commit `bfadb052a`） | Wave 1.6 | 同上 | ✅ fixed 2026-09-18 |
+
+### §4-a 快速通道（2026-09-18 核定）：🟢🟡 两 flag 可先开
+
+人工审核预算只挡 🔴 三项（miniscript H1–H4、auction 奖项名/全押、sessionGlow 奖章名）。以下两个 flag 的 copy 暴露面已清零，可走独立快速通道：
+
+| Flag | 暴露面结论 | 开灯步骤 |
+|---|---|---|
+| 🟢 `highlightsInjectorEnabled` | 纯 prompt 侧注入，零用户可见新文案；flag-off 字节一致性经 QA 字符串级验证 | ① staging 置 true → ② single-test bot 全链路 + 一场 blaze 真局走查（确认 AITrace `promptVersion` 带 `_HL`、`fallbackUsed` 速率不升）→ ③ 生产低峰窗口置 true，48h 观察 dwell 与 fallback 率 |
+| 🟡 `lieDetectiveV2Enabled` | H5/H6 已修复（`bfadb052a`）；bank 36/36 干净；AC-09 GitHub 侧已满足（`LIE_DETECTIVE_MODE` 未设置） | ① 先确认 CVM env 无 `LIE_DETECTIVE_MODE` 残留（§2-a 行）→ ② staging 置 true → ③ bot 走查 + 真局确认出题质量 → ④ 生产低峰置 true，48h 观察 `joyjoin_ai_calls_total{feature="generateLieDetectiveStatements",outcome="fallback"}` |
+
+⚠️ 注意：这两个 flag 的生产开启仍要求 §2 的 CVM env 行确认（`gh variable` 侧已完成）与 §3 观察期纪律，只是不再被 §4 文案审核阻塞。
 | H7 | 拍卖 12 条新兜底拍品全量 🔴 Hard Rules 审校 | wave2 AC-10(c) | `auctionV2Enabled` | ⏳ pending（依赖 Wave 2 实现产出内容） |
 | H8 | 拍卖四个奖项名 🔴 审校：**最敢花 / 捡漏王 / 全场最热 / 最稳的手**——重点「最稳的手」必须读作夸奖而非嘲讽（spec R-E）。注：合约 LOCKED 文案为「全场最热」，任务简报中「最热标」为非正式写法，以合约为准 | wave2 AC-10(d) | `auctionV2Enabled` | ⏳ pending |
 | H9 | 「全押」隔离检查：全量新拍卖文案中「全押」不与 赌/注/赢 同屏共现；预案「全力一击」集中于 `packages/shared/src/copy/` 可热替换 | wave2 AC-16 / spec D7 | `auctionV2Enabled` | ⏳ pending |
