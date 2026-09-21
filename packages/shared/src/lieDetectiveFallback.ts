@@ -181,7 +181,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
     statements: [
       { index: 1, text: '我记得所有朋友的生日', is_ai: false, source_tag: '记住生日' },
       { index: 2, text: '我能快速找到两人的交集', is_ai: false, source_tag: '发现共同点' },
-      { index: 3, text: '我组织过百人相亲', is_ai: true, source_tag: null },
+      { index: 3, text: '我组织过百人同城观影会', is_ai: true, source_tag: null },
     ],
   },
   {
@@ -201,7 +201,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
     statements: [
       { index: 1, text: '朋友凌晨三点也找我聊天', is_ai: false, source_tag: '深夜倾听' },
       { index: 2, text: '我写日记已经写了十二年', is_ai: false, source_tag: '写日记' },
-      { index: 3, text: '我养过一只考拉', is_ai: true, source_tag: null },
+      { index: 3, text: '我的手写信在图书馆展出过', is_ai: true, source_tag: null },
     ],
   },
   {
