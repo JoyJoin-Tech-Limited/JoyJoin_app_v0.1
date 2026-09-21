@@ -730,6 +730,17 @@ app.get('/api/event-pools/:id', (req, res) => {
   res.json({ ...MOCK_POOL, id: req.params.id })
 })
 
+// 双人成行 status (screenshot harness): only the dedicated duo fixture pool
+// reports bound; every other pool reports none so existing captures keep
+// their duo-card baseline.
+app.get('/api/pools/:id/duo-status', (req, res) => {
+  if (req.params.id === 'pool-screenshot-duo') {
+    res.json({ state: 'bound', friendDisplayName: '小鹿' })
+  } else {
+    res.json({ state: 'none' })
+  }
+})
+
 // My registrations
 app.get('/api/my-pool-registrations', (req, res) => {
   res.json([

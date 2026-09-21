@@ -766,6 +766,63 @@ register('icebreaker-warmup-generating', () =>
 register('icebreaker-warmup-error', () =>
   captureIcebreakerWarmupInteraction('mock-warmup-error', '.warmup-card-slot__error-text'))
 
+// ─── WaitingBeat emotional-layer renders (2026-09-17 pre-ship) ─────
+// Mock states in scripts/mock-h5-icebreaker.mjs put a PARTICIPANT viewer
+// into the four waiting branches that carry the new WaitingBeat component:
+//   waiting-beat-auction      拍卖未生成      → variant 'host'
+//   waiting-beat-micro-done   已完成等他人    → variant 'peers'
+//   waiting-beat-lie-round    回合未开启      → variant 'host'
+//   waiting-beat-fallback     未注册 phase    → FallbackPhaseView
+register('waiting-beat-auction', () => captureIcebreaker('mock-waiting-beat-auction', '.waiting-beat'))
+register('waiting-beat-micro-done', () => captureIcebreaker('mock-waiting-beat-micro-done', '.waiting-beat'))
+register('waiting-beat-lie-round', () => captureIcebreaker('mock-waiting-beat-lie-round', '.waiting-beat'))
+register('waiting-beat-fallback', () => captureIcebreaker('mock-waiting-beat-fallback', '.waiting-beat'))
+
+// Duo bound state + text-overlap geometry proof. The celebration whisper only
+// mounts on a live waiting→bound transition (no polling in the hook), so the
+// capture renders the bound row and then injects the real
+// .pool-reg-duo__bound-whisper element — the compiled CSS styles it — and
+// asserts its box does NOT intersect the bound text (Class A regression:
+// the pre-fix absolutely-positioned version could overlap the ellipsis).
+register('duo-bound', () =>
+  withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/pool-registration/index?id=pool-screenshot-duo`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForSelector('.pool-reg-duo--bound', { timeout: 15000 })
+
+      const geometry = await page.evaluate(() => {
+        const card = document.querySelector('.pool-reg-duo')
+        const text = document.querySelector('.pool-reg-duo__bound-text')
+        if (!card || !text) return { ok: false, reason: 'missing nodes' }
+        const whisper = document.createElement('span')
+        whisper.className = 'pool-reg-duo__bound-whisper'
+        whisper.textContent = '悦仔会把你们安排在同桌'
+        card.appendChild(whisper)
+        const wr = whisper.getBoundingClientRect()
+        const tr = text.getBoundingClientRect()
+        const overlap = !(wr.right <= tr.left || wr.left >= tr.right || wr.bottom <= tr.top || wr.top >= tr.bottom)
+        return {
+          ok: !overlap,
+          overlap,
+          whisperBottom: Math.round(wr.bottom),
+          textBottom: Math.round(tr.bottom),
+          textRight: Math.round(tr.right),
+          whisperLeft: Math.round(wr.left),
+        }
+      })
+      console.log('[duo-bound geometry]', JSON.stringify(geometry))
+      await page.waitForTimeout(500)
+      await scrollSelectorIntoView(page, '.pool-reg-duo--bound', 'center')
+      return screenshotViewport(page)
+    },
+  ))
+
 // ─── Wave 2 Auction V2 + Wave 4 Session Glow previews (2026-09-18) ────
 // Flag-gated surfaces for the Wave 5 human DevTools walkthrough. Mock states
 // live in scripts/mock-h5-icebreaker.mjs:

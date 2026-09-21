@@ -421,6 +421,64 @@ export function buildIcebreakerState(sessionId) {
         currentTopicIndex: 0,
         warmupReadyUserIds: [IB_HOST_ID, 'ib-p2', 'ib-p3'],
       }
+    // ─── WaitingBeat emotional-layer fixtures (2026-09-17 pre-ship renders) ──
+    // Viewer is a PARTICIPANT (hostUserId swapped to 老周) so the waiting
+    // branches render: the default auth user (user-screenshot-001) is the
+    // roster host and would see host controls instead.
+    case 'waiting-beat-auction':
+      // 拍卖未生成 → 等待主持人 (variant 'host')
+      return {
+        ...base,
+        hostUserId: 'ib-p5',
+        hostDisplayName: '老周',
+        currentPhase: 'auction',
+        auctionLots: [],
+      }
+    case 'waiting-beat-micro-done':
+      // 已完成挑战 → 等待其他玩家 (variant 'peers')
+      return {
+        ...base,
+        hostUserId: 'ib-p5',
+        hostDisplayName: '老周',
+        currentPhase: 'micro_challenge',
+        currentChallenge: {
+          id: 'mc-shot-waiting',
+          title: '互相问3个问题',
+          description: '每人准备3个能真正了解对方的问题，轮流问。越真诚越好。',
+          durationSeconds: 180,
+          completionCTA: '我完成了',
+          visualHint: '越真诚越好',
+        },
+        challengeCompletedBy: [IB_HOST_ID, 'ib-p2', 'ib-p3'],
+      }
+    case 'waiting-beat-lie-round':
+      // Viewer已提交陈述、其他人未提交 → 「你的陈述已提交，等待其他玩家完成」
+      // (variant 'peers'). hasGeneratedStatements derives from the VIEWER's own
+      // player entry carrying statements; everyoneGenerated stays false so the
+      // waiting branch renders instead of the turn-rotation branches.
+      return {
+        ...base,
+        hostUserId: 'ib-p5',
+        hostDisplayName: '老周',
+        currentPhase: 'lie_detective',
+        // NOTE: players[] entries are treated as statement-ready by the view
+        // (generatedUserIds = every player's userId), so include ONLY the
+        // viewer — 5 empty-statement peers would flip everyoneGenerated to
+        // true and route into the turn-rotation branches.
+        lieDetectivePlayers: [
+          { userId: IB_HOST_ID, displayName: '悦仔测试', statements: IB_LIE_STATEMENTS },
+        ],
+        currentLieDetectivePlayerIndex: 0,
+        votes: [],
+      }
+    case 'waiting-beat-fallback':
+      // 未注册 phase (king_game) → FallbackPhaseView 的 WaitingBeat
+      return {
+        ...base,
+        hostUserId: 'ib-p5',
+        hostDisplayName: '老周',
+        currentPhase: 'king_game',
+      }
     default:
       return { ...base, currentPhase: 'warmup' }
   }
