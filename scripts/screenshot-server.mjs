@@ -766,8 +766,7 @@ register('icebreaker-warmup-generating', () =>
 register('icebreaker-warmup-error', () =>
   captureIcebreakerWarmupInteraction('mock-warmup-error', '.warmup-card-slot__error-text'))
 
-// ─── WaitingBeat emotional-layer renders (2026-09-17 pre-ship) ─────
-// Mock states in scripts/mock-h5-icebreaker.mjs put a PARTICIPANT viewer
+// ─── WaitingBeat emotional-layer renders (2026-09-17 pre-ship) ─────// Mock states in scripts/mock-h5-icebreaker.mjs put a PARTICIPANT viewer
 // into the four waiting branches that carry the new WaitingBeat component:
 //   waiting-beat-auction      拍卖未生成      → variant 'host'
 //   waiting-beat-micro-done   已完成等他人    → variant 'peers'
@@ -777,6 +776,25 @@ register('waiting-beat-auction', () => captureIcebreaker('mock-waiting-beat-auct
 register('waiting-beat-micro-done', () => captureIcebreaker('mock-waiting-beat-micro-done', '.waiting-beat'))
 register('waiting-beat-lie-round', () => captureIcebreaker('mock-waiting-beat-lie-round', '.waiting-beat'))
 register('waiting-beat-fallback', () => captureIcebreaker('mock-waiting-beat-fallback', '.waiting-beat'))
+
+// Notifications list page (2026-09-17): the new list surface that closes the
+// "badges with no list" gap — unread rows tinted, read rows neutral, relative
+// timestamps, end-of-list line.
+register('notifications-list', () =>
+  withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/notifications/index`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForSelector('.notifications-page__row', { timeout: 15000 })
+      await page.waitForTimeout(800)
+      return screenshotViewport(page)
+    },
+  ))
 
 // Duo bound state + text-overlap geometry proof. The celebration whisper only
 // mounts on a live waiting→bound transition (no polling in the hook), so the

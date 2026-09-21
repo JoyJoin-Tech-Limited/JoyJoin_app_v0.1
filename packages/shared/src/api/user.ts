@@ -121,6 +121,24 @@ export interface NotificationCountsResponse {
   total: number
 }
 
+/** One notification row in the list page (2026-09-17 notification list). */
+export interface NotificationListItem {
+  id: string
+  category: string
+  type: string
+  title: string
+  message: string | null
+  relatedResourceId: string | null
+  isRead: boolean
+  createdAt: string
+}
+
+export interface NotificationListResponse {
+  items: NotificationListItem[]
+  /** Pass as `before` to fetch the next page; null = no more. */
+  nextCursor: string | null
+}
+
 export interface UserInterestsResponse {
   id?: string
   userId?: string
@@ -148,6 +166,17 @@ export function getMyBlindBoxEvents(api: ApiTransport): Promise<BlindBoxEventSum
 
 export function getNotificationCounts(api: ApiTransport): Promise<NotificationCountsResponse> {
   return api<NotificationCountsResponse>({ path: '/api/notifications/counts' })
+}
+
+export function getNotifications(
+  api: ApiTransport,
+  params: { limit?: number; before?: string } = {}
+): Promise<NotificationListResponse> {
+  const parts: string[] = []
+  if (params.limit) parts.push(`limit=${encodeURIComponent(String(params.limit))}`)
+  if (params.before) parts.push(`before=${encodeURIComponent(params.before)}`)
+  const suffix = parts.length > 0 ? `?${parts.join('&')}` : ''
+  return api<NotificationListResponse>({ path: `/api/notifications${suffix}` })
 }
 
 export function markNotificationsAsRead(

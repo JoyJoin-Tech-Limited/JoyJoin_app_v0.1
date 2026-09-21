@@ -1,6 +1,6 @@
 import { type Notification, type NotificationCounts, notifications } from "@shared/schema";
 import { db } from "../db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 
 export interface NotificationsRepository {
   getNotificationCounts(userId: string): Promise<NotificationCounts>;
@@ -9,6 +9,8 @@ export interface NotificationsRepository {
   getAdminNotifications(adminId: string): Promise<Array<Notification & { recipientCount: number; readCount: number }>>;
   createBroadcastNotification(data: { sentBy: string; category: string; type: string; title: string; message?: string; userIds: string[] }): Promise<{ sent: number }>;
   getNotificationStats(notificationId: string): Promise<{ recipientCount: number; readCount: number }>;
+  /** List page (2026-09-17): newest first, keyset-paginated by createdAt+id. */
+  listByUser(userId: string, params: { limit: number; before?: { createdAt: Date; id: string } }): Promise<Notification[]>;
 }
 
 export const notificationsRepo: NotificationsRepository = {
@@ -148,5 +150,22 @@ export const notificationsRepo: NotificationsRepository = {
       recipientCount: Number(row.recipient_count) || 0,
       readCount: Number(row.read_count) || 0,
     };
+  },
+
+  async listByUser(userId: string, params: { limit: number; before?: { createdAt: Date; id: string } }): Promise<Notification[]> {
+    const conditions = [eq(notifications.userId, userId)];
+    if (params.before) {
+      // Keyset pagination: (createdAt, id) strictly older than the cursor.
+      conditions.push(
+        lt(notifications.createdAt, params.before.createdAt),
+      );
+    }
+    const rows: Notification[] = await db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt), desc(notifications.id))
+      .limit(params.limit);
+    return rows;
   },
 };

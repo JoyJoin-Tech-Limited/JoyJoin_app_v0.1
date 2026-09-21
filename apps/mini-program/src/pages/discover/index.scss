@@ -166,6 +166,42 @@
     animation: discover-greeting-enter 0.4s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  // Notification bell (2026-09-17): entry to the notifications list page.
+  &__bell {
+    position: relative;
+    margin-left: auto;
+    width: 72rpx;
+    height: 72rpx;
+    @include flex-center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    align-self: flex-start;
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.08);
+    }
+  }
+
+  &__bell-badge {
+    position: absolute;
+    top: -4rpx;
+    right: -8rpx;
+    min-width: 32rpx;
+    height: 32rpx;
+    padding: 0 6rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    @include flex-center;
+    box-sizing: border-box;
+  }
+
+  &__bell-badge-text {
+    font-size: 20rpx;
+    line-height: 1;
+    color: $color-text-white;
+  }
+
   &__greeting {
     font-size: $font-size-xl;
     font-weight: $font-weight-black;

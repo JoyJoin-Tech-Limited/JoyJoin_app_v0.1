@@ -19,7 +19,7 @@ import { getGuidanceTipCopy } from '@shared/copy/guidanceCopy'
 import { useAuth } from '../../hooks/useAuth'
 import { useGuidanceQueue } from '../../hooks/useGuidanceQueue'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { useMarkNotificationsAsRead, useNotificationCounts } from '../../hooks/useNotificationCounts'
 import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
 import { loadDiscoverPools } from '../../lib/api/discoverPools'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
@@ -118,6 +118,32 @@ function arrivalTodayKey(): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+// Notification bell (2026-09-17): entry to the notifications list page.
+// Badge = total unread across categories; the list page clears badges on exit.
+function NotificationBell() {
+  const { data: counts } = useNotificationCounts()
+  const unread = counts?.total ?? 0
+  return (
+    <View
+      className='discover-auth__bell'
+      hoverClass='discover-auth__bell--active'
+      onClick={() => {
+        haptics('light')
+        Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.notifications }).catch(() => {})
+      }}
+      role='button'
+      aria-label={unread > 0 ? `通知，${unread} 条未读` : '通知'}
+    >
+      <JoyJoinIcon emoji='🔔' tier='semantic' size={22} />
+      {unread > 0 ? (
+        <View className='discover-auth__bell-badge' aria-hidden='true'>
+          <Text className='discover-auth__bell-badge-text'>{unread > 99 ? '99+' : unread}</Text>
+        </View>
+      ) : null}
+    </View>
+  )
 }
 
 // ─── Skeleton placeholder (initial loading) ───────────────────────
@@ -696,6 +722,7 @@ function AuthenticatedDiscover({
           </View>
           <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
         </View>
+        <NotificationBell />
       </View>
 
       {/* PR-5 + PR-9 first-visit arrival card (one-time; × / row tap / 6s

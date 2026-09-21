@@ -509,6 +509,19 @@ app.get('/api/notifications/counts', (req, res) => {
   res.json({ discover: 0, activities: 0, chat: 0, total: 0 })
 })
 
+app.get('/api/notifications', (req, res) => {
+  const now = Date.now()
+  res.json({
+    items: [
+      { id: 'ntf-1', category: 'activities', type: 'match_success', title: '排桌完成！', message: '你在「周末松弛感饭局 · 南山」的排桌已完成，去看看你的同桌伙伴吧', relatedResourceId: 'group-screenshot-001', isRead: false, createdAt: new Date(now - 5 * 60_000).toISOString() },
+      { id: 'ntf-2', category: 'activities', type: 'venue_assigned', title: '场地已确定', message: '活动场地：山有木兮小酒馆，地址：南山区科技园南区 R2-B 栋 1 层', relatedResourceId: 'pool-screenshot-001', isRead: false, createdAt: new Date(now - 2 * 60 * 60_000).toISOString() },
+      { id: 'ntf-3', category: 'activities', type: 'seat_not_allocated_refund', title: '本次座位未排上，报名费已退回', message: '周末松弛感饭局 · 南山：本轮排桌未能为你安排到合适的座位。报名费已原路退回，预计 1-3 个工作日到账。', relatedResourceId: 'pool-screenshot-000', isRead: true, createdAt: new Date(now - 26 * 60 * 60_000).toISOString() },
+      { id: 'ntf-4', category: 'discover', type: 'new_activity', title: '附近有新局', message: '福田 · 周五畅聊局正在招募，和你的画像很合拍', relatedResourceId: null, isRead: true, createdAt: new Date(now - 50 * 60 * 60_000).toISOString() },
+    ],
+    nextCursor: null,
+  })
+})
+
 app.post('/api/notifications/mark-read', (req, res) => {
   res.json({ success: true })
 })

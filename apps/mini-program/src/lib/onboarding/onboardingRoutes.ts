@@ -23,6 +23,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   index: 'pages/index/index',
   terms: 'pages/profile-linked/terms/index',
   eventDetail: 'pages/event-detail/index',
+  notifications: 'pages/notifications/index',
   eventFeedback: 'pages/event-feedback/index',
   poolRegistration: 'pages/pool-registration/index',
   eventCoordination: 'pages/event-coordination/index',
@@ -75,6 +76,7 @@ export const MINI_PROGRAM_ROUTES = {
   connections: `/${MINI_PROGRAM_PAGE_PATHS.connections}`,
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
   eventDetail: `/${MINI_PROGRAM_PAGE_PATHS.eventDetail}`,
+  notifications: `/${MINI_PROGRAM_PAGE_PATHS.notifications}`,
   eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
   matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
   squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
@@ -155,6 +157,7 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.connections,
   MINI_PROGRAM_PAGE_PATHS.profile,
   MINI_PROGRAM_PAGE_PATHS.eventDetail,
+  MINI_PROGRAM_PAGE_PATHS.notifications,
 ] as const
 export const MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.editProfile,

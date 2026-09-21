@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/auth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
+import { notificationsRepo } from "../../repositories/notificationsRepo";
 import { storage } from "../../storage";
 
 export function registerIcebreakerContentRoutes(app: Express): void {
@@ -274,6 +275,57 @@ export function registerIcebreakerContentRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error fetching notification counts", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch notification counts" });
+    }
+  });
+
+  // Notification list page (2026-09-17): keyset-paginated, newest first.
+  app.get('/api/notifications', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const limitRaw = Number(req.query.limit ?? 30);
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(Math.trunc(limitRaw), 1), 50) : 30;
+      const beforeRaw = typeof req.query.before === "string" ? req.query.before : undefined;
+      let before: { createdAt: Date; id: string } | undefined;
+      if (beforeRaw) {
+        // Cursor shape: <ISO-createdAt>_<notificationId> (createdAt contains
+        // no underscore; id is a uuid).
+        const sep = beforeRaw.lastIndexOf("_");
+        if (sep <= 0) {
+          return res.status(400).json({ message: "Invalid cursor" });
+        }
+        const createdAt = new Date(beforeRaw.slice(0, sep));
+        if (Number.isNaN(createdAt.getTime())) {
+          return res.status(400).json({ message: "Invalid cursor" });
+        }
+        before = { createdAt, id: beforeRaw.slice(sep + 1) };
+      }
+
+      const rows = await notificationsRepo.listByUser(userId, { limit: limit + 1, before });
+      const hasMore = rows.length > limit;
+      const items = hasMore ? rows.slice(0, limit) : rows;
+      const last = items[items.length - 1];
+      res.json({
+        items: items.map((n) => ({
+          id: n.id,
+          category: n.category,
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          relatedResourceId: n.relatedResourceId,
+          isRead: n.isRead,
+          createdAt: n.createdAt instanceof Date ? n.createdAt.toISOString() : String(n.createdAt),
+        })),
+        nextCursor: hasMore && last
+          ? `${last.createdAt instanceof Date ? last.createdAt.toISOString() : String(last.createdAt)}_${last.id}`
+          : null,
+      });
+    } catch (error) {
+      logger.error("Error fetching notifications", { error: String(error) });
+      res.status(500).json({ message: "Failed to fetch notifications" });
     }
   });
 

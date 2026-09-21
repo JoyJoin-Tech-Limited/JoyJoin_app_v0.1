@@ -1,0 +1,126 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.notifications-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: $color-bg;
+
+  &__scroll {
+    // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4); a ScrollView needs a bounded height (not min-height) to scroll.
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+
+  &__state {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+  }
+
+  &__retry {
+    padding: $spacing-sm $spacing-xl;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.14);
+    }
+  }
+
+  &__retry-text {
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+
+  &__list {
+    padding: $spacing-md;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $card-radius;
+    background: $color-surface;
+
+    &--unread {
+      background: rgba($color-primary, 0.04);
+    }
+  }
+
+  &__row-icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.08);
+    @include flex-center;
+    flex-shrink: 0;
+    margin-top: 4rpx;
+  }
+
+  &__row-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__row-head {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__row-title {
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    flex: 1;
+    @include text-truncate;
+  }
+
+  &__row-time {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
+    flex-shrink: 0;
+  }
+
+  &__row-message {
+    display: block;
+    margin-top: 6rpx;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  &__row-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    flex-shrink: 0;
+    margin-top: 14rpx;
+  }
+
+  &__more {
+    display: block;
+    text-align: center;
+    padding: $spacing-md 0 $spacing-xl;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
+  }
+}
