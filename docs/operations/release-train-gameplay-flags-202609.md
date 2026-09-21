@@ -195,10 +195,11 @@ ORDER BY s.created_at DESC;
 
 | # | 审核项 | 来源 | 阻塞的 flag | 状态 |
 |---|---|---|---|---|
-| H1 | MiniScript 桂花糕 e1 reaction（说书人 self-hint 边界） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ⏳ pending |
-| H2 | MiniScript 桂花糕 e5（团圆饼 露骨边界） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ⏳ pending |
-| H3 | MiniScript 胸针 e2（伯爵夫人 proto-defensive） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ⏳ pending |
-| H4 | 3 个未映射 iconKeys 的 Lovart 资产决策 | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ⏳ pending |
+| H1 | ~~MiniScript 桂花糕 e1 reaction（说书人 self-hint 边界）~~ → AI 评审团 Lens B 裁定 DEFECTIVE，已替换（「整整齐齐三个板儿，付钱这位，讲究得吓人。」commit `08bb14859`） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ✅ fixed 2026-09-18 |
+| H2 | ~~MiniScript 桂花糕 e5（团圆饼 露骨边界）~~ → Lens B 裁定 DEFECTIVE（动机剧透），已替换（commit `08bb14859`） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ✅ fixed 2026-09-18 |
+| H3 | ~~MiniScript 胸针 e2（伯爵夫人 proto-defensive）~~ → Lens B + @verifier 裁定 genre-fair misdirection（她的秘密就是偷看诗稿，「眼熟」有根有据且不碰真凶） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ✅ ruled SAFE 2026-09-18 |
+| H4 | 3 个未映射 iconKeys 的 Lovart 资产决策 → 裁定：🔍 兜底为设计内行为，可开灯；Lovart 正式图标列为发布后资产任务 | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ✅ ruled 2026-09-18 |
+| H1b | **评审团全量扫描新发现（同批修复）**：桂花糕 e2 说书人「笔锋像说书先生」（近乎自招）、桂花糕 e5 大师姐「没碰整块的」（替他人定罪/脱罪）、胸针 e4 伯爵夫人「瞥了一眼客厅角落」（指向真凶座位）、桂花糕 e5 小师弟「少的那个角」（事实错误） | Wave 1.1 | `miniscriptEvidenceVoteV2Enabled` | ✅ fixed 2026-09-18 (`08bb14859`) |
 | H5 | ~~Lie 兜底既有 set：spider fake「组织过百人相亲」（约会词汇）~~ → 已修复为「我组织过百人同城观影会」（commit `bfadb052a`） | Wave 1.6 | `lieDetectiveV2Enabled` | ✅ fixed 2026-09-18 |
 | H6 | ~~Lie 兜底既有 set：koala fake「养过一只考拉」（不合常理）~~ → 已修复为「我的手写信在图书馆展出过」（commit `bfadb052a`） | Wave 1.6 | 同上 | ✅ fixed 2026-09-18 |
 
@@ -212,9 +213,12 @@ ORDER BY s.created_at DESC;
 | 🟡 `lieDetectiveV2Enabled` | H5/H6 已修复（`bfadb052a`）；bank 36/36 干净；AC-09 GitHub 侧已满足（`LIE_DETECTIVE_MODE` 未设置） | ① 先确认 CVM env 无 `LIE_DETECTIVE_MODE` 残留（§2-a 行）→ ② staging 置 true → ③ bot 走查 + 真局确认出题质量 → ④ 生产低峰置 true，48h 观察 `joyjoin_ai_calls_total{feature="generateLieDetectiveStatements",outcome="fallback"}` |
 
 ⚠️ 注意：这两个 flag 的生产开启仍要求 §2 的 CVM env 行确认（`gh variable` 侧已完成）与 §3 观察期纪律，只是不再被 §4 文案审核阻塞。
-| H7 | 拍卖 12 条新兜底拍品全量 🔴 Hard Rules 审校 | wave2 AC-10(c) | `auctionV2Enabled` | ⏳ pending（依赖 Wave 2 实现产出内容） |
-| H8 | 拍卖四个奖项名 🔴 审校：**最敢花 / 捡漏王 / 全场最热 / 最稳的手**——重点「最稳的手」必须读作夸奖而非嘲讽（spec R-E）。注：合约 LOCKED 文案为「全场最热」，任务简报中「最热标」为非正式写法，以合约为准 | wave2 AC-10(d) | `auctionV2Enabled` | ⏳ pending |
-| H9 | 「全押」隔离检查：全量新拍卖文案中「全押」不与 赌/注/赢 同屏共现；预案「全力一击」集中于 `packages/shared/src/copy/` 可热替换 | wave2 AC-16 / spec D7 | `auctionV2Enabled` | ⏳ pending |
+| H7 | 拍卖 12 条新兜底拍品全量 🔴 Hard Rules 审校 → AI 评审团 Lens A（赌博/婚恋/禁用词/真钱框架四扫描全 CLEAN）+ Lens C（品牌调性 KEEP）双透镜通过 | wave2 AC-10(c) | `auctionV2Enabled` | ✅ passed 2026-09-18 |
+| H8 | ~~拍卖四个奖项名 🔴 审校~~ → Lens C：最敢花/捡漏王/全场最热 KEEP；**最稳的手 → 定力担当**（得主人为未中标者，原名为 spec R-E 标记的嘲讽误读风险，commit `08bb14859`） | wave2 AC-10(d) | `auctionV2Enabled` | ✅ fixed 2026-09-18 |
+| H9 | 「全押」隔离检查 → Lens A 逐屏审计 PASS（零 赌/赢 共现）；**Lens C 发布裁决：直接启用预案「全力一击」**（同步上传 + 关键词扫描器不看语境，一行可回滚，commit `08bb14859`；「全押」保留于 `AUCTION_ALL_IN_FALLBACK_LABEL`） | wave2 AC-16 / spec D7 | `auctionV2Enabled` | ✅ resolved 2026-09-18 |
+| H10 | sessionGlow 奖章名（接梗王/暖心雷达/豪气担当/全勤小可爱）+ 档位词（微光/暖心/闪闪发光）→ Lens C 全 KEEP（正向地板规则满足、零比较框架、零羞辱面） | wave4 AC-11(a) | `sessionGlowEnabled` | ✅ passed 2026-09-18 |
+
+> **AI 评审团记录（2026-09-18）：** 三透镜（A 确定性合规扫描 / B 游戏逻辑泄漏 / C 品牌调性）+ @verifier 交叉验证（5 处泄漏全部引证确认、替换文本 5 项检查全过、热替换机制核实）。遗留 follow-up（不阻塞开灯）：① 赌博黑名单补 筹码/彩票；② 共现测试去掉「全押存在」前置条件；③ V1 inline 文案（含 AuctionHeroView:598 硬编码字面量）纳入扫描或提升进 copy 模块。
 
 > 流程先例：Lie V2 bank 审校（Wave 1.6 注）——内容人工审校 → 修改 → 入库。H1–H4 是 flag-on 的 **HARD GATE**（roadmap 原文）。
 
