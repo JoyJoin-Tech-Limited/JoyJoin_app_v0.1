@@ -44,17 +44,18 @@ export function getAuctionOutbidToast(displayName: string, amount: number): stri
 
 // ─── 全押时刻 (D3) ───
 
-/** Seal badge on the leader row + bid-history tag. 扑克语境 but virtual-coin,
- *  zero-stakes framing; NEVER co-renders with 赌/赢 copy on the same screen. */
-export const AUCTION_ALL_IN_BADGE = '全押';
+/** Seal badge on the leader row + bid-history tag. Ships as 「全力一击」 per the
+ *  2026-09-18 remote copy panel (LENS C launch recommendation, verifier-confirmed)
+ *  — action-game flavor, zero gambling glyph; NEVER co-renders with 赌/赢 copy. */
+export const AUCTION_ALL_IN_BADGE = '全力一击';
 
-/** Documented WeChat-review fallback for AUCTION_ALL_IN_BADGE (spec R-D预案).
- *  Hot-swap only — not rendered unless review rejects 「全押」. */
-export const AUCTION_ALL_IN_FALLBACK_LABEL = '全力一击';
+/** Original 「全押」 label retained for instant rollback (one-line flip back).
+ *  spec R-D预案 — swap only if WeChat review posture changes. */
+export const AUCTION_ALL_IN_FALLBACK_LABEL = '全押';
 
 /** Host panel light hint (decision aid, never a force). */
 export function getAuctionHostAllInHint(displayName: string): string {
-  return `${displayName} 全押了，可以落槌`;
+  return `${displayName} ${AUCTION_ALL_IN_BADGE}了，可以落槌`;
 }
 
 // ─── 经济与余额 (D5/D7.4) ───
@@ -75,14 +76,15 @@ export function getAuctionUnsoldLotLine(title: string): string {
 }
 
 // ─── 奖项 (D4) ───
-// Award names are 🔴-flagged for human copy review before flag-on
-// (contract AC-10(d)); 最稳的手 must read as praise of 定力, never mockery.
+// Award names reviewed by the 2026-09-18 remote copy panel (contract AC-10(d)
+// discharged): 最稳的手 renamed to 定力担当 — recipient is a non-winner by
+// construction, the name must read as praise of 定力, never mockery.
 
 export const AUCTION_AWARD_NAMES = {
   biggestSpender: '今晚最敢花',
   bargainHunter: '捡漏王',
   hottestLot: '全场最热',
-  steadiestHand: '最稳的手',
+  steadiestHand: '定力担当',
 } as const;
 
 /** Recap award lines (≤3, deterministic — NO LLM, spec D4 recap v2). */

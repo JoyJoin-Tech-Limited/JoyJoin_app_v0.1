@@ -779,8 +779,9 @@ describe('auction V2 copy compliance (AC-16, spec D7)', () => {
     }
   });
 
-  it('documents the 「全力一击」 fallback label (spec R-D hot-swap)', () => {
-    expect(copyModule.AUCTION_ALL_IN_FALLBACK_LABEL).toBe('全力一击');
+  it('ships 「全力一击」 as the badge label with 「全押」 retained as rollback (2026-09-18 panel)', () => {
+    expect(copyModule.AUCTION_ALL_IN_BADGE).toBe('全力一击');
+    expect(copyModule.AUCTION_ALL_IN_FALLBACK_LABEL).toBe('全押');
   });
 
   it('never analogizes coins to real-world value', () => {
