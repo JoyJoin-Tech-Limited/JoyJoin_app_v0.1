@@ -440,6 +440,11 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   autoRefundEnabled: true,
   /** 双人成行 — default ON; ships enabled. */
   duoRegistrationEnabled: true,
+  /** Subscribe-message reminder scheduler (2026-09-16) — default ON;
+   *  individual moments stay dark until their WECHAT_SUBSCRIBE_TMPL_* env
+   *  var is set. Explicit so the admin toggle UI matches the runtime
+   *  default (getFeatureFlag(key, true)). */
+  subscribeRemindersEnabled: true,
   /** Sentinel policy-pending — see FLAG_ENV_MAP note. Explicitly off so the
    *  admin toggle UI and listFeatureFlags() show a stable default. */
   matchNeverMeetSentinel: false,

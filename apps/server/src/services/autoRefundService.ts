@@ -435,11 +435,15 @@ async function refundPoolPaidRegistrations(
   }
 
   // Notification-strategy batch 1a: push the refund outcome via the
-  // 报名结果提醒 subscribe template to users notified this run — the
-  // 未成行全退 trust promise must be HEARD, not silently landed. Result
-  // template is mutually exclusive with match_success per registration, so
-  // this never double-spends the user's grant. Fail-open, ledger-keyed
-  // (user, 'refund', pool).
+  // 报名结果提醒 subscribe template to users notified this run; ledger-keyed
+  // (user, 'refund', pool). NOTE: the ledger key includes the moment, so this
+  // does NOT conflict with an earlier match_success push for the same pool —
+  // a user who matched then later saw their group collapse can hold both
+  // claims. Whether the refund push actually DELIVERS then depends on the
+  // user's grant: match success already consumed the result-template
+  // acceptance (one-shot), so the refund send returns 43101 and is quietly
+  // skipped unless the user kept 「总是保持以上选择」. The in-app refund
+  // notification above is the guaranteed channel; the push is best-effort.
   if (notifiedThisRunUserIds.size > 0) {
     void (async () => {
       try {

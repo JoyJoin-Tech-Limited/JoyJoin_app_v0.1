@@ -204,17 +204,18 @@
     @include text-truncate;
   }
 
-  // Fresh-bound reassurance whisper (2026-09-16): absolutely positioned so
-  // the ≤148rpx bound height budget never shifts; auto-dismissed by the
-  // component after 2.6s.
+  // Fresh-bound reassurance whisper (2026-09-16): flows BELOW the bound row
+  // in normal flow — an absolutely-positioned whisper would collide with the
+  // ellipsis-truncated bound text (text-on-text render defect). The card
+  // grows ~28rpx for the 2.6s celebration window, then snaps back.
   &__bound-whisper {
-    position: absolute;
-    right: $spacing-md;
-    bottom: 6rpx;
+    display: block;
+    margin-top: 8rpx;
     font-size: 20rpx;
     line-height: 1.4;
     color: $color-success-text-on-light;
     opacity: 0.85;
+    text-align: right;
     animation: fade-slide-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
