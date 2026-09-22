@@ -467,8 +467,8 @@ if [[ "${PROD_IMAGES_READY:-false}" == "true" \
   # Resolve the exact compose image refs (implicit <project>-<service> tags)
   # instead of hardcoding them, so a compose rename cannot silently diverge.
   mapfile -t COMPOSE_IMAGES < <(docker compose -f docker-compose.nginx.yml config --images)
-  PROD_API_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | rg 'joyjoin-api$' | head -1)"
-  PROD_ADMIN_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | rg 'joyjoin-admin$' | head -1)"
+  PROD_API_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | grep 'joyjoin-api$' | head -1)"
+  PROD_ADMIN_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | grep 'joyjoin-admin$' | head -1)"
   if [[ -z "${PROD_API_REF:-}" || -z "${PROD_ADMIN_REF:-}" ]]; then
     echo "❌ Could not resolve compose image refs for registry delivery."
     exit 1
@@ -509,7 +509,7 @@ echo "   Checking Nginx-routed health endpoint..."
 if ! curl -s --retry 5 --retry-delay 3 -H "Host: joyjoinapp.com" http://127.0.0.1/api/health > /dev/null; then
   echo "❌ Nginx route check failed: http://127.0.0.1/api/health"
   echo "📋 Socket listeners (80/443/5000):"
-  ss -ltnp | rg ':80|:443|:5000' || true
+  ss -ltnp | grep -E ':80|:443|:5000' || true
   echo "📋 Container status:"
   docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
   echo "📋 API port bindings:"
@@ -563,7 +563,7 @@ done
 if [[ "$admin_public_ok" != "true" ]]; then
   echo "❌ Admin public route check failed: https://admin.joyjoinapp.com/ (missing id=\"root\")"
   echo "📋 Socket listeners (80/443/3001):"
-  ss -ltnp | rg ':80|:443|:3001' || true
+  ss -ltnp | grep -E ':80|:443|:3001' || true
   echo "📋 Response headers:"
   curl -sSI --resolve admin.joyjoinapp.com:443:127.0.0.1 https://admin.joyjoinapp.com/ || true
   exit 1
