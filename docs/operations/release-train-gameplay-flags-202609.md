@@ -312,6 +312,17 @@ ORDER BY s.created_at DESC;
 | 生产 | fallback 速率快照 | `curl -s https://joyjoinapp.com/api/metrics \| grep joyjoin_ai_calls_total` | 待 ops 确认 | |
 | 生产 | 拍卖 V2 客户端版本号（§2-e） | 微信后台 | 待 ops 确认（Wave 2 实现后） | |
 
+### §6-a 开灯执行记录（2026-09-22，DB 直写通道）
+
+| 环境 | 动作 | 通道 | 结果 |
+|---|---|---|---|
+| Staging | 六 flag 全部置 true（upsert `feature_flags`，`updated_by=flag-on-2026-09-18-ssh-ops`，03:17 UTC） | SSH root@CVM → `docker exec postgres-staging psql` | ✅ 6 行写入并 SELECT 验证 |
+| 生产 | 六 flag 全部置 true（upsert `feature_flags`，`updated_by=flag-on-2026-09-22-ssh-ops`，03:17 UTC） | SSH root@CVM → `docker exec postgres psql` | ✅ 6 行写入并 SELECT 验证 |
+
+⚠️ **生产生效前提（2026-09-22 核实）**：生产 API 容器镜像为 **2026-07-20** 构建——早于全部 gameplay/budget/subscribe 代码。生产 DB 中的六个 `true` 行在**生产部署完成前为休眠状态**（旧代码不识别这些 key，也不会读到新行为）。Staging candidate（2026-09-21 19:50 + 在途的 4fea133 链）已含全部代码 + 2026-09-22 文案修复，staging 开灯即时生效。
+
+⚠️ 生产部署 = 一次大版本上线：main 上累积约两个月的工作（订阅消息三模板、notifications、admin RBAC 安全门、budget-tier、gameplay 列车、文案修复）将同批上生产；随后生产小程序构建/上传需 `api_target=production` 显式输入。AC-10(e)（拍卖 V2 客户端先行）由产品 2026-09-22 决策接受。
+
 ---
 
 ## 7. 已知限制与诚实声明
