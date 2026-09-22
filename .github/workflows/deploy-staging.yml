@@ -1023,6 +1023,9 @@ jobs:
             write_if_nonempty "ENABLE_PRO_MATCH_EXPLANATIONS" "$ENABLE_PRO_MATCH_EXPLANATIONS"
             write_if_nonempty "XIAOYUE_MAX_TURNS" "$XIAOYUE_MAX_TURNS"
             write_if_nonempty "WECHAT_PAY_NOTIFY_URL" "$WECHAT_PAY_NOTIFY_URL"
+            write_if_nonempty "WECHAT_SUBSCRIBE_TMPL_MATCH_SUCCESS" "$WECHAT_SUBSCRIBE_TMPL_MATCH_SUCCESS"
+            write_if_nonempty "WECHAT_SUBSCRIBE_TMPL_EVENT_REMINDER" "$WECHAT_SUBSCRIBE_TMPL_EVENT_REMINDER"
+            write_if_nonempty "WECHAT_SUBSCRIBE_TMPL_RECAP" "$WECHAT_SUBSCRIBE_TMPL_RECAP"
 
             chmod 600 "$ENV_FILE"
             mv -f -- "$ENV_FILE" "$ENV_CANDIDATE"
