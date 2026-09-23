@@ -323,6 +323,18 @@ ORDER BY s.created_at DESC;
 
 ⚠️ 生产部署 = 一次大版本上线：main 上累积约两个月的工作（订阅消息三模板、notifications、admin RBAC 安全门、budget-tier、gameplay 列车、文案修复）将同批上生产；随后生产小程序构建/上传需 `api_target=production` 显式输入。AC-10(e)（拍卖 V2 客户端先行）由产品 2026-09-22 决策接受。
 
+### §6-b 生产上线事故与解决记录（2026-09-22 → 09-23）
+
+**事故**：生产部署 #1（run 35683246462）失败于 `rg: command not found`（部署脚本用了 CVM 没有的 ripgrep）；修复（grep 替换，78785c79）后部署 #2（run 35684103161）切了新 API 容器但 **crash-loop**：`validateDbSchema` 发现生产库缺 `content_filter_logs.review_status`——**生产库自 2026-07-20 部署后从未应用任何迁移，且无 `__drizzle_migrations` 跟踪表**（历史为 db:push + 手工补表混合）。生产 API 宕机 ~20 分钟。
+
+**解决**（教科书顺序：回滚 → 备份 → 补模式 → 重部署）：
+1. 旧 7 月镜像以悬空形式幸存 → 重打 tag 回滚，readyz 转绿，服务恢复。
+2. 备份：`/root/joyjoin-prod-backup-20260922.dump`（479K 全量，保留中）。
+3. 模式追赶（三轮收敛，皆因多行 DDL 截断/并发会话删除 flash 表两次返工）：方法 = 生产结构快照 → 一次性 scratch PG → drizzle-kit push --force → PG 日志多行感知提取 DDL → 审查（最终集：2 列型转换 + 24 CREATE TABLE + 索引重建 15 DROP/53 CREATE + 126 ALTER，零 DROP TABLE 零 DML）→ 单事务应用生产。
+4. 部署 #3（run 35713441460，ref 79ebb7c90）**全绿**：含全部 gameplay/budget/subscribe 代码 + 六个已置 true 的 flag，生产正式生效（2026-09-22 晚，容器健康运行逾 24h 复核）。
+
+**教训（已可复用）**：①生产部署前必须跑结构 diff 校验（本次已用 push-against-scratch 方法验证可行，应固化为 deploy 前置 gate）；②部署脚本禁止假设 CVM 有 rg 等工具；③PG 日志提取 DDL 必须多行感知；④生产 schema 追踪表缺失应立项补齐（drizzle migrate 化）。
+
 ---
 
 ## 7. 已知限制与诚实声明
