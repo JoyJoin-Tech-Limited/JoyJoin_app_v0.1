@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
 import { buildIcebreakerState, mockAigcMeta } from './mock-h5-icebreaker.mjs';
+import { buildDiscoverPools } from './mock/discoverPools.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -126,55 +127,7 @@ const MOCK_PRICING = {
   ],
 }
 
-const MOCK_DISCOVER_POOLS = [
-  {
-    ...MOCK_POOL,
-    id: 'pool-screenshot-001',
-    title: '周末松弛感饭局 · 科技园',
-    district: '科技园',
-    dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    registrationCount: 5,
-    currentParticipants: 5,
-    maxParticipants: 8,
-    spotsLeft: 3,
-    topArchetypes: [
-      { archetype: 'corgi', count: 2 },
-      { archetype: 'dolphin_calm', count: 1 },
-    ],
-    userTypeCount: 2,
-    userTypeRarity: 'present',
-    highChemistryCount: 3,
-    topComplementaryType: 'dolphin_calm',
-    narrativePivot: 'present',
-    hoursUntilDeadline: 36,
-  },
-  {
-    ...MOCK_POOL,
-    id: 'pool-screenshot-002',
-    title: '晚风里的深聊局 · 后海',
-    eventType: '畅聊局',
-    district: '后海',
-    dateTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    registrationCount: 4,
-    currentParticipants: 4,
-    maxParticipants: 6,
-    spotsLeft: 2,
-    sampleArchetypes: ['owl', 'koala', 'corgi'],
-    topArchetypes: [
-      { archetype: 'owl', count: 1 },
-      { archetype: 'koala', count: 1 },
-    ],
-    accentFamily: 'cool',
-    aiHeadline: '慢热也没关系，这里有人愿意认真听',
-    userTypeCount: 1,
-    userTypeRarity: 'rare',
-    highChemistryCount: 2,
-    topComplementaryType: 'owl',
-    narrativePivot: 'rare',
-    hoursUntilDeadline: 72,
-    price: 108,
-  },
-]
+const MOCK_DISCOVER_POOLS = buildDiscoverPools(MOCK_POOL)
 
 const MOCK_ALANG_SLUG = 'meet-alang'
 const MOCK_ALANG_MISSION = {

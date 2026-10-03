@@ -452,6 +452,24 @@
       "justification": "One-off partner-venue seed script (applied 2026-06-02): legacy labels as inserted data. Frozen history; venues were retagged by migration 0093."
     },
     {
+      "file": "apps/server/scripts/budget-adjacency-live-proof.ts",
+      "literal": "150-200",
+      "count": 3,
+      "justification": "T7 live-proof script (committed 79ebb7c90): the legacy label IS the test input — it proves normalizeBudgetTierIds maps '150-200' → dining_150_200 through the real scoring path. Not product copy; runs manually against dev DB only."
+    },
+    {
+      "file": "apps/server/scripts/budget-adjacency-live-proof.ts",
+      "literal": "dining_150_200",
+      "count": 2,
+      "justification": "T7 live-proof script (committed 79ebb7c90): canonical id used in the scenario description/expected output of the adjacency proof (consensus = dining_150_200, venue = dining_200_300, distance 1). Manual dev-DB script, not shipped code."
+    },
+    {
+      "file": "apps/server/scripts/budget-adjacency-live-proof.ts",
+      "literal": "dining_200_300",
+      "count": 1,
+      "justification": "T7 live-proof script (committed 79ebb7c90): canonical id for the adjacent venue tier in the proof scenario (order 2, exactly one tier above consensus). Manual dev-DB script, not shipped code."
+    },
+    {
       "file": "apps/server/src/__tests__/adminMatchingReview.test.ts",
       "literal": "100-200",
       "count": 1,

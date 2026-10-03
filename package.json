@@ -117,6 +117,7 @@
     "simulate:remote-validation": "tsx scripts/simulate/analyze-remote-validation.ts",
     "screenshot:events": "node scripts/screenshot-open.mjs events",
     "screenshot:tier-selector": "node scripts/screenshot-open.mjs tier-selector",
+    "screenshot:discover-area": "node scripts/screenshot-open.mjs discover-area",
     "screenshot:pool-registration": "node scripts/screenshot-open.mjs pool-registration",
     "screenshot:event-ticket-payment": "node scripts/screenshot-open.mjs event-ticket-payment",
     "screenshot:squad-unboxing": "node scripts/screenshot-open.mjs squad-unboxing",

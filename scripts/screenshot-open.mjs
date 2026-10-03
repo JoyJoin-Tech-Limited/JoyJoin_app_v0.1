@@ -16,6 +16,10 @@ const PAGES = {
     url: 'http://localhost:9000/tier-selector-preset-cards.png',
     altPort: 9003,
   },
+  'discover-area': {
+    url: 'http://localhost:9000/discover-area-drawer.png',
+    altPort: 9003,
+  },
   'pool-registration': {
     url: 'http://localhost:9000/pool-registration-step-0-brief.png',
     altPort: 9003,
