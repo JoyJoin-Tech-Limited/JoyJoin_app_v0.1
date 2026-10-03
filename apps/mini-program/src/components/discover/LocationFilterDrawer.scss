@@ -2,9 +2,10 @@
 @use '../../styles/mixins' as *;
 
 // ─── Location Filter Drawer ──────────────────────────────────────
-// Premium area selector for the Discover page. Built on PickerShell +
-// SelectableTile. Preserves multi-select/filter-by-cluster behavior,
-// heat badges, and pending-opacity semantics.
+// Coverage-map area selector for the Discover page. Cluster-level
+// honesty: bookable areas carry live event counts, not-yet-live areas
+// collapse into a single dashed-chip section. Built on PickerShell +
+// SelectableTile.
 
 .location-drawer {
   &__scroll {
@@ -17,70 +18,273 @@
 
   // ── All Regions Tile ────────────────────────────────────────────
   &__all-tile-icon {
-    font-size: 36rpx;
+    display: flex;
+    align-items: center;
   }
 
-  // ── Cluster Section ─────────────────────────────────────────────
-  &__cluster {
-    margin-bottom: $spacing-lg;
+  &__all-count {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    white-space: nowrap;
+  }
 
-    &:last-child {
-      margin-bottom: 0;
+  // Hero treatment: a soft brand wash lifts the default tile above the
+  // grid. The solid purple selected state is preserved untouched.
+  &__hero {
+    .selectable-tile {
+      background: rgba($color-primary, 0.05);
+      border-color: rgba($color-primary, 0.14);
+    }
+
+    .selectable-tile--selected {
+      background: $color-primary;
+      border-color: transparent;
     }
   }
 
-  &__cluster-header {
+  // ── Entrance Choreography ───────────────────────────────────────
+  // One staggered reveal per sheet open — the coverage map is the moment.
+  &__reveal {
+    animation: location-drawer-reveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--1 {
+      animation-delay: 0.04s;
+    }
+
+    &--2 {
+      animation-delay: 0.1s;
+    }
+
+    &--3 {
+      animation-delay: 0.16s;
+    }
+  }
+
+  // ── Sections ────────────────────────────────────────────────────
+  &__section {
+    margin-top: $spacing-lg;
+  }
+
+  &__section-header {
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-sm;
   }
 
-  &__cluster-dot {
+  &__section-dot {
     width: 8rpx;
     height: 24rpx;
     border-radius: 4rpx;
     background: $color-primary;
+
+    &--muted {
+      background: rgba($color-text-muted, 0.5);
+    }
   }
 
-  &__cluster-name {
+  &__section-name {
     @include font-cn-display;
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     line-height: $line-height-normal;
-    color: $color-text-secondary;
+    color: $color-text-primary-warm;
+
+    &--muted {
+      color: $color-text-tertiary;
+    }
   }
 
-  // ── District Grid ───────────────────────────────────────────────
+  // ── Cluster Grid ────────────────────────────────────────────────
   &__district-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: $spacing-md;
+    gap: $spacing-sm;
   }
 
-  &__heat-badge {
+  &__count-pill {
     display: inline-flex;
     align-items: center;
-    padding: 6rpx 12rpx;
+    justify-content: center;
+    height: 32rpx;
+    padding: 0 12rpx;
     border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     line-height: 1;
     white-space: nowrap;
+    color: $color-primary;
 
-    &--hot {
-      background: rgba($color-secondary, 0.12);
-      color: $color-secondary;
-    }
-
-    &--active {
-      background: rgba($color-landed-gold, 0.14);
-      color: $color-brand-gold;
-    }
-
-    &--pending {
+    &--muted {
       background: rgba($color-text-muted, 0.12);
       color: $color-text-muted;
+    }
+  }
+
+  // Breathing "live now" signal inside the count pill — opacity-only pulse,
+  // same vocabulary as the OracleCard topline pulse.
+  &__count-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    margin-right: 8rpx;
+    animation: location-drawer-count-pulse 1.6s ease-in-out infinite;
+  }
+
+  // ── Pending Section ─────────────────────────────────────────────
+  &__pending-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: $card-radius-sm;
+    transition: background 0.12s ease;
+
+    &--hover {
+      background: rgba($color-primary, 0.06);
+    }
+
+    // The toggle wraps a section-header; the header's own margin would
+    // double-space the collapsed row, so collapse it inside the toggle.
+    .location-drawer__section-header {
+      margin-bottom: 0;
+    }
+  }
+
+  &__pending-meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+  }
+
+  &__pending-count {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    white-space: nowrap;
+  }
+
+  &__pending-chevron {
+    font-size: $font-size-lg;
+    line-height: 1;
+    color: $color-text-tertiary;
+    transform: rotate(90deg);
+    transition: transform 150ms ease;
+
+    &--expanded {
+      transform: rotate(-90deg);
+    }
+  }
+
+  &__pending-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__pending-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 64rpx;
+    border: 2rpx dashed $color-border;
+    border-radius: $card-radius-sm;
+    background: $color-bg;
+    transition: background 0.12s ease;
+
+    &--hover {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__pending-chip-name {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    white-space: nowrap;
+  }
+
+  // ── Rescue Dialog ───────────────────────────────────────────────
+  // Rendered inside PickerShell's overlay slot when a zero-count or
+  // pending area is tapped; offers the nearest bookable alternative.
+  &__rescue {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    animation: location-drawer-rescue-fade 0.2s ease-out both;
+  }
+
+  &__rescue-backdrop {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: $color-overlay;
+  }
+
+  &__rescue-card {
+    position: relative;
+    background: $color-surface;
+    border-radius: $card-radius-lg $card-radius-lg 0 0;
+    padding: 40rpx $container-padding calc(40rpx + env(safe-area-inset-bottom));
+    animation: location-drawer-rescue-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__rescue-title {
+    @include font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+    color: $color-text-primary-warm;
+  }
+
+  &__rescue-body {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-base;
+    line-height: 1.6;
+    color: $color-text-secondary;
+  }
+
+  &__rescue-actions {
+    margin-top: $spacing-lg;
+  }
+
+  &__rescue-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: $cta-min-tap;
+    border-radius: $card-radius-sm;
+    transition: opacity 0.12s ease;
+
+    &--primary {
+      background: $color-primary;
+    }
+
+    &--ghost {
+      background: $color-bg;
+      margin-top: $spacing-sm;
+    }
+
+    &--hover {
+      opacity: 0.9;
+    }
+  }
+
+  &__rescue-btn-text {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+
+    &--primary {
+      color: $color-text-white;
+    }
+
+    &--ghost {
+      color: $color-text-primary-warm;
     }
   }
 
@@ -91,16 +295,64 @@
   }
 }
 
+// ── Keyframes ─────────────────────────────────────────────────────
+@keyframes location-drawer-reveal {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes location-drawer-count-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@keyframes location-drawer-rescue-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes location-drawer-rescue-rise {
+  from { opacity: 0; transform: translateY(24rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 // ── Reduced Motion ────────────────────────────────────────────────
-// JS-driven class plus media-query fallback.
 .picker-shell--reduce-motion.location-drawer {
-  .location-drawer__heat-badge {
+  .location-drawer__pending-toggle,
+  .location-drawer__pending-chevron,
+  .location-drawer__pending-chip,
+  .location-drawer__rescue-btn {
     transition: none !important;
+  }
+
+  .location-drawer__reveal,
+  .location-drawer__count-dot,
+  .location-drawer__rescue,
+  .location-drawer__rescue-card {
+    animation: none !important;
+  }
+
+  .location-drawer__count-dot {
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .location-drawer__heat-badge {
+  .location-drawer__pending-toggle,
+  .location-drawer__pending-chevron,
+  .location-drawer__pending-chip,
+  .location-drawer__rescue-btn {
     transition: none !important;
+  }
+
+  .location-drawer__reveal,
+  .location-drawer__count-dot,
+  .location-drawer__rescue,
+  .location-drawer__rescue-card {
+    animation: none !important;
+  }
+
+  .location-drawer__count-dot {
+    opacity: 1;
   }
 }

@@ -26,6 +26,21 @@ describe('getClusterIdByDistrictName', () => {
     expect(getClusterIdByDistrictName('未知区')).toBeUndefined()
     expect(getClusterIdByDistrictName('')).toBeUndefined()
   })
+
+  it('maps legacy short-form aliases (pre-canonical data hygiene)', () => {
+    // Short forms appear in early pool rows and mock fixtures; the mapping
+    // keeps the Discover cluster filter resilient to that legacy data.
+    expect(getClusterIdByDistrictName('南山')).toBe('nanshan')
+    expect(getClusterIdByDistrictName('福田')).toBe('futian')
+    expect(getClusterIdByDistrictName('罗湖')).toBe('futian')
+    expect(getClusterIdByDistrictName('宝安')).toBe('nanshan')
+    expect(getClusterIdByDistrictName('龙岗')).toBe('futian')
+    expect(getClusterIdByDistrictName('盐田')).toBe('futian')
+    expect(getClusterIdByDistrictName('龙华')).toBe('futian')
+    expect(getClusterIdByDistrictName('坪山')).toBe('futian')
+    expect(getClusterIdByDistrictName('光明')).toBe('nanshan')
+    expect(getClusterIdByDistrictName('大鹏')).toBe('nanshan')
+  })
 })
 
 describe('getClusterProximity', () => {

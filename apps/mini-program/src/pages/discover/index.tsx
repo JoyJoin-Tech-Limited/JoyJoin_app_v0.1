@@ -8,10 +8,9 @@ import {
   type EventPoolSummary,
 } from '@shared/api'
 import {
-  shenzhenClusters,
-  getDistrictById,
   getClusterById,
-  type District,
+  getClusterIdByDistrictId,
+  getClusterIdByDistrictName,
 } from '@shared/districts'
 import { FLOW1_ENTRY_COPY } from '@shared/copy/flowAnimationCopy'
 import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
@@ -93,7 +92,17 @@ function readSavedLocation(): { clusterId: string; districtId: string } | null {
     const parsed = JSON.parse(raw)
     const ageMs = Date.now() - (parsed.timestamp || 0)
     if (ageMs > LOCATION_TTL_DAYS * 24 * 60 * 60 * 1000) return null
-    return { clusterId: parsed.clusterId, districtId: parsed.districtId }
+    let clusterId: string | null = parsed.clusterId ?? null
+    // Migration (2026-09-30): saved entries may predate the cluster-level
+    // coverage map and hold a 商圈 district id. Collapse them to their parent
+    // cluster, and drop anything that no longer maps to a bookable area.
+    if (parsed.districtId && parsed.districtId !== ALL_DISTRICT_ID) {
+      clusterId = getClusterIdByDistrictId(parsed.districtId) ?? null
+    }
+    if (!clusterId || clusterId === ALL_CLUSTER_ID) return null
+    const cluster = getClusterById(clusterId)
+    if (!cluster || cluster.districts.every((d) => d.heat === 'pending')) return null
+    return { clusterId, districtId: ALL_DISTRICT_ID }
   } catch {
     return null
   }
@@ -339,20 +348,14 @@ function AuthenticatedDiscover({
 
   // ── Geo detection effect ──
   // ── GPS auto-filter on first detection ──
-  // ── Derived: districts for selected cluster ──
-  const visibleDistricts = useMemo<District[]>(() => {
-    if (selectedCluster === ALL_CLUSTER_ID) {
-      return shenzhenClusters.flatMap((c) => c.districts)
-    }
-    const cluster = shenzhenClusters.find((c) => c.id === selectedCluster)
-    return cluster?.districts ?? []
-  }, [selectedCluster])
 
   // No sticky header with drawer-based filter — hero scrolls away naturally
 
   // ── Derived: display pool list ──
   // Strategy:
-  //   - Manual selection active → strict filter (respect user intent)
+  //   - Manual selection active → strict cluster filter. pool.district is a
+  //     区-level name (南山区/福田区); map it through the shared cluster
+  //     mapping so the feed and the drawer's live counts can never disagree.
   //   - No manual selection → show all pools in server order
   const hasManualFilter = selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
 
@@ -361,16 +364,10 @@ function AuthenticatedDiscover({
       // Strict filtering mode
       return pools.filter((pool) => {
         if (selectedCluster !== ALL_CLUSTER_ID) {
-          const clusterDistricts = shenzhenClusters
-            .find((c) => c.id === selectedCluster)
-            ?.districts.map((d) => d.name) ?? []
-          if (pool.district && !clusterDistricts.includes(pool.district)) {
-            return false
-          }
-        }
-        if (selectedDistrict !== ALL_DISTRICT_ID) {
-          const district = visibleDistricts.find((d) => d.id === selectedDistrict)
-          if (district && pool.district !== district.name) {
+          const poolClusterId = pool.district
+            ? getClusterIdByDistrictName(pool.district)
+            : undefined
+          if (poolClusterId !== selectedCluster) {
             return false
           }
         }
@@ -380,7 +377,7 @@ function AuthenticatedDiscover({
 
     // Default mode: show all pools in server order
     return pools
-  }, [pools, selectedCluster, selectedDistrict, visibleDistricts, hasManualFilter])
+  }, [pools, selectedCluster, hasManualFilter])
 
   // ── Empty-state auto-relaxation ──
   // When manual filter returns nothing, automatically fall back to all pools
@@ -622,16 +619,12 @@ function AuthenticatedDiscover({
 
   // ── Location pill label ──
   const locationPillLabel = useMemo(() => {
-    if (selectedDistrict !== ALL_DISTRICT_ID) {
-      const district = getDistrictById(selectedDistrict)
-      if (district) return district.name
-    }
     if (selectedCluster !== ALL_CLUSTER_ID) {
       const cluster = getClusterById(selectedCluster)
       if (cluster) return cluster.displayName
     }
     return '切换区域'
-  }, [selectedCluster, selectedDistrict])
+  }, [selectedCluster])
 
   const handleRefresh = useCallback(() => {
     haptics('light')
@@ -1040,6 +1033,25 @@ export default function DiscoverPage() {
     []
   )
 
+  // Read-only mirror of the pools query owned by AuthenticatedDiscover.
+  // enabled:false — this observer never fetches on its own; it only reflects
+  // the shared cache so the area drawer can show live per-cluster counts.
+  const { data: poolsForCounts } = useQuery<EventPoolSummary[]>({
+    queryKey: ['mini-program', 'event-pools'],
+    enabled: false,
+  })
+  const countsByCluster = useMemo(() => {
+    const counts: Record<string, number> = {}
+    if (!poolsForCounts) return counts
+    for (const pool of poolsForCounts) {
+      const clusterId = pool.district
+        ? getClusterIdByDistrictName(pool.district)
+        : undefined
+      if (clusterId) counts[clusterId] = (counts[clusterId] ?? 0) + 1
+    }
+    return counts
+  }, [poolsForCounts])
+
   const handleOpenDrawer = useCallback(() => {
     haptics('light')
     setDrawerOpen(true)
@@ -1109,6 +1121,9 @@ export default function DiscoverPage() {
         open={drawerOpen}
         selectedCluster={selectedCluster}
         selectedDistrict={selectedDistrict}
+        countsByCluster={countsByCluster}
+        countsReady={poolsForCounts !== undefined}
+        totalPoolCount={poolsForCounts?.length ?? null}
         onSelect={handleFilterSelect}
         onClose={handleCloseDrawer}
       />

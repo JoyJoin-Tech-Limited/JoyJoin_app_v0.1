@@ -102,23 +102,41 @@
   }
 
   &__close {
+    position: relative;
     min-width: $cta-min-tap;
     min-height: $cta-min-tap;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: $radius-circle;
-    background: $color-bg;
+    background: transparent;
     margin-left: $spacing-sm;
-    transition: background 150ms ease;
     flex-shrink: 0;
 
+    // Visual disc is a centered 56rpx ::before so the icon ink fills ~70% of
+    // the disc and the disc matches the mascot's optical weight in the header.
+    &::before {
+      content: '';
+      position: absolute;
+      top: 16rpx;
+      right: 16rpx;
+      bottom: 16rpx;
+      left: 16rpx;
+      border-radius: 50%;
+      background: $color-bg;
+      transition: background 150ms ease;
+    }
+
     &--hover {
-      background: $color-divider;
+      &::before {
+        background: $color-divider;
+      }
     }
   }
 
   &__close-icon {
+    position: relative;
+    z-index: 1;
     color: $color-text-secondary;
   }
 
@@ -157,7 +175,7 @@
     transition: none;
   }
 
-  .picker-shell__close {
+  .picker-shell__close::before {
     transition: none;
   }
 }
@@ -165,7 +183,7 @@
 @media (prefers-reduced-motion: reduce) {
   .picker-shell,
   .picker-shell__surface,
-  .picker-shell__close {
+  .picker-shell__close::before {
     transition: none !important;
   }
 }

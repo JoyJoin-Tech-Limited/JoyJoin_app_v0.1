@@ -93,7 +93,7 @@ export default function PickerShell({
               role='button'
               aria-label='关闭'
             >
-              <CloseIcon size={24} className='picker-shell__close-icon' />
+              <CloseIcon size={28} className='picker-shell__close-icon' />
             </View>
           )}
         </View>

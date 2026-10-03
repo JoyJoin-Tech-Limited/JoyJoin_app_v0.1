@@ -136,6 +136,9 @@ export const STRICT_MODE_VENUE_THRESHOLD = 10;
 export const districtNameToClusterId: Record<string, string> = {
   '南山区': 'nanshan',
   '福田区': 'futian',
+  // 短别名：早期数据/mock 里的非规范写法（数据卫生兜底，2026-09-30）
+  '南山': 'nanshan',
+  '福田': 'futian',
 };
 
 /** 深圳外部行政区 → 最近的 JoyJoin clusterId（用于 GPS 反查外部区映射） */
@@ -148,6 +151,15 @@ export const externalDistrictToClusterId: Record<string, string> = {
   '坪山区': 'futian',
   '光明区': 'nanshan',
   '大鹏新区': 'nanshan',
+  // 短别名（同上）
+  '罗湖': 'futian',
+  '宝安': 'nanshan',
+  '龙岗': 'futian',
+  '盐田': 'futian',
+  '龙华': 'futian',
+  '坪山': 'futian',
+  '光明': 'nanshan',
+  '大鹏': 'nanshan',
 };
 
 /**

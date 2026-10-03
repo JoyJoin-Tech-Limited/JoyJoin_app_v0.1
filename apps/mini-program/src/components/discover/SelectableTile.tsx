@@ -12,7 +12,6 @@ export interface SelectableTileProps {
   checkmark?: boolean
   disabled?: boolean
   loading?: boolean
-  pending?: boolean
   icon?: ReactNode
   children?: ReactNode
   ariaLabel?: string
@@ -27,7 +26,6 @@ export default function SelectableTile({
   checkmark = true,
   disabled = false,
   loading = false,
-  pending = false,
   icon,
   children,
   ariaLabel,
@@ -38,7 +36,7 @@ export default function SelectableTile({
   return (
     <View
       id={id}
-      className={`selectable-tile selectable-tile--${variant} ${selected ? 'selectable-tile--selected' : ''} ${disabled ? 'selectable-tile--disabled' : ''} ${loading ? 'selectable-tile--loading' : ''} ${pending ? 'selectable-tile--pending' : ''} ${isPrimary ? 'selectable-tile--primary' : 'selectable-tile--degradation'}`}
+      className={`selectable-tile selectable-tile--${variant} ${selected ? 'selectable-tile--selected' : ''} ${disabled ? 'selectable-tile--disabled' : ''} ${loading ? 'selectable-tile--loading' : ''} ${isPrimary ? 'selectable-tile--primary' : 'selectable-tile--degradation'}`}
       onClick={disabled || loading ? undefined : onClick}
       hoverClass={disabled || loading ? undefined : 'selectable-tile--hover'}
       role='button'
@@ -62,12 +60,7 @@ export default function SelectableTile({
         </View>
       )}
 
-      {pending && (
-        <View className='selectable-tile__pending-badge' aria-hidden='true'>
-          <Text className='selectable-tile__pending-badge-text'>待解锁</Text>
-        </View>
-      )}
-      {children && !pending && <View className='selectable-tile__children'>{children}</View>}
+      {children && <View className='selectable-tile__children'>{children}</View>}
     </View>
   )
 }
