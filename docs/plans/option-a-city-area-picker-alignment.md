@@ -3,6 +3,7 @@
 > **Status:** Implemented 2026-06-23.
 > **Final audit scores:** Frontend Design 20/20, Completeness 44/44, Performance PASS (53/60).
 > **Remaining work:** Capture WeChat DevTools screenshots on iPhone SE and iPhone 14 Pro as manual QA evidence.
+> **Superseded (area drawer) 2026-09-30:** the area-drawer spec below — multi-select/filter-by-cluster, 商圈 district grid, heat badges, 待解锁 badge, `pending` tile opacity — was replaced by the cluster-level coverage-map redesign (live 「N 场可报名」 counts, collapsed pending section, rescue dialog; `SelectableTile.pending` deleted). Current state: `docs/agent-context/mini-program-patterns.md` §Location coverage map. City-picker sections remain accurate.
 
 ## 1. Current-state audit
 

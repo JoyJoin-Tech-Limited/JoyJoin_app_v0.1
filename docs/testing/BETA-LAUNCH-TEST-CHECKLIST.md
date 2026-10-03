@@ -51,21 +51,22 @@
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
 | 2.1 | Open location filter | On Discover page, tap location pill/button | `LocationFilterDrawer` slides up from bottom with backdrop overlay |
-| 2.2 | Drawer layout | Inspect drawer contents | Drawer renders via shared `PickerShell`: drag handle, rounded top, backdrop, Xiaoyue mascot + title + close button, safe-area inset. Three cluster sections visible: 南山区 (6 districts), 福田区 (3 districts), 即将开放 (8 districts). District tiles render in a 2-column grid with 28rpx names. Heat shows as compact top-right badges (`热门`/`活跃`); `normal` has no badge. Pending tiles show a grey "待解锁" badge. |
-| 2.3 | Select a district | Tap a district tile (e.g., 科技园) | Tile shows selected state (`aria-pressed=true`) with filled primary background and white checkmark; haptic fires. Drawer auto-closes; district name shown on discover pill. |
-| 2.4 | Apply/clear filter | Tap the selected district tile again, or tap "全部区域" | Selection cleared; discover shows all districts. Tap "全部区域" also clears any active filter. |
+| 2.2 | Drawer layout | Inspect drawer contents | Drawer renders via shared `PickerShell`: drag handle, rounded top, backdrop, Xiaoyue mascot + title + subtitle (`选一个方便去的区域`) + close button, safe-area inset. **Coverage-map structure (2026-09-30 redesign):** 全部区域 hero tile (soft primary tint when unselected, total-count caption on the right) → 已开放区域 section with 96rpx single-row cluster tiles （南山区/福田区） showing live 「N 场可报名」 count pills with a breathing pulse dot — honest 暂无场次 pill when a cluster has zero pools, no pill at all until pool data loads (never a fabricated 0) → collapsed 更多区域 row (`即将开放 · 8 个区域`). |
+| 2.3 | Select a cluster | Tap a cluster tile with count > 0 (e.g., 南山区) | Tile shows selected state (`aria-pressed=true`) with filled primary background and a white check disc centered on the tile's right axis; haptic fires. Drawer auto-closes after ~150ms; cluster name shown on discover pill; feed filters to that cluster's pools only (no auto-relax banner when the count was > 0). |
+| 2.4 | Apply/clear filter | Tap "全部区域" while a cluster is selected | Selection cleared; discover shows all pools; 全部区域 tile returns to its hero tint. |
 | 2.5 | Scroll containment | With drawer open, swipe up/down on the drawer content and on the backdrop | Drawer `ScrollView` scrolls its own content; swiping the backdrop (or at scroll edges) does not scroll the background Discover page. |
 | 2.6 | Close drawer via backdrop | With drawer open, tap the backdrop area | Drawer closes without changing selection |
-| 2.7 | Close drawer via ✕ | Tap the `✕` close button | Drawer closes without changing selection |
+| 2.7 | Close drawer via ✕ | Tap the `✕` close button | Drawer closes without changing selection; ✕ sits on a 56rpx disc inside an 88rpx hit area. |
 
 ### Edge Cases
 
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
-| 2.8 | Single-select behavior | Try selecting districts from different clusters | Only one district (or "全部区域") can be active at a time; previous selection is replaced. |
-| 2.9 | No pools in selected district | Select a district with no active pools | Discover shows empty state (StatusCard with "去发现活动" or "清除筛选") |
-| 2.10 | Scroll within drawer | If many districts, scroll the list | `ScrollView` scrolls smoothly with no layout jump at flex bounds |
-| 2.11 | Verify heat indicators | Compare district heat data vs `packages/shared/src/districts.ts` | `hot` districts show a pink/coral top-right badge "热门"; `active` shows a gold badge "活跃"; `normal` has no badge; `pending` shows a grey "待解锁" badge (not just opacity) |
+| 2.8 | Single-select behavior | Try selecting both clusters | Only one selection (or "全部区域") can be active at a time; previous selection is replaced. |
+| 2.9 | No pools in selected cluster | Tap a cluster tile showing 暂无场次 | Selection does NOT apply; an in-sheet rescue dialog opens instead: title 「{cluster}本周暂无场次」, body suggests the nearest bookable cluster with its live count (e.g., 「福田区本周有 1 场可报名」), primary CTA 「看看福田区」 selects it and closes, ghost CTA 「知道了」 dismisses. No storage write for the empty tap. |
+| 2.9b | Pending district tap | Expand 更多区域, tap a pending chip (e.g., 罗湖区) | Chip never selects and never closes the sheet; rescue dialog opens: 「罗湖区还在筹备中」 + nearest-cluster suggestion (罗湖 maps to 福田区) + 「看看福田区」 / 「知道了」. |
+| 2.10 | Scroll within drawer | Expand 更多区域 and scroll | `ScrollView` scrolls smoothly with no layout jump at flex bounds; pending chips are 64rpx dashed-border rows, non-selecting. |
+| 2.11 | Verify live counts | Compare pill counts vs Discover feed | Each cluster's pill equals the number of pool cards shown when that cluster is selected (both derive from the same `pool.district` → cluster mapping). Totals refresh when pools refetch; pills vanish (not zero) if the pools query fails. |
 
 ---
 

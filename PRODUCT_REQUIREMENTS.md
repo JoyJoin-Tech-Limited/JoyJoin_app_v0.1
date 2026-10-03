@@ -962,9 +962,11 @@ User Sees:
      auto-selects the detected district as the active filter silently (one-time per session).
      Manual filter override via LocationFilterDrawer with 7-day TTL. Auto-relaxation to all-Shenzhen
      view with banner when manual filter is empty. Geo-hint chip shows detected cluster.
-  - Drawer accessibility: role="dialog", district tiles are role="button" with
-    aria-pressed and descriptive aria-label (includes district name + heat level),
-    heat-dot colours driven by SCSS tokens.
+  - Drawer accessibility: role="dialog", cluster tiles are role="button" with
+    aria-pressed and descriptive aria-label (includes cluster name + live count,
+    e.g. 南山区，2 场可报名 / 暂无场次), pending toggle carries aria-expanded, rescue
+    dialog is role="dialog" + aria-modal. Live counts vanish (never fabricated)
+    when pool data has not loaded.
   - Empty state (no matching pools): StatusCard with Lovart illustration,
     warm title/description, and a primary action CTA ("去发现活动" or "清除筛选"
     when manual filters are active).
