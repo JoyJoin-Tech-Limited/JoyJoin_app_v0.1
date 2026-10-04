@@ -55,6 +55,7 @@ import GuidanceTipCard, { type GuidanceTipCardRowKey } from '../../components/gu
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 import { getSystemInfoCompat } from '../../lib/utils/systemInfo'
+import { buildDiscoverCounts } from '../../lib/utils/discoverCounts'
 
 // ─── Constants ────────────────────────────────────────────────────
 const ALL_CLUSTER_ID = '__all__'
@@ -1040,17 +1041,14 @@ export default function DiscoverPage() {
     queryKey: ['mini-program', 'event-pools'],
     enabled: false,
   })
-  const countsByCluster = useMemo(() => {
-    const counts: Record<string, number> = {}
-    if (!poolsForCounts) return counts
-    for (const pool of poolsForCounts) {
-      const clusterId = pool.district
-        ? getClusterIdByDistrictName(pool.district)
-        : undefined
-      if (clusterId) counts[clusterId] = (counts[clusterId] ?? 0) + 1
-    }
-    return counts
-  }, [poolsForCounts])
+  // All-time cluster counts feed nothing display-facing anymore (the drawer
+  // speaks in 本周 semantics), but the filter itself is cluster-level and
+  // unchanged. Week counts + next-event dates drive the drawer's pills.
+  const countsReady = poolsForCounts !== undefined
+  const discoverCounts = useMemo(
+    () => buildDiscoverCounts(poolsForCounts ?? []),
+    [poolsForCounts],
+  )
 
   const handleOpenDrawer = useCallback(() => {
     haptics('light')
@@ -1121,8 +1119,10 @@ export default function DiscoverPage() {
         open={drawerOpen}
         selectedCluster={selectedCluster}
         selectedDistrict={selectedDistrict}
-        countsByCluster={countsByCluster}
-        countsReady={poolsForCounts !== undefined}
+        weekCountsByCluster={discoverCounts.weekCountsByCluster}
+        weekTotal={discoverCounts.weekTotal}
+        nextEventByCluster={discoverCounts.nextEventByCluster}
+        countsReady={countsReady}
         totalPoolCount={poolsForCounts?.length ?? null}
         onSelect={handleFilterSelect}
         onClose={handleCloseDrawer}

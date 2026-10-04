@@ -51,13 +51,108 @@
       animation-delay: 0.04s;
     }
 
-    &--2 {
-      animation-delay: 0.1s;
-    }
-
     &--3 {
       animation-delay: 0.16s;
     }
+  }
+
+  // Per-tile stagger inside the live section (#14 丝滑); the base delay rides
+  // on the class, per-tile increments arrive inline in px-safe `ms`.
+  &__reveal-tile {
+    animation: location-drawer-reveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__single {
+    margin-top: $spacing-sm;
+  }
+
+  // ── Smart Hint Card (#7/#10 智能) ───────────────────────────────
+  &__hint {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-primary, 0.06);
+    border: 2rpx solid rgba($color-primary, 0.14);
+  }
+
+  &__hint-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__hint-title {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+    line-height: $line-height-normal;
+  }
+
+  &__hint-body {
+    display: block;
+    margin-top: 4rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  &__hint-cta {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 64rpx;
+    padding: 0 $spacing-md;
+    border-radius: 999rpx;
+    background: $color-primary;
+    transition: opacity 0.12s ease;
+
+    &--hover {
+      opacity: 0.9;
+    }
+  }
+
+  &__hint-cta-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+    white-space: nowrap;
+  }
+
+  // ── Footer Confirm CTA (#13 丝滑) ───────────────────────────────
+  &__confirm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    border-radius: $card-radius-sm;
+    background: $color-primary;
+    transition: opacity 0.12s ease;
+
+    &--hover {
+      opacity: 0.9;
+    }
+  }
+
+  &__confirm-text {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+  }
+
+  // ── All-quiet Whisper (#18 精致) ────────────────────────────────
+  &__whisper {
+    margin-top: $spacing-lg;
+    text-align: center;
+  }
+
+  &__whisper-text {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    line-height: $line-height-normal;
   }
 
   // ── Sections ────────────────────────────────────────────────────
@@ -110,8 +205,6 @@
     padding: 0 12rpx;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.08);
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
     line-height: 1;
     white-space: nowrap;
     color: $color-primary;
@@ -122,15 +215,54 @@
     }
   }
 
-  // Breathing "live now" signal inside the count pill — opacity-only pulse,
-  // same vocabulary as the OracleCard topline pulse.
+  // Number typography (#16/#17 精致): tabular mono numerals, bold value +
+  // regular unit; the enter animation replays via key-remount on change (#12).
+  &__count-text {
+    display: inline-flex;
+    align-items: center;
+    animation: location-drawer-count-enter 0.15s ease-out both;
+  }
+
+  &__count-num {
+    font-family: $font-mono;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+  }
+
+  &__count-unit {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+  }
+
+  &__nearest-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 28rpx;
+    padding: 0 8rpx;
+    margin-right: 8rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.14);
+
+    &-text {
+      font-size: 20rpx;
+      font-weight: $font-weight-semibold;
+      line-height: 1;
+      color: $color-primary;
+      white-space: nowrap;
+    }
+  }
+
+  // Breathing "live now" signal — 2s cadence shared with the OracleCard
+  // topline pulse (#19 同频), opacity-only compositing.
   &__count-dot {
     width: 8rpx;
     height: 8rpx;
     border-radius: 50%;
     background: $color-primary;
     margin-right: 8rpx;
-    animation: location-drawer-count-pulse 1.6s ease-in-out infinite;
+    animation: location-drawer-count-pulse 2s ease-in-out infinite;
   }
 
   // ── Pending Section ─────────────────────────────────────────────
@@ -190,7 +322,7 @@
     justify-content: center;
     height: 64rpx;
     border: 2rpx dashed $color-border;
-    border-radius: $card-radius-sm;
+    border-radius: 16rpx; // chip-scale radius, distinct from the 24rpx cards (#20)
     background: $color-bg;
     transition: background 0.12s ease;
 
@@ -306,6 +438,11 @@
   50% { opacity: 1; }
 }
 
+@keyframes location-drawer-count-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes location-drawer-rescue-fade {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -321,12 +458,16 @@
   .location-drawer__pending-toggle,
   .location-drawer__pending-chevron,
   .location-drawer__pending-chip,
-  .location-drawer__rescue-btn {
+  .location-drawer__rescue-btn,
+  .location-drawer__hint-cta,
+  .location-drawer__confirm {
     transition: none !important;
   }
 
   .location-drawer__reveal,
+  .location-drawer__reveal-tile,
   .location-drawer__count-dot,
+  .location-drawer__count-text,
   .location-drawer__rescue,
   .location-drawer__rescue-card {
     animation: none !important;
@@ -341,12 +482,16 @@
   .location-drawer__pending-toggle,
   .location-drawer__pending-chevron,
   .location-drawer__pending-chip,
-  .location-drawer__rescue-btn {
+  .location-drawer__rescue-btn,
+  .location-drawer__hint-cta,
+  .location-drawer__confirm {
     transition: none !important;
   }
 
   .location-drawer__reveal,
+  .location-drawer__reveal-tile,
   .location-drawer__count-dot,
+  .location-drawer__count-text,
   .location-drawer__rescue,
   .location-drawer__rescue-card {
     animation: none !important;

@@ -56,7 +56,19 @@ export function registerDiscoverAreaGenerators(ctx) {
     })
   }
 
+  // 精细化 (2026-09-30): cluster selected → sheet stays open, footer CTA.
+  async function captureDiscoverAreaSelected() {
+    return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+      await openDiscoverAreaDrawer(page)
+      await page.click('.location-drawer__district-grid .selectable-tile--large')
+      await page.waitForSelector('.location-drawer__confirm', { state: 'visible', timeout: 5000 })
+      await page.waitForTimeout(500)
+      return screenshotViewport(page)
+    })
+  }
+
   register('discover-area-drawer', captureDiscoverAreaDrawer)
   register('discover-area-pending', captureDiscoverAreaPending)
   register('discover-area-rescue', captureDiscoverAreaRescue)
+  register('discover-area-selected', captureDiscoverAreaSelected)
 }

@@ -54,12 +54,27 @@
   }
 
   &__handle {
-    width: 56rpx;
-    height: 6rpx;
-    background: $color-divider;
-    border-radius: 3rpx;
-    margin: 16rpx auto;
+    // 44rpx tall transparent hit zone; the visible grip is the ::after bar.
+    // Doubles as the drag-to-dismiss grip (2026-09-30 精细化).
+    height: 44rpx;
+    margin: 8rpx auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+
+    &::after {
+      content: '';
+      width: 56rpx;
+      height: 6rpx;
+      border-radius: 3rpx;
+      background: $color-divider;
+      transition: background 120ms ease;
+    }
+
+    &--dragging::after {
+      background: rgba($color-text-muted, 0.6);
+    }
   }
 
   // ── Header ──────────────────────────────────────────────────────

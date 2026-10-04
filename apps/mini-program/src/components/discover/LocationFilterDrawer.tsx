@@ -1,8 +1,11 @@
 import { View, Text, ScrollView } from '@tarojs/components'
-import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react'
+import Taro from '@tarojs/taro'
+import React, { useCallback, useMemo, useEffect, useState } from 'react'
 import {
   shenzhenClusters,
   getClusterById,
+  getClusterIdByDistrictName,
+  districtNameToClusterId,
   externalDistrictToClusterId,
   clusterProximityMap,
   type DistrictCluster,
@@ -12,6 +15,8 @@ import JoyJoinIcon from '../ui/JoyJoinIcon'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { haptics } from '../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { apiRequest } from '../../lib/api/api'
+import { formatNextEventLabel } from '../../lib/utils/discoverCounts'
 import PickerShell from './PickerShell'
 import SelectableTile from './SelectableTile'
 import './LocationFilterDrawer.scss'
@@ -23,7 +28,10 @@ interface LocationFilterDrawerProps {
   open: boolean
   selectedCluster: string
   selectedDistrict: string
-  countsByCluster?: Record<string, number>
+  /** This-week counts + next-event dates (display semantics). */
+  weekCountsByCluster?: Record<string, number>
+  weekTotal?: number
+  nextEventByCluster?: Record<string, string>
   countsReady?: boolean
   totalPoolCount?: number | null
   onSelect: (clusterId: string, districtId: string) => void
@@ -37,85 +45,41 @@ interface RescueState {
   suggestionClusterId: string | null
 }
 
+interface GeoResult {
+  success: boolean
+  city?: string
+  district?: string
+  name?: string
+  source: string
+  code?: string
+  error?: string
+}
+
+// Geo is attempted once per app session; failures degrade silently (no tag,
+// no hint card — the coverage map stays fully usable without location).
+let sessionGeo: { district: string | null } | 'loading' | 'failed' | null = null
+
 export default function LocationFilterDrawer({
   open,
   selectedCluster,
   selectedDistrict,
-  countsByCluster,
+  weekCountsByCluster,
+  weekTotal = 0,
+  nextEventByCluster,
   countsReady = false,
   totalPoolCount = null,
   onSelect,
   onClose,
 }: LocationFilterDrawerProps) {
-  const transitioningRef = useRef(false)
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Track drawer open exactly once per open.
-  // Do NOT include selectedCluster/selectedDistrict in the dependency array;
-  // those values change while the drawer stays open (single-select cluster
-  // filter), which would pollute the filter_open funnel.
-  useEffect(() => {
-    if (open) {
-      discoverAnalytics.track('filter_open', undefined, {
-        selectedCluster,
-        selectedDistrict,
-        countsByCluster,
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current)
-      }
-    }
-  }, [])
-
-  const handleSelect = useCallback(
-    (clusterId: string, districtId: string) => {
-      if (transitioningRef.current) return
-      transitioningRef.current = true
-      haptics('light')
-
-      discoverAnalytics.track('filter_select', undefined, {
-        clusterId,
-        districtId,
-        isAll: clusterId === ALL_CLUSTER_ID && districtId === ALL_DISTRICT_ID,
-      })
-
-      onSelect(clusterId, districtId)
-      // Allow selection feedback to register before closing
-      closeTimerRef.current = setTimeout(() => {
-        onClose()
-        transitioningRef.current = false
-        closeTimerRef.current = null
-      }, 150)
-    },
-    [onSelect, onClose]
-  )
-
-  const handleCloseTap = useCallback(() => {
-    if (transitioningRef.current) return
-    haptics('light')
-    discoverAnalytics.track('filter_close', undefined, {
-      didSelect: false,
-      selectedCluster,
-      selectedDistrict,
-    })
-    onClose()
-  }, [onClose, selectedCluster, selectedDistrict])
-
-  const isAllSelected = selectedCluster === ALL_CLUSTER_ID && selectedDistrict === ALL_DISTRICT_ID
   const { shouldReduceMotion: reduceMotion } = useMiniRevealMotion()
 
   const [rescue, setRescue] = useState<RescueState | null>(null)
   const [pendingExpanded, setPendingExpanded] = useState(false)
+  const [geoDistrict, setGeoDistrict] = useState<string | null | undefined>(undefined)
 
   // Reset transient dialog/section state whenever the sheet closes so a
-  // re-open always starts from the collapsed coverage map.
+  // re-open always starts from the collapsed coverage map. Geo is cached for
+  // the whole app session (see module-level sessionGeo).
   useEffect(() => {
     if (!open) {
       setRescue(null)
@@ -123,8 +87,36 @@ export default function LocationFilterDrawer({
     }
   }, [open])
 
-  // Coverage model: clusters with at least one non-pending district are the
-  // bookable areas; the all-pending cluster renders as a collapsed section.
+  // One-shot reverse geocode per session (2026-09-30 精细化: 最近 tag +
+  // pending-district hint). Fail-open: any error → no tag, no hint.
+  useEffect(() => {
+    if (!open || sessionGeo !== null) {
+      if (sessionGeo && sessionGeo !== 'loading' && sessionGeo !== 'failed') {
+        setGeoDistrict(sessionGeo.district)
+      }
+      return
+    }
+    sessionGeo = 'loading'
+    Taro.getLocation({ type: 'gcj02' })
+      .then((loc) =>
+        apiRequest<GeoResult>({
+          path: '/api/geo/reverse-geocode',
+          method: 'POST',
+          data: { latitude: loc.latitude, longitude: loc.longitude },
+          timeout: 6000,
+        }),
+      )
+      .then((res) => {
+        sessionGeo = { district: res?.success && res.district ? res.district : null }
+        setGeoDistrict(sessionGeo.district)
+      })
+      .catch(() => {
+        sessionGeo = 'failed'
+        setGeoDistrict(null)
+      })
+  }, [open])
+
+  // ── Coverage model ──────────────────────────────────────────────
   const liveClusters = useMemo(
     () => shenzhenClusters.filter((c) => c.districts.some((d) => d.heat !== 'pending')),
     []
@@ -134,24 +126,33 @@ export default function LocationFilterDrawer({
     []
   )
 
-  // Live count per cluster; null while pool data has not loaded successfully
-  // (never show a fabricated zero).
+  const isAllSelected = selectedCluster === ALL_CLUSTER_ID && selectedDistrict === ALL_DISTRICT_ID
+
+  // Display count (this-week semantics); null while data has not loaded.
   const countFor = useCallback(
     (clusterId: string): number | null => {
       if (!countsReady) return null
-      return countsByCluster?.[clusterId] ?? 0
+      return weekCountsByCluster?.[clusterId] ?? 0
     },
-    [countsReady, countsByCluster]
+    [countsReady, weekCountsByCluster]
   )
 
-  // Hero caption counts everything the 全部区域 feed would show (including
-  // pools whose district maps to no cluster), so caption and feed agree.
-  const totalCount = countsReady && typeof totalPoolCount === 'number' ? totalPoolCount : null
+  // Clusters worth showing: unknown-count (loading), >0 this week, or the
+  // current selection (so a stale saved pick stays visible + hintable).
+  const visibleLiveClusters = useMemo(() => {
+    return liveClusters.filter((c) => {
+      const count = countFor(c.id)
+      return count === null || count > 0 || c.id === selectedCluster
+    })
+  }, [liveClusters, countFor, selectedCluster])
 
-  // Nearest bookable cluster with at least one event, by commute proximity.
+  const heroTotal =
+    countsReady && typeof totalPoolCount === 'number' ? totalPoolCount : null
+
+  // Nearest bookable cluster with at least one event this week.
   const findSuggestedCluster = useCallback(
     (fromClusterId: string | null): string | null => {
-      const candidates = liveClusters.filter((c) => (countsByCluster?.[c.id] ?? 0) > 0)
+      const candidates = liveClusters.filter((c) => (weekCountsByCluster?.[c.id] ?? 0) > 0)
       if (candidates.length === 0) return null
       if (!fromClusterId) return candidates[0].id
       const prox = clusterProximityMap[fromClusterId] ?? {}
@@ -159,8 +160,96 @@ export default function LocationFilterDrawer({
         (a, b) => (prox[a.id] ?? 999) - (prox[b.id] ?? 999)
       )[0].id
     },
-    [liveClusters, countsByCluster]
+    [liveClusters, weekCountsByCluster]
   )
+
+  // ── Geo intelligence (最近 tag + pending hint) ──────────────────
+  const nearestClusterId = useMemo(() => {
+    if (!geoDistrict) return null
+    if (!(geoDistrict in districtNameToClusterId)) return null // only live 区 tag 最近
+    const clusterId = getClusterIdByDistrictName(geoDistrict)
+    if (!clusterId || (weekCountsByCluster?.[clusterId] ?? 0) <= 0) return null
+    return clusterId
+  }, [geoDistrict, weekCountsByCluster])
+
+  // ── Smart hint card (priority: stale saved pick > geo pending 区) ─
+  const smartHint = useMemo(() => {
+    if (!countsReady) return null
+    // 1. Saved selection went quiet this week → one-tap recovery.
+    if (selectedCluster !== ALL_CLUSTER_ID) {
+      const count = weekCountsByCluster?.[selectedCluster] ?? 0
+      if (count === 0) {
+        const cluster = getClusterById(selectedCluster)
+        const suggestionClusterId = findSuggestedCluster(selectedCluster)
+        if (cluster && suggestionClusterId) {
+          const suggestion = getClusterById(suggestionClusterId)
+          if (suggestion) {
+            return {
+              title: `${cluster.displayName}本周暂无场次`,
+              body: `${suggestion.displayName}本周有 ${weekCountsByCluster?.[suggestionClusterId] ?? 0} 场可报名`,
+              targetClusterId: suggestionClusterId,
+            }
+          }
+        }
+      }
+    }
+    // 2. User sits in a pending district → point at the nearest bookable cluster.
+    if (geoDistrict && geoDistrict in externalDistrictToClusterId) {
+      const mapped = externalDistrictToClusterId[geoDistrict]
+      const suggestionClusterId =
+        mapped && (weekCountsByCluster?.[mapped] ?? 0) > 0
+          ? mapped
+          : findSuggestedCluster(mapped)
+      if (suggestionClusterId) {
+        const suggestion = getClusterById(suggestionClusterId)
+        if (suggestion) {
+          return {
+            title: `你在${geoDistrict}`,
+            body: `离你最近的${suggestion.displayName}本周有 ${weekCountsByCluster?.[suggestionClusterId] ?? 0} 场可报名`,
+            targetClusterId: suggestionClusterId,
+          }
+        }
+      }
+    }
+    return null
+  }, [countsReady, selectedCluster, weekCountsByCluster, geoDistrict, findSuggestedCluster])
+
+  const allQuiet = countsReady && weekTotal === 0
+
+  // ── Subtitle (live meta) ────────────────────────────────────────
+  const liveWithEvents = useMemo(
+    () => liveClusters.filter((c) => (weekCountsByCluster?.[c.id] ?? 0) > 0).length,
+    [liveClusters, weekCountsByCluster]
+  )
+  const subtitle =
+    countsReady && weekTotal > 0
+      ? `本周 ${weekTotal} 场 · ${liveWithEvents} 个区域`
+      : '选一个方便去的区域'
+
+  // ── Selection (selection applies; the sheet stays open — the footer
+  //    CTA or ✕/backdrop/drag closes it) ───────────────────────────
+  const handleSelect = useCallback(
+    (clusterId: string, districtId: string) => {
+      haptics('light')
+      discoverAnalytics.track('filter_select', undefined, {
+        clusterId,
+        districtId,
+        isAll: clusterId === ALL_CLUSTER_ID && districtId === ALL_DISTRICT_ID,
+      })
+      onSelect(clusterId, districtId)
+    },
+    [onSelect]
+  )
+
+  const handleConfirmView = useCallback(() => {
+    haptics('light')
+    discoverAnalytics.track('filter_close', undefined, {
+      didSelect: true,
+      selectedCluster,
+      selectedDistrict,
+    })
+    onClose()
+  }, [onClose, selectedCluster, selectedDistrict])
 
   const handleClusterTap = useCallback(
     (cluster: DistrictCluster) => {
@@ -193,7 +282,7 @@ export default function LocationFilterDrawer({
       })
       const mapped = externalDistrictToClusterId[district.name] ?? null
       const suggestionClusterId =
-        mapped && (countsByCluster?.[mapped] ?? 0) > 0
+        mapped && (weekCountsByCluster?.[mapped] ?? 0) > 0
           ? mapped
           : findSuggestedCluster(mapped)
       setRescue({
@@ -203,7 +292,7 @@ export default function LocationFilterDrawer({
         suggestionClusterId,
       })
     },
-    [countsByCluster, findSuggestedCluster]
+    [weekCountsByCluster, findSuggestedCluster]
   )
 
   const handlePendingToggle = useCallback(() => {
@@ -214,28 +303,69 @@ export default function LocationFilterDrawer({
     setPendingExpanded((prev) => !prev)
   }, [pendingExpanded])
 
+  // Hint CTA / rescue accept: select the suggestion so the check pops on the
+  // target tile, give a medium haptic, then let the pop read before closing.
+  const acceptSuggestion = useCallback(
+    (targetClusterId: string, fromId: string) => {
+      haptics('medium')
+      discoverAnalytics.track('coverage_adjacent_accept', undefined, {
+        from: fromId,
+        to: targetClusterId,
+      })
+      onSelect(targetClusterId, ALL_DISTRICT_ID)
+      setTimeout(() => onClose(), 300)
+    },
+    [onSelect, onClose]
+  )
+
   const handleRescueAccept = useCallback(() => {
     if (!rescue) return
     const targetClusterId = rescue.suggestionClusterId ?? ALL_CLUSTER_ID
-    discoverAnalytics.track('coverage_adjacent_accept', undefined, {
-      from: rescue.fromId,
-      to: targetClusterId,
-      fallback: rescue.suggestionClusterId === null,
-    })
+    const fromId = rescue.fromId
     setRescue(null)
-    handleSelect(targetClusterId, ALL_DISTRICT_ID)
-  }, [rescue, handleSelect])
+    if (targetClusterId === ALL_CLUSTER_ID) {
+      // No bookable cluster at all — select 全部区域, no celebratory close.
+      handleSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID)
+      return
+    }
+    acceptSuggestion(targetClusterId, fromId)
+  }, [rescue, handleSelect, acceptSuggestion])
 
   const handleRescueDismiss = useCallback(() => {
     haptics('light')
     setRescue(null)
   }, [])
 
+  // ── Dynamic surface height (#2 简洁) ────────────────────────────
+  const sheetHeightRpx = useMemo(() => {
+    let h = 96 + 96 + 40 + 16 // handle + header + subtitle + breathing
+    h += 96 // hero tile
+    if (smartHint) h += 16 + 96
+    if (visibleLiveClusters.length === 1) {
+      h += 16 + 96
+    } else if (visibleLiveClusters.length >= 2) {
+      const rows = Math.ceil(visibleLiveClusters.length / 2)
+      h += 40 + 48 + rows * 96 + (rows - 1) * 16
+    }
+    if (pendingCluster) {
+      h += 40 + 40 // section gap + toggle row
+      if (pendingExpanded) {
+        const chipRows = Math.ceil(pendingCluster.districts.length / 2)
+        h += 16 + chipRows * 64 + (chipRows - 1) * 16
+      }
+    }
+    if (allQuiet) h += 24 + 40
+    if (!isAllSelected) h += 24 + 128 // footer CTA
+    h += 24 // safe bottom base
+    return Math.min(1100, Math.max(560, Math.ceil(h / 8) * 8))
+  }, [smartHint, visibleLiveClusters, pendingCluster, pendingExpanded, allQuiet, isAllSelected])
+
+  // ── Rescue dialog copy ──────────────────────────────────────────
   const suggestionCluster = rescue?.suggestionClusterId
     ? getClusterById(rescue.suggestionClusterId)
     : undefined
   const suggestionCount = rescue?.suggestionClusterId
-    ? countsByCluster?.[rescue.suggestionClusterId] ?? 0
+    ? weekCountsByCluster?.[rescue.suggestionClusterId] ?? 0
     : 0
   const rescueTitle = rescue
     ? rescue.kind === 'pending'
@@ -251,16 +381,39 @@ export default function LocationFilterDrawer({
     : ''
   const rescueCta = suggestionCluster ? `看看${suggestionCluster.displayName}` : '看看全部区域'
 
+  // ── Footer CTA label (#13) ──────────────────────────────────────
+  const selectedWeekCount =
+    selectedCluster !== ALL_CLUSTER_ID ? (weekCountsByCluster?.[selectedCluster] ?? 0) : 0
+  const footerLabel = !countsReady
+    ? '查看活动'
+    : selectedWeekCount > 0
+      ? `查看本周 ${selectedWeekCount} 场`
+      : '查看活动'
+
   return (
     <PickerShell
       visible={open}
-      onClose={handleCloseTap}
-      mascotExpression='coachGuide'
+      onClose={onClose}
+      mascotExpression={allQuiet ? 'matchWaiting' : 'coachGuide'}
       title='偏好区域'
-      subtitle='选一个方便去的区域'
+      subtitle={subtitle}
       showClose
       reduceMotion={reduceMotion}
       className='location-drawer'
+      heightRpx={sheetHeightRpx}
+      footer={
+        !isAllSelected ? (
+          <View
+            className='location-drawer__confirm'
+            onClick={handleConfirmView}
+            hoverClass='location-drawer__confirm--hover'
+            role='button'
+            aria-label={footerLabel}
+          >
+            <Text className='location-drawer__confirm-text'>{footerLabel}</Text>
+          </View>
+        ) : undefined
+      }
       overlay={
         rescue ? (
           <View className='location-drawer__rescue'>
@@ -312,6 +465,29 @@ export default function LocationFilterDrawer({
         // VirtualList is intentionally not used: the coverage map is ≤ 13 items.
       >
         <View className='location-drawer__content'>
+          {/* Smart hint: stale saved pick or pending-district recovery (#7/#10) */}
+          {smartHint && (
+            <View className='location-drawer__hint location-drawer__reveal location-drawer__reveal--1'>
+              <View className='location-drawer__hint-copy'>
+                <Text className='location-drawer__hint-title'>{smartHint.title}</Text>
+                <Text className='location-drawer__hint-body'>{smartHint.body}</Text>
+              </View>
+              <View
+                className='location-drawer__hint-cta'
+                onClick={() =>
+                  acceptSuggestion(smartHint.targetClusterId, selectedCluster !== ALL_CLUSTER_ID ? selectedCluster : 'geo')
+                }
+                hoverClass='location-drawer__hint-cta--hover'
+                role='button'
+                aria-label={`看看${getClusterById(smartHint.targetClusterId)?.displayName ?? ''}`}
+              >
+                <Text className='location-drawer__hint-cta-text'>
+                  {`看看${getClusterById(smartHint.targetClusterId)?.displayName ?? ''}`}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* All Regions hero tile */}
           <View className='location-drawer__reveal location-drawer__reveal--1 location-drawer__hero'>
             <SelectableTile
@@ -328,56 +504,29 @@ export default function LocationFilterDrawer({
               }
               ariaLabel='全部区域'
             >
-              {!isAllSelected && totalCount !== null && (
+              {!isAllSelected && heroTotal !== null && (
                 <Text className='location-drawer__all-count' aria-hidden='true'>
-                  {`${totalCount} 场可报名`}
+                  {`共 ${heroTotal} 场`}
                 </Text>
               )}
             </SelectableTile>
           </View>
 
-          {/* Bookable clusters with live counts */}
-          {liveClusters.length > 0 && (
-            <View className='location-drawer__section location-drawer__reveal location-drawer__reveal--2'>
+          {/* Bookable clusters — this-week live counts; section header only
+              when 2+ visible, bare tile when exactly 1 (#1/#5 简洁) */}
+          {visibleLiveClusters.length === 1 ? (
+            <View className='location-drawer__single'>{renderClusterTile(visibleLiveClusters[0], 0)}</View>
+          ) : visibleLiveClusters.length >= 2 ? (
+            <View className='location-drawer__section'>
               <View className='location-drawer__section-header'>
                 <View className='location-drawer__section-dot' />
                 <Text className='location-drawer__section-name'>已开放区域</Text>
               </View>
               <View className='location-drawer__district-grid'>
-                {liveClusters.map((cluster: DistrictCluster) => {
-                  const isActive = selectedCluster === cluster.id
-                  const count = countFor(cluster.id)
-
-                  return (
-                    <SelectableTile
-                      key={cluster.id}
-                      variant='large'
-                      label={cluster.displayName}
-                      selected={isActive}
-                      onClick={() => handleClusterTap(cluster)}
-                      ariaLabel={
-                        count !== null
-                          ? `${cluster.displayName}，${count > 0 ? `${count} 场可报名` : '暂无场次'}`
-                          : cluster.displayName
-                      }
-                    >
-                      {!isActive && count !== null && (
-                        <View
-                          className={`location-drawer__count-pill ${count === 0 ? 'location-drawer__count-pill--muted' : ''}`}
-                          aria-hidden='true'
-                        >
-                          {count > 0 && (
-                            <View className='location-drawer__count-dot' aria-hidden='true' />
-                          )}
-                          <Text>{count > 0 ? `${count} 场可报名` : '暂无场次'}</Text>
-                        </View>
-                      )}
-                    </SelectableTile>
-                  )
-                })}
+                {visibleLiveClusters.map((cluster, idx) => renderClusterTile(cluster, idx))}
               </View>
             </View>
-          )}
+          ) : null}
 
           {/* Pending districts — collapsed coverage honesty */}
           {pendingCluster && (
@@ -426,6 +575,13 @@ export default function LocationFilterDrawer({
               )}
             </View>
           )}
+
+          {/* All-quiet whisper (#18 精致) */}
+          {allQuiet && (
+            <View className='location-drawer__whisper' aria-live='polite'>
+              <Text className='location-drawer__whisper-text'>新局正在路上，先看看全部区域吧</Text>
+            </View>
+          )}
         </View>
 
         {/* Safe area bottom padding */}
@@ -433,4 +589,66 @@ export default function LocationFilterDrawer({
       </ScrollView>
     </PickerShell>
   )
+
+  // Cluster tile renderer — declared after hooks (stable identity per render).
+  function renderClusterTile(cluster: DistrictCluster, idx: number) {
+    const isActive = selectedCluster === cluster.id
+    const count = countFor(cluster.id)
+    const weekdayLabel =
+      count === 1 ? formatNextEventLabel(nextEventByCluster?.[cluster.id]) : null
+    const isNearest = nearestClusterId === cluster.id && !isActive
+
+    const ariaLabel =
+      count !== null
+        ? `${cluster.displayName}，${count > 0 ? `本周 ${count} 场可报名` : '本周暂无场次'}`
+        : cluster.displayName
+
+    return (
+      <View
+        className='location-drawer__reveal-tile'
+        style={{ animationDelay: `${60 + idx * 30}ms` }}
+        key={cluster.id}
+      >
+        <SelectableTile
+          variant='large'
+          label={cluster.displayName}
+          selected={isActive}
+          onClick={() => handleClusterTap(cluster)}
+          ariaLabel={ariaLabel}
+        >
+          {!isActive && count !== null && (
+            <View
+              className={`location-drawer__count-pill ${count === 0 ? 'location-drawer__count-pill--muted' : ''}`}
+              aria-hidden='true'
+            >
+              {count > 0 && (
+                <View className='location-drawer__count-dot' aria-hidden='true' />
+              )}
+              {isNearest && (
+                <View className='location-drawer__nearest-tag' aria-hidden='true'>
+                  <Text className='location-drawer__nearest-tag-text'>最近</Text>
+                </View>
+              )}
+              {count === 0 ? (
+                <Text key='zero' className='location-drawer__count-text'>
+                  暂无场次
+                </Text>
+              ) : count === 1 && weekdayLabel ? (
+                <View key={`${weekdayLabel}-1`} className='location-drawer__count-text'>
+                  <Text className='location-drawer__count-unit'>{`${weekdayLabel} `}</Text>
+                  <Text className='location-drawer__count-num'>1</Text>
+                  <Text className='location-drawer__count-unit'> 场</Text>
+                </View>
+              ) : (
+                <View key={count} className='location-drawer__count-text'>
+                  <Text className='location-drawer__count-num'>{count}</Text>
+                  <Text className='location-drawer__count-unit'> 场</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </SelectableTile>
+      </View>
+    )
+  }
 }
