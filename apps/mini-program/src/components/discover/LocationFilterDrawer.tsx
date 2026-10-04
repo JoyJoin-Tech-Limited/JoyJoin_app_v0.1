@@ -1,6 +1,6 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import React, { useCallback, useMemo, useEffect, useState } from 'react'
+import React, { useCallback, useMemo, useEffect, useRef, useState } from 'react'
 import {
   shenzhenClusters,
   getClusterById,
@@ -76,6 +76,10 @@ export default function LocationFilterDrawer({
   const [rescue, setRescue] = useState<RescueState | null>(null)
   const [pendingExpanded, setPendingExpanded] = useState(false)
   const [geoDistrict, setGeoDistrict] = useState<string | null | undefined>(undefined)
+  // Whether any selection happened during this open session — feeds the
+  // dismiss funnel event (filter_close) so abandonment stays measurable
+  // now that selection no longer auto-closes.
+  const didSelectRef = useRef(false)
 
   // Reset transient dialog/section state whenever the sheet closes so a
   // re-open always starts from the collapsed coverage map. Geo is cached for
@@ -84,11 +88,14 @@ export default function LocationFilterDrawer({
     if (!open) {
       setRescue(null)
       setPendingExpanded(false)
+      didSelectRef.current = false
     }
   }, [open])
 
   // One-shot reverse geocode per session (2026-09-30 精细化: 最近 tag +
   // pending-district hint). Fail-open: any error → no tag, no hint.
+  // Politeness: never trigger the system permission prompt from a filter
+  // drawer — geocode only when scope.userLocation was already granted.
   useEffect(() => {
     if (!open || sessionGeo !== null) {
       if (sessionGeo && sessionGeo !== 'loading' && sessionGeo !== 'failed') {
@@ -97,7 +104,15 @@ export default function LocationFilterDrawer({
       return
     }
     sessionGeo = 'loading'
-    Taro.getLocation({ type: 'gcj02' })
+    Taro.getSetting()
+      .then((setting) => {
+        if (setting.authSetting?.['scope.userLocation'] !== true) {
+          sessionGeo = 'failed'
+          setGeoDistrict(null)
+          return Promise.reject(new Error('location-not-authorized'))
+        }
+        return Taro.getLocation({ type: 'gcj02' })
+      })
       .then((loc) =>
         apiRequest<GeoResult>({
           path: '/api/geo/reverse-geocode',
@@ -231,6 +246,7 @@ export default function LocationFilterDrawer({
   const handleSelect = useCallback(
     (clusterId: string, districtId: string) => {
       haptics('light')
+      didSelectRef.current = true
       discoverAnalytics.track('filter_select', undefined, {
         clusterId,
         districtId,
@@ -241,15 +257,20 @@ export default function LocationFilterDrawer({
     [onSelect]
   )
 
-  const handleConfirmView = useCallback(() => {
-    haptics('light')
+  // Single funnel exit event for every close path (✕, backdrop, drag, CTA).
+  const handleDismiss = useCallback(() => {
     discoverAnalytics.track('filter_close', undefined, {
-      didSelect: true,
+      didSelect: didSelectRef.current,
       selectedCluster,
       selectedDistrict,
     })
     onClose()
   }, [onClose, selectedCluster, selectedDistrict])
+
+  const handleConfirmView = useCallback(() => {
+    haptics('light')
+    handleDismiss()
+  }, [handleDismiss])
 
   const handleClusterTap = useCallback(
     (cluster: DistrictCluster) => {
@@ -308,14 +329,15 @@ export default function LocationFilterDrawer({
   const acceptSuggestion = useCallback(
     (targetClusterId: string, fromId: string) => {
       haptics('medium')
+      didSelectRef.current = true
       discoverAnalytics.track('coverage_adjacent_accept', undefined, {
         from: fromId,
         to: targetClusterId,
       })
       onSelect(targetClusterId, ALL_DISTRICT_ID)
-      setTimeout(() => onClose(), 300)
+      setTimeout(() => handleDismiss(), 300)
     },
-    [onSelect, onClose]
+    [onSelect, handleDismiss]
   )
 
   const handleRescueAccept = useCallback(() => {
@@ -393,7 +415,7 @@ export default function LocationFilterDrawer({
   return (
     <PickerShell
       visible={open}
-      onClose={onClose}
+      onClose={handleDismiss}
       mascotExpression={allQuiet ? 'matchWaiting' : 'coachGuide'}
       title='偏好区域'
       subtitle={subtitle}

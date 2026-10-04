@@ -70,6 +70,18 @@ export default function PickerShell({
     return cap
   }, [heightRpx])
 
+  // JS-computed inline styles must be px (the Taro H5 parser silently drops
+  // inline rpx — same rule the drag transform follows).
+  const shellHeightPx = useMemo(() => {
+    try {
+      const { screenWidth } = getWindowInfoCompat()
+      if (!screenWidth) return null
+      return Math.round((shellHeightRpx * screenWidth) / 750)
+    } catch {
+      return null
+    }
+  }, [shellHeightRpx])
+
   // ── Drag-to-close (2026-09-30 精细化) ──
   // The drag handle doubles as a pan-down-to-dismiss grip. Inline styles are
   // emitted in px (JS-computed): the Taro H5 style parser drops inline rpx.
@@ -95,12 +107,6 @@ export default function PickerShell({
     drag.lastY = touch.clientY
     drag.lastT = Date.now()
     setDragOffsetPx(dy)
-  }
-
-  const resetDrag = () => {
-    dragRef.current = null
-    setDragging(false)
-    setDragOffsetPx(0)
   }
 
   const handleDragEnd = () => {
@@ -147,7 +153,11 @@ export default function PickerShell({
       />
       <View
         className='picker-shell__surface'
-        style={{ height: `${shellHeightRpx}rpx`, transform: surfaceTransform, transition: surfaceTransition }}
+        style={{
+          height: shellHeightPx ? `${shellHeightPx}px` : `${shellHeightRpx}rpx`,
+          transform: surfaceTransform,
+          transition: surfaceTransition,
+        }}
         role='dialog'
         aria-modal='true'
         onClick={(e) => e.stopPropagation()}
