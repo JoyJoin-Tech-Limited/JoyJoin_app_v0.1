@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "kimi-for-coding/k3",
+  "model": "kimi-coding/k3",
   "provider": {
     "deepseek": {
       "models": {
@@ -35,49 +35,92 @@
         }
       }
     },
-    "kimi": {
-      "models": {
-        "kimi-k2.6": {
-          "options": {
-            "maxTokens": 16384
-          },
-          "variants": {
-            "thinking": {
-              "thinking": true
-            }
-          }
-        }
-      }
-    },
-    "kimi-for-coding": {
+    "kimi-coding": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Kimi For Coding",
+      "options": {
+        "baseURL": "https://api.kimi.com/coding/v1"
+      },
       "models": {
         "kimi-for-coding": {
-          "name": "K2.8 Preview",
+          "name": "Kimi K2.8 Preview",
+          "attachment": true,
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": false,
+          "interleaved": { "field": "reasoning_content" },
           "limit": {
             "context": 1048576,
-            "output": 65536
+            "output": 131072
           },
           "modalities": {
             "input": ["text", "image", "video"],
             "output": ["text"]
           },
           "options": {
-            "maxTokens": 65536
+            "maxTokens": 131072
           },
           "variants": {
-            "low": {
-              "reasoningEffort": "low"
-            },
-            "high": {
-              "reasoningEffort": "high"
-            },
-            "max": {
-              "reasoningEffort": "max"
-            }
+            "low": { "reasoningEffort": "low" },
+            "high": { "reasoningEffort": "high" },
+            "max": { "reasoningEffort": "max" }
+          }
+        },
+        "k3": {
+          "name": "Kimi K3",
+          "attachment": true,
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": false,
+          "interleaved": { "field": "reasoning_content" },
+          "limit": {
+            "context": 1048576,
+            "output": 131072
+          },
+          "modalities": {
+            "input": ["text", "image", "video"],
+            "output": ["text"]
+          },
+          "options": {
+            "maxTokens": 131072
+          },
+          "variants": {
+            "low": { "reasoningEffort": "low" },
+            "high": { "reasoningEffort": "high" },
+            "max": { "reasoningEffort": "max" }
+          }
+        },
+        "k3-256k": {
+          "name": "Kimi K3-256K",
+          "attachment": true,
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": false,
+          "interleaved": { "field": "reasoning_content" },
+          "limit": {
+            "context": 262144,
+            "output": 131072
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "options": {
+            "maxTokens": 131072
+          },
+          "variants": {
+            "low": { "reasoningEffort": "low" },
+            "high": { "reasoningEffort": "high" },
+            "max": { "reasoningEffort": "max" }
           }
         },
         "kimi-for-coding-highspeed": {
-          "name": "K2.7 Code HighSpeed",
+          "name": "Kimi K2.7 Code HighSpeed",
+          "attachment": true,
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": false,
+          "interleaved": { "field": "reasoning_content" },
           "limit": {
             "context": 262144,
             "output": 32768
@@ -90,55 +133,32 @@
             "maxTokens": 32768
           }
         },
-        "k3": {
+        "kimi-k2.6": {
+          "name": "Kimi K2.6",
+          "attachment": true,
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": false,
+          "interleaved": { "field": "reasoning_content" },
           "limit": {
-            "context": 1048576,
-            "output": 65536
+            "context": 262144,
+            "output": 32768
           },
           "modalities": {
             "input": ["text", "image", "video"],
             "output": ["text"]
           },
           "options": {
-            "maxTokens": 65536
+            "maxTokens": 32768
           },
           "variants": {
-            "low": {
-              "reasoningEffort": "low"
-            },
-            "high": {
-              "reasoningEffort": "high"
-            },
-            "max": {
-              "reasoningEffort": "max"
-            }
-          }
-        },
-        "k3-256k": {
-          "limit": {
-            "context": 262144,
-            "output": 65536
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "options": {
-            "maxTokens": 65536
-          },
-          "variants": {
-            "low": {
-              "reasoningEffort": "low"
-            },
-            "high": {
-              "reasoningEffort": "high"
-            },
-            "max": {
-              "reasoningEffort": "max"
-            }
+            "thinking": { "thinking": true }
           }
         }
       }
+    },
+    "kimi-code-plan-cn": {
+      "blacklist": ["k3", "k3-256k", "kimi-for-coding", "kimi-for-coding-highspeed", "kimi-k2.6"]
     },
     "glm": {
       "models": {

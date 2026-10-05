@@ -619,7 +619,7 @@ describe('curateMedals honesty (AC-06, verifier R4)', () => {
     expect(medals.map((m) => m.title)).toEqual(['接梗王']);
   });
 
-  it('cap 4 with distinct winners; miniscript dual-correct earns NO medal', () => {
+  it('distinct winners exhaust data-backed candidates → remaining medals NOT awarded (R4); miniscript dual-correct earns NO medal', () => {
     const state = makeState('medal-cap', {
       sessionGlowEnabled: true,
       enabledPhases: ['warmup', 'quip_battle', 'group_mirror', 'auction', 'mini_script', 'recap'],
@@ -637,11 +637,39 @@ describe('curateMedals honesty (AC-06, verifier R4)', () => {
     });
     const medals = curateMedals(state, ROSTER);
     expect(medals.length).toBeLessThanOrEqual(GLOW_MEDAL_MAX_PER_SESSION);
-    expect(medals.length).toBe(GLOW_MEDAL_MAX_PER_SESSION);
+    // R4 iron rule: 接梗王→p1, 暖心雷达→p2. 全勤小可爱's only backed
+    // candidate (p1) and 豪气担当's only backed candidates (p1, p2) are now
+    // used — those medals must NOT be awarded rather than falling through
+    // to zero-data members (the pre-fix behavior this test used to pin).
+    expect(medals.map((m) => m.title)).toEqual(['接梗王', '暖心雷达']);
     const winners = medals.map((m) => m.recipientDisplayName);
     expect(new Set(winners).size).toBe(winners.length);
     // No miniscript medal exists (honor line is its recognition, spec §5).
     expect(medals.find((m) => m.title.includes('剧本') || m.title.includes('侦探') && m.title !== '最佳侦探')).toBeUndefined();
+  });
+
+  it('cap 4 honest: 5 data-backed categories with distinct winners → lowest-strength category cut', () => {
+    const roster5 = ['host-user', 'p1', 'p2', 'p3', 'p4', 'p5'].map((userId) => ({ userId, displayName: userId }));
+    const state = makeState('medal-cap-honest', {
+      sessionGlowEnabled: true,
+      enabledPhases: ['warmup', 'quip_battle', 'group_mirror', 'auction', 'micro_challenge', 'recap'],
+      glowPoints: {
+        p1: glow({ quip: 8 }),
+        p2: glow({ mirror: 8 }),
+        p4: glow({ auction: 3 }),
+      },
+      auctionLotResults: [
+        { lotIndex: 0, lotId: 'l0', title: 'L0', winnerUserId: 'p4', winningAmount: 10, bidCount: 1, wasAllIn: false },
+      ],
+      glowParticipation: { p3: ['quip_battle', 'group_mirror', 'auction', 'micro_challenge'] },
+      challengeCompletedBy: ['p5', 'p5', 'p5'],
+    });
+    const medals = curateMedals(state, roster5);
+    // Strength order: 接梗王 8 → p1, 暖心雷达 8 → p2, 全勤小可爱 4
+    // (offered = 4 source phases) → p3, 挑战先锋 3 → p5, 豪气担当 1 → cut by cap.
+    expect(medals.length).toBe(GLOW_MEDAL_MAX_PER_SESSION);
+    expect(medals.map((m) => m.recipientDisplayName)).toEqual(['p1', 'p2', 'p3', 'p5']);
+    expect(medals.some((m) => m.title === '豪气担当')).toBe(false);
   });
 
   it('determinism: same input ×3 → identical output', () => {

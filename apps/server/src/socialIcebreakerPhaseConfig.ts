@@ -20,13 +20,13 @@ export function getServerEnabledPhases(env: NodeJS.ProcessEnv = process.env): So
   const enabledPhases = [...DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES];
   const personalityDiceEnabled = isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE, true);
 
-  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR, false)) {
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR, true)) {
     const personalityDiceIndex = enabledPhases.indexOf('personality_dice');
     const insertAt = personalityDiceIndex >= 0 ? personalityDiceIndex + 1 : enabledPhases.length;
     enabledPhases.splice(insertAt, 0, 'group_mirror');
   }
 
-  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD, false)) {
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD, true)) {
     const groupMirrorIndex = enabledPhases.indexOf('group_mirror');
     const personalityDiceIndex = enabledPhases.indexOf('personality_dice');
     const insertAt =
@@ -38,19 +38,19 @@ export function getServerEnabledPhases(env: NodeJS.ProcessEnv = process.env): So
     enabledPhases.splice(insertAt, 0, 'undercover_word');
   }
 
-  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_AUCTION, false)) {
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_AUCTION, true)) {
     const personalityDiceIndex = enabledPhases.indexOf('personality_dice');
     const insertAt = personalityDiceIndex >= 0 ? personalityDiceIndex : enabledPhases.length;
     enabledPhases.splice(insertAt, 0, 'auction');
   }
 
-  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE, false)) {
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE, true)) {
     const auctionIndex = enabledPhases.indexOf('auction');
     const insertAt = auctionIndex >= 0 ? auctionIndex + 1 : enabledPhases.length;
     enabledPhases.splice(insertAt, 0, 'quip_battle');
   }
 
-  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING, false)) {
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING, true)) {
     const quipBattleIndex = enabledPhases.indexOf('quip_battle');
     const insertAt = quipBattleIndex >= 0 ? quipBattleIndex + 1 : enabledPhases.length;
     enabledPhases.splice(insertAt, 0, 'speed_friending');

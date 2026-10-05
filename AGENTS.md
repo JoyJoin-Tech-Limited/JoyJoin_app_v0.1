@@ -135,6 +135,7 @@ npm run harness:gate                  # 5-pillar quality gate
 
 # Auto-refund pipeline smoke (end-to-end vs dev DB; self-cleaning)
 npm run smoke:auto-refund -w @joyjoin/server   # 场次未成行 refunds: Trigger A cancel + Trigger B unmatched, credits restore, idempotency
+npm run smoke:icebreaker-waves -w @joyjoin/server   # Wave 3/4 full-chain: 6-player bot walk over all gameplay phases, highlights extraction, glow banking, medal honesty, *_HL promptVersions; --no-llm curated-only, --keep skips cleanup
 
 # Personality test simulation (accuracy validation)
 npm run simulate:personas:generate    # generate boundary personas + centroids

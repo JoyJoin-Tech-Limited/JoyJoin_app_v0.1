@@ -10,15 +10,27 @@ import {
 } from '../socialIcebreakerPhaseConfig';
 
 describe('social icebreaker phase configuration', () => {
-  it('enables personality dice by default on the server', () => {
-    expect(getServerEnabledPhases({} as NodeJS.ProcessEnv)).toEqual(
-      DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
-    );
+  it('enables all optional gameplay phases by default on the server', () => {
+    expect(getServerEnabledPhases({} as NodeJS.ProcessEnv)).toEqual([
+      'warmup',
+      'micro_challenge',
+      'lie_detective',
+      'auction',
+      'quip_battle',
+      'speed_friending',
+      'personality_dice',
+      'group_mirror',
+      'undercover_word',
+    ]);
   });
 
   it('adds optional auction and mini script phases via server flags', () => {
     expect(
       getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'false',
         SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'true',
         SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT: 'true',
       } as NodeJS.ProcessEnv),
@@ -35,6 +47,11 @@ describe('social icebreaker phase configuration', () => {
   it('enables mini script via legacy SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA', () => {
     expect(
       getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'false',
         SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA: 'true',
       } as NodeJS.ProcessEnv),
     ).toEqual([...DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES, 'mini_script']);
@@ -44,6 +61,10 @@ describe('social icebreaker phase configuration', () => {
     expect(
       getServerEnabledPhases({
         SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'false',
         SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'true',
         SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT: 'true',
       } as NodeJS.ProcessEnv),
@@ -297,16 +318,34 @@ describe('social icebreaker phase configuration', () => {
     expect(getNextEligiblePhase('micro_challenge', state)).toBe('phase_selection');
   });
 
-  it('does not include group_mirror, undercover_word, or quip_battle by default', () => {
+  it('includes group_mirror, undercover_word, quip_battle, speed_friending and auction by default', () => {
     const result = getServerEnabledPhases({} as NodeJS.ProcessEnv);
-    expect(result).not.toContain('group_mirror');
-    expect(result).not.toContain('undercover_word');
-    expect(result).not.toContain('quip_battle');
+    expect(result).toContain('group_mirror');
+    expect(result).toContain('undercover_word');
+    expect(result).toContain('quip_battle');
+    expect(result).toContain('speed_friending');
+    expect(result).toContain('auction');
+  });
+
+  it('omits optional phases when their flags are explicitly false (kill switch)', () => {
+    expect(
+      getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'false',
+      } as NodeJS.ProcessEnv),
+    ).toEqual(DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES);
   });
 
   it('includes group_mirror when SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR is true', () => {
     expect(
       getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'false',
         SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'true',
       } as NodeJS.ProcessEnv),
     ).toEqual([
@@ -321,6 +360,10 @@ describe('social icebreaker phase configuration', () => {
   it('includes undercover_word when SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD is true', () => {
     expect(
       getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'false',
         SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'true',
       } as NodeJS.ProcessEnv),
     ).toEqual([
@@ -335,6 +378,10 @@ describe('social icebreaker phase configuration', () => {
   it('includes quip_battle when SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE is true', () => {
     expect(
       getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'false',
+        SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'false',
         SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'true',
       } as NodeJS.ProcessEnv),
     ).toEqual([
@@ -346,12 +393,13 @@ describe('social icebreaker phase configuration', () => {
     ]);
   });
 
-  it('includes all three new phases in canonical order when all flags are true', () => {
+  it('includes all optional phases in canonical order when all flags are true', () => {
     expect(
       getServerEnabledPhases({
         SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'true',
         SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'true',
         SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'true',
+        SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING: 'true',
         SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'true',
         SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT: 'true',
       } as NodeJS.ProcessEnv),
@@ -361,6 +409,7 @@ describe('social icebreaker phase configuration', () => {
       'lie_detective',
       'auction',
       'quip_battle',
+      'speed_friending',
       'personality_dice',
       'group_mirror',
       'undercover_word',

@@ -252,4 +252,53 @@ describe('curateMedals', () => {
       description: '在话题卡环节中最活跃',
     });
   });
+
+  // Regression (caught by smoke:icebreaker-waves): on the flag-ON honest path
+  // the distinct-recipient walk must never fall through to a zero-data roster
+  // member — when every data-backed candidate already holds a medal, the
+  // medal is simply not awarded (verifier R4 iron rule).
+  describe('glow honest path — no zero-data fallthrough', () => {
+    const glowRoster = [
+      { userId: 'u1', displayName: 'Alice' },
+      { userId: 'u2', displayName: 'Bob' },
+      { userId: 'u3', displayName: 'Carol' },
+    ];
+
+    it('does not award 豪气担当 to a member who won zero lots', () => {
+      const state = makeState({
+        sessionGlowEnabled: true,
+        glowPoints: {
+          u1: { quip: 4, mirror: 0, auction: 6, miniscript: 0, undercover: 0, challenge: 0, dice: 0, lie: 0 },
+          u2: { quip: 0, mirror: 4, auction: 3, miniscript: 0, undercover: 0, challenge: 0, dice: 0, lie: 0 },
+        },
+        auctionLotResults: [
+          { lotIndex: 0, lotId: 'l1', title: 'Lot 1', winnerUserId: 'u1', winningAmount: 20, bidCount: 2, wasAllIn: false },
+          { lotIndex: 1, lotId: 'l2', title: 'Lot 2', winnerUserId: 'u2', winningAmount: 10, bidCount: 1, wasAllIn: false },
+          { lotIndex: 2, lotId: 'l3', title: 'Lot 3', winnerUserId: 'u1', winningAmount: 20, bidCount: 2, wasAllIn: false },
+        ],
+      });
+      const result = curateMedals(state, glowRoster);
+      // u1 takes 接梗王 (quip 4), u2 takes 暖心雷达 (mirror 4). Both lot
+      // winners are now used — 豪气担当 must NOT be awarded at all rather
+      // than falling through to Carol (zero lots won).
+      expect(result.some((m) => m.title === '接梗王' && m.recipientDisplayName === 'Alice')).toBe(true);
+      expect(result.some((m) => m.title === '暖心雷达' && m.recipientDisplayName === 'Bob')).toBe(true);
+      expect(result.some((m) => m.title === '豪气担当')).toBe(false);
+      expect(result.some((m) => m.recipientDisplayName === 'Carol')).toBe(false);
+    });
+
+    it('does not award a weight medal to a zero-weight member when the only candidate is used', () => {
+      const state = makeState({
+        sessionGlowEnabled: true,
+        glowPoints: {
+          u1: { quip: 4, mirror: 4, auction: 0, miniscript: 0, undercover: 0, challenge: 0, dice: 0, lie: 0 },
+        },
+      });
+      const result = curateMedals(state, glowRoster);
+      // u1 alone backs both 接梗王 and 暖心雷达 but can only hold one;
+      // the other must not fall through to Bob/Carol (zero data).
+      expect(result).toHaveLength(1);
+      expect(result[0].recipientDisplayName).toBe('Alice');
+    });
+  });
 });

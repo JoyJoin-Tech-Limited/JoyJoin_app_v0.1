@@ -179,7 +179,13 @@ function weightMapCandidates(
   weights: ReadonlyMap<string, number>,
 ): { sortedRoster: RosterEntry[]; strength: number } | undefined {
   if (weights.size === 0) return undefined;
-  const sorted = sortByWeightDescThenName(roster, weights);
+  // Medal honesty (verifier R4): restrict the distinct-recipient walk to
+  // data-backed members. Without this filter, when every weighted member
+  // already holds a medal the walk falls through to a zero-weight roster
+  // member and awards the medal with no underlying data — the medal must
+  // simply not be awarded instead (caught by smoke:icebreaker-waves).
+  const backed = roster.filter((entry) => (weights.get(entry.userId) ?? 0) > 0);
+  const sorted = sortByWeightDescThenName(backed, weights);
   const top = sorted[0];
   if (!top) return undefined;
   return { sortedRoster: sorted, strength: weights.get(top.userId) ?? 0 };
@@ -243,7 +249,11 @@ function curateGlowMedals(
       }
     }
     if (wins.size > 0) {
-      const sorted = roster.slice().sort((a, b) => {
+      // Medal honesty (verifier R4): restrict the distinct-recipient walk to
+      // members who actually won a lot — never fall through to a zero-win
+      // member when the winners already hold other medals (caught by
+      // smoke:icebreaker-waves).
+      const sorted = roster.filter((entry) => wins.has(entry.userId)).sort((a, b) => {
         const wa = wins.get(a.userId);
         const wb = wins.get(b.userId);
         const ca = wa?.count ?? 0;
