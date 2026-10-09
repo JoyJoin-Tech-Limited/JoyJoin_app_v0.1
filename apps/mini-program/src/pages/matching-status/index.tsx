@@ -323,11 +323,13 @@ export default function MatchingStatusPage() {
         <Text className='matching-status__status-hint'>
           {isCollapsedRegistration
             ? '报名费已原路退回，去发现页看看下一场吧。'
-            : matchStatus === 'pending'
-              ? `${countdown.label}，等待更多人加入…`
-              : venueUnlocked
-                ? '桌友和活动信息都已逐步解锁，继续查看今晚的安排。'
-                : '桌友已经锁定，活动详情会在下一页继续逐步揭晓。'}
+            : matchStatus === 'unmatched'
+              ? '本场没能成行，报名费已原路退回，去发现页看看下一场吧。'
+              : matchStatus === 'pending'
+                ? `${countdown.label}，等待更多人加入…`
+                : venueUnlocked
+                  ? '桌友和活动信息都已逐步解锁，继续查看今晚的安排。'
+                  : '桌友已经锁定，活动详情会在下一页继续逐步揭晓。'}
         </Text>
       </View>
 

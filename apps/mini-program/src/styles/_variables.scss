@@ -136,9 +136,11 @@ $font-ui:   -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 
 $font-body: $font-ui;
 
 // Chinese display: Alimama (loaded on first screen via `loadBrandDisplayFont`, deferred in app.ts).
-// Falls back to system stack if load fails.
-$font-cn-display: 'AlimamaFangYuanTiVF', 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', system-ui,
-  sans-serif;
+// The full font registers under 'AlimamaFangYuanTiVF-Full' (distinct from the minimal subset's
+// family — a same-family override is unreliable on device, causing mixed PingFang/Alimama
+// "irregular bold" within one string). Listed first so per-glyph fallback prefers it once loaded.
+$font-cn-display: 'AlimamaFangYuanTiVF-Full', 'AlimamaFangYuanTiVF', 'PingFang SC', 'Noto Sans SC',
+  'Helvetica Neue', system-ui, sans-serif;
 
 // Legacy alias: same as `$font-cn-display` for existing `font-family: $font-brand` title styles.
 $font-brand: $font-cn-display;

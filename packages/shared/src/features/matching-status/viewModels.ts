@@ -313,6 +313,11 @@ export function getStatusLabel(status?: string): string {
       return '排桌完成'
     case 'completed':
       return '圆满结束'
+    // Auto-refund writes matchStatus='unmatched' when no group forms — without
+    // this case the label fell through to 排桌中 and a refunded user polling
+    // the page saw "桌友已经锁定" (2026-10-05).
+    case 'unmatched':
+      return '未成行'
     case 'pending':
     default:
       return '排桌中'

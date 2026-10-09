@@ -80,6 +80,7 @@ export default function LocationFilterDrawer({
   // dismiss funnel event (filter_close) so abandonment stays measurable
   // now that selection no longer auto-closes.
   const didSelectRef = useRef(false)
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reset transient dialog/section state whenever the sheet closes so a
   // re-open always starts from the collapsed coverage map. Geo is cached for
@@ -97,6 +98,7 @@ export default function LocationFilterDrawer({
   // Politeness: never trigger the system permission prompt from a filter
   // drawer — geocode only when scope.userLocation was already granted.
   useEffect(() => {
+    let cancelled = false
     if (!open || sessionGeo !== null) {
       if (sessionGeo && sessionGeo !== 'loading' && sessionGeo !== 'failed') {
         setGeoDistrict(sessionGeo.district)
@@ -108,7 +110,7 @@ export default function LocationFilterDrawer({
       .then((setting) => {
         if (setting.authSetting?.['scope.userLocation'] !== true) {
           sessionGeo = 'failed'
-          setGeoDistrict(null)
+          if (!cancelled) setGeoDistrict(null)
           return Promise.reject(new Error('location-not-authorized'))
         }
         return Taro.getLocation({ type: 'gcj02' })
@@ -123,13 +125,22 @@ export default function LocationFilterDrawer({
       )
       .then((res) => {
         sessionGeo = { district: res?.success && res.district ? res.district : null }
-        setGeoDistrict(sessionGeo.district)
+        if (!cancelled) setGeoDistrict(sessionGeo.district)
       })
       .catch(() => {
         sessionGeo = 'failed'
-        setGeoDistrict(null)
+        if (!cancelled) setGeoDistrict(null)
       })
+    return () => {
+      cancelled = true
+    }
   }, [open])
+
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+    }
+  }, [])
 
   // ── Coverage model ──────────────────────────────────────────────
   const liveClusters = useMemo(
@@ -335,7 +346,11 @@ export default function LocationFilterDrawer({
         to: targetClusterId,
       })
       onSelect(targetClusterId, ALL_DISTRICT_ID)
-      setTimeout(() => handleDismiss(), 300)
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+      dismissTimerRef.current = setTimeout(() => {
+        dismissTimerRef.current = null
+        handleDismiss()
+      }, 300)
     },
     [onSelect, handleDismiss]
   )
@@ -373,7 +388,7 @@ export default function LocationFilterDrawer({
       h += 40 + 40 // section gap + toggle row
       if (pendingExpanded) {
         const chipRows = Math.ceil(pendingCluster.districts.length / 2)
-        h += 16 + chipRows * 64 + (chipRows - 1) * 16
+        h += 16 + chipRows * 72 + (chipRows - 1) * 16
       }
     }
     if (allQuiet) h += 24 + 40
@@ -520,7 +535,7 @@ export default function LocationFilterDrawer({
               icon={
                 <JoyJoinIcon
                   emoji='🌐'
-                  size={20}
+                  size={40}
                   className='location-drawer__all-tile-icon'
                 />
               }
@@ -657,14 +672,14 @@ export default function LocationFilterDrawer({
                 </Text>
               ) : count === 1 && weekdayLabel ? (
                 <View key={`${weekdayLabel}-1`} className='location-drawer__count-text'>
-                  <Text className='location-drawer__count-unit'>{`${weekdayLabel} `}</Text>
+                  <Text className='location-drawer__count-unit'>{weekdayLabel}</Text>
                   <Text className='location-drawer__count-num'>1</Text>
-                  <Text className='location-drawer__count-unit'> 场</Text>
+                  <Text className='location-drawer__count-unit'>场</Text>
                 </View>
               ) : (
                 <View key={count} className='location-drawer__count-text'>
                   <Text className='location-drawer__count-num'>{count}</Text>
-                  <Text className='location-drawer__count-unit'> 场</Text>
+                  <Text className='location-drawer__count-unit'>场</Text>
                 </View>
               )}
             </View>

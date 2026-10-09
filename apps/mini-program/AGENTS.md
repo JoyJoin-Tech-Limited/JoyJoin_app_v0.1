@@ -142,7 +142,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 > Full inventory + build pipelines: `docs/agent-context/mini-program-assets.md`. The rules below are the ones that must not be violated.
 
 - **Build-time CDN URL guarantee**: `config/index.ts` defaults `TARO_APP_CDN_BASE_URL` to `https://joyjoinapp.com/static` in production; CI workflow has the same fallback. Source code must use `cdnAsset()` / `localAsset()` helpers — never hardcode the CDN hostname.
-- **Two-tier brand font**: minimal Alimama subset (66KB) bundled; full font (621KB) loads from CDN with 500ms defer.
+- **Two-tier brand font**: minimal Alimama subset (66KB, family `AlimamaFangYuanTiVF`) bundled; full font (621KB, family `AlimamaFangYuanTiVF-Full`) loads from CDN with 500ms defer. The tiers MUST use distinct family names — a same-family override is unreliable on device and caused mixed PingFang/Alimama "irregular bold" (fixed 2026-10-05; locked by `src/lib/utils/__tests__/brandFont.test.ts`).
 - **Quicksand English font** (256KB) bundled and loaded on app launch.
 - **Slot machine archetype spritesheet** (`archetype-spritesheet.webp`) — bundled at `/pages/onboarding/assets/archetypes/` (subpackage, preloaded at landing).
 - **Full-size archetype images** — served from CDN as WebP. Preload during idle time.

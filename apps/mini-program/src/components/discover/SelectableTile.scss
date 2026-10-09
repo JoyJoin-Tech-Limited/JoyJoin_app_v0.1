@@ -67,15 +67,15 @@
   &--large &__check {
     top: 50%;
     right: $spacing-md;
-    width: 32rpx;
-    height: 32rpx;
+    width: 48rpx;
+    height: 48rpx;
     border-radius: 50%;
     background: rgba($color-text-white, 0.24);
     transform: translateY(-50%);
     animation: selectable-tile-check-pop-centered 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
 
     .selectable-tile__check-icon {
-      font-size: 20rpx;
+      font-size: 28rpx;
     }
   }
 

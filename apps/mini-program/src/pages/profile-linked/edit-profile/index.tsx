@@ -9,6 +9,7 @@ import {
   type InterestSelectionLevel,
 } from '@shared/api'
 import {
+  CURRENT_CITY_OPTIONS,
   EDUCATION_LEVEL_OPTIONS,
   INTENT_OPTIONS,
   INTENT_FLEXIBLE_OPTION,
@@ -122,6 +123,14 @@ export default function EditProfilePage() {
   const [gender, setGender] = useState('')
   const [birthYear, setBirthYear] = useState(0)
   const [currentCity, setCurrentCity] = useState('')
+  const currentCityIndex = useMemo(
+    () => (CURRENT_CITY_OPTIONS as readonly string[]).indexOf(currentCity),
+    [currentCity],
+  )
+  const DEFAULT_CITY_INDEX = useMemo(
+    () => Math.max(0, (CURRENT_CITY_OPTIONS as readonly string[]).indexOf('深圳')),
+    [],
+  )
   const [hometownRegionCity, setHometownRegionCity] = useState('')
   const [educationLevel, setEducationLevel] = useState('')
 
@@ -705,21 +714,29 @@ export default function EditProfilePage() {
               )}
             </View>
 
-            {/* Current city */}
+            {/* Current city — canonical Picker (2026-10-05): was a free-text
+                Input while admin filters + payments analytics exact-match on
+                users.currentCity, so typed variants (深圳市/trailing space)
+                silently dropped the user from those surfaces. */}
             <View className='edit-profile__field' id='field-currentCity' data-field='currentCity'>
               <Text className='edit-profile__label'>所在城市</Text>
-              <Input
-                className={`edit-profile__input ${fieldErrors.currentCity ? 'edit-profile__input--error' : ''}`}
-                value={currentCity}
-                onInput={(e) => {
-                  setCurrentCity(e.detail.value)
+              <Picker
+                mode='selector'
+                range={[...CURRENT_CITY_OPTIONS]}
+                value={currentCityIndex >= 0 ? currentCityIndex : DEFAULT_CITY_INDEX}
+                onChange={(e) => {
+                  const selectedIndex = Number(e.detail.value)
+                  const nextCity = CURRENT_CITY_OPTIONS[selectedIndex] ?? ''
+                  setCurrentCity(nextCity)
                   setChangedFields((prev) => ({ ...prev, currentCity: true }))
                   setFieldErrors((prev) => ({ ...prev, currentCity: '' }))
                   setContentViolations((prev) => ({ ...prev, currentCity: '' }))
                 }}
-                placeholder='如：深圳'
-                maxlength={30}
-              />
+              >
+                <Text className={`edit-profile__picker-value ${fieldErrors.currentCity ? 'edit-profile__picker-value--error' : ''}`}>
+                  {currentCity || '选择城市'}
+                </Text>
+              </Picker>
               {fieldErrors.currentCity && (
                 <Text className='edit-profile__field-error'>{fieldErrors.currentCity}</Text>
               )}

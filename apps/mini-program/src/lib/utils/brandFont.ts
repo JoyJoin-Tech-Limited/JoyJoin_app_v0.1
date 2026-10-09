@@ -4,15 +4,24 @@ import { cdnAsset } from './cdnAssets'
 import { logInfo, logWarn } from './logger'
 
 /**
- * Must match `$font-cn-display` first family name in `styles/_variables.scss`.
+ * Must match `$font-cn-display` family names in `styles/_variables.scss`.
  *
  * Two-tier loading:
  *   1. Minimal subset (66KB, bundled) — instant display on landing + onboarding.
- *   2. Full font (621KB, CDN) — loads in background, overrides when ready.
- *
- * Both use the same family name so the swap is transparent.
+ *   2. Full font (621KB, CDN) — loads in background under a DISTINCT family
+ *      name; the font stack prefers it per-glyph once ready.
  */
 export const BRAND_DISPLAY_FONT_FAMILY = 'AlimamaFangYuanTiVF'
+
+/**
+ * The full font registers under a DISTINCT family name. WeChat does not
+ * reliably apply a second loadFontFace that re-uses the minimal subset's
+ * family, so glyphs outside the minimal subset kept falling back to PingFang
+ * mid-string (the "irregular bold" bug, 2026-10-05). With its own family,
+ * `$font-cn-display` lists the full family first and standard per-glyph
+ * fallback deterministically prefers it once loaded.
+ */
+export const BRAND_DISPLAY_FONT_FULL_FAMILY = 'AlimamaFangYuanTiVF-Full'
 
 // Minimal subset — only characters needed for landing + onboarding.
 // Served from CDN because WeChat loadFontFace does not accept bundled root-relative paths.
@@ -73,16 +82,16 @@ export function loadBrandDisplayFontFull(): void {
   const source = `url("${BRAND_FONT_FULL_PATH}")`
 
   void Taro.loadFontFace({
-    family: BRAND_DISPLAY_FONT_FAMILY,
+    family: BRAND_DISPLAY_FONT_FULL_FAMILY,
     global: true,
     source,
   })
     .then(() => {
-      logInfo('Brand display font (full) loaded', { family: BRAND_DISPLAY_FONT_FAMILY })
+      logInfo('Brand display font (full) loaded', { family: BRAND_DISPLAY_FONT_FULL_FAMILY })
     })
     .catch((err: unknown) => {
       fullFontLoaded = false
-      logWarn('Brand display font (full) failed', { family: BRAND_DISPLAY_FONT_FAMILY, err })
+      logWarn('Brand display font (full) failed', { family: BRAND_DISPLAY_FONT_FULL_FAMILY, err })
     })
 }
 
@@ -116,8 +125,10 @@ export function loadEnglishBrandFont(): void {
 
 /**
  * Two-tier font loading:
- *   1. Minimal subset instantly (local bundle).
- *   2. Full font deferred by 500ms so it doesn't compete with first paint.
+ *   1. Minimal subset instantly (family `AlimamaFangYuanTiVF`).
+ *   2. Full font deferred by 500ms (family `AlimamaFangYuanTiVF-Full`) so it
+ *      doesn't compete with first paint; `$font-cn-display` prefers it once
+ *      loaded via per-glyph fallback.
  *
  * Call this on app launch and on every early-stage screen mount.
  * The module-level guards prevent redundant `loadFontFace` calls.

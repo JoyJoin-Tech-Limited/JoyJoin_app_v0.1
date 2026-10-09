@@ -116,7 +116,9 @@
   }
 
   &__location-pill-text {
-    font-family: $font-cn-display;
+    // UI font: renders the data-driven cluster name （全部区域/南山中心区…),
+    // whose glyphs sit outside the minimal Alimama subset (mixed-weight bug).
+    font-family: $font-ui;
     font-size: $font-size-base;
     font-weight: $font-weight-bold;
     color: $color-text-white;
