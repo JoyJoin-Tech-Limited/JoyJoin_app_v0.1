@@ -70,7 +70,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `会员/VIP会员` copy → `权益`
 - **`月度会员`/`季度会员`/`活动礼包`/`单次票`/`单次体验` display names → `悦聚月卡`/`悦聚季卡`/`三连局包`/`六连局包`/`单场局票`** ("悦聚卡" family; see `docs/copy/brand-copy-strategy.md` §3.1; pricing is DB-driven via `pricing_settings`, seed: `apps/server/migrations/seed_pricing_plans_20260805.sql`)
 - `/guide` as core onboarding → removed; active steps: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
-- **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states). Chat registration inline handlers removed from routes.ts in 2026-05-01 refactoring; only `routes/domains/xiaoyue.ts` remains (AI analysis, unwired).
+- **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states). Chat registration inline handlers removed from routes.ts in 2026-05-01 refactoring; `routes/domains/xiaoyue.ts` remains and IS wired: `/api/xiaoyue/prefetch` (`triggerXiaoyueAnalysisPrefetch.ts`) and `/api/xiaoyue/analysis` (`useResultsXiaoyueAnalysis.ts`) are used by the personality-test/results flow.
 - IcebreakerToolkit → use Social Icebreaker (`/api/social-icebreaker/*`) instead
 - ~~`standard`/`premium`/`bar` tier machine IDs → `breeze`/`glow`/`blaze`~~ — **WIRED 2026-05-05**: Server `/start` + `/set-tier`, mini-program tier selector, run plans active
 - **`标准局`/`Premium局`/`酒吧局` display names → `破冰局`/`畅聊局`/`狂欢局`** (see `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`)

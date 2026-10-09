@@ -3,14 +3,8 @@
   "entries": [
     {
       "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
-      "literal": "100-200",
-      "count": 1,
-      "justification": "Comment referencing the unmappable blind-box label in the filter-splitting logic (decision B3). Documentation-only occurrence."
-    },
-    {
-      "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
       "literal": "150-200",
-      "count": 2,
+      "count": 1,
       "justification": "Blind-box budget filter option list on the admin events page — blind-box rows store the legacy vocabulary by design until B3 resolves. Burns down when the filter derives options from the registry legacy map."
     },
     {
@@ -22,7 +16,7 @@
     {
       "file": "apps/admin-client/src/pages/admin/AdminEventsPage.tsx",
       "literal": "200-300",
-      "count": 2,
+      "count": 1,
       "justification": "Blind-box budget filter option list on the admin events page — blind-box rows store the legacy vocabulary by design until B3 resolves. Burns down when the filter derives options from the registry legacy map."
     },
     {
