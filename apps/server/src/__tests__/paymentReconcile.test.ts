@@ -1,8 +1,30 @@
 /** HS-01 gap: reconcilePayment coverage — route ownership, idempotency, completion, failure paths. */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Express } from "express";
 
 process.env.DATABASE_URL ??= "postgres://postgres:postgres@127.0.0.1:5432/joyjoin_test";
+
+// reconcilePayment resolves getWechatPayConfig() before the (spied) WeChat
+// request, and vitest.config.ts only loads the developer's ../../.env when it
+// exists — CI has no .env, so the suite must supply its own values.
+const WECHAT_ENV_STUBS: Record<string, string> = {
+  WECHAT_PAY_APP_ID: "wx-test-appid",
+  WECHAT_PAY_MCH_ID: "1900000000",
+  WECHAT_PAY_SERIAL_NO: "TEST_SERIAL_NO",
+  WECHAT_PAY_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\\nTEST\\n-----END PRIVATE KEY-----",
+  WECHAT_PAY_APIV3_KEY: "test-api-v3-key-32-bytes-long!!",
+  WECHAT_PAY_NOTIFY_URL: "https://example.test/api/webhooks/wechat-pay",
+};
+
+beforeAll(() => {
+  for (const [key, value] of Object.entries(WECHAT_ENV_STUBS)) {
+    vi.stubEnv(key, value);
+  }
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
 
 vi.mock("../db", () => ({ db: {} }));
 
