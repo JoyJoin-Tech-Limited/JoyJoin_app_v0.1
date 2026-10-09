@@ -273,8 +273,9 @@ export default function EventPoolCreateDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="深圳">深圳</SelectItem>
-                        <SelectItem value="香港">香港</SelectItem>
+                        {(Object.keys(CITY_DISTRICTS) as (keyof typeof CITY_DISTRICTS)[]).map((city) => (
+                          <SelectItem key={city} value={city}>{city}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

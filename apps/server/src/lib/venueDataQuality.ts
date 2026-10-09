@@ -20,6 +20,8 @@
  *   - Duplicate name detection across the venue list.
  */
 
+import { getClusterIdByDistrictName } from '@shared/districts';
+
 export interface VenueRecord {
   id: string;
   name?: string | null;
@@ -169,6 +171,22 @@ const RULES: Rule[] = [
     severity: 'error',
     message: 'Missing required field: area',
     check: (v) => Boolean(v.area?.trim()),
+  },
+  {
+    // Venue assignment matches venues.area against pool.district with an
+    // exact string eq — a non-canonical area (南山 / 南山區 / full-width
+    // variant) silently makes the venue unassignable even though the shared
+    // cluster mapping tolerates short aliases for legacy pool data. Require
+    // the canonical 区-suffixed form here so ops can fix the row in the
+    // venue editor (the form is now a canonical dropdown).
+    field: 'area',
+    severity: 'warning',
+    message: 'Area 不是标准行政区名（自动分配场地时将匹配不到）',
+    check: (v) => {
+      const area = v.area?.trim();
+      if (!area || v.city?.trim() !== '深圳') return true;
+      return area.endsWith('区') && getClusterIdByDistrictName(area) !== undefined;
+    },
   },
   {
     field: 'contact',

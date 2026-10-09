@@ -73,6 +73,23 @@ describe('checkVenueDataQuality', () => {
     expect(report.results[0].quality).toBe('fail');
   });
 
+  it('warns when a 深圳 venue area is not a canonical district name', () => {
+    const report = checkVenueDataQuality([makeVenue({ area: '南山' })]);
+    const result = report.results[0];
+    expect(result.quality).toBe('warning');
+    expect(
+      result.issues.some((i) => i.field === 'area' && i.severity === 'warning' && i.message.includes('标准行政区')),
+    ).toBe(true);
+  });
+
+  it('does not warn for canonical 深圳 area or non-深圳 cities', () => {
+    const shenzhen = checkVenueDataQuality([makeVenue({ area: '南山区' })]);
+    expect(shenzhen.results[0].issues.some((i) => i.field === 'area')).toBe(false);
+
+    const hk = checkVenueDataQuality([makeVenue({ city: '香港', area: '湾仔' })]);
+    expect(hk.results[0].issues.some((i) => i.field === 'area')).toBe(false);
+  });
+
   it('warns when contact info is absent', () => {
     const report = checkVenueDataQuality([
       makeVenue({ contactPerson: null, contactPhone: null }),

@@ -6,6 +6,7 @@ import {
   getTiersForEventType,
   type BudgetEventType,
 } from "@shared/budgetTiers";
+import { CITY_DISTRICTS } from "@/lib/cityDistricts";
 
 export interface VenueTimeSlot {
   id: string;
@@ -74,10 +75,11 @@ export const VENUE_TYPES = [
   { value: "bar", label: "酒吧" },
 ];
 
-export const CITIES = [
-  { value: "深圳", label: "深圳" },
-  { value: "香港", label: "香港" },
-];
+// Derived from CITY_DISTRICTS keys so the venue form, pool form, and district
+// lists can never drift when a new city opens (single source: lib/cityDistricts).
+export const CITIES = (Object.keys(CITY_DISTRICTS) as (keyof typeof CITY_DISTRICTS)[]).map(
+  (city) => ({ value: city, label: city }),
+);
 
 /**
  * Canonical budget-tier options derived from the shared registry

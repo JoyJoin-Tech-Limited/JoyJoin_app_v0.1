@@ -5,15 +5,9 @@
  * (venues.area, eventPools.district, etc.) to ensure filter queries work.
  *
  * Source of truth: align with DB schema + cityLandmarks.ts neighborhood names.
- */
-
-/**
- * Canonical city → district mappings for the admin portal.
- *
- * These values must match the exact strings stored in the database
- * (venues.area, eventPools.district, etc.) to ensure filter queries work.
- *
- * Source of truth: align with DB schema + cityLandmarks.ts neighborhood names.
+ * Parity with the mini-program coverage map is locked by
+ * apps/server/src/__tests__/districtCatalogContract.test.ts — the 深圳 list
+ * must stay equal to the 区-level keys in @shared/districts.
  */
 export const CITY_DISTRICTS = {
   深圳: [

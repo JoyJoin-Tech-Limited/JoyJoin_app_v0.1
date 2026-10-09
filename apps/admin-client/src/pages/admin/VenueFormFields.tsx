@@ -22,6 +22,7 @@ import {
   BAR_LEGACY_PRICE_RANGES,
 } from "./venueConstants";
 import { shenzhenClusters, getDistrictsByCluster } from "@shared/districts";
+import { CITY_DISTRICTS } from "@/lib/cityDistricts";
 
 export interface VenueFormData {
   name: string;
@@ -68,6 +69,9 @@ interface VenueFormFieldsProps {
 export default function VenueFormFields({ formData, setFormData, mode, setShowMapPicker }: VenueFormFieldsProps) {
   const prefix = mode === "edit" ? "edit-" : "";
   const testIdPrefix = mode === "edit" ? "edit-" : "";
+
+  const districtOptions: readonly string[] =
+    CITY_DISTRICTS[formData.city as keyof typeof CITY_DISTRICTS] ?? [];
 
   const toggleArrayValue = (
     field: "tags" | "cuisines" | "tasteIntensity" | "decorStyle" | "barThemes" | "alcoholOptions",
@@ -127,7 +131,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor={`${prefix}city`}>城市 *</Label>
-          <Select value={formData.city} onValueChange={(v) => setFormData({ ...formData, city: v })}>
+          <Select value={formData.city} onValueChange={(v) => setFormData({ ...formData, city: v, district: "" })}>
             <SelectTrigger data-testid={`select-${testIdPrefix}city`}><SelectValue /></SelectTrigger>
             <SelectContent>
               {CITIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
@@ -136,7 +140,20 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}district`}>区域 *</Label>
-          <Input id={`${prefix}district`} placeholder="例：南山区" value={formData.district} onChange={(e) => setFormData({ ...formData, district: e.target.value })} data-testid={`input-${testIdPrefix}district`} />
+          {/* Canonical dropdown — venue assignment matches venues.area against
+              pool.district with an exact string eq, so a free-text variant
+              （南山 / 南山區 / trailing space) silently makes the venue
+              unassignable. Non-canonical legacy values stay selectable so
+              edit mode doesn't blank existing rows. */}
+          <Select value={formData.district} onValueChange={(v) => setFormData({ ...formData, district: v })}>
+            <SelectTrigger data-testid={`select-${testIdPrefix}district`}><SelectValue placeholder="选择区域" /></SelectTrigger>
+            <SelectContent>
+              {districtOptions.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              {formData.district && !districtOptions.includes(formData.district) && (
+                <SelectItem value={formData.district}>{formData.district}（旧值）</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

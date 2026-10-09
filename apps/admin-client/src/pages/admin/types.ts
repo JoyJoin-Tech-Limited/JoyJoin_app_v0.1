@@ -415,8 +415,8 @@ export type ReportType = "harassment" | "inappropriate_content" | "spam" | "othe
 export type ReportStatus = "pending" | "resolved" | "dismissed";
 export type ModerationAction = "ban" | "warn" | "unban";
 
-export type PaymentStatus = "completed" | "pending" | "failed" | "refunded";
-export type PaymentType = "subscription" | "event" | "event_bundle";
+export type PaymentStatus = "completed" | "pending" | "failed" | "refunded" | "refund_pending";
+export type PaymentType = "subscription" | "event" | "event_bundle" | "event_pack";
 
 // ═══════════════════════════════════════════════════════════
 //  Status map helpers
