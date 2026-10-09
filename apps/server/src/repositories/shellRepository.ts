@@ -232,7 +232,7 @@ export async function getDiscoverShellData(params: {
           .where(
             and(
               sql`${eventPoolRegistrations.poolId} IN (${sql.join(poolIds.map((id: any) => sql`${id}`), sql`, `)})`,
-              eq(eventPoolRegistrations.matchStatus, "pending")
+              inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"])
             )
           )
           .orderBy(eventPoolRegistrations.poolId, eventPoolRegistrations.registeredAt)

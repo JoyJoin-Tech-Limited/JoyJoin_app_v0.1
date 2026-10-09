@@ -16,13 +16,20 @@ import {
   assessmentAnswers,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, ilike, inArray, like, or } from "drizzle-orm";
 import { computeOnboardingNextStep } from "../lib/computeOnboardingNextStep";
+
+export interface AdminUserFilters {
+  search?: string;
+  banned?: boolean;
+  city?: string;
+  archetype?: string;
+}
 
 export interface UsersRepository {
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
-  getAllUsers(): Promise<User[]>;
+  getAllUsers(filters?: AdminUserFilters): Promise<User[]>;
   getUserByPhone(phoneNumber: string): Promise<User[]>;
   createUserWithPhone(data: { phoneNumber: string; email: string; firstName: string; lastName: string }): Promise<User>;
   getUserByWechatOpenId(openId: string): Promise<User | undefined>;
@@ -53,11 +60,43 @@ export const usersRepo: UsersRepository = {
     return user;
   },
 
-  async getAllUsers(): Promise<User[]> {
+  async getAllUsers(filters?: AdminUserFilters): Promise<User[]> {
     // Use Drizzle's query builder so column names are mapped from snake_case
     // DB columns to camelCase TypeScript keys. Raw `db.execute(sql`SELECT *`)`
     // returns snake_case keys, which breaks callers that expect camelCase.
-    return db.select().from(users);
+    if (!filters) {
+      return db.select().from(users);
+    }
+
+    const conditions = [];
+    if (filters.search) {
+      const escaped = filters.search.replace(/[\\%_]/g, (m) => `\\${m}`);
+      const pattern = `%${escaped}%`;
+      conditions.push(
+        or(
+          ilike(users.firstName, pattern),
+          ilike(users.lastName, pattern),
+          ilike(users.displayName, pattern),
+          ilike(users.wechatNickname, pattern),
+          ilike(users.email, pattern),
+          like(users.phoneNumber, pattern),
+        ),
+      );
+    }
+    if (filters.banned) {
+      conditions.push(eq(users.isBanned, true));
+    }
+    if (filters.city) {
+      conditions.push(eq(users.currentCity, filters.city));
+    }
+    if (filters.archetype) {
+      conditions.push(eq(users.archetype, filters.archetype));
+    }
+
+    if (conditions.length === 0) {
+      return db.select().from(users);
+    }
+    return db.select().from(users).where(and(...conditions));
   },
 
   async getUserByPhone(phoneNumber: string): Promise<User[]> {

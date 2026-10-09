@@ -1,5 +1,5 @@
 import type { Express, Request } from "express";
-import { requireAuth } from "../../middleware/auth";
+import { requireAuth, isUserBanned } from "../../middleware/auth";
 import { setupWechatAuth } from "../../wechatAuth";
 import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";
@@ -169,6 +169,10 @@ export function registerAuthRoutes(app: Express): void {
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
           return res.status(401).json({ message: "手机号或密码错误" });
+        }
+
+        if (user.isBanned) {
+          return res.status(403).json({ message: "账号已被封禁", code: "USER_BANNED" });
         }
 
         await new Promise<void>((resolve, reject) => {
@@ -368,6 +372,12 @@ export function registerAuthRoutes(app: Express): void {
 
     try {
       const userId = req.session.userId;
+
+      if (await isUserBanned(userId)) {
+        req.session.userId = undefined;
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const authUserResponse = await buildAuthUserResponse(userId);
 
       if (!authUserResponse) {

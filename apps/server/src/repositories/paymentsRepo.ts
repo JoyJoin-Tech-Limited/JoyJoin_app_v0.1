@@ -1,6 +1,6 @@
 // Audit logging is performed by the calling route handlers via adminAuditLogger
 import { db } from "../db";
-import { sql, eq, and } from "drizzle-orm";
+import { sql, eq, and, type SQL } from "drizzle-orm";
 import { subscriptions, coupons, payments } from "@shared/schema";
 
 interface CreateSubscriptionData {
@@ -52,6 +52,12 @@ export interface PaymentsRepository {
   getPaymentById(id: string): Promise<any | undefined>;
   getPaymentByWechatOrderId(wechatOrderId: string): Promise<any | undefined>;
   getPaymentsByType(paymentType: string): Promise<any[]>;
+  getPaymentsPage(opts: {
+    paymentType?: string;
+    paymentTypes?: string[];
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: any[]; total: number }>;
   getCompletedCount(userId: string): Promise<number>;
   createPayment(data: any): Promise<any>;
   updatePayment(id: string, updates: any): Promise<any>;
@@ -84,9 +90,13 @@ export const paymentsRepo: PaymentsRepository = {
   },
 
   async getUserSubscription(userId: string): Promise<any | undefined> {
+    // status='active' is required (2026-10-05): renewSubscription creates
+    // status='pending' rows with is_active=true BEFORE payment completes —
+    // without this filter an abandoned renewal granted subscription
+    // entitlement (free registrations) for up to a month unpaid.
     const result = await db.execute(sql`
       SELECT * FROM subscriptions
-      WHERE user_id = ${userId} AND is_active = true AND end_date > NOW()
+      WHERE user_id = ${userId} AND is_active = true AND status = 'active' AND end_date > NOW()
       ORDER BY created_at DESC
       LIMIT 1
     `);
@@ -388,6 +398,51 @@ export const paymentsRepo: PaymentsRepository = {
       ORDER BY p.created_at DESC
     `);
     return result.rows;
+  },
+
+  async getPaymentsPage(opts: {
+    paymentType?: string;
+    paymentTypes?: string[];
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: any[]; total: number }> {
+    const typeConditions: SQL[] = [];
+    if (opts.paymentType) {
+      typeConditions.push(sql`p.payment_type = ${opts.paymentType}`);
+    }
+    if (opts.paymentTypes && opts.paymentTypes.length > 0) {
+      typeConditions.push(
+        sql`p.payment_type IN (${sql.join(opts.paymentTypes.map((t) => sql`${t}`), sql`, `)})`,
+      );
+    }
+    const whereClause = typeConditions.length > 0
+      ? sql`WHERE ${sql.join(typeConditions, sql` AND `)}`
+      : sql``;
+
+    const rowsResult = await db.execute(sql`
+      SELECT 
+        p.id, p.user_id, p.payment_type, p.related_id, p.status, p.payment_method,
+        p.original_amount, p.discount_amount, p.final_amount as amount,
+        p.coupon_id, p.wechat_transaction_id, p.wechat_order_id, p.wechat_prepay_id,
+        p.paid_at, p.created_at,
+        u.first_name as user_first_name,
+        u.last_name as user_last_name,
+        u.email as user_email,
+        e.title as event_title,
+        s.plan_type as subscription_plan
+      FROM payments p
+      LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN events e ON p.payment_type = 'event' AND p.related_id = e.id
+      LEFT JOIN subscriptions s ON p.payment_type = 'subscription' AND p.related_id = s.id
+      ${whereClause}
+      ORDER BY p.created_at DESC
+      LIMIT ${opts.limit} OFFSET ${opts.offset}
+    `);
+    const countResult = await db.execute(sql`
+      SELECT count(*)::int AS total FROM payments p ${whereClause}
+    `);
+    const total = Number((countResult.rows[0] as any)?.total ?? 0);
+    return { rows: rowsResult.rows, total };
   },
 
   async getCompletedCount(userId: string): Promise<number> {

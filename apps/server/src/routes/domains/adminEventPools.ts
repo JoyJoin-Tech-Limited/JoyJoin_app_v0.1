@@ -19,7 +19,6 @@ import {
 } from "../../lib/stateTransitions";
 import { matchEventPool, saveMatchResults } from "../../poolMatchingService";
 import { addMemberToPoolGroup } from "../../lib/poolGroupAdmin";
-import { broadcastAdminAction } from "../../eventBroadcast";
 import { notifyPoolCancelled } from "../../lib/wecomNotifications";
 import { shellCache } from "../../lib/shellCache";
 
@@ -31,7 +30,7 @@ const updateEventPoolSchema = z.object({
   district: z.string().optional(),
   dateTime: z.string().datetime().optional(),
   registrationDeadline: z.string().datetime().optional(),
-  genderRestriction: z.string().optional(),
+  genderRestriction: z.enum(["女性", "男性"]).optional(),
   industryRestrictions: z.array(z.string()).optional(),
   seniorityRestrictions: z.array(z.string()).optional(),
   educationLevelRestrictions: z.array(z.string()).optional(),
@@ -619,13 +618,6 @@ export function registerAdminEventPoolRoutes(app: Express): void {
       await saveMatchResults(poolId, groups);
 
       const matchAdminId = getActingAdminId(req);
-      await broadcastAdminAction(
-        poolId,
-        "pool_matched",
-        matchAdminId,
-        { groupCount: groups.length, totalMatched: groups.reduce((sum, g) => sum + g.members.length, 0) }
-      );
-
       logAdminAudit({
         action: "EVENT_POOL_MATCHED",
         adminId: matchAdminId,

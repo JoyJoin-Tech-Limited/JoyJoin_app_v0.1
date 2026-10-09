@@ -135,6 +135,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  screen of pool registration. Env fallback: PERSONA_SNAPSHOT_ENABLED
    *  (default: true). */
   personaSnapshotEnabled: "PERSONA_SNAPSHOT_ENABLED",
+  /** Pool completion sweep (2026-10-06): hourly flip of pools (and their
+   *  matched registrations) to completed at event start +3h. Env fallback:
+   *  POOL_COMPLETION_SWEEP_ENABLED (default: true). */
+  poolCompletionSweepEnabled: "POOL_COMPLETION_SWEEP_ENABLED",
   /** When true, the matching-status live-reveal members stage shows an
    *  abstract puzzle-piece prelude instead of the member identity grid.
    *  Real identity reveal remains in squad-unboxing. Env fallback:
@@ -445,6 +449,10 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  var is set. Explicit so the admin toggle UI matches the runtime
    *  default (getFeatureFlag(key, true)). */
   subscribeRemindersEnabled: true,
+  /** Pool completion sweep — default ON; completes pools automatically at
+   *  event start +3h so "event ended" UX no longer depends on manual admin
+   *  PATCH. */
+  poolCompletionSweepEnabled: true,
   /** Sentinel policy-pending — see FLAG_ENV_MAP note. Explicitly off so the
    *  admin toggle UI and listFeatureFlags() show a stable default. */
   matchNeverMeetSentinel: false,

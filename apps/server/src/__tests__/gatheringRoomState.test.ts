@@ -93,7 +93,7 @@ vi.mock("../storage", () => ({
   },
 }));
 
-vi.mock("../paymentService", () => ({ paymentService: {} }));
+vi.mock("../paymentService", () => ({ paymentService: {}, REFUND_CLAIM_ERROR_MESSAGE: "Can only refund completed payments" }));
 vi.mock("../routes/domains/payments", () => ({ resolveCouponValidation: vi.fn() }));
 vi.mock("../adminAuth", () => ({
   requireAdmin: (_req: any, _res: any, next: any) => next(),

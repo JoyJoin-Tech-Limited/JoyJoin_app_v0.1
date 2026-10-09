@@ -2,12 +2,14 @@ import type { Express, Request } from "express";
 import { z } from "zod";
 import { type AdminUserDto, type AdminProfileCompleteness, getCanonicalDisplayName } from "@shared/api/adminUser";
 import { db } from "../../db";
-import { eq, and, or, desc, gt, sql } from "drizzle-orm";
+import { eq, and, or, inArray, desc, gt, sql } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { logger } from "../../lib/logger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { storage } from "../../storage";
+import { revokeUserSessions } from "../../lib/revokeUserSessions";
+import { clearUserBanCache } from "../../middleware/auth";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { notifyAdminAction } from "../../lib/wecomNotifications";
@@ -499,41 +501,44 @@ export function registerAdminUserRoutes(app: Express): void {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = (page - 1) * limit;
-      
-      const rawUsers = await storage.getAllUsers();
-      const allUserInterests = await db
-        .select({
-          userId: userInterests.userId,
-          totalSelections: userInterests.totalSelections,
-          selections: userInterests.selections,
-          topPriorities: userInterests.topPriorities,
-        })
-        .from(userInterests) as Array<AdminUserInterestSummary>;
+
+      // `subscribed` is a known-empty filter (subscription state is not
+      // projected here) — short-circuit before touching the DB.
+      if (filter === "subscribed") {
+        return res.json({
+          users: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        });
+      }
+
+      // Search / banned / city / archetype are pushed into SQL so a keystroke
+      // never scans and hydrates the entire users table.
+      const rawUsers = await storage.getAllUsers({
+        search: typeof search === "string" ? search : undefined,
+        banned: filter === "banned",
+        city: typeof city === "string" ? city : undefined,
+        archetype: typeof archetype === "string" ? archetype : undefined,
+      });
+
+      const userIds = rawUsers.map((user: any) => user.id);
+      let allUserInterests: Array<AdminUserInterestSummary> = [];
+      if (userIds.length > 0) {
+        allUserInterests = await db
+          .select({
+            userId: userInterests.userId,
+            totalSelections: userInterests.totalSelections,
+            selections: userInterests.selections,
+            topPriorities: userInterests.topPriorities,
+          })
+          .from(userInterests)
+          .where(inArray(userInterests.userId, userIds)) as Array<AdminUserInterestSummary>;
+      }
       const interestsByUser = new Map(allUserInterests.map((row) => [row.userId, row]));
 
       let users = rawUsers;
 
-      // Apply search filter
-      if (search && typeof search === "string") {
-        const searchLower = search.toLowerCase();
-        users = users.filter((user: any) =>
-          user.firstName?.toLowerCase().includes(searchLower) ||
-          user.lastName?.toLowerCase().includes(searchLower) ||
-          user.displayName?.toLowerCase().includes(searchLower) ||
-          user.wechatNickname?.toLowerCase().includes(searchLower) ||
-          user.email?.toLowerCase().includes(searchLower) ||
-          user.phoneNumber?.includes(search)
-        );
-      }
-
       // Apply status filter
-      if (filter === "banned") {
-        users = users.filter((user: any) => user.isBanned);
-      } else if (filter === "subscribed") {
-        users = [];
-      } else if (filter === "non-subscribed") {
-        users = users;
-      } else if (filter === "stuck") {
+      if (filter === "stuck") {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         users = users.filter((user: any) => {
@@ -545,16 +550,6 @@ export function registerAdminUserRoutes(app: Express): void {
           const isStale = (checkpointTime && checkpointTime < sevenDaysAgo) || (createdAt && createdAt < sevenDaysAgo);
           return isStale;
         });
-      }
-
-      // Apply city filter
-      if (city && typeof city === "string") {
-        users = users.filter((user: any) => user.currentCity === city);
-      }
-
-      // Apply archetype filter
-      if (archetype && typeof archetype === "string") {
-        users = users.filter((user: any) => user.archetype === archetype);
       }
 
       // Apply intent filter
@@ -883,6 +878,16 @@ export function registerAdminUserRoutes(app: Express): void {
 
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: true });
 
+      try {
+        await revokeUserSessions(req.params.id);
+      } catch (revokeErr) {
+        logger.warn("Failed to revoke banned user sessions", {
+          userId: req.params.id,
+          error: String(revokeErr),
+        });
+      }
+      clearUserBanCache(req.params.id);
+
       logAdminAudit({
         action: 'USER_BANNED',
         adminId: getActingAdminId(req),
@@ -935,6 +940,7 @@ export function registerAdminUserRoutes(app: Express): void {
       }
 
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: false });
+      clearUserBanCache(req.params.id);
 
       logAdminAudit({
         action: 'USER_UNBANNED',
@@ -975,6 +981,8 @@ export function registerAdminUserRoutes(app: Express): void {
       } = { reassigned: [], tombstoned: [] };
 
       await db.transaction(async (tx: any) => {
+        await revokeUserSessions(userId, tx);
+
         // Host resilience (W1): a departing user's live sessions must never be
         // hard-deleted. Reassign the host role to a remaining participant, or
         // tombstone the row (end it in place) when the host was alone. This

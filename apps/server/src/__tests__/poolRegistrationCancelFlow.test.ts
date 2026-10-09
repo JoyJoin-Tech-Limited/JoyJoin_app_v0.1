@@ -212,6 +212,7 @@ vi.mock("../paymentService", () => ({
   paymentService: {
     createRefund: vi.fn(async () => undefined),
   },
+  REFUND_CLAIM_ERROR_MESSAGE: "Can only refund completed payments",
 }));
 
 vi.mock("../repositories/paymentFulfillmentRepo", () => ({

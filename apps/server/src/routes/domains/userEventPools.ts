@@ -39,7 +39,7 @@ import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
-import { getFeatureFlag, getFeatureFlagSync } from "../../lib/featureFlags";
+import { getFeatureFlag } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
 import { resolveBudgetOptions } from "../../lib/budgetOptionsResolver";
@@ -583,7 +583,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
       }
 
       // Feature flag kill-switch for emergency registration disable
-      if (!getFeatureFlagSync("registrationEnabled", true)) {
+      if (!(await getFeatureFlag("registrationEnabled", true))) {
         return res.status(503).json({
           message: "Registration is temporarily unavailable",
           code: "REGISTRATION_DISABLED",
@@ -997,7 +997,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
       const poolId = req.params.poolId;
       const userId = getAuthenticatedUserId(req) as string;
 
-      if (!getFeatureFlagSync("registrationEnabled", true)) {
+      if (!(await getFeatureFlag("registrationEnabled", true))) {
         return res.status(503).json({
           message: "报名暂不可用，请稍后重试",
           code: "REGISTRATION_DISABLED",
@@ -2022,14 +2022,27 @@ export function registerUserEventPoolRoutes(app: Express): void {
       }
     });
 
-    // Finance - Get all payments
+    // Finance - Get payments (paged; defaults: limit 50, max 200)
     app.get("/api/admin/finance/payments", requireAdmin, async (req, res) => {
       try {
-        const { type } = req.query;
-        const payments = type
-          ? await storage.getPaymentsByType(type as string)
-          : await storage.getAllPayments();
-        res.json(payments);
+        const rawLimit = parseInt((req.query.limit as string) ?? "", 10);
+        const rawOffset = parseInt((req.query.offset as string) ?? "", 10);
+        const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 50;
+        const offset = Number.isFinite(rawOffset) ? Math.max(rawOffset, 0) : 0;
+        const { type, typeGroup } = req.query;
+
+        const paymentTypes = typeGroup === "event"
+          ? ["event", "event_bundle", "event_pack"]
+          : undefined;
+        const paymentType = !paymentTypes && typeof type === "string" && type ? type : undefined;
+
+        const { rows, total } = await storage.getPaymentsPage({
+          paymentType,
+          paymentTypes,
+          limit,
+          offset,
+        });
+        res.json({ payments: rows, total, limit, offset });
       } catch (error) {
         logger.error("Error fetching payments:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch payments" });

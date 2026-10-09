@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { db } from "../../db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { blindBoxEvents, eventPools, eventPoolRegistrations } from "@shared/schema";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { logger } from "../../lib/logger";
@@ -104,19 +104,83 @@ export function registerAttendanceRoutes(app: Express): void {
   // ============ ADMIN BLIND BOX EVENT ROUTES ============
   // ============ ADMIN BLIND BOX EVENT ROUTES ============
 
-  // Admin: list all blind box events (for management console)
+  // Admin: list blind box events (paged + server-side filters)
   app.get('/api/admin/events', requireAdmin, async (req: any, res) => {
     try {
       const adminId = req.session.userId;
       logger.info("[AdminBlindBox] GET /api/admin/events by admin", { data: adminId });
 
-      const events = await db
-        .select()
-        .from(blindBoxEvents)
-        .orderBy(desc(blindBoxEvents.dateTime));
+      const rawLimit = parseInt((req.query.limit as string) ?? "", 10);
+      const rawOffset = parseInt((req.query.offset as string) ?? "", 10);
+      const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 500) : 50;
+      const offset = Number.isFinite(rawOffset) ? Math.max(rawOffset, 0) : 0;
 
-      logger.info("[AdminBlindBox] Loaded blind box events count", { data: events.length });
-      res.json(events);
+      const { status, city, eventType, budgetTier, language, taste, cuisine } = req.query;
+
+      const conditions = [];
+      if (typeof status === "string" && status) {
+        conditions.push(eq(blindBoxEvents.status, status));
+      }
+      if (typeof city === "string" && city) {
+        conditions.push(eq(blindBoxEvents.city, city));
+      }
+      if (typeof eventType === "string" && eventType) {
+        conditions.push(eq(blindBoxEvents.eventType, eventType));
+      }
+      if (typeof budgetTier === "string" && budgetTier) {
+        // Stored as '/'-joined tier ids; match membership, not exact equality.
+        conditions.push(sql`(
+          ${blindBoxEvents.budgetTier} = ${budgetTier}
+          OR ${blindBoxEvents.budgetTier} LIKE ${budgetTier + '/%'}
+          OR ${blindBoxEvents.budgetTier} LIKE ${'%/' + budgetTier}
+          OR ${blindBoxEvents.budgetTier} LIKE ${'%/' + budgetTier + '/%'}
+        )`);
+      }
+      if (typeof language === "string" && language) {
+        conditions.push(sql`${blindBoxEvents.selectedLanguages} @> ARRAY[${language}]::text[]`);
+      }
+      if (typeof taste === "string" && taste) {
+        conditions.push(sql`${blindBoxEvents.selectedTasteIntensity} @> ARRAY[${taste}]::text[]`);
+      }
+      if (typeof cuisine === "string" && cuisine) {
+        conditions.push(sql`${blindBoxEvents.selectedCuisines} @> ARRAY[${cuisine}]::text[]`);
+      }
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const items = where
+        ? await db
+            .select()
+            .from(blindBoxEvents)
+            .where(where)
+            .orderBy(desc(blindBoxEvents.dateTime))
+            .limit(limit)
+            .offset(offset)
+        : await db
+            .select()
+            .from(blindBoxEvents)
+            .orderBy(desc(blindBoxEvents.dateTime))
+            .limit(limit)
+            .offset(offset);
+
+      const totalRows = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(blindBoxEvents)
+        .where(where);
+      const total = Number(totalRows[0]?.count ?? 0);
+
+      const statusRows = await db
+        .select({ status: blindBoxEvents.status, count: sql<number>`count(*)::int` })
+        .from(blindBoxEvents)
+        .groupBy(blindBoxEvents.status);
+      const statusCounts: Record<string, number> = { total: 0 };
+      for (const row of statusRows) {
+        const count = Number(row.count);
+        statusCounts[row.status] = count;
+        statusCounts.total += count;
+      }
+
+      logger.info("[AdminBlindBox] Loaded blind box events count", { data: items.length });
+      res.json({ items, total, limit, offset, statusCounts });
     } catch (error: any) {
       logger.error("[AdminBlindBox] Error fetching blind box events", { error: String(error) });
       res.status(500).json({

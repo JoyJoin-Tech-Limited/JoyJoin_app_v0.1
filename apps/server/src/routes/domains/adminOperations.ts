@@ -18,17 +18,29 @@ export function registerAdminOperationsRoutes(app: Express): void {
   app.get("/api/admin/feedback", requireAdmin, async (req, res) => {
     try {
       const { eventId, minRating, maxRating, startDate, endDate, hasDeepFeedback } = req.query;
-      
-      const filters: any = {};
+
+      const rawLimit = parseInt((req.query.limit as string) ?? "", 10);
+      const rawOffset = parseInt((req.query.offset as string) ?? "", 10);
+      const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 50;
+      const offset = Number.isFinite(rawOffset) ? Math.max(rawOffset, 0) : 0;
+
+      const filters: {
+        eventId?: string;
+        minRating?: number;
+        maxRating?: number;
+        startDate?: Date;
+        endDate?: Date;
+        hasDeepFeedback?: boolean;
+      } = {};
       if (eventId) filters.eventId = eventId as string;
       if (minRating) filters.minRating = parseInt(minRating as string);
       if (maxRating) filters.maxRating = parseInt(maxRating as string);
       if (startDate) filters.startDate = new Date(startDate as string);
       if (endDate) filters.endDate = new Date(endDate as string);
       if (hasDeepFeedback !== undefined) filters.hasDeepFeedback = hasDeepFeedback === 'true';
-      
-      const feedbacks = await storage.getAllFeedbacks(filters);
-      res.json(feedbacks);
+
+      const { items, total } = await storage.getFeedbacksPage(filters, { limit, offset });
+      res.json({ items, total, limit, offset });
     } catch (error) {
       logger.error("Error fetching feedbacks", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch feedbacks" });

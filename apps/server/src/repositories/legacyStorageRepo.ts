@@ -109,6 +109,20 @@ export interface LegacyStorage {
     endDate?: Date;
     hasDeepFeedback?: boolean;
   }): Promise<Array<EventFeedback & { user: { displayName: string | null; phoneNumber: string | null }; event: { title: string; dateTime: Date; status: string | null } }>>;
+  getFeedbacksPage(
+    filters: {
+      eventId?: string;
+      minRating?: number;
+      maxRating?: number;
+      startDate?: Date;
+      endDate?: Date;
+      hasDeepFeedback?: boolean;
+    } | undefined,
+    pagination: { limit: number; offset: number },
+  ): Promise<{
+    items: Array<EventFeedback & { user: { displayName: string | null; phoneNumber: string | null }; event: { title: string; dateTime: Date; status: string | null } }>;
+    total: number;
+  }>;
   getFeedbackById(id: string): Promise<(EventFeedback & { user: User; event: Event }) | undefined>;
   getFeedbackStats(): Promise<{
     totalFeedbacks: number;
@@ -1007,6 +1021,109 @@ export class LegacyStorageRepo implements LegacyStorage {
       : await baseQuery.orderBy(desc(eventFeedback.createdAt));
 
     return results as any;
+  }
+
+  async getFeedbacksPage(
+    filters: {
+      eventId?: string;
+      minRating?: number;
+      maxRating?: number;
+      startDate?: Date;
+      endDate?: Date;
+      hasDeepFeedback?: boolean;
+    } | undefined,
+    pagination: { limit: number; offset: number },
+  ): Promise<{
+    items: Array<EventFeedback & { user: { displayName: string | null; phoneNumber: string | null }; event: { title: string; dateTime: Date; status: string | null } }>;
+    total: number;
+  }> {
+    const conditions = [];
+
+    if (filters?.eventId) {
+      conditions.push(eq(eventFeedback.eventId, filters.eventId));
+    }
+    if (filters?.minRating !== undefined) {
+      conditions.push(gte(eventFeedback.atmosphereScore, filters.minRating));
+    }
+    if (filters?.maxRating !== undefined) {
+      conditions.push(lte(eventFeedback.atmosphereScore, filters.maxRating));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(eventFeedback.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(eventFeedback.createdAt, filters.endDate));
+    }
+    if (filters?.hasDeepFeedback !== undefined) {
+      conditions.push(eq(eventFeedback.hasDeepFeedback, filters.hasDeepFeedback));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const baseQuery = db
+      .select({
+        id: eventFeedback.id,
+        eventId: eventFeedback.eventId,
+        userId: eventFeedback.userId,
+        rating: eventFeedback.rating,
+        vibeMatch: eventFeedback.vibeMatch,
+        energyMatch: eventFeedback.energyMatch,
+        wouldAttendAgain: eventFeedback.wouldAttendAgain,
+        feedback: eventFeedback.feedback,
+        connections: eventFeedback.connections,
+        atmosphereScore: eventFeedback.atmosphereScore,
+        atmosphereNote: eventFeedback.atmosphereNote,
+        attendeeTraits: eventFeedback.attendeeTraits,
+        connectionRadar: eventFeedback.connectionRadar,
+        hasNewConnections: eventFeedback.hasNewConnections,
+        connectionStatus: eventFeedback.connectionStatus,
+        improvementAreas: eventFeedback.improvementAreas,
+        improvementOther: eventFeedback.improvementOther,
+        completedAt: eventFeedback.completedAt,
+        rewardsClaimed: eventFeedback.rewardsClaimed,
+        rewardPoints: eventFeedback.rewardPoints,
+        hasDeepFeedback: eventFeedback.hasDeepFeedback,
+        matchPointValidation: eventFeedback.matchPointValidation,
+        additionalMatchPoints: eventFeedback.additionalMatchPoints,
+        conversationBalance: eventFeedback.conversationBalance,
+        conversationComfort: eventFeedback.conversationComfort,
+        conversationNotes: eventFeedback.conversationNotes,
+        futurePreferences: eventFeedback.futurePreferences,
+        futurePreferencesOther: eventFeedback.futurePreferencesOther,
+        deepFeedbackCompletedAt: eventFeedback.deepFeedbackCompletedAt,
+        createdAt: eventFeedback.createdAt,
+        user: {
+          displayName: users.displayName,
+          phoneNumber: users.phoneNumber,
+        },
+        event: {
+          title: events.title,
+          dateTime: events.dateTime,
+          status: events.status,
+        },
+      })
+      .from(eventFeedback)
+      .leftJoin(users, eq(eventFeedback.userId, users.id))
+      .leftJoin(events, eq(eventFeedback.eventId, events.id));
+
+    const results = where
+      ? await baseQuery
+          .where(where)
+          .orderBy(desc(eventFeedback.createdAt))
+          .limit(pagination.limit)
+          .offset(pagination.offset)
+      : await baseQuery
+          .orderBy(desc(eventFeedback.createdAt))
+          .limit(pagination.limit)
+          .offset(pagination.offset);
+
+    const countRows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventFeedback)
+      .where(where);
+    const total = Number(countRows[0]?.count ?? 0);
+
+    return { items: results as any, total };
   }
 
   async getFeedbackById(id: string): Promise<(EventFeedback & { user: User; event: Event }) | undefined> {

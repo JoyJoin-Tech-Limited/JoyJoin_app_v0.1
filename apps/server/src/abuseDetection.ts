@@ -7,6 +7,8 @@ import { db } from './db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { type ViolationType } from './contentFilter';
+import { logger } from './lib/logger';
+import { revokeUserSessions } from './lib/revokeUserSessions';
 
 const VIOLATION_THRESHOLDS = {
   WARNING_FREEZE_HOURS: 1,
@@ -36,7 +38,8 @@ export async function recordViolation(userId: string, violationType: ViolationTy
     lastViolationReason: violationType
   };
 
-  if (newCount >= VIOLATION_THRESHOLDS.PERM_BAN_COUNT) {
+  const permBanned = newCount >= VIOLATION_THRESHOLDS.PERM_BAN_COUNT;
+  if (permBanned) {
     updates.isBanned = true;
   } else if (newCount >= VIOLATION_THRESHOLDS.TEMP_BAN_COUNT) {
     updates.aiFrozenUntil = new Date(Date.now() + VIOLATION_THRESHOLDS.TEMP_BAN_HOURS * 60 * 60 * 1000);
@@ -47,4 +50,19 @@ export async function recordViolation(userId: string, violationType: ViolationTy
   await db.update(users)
     .set(updates)
     .where(eq(users.id, userId));
+
+  if (permBanned) {
+    try {
+      await revokeUserSessions(userId);
+    } catch (revokeErr) {
+      // Fail-open by design (HS-12 SEC-01): per-request gates stay authoritative
+      // (requireAuth re-checks users.isBanned, middleware/auth.ts; requireAdmin
+      // re-checks admin account status, adminAuth.ts) — a revocation failure must
+      // never abort or 500 the content-safety call sites that record violations.
+      logger.warn('Failed to revoke sessions on permaban', {
+        userId,
+        error: String(revokeErr),
+      });
+    }
+  }
 }

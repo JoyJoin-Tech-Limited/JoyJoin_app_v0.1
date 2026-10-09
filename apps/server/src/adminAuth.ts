@@ -4,6 +4,8 @@ import { isProductionEnvironment } from "./auth/policy";
 import { storage } from "./storage";
 import { SESSION_COOKIE_NAME } from "./lib/sessionCookieName";
 import { logAdminAudit } from "./lib/adminAuditLogger";
+import { logger } from "./lib/logger";
+import { revokeAdminSessions } from "./lib/revokeUserSessions";
 
 const VALID_ADMIN_ROLES = ["super_admin", "operator", "viewer"] as const;
 type AdminRole = (typeof VALID_ADMIN_ROLES)[number];
@@ -357,6 +359,17 @@ export function registerAdminAuthRoutes(app: Express) {
       if (displayName !== undefined) updates.displayName = displayName;
       const account = await storage.updateAdminAccount(id, updates as any);
       const { passwordHash: _ph, ...safe } = account;
+
+      if (updates.status === "disabled") {
+        try {
+          await revokeAdminSessions(id);
+        } catch (revokeErr) {
+          logger.warn("Failed to revoke disabled admin account sessions", {
+            adminAccountId: id,
+            error: String(revokeErr),
+          });
+        }
+      }
 
       logAdminAudit({
         action: "ADMIN_ACCOUNT_UPDATED",

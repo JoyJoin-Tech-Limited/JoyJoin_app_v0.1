@@ -1,4 +1,4 @@
-import { budgetTierIdSchema, eventPoolGroups, eventPools, venues, venueTimeSlotBookings, venueTimeSlots } from "@shared/schema";
+import { budgetTierIdSchema, eventPoolGroups, eventPoolRegistrations, eventPools, venues, venueTimeSlotBookings, venueTimeSlots } from "@shared/schema";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Express } from "express";
 import { z } from "zod";
@@ -12,6 +12,8 @@ import {
   normalizeVenueQualityRecord,
 } from "../../lib/venueDataQuality";
 import { notifyVenueOnboardingStatusChange } from "../../lib/wecomNotifier";
+import { notificationsRepo } from "../../repositories/notificationsRepo";
+import { shellCache } from "../../lib/shellCache";
 import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import { venueMatchingService } from "../../venueMatchingService";
@@ -37,7 +39,7 @@ const venueSchema = z.object({
   type: z.string().min(1).optional(),
   address: z.string().min(1),
   city: z.string().min(1),
-  district: z.string().min(1),
+  district: z.string().trim().min(1),
   clusterId: z.string().optional(),
   districtId: z.string().optional(),
   contactName: z.string().optional(),
@@ -1317,6 +1319,33 @@ export function registerVenueRoutes(app: Express): void {
         context: { venueId, timeSlotId, bookingDate, reason, poolId: pool.id },
       });
 
+      void (async () => {
+        try {
+          const memberRows = (await db
+            .select({ userId: eventPoolRegistrations.userId })
+            .from(eventPoolRegistrations)
+            .where(eq(eventPoolRegistrations.assignedGroupId, groupId))) as Array<{ userId: string }>;
+          await Promise.all(
+            memberRows.map(({ userId }) => {
+              shellCache.invalidateUser(userId);
+              return notificationsRepo.createNotification({
+                userId,
+                category: "activities",
+                type: "venue_assigned",
+                title: "场地已更新",
+                message: `活动场地：${venue.brandName || venue.name}，地址：${venue.address || "详见活动页"}`,
+                relatedResourceId: pool.id,
+              });
+            })
+          );
+        } catch (notifyErr) {
+          logger.warn("Venue assign member notification failed", {
+            groupId,
+            error: notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+          });
+        }
+      })();
+
       res.json({
         success: true,
         message: "Venue assigned successfully",
@@ -1450,6 +1479,33 @@ export function registerVenueRoutes(app: Express): void {
         targetEntityId: groupId,
         context: { oldVenueId: group.venueId, newVenueId, reason, cancelledBookingId: result.cancelledBookingId },
       });
+
+      void (async () => {
+        try {
+          const memberRows = (await db
+            .select({ userId: eventPoolRegistrations.userId })
+            .from(eventPoolRegistrations)
+            .where(eq(eventPoolRegistrations.assignedGroupId, groupId))) as Array<{ userId: string }>;
+          await Promise.all(
+            memberRows.map(({ userId }) => {
+              shellCache.invalidateUser(userId);
+              return notificationsRepo.createNotification({
+                userId,
+                category: "activities",
+                type: "venue_assigned",
+                title: "场地已更新",
+                message: `活动场地：${newVenue.brandName || newVenue.name}，地址：${newVenue.address || "详见活动页"}`,
+                relatedResourceId: group.poolId,
+              });
+            })
+          );
+        } catch (notifyErr) {
+          logger.warn("Venue migrate member notification failed", {
+            groupId,
+            error: notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+          });
+        }
+      })();
 
       res.json({
         success: true,

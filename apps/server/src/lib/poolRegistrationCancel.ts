@@ -21,6 +21,7 @@
  */
 
 import { and, eq, sql } from "drizzle-orm";
+import { shellCache } from "./shellCache";
 import {
   eventAttendance,
   eventPoolGroups,
@@ -33,7 +34,7 @@ import { db } from "../db";
 import { getFeatureFlag } from "./featureFlags";
 import { logger } from "./logger";
 import { logAdminAudit } from "./adminAuditLogger";
-import { paymentService } from "../paymentService";
+import { paymentService, REFUND_CLAIM_ERROR_MESSAGE } from "../paymentService";
 import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
 import { refundAttemptsRepo } from "../repositories/refundAttemptsRepo";
 import { eventCreditsRepo } from "../repositories/eventCreditsRepo";
@@ -50,8 +51,9 @@ const MOCK_ORDER_PREFIX = "MOCK_";
 /** Groups below this size after a cancel collapse (PRD §3 / contract AC-3). */
 const MIN_VIABLE_GROUP_SIZE = 4;
 /** createRefund's atomic-claim rejection — means a concurrent/duplicate
- *  cancel already claimed the refund (AC-1a: treat as already-refunded). */
-const ALREADY_REFUNDED_CLAIM_ERROR = "Can only refund completed payments";
+ *  cancel already claimed the refund (AC-1a: treat as already-refunded).
+ *  Shared constant from paymentService so the message can't drift. */
+const ALREADY_REFUNDED_CLAIM_ERROR = REFUND_CLAIM_ERROR_MESSAGE;
 const PRE_REVEAL_REFUND_REASON_MONEY = "揭示前取消，全额退款";
 /** Sentinel: the registration row vanished mid-transaction (concurrent cancel). */
 const REGISTRATION_DELETE_RACE = "REGISTRATION_DELETE_RACE";
@@ -195,13 +197,16 @@ export async function cancelPoolRegistrationWithPolicy(params: {
     branch,
   });
 
-  if (branch === "pre_reveal_refund") {
-    return cancelPreRevealWithRefund({ registration, poolTitle: pool?.title ?? "", userId, logPrefix });
+  const result = branch === "pre_reveal_refund"
+    ? await cancelPreRevealWithRefund({ registration, poolTitle: pool?.title ?? "", userId, logPrefix })
+    : branch === "post_reveal_no_refund"
+      ? await cancelPostRevealNoRefund({ registration, poolTitle: pool?.title ?? "", userId, logPrefix })
+      : await cancelLegacy({ registration, userId, logPrefix });
+
+  if (result.ok) {
+    shellCache.invalidateUser(userId);
   }
-  if (branch === "post_reveal_no_refund") {
-    return cancelPostRevealNoRefund({ registration, poolTitle: pool?.title ?? "", userId, logPrefix });
-  }
-  return cancelLegacy({ registration, userId, logPrefix });
+  return result;
 }
 
 // ── Legacy branch (AC-4: byte-identical to the pre-Phase-0 handler) ─────────
@@ -676,6 +681,7 @@ async function notifyRemainingMembersOfVacatedSeat(params: {
   }
 
   for (const stayer of stayers) {
+    shellCache.invalidateUser(stayer.userId);
     try {
       await notificationsRepo.createNotification({
         userId: stayer.userId,

@@ -4,6 +4,7 @@ import { logger } from "./logger";
 import { wsService } from "../wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { notificationsRepo } from "../repositories/notificationsRepo";
+import { shellCache } from "./shellCache";
 import { generateAndSaveEventTheme } from "../eventThemeGeneratorService";
 import { processInvitationRewards } from "../poolMatchingInvitationRewards";
 import { assignVenuesToGroups, saveVenueAssignments } from "../venueAssignmentService";
@@ -277,7 +278,8 @@ export async function executePostMatchCommitSideEffects(
             );
 
             if (themeTitleResult) {
-              const memberUserIds = group.members.map((m) => m.userId);
+            const memberUserIds = group.members.map((m) => m.userId);
+            memberUserIds.forEach((memberUserId) => shellCache.invalidateUser(memberUserId));
 
               memberUserIds.forEach((userId) => {
                 wsService.broadcastToUser(userId, {
