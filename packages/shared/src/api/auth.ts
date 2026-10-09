@@ -173,6 +173,11 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     matchingOperatorReviewEnabled?: boolean
     /** When true, enables the Alang NPC prototype system. Default: false. */
     alangEnabled?: boolean
+    /** Flash teaser hero takeover: while alangEnabled is false, the Discover
+     *  hero banner renders the 街头盲盒 teaser variant D for users with an
+     *  archetype. Manual ops switch; auto-noops once alangEnabled flips on.
+     *  Default: false. */
+    flashTeaserHeroEnabled?: boolean
     /** Non-production QA mode: allows restarting the same active Flash task. */
     flashTaskRetryTestEnabled?: boolean
     /** When false, hides the "收起卡组" collapse trigger on squad-unboxing and

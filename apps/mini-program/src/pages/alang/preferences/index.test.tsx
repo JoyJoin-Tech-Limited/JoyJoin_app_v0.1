@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from 'vitest'
 import FlashPreferencesPage from './index'
 
 vi.mock('@tarojs/taro', () => ({ default: { setNavigationBarTitle: vi.fn() } }))
+vi.mock('../../../hooks/useAuth', () => ({
+  useAuth: () => ({ user: { features: { alangEnabled: true } } }),
+}))
 vi.mock('@tarojs/components', () => ({
   View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,

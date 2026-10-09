@@ -75,6 +75,10 @@ await Promise.all(
     'icons/chemistry-badges/Chemistry Badges Grid.png',
     'icons/status-icons/status icons grid.png',
     'icons/QUALITY_STANDARD.md',
+    // Flash teaser mode (sprint_20261009): Lovart teaser hero + card icon are
+    // CDN-only at runtime; the card falls back to the bundled street-box icon.
+    'alang/flash-teaser-hero-v1.webp',
+    'alang/flash-teaser-icon-v1.webp',
   ].map(removePath),
 )
 

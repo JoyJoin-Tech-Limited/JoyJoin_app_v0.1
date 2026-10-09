@@ -96,6 +96,21 @@ describe("buildAuthUserResponse Alang feature exposure", () => {
     expect(response?.singleTestMode).toBe(true);
   });
 
+  it.each([true, false])(
+    "exposes flashTeaserHeroEnabled=%s with a default-false fallback",
+    async (flashTeaserHeroEnabled) => {
+      mockGetFeatureFlag.mockImplementation(
+        async (key: string, defaultValue: boolean) =>
+          key === "flashTeaserHeroEnabled" ? flashTeaserHeroEnabled : defaultValue
+      );
+
+      const response = await buildAuthUserResponse(mockUser.id);
+
+      expect(response?.features?.flashTeaserHeroEnabled).toBe(flashTeaserHeroEnabled);
+      expect(mockGetFeatureFlag).toHaveBeenCalledWith("flashTeaserHeroEnabled", false);
+    }
+  );
+
   it("fails client debug mode closed in production even when the single-test flag is stale", async () => {
     process.env.APP_MODE = "production";
     process.env.ENABLE_SINGLE_TEST_MODE = "true";

@@ -278,6 +278,66 @@
     transform: translateX(4rpx);
   }
 
+  // ── Variant D: 街头盲盒 teaser takeover (sprint_20261009_flash_teaser_mode)
+  // The teaser reuses the banner skeleton but swaps the purple wash for dusk
+  // tones and the breathing CTA for a static 内测中 pill — the whole banner
+  // is the tap target.
+  &--pressed {
+    opacity: 0.92;
+  }
+
+  &--teaser {
+    .hero-promo-banner__overlay {
+      background:
+        // copy zone: deepened dusk wash — the hero's skyline horizon must
+        // never cut through the white title glyphs (design-audit P0)
+        linear-gradient(
+          100deg,
+          rgba($color-dusk-deep, 0.92) 0%,
+          rgba($color-dusk-lavender, 0.72) 38%,
+          rgba($color-dusk-mist, 0.22) 64%,
+          rgba($color-surface, 0) 100%
+        ),
+        radial-gradient(
+          120% 80% at 80% 100%,
+          rgba(251, 191, 36, 0.22) 0%,
+          rgba($color-surface, 0) 60%
+        );
+    }
+
+    .hero-promo-banner__image-fallback {
+      background: linear-gradient(
+        135deg,
+        $color-dusk-cream 0%,
+        $color-dusk-mist 60%,
+        $color-dusk-lavender 100%
+      );
+    }
+  }
+
+  // Static 内测中 pill replacing the CTA for variant D. aria-hidden — the
+  // banner root carries the button role and tap handler.
+  &__teaser-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 24rpx;
+    margin-bottom: 8rpx;
+    min-height: 64rpx;
+    padding: 12rpx 32rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 155, 133, 0.92);
+    box-shadow: 0 4rpx 12rpx rgba($color-primary-dark, 0.18);
+  }
+
+  &__teaser-pill-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+    color: #4A2E00;
+    letter-spacing: 0.5rpx;
+  }
+
   // ── Retry pill (image error recovery) ───────────────────────────────
   &__retry {
     display: inline-flex;

@@ -216,6 +216,13 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    * prototype and all formal Flash routes. Env fallback: ALANG_ENABLED
    * (default: false). */
   alangEnabled: "ALANG_ENABLED",
+  /** Flash teaser hero takeover (sprint_20261009_flash_teaser_mode): when true
+   * AND alangEnabled is false, the Discover hero promo banner renders the
+   * 街头盲盒「未拆的盒子」teaser variant D for users who already hold an
+   * archetype. Manual ops switch for launch-window buzz; auto-noops once
+   * alangEnabled flips on (precedence interlock, no date logic).
+   * Env fallback: FLASH_TEASER_HERO_ENABLED (default: false). */
+  flashTeaserHeroEnabled: "FLASH_TEASER_HERO_ENABLED",
   /** Shenzhen GPS restriction for formal Flash. Production remains locked. */
   flashShenzhenLocationGateEnabled: "FLASH_SHENZHEN_LOCATION_GATE_ENABLED",
   /** Non-production QA escape hatch for restarting the same active Flash task. */

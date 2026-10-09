@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isStreetBlindBoxLive,
   shouldShowAlangDebugTools,
   shouldShowAlangEntry,
   shouldShowStreetBlindBoxEntry,
@@ -8,6 +9,20 @@ import {
 describe('Alang access gates', () => {
   it('keeps the formal Street Blind Box entry enabled independently of legacy Alang', () => {
     expect(shouldShowStreetBlindBoxEntry()).toBe(true)
+  })
+
+  // isStreetBlindBoxLive (sprint_20261009_flash_teaser_mode): the Discover
+  // entry stays visible in both modes; this gate decides live vs teaser.
+  it('is live only when alangEnabled is explicitly true', () => {
+    expect(isStreetBlindBoxLive({ features: { alangEnabled: true } })).toBe(true)
+    expect(isStreetBlindBoxLive({ features: { alangEnabled: false } })).toBe(false)
+  })
+
+  it('fails closed to teaser mode when the features map or flag is missing', () => {
+    expect(isStreetBlindBoxLive(null)).toBe(false)
+    expect(isStreetBlindBoxLive(undefined)).toBe(false)
+    expect(isStreetBlindBoxLive({})).toBe(false)
+    expect(isStreetBlindBoxLive({ features: {} })).toBe(false)
   })
 
   it('shows product entry points in staging when alangEnabled is true', () => {

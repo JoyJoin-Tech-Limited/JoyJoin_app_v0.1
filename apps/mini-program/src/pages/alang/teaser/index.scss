@@ -1,0 +1,232 @@
+@import '../../../styles/variables';
+
+// 街头盲盒「内测中」预告页 — dusk gradient shell always paints; the Lovart
+// hero (when loaded) fades in on top. Reduced-motion / degradation tiers get
+// the fully static render.
+// Layout note (2026-10-09 asset pass): the hero's focal point (悦仔 + 发光盒子)
+// sits center-lower, so copy lives in the upper sky zone — never overlapping
+// the mascot's face.
+.flash-teaser {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 168rpx 64rpx calc(120rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    180deg,
+    $color-dusk-cream 0%,
+    $color-dusk-blush 30%,
+    $color-dusk-mist 62%,
+    $color-dusk-lavender 100%
+  );
+
+  &__hero {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 600ms ease-out;
+    pointer-events: none;
+
+    &--revealed {
+      opacity: 1;
+    }
+  }
+
+  &__particles {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    pointer-events: none;
+  }
+
+  &__particle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(253, 230, 138, 0.7);
+    opacity: 0.35;
+
+    &--1 {
+      width: 10rpx;
+      height: 10rpx;
+      left: 22%;
+      top: 30%;
+    }
+
+    &--2 {
+      width: 14rpx;
+      height: 14rpx;
+      right: 18%;
+      top: 44%;
+    }
+
+    &--3 {
+      width: 8rpx;
+      height: 8rpx;
+      left: 34%;
+      top: 58%;
+    }
+  }
+
+  &--animate {
+    .flash-teaser__particle--1 {
+      animation: flash-teaser-drift 4.2s ease-in-out infinite;
+    }
+    .flash-teaser__particle--2 {
+      animation: flash-teaser-drift 5.4s ease-in-out -1.6s infinite;
+    }
+    .flash-teaser__particle--3 {
+      animation: flash-teaser-drift 3.8s ease-in-out -2.4s infinite;
+    }
+  }
+
+  &__content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  &__pill {
+    padding: 8rpx 24rpx;
+    border-radius: $radius-pill;
+    // One pill token across all teaser surfaces (card / banner / page).
+    background: rgba(255, 155, 133, 0.92);
+    color: #4A2E00;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+  }
+
+  &__title {
+    margin-top: 32rpx;
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: 56rpx;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  &__subtitle {
+    margin-top: 24rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__subtitle-line {
+    display: block;
+    color: $color-text-secondary;
+    font-size: $font-size-md;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  &__promise {
+    margin-top: 20rpx;
+    // Skyline-safe: the promise line sits near the horizon zone of the hero,
+    // so it needs the warmer ink at reduced opacity rather than mid-gray.
+    color: rgba($color-text-primary-warm, 0.72);
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  // 「摸一下盒子」glow pulse — opacity-only overlay centered on the box.
+  &__glow {
+    position: absolute;
+    left: 50%;
+    top: 64%;
+    width: 72%;
+    height: 38%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse, rgba(251, 191, 36, 0.5) 0%, rgba(251, 191, 36, 0) 70%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__glow--pulse {
+    animation: flash-teaser-glow-pulse 640ms ease-out;
+  }
+
+  &__footer {
+    position: absolute;
+    right: 0;
+    bottom: calc(64rpx + env(safe-area-inset-bottom));
+    left: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  &__back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 20rpx 64rpx;
+    box-sizing: border-box;
+    border: 1rpx solid rgba($color-primary, 0.24);
+    border-radius: $radius-pill;
+    background: rgba(255, 255, 255, 0.72);
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.08);
+    }
+  }
+
+  &__back-text {
+    color: $color-primary-dark;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+@keyframes flash-teaser-drift {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateY(-24rpx);
+    opacity: 0.6;
+  }
+}
+
+@keyframes flash-teaser-glow-pulse {
+  0% { opacity: 0; }
+  25% { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-teaser {
+    &__hero {
+      transition: none;
+    }
+
+    &__particle {
+      animation: none;
+    }
+
+    &__glow--pulse {
+      animation: none;
+    }
+
+    &__back {
+      transition: none;
+    }
+  }
+}

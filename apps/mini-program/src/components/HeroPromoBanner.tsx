@@ -10,7 +10,7 @@ import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
 import { haptics } from '../lib/utils/haptics'
 import './HeroPromoBanner.scss'
 
-export type PromoBannerVariant = 'A' | 'B' | 'C'
+export type PromoBannerVariant = 'A' | 'B' | 'C' | 'D'
 
 interface PromoVariantConfig {
   eyebrow: string
@@ -18,6 +18,9 @@ interface PromoVariantConfig {
   subtitle: string
   cta: string
   accessibilityLabel: string
+  /** Variant D (flash teaser) renders the cta text as a static 内测中 pill and
+   *  makes the whole banner the tap target instead of a CTA button. */
+  hideCta?: boolean
 }
 
 const PROMO_VARIANTS: Record<PromoBannerVariant, PromoVariantConfig> = {
@@ -42,11 +45,26 @@ const PROMO_VARIANTS: Record<PromoBannerVariant, PromoVariantConfig> = {
     cta: '开始测试',
     accessibilityLabel: '30 秒测出你的聚会人格，更精准的聚会推荐',
   },
+  // 街头盲盒 teaser takeover (sprint_20261009_flash_teaser_mode): shown by
+  // discover only while flashTeaserHeroEnabled && !alangEnabled && hasArchetype.
+  D: {
+    eyebrow: '街头盲盒',
+    title: '这座城市，还藏着一个没拆的盒子',
+    subtitle: '几位数字朋友正在路上',
+    cta: '内测中',
+    accessibilityLabel: '街头盲盒内测预告，这座城市还藏着一个没拆的盒子，点击查看预告',
+    hideCta: true,
+  },
 } as const
 
 // Primary hero image — CDN-only to keep the main package under 2 MB.
 // A persistent-asset cache is used to reduce repeat network reads.
 const HERO_IMAGE_CDN = cdnAsset('/assets/promo/banner-hero-lovart-v1.webp')
+
+// Variant D teaser hero (Lovart dusk-city, brief:
+// docs/design/lovart-brief-flash-teaser-20261009.md). Until the asset lands,
+// the --teaser dusk gradient overlay carries the surface on image error.
+const TEASER_HERO_IMAGE_CDN = cdnAsset('/assets/alang/flash-teaser-hero-v1.webp')
 
 // ─── Sparkle layer (surprise-box breath of life) ─────────────────────
 // Five soft sparkles on negative-delay loop. Five (not three) so the
@@ -73,7 +91,7 @@ function resolveVariant(
   hasArchetype: boolean,
 ): PromoBannerVariant {
   if (explicit) return explicit
-  const allowed: PromoBannerVariant[] = ['A', 'B', 'C']
+  const allowed: PromoBannerVariant[] = ['A', 'B', 'C', 'D']
   if (urlParam && (allowed as string[]).includes(urlParam)) {
     return urlParam as PromoBannerVariant
   }
@@ -90,6 +108,10 @@ interface HeroPromoBannerProps {
    *  tabs. Defaults to true when not provided. */
   enabled?: boolean
   onCtaTap?: () => void
+  /** Variant D (flash teaser) tap target — the banner body routes to the
+   *  static teaser page. Only wired by discover when the teaser interlock
+   *  (flashTeaserHeroEnabled && !alangEnabled && hasArchetype) holds. */
+  onTeaserTap?: () => void
 }
 
 export default function HeroPromoBanner({
@@ -99,15 +121,8 @@ export default function HeroPromoBanner({
   hasArchetype = false,
   enabled = true,
   onCtaTap,
+  onTeaserTap,
 }: HeroPromoBannerProps) {
-  const [resolvedSrc, setResolvedSrc] = useState(HERO_IMAGE_CDN)
-  const [hasSwitchedToCdn, setHasSwitchedToCdn] = useState(true)
-  const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading')
-  const [retryCount, setRetryCount] = useState(0)
-  const { shouldReduceMotion } = useMiniRevealMotion()
-  const staggerMounted = useStaggerMount()
-  const { isDegradation } = useDeviceTier()
-  const { isPageVisible } = usePageVisibility()
   const router = useRouter()
 
   // Server-driven kill switch lives in the auth payload as
@@ -120,6 +135,8 @@ export default function HeroPromoBanner({
   // Variant resolution: explicit prop > URL param > archetype-driven default.
   // A-variant is the primary "this weekend" pitch; C-variant nudges the
   // user toward the personality test when they don't yet have an archetype.
+  // Variant D (flash teaser) is only ever passed explicitly by discover when
+  // its teaser interlock holds (or via ?promo=D staff debug).
   const effectiveVariant: PromoBannerVariant = useMemo(
     () =>
       resolveVariant(
@@ -129,6 +146,25 @@ export default function HeroPromoBanner({
       ),
     [variant, router?.params?.promo, hasArchetype],
   )
+
+  const isTeaserVariant = effectiveVariant === 'D'
+  const heroImageSrc = isTeaserVariant ? TEASER_HERO_IMAGE_CDN : HERO_IMAGE_CDN
+  const [resolvedSrc, setResolvedSrc] = useState(heroImageSrc)
+  const [hasSwitchedToCdn, setHasSwitchedToCdn] = useState(true)
+  const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading')
+  const [retryCount, setRetryCount] = useState(0)
+  const { shouldReduceMotion } = useMiniRevealMotion()
+  const staggerMounted = useStaggerMount()
+  const { isDegradation } = useDeviceTier()
+  const { isPageVisible } = usePageVisibility()
+
+  // Discover is a kept-alive tab: a mid-session flag flip (auth revalidation)
+  // can switch the variant without remounting — reset the hero to match.
+  useEffect(() => {
+    setResolvedSrc(heroImageSrc)
+    setImageState('loading')
+    setRetryCount(0)
+  }, [heroImageSrc])
 
   const config = PROMO_VARIANTS[effectiveVariant]
   const isCtaDisabled = !onCtaTap
@@ -215,14 +251,14 @@ export default function HeroPromoBanner({
     if (retryCount >= 2) return
     setImageState('loading')
     setHasSwitchedToCdn(true)
-    setResolvedSrc(HERO_IMAGE_CDN)
+    setResolvedSrc(heroImageSrc)
     setRetryCount((c) => c + 1)
     discoverAnalytics.track(
       'promo_banner_image_retry',
       undefined,
       { variant: effectiveVariant, retryCount },
     )
-  }, [effectiveVariant, retryCount])
+  }, [effectiveVariant, retryCount, heroImageSrc])
 
   const handleCtaTap = useCallback(() => {
     if (isCtaDisabled) return
@@ -234,6 +270,20 @@ export default function HeroPromoBanner({
     )
     onCtaTap?.()
   }, [isCtaDisabled, effectiveVariant, hasArchetype, onCtaTap])
+
+  // Variant D: the whole banner is the teaser tap target (no CTA button).
+  // Fires on the existing promo channel (variant: 'D') for funnel continuity
+  // plus flash_teaser_tap for the teaser demand signal.
+  const handleTeaserTap = useCallback(() => {
+    haptics('light')
+    discoverAnalytics.track(
+      'promo_banner_cta_tap',
+      undefined,
+      { variant: effectiveVariant, hasArchetype },
+    )
+    discoverAnalytics.track('flash_teaser_tap', undefined, { surface: 'banner' })
+    onTeaserTap?.()
+  }, [effectiveVariant, hasArchetype, onTeaserTap])
 
   const sparkles = useMemo(
     () =>
@@ -336,6 +386,17 @@ export default function HeroPromoBanner({
         >
           {config.subtitle}
         </Text>
+        {config.hideCta ? (
+          <View
+            className={[
+              'hero-promo-banner__teaser-pill',
+              animateIn ? 'stagger-in stagger-in--4' : '',
+            ].filter(Boolean).join(' ')}
+            aria-hidden='true'
+          >
+            <Text className='hero-promo-banner__teaser-pill-text'>{config.cta}</Text>
+          </View>
+        ) : (
         <View
           className={[
             'hero-promo-banner__cta',
@@ -353,6 +414,7 @@ export default function HeroPromoBanner({
             <Text className='hero-promo-banner__cta-arrow-glyph'>→</Text>
           </View>
         </View>
+        )}
         {imageState === 'error' && retryCount < 2 && (
           <View
             className='hero-promo-banner__retry'
@@ -374,16 +436,19 @@ export default function HeroPromoBanner({
       className={[
         'hero-promo-banner',
         compact ? 'hero-promo-banner--compact' : '',
+        isTeaserVariant ? 'hero-promo-banner--teaser' : '',
         shouldReduceMotion ? 'hero-promo-banner--reduce-motion' : '',
         isDegradation ? 'hero-promo-banner--degradation' : '',
         !isInView ? 'hero-promo-banner--offscreen' : '',
         !isPageVisible ? 'hero-promo-banner--page-hidden' : '',
         className,
       ].filter(Boolean).join(' ')}
-      role='region'
+      role={isTeaserVariant ? 'button' : 'region'}
       aria-label={config.accessibilityLabel}
-      aria-roledescription='活动推荐横幅'
+      aria-roledescription={isTeaserVariant ? undefined : '活动推荐横幅'}
       aria-live='polite'
+      onClick={isTeaserVariant ? handleTeaserTap : undefined}
+      hoverClass={isTeaserVariant ? 'hero-promo-banner--pressed' : ''}
     >
       <View className='hero-promo-banner__slide'>{imageBlock}{copyBlock}</View>
     </View>

@@ -8,7 +8,8 @@ import {
   type FlashStoryInteractionKind,
   type FlashStoryUnitId,
 } from '@shared/alang/flashStorySeason'
-import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
+import { useAuth } from '../../../hooks/useAuth'
+import { isStreetBlindBoxLive } from '../../../lib/alang/alangAccess'
 import { useFlashStoryArchive } from '../../../lib/alang/useFlash'
 import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
 import type { FlashStoryArchiveView } from '../../../lib/alang/flashTypes'
@@ -78,7 +79,8 @@ function pilotImprintsComplete(archive: FlashStoryArchiveView | undefined): bool
 }
 
 export default function FlashStoryArchivePage() {
-  const enabled = shouldShowStreetBlindBoxEntry()
+  const { user } = useAuth()
+  const enabled = isStreetBlindBoxLive(user)
   const { shouldReduceMotion } = useMiniRevealMotion()
   const { data, isLoading, isError, refetch } = useFlashStoryArchive(enabled)
   const archiveOpenedRef = useRef(false)

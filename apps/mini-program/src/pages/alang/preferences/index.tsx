@@ -2,7 +2,8 @@ import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { FlashFeatureClosed } from '../../../components/alang/FlashUi'
-import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
+import { useAuth } from '../../../hooks/useAuth'
+import { isStreetBlindBoxLive } from '../../../lib/alang/alangAccess'
 import './index.scss'
 
 const STORY_PROMISES = [
@@ -12,7 +13,8 @@ const STORY_PROMISES = [
 ] as const
 
 export default function FlashPreferencesPage() {
-  const enabled = shouldShowStreetBlindBoxEntry()
+  const { user } = useAuth()
+  const enabled = isStreetBlindBoxLive(user)
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '故事说明' })

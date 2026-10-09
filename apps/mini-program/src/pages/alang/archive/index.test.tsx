@@ -4,6 +4,7 @@ import FlashStoryArchivePage from './index'
 
 const mocks = vi.hoisted(() => ({
   useArchive: vi.fn(),
+  useAuth: vi.fn(),
   track: vi.fn(),
   haptics: vi.fn(),
   setNavigationBarTitle: vi.fn(),
@@ -47,6 +48,8 @@ vi.mock('../../../hooks/useMiniRevealMotion', () => ({
   useMiniRevealMotion: () => ({ motionMode: 'full', shouldReduceMotion: false, source: 'default' }),
 }))
 
+vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
+
 const emptyArchive = {
   season: { id: 'season-1', code: 's1', title: '没有名字的旧物' },
   fragments: [],
@@ -87,6 +90,9 @@ describe('FlashStoryArchivePage (谜案档案台)', () => {
     vi.useFakeTimers()
     mocks.didShow = null
     mocks.getStorageSync.mockReturnValue(null)
+    // Teaser-mode gate (sprint_20261009): pages render live content only when
+    // alangEnabled=true; these tests exercise the live surface.
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.useArchive.mockReturnValue({ data: emptyArchive, isLoading: false, isError: false, refetch: mocks.refetch })
   })
 

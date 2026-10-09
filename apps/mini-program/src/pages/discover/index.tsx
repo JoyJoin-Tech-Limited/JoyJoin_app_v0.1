@@ -51,6 +51,7 @@ import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import SingleTestBanner from '../../components/dev/SingleTestBanner'
 import AlangDiscoverCard from '../../components/alang/AlangDiscoverCard'
+import { isStreetBlindBoxLive } from '../../lib/alang/alangAccess'
 import GuidanceTipCard, { type GuidanceTipCardRowKey } from '../../components/guidance/GuidanceTipCard'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
@@ -78,7 +79,16 @@ const COLLAPSIBLE_TAB_BAR_ENABLED = true
 const DISCOVER_CARD_HEIGHT_RPX = 560
 
 // ─── Promo banner variant assignment ──────────────────────────────
-function resolveVariant(userId: string | undefined, hasArchetype: boolean): PromoBannerVariant {
+// Flash teaser interlock (sprint_20261009_flash_teaser_mode): the hero slot
+// becomes the「未拆的盒子」teaser ONLY while ops has enabled the takeover flag
+// AND the feature itself is still dark AND the user already holds an
+// archetype (no-archetype users keep the personality-test funnel C-path).
+function resolveVariant(
+  userId: string | undefined,
+  hasArchetype: boolean,
+  teaser?: { flashTeaserHeroEnabled: boolean; alangLive: boolean },
+): PromoBannerVariant {
+  if (teaser?.flashTeaserHeroEnabled && !teaser.alangLive && hasArchetype) return 'D'
   if (!hasArchetype) return 'C'
   if (!userId) return 'A'
   const hash = userId.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
@@ -436,8 +446,12 @@ function AuthenticatedDiscover({
   )
 
   const bannerVariant = useMemo(
-    () => resolveVariant(userId, !!userArchetype),
-    [userId, userArchetype],
+    () =>
+      resolveVariant(userId, !!userArchetype, {
+        flashTeaserHeroEnabled: (user as any)?.features?.flashTeaserHeroEnabled === true,
+        alangLive: (user as any)?.features?.alangEnabled === true,
+      }),
+    [userId, userArchetype, user],
   )
 
   // PR-9 funnel-tail close/tap-through events. `auto` fires from the 6s timer
@@ -506,7 +520,13 @@ function AuthenticatedDiscover({
   // only ever receives 'event' | 'street' (its two registered rows).
   const runArrivalRowAction = useCallback((key: GuidanceTipCardRowKey) => {
     if (key === 'street') {
-      Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangEvent }).catch((error) => {
+      // Teaser-mode parity (sprint_20261009): while alangEnabled is off, the
+      // coachmark street row tells the same story as the teaser card/banner —
+      // route to the static teaser page, never the closed live surface.
+      const target = isStreetBlindBoxLive(user)
+        ? MINI_PROGRAM_ROUTES.alangEvent
+        : MINI_PROGRAM_ROUTES.alangTeaser
+      Taro.navigateTo({ url: target }).catch((error) => {
         logWarn('[Discover] arrival row: failed to open 街头盲盒', {
           error: error instanceof Error ? error.message : String(error),
         })
@@ -514,7 +534,7 @@ function AuthenticatedDiscover({
       return
     }
     scrollPoolsIntoView()
-  }, [scrollPoolsIntoView])
+  }, [scrollPoolsIntoView, user])
 
   // Row tap, legacy flag-off path: dismiss as a guided tap-through (keeps
   // the arrival_hook_tap_through analytics semantics), then route.
@@ -619,6 +639,16 @@ function AuthenticatedDiscover({
     }
   }, [userArchetype, openPools])
 
+  // Variant D teaser tap → static teaser page (never a dead link).
+  const handleFlashTeaserTap = useCallback(() => {
+    Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangTeaser }).catch((error) => {
+      logWarn('[FlashTeaser] banner teaser tap: failed to open teaser page', {
+        error: String(error),
+      })
+      Taro.showToast({ title: '预告页打开失败，请更新小程序后重试', icon: 'none' })
+    })
+  }, [])
+
   // ── Location pill label ──
   const locationPillLabel = useMemo(() => {
     if (selectedCluster !== ALL_CLUSTER_ID) {
@@ -698,6 +728,7 @@ function AuthenticatedDiscover({
         // hasn't loaded yet.
         enabled={(user as any)?.features?.promoBannerEnabled ?? true}
         onCtaTap={handleBannerCtaTap}
+        onTeaserTap={handleFlashTeaserTap}
       />
 
       {/* Greeting hero */}
@@ -797,8 +828,10 @@ function AuthenticatedDiscover({
         </View>
       </View>
 
-      {/* Alang NPC prototype card — server feature flag only */}
-      <AlangDiscoverCard />
+      {/* 街头盲盒 entry — XOR with banner variant D (sprint_20261009): when the
+          hero takeover is active it carries the teaser story alone; repeating
+          the card below would spend two prime slots on one unusable feature. */}
+      {bannerVariant !== 'D' && <AlangDiscoverCard />}
 
       {/* Pool listing */}
       <View className={`discover-auth__section${!poolsLoading && (poolsError || visiblePools.length === 0) ? ' discover-auth__section--empty' : ''}`}>

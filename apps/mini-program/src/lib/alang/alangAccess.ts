@@ -11,9 +11,18 @@ export type AlangAccessUser = {
   features?: AlangFeatureFlags
 }
 
-/** 街头盲盒是正式、默认开放的产品；内部 alang 路径不代表旧原型门禁。 */
+/** 街头盲盒入口恒可见，但有两种模式：alangEnabled=false 时是「内测中」预告
+ *  态（预告卡 + 静态预告页），true 时是正式功能。模式判定用 isStreetBlindBoxLive。 */
 export function shouldShowStreetBlindBoxEntry(): boolean {
   return true
+}
+
+/** 街头盲盒正式功能是否上线（alangEnabled=true）。false = 预告态。
+ *  Fail-closed：features 缺失/未加载一律视为预告态。 */
+export function isStreetBlindBoxLive(
+  user: AlangAccessUser | null | undefined,
+): boolean {
+  return user?.features?.alangEnabled === true
 }
 
 /** Legacy Alang prototype entry points remain controlled by the old flag. */

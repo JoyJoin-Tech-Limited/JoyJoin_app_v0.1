@@ -414,11 +414,14 @@ describe('formal Flash dialogue', () => {
     }))
   })
 
-  it('loads a formal deep link when the legacy Alang flag is disabled', () => {
+  // Teaser-mode contract (sprint_20261009_flash_teaser_mode): alangEnabled is
+  // now the master switch for the formal feature — flag off = closed state,
+  // no encounter fetch.
+  it('shows the closed state without fetching when alangEnabled is false', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashDialoguePage />)
-    expect(screen.getByText('如果现在能随便逛逛，你更想去哪种地方？')).toBeInTheDocument()
-    expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', true, false)
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
+    expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', false, false)
   })
 
   it('redirects a completed season into the dedicated finale ceremony', async () => {

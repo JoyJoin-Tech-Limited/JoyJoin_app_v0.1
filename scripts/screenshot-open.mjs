@@ -57,6 +57,9 @@ const PAGES = {
   'icebreaker-warmup-generating': { url: 'http://localhost:9000/icebreaker-warmup-generating.png', altPort: 9003 },
   'icebreaker-warmup-error': { url: 'http://localhost:9000/icebreaker-warmup-error.png', altPort: 9003 },
   'landing': { url: 'http://localhost:9000/landing-blind-box.png', altPort: 9003 },
+  'flash-teaser-card': { url: 'http://localhost:9000/flash-teaser-card.png', altPort: 9003 },
+  'flash-teaser-banner': { url: 'http://localhost:9000/flash-teaser-banner.png', altPort: 9003 },
+  'flash-teaser-page': { url: 'http://localhost:9000/flash-teaser-page.png', altPort: 9003 },
   'landing-legal-hint': { url: 'http://localhost:9000/landing-legal-hint.png', altPort: 9003 },
   'gathering-room': { url: 'http://localhost:9000/gathering-room.png', altPort: 9003 },
   'personality-test-slider': { url: 'http://localhost:9000/personality-test-slider-neutral.png', altPort: 9003 },
@@ -175,6 +178,13 @@ async function main() {
   const mockServer = run('node', ['scripts/mock-h5-server.mjs'], {
     cwd: ROOT,
     silent: true,
+    env: {
+      ...process.env,
+      // Flash teaser captures need the teaser-mode fixture (alangEnabled=false);
+      // the banner capture additionally turns on the variant-D takeover.
+      MOCK_FLASH_TEASER: page.startsWith('flash-teaser') ? 'true' : 'false',
+      MOCK_FLASH_TEASER_HERO: page === 'flash-teaser-banner' ? 'true' : 'false',
+    },
   })
 
   const screenshotPort = await findFreePort(9000)

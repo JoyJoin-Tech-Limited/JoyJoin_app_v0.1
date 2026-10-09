@@ -10,7 +10,8 @@ import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
 import { FlashStoryInteractionStage } from '../../../components/alang/interaction/FlashStoryInteractionStage'
 import { isFlatLaterActUnitId } from '../../../components/alang/story-unit/LaterActStoryConfigs'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
-import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
+import { useAuth } from '../../../hooks/useAuth'
+import { isStreetBlindBoxLive } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { getApiErrorStatusCode, isTransportApiError } from '../../../lib/api/authSession'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
@@ -132,7 +133,8 @@ interface FlashDialoguePageProps {
 }
 
 export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_PROGRAM_ROUTES.alangDialogue }: FlashDialoguePageProps = {}) {
-  const enabled = shouldShowStreetBlindBoxEntry()
+  const { user } = useAuth()
+  const enabled = isStreetBlindBoxLive(user)
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const encounterId = params.encounterId ?? ''
   const replay = params.replay === '1'

@@ -1,7 +1,8 @@
 import Taro from '@tarojs/taro'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { FlashButton, FlashPageState } from '../../../components/alang/FlashUi'
-import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
+import { useAuth } from '../../../hooks/useAuth'
+import { isStreetBlindBoxLive } from '../../../lib/alang/alangAccess'
 import { useFlashEncounter } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import '../flash.scss'
@@ -14,7 +15,8 @@ const DIMENSIONS = [
 ] as const
 
 export default function FlashFinalePage() {
-  const enabled = shouldShowStreetBlindBoxEntry()
+  const { user } = useAuth()
+  const enabled = isStreetBlindBoxLive(user)
   const encounterId = Taro.getCurrentInstance().router?.params?.encounterId ?? ''
   const { data, isLoading, isError } = useFlashEncounter(encounterId, enabled && !!encounterId)
   const story = data?.storyEpisode

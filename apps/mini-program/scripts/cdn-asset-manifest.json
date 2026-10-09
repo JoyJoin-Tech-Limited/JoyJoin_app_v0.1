@@ -1993,6 +1993,14 @@
     {
       "localPath": "assets/gathering-room/room-composite-v2.webp",
       "cdnPath": "assets/gathering-room/room-composite-v2.webp"
+    },
+    {
+      "localPath": "assets/alang/flash-teaser-hero-v1.webp",
+      "cdnPath": "assets/alang/flash-teaser-hero-v1.webp"
+    },
+    {
+      "localPath": "assets/alang/flash-teaser-icon-v1.webp",
+      "cdnPath": "assets/alang/flash-teaser-icon-v1.webp"
     }
   ],
   "pendingAssets": [

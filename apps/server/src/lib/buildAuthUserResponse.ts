@@ -138,6 +138,7 @@ const [
     aigcLabelsEnabled,
     matchingOperatorReviewEnabled,
     alangEnabled,
+    flashTeaserHeroEnabled,
     flashTaskRetryTestEnabledFlag,
     squadUnboxingPocketDeckEnabled,
     profileIdentityStageEnabled,
@@ -189,6 +190,7 @@ const [
     getFeatureFlag('aigcLabelsEnabled', false),
     getFeatureFlag('matchingOperatorReviewEnabled', false),
     getFeatureFlag('alangEnabled', false),
+    getFeatureFlag('flashTeaserHeroEnabled', false),
     getFeatureFlag('flashTaskRetryTestEnabled', false),
     getFeatureFlag('squadUnboxingPocketDeckEnabled', true),
     getFeatureFlag('profileIdentityStageEnabled', true),
@@ -299,6 +301,8 @@ const [
       aigcLabelsEnabled,
       matchingOperatorReviewEnabled,
       alangEnabled,
+      /** Flash teaser hero takeover (ships dark; interlocked to !alangEnabled). */
+      flashTeaserHeroEnabled,
       flashTaskRetryTestEnabled:
         (process.env.APP_MODE ?? 'production') !== 'production' && flashTaskRetryTestEnabledFlag,
       squadUnboxingPocketDeckEnabled,

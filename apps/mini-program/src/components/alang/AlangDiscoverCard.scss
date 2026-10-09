@@ -81,8 +81,98 @@
     color: $color-primary;
     font-size: $font-size-2xl;
   }
+
+  // ── Teaser mode (alangEnabled=false) — 「未拆的盒子」 ─────────────
+  &--teaser {
+    position: relative;
+    overflow: hidden;
+    border-color: rgba($color-primary, 0.22);
+    // Deepened so the card stands beside the banner's dusk instead of fading
+    // under it (ui-layout-audit B): mist/lavender carry the body, cream only
+    // kisses the top-left.
+    background: linear-gradient(
+      160deg,
+      $color-dusk-blush 0%,
+      $color-dusk-mist 46%,
+      $color-dusk-lavender 100%
+    );
+  }
+
+  &__bolt--teaser {
+    position: relative;
+    background: $color-dusk-deep;
+    box-shadow: 0 6rpx 18rpx rgba($color-primary-dark, 0.28);
+  }
+
+  // Golden halo behind the box icon — opacity-only breath, 4s cycle.
+  // Runs only under --teaser-animate (in-view + motion allowed + not degraded).
+  &__halo {
+    position: absolute;
+    top: -22%;
+    right: -22%;
+    bottom: -22%;
+    left: -22%;
+    background: radial-gradient(circle, rgba(251, 191, 36, 0.55) 0%, rgba(251, 191, 36, 0) 70%);
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  &__beta-pill {
+    padding: 4rpx 12rpx;
+    border-radius: $radius-pill;
+    // One pill token across all teaser surfaces (card / banner / page):
+    // solid coral + deep warm-brown text.
+    background: rgba(255, 155, 133, 0.92);
+    color: #4A2E00;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+  }
+
+  // Golden sheen sweep across the card — 8s cycle, transform-only.
+  &__sheen {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    background: linear-gradient(
+      105deg,
+      rgba(253, 230, 138, 0) 0%,
+      rgba(253, 230, 138, 0.35) 50%,
+      rgba(253, 230, 138, 0) 100%
+    );
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+
+  &--teaser-animate {
+    .alang-discover-card__halo {
+      animation: alang-teaser-halo-breath 4s ease-in-out infinite;
+    }
+    .alang-discover-card__sheen {
+      animation: alang-teaser-sheen-sweep 8s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes alang-teaser-halo-breath {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.65; }
+}
+
+@keyframes alang-teaser-sheen-sweep {
+  0% { transform: translateX(-120%); }
+  18% { transform: translateX(320%); }
+  100% { transform: translateX(320%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .alang-discover-card { transition: none; }
+  .alang-discover-card {
+    transition: none;
+
+    &__halo,
+    &__sheen {
+      animation: none;
+    }
+  }
 }

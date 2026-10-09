@@ -1,6 +1,11 @@
 # Lovart Brief — 街头盲盒预告态（Teaser）资产系列 (2026-10-09)
 
-> Status: **pending generation**。手动在 Lovart ChatCanvas 执行。
+> Status: **assets generated & integrated — CDN upload pending**。两张资产已生成、验收通过、
+> 处理入库（`src/assets/alang/flash-teaser-{hero,icon}-v1.webp`，manifest 已登记，dist 已清理）。
+> 母版：`assets-source/lovart/flash-teaser/`。剩最后一步：commit + push 后跑
+> `gh workflow run "Upload CDN Assets"`，上传成功全链路自动点亮。
+> 布局适配（2026-10-09 asset pass）：hero 焦点（悦仔+盒子）居中偏下，预告页文案上移至天空干净区；
+> 卡图标用 `aspectFit` 防狼耳裁切。
 > 背景：街头盲盒功能上线期保持服务端关闭（`alangEnabled=false`），Discover 入口卡改为「内测中」预告卡 + 静态预告落页。本系列两张资产服务于该预告态。
 > 下游交接：资产生成后走 CDN 上传流程 + LQIP 管线，前端落地交 `taro-engineer`。
 

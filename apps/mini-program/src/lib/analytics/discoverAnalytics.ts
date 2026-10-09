@@ -27,6 +27,9 @@ export type DiscoverAnalyticsEventType =
   | 'promo_banner_cta_tap'
   | 'promo_banner_image_error'
   | 'promo_banner_image_retry'
+  // Flash teaser mode (2026-10-09): demand signal while alangEnabled is off.
+  | 'flash_teaser_impression'
+  | 'flash_teaser_tap'
   | 'welcome_coupon_banner_impression'
   | 'welcome_coupon_banner_tap'
   | 'welcome_coupon_auto_applied'

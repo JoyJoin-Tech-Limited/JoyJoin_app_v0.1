@@ -371,10 +371,12 @@ describe('formal Flash map navigation', () => {
     expect(screen.queryByText('60 米')).not.toBeInTheDocument()
   })
 
-  it('still requires explicit GPS consent when the legacy Alang flag is disabled', async () => {
+  // Teaser-mode contract (sprint_20261009_flash_teaser_mode): flag off =
+  // closed state; the page never reaches the GPS consent prompt.
+  it('shows the closed state and never touches location when alangEnabled is false', async () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashMapPage />)
-    expect(await screen.findByText('打开前台定位，开始找默默？')).toBeInTheDocument()
+    expect(await screen.findByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
   })
 })

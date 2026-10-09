@@ -154,6 +154,10 @@ const DISCOVER_EVENT_TYPES = [
   "promo_banner_cta_tap",
   "promo_banner_image_error",
   "promo_banner_image_retry",
+  // Flash teaser mode (sprint_20261009_flash_teaser_mode): teaser-surface
+  // demand signal while alangEnabled is off.
+  "flash_teaser_impression",
+  "flash_teaser_tap",
   "corner_badge_impression",
   "corner_badge_live_update",
   "welcome_coupon_banner_impression",

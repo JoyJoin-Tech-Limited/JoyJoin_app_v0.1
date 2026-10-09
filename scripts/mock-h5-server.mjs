@@ -69,7 +69,11 @@ const MOCK_USER = {
     profileRedesignEnabled: true,
     matchingPuzzlePreludeEnabled: true,
     oracleCardCornerStatEnabled: true,
-    alangEnabled: true,
+    // Flash teaser screenshot modes (screenshot-open.mjs): MOCK_FLASH_TEASER
+    // puts the feature in teaser mode; MOCK_FLASH_TEASER_HERO additionally
+    // enables the banner variant-D takeover (which suppresses the card — XOR).
+    alangEnabled: process.env.MOCK_FLASH_TEASER === 'true' ? false : true,
+    flashTeaserHeroEnabled: process.env.MOCK_FLASH_TEASER_HERO === 'true',
     profilePixelAvatarEnabled: true,
     equipmentRewardsEnabled: true,
     personalStoryEnabled: true,
