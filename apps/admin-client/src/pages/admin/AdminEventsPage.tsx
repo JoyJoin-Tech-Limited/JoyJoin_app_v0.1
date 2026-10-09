@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
@@ -87,6 +87,16 @@ interface BlindBoxEvent {
   selectedCuisines?: string[] | null;
 }
 
+interface EventsResponse {
+  items: BlindBoxEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+  statusCounts?: Record<string, number>;
+}
+
+const EVENTS_PAGE_SIZE = 50;
+
 interface EventPoolSummary {
   id: string;
   title: string;
@@ -137,17 +147,6 @@ const budgetOptions = [
   { value: "200-300", label: "200-300" },
   { value: "300-500", label: "300-500" },
 ] as const;
-
-/**
- * Split the stored blind-box budget vocabulary. `blindBoxEventsRepo` writes
- * `budget.join('/')`, so a row can carry several tiers ("150-200/200-300") and
- * an exact string compare would silently match none of them.
- */
-const splitBudgetTiers = (raw: string | null | undefined): string[] =>
-  (raw ?? "")
-    .split("/")
-    .map((value) => value.trim())
-    .filter(Boolean);
 
 const formatEventDateTime = (dateTimeStr: string) =>
   safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { locale: zhCN, fallback: dateTimeStr });
@@ -203,6 +202,11 @@ export default function AdminEventsPage() {
   const [languageFilter, setLanguageFilter] = useState<LanguageFilter>("all");
   const [tasteFilter, setTasteFilter] = useState<TasteFilter>("all");
   const [cuisineFilter, setCuisineFilter] = useState<CuisineFilter>("all");
+  const [eventsPage, setEventsPage] = useState(1);
+
+  useEffect(() => {
+    setEventsPage(1);
+  }, [statusFilter, cityFilter, eventTypeFilter, budgetFilter, languageFilter, tasteFilter, cuisineFilter]);
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -213,16 +217,49 @@ export default function AdminEventsPage() {
 
   const { toast } = useToast();
 
-  // 盲盒活动列表
+  // 盲盒活动列表（服务端分页 + 筛选）
   const {
-    data: events = [],
+    data: eventsData,
     isLoading: isLoadingEvents,
     isError: isEventsError,
     error: eventsError,
     refetch: refetchEvents,
-  } = useQuery<BlindBoxEvent[]>({
-    queryKey: ["/api/admin/events"],
+  } = useQuery<EventsResponse>({
+    queryKey: [
+      "/api/admin/events",
+      {
+        status: statusFilter,
+        city: cityFilter,
+        eventType: eventTypeFilter,
+        budgetTier: budgetFilter,
+        language: languageFilter,
+        taste: tasteFilter,
+        cuisine: cuisineFilter,
+        page: eventsPage,
+      },
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append("limit", String(EVENTS_PAGE_SIZE));
+      params.append("offset", String((eventsPage - 1) * EVENTS_PAGE_SIZE));
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      if (cityFilter !== "all") params.append("city", cityFilter);
+      if (eventTypeFilter !== "all") params.append("eventType", eventTypeFilter);
+      if (budgetFilter !== "all") params.append("budgetTier", budgetFilter);
+      if (languageFilter !== "all") params.append("language", languageFilter);
+      if (tasteFilter !== "all") params.append("taste", tasteFilter);
+      if (cuisineFilter !== "all") params.append("cuisine", cuisineFilter);
+      const res = await apiRequest("GET", `/api/admin/events?${params.toString()}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return { items: data as BlindBoxEvent[], total: data.length, limit: data.length, offset: 0 } as EventsResponse;
+      }
+      return data as EventsResponse;
+    },
   });
+
+  const events = eventsData?.items ?? [];
+  const eventsTotal = eventsData?.total ?? 0;
 
   // 活动池列表（用于创建盲盒活动时选择池子）
   const { data: pools = [] } = useQuery<EventPoolSummary[]>({
@@ -316,65 +353,14 @@ export default function AdminEventsPage() {
     setShowCancelDialog(false);
   };
 
-  // ====== 衍生数据：统计 & 过滤 ======
-  const totalEvents = events.length;
-  const pendingCount = events.filter((e) => e.status === "pending_match").length;
-  const matchedCount = events.filter((e) => e.status === "matched").length;
-  const completedCount = events.filter((e) => e.status === "completed").length;
+  // ====== 衍生数据：统计（全局聚合，服务端返回）======
+  const statusCounts = eventsData?.statusCounts;
+  const totalEvents = statusCounts?.total ?? eventsTotal;
+  const pendingCount = statusCounts?.pending_match ?? 0;
+  const matchedCount = statusCounts?.matched ?? 0;
+  const completedCount = statusCounts?.completed ?? 0;
 
-  const filteredEvents = useMemo(() => {
-    return events.filter((e) => {
-      if (statusFilter !== "all" && e.status !== statusFilter) return false;
-
-      if (cityFilter !== "all" && e.city !== cityFilter) return false;
-
-      if (eventTypeFilter !== "all" && e.eventType !== eventTypeFilter)
-        return false;
-
-      // 按预算筛选：存储值可能是 "/" 连接的多个档位（blindBoxEventsRepo 写入
-      // `budget.join('/')`），因此按成员匹配而不是整串相等——整串相等会静默地
-      // 一个都不匹配。没有注册表对应值的档位（盲盒词汇 `100-200`）按设计保持
-      // 不匹配：其映射是未决产品决策 B3，不得在此猜测。
-      if (budgetFilter !== "all" && !splitBudgetTiers(e.budgetTier).includes(budgetFilter))
-        return false;
-
-      // 按语言偏好筛选（活动要求该语言时才会显示）
-      if (
-        languageFilter !== "all" &&
-        (!e.selectedLanguages || !e.selectedLanguages.includes(languageFilter))
-      ) {
-        return false;
-      }
-
-      // 按口味偏好筛选
-      if (
-        tasteFilter !== "all" &&
-        (!e.selectedTasteIntensity ||
-          !e.selectedTasteIntensity.includes(tasteFilter))
-      ) {
-        return false;
-      }
-
-      // 按菜系偏好筛选
-      if (
-        cuisineFilter !== "all" &&
-        (!e.selectedCuisines || !e.selectedCuisines.includes(cuisineFilter))
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [
-    events,
-    statusFilter,
-    cityFilter,
-    eventTypeFilter,
-    budgetFilter,
-    languageFilter,
-    tasteFilter,
-    cuisineFilter,
-  ]);
+  const filteredEvents = events;
 
   const getCreatorName = (event: BlindBoxEvent) => {
     if (!event.creator) return "未知用户";
@@ -669,7 +655,8 @@ export default function AdminEventsPage() {
               data-testid="text-no-events"
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredEvents.map((event) => (
                 <Card
                   key={event.id}
@@ -774,7 +761,32 @@ export default function AdminEventsPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+              </div>
+              <div className="flex items-center justify-between pt-4">
+                <div className="text-sm text-muted-foreground">共 {eventsTotal} 条</div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={eventsPage <= 1}
+                    onClick={() => setEventsPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    上一页
+                  </Button>
+                  <span className="text-sm">
+                    {eventsPage} / {Math.max(1, Math.ceil(eventsTotal / EVENTS_PAGE_SIZE))}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={eventsPage * EVENTS_PAGE_SIZE >= eventsTotal}
+                    onClick={() => setEventsPage((prev) => prev + 1)}
+                  >
+                    下一页
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

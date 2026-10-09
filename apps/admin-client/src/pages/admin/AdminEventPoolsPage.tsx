@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
@@ -94,6 +94,9 @@ const RAW_STATUS_LABEL: Record<
   { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
 > = {
   active: { label: "招募中", variant: "secondary" },
+  matching: { label: "排桌中", variant: "default" },
+  matched: { label: "排桌完成", variant: "default" },
+  completed: { label: "已结束", variant: "outline" },
   cancelled: { label: "已取消", variant: "destructive" },
   archived: { label: "已关闭", variant: "outline" },
 };
@@ -348,7 +351,6 @@ export default function AdminEventPoolsPage() {
       apiRequest("PATCH", `/api/admin/event-pools/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/event-pools"] });
       setShowCreateDialog(false);
       setEditingPoolId(null);
       form.reset();
@@ -459,55 +461,66 @@ export default function AdminEventPoolsPage() {
   };
 
   // ====== 派生数据：根据报名情况算业务状态 ======
-  const poolsWithFlags = pools.map((pool) => {
-    const pending = pool.pendingCount ?? 0;
-    const matched = pool.matchedCount ?? 0;
-    const successfulMatches = pool.successfulMatches ?? 0;
+  const {
+    totalPools,
+    activePools,
+    poolsWithWaiting,
+    poolsWithEvents,
+    filteredPools,
+  } = useMemo(() => {
+    const augmented = pools.map((pool) => {
+      const pending = pool.pendingCount ?? 0;
+      const matched = pool.matchedCount ?? 0;
+      const successfulMatches = pool.successfulMatches ?? 0;
 
-    const hasWaiting = pending > 0;
-    const hasEvents = matched > 0 || successfulMatches > 0;
+      const hasWaiting = pending > 0;
+      const hasEvents = matched > 0 || successfulMatches > 0;
+
+      return {
+        ...pool,
+        _hasWaiting: hasWaiting,
+        _hasEvents: hasEvents,
+      };
+    });
+
+    const filtered = augmented
+      .filter((pool) => {
+        if (cityFilter !== "all" && pool.city !== cityFilter) return false;
+        if (waitingFilter === "hasWaiting" && !pool._hasWaiting) return false;
+        if (waitingFilter === "noWaiting" && pool._hasWaiting) return false;
+        if (eventsFilter === "hasEvents" && !pool._hasEvents) return false;
+        if (eventsFilter === "noEvents" && pool._hasEvents) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const time = (d: string | undefined) => {
+          const t = d ? new Date(d).getTime() : 0;
+          return Number.isNaN(t) ? 0 : t;
+        };
+        switch (sortBy) {
+          case "newest":
+            return time(b.createdAt) - time(a.createdAt);
+          case "oldest":
+            return time(a.createdAt) - time(b.createdAt);
+          case "title":
+            return (a.title || "").localeCompare(b.title || "");
+          case "mostRegistrations":
+            return (b.registrationCount ?? 0) - (a.registrationCount ?? 0);
+          case "mostMatched":
+            return (b.matchedCount ?? 0) - (a.matchedCount ?? 0);
+          default:
+            return 0;
+        }
+      });
 
     return {
-      ...pool,
-      _hasWaiting: hasWaiting,
-      _hasEvents: hasEvents,
+      totalPools: augmented.length,
+      activePools: augmented.filter((p) => p.status === "active").length,
+      poolsWithWaiting: augmented.filter((p) => p._hasWaiting).length,
+      poolsWithEvents: augmented.filter((p) => p._hasEvents).length,
+      filteredPools: filtered,
     };
-  });
-
-  const totalPools = poolsWithFlags.length;
-  const activePools = poolsWithFlags.filter((p) => p.status === "active").length;
-  const poolsWithWaiting = poolsWithFlags.filter((p) => p._hasWaiting).length;
-  const poolsWithEvents = poolsWithFlags.filter((p) => p._hasEvents).length;
-
-  const filteredPools = poolsWithFlags
-    .filter((pool) => {
-      if (cityFilter !== "all" && pool.city !== cityFilter) return false;
-      if (waitingFilter === "hasWaiting" && !pool._hasWaiting) return false;
-      if (waitingFilter === "noWaiting" && pool._hasWaiting) return false;
-      if (eventsFilter === "hasEvents" && !pool._hasEvents) return false;
-      if (eventsFilter === "noEvents" && pool._hasEvents) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      const time = (d: string | undefined) => {
-        const t = d ? new Date(d).getTime() : 0;
-        return Number.isNaN(t) ? 0 : t;
-      };
-      switch (sortBy) {
-        case "newest":
-          return time(b.createdAt) - time(a.createdAt);
-        case "oldest":
-          return time(a.createdAt) - time(b.createdAt);
-        case "title":
-          return (a.title || "").localeCompare(b.title || "");
-        case "mostRegistrations":
-          return (b.registrationCount ?? 0) - (a.registrationCount ?? 0);
-        case "mostMatched":
-          return (b.matchedCount ?? 0) - (a.matchedCount ?? 0);
-        default:
-          return 0;
-      }
-    });
+  }, [pools, cityFilter, waitingFilter, eventsFilter, sortBy]);
 
   const handleCopyPool = (pool: AdminEventPool) => {
     // 快速复制：将池子信息填充到表单

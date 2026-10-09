@@ -345,6 +345,7 @@ export default function AdminDataInsightsPage() {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
+                      isAnimationActive={false}
                     >
                       {[
                         COLORS.new,

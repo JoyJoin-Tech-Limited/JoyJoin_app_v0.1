@@ -121,9 +121,9 @@ export default function AdminNotificationsPage() {
     queryKey: ["/api/admin/events", "notification-broadcast"],
     enabled: recipientFilter === "event",
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/events");
+      const res = await apiRequest("GET", "/api/admin/events?limit=500");
       const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      return (Array.isArray(data) ? data : data?.items ?? []) as AdminEventOption[];
     },
   });
 

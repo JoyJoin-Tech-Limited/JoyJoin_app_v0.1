@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,8 @@ interface FeedbackListItem {
   };
 }
 
+const FEEDBACK_PAGE_SIZE = 50;
+
 export default function AdminFeedbackPage() {
   const [filters, setFilters] = useState({
     eventId: "",
@@ -111,6 +113,11 @@ export default function AdminFeedbackPage() {
     endDate: "",
     hasDeepFeedback: undefined as boolean | undefined,
   });
+  const [feedbackPage, setFeedbackPage] = useState(1);
+
+  useEffect(() => {
+    setFeedbackPage(1);
+  }, [filters]);
 
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
 
@@ -119,14 +126,14 @@ export default function AdminFeedbackPage() {
     queryKey: ["/api/admin/feedback/stats"],
   });
 
-  // Fetch all feedbacks with filters
+  // Fetch feedbacks with filters + server pagination
   const {
-    data: feedbacks = [],
+    data: feedbacksData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useQuery<FeedbackListItem[]>({
+  } = useQuery<{ items: FeedbackListItem[]; total: number }>({
     queryKey: [
       "/api/admin/feedback",
       filters.eventId,
@@ -135,9 +142,12 @@ export default function AdminFeedbackPage() {
       filters.startDate,
       filters.endDate,
       filters.hasDeepFeedback,
+      feedbackPage,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
+      params.append("limit", String(FEEDBACK_PAGE_SIZE));
+      params.append("offset", String((feedbackPage - 1) * FEEDBACK_PAGE_SIZE));
       if (filters.eventId) params.append("eventId", filters.eventId);
       if (filters.minRating) params.append("minRating", filters.minRating);
       if (filters.maxRating) params.append("maxRating", filters.maxRating);
@@ -145,15 +155,24 @@ export default function AdminFeedbackPage() {
       if (filters.endDate) params.append("endDate", filters.endDate);
       if (filters.hasDeepFeedback !== undefined) params.append("hasDeepFeedback", String(filters.hasDeepFeedback));
 
-      const query = params.toString();
-      const response = await apiRequest("GET", `/api/admin/feedback${query ? `?${query}` : ""}`);
-      return response.json();
+      const response = await apiRequest("GET", `/api/admin/feedback?${params.toString()}`);
+      const data = await response.json();
+      if (Array.isArray(data)) return { items: data as FeedbackListItem[], total: data.length };
+      return { items: (data?.items ?? []) as FeedbackListItem[], total: Number(data?.total ?? 0) };
     },
   });
 
+  const feedbacks = feedbacksData?.items ?? [];
+  const feedbacksTotal = feedbacksData?.total ?? 0;
+
   // Fetch events for filter dropdown
   const { data: events = [] } = useQuery<EventListItem[]>({
-    queryKey: ["/api/admin/events"],
+    queryKey: ["/api/admin/events", "feedback-filter"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/events?limit=500");
+      const data = await res.json();
+      return (Array.isArray(data) ? data : data?.items ?? []) as EventListItem[];
+    },
   });
 
   // Fetch selected feedback details
@@ -488,6 +507,30 @@ export default function AdminFeedbackPage() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="flex items-center justify-between border-t px-3 py-2">
+                <div className="text-sm text-muted-foreground">共 {feedbacksTotal} 条</div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={feedbackPage <= 1}
+                    onClick={() => setFeedbackPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    上一页
+                  </Button>
+                  <span className="text-sm">
+                    {feedbackPage} / {Math.max(1, Math.ceil(feedbacksTotal / FEEDBACK_PAGE_SIZE))}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={feedbackPage * FEEDBACK_PAGE_SIZE >= feedbacksTotal}
+                    onClick={() => setFeedbackPage((prev) => prev + 1)}
+                  >
+                    下一页
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

@@ -41,7 +41,7 @@ interface Payment {
   user_id: string;
   amount: number;
   payment_type: "subscription" | "event" | "event_bundle" | "event_pack";
-  status: "completed" | "pending" | "failed" | "refunded";
+  status: "completed" | "pending" | "failed" | "refunded" | "refund_pending";
   payment_method: string;
   created_at: string;
   user_first_name: string | null;
@@ -65,9 +65,10 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
   pending: { label: "待处理", variant: "secondary" },
   failed: { label: "失败", variant: "destructive" },
   refunded: { label: "已退款", variant: "outline" },
+  refund_pending: { label: "退款处理中", variant: "secondary" },
 };
 
-const EVENT_PAYMENT_TYPES = ["event", "event_bundle", "event_pack"] as const;
+const PAYMENTS_PAGE_SIZE = 50;
 
 const PAYMENT_TYPE_MAP: Record<string, { label: string; variant: "default" | "outline" }> = {
   subscription: { label: "权益", variant: "default" },
@@ -133,6 +134,7 @@ function FinanceErrorState({
 export default function AdminFinancePage() {
   const [mainTab, setMainTab] = useState<"payments" | "commissions" | "refunds">("payments");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "subscription" | "event">("all");
+  const [paymentsPage, setPaymentsPage] = useState(1);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [refundPayment, setRefundPayment] = useState<Payment | null>(null);
   const [refundReason, setRefundReason] = useState("");
@@ -143,28 +145,31 @@ export default function AdminFinancePage() {
   });
 
   const {
-    data: payments = [],
+    data: paymentsData,
     isLoading: paymentsLoading,
     isError: paymentsError,
     error: paymentsQueryError,
     refetch: refetchPayments,
-  } = useQuery<Payment[]>({
-    queryKey: ["/api/admin/finance/payments", paymentFilter],
+  } = useQuery<{ payments: Payment[]; total: number }>({
+    queryKey: ["/api/admin/finance/payments", paymentFilter, paymentsPage],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/admin/finance/payments");
-      const data = await response.json();
-      const rows: Payment[] = Array.isArray(data) ? data : data?.payments ?? [];
-      if (paymentFilter === "all") {
-        return rows;
-      }
+      const params = new URLSearchParams();
+      params.append("limit", String(PAYMENTS_PAGE_SIZE));
+      params.append("offset", String((paymentsPage - 1) * PAYMENTS_PAGE_SIZE));
       if (paymentFilter === "event") {
-        return rows.filter((payment) =>
-          (EVENT_PAYMENT_TYPES as readonly string[]).includes(payment.payment_type),
-        );
+        params.append("typeGroup", "event");
+      } else if (paymentFilter !== "all") {
+        params.append("type", paymentFilter);
       }
-      return rows.filter((payment) => payment.payment_type === paymentFilter);
+      const response = await apiRequest("GET", `/api/admin/finance/payments?${params.toString()}`);
+      const data = await response.json();
+      if (Array.isArray(data)) return { payments: data as Payment[], total: data.length };
+      return { payments: (data?.payments ?? []) as Payment[], total: Number(data?.total ?? 0) };
     },
   });
+
+  const payments = paymentsData?.payments ?? [];
+  const paymentsTotal = paymentsData?.total ?? 0;
 
   const {
     data: commissions = [],
@@ -335,7 +340,7 @@ export default function AdminFinancePage() {
             {/* Payment Records Tab */}
             <TabsContent value="payments" className="space-y-4">
               <div className="flex items-center justify-between">
-                <Tabs value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as "all" | "subscription" | "event")}>
+                <Tabs value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v as "all" | "subscription" | "event"); setPaymentsPage(1); }}>
                   <TabsList data-testid="tabs-payment-filter">
                     <TabsTrigger value="all" data-testid="filter-all">
                       全部
@@ -351,9 +356,26 @@ export default function AdminFinancePage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
+                    const allPayments: Payment[] = [];
+                    const exportPageSize = 200;
+                    for (let pageIndex = 0; pageIndex < 50; pageIndex += 1) {
+                      const params = new URLSearchParams();
+                      params.append("limit", String(exportPageSize));
+                      params.append("offset", String(pageIndex * exportPageSize));
+                      if (paymentFilter === "event") {
+                        params.append("typeGroup", "event");
+                      } else if (paymentFilter !== "all") {
+                        params.append("type", paymentFilter);
+                      }
+                      const res = await apiRequest("GET", `/api/admin/finance/payments?${params.toString()}`);
+                      const data = await res.json();
+                      const rows: Payment[] = Array.isArray(data) ? data : data?.payments ?? [];
+                      allPayments.push(...rows);
+                      if (rows.length < exportPageSize) break;
+                    }
                     const headers = ["ID", "用户", "类型", "金额", "关联内容", "状态", "支付方式", "创建时间"];
-                    const rows = payments.map((p) => [
+                    const rows = allPayments.map((p) => [
                       p.id,
                       `${p.user_first_name || ''} ${p.user_last_name || ''}`.trim() || p.user_email || '',
                       p.payment_type,
@@ -472,6 +494,30 @@ export default function AdminFinancePage() {
                       ))}
                     </TableBody>
                   </Table>
+                  <div className="flex items-center justify-between border-t px-3 py-2">
+                    <div className="text-sm text-muted-foreground">共 {paymentsTotal} 条</div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={paymentsPage <= 1}
+                        onClick={() => setPaymentsPage((prev) => Math.max(1, prev - 1))}
+                      >
+                        上一页
+                      </Button>
+                      <span className="text-sm">
+                        {paymentsPage} / {Math.max(1, Math.ceil(paymentsTotal / PAYMENTS_PAGE_SIZE))}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={paymentsPage * PAYMENTS_PAGE_SIZE >= paymentsTotal}
+                        onClick={() => setPaymentsPage((prev) => prev + 1)}
+                      >
+                        下一页
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </TabsContent>

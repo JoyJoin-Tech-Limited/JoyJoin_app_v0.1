@@ -55,6 +55,7 @@ export default function AdminUsersPage() {
   const [, setLocation] = useLocation();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "subscribed" | "banned" | "stuck">("all");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [cityFilter, setCityFilter] = useState<string>("");
@@ -76,11 +77,16 @@ export default function AdminUsersPage() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const { data: users = [], isLoading, isError, error, refetch } = useQuery<AdminUser[]>({
-    queryKey: ["/api/admin/users", { search: searchQuery, filter: filterStatus === "all" ? undefined : filterStatus, city: cityFilter, archetype: archetypeFilter, maxCompleteness }],
+    queryKey: ["/api/admin/users", { search: debouncedSearchQuery, filter: filterStatus === "all" ? undefined : filterStatus, city: cityFilter, archetype: archetypeFilter, maxCompleteness }],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (searchQuery) params.append("search", searchQuery);
+      if (debouncedSearchQuery) params.append("search", debouncedSearchQuery);
       if (filterStatus !== "all") params.append("filter", filterStatus);
       if (cityFilter) params.append("city", cityFilter);
       if (archetypeFilter) params.append("archetype", archetypeFilter);

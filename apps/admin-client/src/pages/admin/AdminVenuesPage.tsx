@@ -43,6 +43,7 @@ import MapPicker from "@/components/discover/MapPicker";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import { fmtDate } from "@/lib/dateUtils";
 import {
+  CITIES,
   DAYS_OF_WEEK,
   type Venue,
   type AllTimeSlot,
@@ -113,11 +114,6 @@ function buildVenuePayload(
 const VENUE_TYPES = [
   { value: "restaurant", label: "餐厅" },
   { value: "bar", label: "酒吧" },
-];
-
-const CITIES = [
-  { value: "深圳", label: "深圳" },
-  { value: "香港", label: "香港" },
 ];
 
 const ONBOARDING_STATUS_CONFIG: Record<
@@ -294,6 +290,7 @@ export default function AdminVenuesPage() {
     },
     onSuccess: (result: { message?: string } | null) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/venues"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/time-slots/all"] });
       setShowDeleteDialog(false);
       setSelectedVenue(null);
       toast({
@@ -554,10 +551,20 @@ export default function AdminVenuesPage() {
     return result;
   }, [venues, filterType, filterOnboardingStatus, filterCity, searchQuery]);
 
-  const activeVenues = venues.filter(v => v.isActive).length;
-  const pendingReviewCount = venues.filter(v => v.onboardingStatus === "pending_review").length;
-  const totalBookings = venues.reduce((sum, v) => sum + (v.bookingCount || 0), 0);
-  const totalCommission = venues.reduce((sum, v) => sum + (v.totalCommission || 0), 0);
+  const { activeVenues, pendingReviewCount, totalBookings, totalCommission } = useMemo(() => ({
+    activeVenues: venues.filter(v => v.isActive).length,
+    pendingReviewCount: venues.filter(v => v.onboardingStatus === "pending_review").length,
+    totalBookings: venues.reduce((sum, v) => sum + (v.bookingCount || 0), 0),
+    totalCommission: venues.reduce((sum, v) => sum + (v.totalCommission || 0), 0),
+  }), [venues]);
+
+  const venueTimeSlotSummaryById = useMemo(() => {
+    const map: Record<string, ReturnType<typeof getVenueTimeSlotSummary>> = {};
+    filteredVenues.forEach((venue) => {
+      map[venue.id] = getVenueTimeSlotSummary(venue.id);
+    });
+    return map;
+  }, [filteredVenues, slotsByVenueId]);
 
   return (
     <div className="p-8 space-y-6">
@@ -852,7 +859,7 @@ export default function AdminVenuesPage() {
 
                 {/* Time slot summary */}
                 {(() => {
-                  const summary = getVenueTimeSlotSummary(venue.id);
+                  const summary = venueTimeSlotSummaryById[venue.id];
                   return (
                     <div className="flex items-center gap-1.5 text-xs py-1.5 border-t">
                       <Clock className="h-3 w-3 flex-shrink-0" />
