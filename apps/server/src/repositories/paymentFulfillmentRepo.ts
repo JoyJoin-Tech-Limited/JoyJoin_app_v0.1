@@ -11,7 +11,7 @@ import {
   userCoupons,
 } from "@shared/schema";
 import * as schema from "@shared/schema";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ne, notInArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "../db";
 import { eventCreditsRepo } from "./eventCreditsRepo";
@@ -164,6 +164,20 @@ export const paymentFulfillmentRepo = {
         return { payment, alreadyCompleted: true };
       }
 
+      // Refund-flow states are terminal for payment fulfillment (2026-10-06):
+      // a reconcile/status query on a refund_pending row sees WeChat
+      // trade_state=SUCCESS and must NOT resurrect the payment to completed —
+      // that would re-fire user notifications and re-open a second refund
+      // window. alreadyCompleted=true so callers skip all side effects.
+      if (payment.status === "refund_pending" || payment.status === "refunded") {
+        logger.info("Payment fulfillment skipped: payment is in refund flow", {
+          payment_id: payment.id,
+          wechat_order_id: params.wechatOrderId,
+          status: payment.status,
+        });
+        return { payment, alreadyCompleted: true };
+      }
+
       const [updatedPayment] = await tx
         .update(payments)
         .set({
@@ -171,7 +185,12 @@ export const paymentFulfillmentRepo = {
           wechatTransactionId: params.transactionId,
           paidAt: new Date(),
         })
-        .where(and(eq(payments.id, payment.id), ne(payments.status, "completed")))
+        .where(
+          and(
+            eq(payments.id, payment.id),
+            notInArray(payments.status, ["completed", "refund_pending", "refunded"]),
+          ),
+        )
         .returning();
 
       if (!updatedPayment) {

@@ -16,6 +16,7 @@ import { startPersonalStoryWorker } from "./jobs/personalStoryWorker";
 import { startPoolMatchingWatchdog } from "./lib/poolMatchingWatchdog";
 import { startVenueTbdRetryScheduler } from "./lib/venueTbdRetryScheduler";
 import { startSubscribeReminderScheduler } from "./lib/subscribeReminderScheduler";
+import { startPoolCompletionSweepScheduler } from "./lib/poolCompletionSweep";
 import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
@@ -189,6 +190,10 @@ app.use((req, res, next) => {
       // Notification strategy (2026-09-16): event-day morning + T+1 recap
       // subscribe pushes; dark until template env vars are configured.
       startSubscribeReminderScheduler();
+      // Pool completion sweep (2026-10-06): flip pools + matched registrations
+      // to completed at event start +3h — "event ended" no longer depends on
+      // manual admin PATCH.
+      startPoolCompletionSweepScheduler();
     });
   } catch (error) {
     logger.error("Failed to start server", { error: String(error) });

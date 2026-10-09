@@ -90,6 +90,44 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
     vi.clearAllMocks();
   });
 
+  it("treats refund_pending as terminal — no resurrection, no side effects (2026-10-06)", async () => {
+    // A reconcile/status query on a refund_pending row sees WeChat
+    // trade_state=SUCCESS; before this guard the payment was flipped back to
+    // completed mid-refund (duplicate notifications + double-refund window).
+    const { tx, insertMock } = createTxHarness({
+      selectResults: [[{ ...basePayment, status: "refund_pending" }]],
+    });
+
+    mockDb.transaction.mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId: basePayment.wechatOrderId,
+      transactionId: "wx_txn_001",
+    });
+
+    expect(result.alreadyCompleted).toBe(true);
+    expect(result.payment).toMatchObject({ id: basePayment.id, status: "refund_pending" });
+    expect(tx.update).not.toHaveBeenCalled();
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("treats refunded as terminal — no resurrection, no side effects", async () => {
+    const { tx, insertMock } = createTxHarness({
+      selectResults: [[{ ...basePayment, status: "refunded" }]],
+    });
+
+    mockDb.transaction.mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId: basePayment.wechatOrderId,
+      transactionId: "wx_txn_001",
+    });
+
+    expect(result.alreadyCompleted).toBe(true);
+    expect(tx.update).not.toHaveBeenCalled();
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
   it("treats a zero-row payment update as already completed and skips side effects", async () => {
     const { tx, insertMock } = createTxHarness({
       selectResults: [

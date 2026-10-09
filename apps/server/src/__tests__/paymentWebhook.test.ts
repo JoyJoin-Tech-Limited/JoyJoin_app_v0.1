@@ -31,6 +31,7 @@ const mockPaymentsRepo = {
   createNotification: vi.fn(),
   updateSubscription: vi.fn(),
   recordCouponUsage: vi.fn(),
+  releasePaymentRefundClaim: vi.fn(),
 };
 
 const mockNotificationsRepo = {
@@ -131,6 +132,57 @@ describe("PaymentService — handleWebhook", () => {
     expect(paymentFulfillmentRepo.finalizeRefundedPayment).toHaveBeenCalledWith({
       wechatOrderId: "JJ123456",
     });
+  });
+
+  // ── REFUND.ABNORMAL / REFUND.CLOSED (2026-10-06 black-hole fix) ─────────
+  // Before: these events were log-only, leaving refund_attempts 'pending' and
+  // the payment stuck in refund_pending forever with no retry surface.
+
+  it("REFUND.ABNORMAL marks the pending attempt failed and releases the claim", async () => {
+    const { refundAttemptsRepo } = await import("../repositories/refundAttemptsRepo");
+    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({
+      ...mockPayment,
+      status: "refund_pending",
+    });
+    vi.mocked(refundAttemptsRepo.findPendingByPaymentId).mockResolvedValueOnce({
+      id: "attempt-1",
+      paymentId: mockPayment.id,
+      status: "pending",
+    } as any);
+
+    const payload = {
+      event_type: "REFUND.ABNORMAL",
+      resource: { out_trade_no: "JJ123456" },
+    };
+
+    await service.handleWebhook(payload, JSON.stringify(payload), {});
+
+    expect(refundAttemptsRepo.updateStatus).toHaveBeenCalledWith("attempt-1", {
+      status: "failed",
+      resolvedAt: expect.any(Date),
+      failureReason: "REFUND.ABNORMAL",
+    });
+    expect(mockPaymentsRepo.releasePaymentRefundClaim).toHaveBeenCalledWith(mockPayment.id);
+    expect(paymentFulfillmentRepo.finalizeRefundedPayment).not.toHaveBeenCalled();
+  });
+
+  it("REFUND.CLOSED releases the claim even with no pending attempt", async () => {
+    const { refundAttemptsRepo } = await import("../repositories/refundAttemptsRepo");
+    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({
+      ...mockPayment,
+      status: "refund_pending",
+    });
+    vi.mocked(refundAttemptsRepo.findPendingByPaymentId).mockResolvedValueOnce(undefined);
+
+    const payload = {
+      event_type: "REFUND.CLOSED",
+      resource: { out_trade_no: "JJ123456" },
+    };
+
+    await service.handleWebhook(payload, JSON.stringify(payload), {});
+
+    expect(refundAttemptsRepo.updateStatus).not.toHaveBeenCalled();
+    expect(mockPaymentsRepo.releasePaymentRefundClaim).toHaveBeenCalledWith(mockPayment.id);
   });
 
   // ── Idempotency ────────────────────────────────────────────────────────────

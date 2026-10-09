@@ -136,6 +136,16 @@ interface PreparedPaymentOrder {
   finalAmount: number;
 }
 
+/**
+ * Thrown by createRefund when the atomic refund claim fails — i.e. the
+ * payment is not in `completed` state (already claimed/refunded). Exported
+ * because poolRegistrationCancel matches this message to treat a duplicate
+ * claim as already-refunded (AC-1a); keep both sides on this constant so an
+ * edit can't silently break idempotency (was a string literal duplicated in
+ * two files, 2026-10-06).
+ */
+export const REFUND_CLAIM_ERROR_MESSAGE = "Can only refund completed payments";
+
 export class PaymentService {
   assertMiniProgramAppIdConsistency(): void {
     const issue = getDirectMiniProgramAppIdConsistencyIssue(process.env);
@@ -306,6 +316,21 @@ export class PaymentService {
       await this.handleRefundSuccess(
         this.getRequiredWebhookString(refundPayload.out_trade_no, "out_trade_no")
       );
+    } else if (eventType === "REFUND.ABNORMAL" || eventType === "REFUND.CLOSED") {
+      // WeChat accepted the refund request but the refund itself failed or was
+      // closed (2026-10-06): without this branch the attempt stayed 'pending'
+      // and the payment stuck in refund_pending forever — a black hole with no
+      // retry surface. Mark the attempt failed and release the claim so ops
+      // can retry from admin.
+      const refundResource = this.getWebhookResource(resource);
+      const refundPayload = refundResource.ciphertext
+        ? this.decryptResource(this.getEncryptedWebhookResource(refundResource))
+        : refundResource;
+
+      await this.handleRefundFailure(
+        this.getRequiredWebhookString(refundPayload.out_trade_no, "out_trade_no"),
+        eventType,
+      );
     } else {
       logger.info("Payment webhook received unhandled event type", { event_type: eventType });
     }
@@ -455,6 +480,46 @@ export class PaymentService {
     );
   }
 
+  /**
+   * Handle a failed/closed refund after WeChat accepted the request.
+   * Idempotent: marks the pending attempt failed (if any) and releases the
+   * refund claim (refund_pending → completed) so ops can retry; repeated
+   * events are no-ops once the claim is released.
+   */
+  private async handleRefundFailure(
+    wechatOrderId: string,
+    eventType: "REFUND.ABNORMAL" | "REFUND.CLOSED",
+  ): Promise<void> {
+    const payment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
+
+    if (!payment) {
+      logger.error("Refund failure handling failed because the order was not found", {
+        order_id: wechatOrderId,
+        event_type: eventType,
+      });
+      return;
+    }
+
+    const pendingAttempt = await refundAttemptsRepo.findPendingByPaymentId(payment.id);
+    if (pendingAttempt) {
+      await refundAttemptsRepo.updateStatus(pendingAttempt.id, {
+        status: "failed",
+        resolvedAt: new Date(),
+        failureReason: eventType,
+      });
+    }
+
+    await paymentsRepo.releasePaymentRefundClaim(payment.id);
+
+    logger.error("WeChat refund failed after acceptance — claim released for ops retry", {
+      order_id: wechatOrderId,
+      payment_id: payment.id,
+      user_id: payment.userId,
+      event_type: eventType,
+      attempt_id: pendingAttempt?.id ?? null,
+    });
+  }
+
   private async notifyRefundProcessed(payment: any): Promise<void> {
     try {
       const user = await usersRepo.getUser(payment.userId);
@@ -596,6 +661,13 @@ export class PaymentService {
       reqLogger.info("Payment status query returned cached failed");
       return "failed";
     }
+    // refund_pending is terminal for ORDER-status purposes (2026-10-06): the
+    // refund outcome arrives via REFUND.* webhooks; querying the order would
+    // see trade_state=SUCCESS and risk resurrecting the payment mid-refund.
+    if (existingPayment?.status === "refund_pending") {
+      reqLogger.info("Payment status query returned cached refund_pending");
+      return "refund_pending";
+    }
 
     try {
       const response = await this.wechatRequest<{ trade_state: string; transaction_id?: string }>({
@@ -648,6 +720,13 @@ export class PaymentService {
       reqLogger.info("Reconciliation skipped: payment already failed");
       return { status: "failed", fulfilled: false };
     }
+    // refund_pending is terminal for reconciliation (2026-10-06): the refund
+    // outcome arrives via REFUND.* webhooks; fulfilling from the order query
+    // would resurrect the payment mid-refund and re-open a double-refund window.
+    if (existingPayment.status === "refund_pending") {
+      reqLogger.info("Reconciliation skipped: payment is in refund flow");
+      return { status: "refund_pending", fulfilled: false };
+    }
 
     try {
       const response = await this.wechatRequest<{ trade_state: string; transaction_id?: string }>({
@@ -693,7 +772,7 @@ export class PaymentService {
     // WeChat refund call below can never be issued twice for one payment.
     const claimed = await paymentsRepo.claimPaymentForRefund(payment.id);
     if (!claimed) {
-      throw new Error("Can only refund completed payments");
+      throw new Error(REFUND_CLAIM_ERROR_MESSAGE);
     }
 
     if (payment.paymentType === "event_pack") {
@@ -942,7 +1021,10 @@ export class PaymentService {
 
   private getPaymentDescription(paymentType: CreatePaymentParams["paymentType"]): string {
     if (paymentType === "event_pack") return "悦聚连局包";
-    if (paymentType === "event_bundle") return "悦聚月卡";
+    // event_bundle covers both 月卡 and 季卡 renewals — use the family name
+    // (labeling every renewal 悦聚月卡 showed the wrong plan on the WeChat
+    // payment sheet for 季卡 purchases, 2026-10-06).
+    if (paymentType === "event_bundle") return "悦聚卡";
     if (paymentType === "subscription") return "悦聚卡";
     return "悦聚活动报名";
   }

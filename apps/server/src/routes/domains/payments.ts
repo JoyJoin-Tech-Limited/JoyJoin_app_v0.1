@@ -746,14 +746,29 @@ export function registerPaymentRoutes(app: Express): void {
             const selectedPlanType = getNonEmptyString(planId) ?? getNonEmptyString(type) ?? "subscription";
             const normalizedPlanType = normalizeSubscriptionPlanType(selectedPlanType) ?? selectedPlanType;
 
+            // Mirror the real path's paymentType semantics (2026-10-06):
+            // subscription plans go through renewSubscription + event_bundle so
+            // fulfillment ACTIVATES a subscription; previously every mock order
+            // was event_pack, so a mock 悦聚月卡/季卡 completed with ZERO
+            // entitlement (fulfillment threw "Unsupported event pack plan
+            // type" and the catch swallowed it).
+            const subscriptionPlanType = normalizeSubscriptionPlanType(selectedPlanType);
+            let mockPaymentType = "event_pack";
+            let mockRelatedId = normalizedPlanType;
+            if (subscriptionPlanType) {
+              const renewalData = await subscriptionService.renewSubscription(userId, subscriptionPlanType);
+              mockPaymentType = "event_bundle";
+              mockRelatedId = renewalData.subscriptionId;
+            }
+
             const mockOrderId = `MOCK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const mockTimeStamp = String(Math.floor(Date.now() / 1000));
             const mockNonceStr = Math.random().toString(36).slice(2, 18);
 
             await paymentsRepo.createPayment({
               userId,
-              paymentType: "event_pack",
-              relatedId: normalizedPlanType,
+              paymentType: mockPaymentType,
+              relatedId: mockRelatedId,
               originalAmount: 0,
               discountAmount: 0,
               finalAmount: 0,
