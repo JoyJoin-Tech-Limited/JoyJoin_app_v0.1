@@ -61,7 +61,6 @@ import {
   getUserDisplayName,
   getUserInterests,
   normaliseSession,
-  type EventSessionDiscovery,
   type SocialRecapResponse,
   type SocialStartResponse,
 } from './icebreakerSessionModel'
@@ -153,30 +152,7 @@ export default function IcebreakerSessionPage() {
   // Phase emblems, reactions, reveals, and achievements are CDN tiers.
   usePreloadCdnIcons(ICEBREAKER_PRELOAD_ASSETS)
 
-  const {
-    data: eventSession,
-    isLoading: eventSessionLoading,
-    error: eventSessionError,
-  } = useQuery<EventSessionDiscovery | null>({
-    queryKey: ['mini-program', 'event-session', routeEventId],
-    queryFn: async () => {
-      const existing = await apiRequest<EventSessionDiscovery | null>({
-        path: `/api/events/${encodeURIComponent(routeEventId)}/session`,
-      })
-
-      if (existing?.sessionId) {
-        return existing
-      }
-
-      return apiRequest<EventSessionDiscovery>({
-        path: `/api/events/${encodeURIComponent(routeEventId)}/session`,
-        method: 'POST',
-      })
-    },
-    enabled: false,
-  })
-
-  const resolvedSessionId = routeSessionId || eventSession?.sessionId || routeEventId || ''
+  const resolvedSessionId = routeSessionId || routeEventId || ''
 
   useEffect(() => {
     setSocialSessionId(null)
@@ -894,7 +870,6 @@ export default function IcebreakerSessionPage() {
   // Poll errors only become pageError when there is no session to render yet.
   const pageError =
     bootstrapError ??
-    (eventSessionError ? getIcebreakerPageErrorText(eventSessionError, '无法创建破冰会话') : null) ??
     (sessionError ? getIcebreakerPageErrorText(sessionError, getErrorMessage('load-failed')) : null) ??
     (socialSessionQuery.error && !session ? getIcebreakerPageErrorText(socialSessionQuery.error, getErrorMessage('sync-failed')) : null)
 
@@ -928,7 +903,7 @@ export default function IcebreakerSessionPage() {
     )
   }
 
-  if (authLoading || eventSessionLoading || sessionLoading || isBootstrapping) {
+  if (authLoading || sessionLoading || isBootstrapping) {
     return (
       <OnboardingLoadingShell
         stepLabel='同桌游戏'

@@ -97,6 +97,16 @@
   }
 }
 
+@keyframes matching-overlay-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes matching-overlay-swap-dot {
   0%,
   100% {
@@ -116,6 +126,10 @@
 
   .matching-status__overlay--stage-swap .matching-status__overlay-card {
     animation-delay: 0ms;
+  }
+
+  .matching-status__overlay-backdrop {
+    animation: none;
   }
 }
 

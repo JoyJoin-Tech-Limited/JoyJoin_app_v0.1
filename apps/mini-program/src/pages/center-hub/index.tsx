@@ -1,6 +1,6 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { haptics } from '../../lib/utils/haptics'
@@ -31,11 +31,11 @@ function CenterHubContent({
 }) {
   const { isDegradation } = useDeviceTier()
 
-  const handleEventTap = (event: JoinedEventSummary) => {
+  const handleEventTap = useCallback((event: JoinedEventSummary) => {
     Taro.navigateTo({
       url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(event.id)}`,
     })
-  }
+  }, [])
 
   if (isLoading) {
     return (

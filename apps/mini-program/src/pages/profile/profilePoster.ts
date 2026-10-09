@@ -270,6 +270,7 @@ export async function generateProfileSharePoster(
       )
         settled = true
         clearTimeout(timeout)
+        try { ctx.clearRect(0, 0, POSTER_SIZE, POSTER_SIZE) } catch {}
         resolve(tempFilePath)
       } catch (error) {
         settled = true

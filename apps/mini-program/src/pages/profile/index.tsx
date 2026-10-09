@@ -273,17 +273,23 @@ export default function ProfilePage() {
     }
   })
 
-  const { data: joinedEvents = [], isLoading: isLoadingEvents } = useQuery({
-    queryKey: ['mini-program', 'joined-events'],
-    queryFn: () => getJoinedEvents(apiRequest),
-    enabled: !authLoading && !!authUser,
-  })
-
   const profileShellQuery = useQuery({
     queryKey: ['mini-program', 'shell/profile'],
     queryFn: () => getProfileShell(apiRequest),
     enabled: !authLoading && !!authUser,
     staleTime: 30_000,
+  })
+
+  const shellEventsJoined = profileShellQuery.data?.stats?.eventsJoined
+  const shellSettled = profileShellQuery.isSuccess || profileShellQuery.isError
+  const { data: joinedEvents = [], isLoading: isLoadingEvents } = useQuery({
+    queryKey: ['mini-program', 'joined-events'],
+    queryFn: () => getJoinedEvents(apiRequest),
+    enabled:
+      !authLoading &&
+      !!authUser &&
+      shellSettled &&
+      (profileShellQuery.isError || shellEventsJoined == null),
   })
 
   const gamificationQuery = useQuery({

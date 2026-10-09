@@ -299,6 +299,7 @@ function AuthenticatedDiscover({
     queryKey: ['mini-program', 'my-pool-registrations'],
     staleTime: 20 * 1000,
     queryFn: () => getMyPoolRegistrations(apiRequest),
+    enabled: !poolsLoading,
   })
 
   // ── Eager font + asset preload ──
@@ -415,7 +416,7 @@ function AuthenticatedDiscover({
   )
   const dynamicSubtitle = useMemo(
     () => {
-      if (isLoadingRegistrations) return '发现适合你的聚会…'
+      if (poolsLoading || isLoadingRegistrations) return '发现适合你的聚会…'
       // Arrival day: the random tagline yields to the hook card's promise —
       // the header echoes the generic (Tier B) line instead of competing.
       if (arrivalHookDayEffective) return getOnboardingVoiceLine('discover-arrival', null)
@@ -426,7 +427,7 @@ function AuthenticatedDiscover({
         openPoolCount: pools.filter((p) => p.status !== 'closed').length,
       })
     },
-    [displayName, userArchetype, registrations.length, pools, isLoadingRegistrations, arrivalHookDayEffective],
+    [displayName, userArchetype, registrations.length, pools, isLoadingRegistrations, poolsLoading, arrivalHookDayEffective],
   )
   // ── Handlers ──
   const openPools = useMemo(

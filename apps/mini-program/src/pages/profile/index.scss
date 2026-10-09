@@ -420,6 +420,19 @@
     display: flex;
     gap: $spacing-sm;
     margin-top: $spacing-sm;
+    animation: profile-milestones-in 180ms ease-out both;
+  }
+
+  @keyframes profile-milestones-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8rpx);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   &__milestone {
@@ -1456,6 +1469,10 @@
   // entirely rather than frozen mid-bar.
   .profile-page__growth-progress-sheen {
     display: none;
+    animation: none;
+  }
+
+  .profile-page__milestones-row {
     animation: none;
   }
 }

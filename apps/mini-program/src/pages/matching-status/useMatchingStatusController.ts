@@ -215,7 +215,7 @@ export function useMatchingStatusController({
       matchStatus === 'pending' &&
       Boolean(registration?.poolId),
     refetchInterval: isPageVisible ? MATCH_COMPASS_REFETCH_INTERVAL_MS : false,
-    staleTime: 0,
+    staleTime: MATCH_COMPASS_REFETCH_INTERVAL_MS,
   })
 
   const {
@@ -229,7 +229,7 @@ export function useMatchingStatusController({
       }),
     enabled: hasResolvedAuthBootstrap && matchStatus === 'pending' && Boolean(registration?.poolId),
     refetchInterval: isPageVisible ? POOL_GROUP_FILL_REFETCH_INTERVAL_MS : false,
-    staleTime: 0,
+    staleTime: POOL_GROUP_FILL_REFETCH_INTERVAL_MS,
   })
 
   const fullPoolDismissKey = registration?.poolId

@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
@@ -32,13 +32,16 @@ interface Connection {
 export default function ConnectionsPage() {
   const { authLoading, renderGate } = useMiniPageGate()
   const markAsRead = useMarkNotificationsAsRead()
+  const hasMarkedRef = useRef(false)
 
   useCustomTabBarSync({
     enabled: !authLoading,
   })
 
   useEffect(() => {
+    if (hasMarkedRef.current) return
     markAsRead.mutate('chat')
+    hasMarkedRef.current = true
   }, [markAsRead])
 
   // Warm own first-viewport assets + adjacent tabs' assets during idle so

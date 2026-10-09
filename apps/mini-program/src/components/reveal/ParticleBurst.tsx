@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { View, Canvas } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { getSystemReducedMotionCompat, getWindowInfoCompat } from '../../lib/utils/systemInfo'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import './ParticleBurst.scss'
 
 function prefersReducedMotion(): boolean {
@@ -209,6 +210,7 @@ export default function ParticleBurst({
   reducedMotion,
   fill = false,
 }: ParticleBurstProps) {
+  const { isDegradation } = useDeviceTier()
   const isReduced = reducedMotion ?? REDUCED_MOTION
   const canvasIdRef = useRef(`particle-burst-${Math.random().toString(36).slice(2, 9)}`)
   const ctxRef = useRef<Taro.CanvasContext | null>(null)
@@ -293,6 +295,7 @@ export default function ParticleBurst({
   }, [])
 
   const runBurst = useCallback(() => {
+    if (isDegradation) return
     if (isReduced) {
       setShowEmoji(true)
       if (emojiTimeoutRef.current) clearTimeout(emojiTimeoutRef.current)
@@ -344,7 +347,7 @@ export default function ParticleBurst({
       }
       rafRef.current = RAF(loop)
     })
-  }, [type, clampedCount, origin.x, origin.y, spotlightColor, isReduced, measureCanvas, finish])
+  }, [type, clampedCount, origin.x, origin.y, spotlightColor, isReduced, isDegradation, measureCanvas, finish])
 
   // Fire only on a false→true transition; never tear down mid-flight on trigger→false
   useEffect(() => {

@@ -17,6 +17,7 @@
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.96);
+    animation: matching-overlay-backdrop-in 180ms ease-out both;
   }
 
   // Stage-swap beat (2026-09-16): incoming card entrance is delayed while

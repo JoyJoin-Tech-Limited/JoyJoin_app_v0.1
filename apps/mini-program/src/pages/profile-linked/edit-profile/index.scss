@@ -449,8 +449,6 @@
   &__skeleton-block {
     border-radius: $radius-md;
     background: linear-gradient(90deg, $color-divider 25%, rgba($color-divider, 0.5) 50%, $color-divider 75%);
-    background-size: 200% 100%;
-    animation: edit-profile-skeleton-shimmer 1.5s ease-in-out infinite;
 
     &--hero {
       height: 160rpx;

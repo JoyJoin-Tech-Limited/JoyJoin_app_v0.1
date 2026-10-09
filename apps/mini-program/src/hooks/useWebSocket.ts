@@ -150,16 +150,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
     if (!autoConnect) return
 
     const ws = getWebSocket()
+    ws.retain()
     if (ws.getState() === 'disconnected') {
       ws.connect()
     }
 
     return () => {
-      // Only disconnect on unmount when autoConnect is true.
-      // This ensures the socket stays alive for other consumers if the hook is
-      // used in multiple places simultaneously – the singleton handles ref
-      // counting implicitly (last disconnect wins).
-      ws.disconnect()
+      // Reference-counted release: the shared singleton only disconnects when
+      // the last consumer unmounts, so one page leaving cannot kill the
+      // socket for matching-status / gathering-room / icebreaker.
+      ws.release()
     }
   }, [autoConnect])
 

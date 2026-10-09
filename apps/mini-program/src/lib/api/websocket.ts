@@ -50,6 +50,14 @@ export class MiniProgramWebSocket {
   // -- pending sends --------------------------------------------------------
   /** Messages queued while the socket is still connecting */
   private pendingMessages: string[] = []
+  private readonly maxPendingMessages = 50
+
+  // -- connect timeout ------------------------------------------------------
+  private connectTimeoutTimer: ReturnType<typeof setTimeout> | null = null
+  private readonly connectTimeoutMs = 10_000
+
+  // -- consumer ref-count ---------------------------------------------------
+  private refCount = 0
 
   // -- connection URL -------------------------------------------------------
   private readonly url: string
@@ -90,6 +98,15 @@ export class MiniProgramWebSocket {
     )
 
     logInfo('[WS] Connecting…', { url: this.url, attempt: this.reconnectAttempts })
+
+    this.clearConnectTimeout()
+    this.connectTimeoutTimer = setTimeout(() => {
+      this.connectTimeoutTimer = null
+      if (this.state === 'connecting' || this.state === 'reconnecting') {
+        logWarn('[WS] Connect timed out', { url: this.url })
+        this.handleError()
+      }
+    }, this.connectTimeoutMs)
 
     try {
       const task = Taro.connectSocket({
@@ -151,6 +168,7 @@ export class MiniProgramWebSocket {
 
     // Prevent any pending reconnect
     this.clearReconnectTimer()
+    this.clearConnectTimeout()
     this.stopHeartbeat()
     this.reconnectAttempts = 0
     this.pendingMessages = []
@@ -168,6 +186,19 @@ export class MiniProgramWebSocket {
     }
 
     this.setState('disconnected')
+  }
+
+  /** Register a consumer. The socket disconnects when the last consumer releases. */
+  retain(): void {
+    this.refCount += 1
+  }
+
+  /** Release a consumer. The socket disconnects when the count reaches zero. */
+  release(): void {
+    this.refCount = Math.max(0, this.refCount - 1)
+    if (this.refCount === 0) {
+      this.disconnect()
+    }
   }
 
   // -- Subscriptions --------------------------------------------------------
@@ -262,7 +293,11 @@ export class MiniProgramWebSocket {
     if (this.state === 'connected' && this.socketTask) {
       this.doSend(payload)
     } else if (this.state === 'connecting' || this.state === 'reconnecting') {
-      // Queue until the socket opens
+      // Queue until the socket opens (bounded so a stalled handshake cannot
+      // grow the queue without limit).
+      if (this.pendingMessages.length >= this.maxPendingMessages) {
+        this.pendingMessages.shift()
+      }
       this.pendingMessages.push(payload)
     } else {
       logWarn('[WS] send() called while disconnected – message dropped', {
@@ -336,6 +371,7 @@ export class MiniProgramWebSocket {
 
   private handleOpen(): void {
     logInfo('[WS] Connected')
+    this.clearConnectTimeout()
     this.reconnectAttempts = 0
     this.setState('connected')
     this.startHeartbeat()
@@ -344,6 +380,7 @@ export class MiniProgramWebSocket {
 
   private handleClose(): void {
     logInfo('[WS] Connection closed')
+    this.clearConnectTimeout()
     this.socketTask = null
     this.stopHeartbeat()
 
@@ -356,11 +393,20 @@ export class MiniProgramWebSocket {
 
   private handleError(): void {
     logError('[WS] Socket error')
+    this.clearConnectTimeout()
 
     // On error the socket will typically also fire `onClose`, but if the
     // connection never opened we need to handle reconnect here as well.
     if (this.state === 'connecting' || this.state === 'reconnecting') {
+      const task = this.socketTask
       this.socketTask = null
+      if (task) {
+        try {
+          task.close({ code: 1011, reason: 'Connect failed' })
+        } catch {
+          // Task may already be closed — ignore
+        }
+      }
       this.stopHeartbeat()
       this.setState('disconnected')
       this.scheduleReconnect()
@@ -422,6 +468,13 @@ export class MiniProgramWebSocket {
     if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
+    }
+  }
+
+  private clearConnectTimeout(): void {
+    if (this.connectTimeoutTimer !== null) {
+      clearTimeout(this.connectTimeoutTimer)
+      this.connectTimeoutTimer = null
     }
   }
 

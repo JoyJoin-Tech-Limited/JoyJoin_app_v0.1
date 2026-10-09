@@ -196,6 +196,7 @@ function exportCanvas(
           })
           settled = true
           clearTimeout(timeout)
+          try { ctx.clearRect(0, 0, width, height) } catch {}
           setTimeout(() => {
             try { Taro.getFileSystemManager().unlinkSync(out.tempFilePath) } catch {}
           }, 60000)

@@ -81,6 +81,7 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
   const [cardNickname] = useState('')
   const [selectedVariantIndex] = useState(0)
   const posterRetryRef = useRef(false)
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleGeneratePosterRef = useRef<(() => Promise<void>) | null>(null)
 
   // Invalidate stale poster when user changes card personalization
@@ -93,6 +94,12 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantIndex, cardNickname])
+
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+    }
+  }, [])
 
   const clearSharePoster = useCallback(() => {
     setSharePosterPath('')
@@ -349,7 +356,9 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
         // Reset state so the retry callback can re-enter generation
         setIsGeneratingPoster(false)
         setGenerationPhase('')
-        setTimeout(() => {
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null
           handleGeneratePosterRef.current?.()
         }, 1500)
         return

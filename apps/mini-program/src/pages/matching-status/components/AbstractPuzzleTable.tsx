@@ -135,10 +135,12 @@ export default function AbstractPuzzleTable({
       onClick={handleSkip}
     >
       <View className='abstract-puzzle-table__plate'>
-        <View
-          className='abstract-puzzle-table__plate-glow'
-          style={{ backgroundColor: accentColor }}
-        />
+        {!isDegradation ? (
+          <View
+            className='abstract-puzzle-table__plate-glow'
+            style={{ backgroundColor: accentColor }}
+          />
+        ) : null}
 
         <View className='abstract-puzzle-table__grid'>
           {pieces.map((piece) => {
@@ -197,22 +199,24 @@ export default function AbstractPuzzleTable({
         </View>
 
         {/* Unifying overlay: constellation lines that span the whole grid */}
-        <View
-          className='abstract-puzzle-table__unify-layer'
-          aria-hidden='true'
-        >
-          <View className='abstract-puzzle-table__constellation'>
-            <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--1' />
-            <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--2' />
-            <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--3' />
-            <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--4' />
-            <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--5' />
-            <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--6' />
-            <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--7' />
+        {!isDegradation ? (
+          <View
+            className='abstract-puzzle-table__unify-layer'
+            aria-hidden='true'
+          >
+            <View className='abstract-puzzle-table__constellation'>
+              <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--1' />
+              <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--2' />
+              <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--3' />
+              <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--4' />
+              <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--5' />
+              <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--6' />
+              <View className='abstract-puzzle-table__twinkle abstract-puzzle-table__twinkle--7' />
+            </View>
           </View>
-        </View>
+        ) : null}
 
-        {isComplete ? (
+        {isComplete && !isDegradation ? (
           <View
             className='abstract-puzzle-table__complete-glow'
             style={{ backgroundColor: accentColor }}

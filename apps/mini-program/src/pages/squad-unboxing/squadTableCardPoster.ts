@@ -199,9 +199,11 @@ export async function drawSquadTableCardPoster(input: SquadTableCardPosterInput)
     })
   })
 
-  return exportCanvasWithRetry(
+  const posterPath = await exportCanvasWithRetry(
     SQUAD_TABLE_CARD_CANVAS_ID,
     SQUAD_TABLE_CARD_POSTER_WIDTH,
     SQUAD_TABLE_CARD_POSTER_HEIGHT,
   )
+  try { ctx.clearRect(0, 0, SQUAD_TABLE_CARD_POSTER_WIDTH, SQUAD_TABLE_CARD_POSTER_HEIGHT) } catch {}
+  return posterPath
 }

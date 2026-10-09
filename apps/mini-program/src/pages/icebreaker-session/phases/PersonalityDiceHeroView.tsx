@@ -128,7 +128,7 @@ export function PersonalityDiceHeroView({
       const now = Date.now()
       setCountdownNow(now)
       if (now >= revealCountdownEndsAt) clearInterval(timer)
-    }, 200)
+    }, 1000)
     return () => clearInterval(timer)
   }, [revealCountdownEndsAt])
 

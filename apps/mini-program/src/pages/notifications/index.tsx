@@ -1,7 +1,7 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import { useReachBottom } from '@tarojs/taro'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import { getNotifications, type NotificationListItem } from '@shared/api'
 import { apiRequest } from '../../lib/api/api'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
@@ -35,8 +35,35 @@ function formatRelativeTime(iso: string): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 
+const NotificationRow = memo(function NotificationRow({ item }: { item: NotificationListItem }) {
+  const meta = CATEGORY_META[item.category] ?? { emoji: '🔔', label: '通知' }
+  return (
+    <View
+      className={`notifications-page__row${item.isRead ? '' : ' notifications-page__row--unread'}`}
+    >
+      <View className='notifications-page__row-icon' aria-hidden='true'>
+        <JoyJoinIcon emoji={meta.emoji} tier='category' size={20} />
+      </View>
+      <View className='notifications-page__row-body'>
+        <View className='notifications-page__row-head'>
+          <Text className='notifications-page__row-title'>{item.title}</Text>
+          <Text className='notifications-page__row-time'>
+            {formatRelativeTime(item.createdAt)}
+          </Text>
+        </View>
+        {item.message ? (
+          <Text className='notifications-page__row-message'>{item.message}</Text>
+        ) : null}
+      </View>
+      {!item.isRead ? (
+        <View className='notifications-page__row-dot' aria-hidden='true' />
+      ) : null}
+    </View>
+  )
+})
+
 export default function NotificationsPage() {
-  const markAsRead = useMarkNotificationsAsRead()
+  const { mutate: markNotificationsRead } = useMarkNotificationsAsRead()
   const markedRef = useRef(false)
 
   // Leaving the list page clears the tab badges — the list IS the read surface.
@@ -44,10 +71,10 @@ export default function NotificationsPage() {
     return () => {
       if (markedRef.current) return
       markedRef.current = true
-      void markAsRead.mutate('activities')
-      void markAsRead.mutate('discover')
+      void markNotificationsRead('activities')
+      void markNotificationsRead('discover')
     }
-  }, [markAsRead])
+  }, [markNotificationsRead])
 
   const query = useInfiniteQuery({
     queryKey: ['mini-program', 'notifications', 'list'],
@@ -100,33 +127,9 @@ export default function NotificationsPage() {
       ) : (
         <ScrollView className='notifications-page__scroll' scrollY enhanced showScrollbar={false}>
           <View className='notifications-page__list'>
-            {items.map((item) => {
-              const meta = CATEGORY_META[item.category] ?? { emoji: '🔔', label: '通知' }
-              return (
-                <View
-                  key={item.id}
-                  className={`notifications-page__row${item.isRead ? '' : ' notifications-page__row--unread'}`}
-                >
-                  <View className='notifications-page__row-icon' aria-hidden='true'>
-                    <JoyJoinIcon emoji={meta.emoji} tier='category' size={20} />
-                  </View>
-                  <View className='notifications-page__row-body'>
-                    <View className='notifications-page__row-head'>
-                      <Text className='notifications-page__row-title'>{item.title}</Text>
-                      <Text className='notifications-page__row-time'>
-                        {formatRelativeTime(item.createdAt)}
-                      </Text>
-                    </View>
-                    {item.message ? (
-                      <Text className='notifications-page__row-message'>{item.message}</Text>
-                    ) : null}
-                  </View>
-                  {!item.isRead ? (
-                    <View className='notifications-page__row-dot' aria-hidden='true' />
-                  ) : null}
-                </View>
-              )
-            })}
+            {items.map((item) => (
+              <NotificationRow key={item.id} item={item} />
+            ))}
           </View>
           {query.isFetchingNextPage ? (
             <Text className='notifications-page__more'>加载中…</Text>

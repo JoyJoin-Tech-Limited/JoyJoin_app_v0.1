@@ -6,6 +6,7 @@ import { logInfo, logWarn } from '../utils/logger'
 import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 import { queryClient } from './queryClient'
 import { clearPersistentCache } from './persistentCache'
+import { destroyWebSocket } from './websocket'
 import { MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES } from '../auth/authSessionQueryKeys'
 import { clearAllUserScopedStorage } from '../auth/userScopedStorage'
 import {
@@ -122,6 +123,7 @@ export function clearMiniProgramAuthSession(options?: {
     clearSessionToken()
     clearPersistentCache()
     clearAllUserScopedStorage()
+    destroyWebSocket()
   }
 }
 

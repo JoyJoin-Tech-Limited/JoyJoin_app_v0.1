@@ -87,7 +87,7 @@ export default function PoolGroupDetailPage() {
     isLoading,
     error,
   } = useQuery<PoolGroupDetailsResponse>({
-    queryKey: ['mini-program', 'pool-group-detail', groupId],
+    queryKey: ['mini-program', 'pool-group', groupId],
     queryFn: () => getPoolGroupDetails(apiRequest, groupId),
     enabled: !!groupId && !authLoading,
   })
@@ -97,7 +97,7 @@ export default function PoolGroupDetailPage() {
   const { data: groupAnalysis, isLoading: isAnalysisLoading } = useQuery({
     queryKey: ['mini-program', 'pool-group-analysis', groupId],
     queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
-    enabled: !!groupId && !authLoading && Boolean(poolGroup),
+    enabled: !!groupId && !authLoading,
     staleTime: STALE_TIME_GROUP_ANALYSIS_MS,
     retry: 1,
   })
@@ -291,7 +291,7 @@ export default function PoolGroupDetailPage() {
         <View className='pool-group-detail__error-actions'>
           <Button variant='primary' onClick={() => {
             haptics('light')
-            queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-group-detail', groupId] })
+            queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-group', groupId] })
           }}
           >
             重试

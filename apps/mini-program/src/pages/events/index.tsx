@@ -1,6 +1,6 @@
 import { CustomWrapper, View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { usePullDownRefresh, useDidShow } from '@tarojs/taro'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { haptics } from '../../lib/utils/haptics'
@@ -48,6 +48,7 @@ export default function EventsPage() {
   const { isDegradation } = useDeviceTier()
   const { authLoading, renderGate } = useMiniPageGate()
   const markAsRead = useMarkNotificationsAsRead()
+  const hasMarkedRef = useRef(false)
   useCustomTabBarSync({
     enabled: !authLoading,
   })
@@ -55,8 +56,10 @@ export default function EventsPage() {
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
 
   useEffect(() => {
+    if (hasMarkedRef.current) return
     const timer = setTimeout(() => {
       markAsRead.mutate('activities')
+      hasMarkedRef.current = true
     }, 100)
     return () => clearTimeout(timer)
   }, [markAsRead])
@@ -147,7 +150,7 @@ export default function EventsPage() {
     }
   }, [authLoading, isLoading, events.length])
 
-  const partitionedEvents = partitionJoinedEventsByDateTime(events)
+  const partitionedEvents = useMemo(() => partitionJoinedEventsByDateTime(events), [events])
   let resolvedActiveTab = activeTab
 
   if (!hasManualTabSelection) {

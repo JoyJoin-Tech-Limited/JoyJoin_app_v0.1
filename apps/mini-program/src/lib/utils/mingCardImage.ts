@@ -76,7 +76,9 @@ export async function generateMingCardImage(input: MingCardInput): Promise<strin
       new Promise<void>((resolve) => ctx.draw(false, () => resolve())),
       new Promise<void>((resolve) => setTimeout(resolve, 800)),
     ])
-    return await exportCanvasWithRetry(MING_CARD_CANVAS_ID, MING_CARD_WIDTH, MING_CARD_HEIGHT)
+    const posterPath = await exportCanvasWithRetry(MING_CARD_CANVAS_ID, MING_CARD_WIDTH, MING_CARD_HEIGHT)
+    try { ctx.clearRect(0, 0, MING_CARD_WIDTH, MING_CARD_HEIGHT) } catch {}
+    return posterPath
   } catch (error) {
     logError('[MingCard] generation failed', {
       message: error instanceof Error ? error.message : String(error),

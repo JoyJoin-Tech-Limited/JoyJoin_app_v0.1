@@ -123,7 +123,7 @@ export default function FirstTimeCouponBanner({
 
   const animateIn = staggerMounted && !shouldReduceMotion
   const idleAnimationsEnabled = animateIn && !isDegradation
-  const showCounterAnimation = animateIn
+  const showCounterAnimation = animateIn && !isDegradation
 
   const countedPercent = useCountUp(discountPercent, 1200, showCounterAnimation)
 
