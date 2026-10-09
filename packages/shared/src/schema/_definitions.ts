@@ -66,7 +66,7 @@ export const users = pgTable("users", {
   // Canonical life-stage vocabulary: 学生党, 职场新人, 职场老手, 创业中, 自由职业.
   // New code should read/write this field. workMode is deprecated for writes.
   lifeStage: varchar("life_stage"), // 学生党, 职场新人, 职场老手, 创业中, 自由职业
-  ageMatchPreference: varchar("age_match_preference"), // 同龄人, 偏年轻, 偏成熟, 都可以
+  ageMatchPreference: varchar("age_match_preference"), // 同龄优先, 上下3岁, 上下5岁, 不限 (Match Compass; legacy: 同龄人/偏年轻/偏成熟/都可以 normalized at scoring)
   
   // Registration fields - Education
   educationLevel: varchar("education_level"), // 博士, 硕士, 本科, 大专, 中专, 高中及以下
@@ -137,7 +137,7 @@ export const users = pgTable("users", {
   preferredLanguages: text("preferred_languages").array(), // Profile-level language preferences: ["中文（国语）", "英语"]
   dietaryRestrictions: text("dietary_restrictions").array(), // Dietary needs: ["素食", "不吃辣", "清真"]
   // Primary vibe enrichment: preferred table/group atmosphere
-  tableVibePreference: varchar("table_vibe_preference", { length: 30 }), // Preferred table atmosphere: "light_fun" | "natural_chat" | "deep_talk"
+  tableVibePreference: varchar("table_vibe_preference", { length: 30 }), // 轻松聊天, 深度交流, 游戏互动, 不限 (Match Compass; legacy light_fun/natural_chat/deep_talk normalized at scoring)
   
   // ========== Match Compass Preference DNA Defaults ==========
   defaultPreferenceStrictness: integer("default_preference_strictness").default(50),

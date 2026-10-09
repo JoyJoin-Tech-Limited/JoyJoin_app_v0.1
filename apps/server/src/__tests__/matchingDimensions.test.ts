@@ -139,6 +139,7 @@ const {
   calculateLifeStageAffinity,
   calculateEducationAffinityScore,
   calculateHometownAffinityScore,
+  calculateSocialAffinityScore,
   calculateBackgroundDiversityScore,
   calculateChemistryScore,
   calculateEnergyBalance,
@@ -496,6 +497,65 @@ describe('hometown affinity', () => {
       makeDimUser('a', { hometownAffinityOptin: true, hometown: '北京' }),
       makeDimUser('b', { hometownAffinityOptin: true, hometown: '北京市朝阳区' }),
     )).toBe(70);
+  });
+});
+
+// =============================================================================
+// Match Compass preference vocabulary alignment (2026-10-05 recurrence lock)
+// The Match Compass writer (MatchCompassSections.tsx) stores Chinese labels —
+// 同龄优先/上下3岁/上下5岁/不限 and 轻松聊天/深度交流/游戏互动/不限 — but the
+// scoring readers previously only understood the legacy schema-comment
+// vocabularies, so every live write collapsed to the mismatch/neutral floor.
+// Tested through calculateSocialAffinityScore with a single populated factor
+// (factors=1 → composite returns the sub-score verbatim).
+// =============================================================================
+
+describe('match compass preference vocabulary alignment', () => {
+  function ageAffinity(pref1: string | null, pref2: string | null): number {
+    return calculateSocialAffinityScore(
+      makeDimUser('a', { lifeStage: null, educationLevel: null, ageMatchPreference: pref1 }),
+      makeDimUser('b', { lifeStage: null, educationLevel: null, ageMatchPreference: pref2 }),
+    );
+  }
+
+  function vibeAffinity(vibe1: string | null, vibe2: string | null): number {
+    return calculateSocialAffinityScore(
+      makeDimUser('a', { lifeStage: null, educationLevel: null, tableVibePreference: vibe1 }),
+      makeDimUser('b', { lifeStage: null, educationLevel: null, tableVibePreference: vibe2 }),
+    );
+  }
+
+  it('age preference: live writer vocabulary scores the full gradient', () => {
+    expect(ageAffinity('同龄优先', '同龄优先')).toBe(100);
+    expect(ageAffinity('不限', '同龄优先')).toBe(75);
+    expect(ageAffinity('上下3岁', '上下5岁')).toBe(70);
+    expect(ageAffinity('同龄优先', '上下3岁')).toBe(60);
+    expect(ageAffinity('同龄优先', '上下5岁')).toBe(40);
+  });
+
+  it('age preference: legacy schema values normalize instead of flooring', () => {
+    expect(ageAffinity('同龄人', '同龄优先')).toBe(100);
+    expect(ageAffinity('都可以', '上下5岁')).toBe(75);
+    expect(ageAffinity('偏年轻', '偏成熟')).toBe(70);
+  });
+
+  it('table vibe: live writer vocabulary scores the full gradient', () => {
+    expect(vibeAffinity('轻松聊天', '轻松聊天')).toBe(100);
+    expect(vibeAffinity('不限', '游戏互动')).toBe(75);
+    expect(vibeAffinity('轻松聊天', '游戏互动')).toBe(75);
+    expect(vibeAffinity('深度交流', '轻松聊天')).toBe(65);
+    expect(vibeAffinity('深度交流', '游戏互动')).toBe(30);
+  });
+
+  it('table vibe: legacy English ids normalize instead of flooring', () => {
+    expect(vibeAffinity('natural_chat', '轻松聊天')).toBe(100);
+    expect(vibeAffinity('deep_talk', 'light_fun')).toBe(30);
+    expect(vibeAffinity('light_fun', 'natural_chat')).toBe(75);
+  });
+
+  it('missing data stays neutral', () => {
+    expect(ageAffinity(null, '同龄优先')).toBe(50);
+    expect(vibeAffinity('轻松聊天', null)).toBe(50);
   });
 });
 

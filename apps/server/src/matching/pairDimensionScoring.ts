@@ -112,12 +112,18 @@ export function calculateHometownAffinityScore(user1: UserWithProfile, user2: Us
   if (!user1.hometown || !user2.hometown) {
     return 0; // 缺少家乡信息
   }
-  
+
+  // Hometown is a free-text field (any city in China) — normalize before
+  // comparing so a stray space/full-width variant doesn't silently zero the
+  // exact-match bonus (2026-10-05).
+  const hometown1 = user1.hometown.trim();
+  const hometown2 = user2.hometown.trim();
+
   // 完全匹配：100分
-  if (user1.hometown === user2.hometown) {
+  if (hometown1 === hometown2) {
     return 100;
   }
-  
+
   // 同省匹配：提取省份并比较（简化处理）
   const getProvince = (hometown: string): string => {
     // 处理直辖市和常见省份格式
@@ -133,8 +139,8 @@ export function calculateHometownAffinityScore(user1: UserWithProfile, user2: Us
     return hometown;
   };
   
-  const province1 = getProvince(user1.hometown);
-  const province2 = getProvince(user2.hometown);
+  const province1 = getProvince(hometown1);
+  const province2 = getProvince(hometown2);
   
   if (province1 === province2) {
     return 70; // 同省：70分
@@ -221,36 +227,75 @@ export function calculateEducationAffinityScore(edu1: string, edu2: string): num
 
 /**
  * Calculate age match preference compatibility (0-100).
+ *
+ * Live writer vocabulary (Match Compass, MatchCompassSections.tsx):
+ *   同龄优先 / 上下3岁 / 上下5岁 / 不限
+ * Legacy schema-comment values (同龄人/偏年轻/偏成熟/都可以) are normalized so
+ * any historical rows still score — before 2026-10-05 the reader ONLY knew the
+ * legacy set and every live write fell through to the 40 mismatch floor.
  */
+const AGE_PREF_LEGACY_MAP: Record<string, string> = {
+  "同龄人": "同龄优先",
+  "都可以": "不限",
+};
+
 function calculateAgePreferenceAffinity(
   pref1: string | null,
   pref2: string | null,
 ): number {
   if (!pref1 || !pref2) return 50;
-  if (pref1 === pref2) return 100;
-  if (pref1 === "都可以" || pref2 === "都可以") return 75;
-  const complementary =
+  const p1 = AGE_PREF_LEGACY_MAP[pref1] ?? pref1;
+  const p2 = AGE_PREF_LEGACY_MAP[pref2] ?? pref2;
+  if (p1 === p2) return 100;
+  if (p1 === "不限" || p2 === "不限") return 75;
+  // Adjacent flexibility levels are largely compatible
+  const adjacent =
+    (p1 === "上下3岁" && p2 === "上下5岁") ||
+    (p1 === "上下5岁" && p2 === "上下3岁");
+  if (adjacent) return 70;
+  // Strict vs one-step flexible: mild tension
+  const mildTension =
+    (p1 === "同龄优先" && p2 === "上下3岁") ||
+    (p1 === "上下3岁" && p2 === "同龄优先");
+  if (mildTension) return 60;
+  // Legacy opposite pulls (偏年轻 ↔ 偏成熟), kept for historical rows
+  const legacyComplementary =
     (pref1 === "偏年轻" && pref2 === "偏成熟") ||
     (pref1 === "偏成熟" && pref2 === "偏年轻");
-  if (complementary) return 70;
+  if (legacyComplementary) return 70;
   return 40;
 }
 
 /**
  * Calculate table vibe preference compatibility (0-100).
+ *
+ * Live writer vocabulary (Match Compass): 轻松聊天 / 深度交流 / 游戏互动 / 不限
+ * Legacy English ids (light_fun/natural_chat/deep_talk) are normalized — before
+ * 2026-10-05 the reader ONLY knew the English set and every live write scored
+ * the 50 neutral floor.
  */
+const VIBE_LEGACY_MAP: Record<string, string> = {
+  natural_chat: "轻松聊天",
+  deep_talk: "深度交流",
+  light_fun: "游戏互动",
+};
+
 function calculateVibePreferenceAffinity(
   vibe1: string | null,
   vibe2: string | null,
 ): number {
   if (!vibe1 || !vibe2) return 50;
-  if (vibe1 === vibe2) return 100;
-  const compatible = ['light_fun', 'natural_chat'];
-  if (compatible.includes(vibe1) && compatible.includes(vibe2)) return 75;
-  if ((vibe1 === 'deep_talk' && vibe2 === 'natural_chat') ||
-      (vibe2 === 'deep_talk' && vibe1 === 'natural_chat')) return 65;
-  if ((vibe1 === 'deep_talk' && vibe2 === 'light_fun') ||
-      (vibe2 === 'deep_talk' && vibe1 === 'light_fun')) return 30;
+  const v1 = VIBE_LEGACY_MAP[vibe1] ?? vibe1;
+  const v2 = VIBE_LEGACY_MAP[vibe2] ?? vibe2;
+  if (v1 === v2) return 100;
+  if (v1 === "不限" || v2 === "不限") return 75;
+  // Both light-side vibes are compatible
+  const lightPair = ["轻松聊天", "游戏互动"];
+  if (lightPair.includes(v1) && lightPair.includes(v2)) return 75;
+  if ((v1 === "深度交流" && v2 === "轻松聊天") ||
+      (v2 === "深度交流" && v1 === "轻松聊天")) return 65;
+  if ((v1 === "深度交流" && v2 === "游戏互动") ||
+      (v2 === "深度交流" && v1 === "游戏互动")) return 30;
   return 50;
 }
 
