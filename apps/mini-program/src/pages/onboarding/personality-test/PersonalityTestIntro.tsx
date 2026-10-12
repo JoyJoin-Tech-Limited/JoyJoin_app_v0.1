@@ -27,10 +27,15 @@ const TEASE_ARCHETYPE_IDS = [
   'cat',
 ] as const
 
+/** Single source for the duration promise — used by BOTH the intro title and
+ *  the first trust point so the two can never contradict each other again
+ *  (2026-10-09: title said 3 分钟 while the trust meta said 约 3-5 分钟). */
+const INTRO_DURATION_COPY = '约 3 分钟'
+
 const INTRO_TRUST_POINTS = [
   {
     prefix: '1.',
-    title: '约 3-5 分钟完成',
+    title: `${INTRO_DURATION_COPY}完成`,
     description: '轻量作答，凭直觉选，不知不觉就答完。',
   },
   {
@@ -111,7 +116,7 @@ export default function PersonalityTestIntro({
               <Text className='personality-test__eyebrow-en'>JoyJoin</Text>
               <Text> · 氛围测试</Text>
             </Text>
-            <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
+            <Text className='personality-test__intro-title'>{`${INTRO_DURATION_COPY}，读懂你的`}</Text>
             <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
             <Text className='personality-test__intro-subtitle'>
               找到你的氛围命格，让后面的遇见都更对味。

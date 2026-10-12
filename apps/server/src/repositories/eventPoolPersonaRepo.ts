@@ -202,7 +202,7 @@ export async function buildPoolPersonaSnapshot(
   const dimensions: PoolPersonaSnapshotResponse["dimensions"] = [
     {
       key: "archetype",
-      label: "社交氛围",
+      label: "氛围构成",
       total: archetypeTotal,
       disclosed: archetypeTotal >= THRESHOLDS.archetypeTotal,
       clusters: topClusters(archetypeCounts, archetypeTotal),

@@ -11,8 +11,11 @@ interface PersonaSnapshotSheetProps {
   onClose: () => void
 }
 
+// WeChat review posture (🔴): 社交 never appears in visible copy — the
+// archetype dimension reads as 氛围构成 (client labels override the server's
+// legacy `label`, so this map is the rendered truth).
 const DIMENSION_LABELS: Record<string, string> = {
-  archetype: '社交氛围',
+  archetype: '氛围构成',
   industry: '行业背景',
   intent: '报名期待',
   age: '年龄分布',
@@ -101,7 +104,7 @@ export default function PersonaSnapshotSheet({ snapshot, eventType, initialDimen
 
           <View className='persona-snapshot-sheet__disclaimer'>
             <Text className='persona-snapshot-sheet__disclaimer-text'>
-              数据为当前报名伙伴的聚合画像，会随新伙伴加入而变化。最终组队以匹配结果为准。
+              数据为当前报名伙伴的聚合画像，会随新伙伴加入而变化。最终组队以排桌结果为准。
             </Text>
           </View>
         </ScrollView>

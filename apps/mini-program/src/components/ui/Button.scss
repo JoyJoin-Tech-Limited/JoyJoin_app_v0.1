@@ -88,11 +88,11 @@
     min-height: max($button-height, $cta-min-tap);
     height: $button-height;
     border-radius: 16rpx;
-    background: #07C160;
+    background: $color-wechat-green;
     color: $color-text-white;
     font-size: $font-size-md;
     font-weight: $font-weight-semibold;
-    box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.25);
+    box-shadow: 0 4rpx 16rpx rgba($color-wechat-green, 0.25);
 
     &:active {
       opacity: 0.92;

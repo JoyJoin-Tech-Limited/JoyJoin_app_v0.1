@@ -714,7 +714,7 @@ export default function EssentialDataPage() {
   const INTENT_REACTIONS: Record<string, string> = useMemo(
     () => ({
       friends: '新朋友 +1，这一局会很有趣。',
-      networking: '拓展人脉，悦仔会帮你找能互相增值的圈子。',
+      networking: '拓展人脉，悦仔会帮你找能互相增值的同路人。',
       discussion: '想深聊？悦仔会帮你安排一桌愿意倾听的人。',
       fun: '开心优先，别想太多。',
       explore: '尝鲜体验，悦仔会帮你挑一个有趣的方向。',

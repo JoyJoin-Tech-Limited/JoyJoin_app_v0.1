@@ -276,7 +276,7 @@ export default function Index() {
   // Auth gate is now expressed as an invisible functional lock on LandingPage
   // CTAs (pointer-events: none + disabled buttons). No visual loading screen.
   // The timeout banner renders inline on LandingPage if auth revalidation
-  // exceeds INDEX_GATE_TIMEOUT_MS (4s).
+  // exceeds INDEX_GATE_TIMEOUT_MS (2.5s).
   return (
     <MiniProgramLandingPage
       isAuthLoading={isGateChecking}

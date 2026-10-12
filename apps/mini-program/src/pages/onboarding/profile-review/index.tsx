@@ -35,6 +35,7 @@ import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
+import { looksLikeOfflineError } from '../../../lib/utils/offlineDetection'
 import Button from '../../../components/ui/Button'
 import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import Card from '../../../components/ui/Card'
@@ -582,6 +583,16 @@ export default function ProfileReviewPage() {
     } catch (err) {
       setIsPageExiting(false)
       setIsCelebrating(false)
+      // Offline branch: unified preflight copy (essential/extended-data
+      // parity). The page collects no input and the completion call is
+      // idempotent-safe to retry, so re-submit is the only promise made.
+      if (looksLikeOfflineError(err)) {
+        const offlineMessage = getErrorForSurface('offline-preflight', 'inline-error')
+        setError(offlineMessage)
+        analytics.errorOccurred('submit_offline', offlineMessage)
+        logError('[ProfileReview] Complete failed offline', { message: offlineMessage })
+        return
+      }
       const message = err instanceof Error ? err.message : getErrorForSurface('operation-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('complete_failed', message)
@@ -1014,6 +1025,7 @@ export default function ProfileReviewPage() {
           {welcomeCoupon ? (
             <WelcomeGiftCard
               discountValue={welcomeCoupon.discountValue}
+              validUntil={welcomeCoupon.validUntil ?? null}
               visible={isCouponCardVisible}
               reduceMotion={shouldReduceMotion}
               onTap={() => {
@@ -1080,7 +1092,7 @@ export default function ProfileReviewPage() {
           variant='brand'
           className='profile-review__submit'
           onClick={() => {
-            haptics('heavy')
+            haptics('medium')
             handleComplete()
           }}
           disabled={isSubmitting || isCelebrating}
@@ -1098,6 +1110,7 @@ export default function ProfileReviewPage() {
         archetypeName={visual?.name}
         accentText={visual?.accentText}
         giftDiscountValue={welcomeCoupon?.discountValue ?? null}
+        giftValidUntil={welcomeCoupon?.validUntil ?? null}
         giftLoading={isCouponLoading && !welcomeCoupon}
         onAdvance={(mode) => {
           analytics.interaction('ceremony_advance', { mode })

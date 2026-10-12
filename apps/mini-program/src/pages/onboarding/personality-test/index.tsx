@@ -31,11 +31,13 @@ import {
   type AnonymousAssessmentTopMatch,
 } from '../../../lib/auth/anonymousOnboarding'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import { persistPendingReferralCode } from '../../../lib/auth/pendingReferralCode'
 import {
   navigateToMiniProgramNextStep,
   runMiniProgramRouteTransition,
 } from '../../../lib/onboarding/onboardingNavigation'
 import { logInfo, logWarn, logError } from '../../../lib/utils/logger'
+import { looksLikeOfflineError } from '../../../lib/utils/offlineDetection'
 import { haptics } from '../../../lib/utils/haptics'
 import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
@@ -189,6 +191,16 @@ export default function PersonalityTestPage() {
     // resolve bundled subpackage paths in the WeChat runtime and produces
     // "image not found" errors in vConsole (2026-09-03).
   }, [])
+
+  // D5 referral attribution, receiver side (2026-10-11): a results-share card
+  // lands directly on this page carrying `?invitationCode=…`. Persist it now
+  // (no-op when absent) so the results login handoff can forward the code —
+  // the URL param does not survive the anonymous test → login journey.
+  // Mirrors the landing-page bridge; latest share wins.
+  const introInvitationCode = router.params.invitationCode ?? ''
+  useEffect(() => {
+    persistPendingReferralCode(introInvitationCode)
+  }, [introInvitationCode])
 
   // Detect reduced-motion preference once for the intro mascot
   useEffect(() => {
@@ -935,6 +947,16 @@ export default function PersonalityTestPage() {
     } catch (err) {
       setIsPageExiting(false)
       const rawMessage = err instanceof Error ? err.message : String(err)
+      // Offline branch: unified preflight copy (essential/extended-data
+      // parity). The failed answer is not consumed — the user stays on the
+      // same question and re-taps once reconnected.
+      if (looksLikeOfflineError(err)) {
+        const offlineMessage = getErrorForSurface('offline-preflight', 'inline-error')
+        setError(offlineMessage)
+        analytics.errorOccurred('submit_offline', offlineMessage)
+        logError('[PersonalityTest] Failed to submit answer offline', { rawMessage, userMessage: offlineMessage })
+        return
+      }
       const message = getErrorForSurface('submit-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('answer_failed', rawMessage)
