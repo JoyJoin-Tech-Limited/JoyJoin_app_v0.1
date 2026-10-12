@@ -229,6 +229,28 @@ function AuthenticatedDiscover({
   // ordering — read by the step_started funnel event.
   const arrivalFromOnboardingRef = useRef(false)
 
+  // discover_first_arrival (D7 funnel; whitelisted server-side since
+  // 2026-08-27 but never sent): fire exactly once per user, when the
+  // first-arrival signal is consumed (either coachmark path) or detected on
+  // the first mount after onboarding completion. The tombstone uses the same
+  // per-user storage-key pattern as the arrival coachmark and is written
+  // BEFORE the fire-and-forget send, so no interleaving can double-fire.
+  const firstArrivalTrackedRef = useRef(false)
+  const trackFirstArrivalOnce = useCallback((source: 'pending' | 'coachmark' | 'queue') => {
+    if (!userId || firstArrivalTrackedRef.current) return
+    try {
+      if (Taro.getStorageSync(`joyjoin_discover_first_arrival_tracked:${userId}`)) {
+        firstArrivalTrackedRef.current = true
+        return
+      }
+      firstArrivalTrackedRef.current = true
+      Taro.setStorageSync(`joyjoin_discover_first_arrival_tracked:${userId}`, true)
+    } catch {
+      return
+    }
+    discoverAnalytics.track('discover_first_arrival', undefined, { fromOnboarding: true, source })
+  }, [userId])
+
   // ── C4 guidance queue (2026-08-27, flag-gated) ──
   // guidanceQueueEnabled ON → the queue owns the arrival coachmark slot (E1
   // absorption); OFF → the legacy storage-keyed path below runs byte-for-byte.
@@ -354,6 +376,12 @@ function AuthenticatedDiscover({
       } catch {
         fromOnboarding = false
       }
+    }
+    // First-ever discover mount via the onboarding-completion path — the
+    // first-arrival funnel event fires here even if the coachmark effects
+    // below have not run yet (tombstone dedupes all three call sites).
+    if (fromOnboarding) {
+      trackFirstArrivalOnce('pending')
     }
     onboardingAnalytics.stepStarted('discover', fromOnboarding ? { fromOnboarding: true } : undefined)
   })
@@ -561,6 +589,7 @@ function AuthenticatedDiscover({
     if (!arrivalTipShowing || !userId) return
     arrivalFromOnboardingRef.current = true
     setArrivalHookDay(true)
+    trackFirstArrivalOnce('queue')
     try {
       Taro.setStorageSync(`joyjoin_discover_arrival_seen_date:${userId}`, arrivalTodayKey())
     } catch {
@@ -603,6 +632,7 @@ function AuthenticatedDiscover({
     }
     arrivalFromOnboardingRef.current = true
     setArrivalHookDay(true)
+    trackFirstArrivalOnce('coachmark')
     setShowArrivalCoachmark(true)
     onboardingAnalytics.interaction('discover', 'arrival_hook_impression', {
       fromOnboarding: true,

@@ -50,6 +50,23 @@ const ONBOARDING_ANALYTICS_EVENT_TYPES = [
   "slot_animation_start",
   "skip_animation",
   "result_stage_dwell",
+  // Login funnel (2026-10-09, results final stage → WeChat login handoff).
+  // The typed mini-program helpers land login_prompt_dismissed /
+  // login_handoff_failed as event_type='interaction' / 'error_occurred' rows
+  // (metadata.action / metadata.errorType); all four names are listed here
+  // so direct senders using them as eventType are accepted too (same
+  // dual-acceptance pattern as the PR-2 actions above).
+  //   login_cta_tap          metadata: { surface: 'results_final_stage' }
+  //   login_handoff_duration metadata: { durationMs, outcome: success|failed }
+  //   login_handoff_failed   metadata: errorMessage + optional
+  //                          reason: deny|offline|network|server|unknown
+  // Metadata keys are NOT key-validated server-side (tolerant 4KB-capped
+  // merge in buildOnboardingEventMetadata), so the new `reason` key needs no
+  // separate whitelist entry.
+  "login_cta_tap",
+  "login_prompt_dismissed",
+  "login_handoff_failed",
+  "login_handoff_duration",
 ] as const;
 
 const ALLOWED_ONBOARDING_EVENT_TYPES = new Set<string>(ONBOARDING_ANALYTICS_EVENT_TYPES);

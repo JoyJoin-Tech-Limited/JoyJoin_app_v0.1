@@ -51,6 +51,11 @@ const USER_SCOPED_DUO_KEYS = [
   'jj_pending_duo_context',
 ] as const
 
+/** Referral attribution captured pre-login (consumed by the results login handoff) */
+const USER_SCOPED_REFERRAL_KEYS = [
+  'joyjoin_pending_referral_code',
+] as const
+
 /** Legal consent — user-specific (a new user on this device hasn't agreed) */
 const USER_SCOPED_LEGAL_KEYS = [
   'joyjoin_legal_accepted_v1',
@@ -68,6 +73,7 @@ export const USER_SCOPED_STORAGE_KEYS: readonly string[] = [
   ...USER_SCOPED_ONBOARDING_KEYS,
   ...USER_SCOPED_PAYMENT_KEYS,
   ...USER_SCOPED_DUO_KEYS,
+  ...USER_SCOPED_REFERRAL_KEYS,
   ...USER_SCOPED_LEGAL_KEYS,
   ...USER_SCOPED_ANALYTICS_KEYS,
 ]
@@ -87,6 +93,7 @@ const USER_SCOPED_PREFIX_KEYS = [
   'jj_arrival_seen_',         // arrival migration seen per user
   'jj_full_pool_dismissed_',  // full-pool banner dismissed per pool
   'jj_duo_share_',            // duo share timestamps per pool
+  'joyjoin_discover_first_arrival_tracked:', // discover_first_arrival tombstone per user
   'joyjoin_signal_retest_dismissed', // P5a signal-quality retest prompt dismissed per session
 ] as const
 

@@ -315,11 +315,12 @@ class MiniProgramOnboardingAnalytics {
     step: MiniProgramOnboardingAnalyticsStep,
     errorType: string,
     errorMessage: string,
+    metadata?: Record<string, unknown>,
   ): void {
     this.track(
       'error_occurred',
       step,
-      { errorType, errorMessage },
+      { errorType, errorMessage, ...(metadata ?? {}) },
       this.stepStartTimes.get(step),
     )
   }

@@ -105,6 +105,14 @@ export type DiscoverAnalyticsEventType =
   // page intro phase; metadata: { entryMode: 'fresh'|'resume' }.
   | 'onboarding_intro_viewed'
   | 'personality_test_started'
+  // Results-stage login funnel (2026-10-09): login_cta_tap fires at the
+  // continue-CTA entry (metadata: { surface }); login_handoff_duration fires
+  // on settle (metadata: { durationMs, outcome: 'success'|'failure' }).
+  // discover_first_arrival fires once per user when the arrival signal is
+  // consumed (tombstone-deduped; was whitelisted-but-unsent before).
+  | 'login_cta_tap'
+  | 'login_handoff_duration'
+  | 'discover_first_arrival'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

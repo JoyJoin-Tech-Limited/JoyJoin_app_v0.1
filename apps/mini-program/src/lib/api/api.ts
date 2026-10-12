@@ -417,12 +417,20 @@ export async function checkReturningMiniProgramWeChatUser(): Promise<{ exists: b
 export async function authenticateMiniProgramUserWithTest(input: {
   testAnswers?: ImportedMiniProgramAssessmentAnswer[]
   anonymousSessionId?: string | null
+  /**
+   * Referral attribution captured pre-login (e.g. a guest who arrived via a
+   * pool-less share link, tested anonymously, and logs in at the results
+   * stage). Forwarded to /api/auth/wechat/login-with-test, which persists it
+   * into session.pendingReferralCode for pool-registration attribution.
+   */
+  referralCode?: string
 }): Promise<void> {
   await postMiniProgramWeChatLogin(
     '/api/auth/wechat/login-with-test',
     {
       testAnswers: input.testAnswers ?? [],
       anonymousSessionId: input.anonymousSessionId ?? undefined,
+      referralCode: input.referralCode || undefined,
     },
     '无法导入测试结果并建立微信登录会话',
   )

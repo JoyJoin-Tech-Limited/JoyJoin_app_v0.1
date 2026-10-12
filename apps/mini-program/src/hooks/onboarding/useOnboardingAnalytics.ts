@@ -40,8 +40,8 @@ export function useOnboardingAnalytics(
     onboardingAnalytics.validationFailed(step, field, reason)
   }, [step])
 
-  const errorOccurred = useCallback((errorType: string, errorMessage: string) => {
-    onboardingAnalytics.errorOccurred(step, errorType, errorMessage)
+  const errorOccurred = useCallback((errorType: string, errorMessage: string, metadata?: Record<string, unknown>) => {
+    onboardingAnalytics.errorOccurred(step, errorType, errorMessage, metadata)
   }, [step])
 
   const interaction = useCallback((action: string, metadata?: Record<string, unknown>) => {

@@ -11,8 +11,14 @@ import {
   readAnonymousAssessmentAnswers,
   readAnonymousAssessmentSession,
 } from '../../../../../lib/auth/anonymousOnboarding'
+import {
+  clearPendingReferralCode,
+  readPendingReferralCode,
+} from '../../../../../lib/auth/pendingReferralCode'
+import { discoverAnalytics } from '../../../../../lib/analytics/discoverAnalytics'
 import { navigateToMiniProgramNextStep } from '../../../../../lib/onboarding/onboardingNavigation'
 import { logError, logInfo } from '../../../../../lib/utils/logger'
+import { looksLikeOfflineError } from '../../../../../lib/utils/offlineDetection'
 import { waitFor } from '../resultHelpers'
 
 /**
@@ -20,6 +26,29 @@ import { waitFor } from '../resultHelpers'
  * flashes the transition overlay for a single frame.
  */
 const LOGIN_HANDOFF_MIN_VISIBLE_MS = 1200
+
+/** Failure-reason taxonomy for the login_handoff_failed funnel event. */
+type LoginHandoffFailureReason = 'deny' | 'offline' | 'network' | 'server' | 'unknown'
+
+/**
+ * Classify a login-handoff failure for funnel analysis:
+ *  - deny    — the user denied/cancelled the WeChat Taro.login step (errMsg).
+ *  - offline — connectivity-gone heuristics (shared offline-detection util).
+ *  - network — other transport-layer failures (DNS, SSL, domain whitelist…).
+ *  - server  — the API answered with a 5xx.
+ *  - unknown — anything else.
+ */
+function classifyLoginHandoffFailure(error: unknown, typedError: ApiError | undefined): LoginHandoffFailureReason {
+  const errMsg =
+    error && typeof error === 'object' && typeof (error as { errMsg?: unknown }).errMsg === 'string'
+      ? (error as { errMsg: string }).errMsg
+      : ''
+  if (/deny|cancel/i.test(errMsg)) return 'deny'
+  if (looksLikeOfflineError(error)) return 'offline'
+  if (typedError?.isTransportError) return 'network'
+  if (typeof typedError?.statusCode === 'number' && typedError.statusCode >= 500) return 'server'
+  return 'unknown'
+}
 
 interface UseResultsLoginHandoffParams {
   auth: ReturnType<typeof useAuth>
@@ -53,6 +82,7 @@ export function useResultsLoginHandoff({
         : '微信登录，查看谁和你最搭'
 
   const handleContinue = useCallback(async () => {
+    discoverAnalytics.track('login_cta_tap', undefined, { surface: 'results_final_stage' })
     if (auth.isLoading || isLoggingIn) {
       return
     }
@@ -92,10 +122,23 @@ export function useResultsLoginHandoff({
         hasSessionId: !!anonymousSessionSnapshot?.sessionId,
       })
 
+      // Referral attribution (2026-10-09): a guest may have arrived via a
+      // share link, tested anonymously, and only now logs in — the landing
+      // persisted the invite code so it survives app restarts until this
+      // consumption point.
+      const pendingReferralCode = readPendingReferralCode()
+
       await authenticateMiniProgramUserWithTest({
         testAnswers: answers,
         anonymousSessionId: anonymousSessionSnapshot?.sessionId ?? null,
+        referralCode: pendingReferralCode || undefined,
       })
+
+      // The login response succeeded — the server now holds the attribution
+      // in session.pendingReferralCode, so the stored code is consumed.
+      if (pendingReferralCode) {
+        clearPendingReferralCode()
+      }
 
       const userState = await getUserState()
       seedMiniProgramAuthSession(userState, queryClient)
@@ -106,6 +149,12 @@ export function useResultsLoginHandoff({
         action: 'login-handoff-success',
         answerCount: answers.length,
         nextStep: userState.nextStep ?? 'essential-data',
+      })
+      // Settle event measures the real handoff latency — it must fire BEFORE
+      // the branded min-dwell below, or every success would read ≥1200ms.
+      discoverAnalytics.track('login_handoff_duration', undefined, {
+        durationMs: Date.now() - handoffStartedAt,
+        outcome: 'success',
       })
       // R2-7: hold the branded handoff overlay for a minimum beat, then land
       // directly on the nextStep destination — no intermediate/transit frame.
@@ -125,8 +174,13 @@ export function useResultsLoginHandoff({
             : error instanceof Error && error.message
               ? error.message
               : getErrorForSurface('login-failed', 'inline-error')
-      analytics.errorOccurred('login_handoff_failed', message)
-      logError('[PersonalityResults] Login failed', { message })
+      const reason = classifyLoginHandoffFailure(error, typedError)
+      analytics.errorOccurred('login_handoff_failed', message, { reason })
+      discoverAnalytics.track('login_handoff_duration', undefined, {
+        durationMs: Date.now() - handoffStartedAt,
+        outcome: 'failure',
+      })
+      logError('[PersonalityResults] Login failed', { message, reason })
       // R2-7: return to the pre-handshake state with a friendly inline retry
       // surface (FinalStage renders it above the continue CTA, which is the
       // retry action) — never strand the user on a toast alone.

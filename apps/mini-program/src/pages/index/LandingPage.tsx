@@ -14,6 +14,7 @@ import { MINI_PROGRAM_ROUTES } from "../../lib/onboarding/onboardingRoutes"
 import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
 import { useResetOnShow } from "../../hooks/useResetOnShow"
 import { readAnonymousAssessmentSession, isAnonymousAssessmentSessionCompleted } from "../../lib/auth/anonymousOnboarding"
+import { persistPendingReferralCode } from "../../lib/auth/pendingReferralCode"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import { landingAnalytics } from "../../lib/analytics/landingAnalytics"
 import { getSystemReducedMotion } from "../../lib/utils/accessibility"
@@ -232,6 +233,12 @@ export default function MiniProgramLandingPage({
 
   useEffect(() => {
     loadBrandDisplayFont()
+    // Referral attribution bridge: a guest arriving via a share link may take
+    // the test anonymously and log in only at the results stage — the URL
+    // param does not survive that journey, so persist the code now. The
+    // results login handoff consumes it (login-with-test) and clears it on
+    // success; until then it must survive app restarts.
+    persistPendingReferralCode(invitationCode)
     const snapshot = readAnonymousAssessmentSession()
     setHasIncompleteSession(!!snapshot && !isAnonymousAssessmentSessionCompleted(snapshot))
     const windowHeightPx = readWindowHeightPx()
@@ -244,7 +251,9 @@ export default function MiniProgramLandingPage({
       .catch(() => {
         /* keep 'unknown' */
       })
-  }, [])
+    // invitationCode is a stable router-param string; a re-route carrying a
+    // newer code SHOULD overwrite the stored one (latest share wins).
+  }, [invitationCode])
 
   // Reset navigation loading state when the user swipes back or foregrounds
   // the landing page so the CTA never stays stuck on the ellipsis spinner.

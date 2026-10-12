@@ -237,6 +237,10 @@ const DISCOVER_EVENT_TYPES = [
   "onboarding_intro_viewed",
   "personality_test_started",
   "personality_test_completed",
+  // Login handoff leg (2026-10-09 funnel audit): metadata carries only
+  // surface / durationMs / outcome / failure reason enum — no user text.
+  "login_cta_tap",
+  "login_handoff_duration",
   "discover_first_arrival",
   "registration_started",
   "registration_paid",

@@ -38,6 +38,23 @@ describe('personality results orchestration split', () => {
     expect(pageSource).not.toContain('authenticateMiniProgramUserWithTest')
   })
 
+  it('threads referral attribution through the login handoff (2026-10-09)', () => {
+    expect(loginSource).toContain('readPendingReferralCode')
+    expect(loginSource).toContain('referralCode: pendingReferralCode || undefined')
+    // The stored code must be cleared ONLY after a successful login response.
+    const callIndex = loginSource.indexOf('await authenticateMiniProgramUserWithTest')
+    const clearIndex = loginSource.indexOf('clearPendingReferralCode()')
+    expect(callIndex).toBeGreaterThan(-1)
+    expect(clearIndex).toBeGreaterThan(callIndex)
+  })
+
+  it('keeps the results-stage login funnel events wired (2026-10-09)', () => {
+    expect(loginSource).toContain("discoverAnalytics.track('login_cta_tap'")
+    expect(loginSource).toContain("discoverAnalytics.track('login_handoff_duration'")
+    // login_handoff_failed must carry the classified reason metadata.
+    expect(loginSource).toContain("analytics.errorOccurred('login_handoff_failed', message, { reason })")
+  })
+
   it('keeps the stage dispatch JSX and hidden canvases on the page', () => {
     expect(pageSource).toContain("case 'slot':")
     expect(pageSource).toContain("case 'reveal':")
