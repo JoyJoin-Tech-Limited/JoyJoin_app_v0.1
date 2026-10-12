@@ -43,6 +43,7 @@ import {
   resolveMiniProgramPaymentPlans,
   type MiniProgramPaymentPlanKey,
 } from '../../../lib/payment/paymentPageModel'
+import { findWelcomeCoupon } from '../event-ticket-payment/ticketHelpers'
 
 // ─── Payment Ritual V2 Imports (Sprint 1: Foundation + Sprint 2: Polish) ───
 import RitualActAnticipation from './components/RitualActAnticipation'
@@ -351,13 +352,8 @@ export default function BlindBoxPaymentPage() {
     return buildRitualContext(plans, userArchetype, userCity, user.id, ritualCommunityData)
   }, [plans, userArchetype, userCity, user?.id, ritualCommunityData])
 
-  // Find welcome coupon
-  const welcomeCoupon = useMemo(() => {
-    return availableCoupons.find((c) => {
-      const code = c.code?.toUpperCase?.() ?? ''
-      return code.startsWith('WELCOME') && c.status === 'available'
-    })
-  }, [availableCoupons])
+  // Find welcome coupon (canonical chain: WELCOME20 fixed ¥20 > legacy codes)
+  const welcomeCoupon = useMemo(() => findWelcomeCoupon(availableCoupons), [availableCoupons])
 
   const welcomeDiscountPercent = useMemo(() => {
     if (!welcomeCoupon) return 50
@@ -1164,6 +1160,8 @@ export default function BlindBoxPaymentPage() {
           className='payment-page__welcome-banner'
           couponCode={welcomeCoupon.code}
           discountPercent={welcomeDiscountPercent}
+          discountType={welcomeCoupon.discountType ?? null}
+          discountValue={welcomeCoupon.discountValue ?? null}
           onUseCoupon={handleUseWelcomeCoupon}
           analyticsContext='blind-box-payment'
           userArchetype={user?.archetype ?? null}

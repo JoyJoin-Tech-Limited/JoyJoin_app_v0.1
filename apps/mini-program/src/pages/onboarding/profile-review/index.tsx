@@ -1025,6 +1025,7 @@ export default function ProfileReviewPage() {
           {welcomeCoupon ? (
             <WelcomeGiftCard
               discountValue={welcomeCoupon.discountValue}
+              discountType={welcomeCoupon.discountType}
               validUntil={welcomeCoupon.validUntil ?? null}
               visible={isCouponCardVisible}
               reduceMotion={shouldReduceMotion}
@@ -1110,6 +1111,7 @@ export default function ProfileReviewPage() {
         archetypeName={visual?.name}
         accentText={visual?.accentText}
         giftDiscountValue={welcomeCoupon?.discountValue ?? null}
+        giftDiscountType={welcomeCoupon?.discountType ?? null}
         giftValidUntil={welcomeCoupon?.validUntil ?? null}
         giftLoading={isCouponLoading && !welcomeCoupon}
         onAdvance={(mode) => {

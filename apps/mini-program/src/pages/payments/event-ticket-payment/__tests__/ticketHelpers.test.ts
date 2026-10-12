@@ -9,6 +9,8 @@ import {
   findWelcomeCoupon,
   getBestCoupon,
   getVipMonthlyAnchorLabel,
+  isAnchorSafeCoupon,
+  isAnchorSafeWelcomeCoupon,
   isWelcomeCouponAutoApplyEligible,
   isWelcomeCouponCode,
   resolvePaymentCheckoutFlags,
@@ -60,7 +62,15 @@ describe('isWelcomeCouponAutoApplyEligible (audit F4)', () => {
 })
 
 describe('findWelcomeCoupon', () => {
-  it('prefers the highest-value available welcome coupon', () => {
+  it('prefers the canonical fixed WELCOME20 over legacy percentage codes', () => {
+    const coupons = [
+      makeCoupon({ id: 'a', code: 'WELCOME50', discountValue: 50 }),
+      makeCoupon({ id: 'b', code: 'WELCOME20', discountType: 'fixed_amount', discountValue: 2000 }),
+    ]
+    expect(findWelcomeCoupon(coupons)?.code).toBe('WELCOME20')
+  })
+
+  it('keeps the legacy chain order WELCOME50 > WELCOME40 when the canonical coupon is absent', () => {
     const coupons = [
       makeCoupon({ id: 'a', code: 'WELCOME40', discountValue: 40 }),
       makeCoupon({ id: 'b', code: 'WELCOME50', discountValue: 50 }),
@@ -77,29 +87,88 @@ describe('findWelcomeCoupon', () => {
   })
 })
 
-describe('eligible-coupon filtering recipe (F4 leak guard)', () => {
-  // Mirrors the page-level memo: on 'single' the WELCOME* family is removed
-  // before getBestCoupon runs, so no auto discount leaks onto the anchor plan.
-  it('getBestCoupon returns null when only welcome coupons exist and the plan filters them out', () => {
+describe('isAnchorSafeWelcomeCoupon (F4 revision 2026-10-12)', () => {
+  it('accepts only the canonical fixed ¥20 welcome coupon', () => {
+    expect(
+      isAnchorSafeWelcomeCoupon(
+        makeCoupon({ code: 'WELCOME20', discountType: 'fixed_amount', discountValue: 2000 }),
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects legacy percentage codes, oversized fixed values, and non-welcome codes', () => {
+    expect(isAnchorSafeWelcomeCoupon(makeCoupon({ code: 'WELCOME50', discountValue: 50 }))).toBe(false)
+    expect(
+      isAnchorSafeWelcomeCoupon(
+        makeCoupon({ code: 'WELCOME100', discountType: 'fixed_amount', discountValue: 10000 }),
+      ),
+    ).toBe(false)
+    expect(
+      isAnchorSafeWelcomeCoupon(
+        makeCoupon({ code: 'REFERRAL20', discountType: 'fixed_amount', discountValue: 2000 }),
+      ),
+    ).toBe(false)
+  })
+})
+
+describe('isAnchorSafeCoupon (generalized anchor invariant 2026-10-12)', () => {
+  it('accepts any fixed coupon capped at ¥20, regardless of code family', () => {
+    expect(isAnchorSafeCoupon(makeCoupon({ code: 'WELCOME20', discountType: 'fixed_amount', discountValue: 2000 }))).toBe(true)
+    expect(isAnchorSafeCoupon(makeCoupon({ code: 'REFERRAL10', discountType: 'fixed_amount', discountValue: 1000 }))).toBe(true)
+  })
+
+  it('rejects percentage coupons and oversized fixed coupons', () => {
+    expect(isAnchorSafeCoupon(makeCoupon({ code: 'WELCOME50', discountValue: 50 }))).toBe(false)
+    expect(isAnchorSafeCoupon(makeCoupon({ code: 'INVITE_REWARD', discountType: 'fixed_amount', discountValue: 5000 }))).toBe(false)
+  })
+})
+
+describe('eligible-coupon filtering recipe (F4 revised + generalized 2026-10-12)', () => {
+  // Mirrors the page-level memo: on 'single', ONLY anchor-safe coupons
+  // (fixed ≤ ¥20, any family) survive — legacy percentage WELCOME codes and
+  // big reward coupons are both excluded.
+  it('getBestCoupon returns null when only a legacy percentage welcome coupon exists on the anchor plan', () => {
     const all = [makeCoupon({ code: 'WELCOME50' })]
-    const eligible = all.filter((c) => !isWelcomeCouponCode(c.code))
+    const eligible = all.filter(isAnchorSafeCoupon)
     expect(getBestCoupon(eligible, 8800)).toBeNull()
   })
 
-  it('getBestCoupon still auto-applies non-welcome coupons on the anchor plan', () => {
+  it('canonical fixed welcome coupon rides the anchor plan (8800 → 6800)', () => {
     const all = [
-      makeCoupon({ code: 'WELCOME50', discountValue: 50 }),
-      makeCoupon({ code: 'REFERRAL20', discountType: 'fixed_amount', discountValue: 2000 }),
+      makeCoupon({ id: 'w20', code: 'WELCOME20', discountType: 'fixed_amount', discountValue: 2000 }),
+      makeCoupon({ id: 'w50', code: 'WELCOME50', discountValue: 50 }),
     ]
-    const eligible = all.filter((c) => !isWelcomeCouponCode(c.code))
+    const eligible = all.filter(isAnchorSafeCoupon)
+    expect(eligible.map((c) => c.code)).toEqual(['WELCOME20'])
+    const best = getBestCoupon(eligible, 8800)
+    expect(best?.code).toBe('WELCOME20')
+    expect(calculateDiscount(best, 8800)).toBe(2000)
+    expect(8800 - calculateDiscount(best, 8800)).toBe(6800)
+  })
+
+  it('a small non-welcome fixed coupon may ride the anchor plan', () => {
+    const all = [makeCoupon({ code: 'REFERRAL20', discountType: 'fixed_amount', discountValue: 2000 })]
+    const eligible = all.filter(isAnchorSafeCoupon)
     expect(getBestCoupon(eligible, 8800)?.code).toBe('REFERRAL20')
+  })
+
+  it('a non-welcome percentage coupon no longer rides the anchor plan', () => {
+    const all = [makeCoupon({ code: 'PROMO10', discountType: 'percentage', discountValue: 10 })]
+    const eligible = all.filter(isAnchorSafeCoupon)
+    expect(getBestCoupon(eligible, 8800)).toBeNull()
+  })
+
+  it('a big fixed reward coupon can never ride the anchor plan', () => {
+    const all = [makeCoupon({ code: 'INVITE_REWARD', discountType: 'fixed_amount', discountValue: 5000 })]
+    const eligible = all.filter(isAnchorSafeCoupon)
+    expect(getBestCoupon(eligible, 8800)).toBeNull()
   })
 
   it('getBestCoupon applies the welcome coupon on eligible plans', () => {
     const all = [makeCoupon({ code: 'WELCOME50', discountValue: 50 })]
     const eligible = isWelcomeCouponAutoApplyEligible('pack_3')
       ? all
-      : all.filter((c) => !isWelcomeCouponCode(c.code))
+      : all.filter(isAnchorSafeCoupon)
     expect(getBestCoupon(eligible, 21100)?.code).toBe('WELCOME50')
   })
 
@@ -110,7 +179,7 @@ describe('eligible-coupon filtering recipe (F4 leak guard)', () => {
     const all = [makeCoupon({ code: 'WELCOME50', discountValue: 50 })]
     const eligible = isWelcomeCouponAutoApplyEligible('vip_monthly')
       ? all
-      : all.filter((c) => !isWelcomeCouponCode(c.code))
+      : all.filter(isAnchorSafeCoupon)
     const best = getBestCoupon(eligible, 9800)
     expect(best?.code).toBe('WELCOME50')
     expect(calculateDiscount(best, 9800)).toBe(4900)

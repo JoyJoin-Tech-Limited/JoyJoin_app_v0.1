@@ -81,15 +81,25 @@ async function writeDefaultPreferenceDNA(userId: string, primaryArchetype: strin
   }
 }
 
-/** Awards welcome coupon (WELCOME50 / WELCOME40) to user after first test completion, if not already awarded. */
+/** Awards welcome coupon (WELCOME20 / legacy WELCOME50 / WELCOME40) to user after first test completion, if not already awarded. */
 async function awardWelcomeCouponIfNeeded(userId: string, s: typeof storage): Promise<void> {
   try {
+    // Canonical chain since 2026-10-12: WELCOME20 (fixed ¥20 off) first;
+    // legacy percentage codes remain fallbacks only.
+    const welcomeCoupon20 = await s.getCouponByCode('WELCOME20');
     const welcomeCoupon50 = await s.getCouponByCode('WELCOME50');
     const welcomeCoupon40 = await s.getCouponByCode('WELCOME40');
-    const welcomeCoupon = welcomeCoupon50 ?? welcomeCoupon40;
+    const welcomeCoupon = welcomeCoupon20 ?? welcomeCoupon50 ?? welcomeCoupon40;
     if (welcomeCoupon) {
       const existingCoupons = await s.getUserCoupons(userId);
-      const alreadyHas = existingCoupons.some((uc: any) => uc.coupon_id === welcomeCoupon.id);
+      // Family-level dedup (2026-10-12): any WELCOME* coupon held means the
+      // lifetime 见面礼 is already granted — do not stack WELCOME20 on legacy
+      // WELCOME50/40 holders.
+      const alreadyHas = existingCoupons.some(
+        (uc: any) =>
+          uc.coupon_id === welcomeCoupon.id ||
+          String(uc.code ?? "").toUpperCase().startsWith("WELCOME"),
+      );
       if (!alreadyHas) {
         await s.createUserCoupon({
           userId,

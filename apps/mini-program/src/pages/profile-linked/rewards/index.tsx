@@ -14,6 +14,7 @@ import {
   type UserGamificationSummary,
 } from '@shared/api'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { getCouponDisplayName } from '../../../lib/payment/couponDisplay'
 import { apiRequest } from '../../../lib/api/api'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
@@ -79,7 +80,9 @@ function formatCouponValue(coupon: UserCouponSummary): string {
   }
 
   if (coupon.discountType === 'fixed_amount' && typeof coupon.discountValue === 'number') {
-    return `¥${coupon.discountValue}`
+    // Fixed coupons store cents (WELCOME20 = 2000 → ¥20). Never render the raw
+    // cents value — the legacy formatter printed ¥2000 for the 见面礼.
+    return `¥${Math.floor(coupon.discountValue / 100)}`
   }
 
   return coupon.code ?? '奖励'
@@ -372,7 +375,7 @@ export default function RewardsPage() {
             <Card key={coupon.id} className='rewards-page__coupon-card'>
               <View className='rewards-page__coupon-top'>
                 <View>
-                  <Text className='rewards-page__coupon-title'>{coupon.code ?? '专属奖励'}</Text>
+                  <Text className='rewards-page__coupon-title'>{getCouponDisplayName(coupon.code)}</Text>
                   <Text className='rewards-page__coupon-source'>{formatSourceLabel(coupon.source)}</Text>
                 </View>
                 <View className={`rewards-page__coupon-status rewards-page__coupon-status--${coupon.status}`}>

@@ -49,3 +49,19 @@ describe('WelcomeGiftCard expiry caption (audit F5)', () => {
     expect(screen.queryByText(/有效期至/)).not.toBeInTheDocument()
   })
 })
+
+describe('WelcomeGiftCard fixed-amount 见面礼 (WELCOME20)', () => {
+  it('renders the canonical fixed ¥20 coupon as 20元', () => {
+    render(<WelcomeGiftCard discountValue={2000} discountType='fixed_amount' />)
+
+    expect(screen.getByRole('button', { name: /20元/ })).toBeInTheDocument()
+    expect(screen.getByText('20')).toBeInTheDocument()
+    expect(screen.getByText('元')).toBeInTheDocument()
+  })
+
+  it('keeps the legacy 折 rendering when discountType is absent', () => {
+    render(<WelcomeGiftCard discountValue={50} />)
+
+    expect(screen.getByRole('button', { name: /5折/ })).toBeInTheDocument()
+  })
+})

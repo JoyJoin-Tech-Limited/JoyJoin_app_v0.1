@@ -13,6 +13,8 @@
  */
 import { and, eq, inArray } from "drizzle-orm";
 import {
+  coupons,
+  couponUsage,
   eventCreditGrants,
   eventCreditRedemptions,
   eventPoolRegistrations,
@@ -20,6 +22,7 @@ import {
   notifications,
   payments,
   refundAttempts,
+  userCoupons,
   users,
 } from "@shared/schema";
 import { db } from "../db";
@@ -151,6 +154,44 @@ async function main(): Promise<void> {
   if (!payA || !payC || !packPay) throw new Error("failed to create payments");
 
   console.log("[step] seed…");
+  // S-3 (2026-10-12): burn a coupon on payment A so the Trigger A refund must
+  // restore it — the money-refund path deletes coupon_usage, decrements
+  // coupons.used_count, and flips user_coupons back to unused
+  // (paymentFulfillmentRepo.finalizeRefundedPayment).
+  const [smokeCoupon] = await db
+    .insert(coupons)
+    .values({
+      code: `SMOKE_WELCOME_${ts}`,
+      discountType: "fixed_amount",
+      discountValue: 2000,
+      isActive: true,
+      usedCount: 1,
+    })
+    .returning({ id: coupons.id });
+  if (!smokeCoupon) throw new Error("failed to create smoke coupon");
+
+  const [smokeUserCoupon] = await db
+    .insert(userCoupons)
+    .values({
+      userId: smokeUser.id,
+      couponId: smokeCoupon.id,
+      source: "admin_grant",
+      isUsed: true,
+      usedAt: new Date(),
+    })
+    .returning({ id: userCoupons.id });
+  if (!smokeUserCoupon) throw new Error("failed to create smoke user coupon");
+
+  await db.insert(couponUsage).values({
+    couponId: smokeCoupon.id,
+    userId: smokeUser.id,
+    paymentId: payA.id,
+    discountApplied: 2000,
+  });
+  // Link the coupon to payment A so the refund restore path sees it.
+  await db.update(payments).set({ couponId: smokeCoupon.id }).where(eq(payments.id, payA.id));
+
+  console.log("[step] seed…");
   await db.transaction(async (tx: Parameters<typeof eventCreditsRepo.grantCreditsForPayment>[0]) => {
     await eventCreditsRepo.grantCreditsForPayment(tx, {
       paymentId: packPay.id,
@@ -253,6 +294,31 @@ async function main(): Promise<void> {
     .limit(1);
   check("A: redemption row removed", !redemptionAfter);
 
+  // S-3: coupon restore assertions (money refund must return the coupon).
+  const couponUsageAfter = await db
+    .select({ id: couponUsage.id })
+    .from(couponUsage)
+    .where(eq(couponUsage.paymentId, payA.id));
+  check("A: coupon usage row removed", couponUsageAfter.length === 0, `count=${couponUsageAfter.length}`);
+
+  const [userCouponAfter] = await db
+    .select({ isUsed: userCoupons.isUsed, usedAt: userCoupons.usedAt })
+    .from(userCoupons)
+    .where(eq(userCoupons.id, smokeUserCoupon.id))
+    .limit(1);
+  check(
+    "A: user coupon restored to unused",
+    userCouponAfter?.isUsed === false && userCouponAfter?.usedAt === null,
+    JSON.stringify(userCouponAfter),
+  );
+
+  const [couponAfter] = await db
+    .select({ usedCount: coupons.usedCount })
+    .from(coupons)
+    .where(eq(coupons.id, smokeCoupon.id))
+    .limit(1);
+  check("A: coupon used_count decremented to 0", couponAfter?.usedCount === 0, `usedCount=${couponAfter?.usedCount}`);
+
   // ── Cross-trigger idempotency — both re-runs are no-ops ──
   const summaryA2 = await refundPoolCancellation(smokePool.id, "冒烟测试饭局");
   check(
@@ -310,6 +376,14 @@ async function main(): Promise<void> {
     .delete(refundAttempts)
     .where(inArray(refundAttempts.paymentId, paymentIds))
     .catch(() => undefined);
+  // S-3 cleanup: coupon rows created by this run (refund already removed the
+  // coupon_usage row; delete defensively before payments for FK safety).
+  await db
+    .delete(couponUsage)
+    .where(inArray(couponUsage.paymentId, paymentIds))
+    .catch(() => undefined);
+  await db.delete(userCoupons).where(eq(userCoupons.id, smokeUserCoupon.id)).catch(() => undefined);
+  await db.delete(coupons).where(eq(coupons.id, smokeCoupon.id)).catch(() => undefined);
   await db
     .delete(notifications)
     .where(and(eq(notifications.userId, smokeUser.id), eq(notifications.category, "activities")))

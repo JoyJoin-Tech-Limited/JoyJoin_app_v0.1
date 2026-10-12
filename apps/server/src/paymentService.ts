@@ -146,6 +146,22 @@ interface PreparedPaymentOrder {
  */
 export const REFUND_CLAIM_ERROR_MESSAGE = "Can only refund completed payments";
 
+/**
+ * Thrown by createMiniProgramPayment when a coupon (or level discount) fully
+ * covers the order. WeChat Pay JSAPI cannot charge total=0, and the
+ * mini-program path has no free-fulfilment branch (unlike the H5
+ * createPayment path, which fulfils FREE_* orders locally). Rejecting before
+ * the payment row is created keeps the order out of a broken state; the
+ * route-level coupon validation rejects this case first (2026-10-12).
+ */
+export class CouponFullDiscountError extends Error {
+  readonly code = "COUPON_FULL_DISCOUNT";
+  constructor() {
+    super("优惠券已全额抵扣本单，暂不支持 ¥0 支付");
+    this.name = "CouponFullDiscountError";
+  }
+}
+
 export class PaymentService {
   assertMiniProgramAppIdConsistency(): void {
     const issue = getDirectMiniProgramAppIdConsistencyIssue(process.env);
@@ -206,7 +222,10 @@ export class PaymentService {
     this.assertMiniProgramAppIdConsistency();
 
     const { openid } = params;
-    const { payment, wechatOrderId, finalAmount } = await this.preparePaymentOrder(params);
+    const { payment, wechatOrderId, finalAmount } = await this.preparePaymentOrder({
+      ...params,
+      requiresChargeableAmount: true,
+    });
 
     const response = await this.wechatRequest<{ prepay_id: string }>({
       method: "POST",
@@ -888,7 +907,9 @@ export class PaymentService {
     return `WECHATPAY2-SHA256-RSA2048 mchid="${mchId}",nonce_str="${nonce}",timestamp="${timestamp}",serial_no="${serialNo}",signature="${signature}"`;
   }
 
-  private async preparePaymentOrder(params: CreatePaymentParams): Promise<PreparedPaymentOrder> {
+  private async preparePaymentOrder(
+    params: CreatePaymentParams & { requiresChargeableAmount?: boolean },
+  ): Promise<PreparedPaymentOrder> {
     const {
       userId,
       paymentType,
@@ -909,6 +930,16 @@ export class PaymentService {
 
     const totalDiscountAmount = levelDiscountAmount + couponDiscountAmount;
     const finalAmount = Math.max(0, originalAmount - totalDiscountAmount);
+
+    // Mini-program charge path: WeChat Pay JSAPI rejects total < 1. Reject
+    // before any payment row is created so no broken pending order is left
+    // behind. (H5 keeps its FREE_* fulfilment branch; it never passes this
+    // flag.) 2026-10-12 — client already withholds full-cover coupons, this is
+    // the server-authority backstop.
+    if (params.requiresChargeableAmount && finalAmount <= 0) {
+      throw new CouponFullDiscountError();
+    }
+
     const wechatOrderId = `JJ${Date.now()}${Math.random().toString(36).slice(2, 11)}`;
 
     const payment = await paymentsRepo.createPayment({
@@ -992,7 +1023,9 @@ export class PaymentService {
     const discountValue = Number(coupon.discountValue ?? coupon.discount_value ?? 0);
 
     if (discountType === "fixed_amount") {
-      couponDiscountAmount = discountValue;
+      // Cap at the order amount so discount bookkeeping can never exceed the
+      // original amount (also prevents a negative payable).
+      couponDiscountAmount = Math.min(discountValue, amountAfterLevelDiscount);
     } else if (discountType === "percentage") {
       couponDiscountAmount = Math.floor(amountAfterLevelDiscount * (discountValue / 100));
     }

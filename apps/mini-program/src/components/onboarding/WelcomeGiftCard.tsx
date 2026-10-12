@@ -5,8 +5,16 @@ import { haptics } from '../../lib/utils/haptics'
 import './WelcomeGiftCard.scss'
 
 export interface WelcomeGiftCardProps {
-  /** Coupon discount value, e.g. 50 for a 50% coupon. */
+  /**
+   * Coupon discount value, e.g. 50 for a 50% coupon; cents for
+   * `fixed_amount` (canonical 见面礼 WELCOME20 = 2000 → 20元).
+   */
   discountValue?: number
+  /**
+   * Wire discount type. `fixed_amount` renders whole yuan; absent/percentage
+   * keeps the legacy 折 rendering.
+   */
+  discountType?: string | null
   /**
    * Coupon expiry (ISO-8601, from the grant response's `validUntil`). When
    * present, renders a small 「有效期至 M月D日」 caption; when absent, nothing
@@ -27,7 +35,15 @@ export interface WelcomeGiftCardProps {
 
 const COUPON_IMAGE_PATH = '/assets/lovart/gift-card/coupon.webp'
 
-function formatDiscount(discountValue: number): { value: string; unit: string } {
+function formatDiscount(
+  discountValue: number,
+  discountType?: string | null,
+): { value: string; unit: string } {
+  // Canonical fixed 见面礼 (WELCOME20): display whole yuan. Legacy percentage
+  // coupons keep the 折 rendering.
+  if (discountType === 'fixed_amount' && discountValue > 0) {
+    return { value: `${Math.floor(discountValue / 100)}`, unit: '元' }
+  }
   if (discountValue > 0 && discountValue <= 100) {
     const zhe = Math.round((100 - discountValue) / 10)
     if (zhe >= 1 && zhe <= 9) {
@@ -46,6 +62,7 @@ function formatDiscount(discountValue: number): { value: string; unit: string } 
  */
 export default function WelcomeGiftCard({
   discountValue = 0,
+  discountType = null,
   validUntil = null,
   onTap,
   className = '',
@@ -58,7 +75,7 @@ export default function WelcomeGiftCard({
     onTap?.()
   }
 
-  const { value, unit } = formatDiscount(discountValue)
+  const { value, unit } = formatDiscount(discountValue, discountType)
   const badgeLabel = `${value}${unit}`
   const validityHint = formatCouponValidUntilLabel(validUntil)
   const { src: imageSrc, onError: onImageError } = useCdnFirstSrc(COUPON_IMAGE_PATH)

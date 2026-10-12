@@ -52,7 +52,15 @@ const TAP_GUARD_MS = 2400
  * WelcomeGiftCard.scss, and pulling it in here would drag the gift-card WXSS
  * back into the onboarding subpackage chunk graph (sub-common.wxss trap).
  */
-function formatGiftDiscount(discountValue: number): { value: string; unit: string } {
+function formatGiftDiscount(
+  discountValue: number,
+  discountType?: string | null,
+): { value: string; unit: string } {
+  // Canonical fixed 见面礼 (WELCOME20): display whole yuan. Legacy percentage
+  // coupons keep the 折 rendering.
+  if (discountType === 'fixed_amount' && discountValue > 0) {
+    return { value: `${Math.floor(discountValue / 100)}`, unit: '元' }
+  }
   if (discountValue > 0 && discountValue <= 100) {
     const zhe = Math.round((100 - discountValue) / 10)
     if (zhe >= 1 && zhe <= 9) {
@@ -73,6 +81,11 @@ interface UnboxingCeremonyProps {
    * the ceremony never blocks on the coupon network call.
    */
   giftDiscountValue?: number | null
+  /**
+   * Wire discount type for the gift row. `fixed_amount` renders whole yuan
+   * (canonical ¥20 见面礼); absent/percentage keeps the legacy 折 rendering.
+   */
+  giftDiscountType?: string | null
   /**
    * Coupon expiry (ISO-8601, grant response `validUntil`). When present, the
    * gift row adds a small 「有效期至 M月D日」 caption; absent → nothing
@@ -95,6 +108,7 @@ export default function UnboxingCeremony({
   archetypeName,
   accentText,
   giftDiscountValue = null,
+  giftDiscountType = null,
   giftValidUntil = null,
   giftLoading = false,
   onAdvance,
@@ -139,7 +153,8 @@ export default function UnboxingCeremony({
 
   if (!visible) return null
 
-  const giftDiscount = giftDiscountValue != null ? formatGiftDiscount(giftDiscountValue) : null
+  const giftDiscount =
+    giftDiscountValue != null ? formatGiftDiscount(giftDiscountValue, giftDiscountType) : null
   const giftValidityHint = giftDiscount ? formatCouponValidUntilLabel(giftValidUntil) : null
 
   const rootClass = [

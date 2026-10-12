@@ -148,17 +148,6 @@
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
     transition: border-color 0.2s ease, background 0.2s ease;
-
-    &--unlocked {
-      border: 2rpx solid $color-success;
-      background: rgba($color-success, 0.05);
-    }
-  }
-
-  &__tier-icon {
-    width: 48rpx;
-    height: 48rpx;
-    flex-shrink: 0;
   }
 
   &__tier-info {
@@ -183,29 +172,6 @@
     margin-top: $spacing-xs;
     overflow-wrap: normal;
     word-break: break-word;
-  }
-
-  &__tier-status {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    font-size: $font-size-sm;
-    color: $color-text-muted;
-    flex-shrink: 0;
-
-    &--unlocked {
-      color: $color-success;
-    }
-  }
-
-  &__tier-check {
-    width: 20rpx;
-    height: 20rpx;
-  }
-
-  &__tier-status-text {
-    font-size: $font-size-sm;
-    color: inherit;
   }
 
   &__spacer {

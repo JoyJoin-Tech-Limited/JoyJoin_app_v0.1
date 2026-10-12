@@ -6,6 +6,7 @@ import {
   type UserCouponSummary,
   type VipSubscriptionPlanKey,
 } from '@shared/api'
+import { formatCouponBenefitLabel, getCouponDisplayName } from './couponDisplay'
 
 export type MiniProgramPaymentPlanKey = VipSubscriptionPlanKey | EventPackPlanKey
 
@@ -155,13 +156,12 @@ export function buildMiniProgramPaymentCouponDisplayModel(
 ): MiniProgramPaymentCouponDisplayModel {
   const code = coupon.code ?? ''
 
+  // S-7 (2026-10-12): never surface internal coupon codes; show a friendly
+  // name + a human benefit label (立减 ¥20 / 5折).
   return {
     id: coupon.id,
     code,
-    title: code || '优惠券',
-    description:
-      coupon.discountType === 'percentage'
-        ? `${coupon.discountValue || 0}% 折扣`
-        : `立减 ${formatMiniProgramPaymentPrice((coupon.discountValue || 0) / 100)}`,
+    title: getCouponDisplayName(code),
+    description: formatCouponBenefitLabel(coupon),
   }
 }

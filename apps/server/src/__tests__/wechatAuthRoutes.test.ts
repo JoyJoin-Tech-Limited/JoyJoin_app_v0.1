@@ -434,10 +434,10 @@ describe("wechat auth route hardening", () => {
       return cookieHeader(loginResponse);
     }
 
-    it("awards WELCOME50 when no existing coupon", async () => {
+    it("awards the canonical WELCOME20 (fixed ¥20) when no existing coupon", async () => {
       vi.mocked(paymentsRepo.getCouponByCode).mockImplementation(async (code: string) => {
-        if (code === "WELCOME50") {
-          return { id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50, valid_until: new Date("2026-12-31T00:00:00Z") };
+        if (code === "WELCOME20") {
+          return { id: "coupon-20", code: "WELCOME20", discount_type: "fixed_amount", discount_value: 2000, valid_until: new Date("2026-12-31T00:00:00Z") };
         }
         return undefined;
       });
@@ -453,15 +453,15 @@ describe("wechat auth route hardening", () => {
 
         expect(response.status).toBe(200);
         expect(body).toMatchObject({
-          code: "WELCOME50",
-          discountType: "percentage",
-          discountValue: 50,
+          code: "WELCOME20",
+          discountType: "fixed_amount",
+          discountValue: 2000,
           source: "profile_review_first_view",
           isNewlyAwarded: true,
           validUntil: "2026-12-31T00:00:00.000Z",
         });
         expect(paymentsRepo.createUserCoupon).toHaveBeenCalledWith(
-          expect.objectContaining({ userId: mockUser.id, couponId: "coupon-50", source: "profile_review_first_view" })
+          expect.objectContaining({ userId: mockUser.id, couponId: "coupon-20", source: "profile_review_first_view" })
         );
       });
     });
@@ -469,7 +469,7 @@ describe("wechat auth route hardening", () => {
     it("returns existing coupon without creating a new one", async () => {
       vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue({ id: "coupon-40", code: "WELCOME40", discount_type: "percentage", discount_value: 40 });
       vi.mocked(paymentsRepo.getUserCoupons).mockResolvedValue([
-        { id: "uc-2", coupon_id: "coupon-40", source: "profile_review_first_view", created_at: "2026-06-28T00:00:00Z" },
+        { id: "uc-2", coupon_id: "coupon-40", code: "WELCOME40", discount_type: "percentage", discount_value: 40, source: "profile_review_first_view", created_at: "2026-06-28T00:00:00Z" },
       ]);
 
       await withServer(async (baseUrl) => {
@@ -492,6 +492,38 @@ describe("wechat auth route hardening", () => {
       });
     });
 
+    it("returns the legacy coupon when the user already holds any WELCOME* coupon (family dedup)", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockImplementation(async (code: string) => {
+        if (code === "WELCOME20") {
+          return { id: "coupon-20", code: "WELCOME20", discount_type: "fixed_amount", discount_value: 2000 };
+        }
+        return undefined;
+      });
+      vi.mocked(paymentsRepo.getUserCoupons).mockResolvedValue([
+        { id: "uc-legacy", coupon_id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50, source: "registration_complete", created_at: "2026-06-28T00:00:00Z" },
+      ]);
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, {
+          headers: { cookie },
+        });
+        const body = await response.json() as any;
+
+        // Lifetime 见面礼: the legacy WELCOME50 holder must NOT also receive
+        // WELCOME20 — the response describes the coupon they actually hold.
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({
+          code: "WELCOME50",
+          discountType: "percentage",
+          discountValue: 50,
+          isNewlyAwarded: false,
+        });
+        expect(paymentsRepo.createUserCoupon).not.toHaveBeenCalled();
+      });
+    });
+
     it("returns 404 when no welcome coupon is configured", async () => {
       vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue(undefined);
 
@@ -505,12 +537,15 @@ describe("wechat auth route hardening", () => {
       });
     });
 
-    it("falls back to WELCOME40 when WELCOME50 is missing", async () => {
+    it("falls back to legacy WELCOME50 when WELCOME20 is missing", async () => {
       vi.mocked(paymentsRepo.getCouponByCode).mockImplementation(async (code: string) => {
-        if (code === "WELCOME50") return undefined;
-        return { id: "coupon-40", code: "WELCOME40", discount_type: "percentage", discount_value: 40 };
+        if (code === "WELCOME20") return undefined;
+        if (code === "WELCOME50") {
+          return { id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50 };
+        }
+        return undefined;
       });
-      vi.mocked(paymentsRepo.createUserCoupon).mockResolvedValue({ id: "uc-40", created_at: new Date("2026-06-29T00:00:00Z") });
+      vi.mocked(paymentsRepo.createUserCoupon).mockResolvedValue({ id: "uc-50", created_at: new Date("2026-06-29T00:00:00Z") });
 
       await withServer(async (baseUrl) => {
         const cookie = await loginAndGetCookie(baseUrl);
@@ -522,12 +557,12 @@ describe("wechat auth route hardening", () => {
 
         expect(response.status).toBe(200);
         expect(body).toMatchObject({
-          code: "WELCOME40",
-          discountValue: 40,
+          code: "WELCOME50",
+          discountValue: 50,
           isNewlyAwarded: true,
         });
         expect(paymentsRepo.createUserCoupon).toHaveBeenCalledWith(
-          expect.objectContaining({ userId: mockUser.id, couponId: "coupon-40" })
+          expect.objectContaining({ userId: mockUser.id, couponId: "coupon-50" })
         );
       });
     });

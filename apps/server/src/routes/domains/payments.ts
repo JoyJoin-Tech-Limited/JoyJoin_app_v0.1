@@ -6,7 +6,7 @@ import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
-import { paymentService } from "../../paymentService";
+import { paymentService, CouponFullDiscountError } from "../../paymentService";
 import { paymentsRepo } from "../../repositories/paymentsRepo";
 import { paymentFulfillmentRepo } from "../../repositories/paymentFulfillmentRepo";
 import { shellCache } from "../../lib/shellCache";
@@ -241,6 +241,7 @@ export async function resolveCouponValidation(
   | {
       valid: false;
       message: string;
+      code?: string;
     }
 > {
   const normalizedCode = couponCode.trim().toUpperCase();
@@ -304,6 +305,17 @@ export async function resolveCouponValidation(
   const discountAmount = calculateCouponDiscountAmount(couponRecord, originalAmount);
   if (discountAmount <= 0) {
     return { valid: false, message: "此优惠码不可用或已过期" };
+  }
+
+  // 2026-10-12: a coupon that covers the full amount cannot be charged via
+  // WeChat Pay (min total 1 cent). Reject at validation time with a coded
+  // error instead of letting the payment service hit WeChat with total=0.
+  if (discountAmount >= originalAmount) {
+    return {
+      valid: false,
+      code: "COUPON_FULL_DISCOUNT",
+      message: "这张优惠券会全额抵扣本单，暂不支持 0 元支付，请换一张券",
+    };
   }
 
   return {
@@ -494,7 +506,7 @@ export function registerPaymentRoutes(app: Express): void {
       if (couponCode) {
         const couponValidation = await resolveCouponValidation(userId, String(couponCode), renewalQuote.originalAmount);
         if (!couponValidation.valid) {
-          return res.status(400).json({ message: couponValidation.message });
+          return res.status(400).json({ message: couponValidation.message, code: couponValidation.code ?? "INVALID_COUPON" });
         }
 
         couponId = couponValidation.couponId;
@@ -678,7 +690,7 @@ export function registerPaymentRoutes(app: Express): void {
           resolvedOriginalAmount,
         );
         if (!couponValidation.valid) {
-          return res.status(400).json({ message: couponValidation.message });
+          return res.status(400).json({ message: couponValidation.message, code: couponValidation.code ?? "INVALID_COUPON" });
         }
 
         couponId = couponValidation.couponId;
@@ -877,7 +889,7 @@ export function registerPaymentRoutes(app: Express): void {
               eventPackCheckout.originalAmount,
             );
             if (!couponValidation.valid) {
-              return res.status(400).json({ error: couponValidation.message });
+              return res.status(400).json({ error: couponValidation.message, code: couponValidation.code ?? "INVALID_COUPON" });
             }
 
             couponId = couponValidation.couponId;
@@ -938,7 +950,7 @@ export function registerPaymentRoutes(app: Express): void {
             renewalQuote.originalAmount,
           );
           if (!couponValidation.valid) {
-            return res.status(400).json({ error: couponValidation.message });
+            return res.status(400).json({ error: couponValidation.message, code: couponValidation.code ?? "INVALID_COUPON" });
           }
 
           couponId = couponValidation.couponId;
@@ -961,10 +973,17 @@ export function registerPaymentRoutes(app: Express): void {
           type: normalizedPlanType === "quarterly" ? "vip_quarterly" : "vip_monthly",
         });
       } catch (error) {
+        // Coupon full-cover guard (2026-10-12): a coded 400, not a 500 — a
+        // retry with the same coupon can never succeed, so this must never
+        // surface as "please retry" (PAYMENT_CREATION_FAILED).
+        if (error instanceof CouponFullDiscountError) {
+          return res.status(400).json({ message: error.message, code: error.code });
+        }
         reqLogger.error("Failed to create mini-program payment", {
           error: error instanceof Error ? error.message : String(error),
+          code: typeof (error as { code?: unknown })?.code === "string" ? (error as { code?: string }).code : undefined,
         });
-        res.status(500).json({ error: "Failed to create mini-program payment" });
+        res.status(500).json({ error: "Failed to create mini-program payment", code: "PAYMENT_CREATION_FAILED" });
       }
     }
   );

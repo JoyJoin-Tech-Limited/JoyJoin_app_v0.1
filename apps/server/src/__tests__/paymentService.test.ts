@@ -77,6 +77,7 @@ import { eventCreditsRepo } from "../repositories/eventCreditsRepo";
 import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "../repositories/paymentsRepo";
 import { refundAttemptsRepo } from "../repositories/refundAttemptsRepo";
+import { usersRepo } from "../repositories/usersRepo";
 
 const originalFetch = global.fetch;
 const envSnapshot = { ...process.env };
@@ -547,4 +548,91 @@ describe("PaymentService WeChat Pay timeout", () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
   }, 1000);
+});
+
+// Regression test for the mini-program full-cover coupon guard (2026-10-12):
+// WeChat Pay JSAPI cannot charge total=0, so a coupon that fully covers the
+// order must be rejected before any payment row or WeChat call. Runs
+// independently of the skipped integration suite above.
+describe("PaymentService mini-program full-cover coupon guard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    payments.splice(0, payments.length);
+    process.env = {
+      ...envSnapshot,
+      APP_URL: "https://joyjoin.example.com",
+      WECHAT_APPID: "wx-prod-app-id",
+      WECHAT_PAY_APP_ID: "wx-prod-app-id",
+      WECHAT_PAY_MCH_ID: "mch-123456",
+      WECHAT_PAY_SERIAL_NO: "merchant-serial-001",
+      WECHAT_PAY_PRIVATE_KEY: merchantKeys.privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      WECHAT_PAY_APIV3_KEY: apiV3Key,
+      WECHAT_PAY_PLATFORM_CERT: platformKeys.publicKey.export({ type: "spki", format: "pem" }).toString(),
+      WECHAT_PAY_PLATFORM_PUBLIC_KEY: platformKeys.publicKey.export({ type: "spki", format: "pem" }).toString(),
+      WECHAT_PAY_PLATFORM_SERIAL: "platform-serial-001",
+    };
+    vi.mocked(usersRepo.getUser).mockResolvedValue(undefined as any);
+    vi.mocked(paymentsRepo.getCoupon).mockResolvedValue({
+      id: "coupon-20",
+      code: "WELCOME20",
+      discountType: "fixed_amount",
+      discountValue: 2000,
+      isActive: true,
+      is_active: true,
+      validFrom: new Date(Date.now() - 86_400_000),
+      validUntil: null,
+      usageLimit: null,
+      usedCount: 0,
+      minPurchase: 0,
+    });
+  });
+
+  afterAll(() => {
+    process.env = envSnapshot;
+    global.fetch = originalFetch;
+  });
+
+  it("rejects a coupon that fully covers the order — no WeChat call, no payment row", async () => {
+    const fetchSpy = vi.fn();
+    global.fetch = fetchSpy as any;
+
+    const service = new PaymentService();
+
+    await expect(
+      service.createMiniProgramPayment({
+        userId: "user-1",
+        paymentType: "event",
+        relatedId: "pool-1",
+        originalAmount: 2000,
+        couponId: "coupon-20",
+        openid: "mock-openid-001",
+      })
+    ).rejects.toMatchObject({ code: "COUPON_FULL_DISCOUNT" });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(vi.mocked(paymentsRepo.createPayment)).not.toHaveBeenCalled();
+  });
+
+  it("charges the discounted remainder when the coupon is below the amount (8800 → 6800)", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(JSON.stringify({ prepay_id: "wx-prepay-guard" })),
+    } as any);
+
+    const service = new PaymentService();
+
+    const result = await service.createMiniProgramPayment({
+      userId: "user-1",
+      paymentType: "event",
+      relatedId: "pool-1",
+      originalAmount: 8800,
+      couponId: "coupon-20",
+      openid: "mock-openid-001",
+    });
+
+    expect(result.package).toBe("prepay_id=wx-prepay-guard");
+    expect(vi.mocked(paymentsRepo.createPayment)).toHaveBeenCalledWith(
+      expect.objectContaining({ originalAmount: 8800, discountAmount: 2000, finalAmount: 6800 }),
+    );
+  });
 });

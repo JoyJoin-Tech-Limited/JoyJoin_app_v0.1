@@ -291,14 +291,60 @@ export function isWelcomeCouponCode(code?: string | null): boolean {
 }
 
 /**
- * Audit F4 (interim, client-side gate): the 见面礼 welcome coupon never
- * auto-applies to the anchor 单场局票 plan — the first transaction stays
- * full-price so the anchor product doesn't train discount anchoring.
- * 连局包 and the 悦聚卡 subscription plans (D2: vip_monthly) keep the existing
- * auto-apply behaviour. The coupon applies ONCE to this first purchase —
+ * Canonical 见面礼 (2026-10-12): WELCOME20 = fixed ¥20 off. On the ¥88 anchor
+ * this lands on ¥68 — the legacy 50% coupon produced an unlucky ¥44 in the
+ * Cantonese-speaking launch market. Legacy percentage codes stay resolvable
+ * for coupons already held by testers.
+ */
+export const CANONICAL_WELCOME_COUPON_CODE = 'WELCOME20'
+
+/**
+ * Anchor-safety cap for fixed-amount welcome coupons (¥20 in cents). Only a
+ * fixed deduction at or below this value may ride the anchor 单场局票 — a
+ * larger fixed value (or a percentage coupon) would re-train the price anchor.
+ */
+export const CANONICAL_WELCOME_FIXED_CAP_CENTS = 2000
+
+/**
+ * F4 revision (2026-10-12): the anchor 单场局票 plan accepts the canonical
+ * fixed-amount 见面礼 only (WELCOME20, ¥20 off → first order ¥68). Legacy
+ * percentage codes (WELCOME50/40) stay excluded from the anchor so a 50%-off
+ * discount can never condition the price anchor. The cap guards against a
+ * future fixed coupon accidentally becoming anchor-destroying.
+ */
+export function isAnchorSafeWelcomeCoupon(coupon: UserCouponSummary): boolean {
+  return (
+    isWelcomeCouponCode(coupon.code) &&
+    coupon.discountType === 'fixed_amount' &&
+    typeof coupon.discountValue === 'number' &&
+    coupon.discountValue > 0 &&
+    coupon.discountValue <= CANONICAL_WELCOME_FIXED_CAP_CENTS
+  )
+}
+
+/**
+ * Generalized anchor invariant (2026-10-12, decision: 泛化到一切自动作用于
+ * 单场局票的券): ANY coupon auto-applied to the anchor 单场局票 must be a
+ * fixed-amount coupon capped at ¥20 — regardless of code family. A percentage
+ * coupon or a bigger fixed value (e.g. a future INVITE_REWARD ¥50) can never
+ * ride the anchor via the auto-apply/best-coupon paths.
+ */
+export function isAnchorSafeCoupon(coupon: UserCouponSummary): boolean {
+  return (
+    coupon.discountType === 'fixed_amount' &&
+    typeof coupon.discountValue === 'number' &&
+    coupon.discountValue > 0 &&
+    coupon.discountValue <= CANONICAL_WELCOME_FIXED_CAP_CENTS
+  )
+}
+
+/**
+ * Pack/subscription gate (F4, revised 2026-10-12): 连局包 and the 悦聚卡
+ * subscription plans keep blanket welcome-coupon eligibility. The anchor
+ * 单场局票 plan uses the narrower {@link isAnchorSafeCoupon} rule instead
+ * (fixed ≤¥20, any family). The coupon applies ONCE to this first purchase —
  * 悦聚月卡 renewal is manual at full price, so no copy may imply a recurring
- * discount. Server-side per-plan enforcement is a later schema change; a
- * future manual coupon picker for 单场局票 stays unaffected.
+ * discount.
  */
 export function isWelcomeCouponAutoApplyEligible(plan: string): boolean {
   return plan !== 'single'
@@ -309,12 +355,15 @@ export function findWelcomeCoupon(coupons: UserCouponSummary[]): UserCouponSumma
     return isWelcomeCouponCode(c.code) && c.status === 'available' && !c.isUsed
   })
   if (!welcomes.length) return null
-  // Prefer the highest-value welcome coupon (e.g. WELCOME50 > WELCOME40).
-  return welcomes.reduce((best, c) => {
-    const bestValue = best.discountValue ?? 0
-    const currentValue = c.discountValue ?? 0
-    return currentValue > bestValue ? c : best
-  }, welcomes[0])
+  // Canonical chain: WELCOME20 (fixed ¥20) > WELCOME50 > WELCOME40 > other
+  // WELCOME codes. Fixed and percentage values are not comparable by raw
+  // discountValue, so rank by code instead of value.
+  const chain = [CANONICAL_WELCOME_COUPON_CODE, 'WELCOME50', 'WELCOME40']
+  const rank = (code?: string | null): number => {
+    const index = chain.indexOf((code?.toUpperCase?.() ?? ''))
+    return index === -1 ? chain.length : index
+  }
+  return welcomes.reduce((best, c) => (rank(c.code) < rank(best.code) ? c : best), welcomes[0])
 }
 
 export function calculateDiscount(coupon: UserCouponSummary | null, originalAmount: number): number {

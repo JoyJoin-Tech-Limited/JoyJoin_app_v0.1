@@ -494,9 +494,14 @@ export function registerAuthRoutes(app: Express): void {
     }
 
     try {
+      // 见面礼 canonical chain (2026-10-12): WELCOME20 = fixed ¥20 off —
+      // first order ¥88 → ¥68, avoiding the culturally unlucky ¥44 of the
+      // legacy 50% coupon. WELCOME50/40 stay as legacy fallbacks so an
+      // environment whose coupon table predates the seed still awards one.
+      const welcomeCoupon20 = await paymentsRepo.getCouponByCode("WELCOME20");
       const welcomeCoupon50 = await paymentsRepo.getCouponByCode("WELCOME50");
       const welcomeCoupon40 = await paymentsRepo.getCouponByCode("WELCOME40");
-      const coupon = welcomeCoupon50 ?? welcomeCoupon40;
+      const coupon = welcomeCoupon20 ?? welcomeCoupon50 ?? welcomeCoupon40;
 
       if (!coupon) {
         return res.status(404).json({ code: "WELCOME_COUPON_NOT_FOUND", message: "Welcome coupon not configured" });
@@ -506,17 +511,26 @@ export function registerAuthRoutes(app: Express): void {
       const existing = existingCoupons.find(
         (uc: any) => (uc.coupon_id ?? uc.couponId) === coupon.id
       );
+      // Family-level dedup (2026-10-12): the 见面礼 is lifetime-once per user —
+      // a legacy WELCOME50/40 holder must not additionally receive WELCOME20 on
+      // a re-trigger. The held row is returned verbatim so the client renders
+      // what the user actually has.
+      const existingWelcome =
+        existing ??
+        existingCoupons.find((uc: any) =>
+          String(uc.code ?? "").toUpperCase().startsWith("WELCOME"),
+        );
 
-      if (existing) {
+      if (existingWelcome) {
         return res.json({
-          id: String(existing.id ?? existing.user_coupon_id ?? ''),
-          code: coupon.code,
-          discountType: coupon.discount_type ?? coupon.discountType ?? 'percentage',
-          discountValue: Number(coupon.discount_value ?? coupon.discountValue ?? 0),
-          source: existing.source ?? 'profile_review_first_view',
+          id: String(existingWelcome.id ?? existingWelcome.user_coupon_id ?? ''),
+          code: existingWelcome.code ?? coupon.code,
+          discountType: existingWelcome.discount_type ?? existingWelcome.discountType ?? coupon.discount_type ?? coupon.discountType ?? 'percentage',
+          discountValue: Number(existingWelcome.discount_value ?? existingWelcome.discountValue ?? coupon.discount_value ?? coupon.discountValue ?? 0),
+          source: existingWelcome.source ?? 'profile_review_first_view',
           isNewlyAwarded: false,
-          createdAt: normalizeCouponTimestamp(existing.created_at ?? existing.createdAt),
-          validUntil: normalizeOptionalCouponTimestamp(coupon.valid_until ?? coupon.validUntil),
+          createdAt: normalizeCouponTimestamp(existingWelcome.created_at ?? existingWelcome.createdAt),
+          validUntil: normalizeOptionalCouponTimestamp(existingWelcome.valid_until ?? existingWelcome.validUntil ?? coupon.valid_until ?? coupon.validUntil),
         });
       }
 

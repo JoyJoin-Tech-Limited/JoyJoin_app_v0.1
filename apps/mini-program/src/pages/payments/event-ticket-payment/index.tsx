@@ -47,6 +47,8 @@ import {
   getTerminalRegistrationCode,
   getTerminalRegistrationCopy,
   getVipMonthlyAnchorLabel,
+  isAnchorSafeCoupon,
+  isAnchorSafeWelcomeCoupon,
   isSubscriptionActive,
   isWelcomeCouponAutoApplyEligible,
   isWelcomeCouponCode,
@@ -59,6 +61,7 @@ import {
   type SubscriptionStatusPayload,
   type TerminalRegistrationBlock,
 } from './ticketHelpers'
+import { getCouponDisplayName } from '../../../lib/payment/couponDisplay'
 import './index.scss'
 
 const TOAST_DURATION = 2000
@@ -245,14 +248,21 @@ export default function EventTicketPaymentPage() {
     }
   }, [selectedPlan, vipMonthlyOffer])
 
-  // Auto-select welcome coupon on first load — gated by plan (audit F4
-  // interim): the 见面礼 never auto-applies to the anchor 单场局票 plan, so the
-  // first transaction stays full-price; 连局包 (and future 悦聚卡 plans) keep
-  // the existing behaviour. Server-side per-plan enforcement ships later.
+  // F4 revised (2026-10-12, generalized): the anchor 单场局票 plan accepts
+  // ONLY anchor-safe coupons — fixed-amount ≤ ¥20, any code family (WELCOME20
+  // 见面礼 today; a future big fixed or percentage reward can never ride the
+  // anchor). 连局包 and 悦聚卡 plans keep blanket coupon eligibility.
+  const welcomeAutoApplyEligible = isWelcomeCouponAutoApplyEligible(selectedPlan)
+  const eligibleCoupons = useMemo(() => {
+    const all = couponsData?.coupons ?? []
+    if (welcomeAutoApplyEligible) return all
+    return all.filter(isAnchorSafeCoupon)
+  }, [couponsData?.coupons, welcomeAutoApplyEligible])
+
+  // Auto-select welcome coupon on first load from the plan-eligible set.
   useEffect(() => {
     if (!couponsData?.coupons || selectedCouponCode) return
-    if (!isWelcomeCouponAutoApplyEligible(selectedPlan)) return
-    const welcome = findWelcomeCoupon(couponsData.coupons)
+    const welcome = findWelcomeCoupon(eligibleCoupons)
     if (welcome?.code) {
       setSelectedCouponCode(welcome.code)
       setCouponAppliedAt(Date.now())
@@ -261,7 +271,7 @@ export default function EventTicketPaymentPage() {
         context: 'event-ticket-payment',
       })
     }
-  }, [couponsData?.coupons, selectedCouponCode, selectedPlan])
+  }, [couponsData?.coupons, selectedCouponCode, eligibleCoupons])
 
   // Derived pricing — prefer pool.price, fallback to ritual-context, then hardcoded
   const pricingPlans = ritualContext?.plans ?? []
@@ -284,24 +294,16 @@ export default function EventTicketPaymentPage() {
           ? pack6Price
           : singlePrice
 
-  // Audit F4: on the anchor 单场局票 plan the 见面礼 is ineligible for
-  // auto-apply, so WELCOME* codes are excluded from BOTH the selected-coupon
-  // honouring and the best-coupon fallback — otherwise the discount would
-  // leak onto the anchor product via getBestCoupon even without auto-select.
-  const welcomeAutoApplyEligible = isWelcomeCouponAutoApplyEligible(selectedPlan)
-  const eligibleCoupons = useMemo(() => {
-    const all = couponsData?.coupons ?? []
-    if (welcomeAutoApplyEligible) return all
-    return all.filter((c) => !isWelcomeCouponCode(c.code))
-  }, [couponsData?.coupons, welcomeAutoApplyEligible])
-
   const welcomeCoupon = useMemo(
     () => findWelcomeCoupon(couponsData?.coupons ?? []),
     [couponsData?.coupons],
   )
-  // Quiet eligibility note near the plan selector (F4-b): only when a
-  // welcome coupon exists but the current plan can't auto-use it.
-  const showWelcomeCouponHint = !welcomeAutoApplyEligible && Boolean(welcomeCoupon)
+  // Quiet eligibility note near the plan selector (F4-b, revised): only when
+  // a welcome coupon exists that the current plan cannot use (i.e. a legacy
+  // percentage coupon on the anchor plan). The canonical fixed ¥20 coupon is
+  // eligible everywhere, so it never triggers the hint.
+  const showWelcomeCouponHint =
+    !welcomeAutoApplyEligible && Boolean(welcomeCoupon) && !isAnchorSafeWelcomeCoupon(welcomeCoupon!)
 
   const selectedCoupon = useMemo(() => {
     if (!selectedCouponCode || !couponsData?.coupons) return null
@@ -316,14 +318,16 @@ export default function EventTicketPaymentPage() {
   const discountAmount = calculateDiscount(bestCoupon, currentPrice)
   const finalPrice = Math.max(0, currentPrice - discountAmount)
 
-  // If the selected/auto-selected coupon yields zero discount for the current price,
-  // don't send it to the server. This prevents the server from rejecting the order
-  // with "此优惠码不可用或已过期" when the test price is below the coupon's effective
-  // minimum (e.g. 1 cent with a percentage coupon).
+  // If the selected/auto-selected coupon yields zero discount for the current
+  // price, don't send it to the server. This prevents the server from rejecting
+  // the order with "此优惠码不可用或已过期" when the test price is below the
+  // coupon's effective minimum (e.g. 1 cent with a percentage coupon). Also
+  // never submit a coupon that fully covers the price — a ¥0 payable order is
+  // not chargeable (guards the fixed ¥20 coupon under ¥0.01 test pricing).
   const effectiveCouponCode = useMemo(() => {
-    if (discountAmount > 0) return bestCoupon?.code
+    if (discountAmount > 0 && discountAmount < currentPrice) return bestCoupon?.code
     return undefined
-  }, [discountAmount, bestCoupon?.code])
+  }, [discountAmount, currentPrice, bestCoupon?.code])
 
   // Track page view once the screen is ready and pool is known.
   useEffect(() => {
@@ -1159,7 +1163,7 @@ export default function EventTicketPaymentPage() {
               </View>
               <Text className='ticket-card__coupon-stub-savings'>首单立省 {formatPrice(discountAmount)}</Text>
               <Text className='ticket-card__coupon-stub-code'>
-                优惠码 {bestCoupon.code} · {showCouponDetail ? '▲' : '▼'}
+                {getCouponDisplayName(bestCoupon.code)} · {showCouponDetail ? '▲' : '▼'}
               </Text>
               {showCouponDetail && (
                 <View className='ticket-card__coupon-stub-detail'>

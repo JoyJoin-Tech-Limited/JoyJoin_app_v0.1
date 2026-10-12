@@ -11,7 +11,16 @@ import './FirstTimeCouponBanner.scss'
 interface FirstTimeCouponBannerProps {
   className?: string
   couponCode: string
+  /** Legacy percentage-off value (e.g. 50 for a 5折 coupon). */
   discountPercent?: number
+  /**
+   * Wire discount type (2026-10-12): `fixed_amount` switches the banner into
+   * ¥ mode (canonical 见面礼 WELCOME20 = fixed ¥20 off → first order ¥68).
+   * Absent/other values keep the percentage rendering.
+   */
+  discountType?: string | null
+  /** Wire discount value: percent points when percentage; cents when fixed. */
+  discountValue?: number | null
   onUseCoupon?: (code: string) => void
   analyticsContext?: string
   userArchetype?: string | null
@@ -106,6 +115,8 @@ export default function FirstTimeCouponBanner({
   className = '',
   couponCode,
   discountPercent = 50,
+  discountType,
+  discountValue,
   onUseCoupon,
   analyticsContext = 'payment',
   userArchetype,
@@ -125,7 +136,16 @@ export default function FirstTimeCouponBanner({
   const idleAnimationsEnabled = animateIn && !isDegradation
   const showCounterAnimation = animateIn && !isDegradation
 
-  const countedPercent = useCountUp(discountPercent, 1200, showCounterAnimation)
+  // Fixed-amount mode (canonical 见面礼 WELCOME20, ¥20 off). Percentage mode
+  // keeps the legacy rendering for coupons already held by testers.
+  const isFixedAmount =
+    discountType === 'fixed_amount' && typeof discountValue === 'number' && discountValue > 0
+  const fixedYuan = isFixedAmount ? Math.floor((discountValue as number) / 100) : 0
+  const percentValue =
+    !isFixedAmount && discountType === 'percentage' && discountValue ? discountValue : discountPercent
+  const counterTarget = isFixedAmount ? fixedYuan : percentValue
+
+  const countedValue = useCountUp(counterTarget, 1200, showCounterAnimation)
 
   // Archetype-aware shape tint: subtly color the decorative circle
   // with the user's archetype accent. Falls back to default purple.
@@ -137,12 +157,18 @@ export default function FirstTimeCouponBanner({
     } as React.CSSProperties
   }, [userArchetype])
 
-  // Savings preview: concrete monetary savings from the current plan
+  // Savings preview: concrete monetary savings from the current plan. Fixed
+  // coupons save min(price, fixedYuan) — never more than the price itself.
   const savingsAmount = useMemo(() => {
-    if (!planPrice || !discountPercent || discountPercent <= 0) return null
+    if (!planPrice) return null
     const price = planPrice > 1000 ? planPrice / 100 : planPrice // handle cents vs yuan
-    return Math.round(price * (discountPercent / 100))
-  }, [planPrice, discountPercent])
+    if (isFixedAmount) {
+      if (fixedYuan <= 0) return null
+      return Math.min(Math.round(price), fixedYuan)
+    }
+    if (!percentValue || percentValue <= 0) return null
+    return Math.round(price * (percentValue / 100))
+  }, [planPrice, isFixedAmount, fixedYuan, percentValue])
 
   // Validity hint: "有效期至 12月25日" or null
   const validityHint = useMemo(() => {
@@ -162,13 +188,15 @@ export default function FirstTimeCouponBanner({
       'welcome_coupon_banner_impression',
       undefined,
       {
-        discountPercent,
+        discountPercent: isFixedAmount ? null : percentValue,
+        discountType: isFixedAmount ? 'fixed_amount' : 'percentage',
+        discountYuan: isFixedAmount ? fixedYuan : null,
         context: analyticsContext,
         hasArchetype: !!userArchetype,
       },
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [discountPercent, analyticsContext, userArchetype])
+  }, [percentValue, isFixedAmount, fixedYuan, analyticsContext, userArchetype])
 
   const handleTap = useCallback(() => {
     if (!onUseCoupon || !couponCode || isClaimed) return
@@ -178,7 +206,9 @@ export default function FirstTimeCouponBanner({
       'welcome_coupon_banner_tap',
       undefined,
       {
-        discountPercent,
+        discountPercent: isFixedAmount ? null : percentValue,
+        discountType: isFixedAmount ? 'fixed_amount' : 'percentage',
+        discountYuan: isFixedAmount ? fixedYuan : null,
         context: analyticsContext,
         couponCode,
         hasArchetype: !!userArchetype,
@@ -199,7 +229,7 @@ export default function FirstTimeCouponBanner({
     setTimeout(() => {
       onUseCoupon(couponCode)
     }, 900)
-  }, [couponCode, onUseCoupon, discountPercent, analyticsContext, userArchetype, isClaimed])
+  }, [couponCode, onUseCoupon, percentValue, isFixedAmount, analyticsContext, userArchetype, isClaimed])
 
   const handleTouchStart = useCallback(() => setIsPressed(true), [])
   const handleTouchEnd = useCallback(() => setIsPressed(false), [])
@@ -222,7 +252,12 @@ export default function FirstTimeCouponBanner({
 
   // ── Emotionally resonant, context-aware copy ────────────────────────
   const eyebrowText = '新人见面礼'
-  const titleText = `首单${countedPercent > 0 ? countedPercent : discountPercent}折`
+  // Percentage mode must display 折, not the raw percent (「首单50折」 was a
+  // legacy rendering bug — 50% off = 5折). Fixed mode shows the ¥ deduction.
+  const percentZhe = Math.max(1, Math.min(9, Math.round((100 - percentValue) / 10)))
+  const titleText = isFixedAmount
+    ? `首单立减 ¥${fixedYuan}`
+    : `首单${percentZhe}折`
   const subtitleText = archetypeDisplayName
     ? `作为「${archetypeDisplayName}」的你，这份福利专属于你`
     : '完成聚会人格测试后，悦仔为你准备的专属福利'
@@ -238,7 +273,11 @@ export default function FirstTimeCouponBanner({
         className,
       ].filter(Boolean).join(' ')}
       role='region'
-      aria-label={`新人见面礼，首单${discountPercent}折优惠券${savingsAmount !== null ? `，立省${savingsAmount}元` : ''}`}
+      aria-label={
+        isFixedAmount
+          ? `新人见面礼，首单立减 ¥${fixedYuan}${savingsAmount !== null ? `，立省${savingsAmount}元` : ''}`
+          : `新人见面礼，首单${percentZhe}折优惠券${savingsAmount !== null ? `，立省${savingsAmount}元` : ''}`
+      }
       aria-roledescription='优惠券横幅'
     >
       <View
@@ -264,7 +303,9 @@ export default function FirstTimeCouponBanner({
         {/* Decorative watermark percent */}
         <View className='first-time-coupon-banner__watermark' aria-hidden='true'>
           <Text className='first-time-coupon-banner__watermark-text'>
-            {countedPercent > 0 ? countedPercent : discountPercent}%
+            {isFixedAmount
+              ? `¥${countedValue > 0 ? countedValue : fixedYuan}`
+              : `${countedValue > 0 ? countedValue : percentValue}%`}
           </Text>
         </View>
 

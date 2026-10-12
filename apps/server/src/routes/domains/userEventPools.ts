@@ -48,7 +48,7 @@ import { wsService } from "../../wsService";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
-import { paymentService } from "../../paymentService";
+import { paymentService, CouponFullDiscountError } from "../../paymentService";
 import { cancelPoolRegistrationWithPolicy, computeRegistrationCancelPolicy } from "../../lib/poolRegistrationCancel";
 import { resolveCouponValidation } from "../domains/payments";
 import { getTestPriceCents } from "../../lib/paymentTestPrice";
@@ -1095,7 +1095,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
       if (couponCode) {
         const couponValidation = await resolveCouponValidation(userId, couponCode, originalAmount);
         if (!couponValidation.valid) {
-          return res.status(400).json({ message: couponValidation.message, code: "INVALID_COUPON" });
+          return res.status(400).json({ message: couponValidation.message, code: couponValidation.code ?? "INVALID_COUPON" });
         }
         couponId = couponValidation.couponId;
       }
@@ -1165,6 +1165,12 @@ export function registerUserEventPoolRoutes(app: Express): void {
       // T6-strict: surface budget validation codes verbatim instead of
       // collapsing to PAYMENT_CREATION_FAILED (retry cannot succeed).
       if (error instanceof BudgetTierValidationError) {
+        return res.status(400).json({ message: error.message, code: error.code });
+      }
+
+      // Coupon full-cover guard (2026-10-12): coded 400, not a 500 — retrying
+      // the same coupon can never succeed.
+      if (error instanceof CouponFullDiscountError) {
         return res.status(400).json({ message: error.message, code: error.code });
       }
 

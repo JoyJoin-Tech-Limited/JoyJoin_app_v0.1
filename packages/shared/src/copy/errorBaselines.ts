@@ -55,6 +55,7 @@ export type ErrorCode =
   | 'ATTENDANCE_NOT_READY'
   | 'GATHERING_ROOM_DISABLED'
   | 'INVALID_COUPON'
+  | 'COUPON_FULL_DISCOUNT'
   | 'NO_ACTIVE_ENTITLEMENT'
   | 'NO_AVAILABLE_EVENT_PACK_CREDITS'
   | 'PAYMENT_CREATION_FAILED'
@@ -258,6 +259,13 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   INVALID_COUPON: {
     surface: 'toast-error',
     default: '优惠券暂不可用',
+  },
+  // Coupon fully covers the order — WeChat Pay cannot charge ¥0, so the
+  // order is rejected at validation. No retry with the same coupon can
+  // succeed; the copy must say "switch coupon", not "try again".
+  COUPON_FULL_DISCOUNT: {
+    surface: 'toast-error',
+    default: '这张券会全额抵扣本单，请换一张券',
   },
   NO_ACTIVE_ENTITLEMENT: {
     surface: 'toast-error',

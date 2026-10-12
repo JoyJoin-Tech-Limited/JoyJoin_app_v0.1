@@ -46,6 +46,22 @@ describe('UnboxingCeremony gift row (拆盒即得礼)', () => {
     expect(screen.getByText(/报名可用/)).toBeInTheDocument()
   })
 
+  it('renders the canonical fixed ¥20 见面礼 in whole yuan', () => {
+    render(
+      <UnboxingCeremony
+        visible
+        displayName='小悦'
+        archetypeName='社牛柯基'
+        giftDiscountValue={2000}
+        giftDiscountType='fixed_amount'
+        onComplete={() => {}}
+      />,
+    )
+
+    expect(screen.getByText('20元')).toBeInTheDocument()
+    expect(screen.queryByText('2000%')).not.toBeInTheDocument()
+  })
+
   it('shows a quiet shimmer while the coupon claim is in flight', () => {
     const { container } = render(
       <UnboxingCeremony

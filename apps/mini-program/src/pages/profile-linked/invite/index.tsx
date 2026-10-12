@@ -13,14 +13,19 @@ import { usePageTTI } from '../../../hooks/usePageTTI'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import StatusCard from '../../../components/ui/StatusCard'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import './index.scss'
 
-const REWARD_TIERS = [
-  { count: 1, reward: '7折优惠券 ×1', emoji: '🎫' },
-  { count: 3, reward: '5折优惠券 ×2', emoji: '🎁' },
-  { count: 5, reward: '免费月卡 ×1', emoji: '🏆' },
+// Truthful invite mechanics (2026-10-12, code-review BLOCKING fix): this page
+// shares the permanent referral code — referral registrations write
+// referral_conversions (attribution only). The INVITE_REWARD coupon is issued
+// only for per-pool invitation codes (invitation_uses), which this page never
+// mints, so no coupon promise may appear here. Same-table pairing bias is
+// invitation-code-scoped too — never promise "同一桌" from a referral share.
+const INVITE_STEPS = [
+  { step: '1', title: '分享邀请链接', detail: '把链接或邀请码发给想一起玩的朋友' },
+  { step: '2', title: '朋友注册并完成人格测试', detail: '新朋友也会领到新人见面礼' },
+  { step: '3', title: '一起报名同一场局', detail: '现场见' },
 ]
 
 function buildReferralMiniProgramPath(code: string, poolId?: string): string {
@@ -91,11 +96,10 @@ export default function InvitePage() {
   const platformTotal = stats?.platformTotal ?? 0
   const inviteLink = stats?.inviteLink ?? ''
   const miniProgramPath = referralCode !== '—' ? buildReferralMiniProgramPath(referralCode, activeSharePoolId) : ''
-  const nextTier = REWARD_TIERS.find((tier) => invitedCount < tier.count)
 
   const inviteCopy = useMemo(() => {
     const codeLine = `邀请码：${referralCode}`
-    return `和我一起加入 JoyJoin，看看这场有趣的盲盒社交活动吧。\n${codeLine}\n打开小程序即可使用邀请码`
+    return `和我一起加入 JoyJoin，看看这场有趣的盲盒活动吧。\n${codeLine}\n打开小程序即可使用邀请码`
   }, [referralCode])
 
   if (authLoading || isLoading) {
@@ -168,7 +172,7 @@ export default function InvitePage() {
           ariaLabel='邀请好友'
         />
         <Text className='invite-page__hero-title'>邀请好友，一起悦聚</Text>
-        <Text className='invite-page__hero-subtitle'>邀请越多，奖励越丰厚</Text>
+        <Text className='invite-page__hero-subtitle'>朋友用你的邀请码加入，新人也能领见面礼</Text>
       </View>
 
       <Card className='invite-page__code-card'>
@@ -226,33 +230,19 @@ export default function InvitePage() {
             </Button>
           </View>
           <Text className='invite-page__link-helper'>
-            {nextTier
-              ? `再邀请 ${nextTier.count - invitedCount} 人，就能解锁下一档奖励：${nextTier.reward}`
-              : '所有邀请奖励已解锁，继续邀请还能持续累积平台战绩。'}
+            邀请链接长期有效，分享给朋友即可。
           </Text>
         </Card>
       </View>
 
       <View className='invite-page__section'>
-        <Text className='invite-page__section-title'>奖励阶梯</Text>
-        {REWARD_TIERS.map((tier) => (
-          <Card
-            key={tier.count}
-            className={`invite-page__tier ${invitedCount >= tier.count ? 'invite-page__tier--unlocked' : ''}`}
-          >
-            <JoyJoinIcon emoji={tier.emoji} tier='ui' size={48} className='invite-page__tier-icon' />
+        <Text className='invite-page__section-title'>邀请怎么生效</Text>
+        {INVITE_STEPS.map((item) => (
+          <Card key={item.step} className='invite-page__tier'>
             <View className='invite-page__tier-info'>
-              <Text className='invite-page__tier-target'>邀请 {tier.count} 人</Text>
-              <Text className='invite-page__tier-reward'>{tier.reward}</Text>
+              <Text className='invite-page__tier-target'>{item.title}</Text>
+              <Text className='invite-page__tier-reward'>{item.detail}</Text>
             </View>
-            {invitedCount >= tier.count ? (
-              <View className='invite-page__tier-status invite-page__tier-status--unlocked'>
-                <JoyJoinIcon emoji='✅' tier='ui' size={20} className='invite-page__tier-check' />
-                <Text className='invite-page__tier-status-text'>已达成</Text>
-              </View>
-            ) : (
-              <Text className='invite-page__tier-status'>还差 {tier.count - invitedCount} 人</Text>
-            )}
           </Card>
         ))}
       </View>
