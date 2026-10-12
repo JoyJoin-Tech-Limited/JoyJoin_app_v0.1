@@ -89,7 +89,7 @@ describe('tagGenerationService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'social-tags-v1',
@@ -129,7 +129,7 @@ describe('tagGenerationService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: true,
         fallbackUsed: true,
         promptVersion: 'social-tags-v1',
@@ -147,7 +147,7 @@ describe('tagGenerationService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'social-tags-v1',

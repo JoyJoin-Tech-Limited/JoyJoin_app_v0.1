@@ -48,9 +48,11 @@ When two dimensions disagree (e.g. "small edit" but **high blast radius**), **es
 
 ## DeepSeek V4 (backbone coding model)
 
-### DeepSeek V4 Flash — $0.14/1M input, $0.28/1M output
+### DeepSeek V4.1 Flash (`deepseek-flash`) — input $0.15 / $0.30, output $0.60 / $1.20 (off-peak / peak per 1M)
 
-Cost-efficient tier for **mechanical** work: renames, obvious fixes, formatting, single-shot answers where a mistake is cheap to undo. **1M context window** — largest in class. No thinking mode (fast path). Avoid for ambiguous specs, security-sensitive edits, or multi-step refactors.
+> Canonical name for DeepSeek-V4.1-Flash since 2026-10-09; legacy `deepseek-v4-flash` is retired upstream (requests served by V4.1-Flash). 1M context, JSON output, tool calls, thinking mode (ON by default — disable explicitly for JSON tasks), vision. Pricing verified against api-docs.deepseek.com/quick_start/pricing 2026-10-09.
+
+Cost-efficient tier for **mechanical** work: renames, obvious fixes, formatting, single-shot answers where a mistake is cheap to undo. **1M context window** — largest in class. Thinking mode is ON by default upstream; JSON-tier calls explicitly send `thinking: { type: 'disabled' }` (fast path). Avoid for ambiguous specs, security-sensitive edits, or multi-step refactors.
 
 **Known tool-calling quirks** (shared across DeepSeek, GLM, and Qwen — handled by `toolInputRepair.ts`):
 1. Sends `null` for optional fields instead of omitting them
@@ -61,11 +63,13 @@ Cost-efficient tier for **mechanical** work: renames, obvious fixes, formatting,
 
 The tool-input repair layer (validate-then-repair) handles these transparently. See `apps/server/src/ai/toolInputRepair.ts`.
 
-### DeepSeek V4 Pro — $1.74/1M input, $3.48/1M output
+### DeepSeek V4 Pro (`deepseek-v4-pro`) — input $0.66 / $1.32, output $1.98 / $3.96 (off-peak / peak per 1M)
+
+> DeepSeek-V4-Pro-0813. 1M context, JSON output, tool calls, thinking mode. Pricing verified against api-docs.deepseek.com/quick_start/pricing 2026-10-09.
 
 Default **professional / implementation** tier (1.00x). **1M context window** (4× Kimi, 8× GLM) — ideal for large-repo analysis and multi-file refactors. Supports thinking mode via `reasoning_effort: 'high' | 'max'`. Use for standard feature work, multi-file edits with moderate complexity, and most "ship this PR" engineering. Prefer over Flash when **implicit requirements**, **cross-file consistency**, or **tool orchestration** matter.
 
-*Provider context:* DeepSeek V4 supports 1M context, JSON output, tool calls, and thinking mode via `extra_body.thinking`.
+*Provider context:* DeepSeek V4 supports 1M context, JSON output, tool calls, and thinking mode via top-level `thinking` control (the openai-node SDK does not serialize `extra_body`; see AGENTS.md reasoning trap).
 
 ---
 

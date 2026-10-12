@@ -260,7 +260,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         choices: [{ message: { content: 'Test explanation' } }],
       }) } },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   }),
   getDeepseekSelection: vi.fn().mockReturnValue({
@@ -269,7 +269,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         choices: [{ message: { content: 'Test explanation' } }],
       }) } },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   }),
 }));

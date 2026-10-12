@@ -67,7 +67,7 @@ export function fireAndForgetQualityGate(
         domain: 'icebreaker',
         feature: `${featureType}_quality_gate`,
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         latencyMs: 0,
         success: result.action !== 'discard',
         fallbackUsed: false,

@@ -54,7 +54,7 @@ describe('getDeepseekClient thinking wrapper', () => {
     const client = await getClient();
 
     const result = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       messages: [{ role: 'user', content: 'hi' }],
       max_tokens: 50,
     });
@@ -70,7 +70,7 @@ describe('getDeepseekClient thinking wrapper', () => {
     const client = await getClient();
 
     await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       messages: [],
       // @ts-expect-error - top-level DeepSeek extension under test
       thinking: { type: 'enabled' },
@@ -85,7 +85,7 @@ describe('getDeepseekClient thinking wrapper', () => {
     const client = await getClient();
 
     await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       messages: [],
       // @ts-expect-error - extra_body DeepSeek extension under test
       extra_body: { thinking: { type: 'enabled' } },
@@ -101,11 +101,11 @@ describe('getDeepseekClient thinking wrapper', () => {
     const client = await getClient();
 
     await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       messages: [],
     });
     await client.chat.completions.create(
-      { model: 'deepseek-v4-flash', messages: [] },
+      { model: 'deepseek-flash', messages: [] },
       { signal: undefined },
     );
 

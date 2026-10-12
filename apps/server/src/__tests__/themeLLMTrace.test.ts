@@ -103,7 +103,7 @@ describe('themeLLMService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-llm-v1',
@@ -134,7 +134,7 @@ describe('themeLLMService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-llm-v1',
@@ -154,7 +154,7 @@ describe('themeLLMService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-llm-v1',

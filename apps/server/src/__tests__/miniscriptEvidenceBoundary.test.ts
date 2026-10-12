@@ -50,12 +50,12 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
 vi.mock('../ai/socialModelRouter', () => ({
   getClientForFunction: vi.fn(() => ({
     client: { chat: { completions: { create: createMock } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
   getDeepseekSelection: vi.fn(() => ({
     client: { chat: { completions: { create: createMock } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
 }));

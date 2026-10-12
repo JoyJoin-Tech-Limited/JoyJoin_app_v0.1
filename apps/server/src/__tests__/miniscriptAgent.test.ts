@@ -18,7 +18,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
   getDeepseekSelection: vi.fn(() => ({
@@ -29,7 +29,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
 }));
@@ -110,7 +110,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     const { getClientForFunction } = await import('../ai/socialModelRouter');
     (getClientForFunction as any).mockImplementation(() => ({
       client: { chat: { completions: { create: vi.fn() } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     }));
   });
@@ -184,7 +184,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -228,7 +228,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -265,7 +265,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -292,7 +292,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -331,7 +331,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -359,7 +359,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     const mockCreate = vi.fn().mockImplementation(() => new Promise(() => {}));
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -398,7 +398,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -468,7 +468,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -522,7 +522,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -579,7 +579,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -628,7 +628,7 @@ describe('W7.2 — mini-script framework content moderation (live path)', () => 
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -683,7 +683,7 @@ describe('W7.2 — mini-script framework content moderation (live path)', () => 
     });
     (getClientForFunction as any).mockReturnValue({
       client: { chat: { completions: { create: mockCreate } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 

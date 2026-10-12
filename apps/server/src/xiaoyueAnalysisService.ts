@@ -606,7 +606,7 @@ async function runAnalysisGeneration(
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
-          // deepseek-v4-flash reasons by default; an unchecked chain burns
+          // deepseek-flash reasons by default; an unchecked chain burns
           // 1100+ tokens and stretches generation past 20s. 'low' collapses
           // reasoning to ~30 tokens — measured 2.4s total, full content.
           reasoning_effort: 'low',

@@ -200,20 +200,20 @@ describe('socialModelRouter', () => {
   });
 
   describe('model name resolution', () => {
-    it('uses deepseek-v4-flash model for flash-tier functions', () => {
+    it('uses deepseek-flash model for flash-tier functions', () => {
       setEnv({});
 
       const result = getClientForFunction('generateProfileTagline');
       expect(result.provider).toBe('deepseek');
-      expect(result.model).toBe('deepseek-v4-flash');
+      expect(result.model).toBe('deepseek-flash');
     });
 
-    it('uses deepseek-v4-flash model for thinking-tier functions', () => {
+    it('uses deepseek-flash model for thinking-tier functions', () => {
       setEnv({});
 
       const result = getClientForFunction('generateMicroChallenges');
       expect(result.provider).toBe('deepseek');
-      expect(result.model).toBe('deepseek-v4-flash');
+      expect(result.model).toBe('deepseek-flash');
     });
   });
 });

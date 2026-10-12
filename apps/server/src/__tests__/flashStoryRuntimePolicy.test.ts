@@ -621,7 +621,7 @@ describe("formal Flash story runtime policy", () => {
         response: "服务端编排后的安全回应",
         renderKind: "ai",
         provider: "deepseek",
-        model: "deepseek-v4-flash",
+        model: "deepseek-flash",
         promptVersion: "flash-parallel-universe-v1",
       };
     });

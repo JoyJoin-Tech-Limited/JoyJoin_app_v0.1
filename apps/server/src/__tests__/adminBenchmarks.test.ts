@@ -8,7 +8,7 @@ vi.mock("../benchmarks/socialAIBenchmark", () => ({
   formatBenchmarkReport: vi.fn((report: any) => `Formatted: ${report.ranAt}`),
   getDefaultModelConfigs: vi.fn(() => [
     { label: "minimax-m2.7", provider: "minimax", model: "minimax-m2.7" },
-    { label: "deepseek-v4-flash", provider: "deepseek", model: "deepseek-v4-flash" },
+    { label: "deepseek-flash", provider: "deepseek", model: "deepseek-flash" },
   ]),
 }));
 
@@ -178,14 +178,14 @@ describe("GET /api/admin/benchmarks/social-ai", () => {
       });
       const cookie = setRes.headers.get("set-cookie")?.split(";")[0] || "";
 
-      const res = await fetch(`${baseUrl}/api/admin/benchmarks/social-ai?models=deepseek-v4-flash,unknown-model`, {
+      const res = await fetch(`${baseUrl}/api/admin/benchmarks/social-ai?models=deepseek-flash,unknown-model`, {
         headers: { Cookie: cookie },
       });
 
       expect(res.status).toBe(200);
       const callArg = vi.mocked(runSocialAIBenchmark).mock.calls[0][0];
       expect(callArg?.models).toHaveLength(1);
-      expect(callArg?.models?.[0].label).toBe("deepseek-v4-flash");
+      expect(callArg?.models?.[0].label).toBe("deepseek-flash");
     });
   });
 

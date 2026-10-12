@@ -35,7 +35,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   }),
   getDeepseekSelection: vi.fn().mockReturnValue({
@@ -48,7 +48,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   }),
 }));
@@ -96,7 +96,7 @@ describe('matchExplanationService', () => {
           },
         },
       } as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
     vi.mocked(getDeepseekSelection).mockReturnValue({
@@ -107,7 +107,7 @@ describe('matchExplanationService', () => {
           },
         },
       } as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
   });
@@ -585,7 +585,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       } as any);
 
@@ -610,7 +610,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       } as any);
 
@@ -635,7 +635,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       } as any);
 
@@ -661,7 +661,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       });
 
@@ -793,7 +793,7 @@ describe('matchExplanationService', () => {
               },
             },
           },
-          model: 'deepseek-v4-flash',
+          model: 'deepseek-flash',
           provider: 'deepseek',
         } as any;
       }) as any);
@@ -857,7 +857,7 @@ describe('matchExplanationService', () => {
               },
             },
           },
-          model: 'deepseek-v4-flash',
+          model: 'deepseek-flash',
           provider: 'deepseek',
         } as any;
       }) as any);
@@ -1117,7 +1117,7 @@ describe('matchExplanationService', () => {
       });
       vi.mocked(getClientForFunction).mockImplementation((fnName: string) => ({
         client: { chat: { completions: { create: fnName === 'generateIceBreakers' ? multiLineCreate : singleLineCreate } } } as any,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       } as any));
 
@@ -1153,7 +1153,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       } as any);
 
@@ -1195,7 +1195,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       } as any);
 

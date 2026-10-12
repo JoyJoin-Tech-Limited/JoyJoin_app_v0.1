@@ -1,22 +1,22 @@
 # AI Model Routing Strategy
 
 Status: Current shipped behavior
-Last updated: 2026-08-11
+Last updated: 2026-10-09 (V4.1 Flash canonical-name migration)
 
 This document describes the AI model routing and trace behavior that is currently live in the JoyJoin server. It is intentionally current-state only. For broader architecture boundaries, read `docs/ai/ai-agent-harness-separation-strategy.md`. For future rollout ideas, read `docs/ai/AI_INTEGRATION_PLAN.md` as roadmap material only.
 
 ## DeepSeek V4 Migration
 
-JoyJoin has migrated from deprecated DeepSeek aliases (`deepseek-chat`, `deepseek-reasoner`) to explicit DeepSeek V4 model names:
+JoyJoin has migrated from deprecated DeepSeek aliases (`deepseek-chat`, `deepseek-reasoner`) to explicit DeepSeek model names:
 
-- `deepseek-v4-flash` — fast, cheap, excellent for structured JSON and high-volume tasks
-- `deepseek-v4-pro` — reasoning-grade, expensive, used for complex inference and match explanations (gated)
+- `deepseek-flash` — **DeepSeek-V4.1-Flash** (canonical name since 2026-10-09): fast, cheap, excellent for structured JSON and high-volume tasks. The legacy name `deepseek-flash` is RETIRED upstream but still accepted (requests are served by V4.1-Flash and billed at the Flash price).
+- `deepseek-v4-pro` — DeepSeek-V4-Pro-0813: reasoning-grade, expensive, used for complex inference and match explanations (gated)
 
-Both models support 1M context length, JSON output, tool calls, and thinking mode.
+Both models support 1M context length, JSON output, tool calls, and thinking mode. V4.1 Flash also supports vision. Verified against api-docs.deepseek.com/quick_start/pricing on 2026-10-09.
 
 ## DeepSeek V4 thinking control (2026-08-11 — transport-level fix)
 
-`deepseek-v4-flash` **reasons by default** when a request carries no thinking control. An unconstrained chain burns the completion budget on `reasoning_content` and returns **empty or truncated `message.content`** at production `max_tokens` budgets (100–500), and thinking + `reasoning_effort: high` stretches simple JSON tasks to 11–15s — beyond the 6s icebreaker `raceWithTimeout` bound. Before 2026-08-11 every DeepSeek-routed surface silently fell back to curated/deterministic content.
+`deepseek-flash` **reasons by default** when a request carries no thinking control. An unconstrained chain burns the completion budget on `reasoning_content` and returns **empty or truncated `message.content`** at production `max_tokens` budgets (100–500), and thinking + `reasoning_effort: high` stretches simple JSON tasks to 11–15s — beyond the 6s icebreaker `raceWithTimeout` bound. Before 2026-08-11 every DeepSeek-routed surface silently fell back to curated/deterministic content.
 
 Current controls:
 
@@ -145,7 +145,7 @@ Required shape for live traced surfaces:
 - `domain`
 - `feature`
 - `provider`
-- `model` — exact model name (`deepseek-v4-flash`, `deepseek-v4-pro`, `minimax-m2.7`, etc.)
+- `model` — exact model name (`deepseek-flash`, `deepseek-v4-pro`, `minimax-m2.7`, etc.)
 - `latencyMs`
 - `success`
 - `fallbackUsed`

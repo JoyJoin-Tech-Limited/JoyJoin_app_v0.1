@@ -15,12 +15,12 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('../ai/socialModelRouter', () => ({
   getClientForFunction: vi.fn(() => ({
     client: { chat: { completions: { create: vi.fn() } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
   getDeepseekSelection: vi.fn(() => ({
     client: { chat: { completions: { create: vi.fn() } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
 }));
@@ -89,7 +89,7 @@ describe('generateMiniScriptFrameworkWithMeta + runtime critic', () => {
     const { getClientForFunction } = await import('../ai/socialModelRouter');
     (getClientForFunction as any).mockImplementation(() => ({
       client: { chat: { completions: { create: vi.fn() } } },
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     }));
   });
@@ -101,7 +101,7 @@ describe('generateMiniScriptFrameworkWithMeta + runtime critic', () => {
       });
       (getClientForFunction as any).mockReturnValue({
         client: { chat: { completions: { create: mockCreate } } },
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         provider: 'deepseek',
       });
     });

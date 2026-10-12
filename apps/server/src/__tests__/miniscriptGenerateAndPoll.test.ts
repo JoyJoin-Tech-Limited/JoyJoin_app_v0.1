@@ -215,12 +215,12 @@ const routerCtx = vi.hoisted(() => ({
 vi.mock('../ai/socialModelRouter', () => ({
   getClientForFunction: vi.fn(() => ({
     client: { chat: { completions: { create: routerCtx.create } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
   getDeepseekSelection: vi.fn(() => ({
     client: { chat: { completions: { create: routerCtx.create } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
   callSocialAI: vi.fn(),

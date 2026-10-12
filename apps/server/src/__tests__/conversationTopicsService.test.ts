@@ -79,7 +79,7 @@ describe('conversationTopicsService', () => {
     callSocialAIMock.mockResolvedValue({
       content: 'not-json',
       provider: 'deepseek',
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       latencyMs: 18,
       fallbackUsed: true,
     });
@@ -91,7 +91,7 @@ describe('conversationTopicsService', () => {
         domain: 'match_explanation',
         feature: 'generateConversationTopics',
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'conversation-topics-v1',

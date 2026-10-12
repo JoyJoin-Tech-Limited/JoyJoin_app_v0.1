@@ -13,7 +13,7 @@
  *   DEEPSEEK_API_KEY         — required for DeepSeek runs
  *   BENCHMARK_ITERATIONS     — default 5
  *   BENCHMARK_MODELS         — comma-separated list of model ids to test
- *                              (default: "minimax-m2.7,minimax-m2.7-highspeed,deepseek-v4-flash")
+ *                              (default: "minimax-m2.7,minimax-m2.7-highspeed,deepseek-flash")
  */
 
 import { callSocialAI, type SocialAICallParams, type SocialAICallResult } from '../ai/socialModelRouter';
@@ -212,7 +212,7 @@ export function getDefaultModelConfigs(): BenchmarkModelConfig[] {
   return [
     { label: 'minimax-m2.7', provider: 'minimax', model: 'minimax-m2.7' },
     { label: 'minimax-m2.7-highspeed', provider: 'minimax', model: 'minimax-m2.7-highspeed' },
-    { label: 'deepseek-v4-flash', provider: 'deepseek', model: 'deepseek-v4-flash' },
+    { label: 'deepseek-flash', provider: 'deepseek', model: 'deepseek-flash' },
   ];
 }
 

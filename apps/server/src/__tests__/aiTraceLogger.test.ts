@@ -162,7 +162,7 @@ describe('logAITrace', () => {
       domain: 'icebreaker',
       feature: 'generateWarmupTopics',
       provider: 'deepseek',
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       latencyMs: 95,
       success: true,
       fallbackUsed: false,
@@ -171,7 +171,7 @@ describe('logAITrace', () => {
     });
 
     const record = captureTraceRecord();
-    expect(record.model).toBe('deepseek-v4-flash');
+    expect(record.model).toBe('deepseek-flash');
     expect(record.promptVersion).toBe('v1.2');
   });
 

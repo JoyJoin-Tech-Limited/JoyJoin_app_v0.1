@@ -164,7 +164,7 @@ describe('eventThemeTitleGenerator trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-title-v1',
@@ -182,7 +182,7 @@ describe('eventThemeTitleGenerator trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-title-v1',

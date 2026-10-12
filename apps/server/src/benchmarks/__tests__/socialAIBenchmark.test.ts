@@ -30,17 +30,17 @@ describe('getDefaultModelConfigs', () => {
     expect(configs.map((c) => c.label)).toEqual([
       'minimax-m2.7',
       'minimax-m2.7-highspeed',
-      'deepseek-v4-flash',
+      'deepseek-flash',
     ]);
   });
 
   it('parses BENCHMARK_MODELS as comma-separated labels', () => {
-    process.env.BENCHMARK_MODELS = 'custom-model,deepseek-v4-flash';
+    process.env.BENCHMARK_MODELS = 'custom-model,deepseek-flash';
     const configs = getDefaultModelConfigs();
     expect(configs).toHaveLength(2);
     expect(configs[0].label).toBe('custom-model');
     expect(configs[0].provider).toBe('minimax');
-    expect(configs[1].label).toBe('deepseek-v4-flash');
+    expect(configs[1].label).toBe('deepseek-flash');
     expect(configs[1].provider).toBe('deepseek');
   });
 });

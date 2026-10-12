@@ -7,18 +7,25 @@
  *   - Kimi K2.6 (Moonshot AI — multi-file coordination)
  *   - GLM 5.1 (Zhipu AI / Z.AI — systems engineering)
  *
- * Pricing reference (per 1M tokens):
- *   DeepSeek V4 Flash: input $0.14 (cache miss), output $0.28 — 1M context
- *   DeepSeek V4 Pro:   input $1.74 (cache miss), output $3.48 — 1M context
- *   Kimi K2.6:         input $0.16 (cache hit) / $0.95 (cache miss), output $4.00 — 256K context
- *   GLM 5.1:           Z.AI Coding Plan subscription (~1% of standard API pricing) — ~128K context
+ * Pricing reference (per 1M tokens, api-docs.deepseek.com verified 2026-10-09):
+ *   DeepSeek V4.1 Flash: input $0.15 (off-peak) / $0.30 (peak), output $0.60 / $1.20 — 1M context
+ *   DeepSeek V4 Pro:     input $0.66 / $1.32, output $1.98 / $3.96 — 1M context
+ *   Kimi K2.6:           input $0.16 (cache hit) / $0.95 (cache miss), output $4.00 — 256K context
+ *   GLM 5.1:             Z.AI Coding Plan subscription (~1% of standard API pricing) — ~128K context
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DeepSeek V4
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const DEEPSEEK_V4_FLASH = 'deepseek-v4-flash';
+/**
+ * Canonical name for DeepSeek-V4.1-Flash (latest Flash model; verified against
+ * api-docs.deepseek.com/quick_start/pricing on 2026-10-09). The legacy name
+ * `deepseek-v4-flash` is RETIRED upstream but still accepted — requests are
+ * served by V4.1-Flash. Thinking mode is ON by default; non-thinking calls must
+ * send `thinking: { type: 'disabled' }` (see buildThinkingExtraBody).
+ */
+export const DEEPSEEK_V4_FLASH = 'deepseek-flash';
 export const DEEPSEEK_V4_PRO = 'deepseek-v4-pro';
 
 /** Deprecated aliases — do not use in new code. */

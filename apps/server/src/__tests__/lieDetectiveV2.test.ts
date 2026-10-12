@@ -12,7 +12,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
   getDeepseekSelection: vi.fn(() => ({
@@ -23,7 +23,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
 }));
@@ -165,7 +165,7 @@ describe('generateLieDetectiveStatementFromTag', () => {
     };
     vi.mocked(getClientForFunction).mockReturnValue({
       client: mockClient as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -312,7 +312,7 @@ describe('generateLieDetectiveStatements degrade chain', () => {
     };
     vi.mocked(getClientForFunction).mockReturnValue({
       client: mockClient as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -352,7 +352,7 @@ describe('generateLieDetectiveStatements degrade chain', () => {
     };
     vi.mocked(getClientForFunction).mockReturnValue({
       client: mockClient as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -387,7 +387,7 @@ describe('generateLieDetectiveStatements degrade chain', () => {
     };
     vi.mocked(getClientForFunction).mockReturnValue({
       client: mockClient as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -442,7 +442,7 @@ describe('generateLieDetectiveStatements degrade chain', () => {
     };
     vi.mocked(getClientForFunction).mockReturnValue({
       client: mockClient as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 
@@ -483,7 +483,7 @@ describe('generateLieDetectiveStatements degrade chain', () => {
     };
     vi.mocked(getClientForFunction).mockReturnValue({
       client: mockClient as any,
-      model: 'deepseek-v4-flash',
+      model: 'deepseek-flash',
       provider: 'deepseek',
     });
 

@@ -10,7 +10,7 @@
  *
  * Options:
  *   --iterations N   Number of iterations per fixture-model (default: 5)
- *   --models a,b,c   Comma-separated model list (default: minimax-m2.7,minimax-m2.7-highspeed,deepseek-v4-flash)
+ *   --models a,b,c   Comma-separated model list (default: minimax-m2.7,minimax-m2.7-highspeed,deepseek-flash)
  *   --json           Output raw JSON report instead of human-readable summary
  */
 

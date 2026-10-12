@@ -21,7 +21,7 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('../ai/socialModelRouter', () => ({
   getDeepseekSelection: vi.fn(() => ({
     client: { chat: { completions: { create: hoisted.createMock } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
 }));

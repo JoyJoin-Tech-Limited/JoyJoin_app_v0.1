@@ -119,7 +119,7 @@ describe('callSocialAI', () => {
 
       expect(result.content).toBe('Warm narrative');
       expect(result.provider).toBe('deepseek');
-      expect(result.model).toBe('deepseek-v4-flash');
+      expect(result.model).toBe('deepseek-flash');
       expect(result.fallbackUsed).toBe(false);
       expect(mockDeepseekCreate).toHaveBeenCalledOnce();
       expect(mockMinimaxCreate).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe('callSocialAI', () => {
       });
 
       expect(result.provider).toBe('deepseek');
-      expect(result.model).toBe('deepseek-v4-flash');
+      expect(result.model).toBe('deepseek-flash');
     });
   });
 
@@ -228,7 +228,7 @@ describe('getClientForFunction', () => {
     it('routes analyzeComplexSemantics to deepseek (forced)', () => {
       const sel = getClientForFunction('analyzeComplexSemantics');
       expect(sel.provider).toBe('deepseek');
-      expect(sel.model).toBe('deepseek-v4-flash');
+      expect(sel.model).toBe('deepseek-flash');
     });
 
     it('routes flash-tier functions correctly', () => {

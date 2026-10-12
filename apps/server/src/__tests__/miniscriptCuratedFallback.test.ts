@@ -27,12 +27,12 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('../ai/socialModelRouter', () => ({
   getClientForFunction: vi.fn(() => ({
     client: { chat: { completions: { create: vi.fn() } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
   getDeepseekSelection: vi.fn(() => ({
     client: { chat: { completions: { create: vi.fn() } } },
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
   })),
 }));
