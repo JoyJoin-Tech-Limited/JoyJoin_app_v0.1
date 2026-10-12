@@ -53,8 +53,13 @@ concurrency:
 jobs:
   # workflow_run fires after EVERY Deploy Staging completion, including
   # server-only commits. The push event path-filter already skipped those, so
-  # gate the workflow_run rebuild/upload on the commit's actual changed files.
-  # Fail-safe: if the commit API call fails, treat the commit as changed so the
+  # gate the workflow_run rebuild/upload on the commits actually being
+  # released. Multi-commit pushes are compared as a RANGE (previous successful
+  # staging deploy → HEAD) because the HEAD commit alone can be a docs/config
+  # commit while earlier commits in the same push changed mini-program files
+  # (observed 2026-10-12: a 10-commit push ending on a config-only commit
+  # silently skipped the dev-version upload).
+  # Fail-safe: if the compare/commit API call fails, treat as changed so the
   # dev-version upload is never silently skipped.
   check-mini-program-changes:
     if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
@@ -62,7 +67,7 @@ jobs:
     outputs:
       changed: ${{ steps.check.outputs.changed }}
     steps:
-      - name: Check whether this commit touched mini-program paths
+      - name: Check whether this release touched mini-program paths
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -75,18 +80,41 @@ jobs:
             echo "Manual dispatch; proceeding with rebuild/upload."
             exit 0
           fi
-          COMMIT_JSON=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA" \
-            --jq '{ files: [.files[].filename], truncated: (.truncated == true) }') || {
-            echo "::warning::Failed to fetch commit files for $HEAD_SHA; treating as changed (fail-safe)"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          }
-          CHANGED_FILES=$(printf '%s' "$COMMIT_JSON" | jq -r '.files[]')
-          TRUNCATED=$(printf '%s' "$COMMIT_JSON" | jq -r '.truncated')
-          if [ "$TRUNCATED" = "true" ]; then
-            echo "::warning::Commit file list was truncated by the API; treating as changed (fail-safe)"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          # Prefer the full push range: previous successful main deploy → HEAD.
+          # Fall back to the single-commit listing when no previous deploy
+          # exists (e.g. first run). Any API failure falls through to
+          # changed=true via the fail-safe below.
+          PREV_SHA=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-staging.yml/runs?branch=main&status=success&per_page=30" \
+            --jq "[.workflow_runs[] | select(.head_sha != \"$HEAD_SHA\")][0].head_sha // empty" 2>/dev/null) || PREV_SHA=""
+          if [ -n "$PREV_SHA" ]; then
+            COMPARE_JSON=$(gh api "repos/$GITHUB_REPOSITORY/compare/$PREV_SHA...$HEAD_SHA" \
+              --jq '{ files: [.files[].filename], count: (.files | length) }') || {
+              echo "::warning::Failed to compare $PREV_SHA...$HEAD_SHA; treating as changed (fail-safe)"
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            }
+            CHANGED_FILES=$(printf '%s' "$COMPARE_JSON" | jq -r '.files[]')
+            FILE_COUNT=$(printf '%s' "$COMPARE_JSON" | jq -r '.count')
+            if [ "$FILE_COUNT" -ge 300 ]; then
+              echo "::warning::Compare returned $FILE_COUNT files (API cap); treating as changed (fail-safe)"
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Comparing $PREV_SHA...$HEAD_SHA ($FILE_COUNT changed files)"
+          else
+            COMMIT_JSON=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA" \
+              --jq '{ files: [.files[].filename], truncated: (.truncated == true) }') || {
+              echo "::warning::Failed to fetch commit files for $HEAD_SHA; treating as changed (fail-safe)"
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            }
+            CHANGED_FILES=$(printf '%s' "$COMMIT_JSON" | jq -r '.files[]')
+            TRUNCATED=$(printf '%s' "$COMMIT_JSON" | jq -r '.truncated')
+            if [ "$TRUNCATED" = "true" ]; then
+              echo "::warning::Commit file list was truncated by the API; treating as changed (fail-safe)"
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           fi
           if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(apps/mini-program/|packages/|package\.json$|package-lock\.json$|\.github/workflows/taro-weapp-build\.yml$)'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
