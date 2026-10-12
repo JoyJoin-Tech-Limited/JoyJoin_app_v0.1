@@ -756,6 +756,21 @@ export function registerPaymentRoutes(app: Express): void {
             let mockPaymentType = "event_pack";
             let mockRelatedId = normalizedPlanType;
             if (subscriptionPlanType) {
+              // Double-charge guard (HIGH-1, 2026-10-12): same rule as the
+              // real path below — an active, non-expired subscription rejects
+              // a NEW purchase intent. Mock mode must stay behavior-identical
+              // so staging testers exercise the same 409 the real path emits.
+              const activeSubscription = await paymentsRepo.getUserSubscription(userId);
+              if (activeSubscription) {
+                reqLogger.info("Rejected mock subscription payment: active subscription exists", {
+                  user_id: userId,
+                  subscription_id: activeSubscription.id,
+                });
+                return res.status(409).json({
+                  message: "你的悦聚卡还在有效期内",
+                  code: "SUBSCRIPTION_ALREADY_ACTIVE",
+                });
+              }
               const renewalData = await subscriptionService.renewSubscription(userId, subscriptionPlanType);
               mockPaymentType = "event_bundle";
               mockRelatedId = renewalData.subscriptionId;
@@ -888,6 +903,26 @@ export function registerPaymentRoutes(app: Express): void {
         const normalizedPlanType = normalizeSubscriptionPlanType(selectedPlanType);
         if (!normalizedPlanType) {
           return res.status(400).json({ error: "Unsupported mini-program payment type" });
+        }
+
+        // Double-charge guard (HIGH-1, 2026-10-12): a user holding an active,
+        // non-expired subscription must not start a NEW purchase intent —
+        // re-entry after an app kill would otherwise charge ¥98/¥294 again and
+        // silently extend the card. Uses the same canonical active-subscription
+        // read as the registration entitlement gate (status='active' AND
+        // end_date > NOW(), paymentsRepo.getUserSubscription). Intentional
+        // stacked renewal stays available on the explicit
+        // /api/subscription/renew flow, which is left unguarded.
+        const activeSubscription = await paymentsRepo.getUserSubscription(userId);
+        if (activeSubscription) {
+          reqLogger.info("Rejected subscription purchase: active subscription exists", {
+            user_id: userId,
+            subscription_id: activeSubscription.id,
+          });
+          return res.status(409).json({
+            message: "你的悦聚卡还在有效期内",
+            code: "SUBSCRIPTION_ALREADY_ACTIVE",
+          });
         }
 
         const renewalQuote = await resolveSubscriptionCheckout(normalizedPlanType);
@@ -1259,6 +1294,30 @@ export function registerPaymentRoutes(app: Express): void {
       const monthlyEvents = upcomingEventsResult?.count ?? 0;
       const recentlyActiveCount = uniqueRecentUserIds.size;
 
+      // ── Subscription plans (additive, 2026-10-11) ─────────────────────
+      // 悦聚卡 surface so the event-ticket checkout can render a 悦聚月卡
+      // upsell card (gated client-side by checkoutSubscriptionUpsellEnabled).
+      // Sourced from the same pricing_settings rows the storefront uses;
+      // when a row is missing/inactive the response stays intact via the
+      // SUBSCRIPTION_PRICE_FALLBACKS cents and seed display constants.
+      const testPriceForSubscriptions = getTestPriceCents();
+      const subscriptionPlans = (["monthly", "quarterly"] as const).map((planType) => {
+        const row = plans.find((p) => p.planType === planType);
+        return {
+          planType,
+          displayName: row?.displayName ?? (planType === "monthly" ? "悦聚月卡" : "悦聚季卡"),
+          displayNameEn: row?.displayNameEn ?? (planType === "monthly" ? "YueJu Monthly" : "YueJu Quarterly"),
+          description: row?.description ?? null,
+          priceInCents:
+            testPriceForSubscriptions ?? row?.priceInCents ?? SUBSCRIPTION_PRICE_FALLBACKS[planType],
+          originalPriceInCents:
+            testPriceForSubscriptions !== null
+              ? row?.priceInCents ?? null
+              : row?.originalPriceInCents ?? null,
+          durationDays: row?.durationDays ?? (planType === "monthly" ? 30 : 90),
+        };
+      });
+
       // Build response
       const response = {
         user: {
@@ -1281,6 +1340,7 @@ export function registerPaymentRoutes(app: Express): void {
             isFeatured: p.isFeatured,
           };
         }),
+        subscriptionPlans,
         coupons: coupons.map((c: any) => ({
           id: c.id,
           code: c.code,

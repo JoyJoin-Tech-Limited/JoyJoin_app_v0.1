@@ -59,6 +59,7 @@ export type ErrorCode =
   | 'NO_AVAILABLE_EVENT_PACK_CREDITS'
   | 'PAYMENT_CREATION_FAILED'
   | 'WECHAT_BINDING_REQUIRED'
+  | 'SUBSCRIPTION_ALREADY_ACTIVE'
   // T6-strict budget-tier funnel validation. Without these two templates a
   // rejected/missing budget collapsed to the generic
   // "出了点问题，稍后再试" toast — and a retry with the same invalid value can
@@ -273,6 +274,10 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   WECHAT_BINDING_REQUIRED: {
     surface: 'toast-error',
     default: '请重新登录后再试',
+  },
+  SUBSCRIPTION_ALREADY_ACTIVE: {
+    surface: 'toast-error',
+    default: '你的悦聚卡还在有效期内',
   },
   // T6-strict registration-funnel budget codes. Copy stays zero-emoji,
   // particle-free (system-ui toast), and avoids WeChat-review vocabulary.

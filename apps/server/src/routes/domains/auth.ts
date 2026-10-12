@@ -14,7 +14,7 @@ import type { User } from "@shared/schema";
 import { buildAuthUserResponse } from "../../lib/buildAuthUserResponse";
 import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
 import { getFeatureFlag } from "../../lib/featureFlags";
-import { normalizeCouponTimestamp } from "../../lib/couponUtils";
+import { normalizeCouponTimestamp, normalizeOptionalCouponTimestamp } from "../../lib/couponUtils";
 export function registerAuthRoutes(app: Express): void {
   // WeChat auth setup — skipped in test mode (phone+password login instead)
   if (!isTestMode()) {
@@ -516,6 +516,7 @@ export function registerAuthRoutes(app: Express): void {
           source: existing.source ?? 'profile_review_first_view',
           isNewlyAwarded: false,
           createdAt: normalizeCouponTimestamp(existing.created_at ?? existing.createdAt),
+          validUntil: normalizeOptionalCouponTimestamp(coupon.valid_until ?? coupon.validUntil),
         });
       }
 
@@ -540,6 +541,7 @@ export function registerAuthRoutes(app: Express): void {
               source: raced.source ?? 'profile_review_first_view',
               isNewlyAwarded: false,
               createdAt: normalizeCouponTimestamp(raced.created_at ?? raced.createdAt),
+              validUntil: normalizeOptionalCouponTimestamp(coupon.valid_until ?? coupon.validUntil),
             });
           }
         }
@@ -559,6 +561,7 @@ export function registerAuthRoutes(app: Express): void {
         source: "profile_review_first_view",
         isNewlyAwarded: true,
         createdAt: normalizeCouponTimestamp(userCoupon.created_at ?? userCoupon.createdAt),
+        validUntil: normalizeOptionalCouponTimestamp(coupon.valid_until ?? coupon.validUntil),
       });
     } catch (error) {
       logger.error("[WelcomeCoupon] Failed to claim welcome coupon", {

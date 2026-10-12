@@ -214,6 +214,15 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  snapshot authority lives in session state; this flag is exposure for
      *  future client affordances only. Default: false (V1). */
     lieDetectiveV2Enabled?: boolean
+    /** 安心补位 Phase 0: when true, pre-reveal cancel issues a real full
+     *  refund (money + credits). Client uses this to render the matched-state
+     *  cancel affordance with policy-aware copy. Default: false. */
+    preRevealRefundEnabled?: boolean
+    /** Checkout subscription upsell: when true, the event-ticket checkout
+     *  renders the 悦聚月卡 (monthly subscription) upsell card. Plan pricing
+     *  rides the additive `subscriptionPlans` field on
+     *  GET /api/payments/ritual-context (flag-independent). Default: false. */
+    checkoutSubscriptionUpsellEnabled?: boolean
   }
 }
 

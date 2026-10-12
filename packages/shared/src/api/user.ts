@@ -229,6 +229,13 @@ export interface WelcomeCouponResponse {
   source: string
   isNewlyAwarded: boolean
   createdAt: string
+  /**
+   * Coupon validity end (ISO-8601) sourced from the coupon row's
+   * `valid_until`; null when the coupon has no expiry configured. Additive
+   * (2026-10-09) for the WelcomeGiftCard 有效期至 display — absent on old
+   * servers, so consumers must treat it as optional.
+   */
+  validUntil?: string | null
 }
 
 /** Claim (or re-fetch) the lifetime welcome coupon awarded on first 入场卡 view. */

@@ -327,6 +327,13 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  audit. When false, post-reveal cancel keeps exact legacy behavior.
    *  Env fallback: NO_REFUND_AFTER_REVEAL_ENABLED (default: false). */
   noRefundAfterReveal: "NO_REFUND_AFTER_REVEAL_ENABLED",
+  /** Checkout subscription upsell (2026-10-11): gates the 悦聚月卡 subscription
+   *  upsell card on the event-ticket checkout flow. Client renders the card
+   *  only when this flag is true; pricing rides the additive
+   *  `subscriptionPlans` field on GET /api/payments/ritual-context, which is
+   *  always present regardless of this flag. Ships dark.
+   *  Env fallback: CHECKOUT_SUBSCRIPTION_UPSELL_ENABLED (default: false). */
+  checkoutSubscriptionUpsellEnabled: "CHECKOUT_SUBSCRIPTION_UPSELL_ENABLED",
   /** C4 GuidanceQueue orchestrator (onboarding guidance iteration, 2026-08-27):
    *  server-persisted seen-state, ≤1 tip per session arbitration, and the
    *  discover arrival-coachmark absorption. Ships dark — flag-on happens only
@@ -525,6 +532,9 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  show a stable default. Flags are independent (M1). */
   preRevealRefundEnabled: false,
   noRefundAfterReveal: false,
+  /** Checkout subscription upsell ships dark; explicit false so the admin
+   *  toggle UI and listFeatureFlags() show a stable default. */
+  checkoutSubscriptionUpsellEnabled: false,
   /** Onboarding guidance iteration (2026-08-27) — all 5 ship dark in W1;
    *  explicit false so the admin toggle UI and listFeatureFlags() show a
    *  stable default. Flag-on only after the D7 2-week baseline. */

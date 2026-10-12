@@ -437,7 +437,7 @@ describe("wechat auth route hardening", () => {
     it("awards WELCOME50 when no existing coupon", async () => {
       vi.mocked(paymentsRepo.getCouponByCode).mockImplementation(async (code: string) => {
         if (code === "WELCOME50") {
-          return { id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50 };
+          return { id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50, valid_until: new Date("2026-12-31T00:00:00Z") };
         }
         return undefined;
       });
@@ -458,6 +458,7 @@ describe("wechat auth route hardening", () => {
           discountValue: 50,
           source: "profile_review_first_view",
           isNewlyAwarded: true,
+          validUntil: "2026-12-31T00:00:00.000Z",
         });
         expect(paymentsRepo.createUserCoupon).toHaveBeenCalledWith(
           expect.objectContaining({ userId: mockUser.id, couponId: "coupon-50", source: "profile_review_first_view" })
@@ -485,6 +486,8 @@ describe("wechat auth route hardening", () => {
           discountValue: 40,
           isNewlyAwarded: false,
         });
+        // Coupon row has no valid_until configured → null (never invented).
+        expect(body.validUntil).toBeNull();
         expect(paymentsRepo.createUserCoupon).not.toHaveBeenCalled();
       });
     });

@@ -155,6 +155,8 @@ const [
     testGatherGlowEnabled,
     lieDetectiveV2Enabled,
     personalityDiceChooseModeEnabled,
+    preRevealRefundEnabled,
+    checkoutSubscriptionUpsellEnabled,
     entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
@@ -215,6 +217,13 @@ const [
     // live-by-default kill switch; the session snapshot is the runtime
     // authority — this is legacy-session backstop exposure only.
     getFeatureFlag('personalityDiceChooseModeEnabled', true),
+    // 安心补位 Phase 0 (2026-08-27): exposed 2026-10-11 so the mini-program
+    // can render the matched-state cancel affordance with the correct policy
+    // copy. Ships dark; flag-off = exact legacy cancel behavior.
+    getFeatureFlag('preRevealRefundEnabled', false),
+    // Checkout subscription upsell (2026-10-11): gates the 悦聚月卡 upsell
+    // card on the event-ticket checkout. Ships dark.
+    getFeatureFlag('checkoutSubscriptionUpsellEnabled', false),
     // Server-resolved entitlement signal (pool-registration gate semantics via
     // lib/entitlement.ts), joined into the flag batch so the cold-start auth
     // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
@@ -322,6 +331,12 @@ const [
       /** Personality Dice Choose-Your-Prompt (live-by-default; session snapshot
        *  is the runtime authority — backstops legacy sessions only). */
       personalityDiceChooseMode: personalityDiceChooseModeEnabled,
+      /** 安心补位 Phase 0: pre-reveal cancel issues a real full refund.
+       *  Default: false (exact legacy cancel behavior). */
+      preRevealRefundEnabled,
+      /** Checkout subscription upsell (悦聚月卡 card on ticket checkout).
+       *  Default: false. */
+      checkoutSubscriptionUpsellEnabled,
     },
   };
 
