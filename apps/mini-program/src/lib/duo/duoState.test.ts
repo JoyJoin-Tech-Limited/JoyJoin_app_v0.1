@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { resolveDuoCardState, type DuoCardStateInput } from './duoState'
+import {
+  resolveDuoCardState,
+  resolveInitialDuoMode,
+  shouldAutoExpandDuoRow,
+  type DuoCardStateInput,
+} from './duoState'
 
 function input(overrides: Partial<DuoCardStateInput> = {}): DuoCardStateInput {
   return {
@@ -39,5 +44,52 @@ describe('resolveDuoCardState', () => {
 
   it('restores waiting from a share timestamp even if the server still says none', () => {
     expect(resolveDuoCardState(input({ serverState: 'none', mode: 'duo', hasShared: true }))).toBe('waiting')
+  })
+})
+
+describe('resolveInitialDuoMode (audit C3 auto-expand)', () => {
+  it('defaults to solo when no invite and no share timestamp', () => {
+    expect(resolveInitialDuoMode({ inviteArrival: false, hasShareTimestamp: false })).toBe('solo')
+  })
+
+  it('pre-selects duo when the user arrived via an invite/referral code', () => {
+    expect(resolveInitialDuoMode({ inviteArrival: true, hasShareTimestamp: false })).toBe('duo')
+  })
+
+  it('keeps the share-timestamp restore path intact', () => {
+    expect(resolveInitialDuoMode({ inviteArrival: false, hasShareTimestamp: true })).toBe('duo')
+    expect(resolveInitialDuoMode({ inviteArrival: true, hasShareTimestamp: true })).toBe('duo')
+  })
+
+  it('maps invite-arrival duo mode to the expanded card state (collapsed by default otherwise)', () => {
+    const inviteMode = resolveInitialDuoMode({ inviteArrival: true, hasShareTimestamp: false })
+    const defaultMode = resolveInitialDuoMode({ inviteArrival: false, hasShareTimestamp: false })
+    expect(resolveDuoCardState(input({ mode: inviteMode }))).toBe('expanded')
+    expect(resolveDuoCardState(input({ mode: defaultMode }))).toBe('collapsed')
+  })
+})
+
+describe('shouldAutoExpandDuoRow (async invite-arrival guard)', () => {
+  const base = {
+    inviteArrival: true,
+    currentMode: 'solo' as const,
+    hasShared: false,
+    hasUserInteracted: false,
+    alreadyApplied: false,
+  }
+
+  it('fires once for a late-resolving invite code on a pristine solo card', () => {
+    expect(shouldAutoExpandDuoRow(base)).toBe(true)
+  })
+
+  it('never fires without an invite arrival', () => {
+    expect(shouldAutoExpandDuoRow({ ...base, inviteArrival: false })).toBe(false)
+  })
+
+  it('never overrides a user tap, a duo card, a shared card, or a second application', () => {
+    expect(shouldAutoExpandDuoRow({ ...base, hasUserInteracted: true })).toBe(false)
+    expect(shouldAutoExpandDuoRow({ ...base, currentMode: 'duo' })).toBe(false)
+    expect(shouldAutoExpandDuoRow({ ...base, hasShared: true })).toBe(false)
+    expect(shouldAutoExpandDuoRow({ ...base, alreadyApplied: true })).toBe(false)
   })
 })

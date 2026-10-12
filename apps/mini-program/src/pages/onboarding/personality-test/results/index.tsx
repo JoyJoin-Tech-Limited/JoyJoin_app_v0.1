@@ -1,10 +1,11 @@
 import { Canvas, Image, Text, View } from '@tarojs/components'
-import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
-import { useQueryClient } from '@tanstack/react-query'
+import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { ARCHETYPE_BY_ID, getArchetypeIndex } from '@shared/personality/archetypeNames'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
+import { getReferralStats, type ReferralStatsResponse } from '@shared/api'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useUnload } from '../../../../hooks/useUnload'
 import { useSpriteReadiness } from '../../../../hooks/useSpriteReadiness'
@@ -14,9 +15,15 @@ import { onboardingAnalytics } from '../../../../lib/onboarding/onboardingAnalyt
 import {
   readAnonymousAssessmentSession,
 } from '../../../../lib/auth/anonymousOnboarding'
+import { persistPendingReferralCode } from '../../../../lib/auth/pendingReferralCode'
+import { apiRequest } from '../../../../lib/api/api'
+import {
+  buildPersonalityResultSharePath,
+  buildPersonalityResultTimelineQuery,
+  getResultShareRewardHint,
+} from '../../../../lib/referral/resultShare'
 import { logInfo, logWarn } from '../../../../lib/utils/logger'
 import { useDeviceTier } from '../../../../hooks/useDeviceTier'
-import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboarding/onboardingNavigation'
 import {
   getArchetypeVisual,
@@ -99,6 +106,34 @@ function buildAuthUserResultState(user: any): ResolvedResultState | null {
 export default function PersonalityTestResultsPage() {
   const auth = useAuth()
   const deviceTier = useDeviceTier()
+  const router = useRouter()
+
+  // D5 referral attribution, receiver side (2026-10-11): a Moments share lands
+  // directly on this page carrying `?invitationCode=…` — persist it so the
+  // login handoff can forward the code (same storage + consumption point as
+  // the landing-page bridge). No-op when the param is absent.
+  const timelineInvitationCode = router.params.invitationCode ?? ''
+  useEffect(() => {
+    persistPendingReferralCode(timelineInvitationCode)
+    // Latest share wins — a newer code intentionally overwrites the stored one.
+  }, [timelineInvitationCode])
+
+  // D5 referral attribution, sender side: the sharer's own code rides the
+  // share path so every results poster becomes an attributed channel.
+  // `/api/referrals/stats` is requireAuth + lazily creates the code, so guests
+  // never fetch (enabled gate) and every authenticated user gets a code.
+  // Fail-open: an in-flight/failed fetch shares exactly as before (no code).
+  const { data: referralStats } = useQuery<ReferralStatsResponse>({
+    queryKey: ['mini-program', 'referral-stats'],
+    queryFn: () => getReferralStats(apiRequest),
+    enabled: auth.isAuthenticated,
+    staleTime: 5 * 60_000,
+    retry: 0,
+  })
+  // Same fallback as the invite page — the typed auth payload does not carry
+  // referralCode, but keep the defensive read in case the server adds it.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const shareReferralCode = referralStats?.referralCode || (auth.user as any)?.referralCode || ''
 
   const personalityShareEnabled = auth.user?.features?.personalityShareEnabled ?? true
   const personalitySlotAnimationEnabled = auth.user?.features?.personalitySlotAnimationEnabled ?? true
@@ -431,13 +466,13 @@ export default function PersonalityTestResultsPage() {
 
   useShareAppMessage(() => ({
     title: shareTitle,
-    path: MINI_PROGRAM_ROUTES.personalityTest,
+    path: buildPersonalityResultSharePath(shareReferralCode),
     imageUrl: shareImageUrl,
   }))
 
   useShareTimeline(() => ({
     title: shareTitle,
-    query: 'source=personality-result',
+    query: buildPersonalityResultTimelineQuery(shareReferralCode),
     imageUrl: shareImageUrl,
   }))
 
@@ -599,6 +634,7 @@ export default function PersonalityTestResultsPage() {
             shareAnimatedClipEnabled={shareAnimatedClipEnabled}
             isGeneratingClip={isGeneratingClip}
             onGenerateClip={handleGenerateClip}
+            shareRewardHint={getResultShareRewardHint(shareReferralCode)}
             signalRetestPrompt={{
               visible: showSignalRetestPrompt,
               onRetest: handleSignalRetest,

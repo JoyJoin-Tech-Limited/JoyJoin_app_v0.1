@@ -85,6 +85,12 @@ interface FinalStageProps {
   onGenerateClip?: () => void
   posterError?: boolean
   /**
+   * D5 (2026-10-11): 悦仔-voice referral reward caption under the share CTA.
+   * The page passes a non-empty line only when the share actually carries the
+   * user's referral code (attribution exists); empty/omitted renders nothing.
+   */
+  shareRewardHint?: string
+  /**
    * P5a signal-quality retest prompt (2026-09-14): quiet secondary banner
    * rendered below the result cards when the session's answer pattern carried
    * too little signal. Wired by the page via useSignalRetestPrompt; omit the
@@ -151,6 +157,7 @@ export default function FinalStage({
   isGeneratingClip = false,
   onGenerateClip,
   posterError = false,
+  shareRewardHint = '',
   signalRetestPrompt,
 }: FinalStageProps) {
   const [heroImgError, setHeroImgError] = useState(false)
@@ -691,6 +698,11 @@ export default function FinalStage({
                   {isGeneratingClip ? '正在合成动态短片…' : '生成动态分享短片'}
                 </Button>
               )}
+              {/* D5: quiet referral reward caption under the share CTA — only
+                  present when the share carries the user's referral code. */}
+              {shareRewardHint ? (
+                <Text className='personality-results__share-reward-hint'>{shareRewardHint}</Text>
+              ) : null}
             </View>
           </View>
         </Card>

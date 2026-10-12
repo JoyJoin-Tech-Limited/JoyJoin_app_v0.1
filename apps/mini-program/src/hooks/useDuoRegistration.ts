@@ -14,7 +14,7 @@ import {
   readDuoShareTimestamp,
   writeDuoShareTimestamp,
 } from '../lib/duo/duoContext'
-import { resolveDuoCardState } from '../lib/duo/duoState'
+import { resolveDuoCardState, resolveInitialDuoMode, shouldAutoExpandDuoRow } from '../lib/duo/duoState'
 import { haptics } from '../lib/utils/haptics'
 import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
 import { logWarn } from '../lib/utils/logger'
@@ -33,6 +33,12 @@ export interface UseDuoRegistrationOptions {
   eventType: string
   invitationCode: string
   isDuoInvite: boolean
+  /**
+   * Audit C3 (2026-10-11): true when the user arrived via a duo/referral
+   * invite into this pool (`resolvedInvitationCode` present on the page).
+   * Auto-expands the duo row once — local display state only, no server write.
+   */
+  inviteArrival: boolean
   enabled: boolean
   /** Step 0 = brief; used to gate the card-impression event. */
   step: number
@@ -79,6 +85,7 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     eventType,
     invitationCode,
     isDuoInvite,
+    inviteArrival,
     enabled,
     step,
     stepBrief,
@@ -89,9 +96,13 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
 
   const queryClient = useQueryClient()
 
-  // Local segmented selection; restored to 'duo' when a share timestamp exists.
+  // Local segmented selection; restored to 'duo' when a share timestamp exists,
+  // or pre-selected when the user arrived via an invite into this pool (C3).
   const [duoMode, setDuoMode] = useState<'solo' | 'duo'>(() =>
-    poolId && readDuoShareTimestamp(poolId) !== null ? 'duo' : 'solo',
+    resolveInitialDuoMode({
+      inviteArrival,
+      hasShareTimestamp: Boolean(poolId) && readDuoShareTimestamp(poolId) !== null,
+    }),
   )
   const [duoCode, setDuoCode] = useState('')
   const [duoShared, setDuoShared] = useState(() => poolId !== '' && readDuoShareTimestamp(poolId) !== null)
@@ -104,6 +115,30 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
   const hasTrackedDuoCardImpressionRef = useRef(false)
   const hasTrackedDuoBannerImpressionRef = useRef(false)
   const duoInvalidToastShownRef = useRef(false)
+  // C3 auto-expand guards: the invite-arrival pre-selection is one-shot and
+  // never overrides a tap the user already made while the code was resolving.
+  const duoUserInteractedRef = useRef(false)
+  const duoAutoExpandAppliedRef = useRef(false)
+
+  // C3: async invite-arrival auto-expand — covers `user.pendingReferralCode`
+  // resolving after mount (the URL-param case is already handled by the
+  // useState initializer above). No analytics: the whitelist is frozen and a
+  // pre-selection is not a user tap (`duo_segment_select` stays tap-only).
+  useEffect(() => {
+    if (
+      !shouldAutoExpandDuoRow({
+        inviteArrival,
+        currentMode: duoMode,
+        hasShared: duoShared,
+        hasUserInteracted: duoUserInteractedRef.current,
+        alreadyApplied: duoAutoExpandAppliedRef.current,
+      })
+    ) {
+      return
+    }
+    duoAutoExpandAppliedRef.current = true
+    setDuoMode('duo')
+  }, [inviteArrival, duoMode, duoShared])
 
   useResetOnShow(setIsDuoSheetOpen)
 
@@ -234,6 +269,7 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
   const selectDuoMode = useCallback(
     async (nextMode: 'solo' | 'duo') => {
       if (nextMode === duoMode) return
+      duoUserInteractedRef.current = true
       discoverAnalytics.track('duo_segment_select', poolId, { mode: nextMode })
       if (nextMode === 'solo') {
         setDuoMode('solo')

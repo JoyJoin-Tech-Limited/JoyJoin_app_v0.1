@@ -42,3 +42,43 @@ export function resolveDuoCardState(input: DuoCardStateInput): DuoCardState {
   if (input.mode === 'duo') return input.hasShared ? 'waiting' : 'expanded'
   return 'collapsed'
 }
+
+/**
+ * Audit C3 (2026-10-11): invite/referral arrival auto-expand.
+ *
+ * A user landing on pool-registration with a resolved invitation code (duo
+ * share link, pool-scoped referral link, or a session-carried pending code)
+ * arrived BECAUSE of someone in this pool — the duo row should open expanded
+ * (2人 selected, share CTA visible) instead of staying a collapsed footnote.
+ *
+ * This is a LOCAL initial selection only: it never creates a duo invite on
+ * the server (that stays behind the explicit 2人 tap in `selectDuoMode`),
+ * never touches MAX-1-duo matching rules, and picking 1人 collapses back per
+ * spec §A.5. Pure + exported for unit coverage; the hook applies it
+ * ref-guarded (initializer for the sync URL-param case, one-shot effect for
+ * the async session-fallback case).
+ */
+export function resolveInitialDuoMode(input: {
+  inviteArrival: boolean
+  hasShareTimestamp: boolean
+}): 'solo' | 'duo' {
+  return input.inviteArrival || input.hasShareTimestamp ? 'duo' : 'solo'
+}
+
+/**
+ * One-shot guard for the async auto-expand (e.g. `user.pendingReferralCode`
+ * resolves after mount). Never overrides a user's own tap, never re-fires,
+ * never flips a card that is already in duo mode or has shared.
+ */
+export function shouldAutoExpandDuoRow(input: {
+  inviteArrival: boolean
+  currentMode: 'solo' | 'duo'
+  hasShared: boolean
+  hasUserInteracted: boolean
+  alreadyApplied: boolean
+}): boolean {
+  if (!input.inviteArrival) return false
+  if (input.alreadyApplied || input.hasUserInteracted) return false
+  if (input.currentMode !== 'solo' || input.hasShared) return false
+  return true
+}

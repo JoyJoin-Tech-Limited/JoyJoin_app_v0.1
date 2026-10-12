@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse } from '@shared/api'
+import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, getUserCoupons, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION, toggleIntentValue } from '@shared/constants'
 
@@ -77,6 +77,7 @@ import PoolRegistrationMascotSection, { type PoolRegistrationMascotState } from 
 import PoolRegistrationResumeCard from './components/PoolRegistrationResumeCard'
 import PoolRegistrationStepper from './components/PoolRegistrationStepper'
 import RegistrationConfirmModal from './components/RegistrationConfirmModal'
+import { findWelcomeCoupon } from '../payments/event-ticket-payment/ticketHelpers'
 import { getIntentFeedback } from './components/intentFeedback'
 import PoolRegistrationHeroPersonaSection from './components/PoolRegistrationHeroPersonaSection'
 import PoolRegistrationInclusions, {
@@ -180,6 +181,21 @@ export default function PoolRegistrationPage() {
     enabled: !!poolId && !authLoading,
     staleTime: 30_000,
   })
+
+  // Welcome-coupon presence for the confirm modal's quiet gift note (audit
+  // F6). Shares the ['mini-program', 'user-coupons'] key + staleTime with the
+  // event-ticket-payment page, so continuing to checkout reuses this cache
+  // instead of firing a second request.
+  const { data: couponsData } = useQuery({
+    queryKey: ['mini-program', 'user-coupons'],
+    queryFn: () => getUserCoupons(apiRequest),
+    enabled: !!user?.id && !authLoading,
+    staleTime: 2 * 60 * 1000,
+  })
+  const hasWelcomeGift = useMemo(
+    () => Boolean(findWelcomeCoupon(couponsData?.coupons ?? [])),
+    [couponsData?.coupons],
+  )
 
   // Aggregate persona snapshot for the pool (feature-flagged, kill-switch can disable)
   const personaSnapshotEnabled = user?.features?.personaSnapshotEnabled ?? true
@@ -289,6 +305,9 @@ export default function PoolRegistrationPage() {
     eventType,
     invitationCode,
     isDuoInvite,
+    // Audit C3: duo/referral invite arrival pre-expands the duo row (local
+    // display only — no invite is created until the user taps 2人).
+    inviteArrival: Boolean(resolvedInvitationCode),
     enabled: duoRegistrationEnabled,
     step,
     stepBrief: STEP_BRIEF,
@@ -1068,7 +1087,7 @@ export default function PoolRegistrationPage() {
             insight={brief.insight}
             matchingPromise={brief.matchingPromise}
             reasons={brief.reasons.slice(0, 3)}
-            trustLabel='匹配后再揭晓桌友'
+            trustLabel='排桌后再揭晓桌友'
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
@@ -1155,7 +1174,7 @@ export default function PoolRegistrationPage() {
                   <Text className='pool-reg__completion-text'>预算已收到，可以继续了</Text>
                 </View>
               ) : (
-                <Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>
+                <Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你挑合拍的桌友。</Text>
               )
             }
           >
@@ -1238,6 +1257,8 @@ export default function PoolRegistrationPage() {
         dateTimeLabel={poolDateTimeLabel}
         area={poolArea}
         highlights={confirmHighlights}
+        price={pool?.price ?? null}
+        hasWelcomeGift={hasWelcomeGift}
         isRegistering={isRegistering}
         reduceMotion={reduceMotion}
         onConfirm={handleConfirmModalConfirm}

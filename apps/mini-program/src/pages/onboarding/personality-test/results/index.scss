@@ -116,6 +116,7 @@ $color-skill-cool: #7c3aed;
     @include flex-center;
     @include overlay-padding($spacing-xl, $container-padding, $spacing-xl);
 
+    min-height: 100vh;
     min-height: 100dvh;
     flex-direction: column;
     text-align: center;
@@ -2430,6 +2431,17 @@ $color-skill-cool: #7c3aed;
     margin-top: $spacing-sm;
   }
 
+  // D5 (2026-10-11): referral reward caption under the share CTA — quiet
+  // caption register, same token stack as &__collect-hint. The parent
+  // &__pokemon-actions flex-column gap supplies the top separation.
+  &__share-reward-hint {
+    display: block;
+    text-align: center;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-muted;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     &__reveal-orb {
       animation: none;
@@ -3279,7 +3291,7 @@ $color-skill-cool: #7c3aed;
   position: absolute;
   inset: 0;
   border-radius: 42rpx;
-  background: #FFFFFF;
+  background: $color-surface;
   opacity: 0;
   pointer-events: none;
   animation: slot-flash-fade 0.45s ease-out forwards;
