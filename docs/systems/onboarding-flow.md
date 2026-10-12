@@ -95,7 +95,7 @@ Blind-box **payment** after onboarding is **not** part of this table; see [`docs
 
 **Implementation:**
 - Show archetype reveal animation (slot machine)
-- After 3 seconds, show WeChat login CTA
+- On reveal completion, the WeChat login CTA renders with FinalStage (no timer)
 - On login: Send test results to backend, create user, link results
 - Uses endpoint: `POST /api/auth/wechat/login-with-test`
 
@@ -197,7 +197,7 @@ const WELCOME_BACK_SEEN_KEY = 'jj_welcome_back_seen';
 
 **Implementation:**
 - Show archetype reveal animation (slot machine)
-- After 3 seconds, show WeChat login CTA
+- On reveal completion, the WeChat login CTA renders with FinalStage (no timer)
 - On login: Send test results to backend, create user, link results
 - Uses endpoint: `POST /api/auth/wechat/login-with-test`
 

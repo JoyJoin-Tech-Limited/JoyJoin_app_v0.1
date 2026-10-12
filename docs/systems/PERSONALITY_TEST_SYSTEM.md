@@ -669,7 +669,7 @@ User opens the test (unauthenticated) — web: `/personality-test` · mini-progr
 └────────────────────────┘
          ↓
    Show results page
-   (WeChat 微信授权登入 CTA after 3 s)
+   (WeChat 微信授权登入 CTA renders with FinalStage on reveal completion — no timer)
          ↓
    On WeChat login:
    POST /api/auth/wechat/login-with-test
@@ -725,7 +725,7 @@ The V4 assessment runs **before** WeChat login. The anonymous flow differs from 
 
 1. **Session creation (client-side)**: A logical assessment session is started in the client with a generated `sessionId` and `phase = 'pre_signup'`. No `assessment_session` row is written to the database yet.
 2. **Answer storage (client-only pre-auth)**: While unauthenticated, answers are stored only in `localStorage` (`joyjoin_v4_presignup_answers`) alongside the anonymous `sessionId`.
-3. **Results display**: `PersonalityTestResultPage` shows the archetype result and WeChat login CTA after 3 seconds, based on the client-side engine state.
+3. **Results display**: `PersonalityTestResultPage` shows the archetype result; the WeChat login CTA renders with FinalStage on reveal completion (no timer — `useResultsLoginHandoff.ts`).
 4. **Post-auth processing**: After WeChat login, `PersonalityTestResultPage` calls:
    ```
    POST /api/auth/wechat/login-with-test

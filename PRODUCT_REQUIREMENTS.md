@@ -656,7 +656,7 @@ JoyJoin is a **盲盒式城市体验平台** — 兴趣活动驱动的轻社交.
 ```
 LandingPage → /personality-test (anonymous V4 test) 
 → PersonalityTestResultPage (archetype reveal) 
-→ 微信一键登录 (WeChat login CTA, shown after 3 seconds)
+→ 微信一键登录 (WeChat login CTA, rendered with FinalStage on reveal completion — no timer; `useResultsLoginHandoff.ts`)
 → POST /api/auth/wechat/login-with-test (creates account + saves test results)
 → /onboarding/setup (EssentialDataPage — new users only)
 → /onboarding/extended (ExtendedDataPage)
