@@ -140,7 +140,7 @@
 | 4.13 | Coupon validation | Apply a coupon code `POST /api/coupons/validate` | Coupon discount reflected in total. Invalid/expired coupon shows error. |
 | 4.14 | Admin refund | Admin initiates refund via `POST /api/admin/payments/:id/refund` | Refund processed. User notified. Admin audit log entry created. |
 | 4.15 | Rate limiting | Rapidly create payment intents | `paymentEndpointLimiter` blocks excessive requests with 429 |
-| 4.16 | Welcome coupon banner impression | Complete personality test → navigate to blind-box payment with available `WELCOME50` coupon | Banner renders above coupon list with counter animation (0→50). Analytics event `welcome_coupon_banner_impression` fires. |
+| 4.16 | Welcome coupon banner impression | Complete personality test → navigate to blind-box payment with available `WELCOME20` coupon | Banner renders above coupon list with counter animation (0→20). Analytics event `welcome_coupon_banner_impression` fires. |
 | 4.17 | Welcome coupon banner tap | Tap the welcome coupon banner | Confetti burst animates. Coupon auto-selected. Toast "已选择优惠券" shows. Analytics event `welcome_coupon_banner_tap` fires. Banner hidden after selection. |
 
 ---
