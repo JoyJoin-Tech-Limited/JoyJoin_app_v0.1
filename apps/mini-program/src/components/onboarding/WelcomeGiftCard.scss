@@ -255,6 +255,16 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
   font-weight: $font-weight-medium;
 }
 
+// F5 (2026-10): quiet expiry caption under the 报名可用 pill — System-UI
+// register, secondary tone. Rendered only when the grant response carries
+// `validUntil`; absent otherwise (fail-closed).
+.welcome-gift-card__expiry {
+  margin-top: 8rpx;
+  font-size: $font-size-xs;
+  line-height: $line-height-display;
+  color: $color-text-secondary;
+}
+
 // Extra-tight fallback for very narrow screens so copy never collides with the illustration.
 @media (max-width: 360px) {
   .welcome-gift-card__overlay {

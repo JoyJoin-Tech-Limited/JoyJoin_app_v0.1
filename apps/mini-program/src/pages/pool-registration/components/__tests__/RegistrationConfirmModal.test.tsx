@@ -119,4 +119,38 @@ describe('RegistrationConfirmModal', () => {
     expect(screen.queryByText(/150-200/)).not.toBeInTheDocument()
     expect(document.querySelector('.reg-confirm__chips')).toBeNull()
   })
+
+  it('restates the ticket price when a positive price is provided (audit F6)', () => {
+    render(<RegistrationConfirmModal {...baseProps} price={88} />)
+
+    expect(screen.getByText('报名费')).toBeInTheDocument()
+    expect(screen.getByText('¥88')).toBeInTheDocument()
+  })
+
+  it('omits the price row when price is absent or non-positive', () => {
+    const { rerender } = render(<RegistrationConfirmModal {...baseProps} />)
+    expect(screen.queryByText('报名费')).not.toBeInTheDocument()
+
+    rerender(<RegistrationConfirmModal {...baseProps} price={null} />)
+    expect(screen.queryByText('报名费')).not.toBeInTheDocument()
+
+    rerender(<RegistrationConfirmModal {...baseProps} price={0} />)
+    expect(screen.queryByText('报名费')).not.toBeInTheDocument()
+  })
+
+  it('shows the plan-neutral gift note only when an unused welcome coupon exists (audit F6 + F4)', () => {
+    const { rerender } = render(<RegistrationConfirmModal {...baseProps} hasWelcomeGift />)
+    expect(screen.getByText('见面礼已备好')).toBeInTheDocument()
+    // Plan-neutral: must never promise auto-apply (eligibility is decided per
+    // plan on the payment page — audit F4).
+    expect(screen.queryByText(/自动使用/)).not.toBeInTheDocument()
+
+    rerender(<RegistrationConfirmModal {...baseProps} hasWelcomeGift={false} />)
+    expect(screen.queryByText('见面礼已备好')).not.toBeInTheDocument()
+  })
+
+  it('omits the cost block entirely when neither price nor gift is present', () => {
+    render(<RegistrationConfirmModal {...baseProps} />)
+    expect(document.querySelector('.reg-confirm__cost')).toBeNull()
+  })
 })

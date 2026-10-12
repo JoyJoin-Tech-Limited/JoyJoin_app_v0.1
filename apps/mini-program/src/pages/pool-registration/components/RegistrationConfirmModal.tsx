@@ -11,6 +11,18 @@ interface RegistrationConfirmModalProps {
   highlights: string[]
   isRegistering: boolean
   reduceMotion: boolean
+  /**
+   * Ticket price in yuan (`pool.price` — same source of truth as the hero
+   * meta pill). Row omitted when absent or non-positive. Audit F6: the last
+   * pre-paywall screen must restate the price.
+   */
+  price?: number | null
+  /**
+   * True when the user holds an unused 见面礼 welcome coupon. Copy stays
+   * plan-neutral (「见面礼已备好」) because per-plan auto-apply eligibility
+   * is decided on the payment page (audit F4) — never promise 自动使用 here.
+   */
+  hasWelcomeGift?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -29,6 +41,8 @@ export default function RegistrationConfirmModal({
   highlights,
   isRegistering,
   reduceMotion,
+  price = null,
+  hasWelcomeGift = false,
   onConfirm,
   onCancel,
 }: RegistrationConfirmModalProps) {
@@ -92,6 +106,12 @@ export default function RegistrationConfirmModal({
 
   const rootClass = reduceMotion ? 'reg-confirm reg-confirm--static' : 'reg-confirm'
 
+  // Audit F6: quiet cost restatement between the ticket and the assurance
+  // rows — price (same yuan source as the hero pill) + a plan-neutral gift
+  // note. System-UI register; this is a trust surface, not a promo banner.
+  const showPrice = typeof price === 'number' && price > 0
+  const showCostBlock = showPrice || hasWelcomeGift
+
   return (
     <View className='reg-confirm-overlay' onClick={handleOverlayClick}>
       <View className={rootClass} onClick={handleCardClick} role='dialog' aria-modal='true' aria-labelledby='reg-confirm-title'>
@@ -128,6 +148,22 @@ export default function RegistrationConfirmModal({
             ) : null}
           </ReservationTicket>
         </View>
+
+        {showCostBlock ? (
+          <View className='reg-confirm__cost'>
+            {showPrice ? (
+              <View className='reg-confirm__cost-row'>
+                <Text className='reg-confirm__cost-label'>报名费</Text>
+                <Text className='reg-confirm__cost-value'>¥{price}</Text>
+              </View>
+            ) : null}
+            {hasWelcomeGift ? (
+              <View className='reg-confirm__cost-row'>
+                <Text className='reg-confirm__cost-gift'>见面礼已备好</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <View className='reg-confirm__list'>
           {rows.map((row, index) => {

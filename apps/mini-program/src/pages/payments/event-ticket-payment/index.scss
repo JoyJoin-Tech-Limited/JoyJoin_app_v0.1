@@ -343,6 +343,13 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 // ── Bottom Spacer ──
 .ticket-bottom-spacer {
   height: 200rpx;
+
+  // D3 (2026-10-11): the refund-guarantee caption adds one caption line to
+  // the fixed footer when preRevealRefundEnabled is on — grow the scroll-end
+  // spacer by the same amount so the abandon link is never occluded.
+  &--with-guarantee {
+    height: 248rpx;
+  }
 }
 
 // ── Sticky Footer CTA ──
@@ -639,6 +646,21 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   gap: 16rpx;
 }
 
+// F4-b eligibility note (2026-10): quiet System-UI register — no promo
+// styling, no emoji; centred under the plan cards, 8rpx rhythm.
+.ticket-plan-hint {
+  display: flex;
+  justify-content: center;
+  margin-top: 16rpx;
+
+  &__text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $ticket-text-muted;
+    line-height: 1.5;
+  }
+}
+
 .ticket-plan-card {
   display: flex;
   align-items: flex-start;
@@ -653,6 +675,17 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   &--selected {
     border-color: $color-primary;
     background: rgba($color-primary, 0.03);
+  }
+
+  // D2 悦聚月卡 recommended card (2026-10-11): a persistent soft primary
+  // border marks the recommended option before selection; the selected state
+  // keeps the existing solid-token treatment. Solid tokens only, no gradient.
+  &--recommended {
+    border-color: rgba($color-primary, 0.35);
+
+    &.ticket-plan-card--selected {
+      border-color: $color-primary;
+    }
   }
 
   &--pressed {
@@ -728,6 +761,16 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
       Text {
         color: $color-primary;
+      }
+    }
+
+    // D2 recommended badge (悦聚月卡): solid primary fill + white text — the
+    // strongest emphasis tier in the plan list, above the tinted badges.
+    &--recommended {
+      background: $color-primary;
+
+      Text {
+        color: $color-text-white;
       }
     }
   }
@@ -1062,6 +1105,23 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
   &--pressed {
     opacity: 0.7;
+  }
+}
+
+// D3 refund-guarantee caption (flag preRevealRefundEnabled, 2026-10-11):
+// quiet System-UI register directly under the payment CTA — same muted
+// caption styling as the trust row's 「微信支付 · 安全加密」 line. 8rpx
+// rhythm; renders nothing at all when the flag is off.
+.ticket-refund-guarantee {
+  display: flex;
+  justify-content: center;
+  margin-top: 12rpx;
+
+  &__text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $ticket-text-muted;
+    line-height: 1.5;
   }
 }
 

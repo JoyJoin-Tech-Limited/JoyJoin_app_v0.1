@@ -5,6 +5,7 @@ import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { useChoreographedWait } from '../../hooks/useChoreographedWait'
 import { haptics } from '../../lib/utils/haptics'
+import { formatCouponValidUntilLabel } from '../../lib/utils/couponValidity'
 import { CEREMONY_IDS, enterCeremony, exitCeremony } from '../../lib/guidance/ceremonyState'
 import {
   BLIND_BOX_BODY_ASSET,
@@ -72,6 +73,12 @@ interface UnboxingCeremonyProps {
    * the ceremony never blocks on the coupon network call.
    */
   giftDiscountValue?: number | null
+  /**
+   * Coupon expiry (ISO-8601, grant response `validUntil`). When present, the
+   * gift row adds a small 「有效期至 M月D日」 caption; absent → nothing
+   * (fail-closed). Audit F5.
+   */
+  giftValidUntil?: string | null
   /** True while the welcome-coupon claim is still in flight. */
   giftLoading?: boolean
   /**
@@ -88,6 +95,7 @@ export default function UnboxingCeremony({
   archetypeName,
   accentText,
   giftDiscountValue = null,
+  giftValidUntil = null,
   giftLoading = false,
   onAdvance,
   onComplete,
@@ -132,6 +140,7 @@ export default function UnboxingCeremony({
   if (!visible) return null
 
   const giftDiscount = giftDiscountValue != null ? formatGiftDiscount(giftDiscountValue) : null
+  const giftValidityHint = giftDiscount ? formatCouponValidUntilLabel(giftValidUntil) : null
 
   const rootClass = [
     'unboxing-ceremony',
@@ -200,6 +209,9 @@ export default function UnboxingCeremony({
             <Text className='unboxing-ceremony__gift-text'>
               悦仔见面礼 · <Text className='unboxing-ceremony__gift-discount'>{giftDiscount.value}{giftDiscount.unit}</Text>券，报名可用
             </Text>
+            {giftValidityHint ? (
+              <Text className='unboxing-ceremony__gift-expiry'>有效期至 {giftValidityHint}</Text>
+            ) : null}
           </View>
         ) : giftLoading ? (
           <View className='unboxing-ceremony__gift unboxing-ceremony__gift--loading' aria-hidden='true'>

@@ -1,11 +1,18 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useCdnFirstSrc } from '../../lib/utils/cdnAssets'
+import { formatCouponValidUntilLabel } from '../../lib/utils/couponValidity'
 import { haptics } from '../../lib/utils/haptics'
 import './WelcomeGiftCard.scss'
 
 export interface WelcomeGiftCardProps {
   /** Coupon discount value, e.g. 50 for a 50% coupon. */
   discountValue?: number
+  /**
+   * Coupon expiry (ISO-8601, from the grant response's `validUntil`). When
+   * present, renders a small 「有效期至 M月D日」 caption; when absent, nothing
+   * is rendered (fail-closed). Audit F5.
+   */
+  validUntil?: string | null
   /** Called when the user taps the card. */
   onTap?: () => void
   /** Additional class names. */
@@ -39,6 +46,7 @@ function formatDiscount(discountValue: number): { value: string; unit: string } 
  */
 export default function WelcomeGiftCard({
   discountValue = 0,
+  validUntil = null,
   onTap,
   className = '',
   visible = true,
@@ -52,6 +60,7 @@ export default function WelcomeGiftCard({
 
   const { value, unit } = formatDiscount(discountValue)
   const badgeLabel = `${value}${unit}`
+  const validityHint = formatCouponValidUntilLabel(validUntil)
   const { src: imageSrc, onError: onImageError } = useCdnFirstSrc(COUPON_IMAGE_PATH)
 
   const rootClass = [
@@ -107,6 +116,9 @@ export default function WelcomeGiftCard({
           <View className='welcome-gift-card__hint'>
             <Text className='welcome-gift-card__hint-text'>报名可用</Text>
           </View>
+          {validityHint ? (
+            <Text className='welcome-gift-card__expiry'>有效期至 {validityHint}</Text>
+          ) : null}
         </View>
 
         <View className='welcome-gift-card__discount' aria-hidden='true'>

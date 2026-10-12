@@ -37,6 +37,7 @@
     animation: none;
 
     .reg-confirm__ticket,
+    .reg-confirm__cost,
     .reg-confirm__row,
     .reg-confirm__check,
     .reg-confirm__progress-fill {
@@ -127,6 +128,51 @@
     flex-direction: column;
     gap: 24rpx;
     margin-bottom: 32rpx;
+  }
+
+  // Audit F6 (2026-10): quiet cost restatement — price + plan-neutral gift
+  // note in System-UI register (trust surface, not promo). Reveal slot sits
+  // between the ticket (350ms) and the first assurance row (650ms).
+  &__cost {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    margin-bottom: 24rpx;
+    padding: 16rpx 24rpx;
+    border-radius: $radius-md;
+    background: $color-bg;
+    opacity: 0;
+    transform: translate3d(0, 16rpx, 0);
+    animation: reg-confirm-row-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 500ms forwards;
+  }
+
+  &__cost-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24rpx;
+  }
+
+  &__cost-label {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.5;
+  }
+
+  &__cost-value {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary-warm;
+    line-height: 1.5;
+  }
+
+  &__cost-gift {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.5;
   }
 
   &__row {
@@ -267,6 +313,7 @@
     animation: none;
 
     &__ticket,
+    &__cost,
     &__row,
     &__check,
     &__progress-fill {

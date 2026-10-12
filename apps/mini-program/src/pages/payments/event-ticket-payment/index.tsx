@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { registerForPoolWithPayment, getEventPool, getUserCoupons, reconcilePayment } from '@shared/api'
+import { registerForPool, registerForPoolWithPayment, createMiniProgramPaymentIntent, getEventPool, getUserCoupons, reconcilePayment } from '@shared/api'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { useAuth } from '../../../hooks/useAuth'
-import { apiRequest } from '../../../lib/api/api'
+import { apiRequest, type ApiError } from '../../../lib/api/api'
 import { logInfo, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
@@ -32,9 +32,11 @@ import StatusCard from '../../../components/ui/StatusCard'
 import ReservationTicket from '../../../components/reservation/ReservationTicket'
 import RegistrationSuccessCeremony from '../../../components/reservation/RegistrationSuccessCeremony'
 import TicketPlanSelection, { type SelectedPlan } from './components/TicketPlanSelection'
+import RefundGuaranteeLine from './components/RefundGuaranteeLine'
 import IcebreakerInclusionSheet from '../../../components/event-ticket-payment/IcebreakerInclusionSheet'
 import TicketOrderSkeleton, { getTicketCtaLabel } from '../../../components/payments/TicketOrderSkeleton'
 import {
+  buildPlansShown,
   calculateDiscount,
   findWelcomeCoupon,
   formatBudgetLabel,
@@ -42,7 +44,20 @@ import {
   formatPrice,
   getBestCoupon,
   getDisplayLabel,
+  getTerminalRegistrationCode,
+  getTerminalRegistrationCopy,
+  getVipMonthlyAnchorLabel,
+  isSubscriptionActive,
+  isWelcomeCouponAutoApplyEligible,
+  isWelcomeCouponCode,
+  resolvePaymentCheckoutFlags,
+  resolveSubscriptionConflictMessage,
+  resolveVipMonthlyOffer,
+  SUBSCRIPTION_STATUS_QUERY_KEY,
   type PricingPlan,
+  type RitualContextPayload,
+  type SubscriptionStatusPayload,
+  type TerminalRegistrationBlock,
 } from './ticketHelpers'
 import './index.scss'
 
@@ -58,6 +73,20 @@ interface PaymentState {
   paymentId?: string
   wechatOrderId?: string
   error?: string
+  /**
+   * D2 悦聚月卡 paid-but-unregistered recovery marker: the card payment is
+   * CONFIRMED but the entitlement registration has not completed. The retry
+   * CTA must re-attempt ONLY the registration step — never a new payment.
+   */
+  registrationPending?: boolean
+  /**
+   * HIGH-2 terminal seat-booking block (pool full/closed/cancelled/deadline):
+   * retrying THIS pool can never succeed, so the page swaps to a terminal
+   * surface with a 「去看看其他局」 CTA instead of the retry loop. `paid`
+   * records whether the 悦聚月卡 charge already went through (post-payment
+   * registration failure) or the block fired before any charge (pre-check).
+   */
+  registrationTerminal?: TerminalRegistrationBlock
 }
 
 export default function EventTicketPaymentPage() {
@@ -151,17 +180,78 @@ export default function EventTicketPaymentPage() {
     staleTime: 2 * 60 * 1000,
   })
 
-  // Fetch pricing plans from ritual context for dynamic pack prices
-  const { data: pricingData } = useQuery<{ plans: PricingPlan[] }>({
+  // Fetch pricing plans from ritual context for dynamic pack prices. The
+  // response is additive-tolerant: the subscription upsell batch adds a
+  // `subscriptionPlans` array (D2); old servers only return `plans`.
+  // `isFetched` also gates the plan-selector impression (MEDIUM-1): the
+  // plansShown metadata must not fire while the monthly-offer resolution is
+  // still in flight.
+  const { data: ritualContext, isFetched: ritualContextFetched } = useQuery<RitualContextPayload>({
     queryKey: ['mini-program', 'pricing-plans'],
-    queryFn: () => apiRequest<{ plans: PricingPlan[] }>({ path: '/api/payments/ritual-context' }).then((r) => ({ plans: r.plans ?? [] })),
+    queryFn: () => apiRequest<RitualContextPayload>({ path: '/api/payments/ritual-context' }),
     enabled: !!user?.id && isPageReady,
     staleTime: 10 * 60 * 1000,
   })
 
-  // Auto-select welcome coupon on first load
+  // D2/D3 checkout flags from GET /api/auth/user → features. Fail-closed:
+  // absent/undefined reads as false (see resolvePaymentCheckoutFlags).
+  const { checkoutSubscriptionUpsellEnabled, preRevealRefundEnabled } = resolvePaymentCheckoutFlags(user)
+
+  // HIGH-1 subscription-status read (GET /api/subscription/status), fetched
+  // only when the upsell flag is on. Suppression is fail-CLOSED on an
+  // affirmative active signal and fail-OPEN on loading/error: the card keeps
+  // rendering and the server-side 409 SUBSCRIPTION_ALREADY_ACTIVE guard is
+  // the real backstop, so a failed status read never blocks the page. No
+  // scary logging here — a missing read is a normal offline/edge outcome.
+  const { data: subscriptionStatus, isFetched: subscriptionStatusFetched } =
+    useQuery<SubscriptionStatusPayload>({
+      queryKey: SUBSCRIPTION_STATUS_QUERY_KEY,
+      queryFn: () => apiRequest<SubscriptionStatusPayload>({ path: '/api/subscription/status' }),
+      enabled: checkoutSubscriptionUpsellEnabled && !!user?.id && isPageReady,
+      staleTime: 60 * 1000,
+    })
+  const subscriptionActive = isSubscriptionActive(subscriptionStatus)
+
+  // D2 悦聚月卡 upsell offer — fail-closed: the monthly card renders only
+  // when the flag is ON, ritual-context actually carries a monthly
+  // subscription plan with a server-side price, AND the user does not already
+  // hold an active subscription (HIGH-1). No client price fallback.
+  const vipMonthlyOffer = useMemo(
+    () =>
+      checkoutSubscriptionUpsellEnabled && !subscriptionActive
+        ? resolveVipMonthlyOffer(ritualContext)
+        : null,
+    [checkoutSubscriptionUpsellEnabled, subscriptionActive, ritualContext],
+  )
+  const vipMonthlyPlanView = useMemo(
+    () =>
+      vipMonthlyOffer
+        ? {
+            displayName: vipMonthlyOffer.displayName,
+            description: vipMonthlyOffer.description,
+            priceInCents: vipMonthlyOffer.priceInCents,
+            anchorLabel: getVipMonthlyAnchorLabel(vipMonthlyOffer),
+          }
+        : null,
+    [vipMonthlyOffer],
+  )
+
+  // Selection hygiene: if the monthly offer disappears between render and
+  // refetch (flag flip or a payload without subscription plans), fall back to
+  // the anchor plan instead of leaving an unpayable selection on screen.
+  useEffect(() => {
+    if (selectedPlan === 'vip_monthly' && !vipMonthlyOffer) {
+      setSelectedPlan('single')
+    }
+  }, [selectedPlan, vipMonthlyOffer])
+
+  // Auto-select welcome coupon on first load — gated by plan (audit F4
+  // interim): the 见面礼 never auto-applies to the anchor 单场局票 plan, so the
+  // first transaction stays full-price; 连局包 (and future 悦聚卡 plans) keep
+  // the existing behaviour. Server-side per-plan enforcement ships later.
   useEffect(() => {
     if (!couponsData?.coupons || selectedCouponCode) return
+    if (!isWelcomeCouponAutoApplyEligible(selectedPlan)) return
     const welcome = findWelcomeCoupon(couponsData.coupons)
     if (welcome?.code) {
       setSelectedCouponCode(welcome.code)
@@ -171,10 +261,10 @@ export default function EventTicketPaymentPage() {
         context: 'event-ticket-payment',
       })
     }
-  }, [couponsData?.coupons, selectedCouponCode])
+  }, [couponsData?.coupons, selectedCouponCode, selectedPlan])
 
   // Derived pricing — prefer pool.price, fallback to ritual-context, then hardcoded
-  const pricingPlans = pricingData?.plans ?? []
+  const pricingPlans = ritualContext?.plans ?? []
   const eventSinglePlan = pricingPlans.find((p: PricingPlan) => p.planType === 'event_single')
   const pack3Plan = pricingPlans.find((p: PricingPlan) => p.planType === 'pack_3')
   const pack6Plan = pricingPlans.find((p: PricingPlan) => p.planType === 'pack_6')
@@ -182,17 +272,46 @@ export default function EventTicketPaymentPage() {
   const singlePrice = eventSinglePlan?.priceInCents ?? 8800
   const pack3Price = pack3Plan?.priceInCents ?? 21100
   const pack6Price = pack6Plan?.priceInCents ?? 37000
-  const currentPrice = selectedPlan === 'pack_3' ? pack3Price : selectedPlan === 'pack_6' ? pack6Price : singlePrice
+  // D2: the monthly price is server-derived ONLY (no hardcoded fallback) —
+  // when the offer is absent the selection-reset effect above moves the user
+  // back to 'single', so the singlePrice fallback here is unreachable.
+  const currentPrice =
+    selectedPlan === 'vip_monthly'
+      ? vipMonthlyOffer?.priceInCents ?? singlePrice
+      : selectedPlan === 'pack_3'
+        ? pack3Price
+        : selectedPlan === 'pack_6'
+          ? pack6Price
+          : singlePrice
+
+  // Audit F4: on the anchor 单场局票 plan the 见面礼 is ineligible for
+  // auto-apply, so WELCOME* codes are excluded from BOTH the selected-coupon
+  // honouring and the best-coupon fallback — otherwise the discount would
+  // leak onto the anchor product via getBestCoupon even without auto-select.
+  const welcomeAutoApplyEligible = isWelcomeCouponAutoApplyEligible(selectedPlan)
+  const eligibleCoupons = useMemo(() => {
+    const all = couponsData?.coupons ?? []
+    if (welcomeAutoApplyEligible) return all
+    return all.filter((c) => !isWelcomeCouponCode(c.code))
+  }, [couponsData?.coupons, welcomeAutoApplyEligible])
+
+  const welcomeCoupon = useMemo(
+    () => findWelcomeCoupon(couponsData?.coupons ?? []),
+    [couponsData?.coupons],
+  )
+  // Quiet eligibility note near the plan selector (F4-b): only when a
+  // welcome coupon exists but the current plan can't auto-use it.
+  const showWelcomeCouponHint = !welcomeAutoApplyEligible && Boolean(welcomeCoupon)
 
   const selectedCoupon = useMemo(() => {
     if (!selectedCouponCode || !couponsData?.coupons) return null
-    return couponsData.coupons.find((c) => c.code === selectedCouponCode && c.status === 'available' && !c.isUsed) ?? null
-  }, [selectedCouponCode, couponsData?.coupons])
+    return eligibleCoupons.find((c) => c.code === selectedCouponCode && c.status === 'available' && !c.isUsed) ?? null
+  }, [selectedCouponCode, couponsData?.coupons, eligibleCoupons])
 
   const bestCoupon = useMemo(() => {
     if (selectedCoupon) return selectedCoupon
-    return getBestCoupon(couponsData?.coupons ?? [], currentPrice)
-  }, [selectedCoupon, couponsData?.coupons, currentPrice])
+    return getBestCoupon(eligibleCoupons, currentPrice)
+  }, [selectedCoupon, eligibleCoupons, currentPrice])
 
   const discountAmount = calculateDiscount(bestCoupon, currentPrice)
   const finalPrice = Math.max(0, currentPrice - discountAmount)
@@ -220,19 +339,33 @@ export default function EventTicketPaymentPage() {
     })
   }, [isPageReady, poolId, selectedPlan, couponsData?.coupons, deviceTier.tier])
 
-  // Track plan selector impression once it becomes visible.
+  // Track plan selector impression once it becomes visible. plansShown must
+  // mirror the ACTUAL rendered list (D2 stale-metadata fix): the monthly card
+  // prepends vip_monthly when the upsell offer is on the page.
+  //
+  // MEDIUM-1: the impression must wait until every input that decides the
+  // monthly card has SETTLED — ritual-context (offer source) and, when the
+  // upsell flag is on, the subscription-status read (suppression source).
+  // Firing at isPageReady recorded stale three-plan metadata whenever the
+  // monthly offer resolved a tick later. `isFetched` flips on error too, so
+  // failed reads count as settled (fail-open renders the card either way);
+  // a logged-out visitor disables both queries, which also reads as settled.
+  const planSelectorMetadataReady =
+    (ritualContextFetched || !user?.id) &&
+    (!checkoutSubscriptionUpsellEnabled || !user?.id || subscriptionStatusFetched)
+
   useEffect(() => {
-    if (!isPageReady || !poolId || hasTrackedPlanSelectorImpressionRef.current) return
+    if (!isPageReady || !poolId || !planSelectorMetadataReady || hasTrackedPlanSelectorImpressionRef.current) return
     hasTrackedPlanSelectorImpressionRef.current = true
     discoverAnalytics.track('plan_selector_impression', undefined, {
       poolId,
-      plansShown: ['single', 'pack_3', 'pack_6'],
+      plansShown: buildPlansShown(vipMonthlyOffer !== null),
       defaultPlan: selectedPlan,
       singlePrice,
       pack3Price,
       pack6Price,
     })
-  }, [isPageReady, poolId, selectedPlan, singlePrice, pack3Price, pack6Price])
+  }, [isPageReady, poolId, planSelectorMetadataReady, selectedPlan, singlePrice, pack3Price, pack6Price, vipMonthlyOffer])
 
   // Track terms row impression once the ticket card is actually rendered.
   useEffect(() => {
@@ -272,9 +405,14 @@ export default function EventTicketPaymentPage() {
     }
   }, [deviceTier.isDegradation, tailImageLoaded, tailImageError, tailLoadTimedOut, eventType, poolId])
 
-  // Reset transient flags on show (swipe-back safety)
+  // Reset transient flags on show (swipe-back safety). Never reset a
+  // paid-but-unregistered 悦聚月卡 state back to idle — that would hide the
+  // registration-retry path and risk a duplicate purchase. The terminal
+  // seat-booking block (HIGH-2) is likewise sticky: the pool does not un-fill
+  // on swipe-back, and re-showing the checkout would invite a second charge
+  // attempt against a pool that can never accept it.
   useDidShow(() => {
-    if (payment.status === 'failed') {
+    if (payment.status === 'failed' && !payment.registrationPending && !payment.registrationTerminal) {
       setPayment({ status: 'idle' })
     }
   })
@@ -289,8 +427,89 @@ export default function EventTicketPaymentPage() {
     }
   }, [])
 
-  const pollVerification = useCallback((orderId: string, paymentId: string) => {
-    setPayment({ status: 'verifying', paymentId, wechatOrderId: orderId })
+  // D2 悦聚月卡 post-payment step: the subscription payment (event_bundle via
+  // /api/payments/miniprogram/create, plan id `vip_monthly`) activates the
+  // card; the seat itself is then booked through the entitlement register
+  // path (POST /api/event-pools/:id/register) so the success ceremony stays
+  // truthful — 「已加入」 only renders after the registration actually exists.
+  const finalizeVipRegistration = useCallback(
+    async (orderId: string, paymentId: string | null, via: 'poll' | 'reconcile') => {
+      const draft = returnContextRef.current?.draft ?? {}
+      try {
+        await registerForPool(apiRequest, poolId, draft)
+      } catch (err) {
+        const errData = (err as ApiError)?.data as { code?: string } | undefined
+        if (errData?.code !== 'ALREADY_REGISTERED') {
+          // HIGH-2a: terminal seat-booking rejections (pool filled during
+          // payment, closed, cancelled, deadline passed) can never succeed on
+          // retry — route to the terminal surface instead of the
+          // paid-but-unregistered retry loop. The 悦聚月卡 itself stays
+          // active and valid for other pools; no second charge ever happens.
+          const terminalCode = getTerminalRegistrationCode(err)
+          if (terminalCode) {
+            logError('[EventTicketPayment] 悦聚月卡 active but pool registration terminally blocked', {
+              orderId,
+              poolId,
+              terminalCode,
+              via,
+            })
+            setPayment({
+              status: 'failed',
+              paymentId: paymentId ?? undefined,
+              wechatOrderId: orderId,
+              registrationTerminal: { code: terminalCode, paid: true },
+            })
+            return
+          }
+          logError('[EventTicketPayment] 悦聚月卡 active but pool registration failed', {
+            orderId,
+            poolId,
+            error: String(err),
+          })
+          // Paid-but-unregistered (transient/network failure): keep the
+          // return context so retry can complete the booking, and never
+          // create a second payment here.
+          setPayment({
+            status: 'failed',
+            paymentId: paymentId ?? undefined,
+            wechatOrderId: orderId,
+            registrationPending: true,
+            error: '月卡已生效，这次报名没完成。点下方按钮补上报名，不会重复扣款。',
+          })
+          return
+        }
+      }
+
+      setPayment({ status: 'success', paymentId: paymentId ?? undefined, wechatOrderId: orderId })
+      discoverAnalytics.track('pay_success', undefined, {
+        poolId,
+        plan: 'vip_monthly',
+        couponCode: bestCoupon?.code ?? null,
+        originalAmount: currentPrice,
+        finalAmount: finalPrice,
+        paymentId,
+        wechatOrderId: orderId,
+        via,
+      })
+
+      const ctx = returnContextRef.current
+      if (ctx) {
+        const paid = markPaymentReturnContextPaid(ctx)
+        void persistPaymentReturnContext(paid)
+        setReturnContext(paid)
+        returnContextRef.current = paid
+      }
+
+      void bustRegistrationCaches(queryClient, { poolId })
+      clearPaymentReturnContextStorage()
+
+      logInfo('[EventTicketPayment] 悦聚月卡 payment confirmed, registration created', { orderId, paymentId, via })
+    },
+    [poolId, queryClient, bestCoupon?.code, currentPrice, finalPrice],
+  )
+
+  const pollVerification = useCallback((orderId: string, paymentId: string | null, planAtPay: SelectedPlan) => {
+    setPayment({ status: 'verifying', paymentId: paymentId ?? undefined, wechatOrderId: orderId })
     let attempts = 0
     // Capped exponential-backoff polling: webhooks usually arrive in <5s; polling
     // covers delayed delivery without hammering the status endpoint on fixed 1s
@@ -307,7 +526,7 @@ export default function EventTicketPaymentPage() {
         verifyTimerRef.current = null
       }
       if (status === 'success') {
-        setPayment({ status: 'success', paymentId, wechatOrderId: orderId })
+        setPayment({ status: 'success', paymentId: paymentId ?? undefined, wechatOrderId: orderId })
         // No haptic here (spec §2): the celebration haptic fires on the visual
         // beat — the 「已留座」 seal landing in RegistrationSuccessCeremony —
         // not on the network response.
@@ -317,6 +536,12 @@ export default function EventTicketPaymentPage() {
     }
 
     const completeSuccess = (via: 'poll' | 'reconcile') => {
+      // D2 悦聚月卡: payment confirmed → activate-then-register orchestration.
+      // The card is already active; booking the seat completes the promise.
+      if (planAtPay === 'vip_monthly') {
+        void finalizeVipRegistration(orderId, paymentId, via)
+        return
+      }
       finish('success')
       discoverAnalytics.track('pay_success', undefined, {
         poolId,
@@ -432,7 +657,7 @@ export default function EventTicketPaymentPage() {
     }
 
     scheduleNextPoll()
-  }, [queryClient, poolId, selectedPlan, currentPrice, finalPrice, bestCoupon?.code])
+  }, [queryClient, poolId, selectedPlan, currentPrice, finalPrice, bestCoupon?.code, finalizeVipRegistration])
 
   const handlePay = useCallback(async () => {
     if (paymentInFlightRef.current) return
@@ -460,6 +685,118 @@ export default function EventTicketPaymentPage() {
       const payload = returnContext?.draft ?? {}
       const couponCode = effectiveCouponCode
 
+      // Shared WeChat-sheet outcome handler for both create paths (event
+      // register-with-payment and the D2 悦聚月卡 subscription intent).
+      const handlePaySheetError = (payErr: any, ids: { paymentId: string | null; wechatOrderId: string }) => {
+        if (payErr?.errMsg?.includes('cancel')) {
+          logInfo('[EventTicketPayment] WeChat Pay cancelled by user')
+          discoverAnalytics.track('pay_cancel', undefined, {
+            poolId,
+            plan: selectedPlan,
+            couponCode: bestCoupon?.code ?? null,
+            originalAmount: currentPrice,
+            finalAmount: finalPrice,
+            paymentId: ids.paymentId,
+            wechatOrderId: ids.wechatOrderId,
+          })
+          setPayment({ status: 'idle' })
+          setCancelCount((count) => count + 1)
+        } else {
+          logError('[EventTicketPayment] WeChat Pay failed', payErr)
+          discoverAnalytics.track('pay_fail', undefined, {
+            poolId,
+            plan: selectedPlan,
+            couponCode: bestCoupon?.code ?? null,
+            originalAmount: currentPrice,
+            finalAmount: finalPrice,
+            paymentId: ids.paymentId,
+            wechatOrderId: ids.wechatOrderId,
+            reason: 'wechat_pay_error',
+            error: payErr?.errMsg ?? String(payErr),
+          })
+          setPayment({ status: 'failed', error: '支付未成功，请重试' })
+        }
+      }
+
+      // D2 悦聚月卡: subscription purchase through the mini-program payment
+      // intent endpoint. The server maps `vip_monthly` to the monthly 悦聚卡
+      // (normalizeSubscriptionPlanType) and activates the subscription on
+      // fulfillment; the pool seat is then booked via the entitlement
+      // register path (see finalizeVipRegistration) so the success ceremony
+      // only claims 「已加入」 once the registration actually exists.
+      if (selectedPlan === 'vip_monthly') {
+        if (!vipMonthlyOffer) {
+          // Fail-closed: the offer vanished between render and tap.
+          setPayment({ status: 'idle' })
+          Taro.showToast({ title: '方案已更新，请重新选择', icon: 'none', duration: TOAST_DURATION })
+          return
+        }
+
+        // HIGH-2b pre-charge capacity guard. The page already holds pool
+        // capacity state (getEventPool carries registrationCount /
+        // currentParticipants + maxParticipants / spotsLeft), so re-validate
+        // fullness BEFORE creating the intent: if the pool filled while the
+        // user was deciding, block with the honest terminal surface instead
+        // of charging. Payloads without capacity data fail OPEN to the
+        // normal pay path — the server-side POOL_FULL check stays the
+        // authority; this guard only avoids a needless charge.
+        const heldSeats = pool?.registrationCount ?? pool?.currentParticipants ?? 0
+        const knownCapacity =
+          typeof pool?.maxParticipants === 'number' && pool.maxParticipants > 0
+            ? pool.maxParticipants
+            : typeof pool?.spotsLeft === 'number'
+              ? heldSeats + Math.max(pool.spotsLeft, 0)
+              : undefined
+        if (typeof knownCapacity === 'number' && heldSeats >= knownCapacity) {
+          logInfo('[EventTicketPayment] 悦聚月卡 blocked before charge: pool already full', {
+            poolId,
+            heldSeats,
+            knownCapacity,
+          })
+          setPayment({
+            status: 'failed',
+            registrationTerminal: { code: 'POOL_FULL', paid: false },
+          })
+          return
+        }
+
+        const intent = await createMiniProgramPaymentIntent(apiRequest, {
+          type: 'vip_monthly',
+          planId: 'vip_monthly',
+          couponCode,
+        })
+
+        logInfo('[EventTicketPayment] 悦聚月卡 payment intent created', {
+          wechatOrderId: intent.outTradeNo,
+          mock: intent.mock === true,
+        })
+
+        // Interaction-latency baseline: order created, UI transitions to paying.
+        interactionLatency.trackInteraction('payment_order_create', t0)
+
+        if (intent.mock) {
+          // MOCK_PAYMENTS: the order is instantly completed server-side, so
+          // skip the WeChat sheet and verify immediately.
+          pollVerification(intent.outTradeNo, null, 'vip_monthly')
+          return
+        }
+
+        setPayment({ status: 'paying', wechatOrderId: intent.outTradeNo })
+        try {
+          await Taro.requestPayment({
+            timeStamp: intent.timeStamp,
+            nonceStr: intent.nonceStr,
+            package: intent.package,
+            signType: intent.signType as 'RSA',
+            paySign: intent.paySign,
+          })
+          pollVerification(intent.outTradeNo, null, 'vip_monthly')
+        } catch (payErr: any) {
+          handlePaySheetError(payErr, { paymentId: null, wechatOrderId: intent.outTradeNo })
+        }
+        return
+      }
+
       const result = await registerForPoolWithPayment(apiRequest, poolId, {
         ...payload,
         couponCode,
@@ -482,38 +819,26 @@ export default function EventTicketPaymentPage() {
           signType: result.signType as 'RSA',
           paySign: result.paySign,
         })
-        pollVerification(result.wechatOrderId, result.paymentId)
+        pollVerification(result.wechatOrderId, result.paymentId, selectedPlan)
       } catch (payErr: any) {
-        if (payErr?.errMsg?.includes('cancel')) {
-          logInfo('[EventTicketPayment] WeChat Pay cancelled by user')
-          discoverAnalytics.track('pay_cancel', undefined, {
-            poolId,
-            plan: selectedPlan,
-            couponCode: bestCoupon?.code ?? null,
-            originalAmount: currentPrice,
-            finalAmount: finalPrice,
-            paymentId: result.paymentId,
-            wechatOrderId: result.wechatOrderId,
-          })
-          setPayment({ status: 'idle' })
-          setCancelCount((count) => count + 1)
-        } else {
-          logError('[EventTicketPayment] WeChat Pay failed', payErr)
-          discoverAnalytics.track('pay_fail', undefined, {
-            poolId,
-            plan: selectedPlan,
-            couponCode: bestCoupon?.code ?? null,
-            originalAmount: currentPrice,
-            finalAmount: finalPrice,
-            paymentId: result.paymentId,
-            wechatOrderId: result.wechatOrderId,
-            reason: 'wechat_pay_error',
-            error: payErr?.errMsg ?? String(payErr),
-          })
-          setPayment({ status: 'failed', error: '支付未成功，请重试' })
-        }
+        handlePaySheetError(payErr, { paymentId: result.paymentId, wechatOrderId: result.wechatOrderId })
       }
     } catch (err: any) {
+      // HIGH-1 backstop: the server rejected the 悦聚月卡 intent because the
+      // subscription is already active (409 SUBSCRIPTION_ALREADY_ACTIVE).
+      // Nothing was charged. Surface the server's own Chinese message through
+      // the normal payment-error surface, refresh the subscription-status
+      // query so the upsell card disappears, and skip the pay_fail funnel
+      // noise — this is a state conflict, not a payment failure.
+      const intentErrorData = (err as ApiError)?.data as { code?: string } | undefined
+      if (intentErrorData?.code === 'SUBSCRIPTION_ALREADY_ACTIVE') {
+        const conflictMessage = resolveSubscriptionConflictMessage(err)
+        logInfo('[EventTicketPayment] 悦聚月卡 intent rejected: subscription already active', { poolId })
+        void queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_STATUS_QUERY_KEY })
+        setPayment({ status: 'failed', error: conflictMessage })
+        Taro.showToast({ title: conflictMessage, icon: 'none', duration: TOAST_DURATION })
+        return
+      }
       const msg = err?.message ?? err?.error ?? '支付创建失败，请稍后重试'
       logError('[EventTicketPayment] Payment creation failed', err)
       discoverAnalytics.track('pay_fail', undefined, {
@@ -530,12 +855,24 @@ export default function EventTicketPaymentPage() {
     } finally {
       paymentInFlightRef.current = false
     }
-  }, [returnContext, bestCoupon, poolId, pollVerification, currentPrice, finalPrice, selectedPlan, effectiveCouponCode])
+  }, [returnContext, bestCoupon, pool, poolId, pollVerification, currentPrice, finalPrice, selectedPlan, effectiveCouponCode, vipMonthlyOffer])
 
   const handleRetry = useCallback(() => {
     haptics('light')
+    // D2 paid-but-unregistered recovery: the 悦聚月卡 payment is already
+    // confirmed — re-attempt ONLY the entitlement registration, never a
+    // second payment.
+    if (payment.registrationPending && payment.wechatOrderId) {
+      setPayment({
+        status: 'verifying',
+        paymentId: payment.paymentId,
+        wechatOrderId: payment.wechatOrderId,
+      })
+      void finalizeVipRegistration(payment.wechatOrderId, payment.paymentId ?? null, 'poll')
+      return
+    }
     setPayment({ status: 'idle' })
-  }, [])
+  }, [payment, finalizeVipRegistration])
 
   const [isNavigating, setIsNavigating] = useState(false)
   useResetOnShow(setIsNavigating)
@@ -553,6 +890,23 @@ export default function EventTicketPaymentPage() {
       },
     })
   }, [isNavigating, poolId])
+
+  // HIGH-2 terminal-surface CTA: leave this (unbookable) pool for Discover.
+  // The payment return context is cleared — the flow for THIS pool is over;
+  // the 悦聚月卡 (when paid) stays valid and is re-usable on any other pool.
+  const handleGoDiscover = useCallback(() => {
+    if (isNavigating) return
+    setIsNavigating(true)
+    haptics('medium')
+    clearPaymentReturnContextStorage()
+    Taro.switchTab({
+      url: MINI_PROGRAM_ROUTES.discover,
+      fail: () => {
+        setIsNavigating(false)
+        Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+      },
+    })
+  }, [isNavigating])
 
   const handleBack = useCallback(() => {
     const dwellTimeMs = pageEnteredAt > 0 ? Date.now() - pageEnteredAt : 0
@@ -708,6 +1062,38 @@ export default function EventTicketPaymentPage() {
           <View className='ticket-verifying__dot' />
           <View className='ticket-verifying__dot' />
         </View>
+      </View>
+    )
+  }
+
+  // HIGH-2 terminal seat-booking surface (悦聚月卡 flow): the pool filled /
+  // closed / was cancelled / hit its deadline — either after the card payment
+  // confirmed (paid: the subscription stays active, no quota consumed) or at
+  // the pre-charge guard (unpaid: nothing was charged). There is NO retry CTA
+  // here: retrying this pool can never succeed, and the paid retry loop was
+  // the POOL_FULL dead-end this state replaces. System-UI copy leads with the
+  // truthful 月卡已生效 when paid; the only way out is 「去看看其他局」.
+  if (payment.status === 'failed' && payment.registrationTerminal) {
+    const terminalCopy = getTerminalRegistrationCopy(payment.registrationTerminal)
+    return (
+      <View className='ticket-error' role='alert'>
+        <StatusCard
+          tone='info'
+          heroSrc={getXiaoyueExpressionAsset('paymentTrust')}
+          title={terminalCopy.title}
+          description={terminalCopy.body}
+          action={{
+            label: '去看看其他局',
+            onClick: handleGoDiscover,
+            variant: 'primary',
+            disabled: isNavigating,
+          }}
+          footer={
+            <View className='ticket-loading__back' onClick={handleBack}>
+              <Text>返回上一步</Text>
+            </View>
+          }
+        />
       </View>
     )
   }
@@ -959,6 +1345,8 @@ export default function EventTicketPaymentPage() {
             finalPrice={finalPrice}
             bestCoupon={bestCoupon}
             poolId={poolId}
+            showWelcomeCouponHint={showWelcomeCouponHint}
+            vipMonthlyPlan={vipMonthlyPlanView}
           />
         )}
 
@@ -993,8 +1381,9 @@ export default function EventTicketPaymentPage() {
           <Text>稍后再报名</Text>
         </View>
 
-        {/* Spacer for sticky CTA */}
-        <View className='ticket-bottom-spacer' />
+        {/* Spacer for sticky CTA — grows when the D3 refund-guarantee caption
+            adds a line to the fixed footer (flag preRevealRefundEnabled). */}
+        <View className={`ticket-bottom-spacer ${preRevealRefundEnabled ? 'ticket-bottom-spacer--with-guarantee' : ''}`} />
       </ScrollView>
 
       {/* ── Sticky CTA ── */}
@@ -1008,7 +1397,7 @@ export default function EventTicketPaymentPage() {
         ) : null}
         {payment.status === 'failed' ? (
           <View className='ticket-cta ticket-cta--retry' hoverClass='ticket-cta--pressed' onClick={handleRetry}>
-            <Text className='ticket-cta__text'>重试支付</Text>
+            <Text className='ticket-cta__text'>{payment.registrationPending ? '补上这次报名' : '重试支付'}</Text>
           </View>
         ) : (
           <View
@@ -1028,6 +1417,11 @@ export default function EventTicketPaymentPage() {
             </View>
           </View>
         )}
+
+        {/* D3 refund-guarantee caption (flag preRevealRefundEnabled): one
+            quiet System-UI line directly under the CTA; renders nothing when
+            the flag is off. The 退款政策 link above stays untouched. */}
+        <RefundGuaranteeLine visible={preRevealRefundEnabled} />
 
         {payment.error && (
           <View className='ticket-footer__error' role='alert'>

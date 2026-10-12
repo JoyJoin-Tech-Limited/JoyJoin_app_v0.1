@@ -3,9 +3,22 @@ import type { UserCouponSummary } from '@shared/api'
 
 import { haptics } from '../../../../lib/utils/haptics'
 import { discoverAnalytics } from '../../../../lib/analytics/discoverAnalytics'
-import { formatPrice } from '../ticketHelpers'
+import { formatPrice, type SelectedPlan } from '../ticketHelpers'
 
-export type SelectedPlan = 'single' | 'pack_3' | 'pack_6'
+export type { SelectedPlan } from '../ticketHelpers'
+
+/**
+ * View model for the D2 悦聚月卡 upsell card. The page builds this from
+ * resolveVipMonthlyOffer + getVipMonthlyAnchorLabel and only passes a
+ * non-null value when the upsell flag is ON and ritual-context carries the
+ * monthly plan — null keeps the legacy three-plan layout byte-identical.
+ */
+export interface VipMonthlyPlanView {
+  displayName: string
+  description: string | null
+  priceInCents: number
+  anchorLabel: string | null
+}
 
 interface TicketPlanSelectionProps {
   selectedPlan: SelectedPlan
@@ -18,6 +31,17 @@ interface TicketPlanSelectionProps {
   finalPrice: number
   bestCoupon: UserCouponSummary | null
   poolId: string
+  /**
+   * Audit F4-b: true when a 见面礼 welcome coupon exists but is ineligible
+   * for the currently selected plan — renders a quiet eligibility note under
+   * the plan cards (System UI register, no promo styling).
+   */
+  showWelcomeCouponHint?: boolean
+  /**
+   * D2 悦聚月卡 upsell offer. Non-null renders the monthly card FIRST as the
+   * recommended option; null/undefined = legacy three-plan layout.
+   */
+  vipMonthlyPlan?: VipMonthlyPlanView | null
 }
 
 export default function TicketPlanSelection({
@@ -31,6 +55,8 @@ export default function TicketPlanSelection({
   finalPrice,
   bestCoupon,
   poolId,
+  showWelcomeCouponHint = false,
+  vipMonthlyPlan = null,
 }: TicketPlanSelectionProps) {
   const handleSelect = (plan: SelectedPlan) => {
     haptics('light')
@@ -45,6 +71,13 @@ export default function TicketPlanSelection({
     onSelectPlan(plan)
   }
 
+  // Monthly card description: server-provided plan description + the derived
+  // per-event anchor. Both segments optional; omitted entirely when neither
+  // exists (never hardcoded quota copy).
+  const vipMonthlyDesc = vipMonthlyPlan
+    ? [vipMonthlyPlan.description, vipMonthlyPlan.anchorLabel].filter(Boolean).join(' · ')
+    : ''
+
   return (
     <>
       <View className='ticket-plan-section'>
@@ -54,6 +87,33 @@ export default function TicketPlanSelection({
         </View>
 
         <View className='ticket-plan-cards'>
+          {/* D2 悦聚月卡 (flag checkoutSubscriptionUpsellEnabled): first
+              position, recommended badge. One-time purchase — renewal is
+              manual at full price, so no recurring-discount copy here. */}
+          {vipMonthlyPlan ? (
+            <View
+              className={`ticket-plan-card ticket-plan-card--recommended ${selectedPlan === 'vip_monthly' ? 'ticket-plan-card--selected' : ''}`}
+              hoverClass='ticket-plan-card--pressed'
+              onClick={() => handleSelect('vip_monthly')}
+            >
+              <View className='ticket-plan-card__radio'>
+                <View className={`ticket-plan-card__radio-dot ${selectedPlan === 'vip_monthly' ? 'ticket-plan-card__radio-dot--active' : ''}`} />
+              </View>
+              <View className='ticket-plan-card__body'>
+                <View className='ticket-plan-card__top'>
+                  <View className='ticket-plan-card__title-wrap'>
+                    <Text className='ticket-plan-card__title'>{vipMonthlyPlan.displayName}</Text>
+                    <View className='ticket-plan-card__badge ticket-plan-card__badge--recommended'>
+                      <Text>推荐</Text>
+                    </View>
+                  </View>
+                  <Text className='ticket-plan-card__price'>{formatPrice(vipMonthlyPlan.priceInCents)}</Text>
+                </View>
+                {vipMonthlyDesc ? <Text className='ticket-plan-card__desc'>{vipMonthlyDesc}</Text> : null}
+              </View>
+            </View>
+          ) : null}
+
           <View
             className={`ticket-plan-card ${selectedPlan === 'single' ? 'ticket-plan-card--selected' : ''}`}
             hoverClass='ticket-plan-card--pressed'
@@ -115,6 +175,15 @@ export default function TicketPlanSelection({
             </View>
           </View>
         </View>
+
+        {/* F4-b eligibility note: plan-neutral canonical vocabulary only
+            (连局包 / 悦聚卡 per brand-copy-strategy §3.1). If server-side
+            per-plan coupon validation lands later, keep this copy honest. */}
+        {showWelcomeCouponHint ? (
+          <View className='ticket-plan-hint'>
+            <Text className='ticket-plan-hint__text'>见面礼可用于连局包与悦聚卡</Text>
+          </View>
+        ) : null}
       </View>
 
       <View className='ticket-price-summary'>

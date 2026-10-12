@@ -133,6 +133,15 @@
   text-align: center;
 }
 
+// F5 (2026-10): quiet expiry caption inside the gift block — rendered only
+// when the grant response carries `validUntil`.
+.unboxing-ceremony__gift-expiry {
+  font-size: 20rpx;
+  color: rgba($color-text-primary-warm, 0.55);
+  line-height: 1.4;
+  text-align: center;
+}
+
 .unboxing-ceremony__gift-discount {
   font-family: $font-en-brand;
   font-weight: 700;
