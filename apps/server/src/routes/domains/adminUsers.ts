@@ -18,6 +18,15 @@ import { reassignOrTombstoneHostedSessions } from "../../lib/socialIcebreakerSto
 import { registerAdminSocialIcebreakerRoutes } from "./adminSocialIcebreaker";
 import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
 
+/**
+ * Account-deletion retention set (memo 2026-10-06, Option B): de-identified
+ * financial rows survive deletion of the user. Single source — extend here
+ * (children such as `refund_attempts` ride along via the retained parent).
+ */
+export const RETAINED_USER_TABLES = ["payments"] as const;
+
+const PENDING_REFUND_DELETE_CODE = "PENDING_REFUND_IN_PROGRESS";
+
 type AdminUserInterestSummary = {
   userId: string;
   totalSelections: number | null;
@@ -979,6 +988,7 @@ export function registerAdminUserRoutes(app: Express): void {
         reassigned: Array<{ sessionId: string; newHostUserId: string }>;
         tombstoned: string[];
       } = { reassigned: [], tombstoned: [] };
+      let paymentsDetached = 0;
 
       await db.transaction(async (tx: any) => {
         await revokeUserSessions(userId, tx);
@@ -990,6 +1000,34 @@ export function registerAdminUserRoutes(app: Express): void {
         // discovered.
         hostSessionRecovery = await reassignOrTombstoneHostedSessions(tx, userId);
 
+        // Account-deletion retention (Option B, 2026-10-09): fail closed while
+        // a refund is in flight — detaching mid-refund would split the money
+        // fact from its user link. Ops retries once the attempt resolves.
+        const pendingRefundResult = (await tx.execute(sql`
+          SELECT 1 AS pending
+          FROM refund_attempts ra
+          JOIN payments p ON p.id = ra.payment_id
+          WHERE p.user_id = ${userId} AND ra.status = 'pending'
+          LIMIT 1
+        `)) as { rows?: unknown[] };
+        if ((pendingRefundResult.rows ?? []).length > 0) {
+          const blocked = new Error(
+            "Pending refund in progress; account data cannot be deleted yet",
+          ) as Error & { code: string };
+          blocked.code = PENDING_REFUND_DELETE_CODE;
+          throw blocked;
+        }
+
+        // Retained financial rows: de-identify (detach + scrub the
+        // user-preference payload; `related_id` keeps the pool id for the
+        // auto-refund pipeline, which needs only id/wechatOrderId).
+        const detachResult = (await tx.execute(sql`
+          UPDATE payments
+             SET user_id = NULL, event_registration_payload = NULL
+           WHERE user_id = ${userId}
+        `)) as { rowCount?: number | null };
+        paymentsDetached = detachResult.rowCount ?? 0;
+
         // These identifiers intentionally have no FK in the current schema, so
         // pg_constraint discovery cannot see them. Keep this list limited to
         // non-FK privacy records; FK-backed tables belong to the cascade below.
@@ -1000,8 +1038,11 @@ export function registerAdminUserRoutes(app: Express): void {
         // Discover the live FK graph from PostgreSQL and delete transitive
         // dependents deepest-first. This keeps the endpoint aligned as new
         // user-owned tables are added and leaves ON DELETE CASCADE relations to
-        // the database itself.
-        await cascadeDeleteByIds(tx, "users", "id", [userId]);
+        // the database itself. `payments` (and therefore `refund_attempts`) is
+        // retained via the retention config.
+        await cascadeDeleteByIds(tx, "users", "id", [userId], {
+          retain: RETAINED_USER_TABLES,
+        });
       });
 
       logAdminAudit({
@@ -1016,11 +1057,19 @@ export function registerAdminUserRoutes(app: Express): void {
           action: 'delete_all_user_data' as string,
           hostSessionsReassigned: hostSessionRecovery.reassigned.length,
           hostSessionsTombstoned: hostSessionRecovery.tombstoned.length,
+          retainedTables: RETAINED_USER_TABLES,
+          paymentsDetached,
         },
       });
 
       res.json({ message: "User data deleted successfully" });
     } catch (error) {
+      if ((error as { code?: string })?.code === PENDING_REFUND_DELETE_CODE) {
+        return res.status(409).json({
+          message: "该用户存在处理中的退款，请等待退款完成后再删除账号数据",
+          code: PENDING_REFUND_DELETE_CODE,
+        });
+      }
       logger.error("Error deleting user data", { error: String(error) });
       res.status(500).json({ message: "Failed to delete user data. See server logs for details." });
     }

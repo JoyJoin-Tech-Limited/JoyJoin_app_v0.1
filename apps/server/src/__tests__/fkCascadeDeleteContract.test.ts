@@ -1,13 +1,37 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { cascadeDeleteByIds } from "../lib/fkCascadeDelete";
+
+vi.mock("../lib/logger", () => ({
+  logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
 
 const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_FILE_DIR, "../../../..");
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
+}
+
+/**
+ * Render a Drizzle SQL object into text, including inlined string parameters.
+ * Mirrors the mock style in `revokeUserSessionsContract.test.ts` so assertions
+ * read the exact statements the helper builds (StringChunk values are arrays;
+ * `${param}` values are pushed as primitive string chunks).
+ */
+function renderSql(query: unknown): string {
+  const chunks = (query as { queryChunks?: unknown[] })?.queryChunks ?? [];
+  return chunks
+    .map((chunk) => {
+      if (typeof chunk === "string") return chunk;
+      const value = (chunk as { value?: unknown })?.value;
+      if (Array.isArray(value)) return value.join("");
+      if (chunk && (chunk as object).constructor === String) return String(chunk);
+      return "";
+    })
+    .join("");
 }
 
 describe("fk cascade delete contract", () => {
@@ -41,8 +65,14 @@ describe("fk cascade delete contract", () => {
 
     // Regression guard for schema drift in DELETE /api/admin/users/:id/data:
     // newly added user foreign keys must be discovered from PostgreSQL rather
-    // than requiring this endpoint to be updated table by table.
-    expect(adminUsers).toContain('cascadeDeleteByIds(tx, "users", "id", [userId])');
+    // than requiring this endpoint to be updated table by table. The call must
+    // also carry the retention config (Option B, 2026-10-09) so financial rows
+    // survive; a bare 4-arg call would silently delete them again.
+    expect(adminUsers).toMatch(
+      /cascadeDeleteByIds\(\s*tx,\s*"users",\s*"id",\s*\[userId\],\s*\{\s*retain:\s*RETAINED_USER_TABLES,?\s*\}\s*\)/,
+    );
+    expect(adminUsers).not.toContain('cascadeDeleteByIds(tx, "users", "id", [userId])');
+    expect(adminUsers).toContain('export const RETAINED_USER_TABLES = ["payments"] as const;');
     expect(adminUsers).toContain("if (user.isAdmin)");
     // These current schema columns intentionally have no FK, so catalog
     // discovery cannot see them and they require explicit privacy cleanup.
@@ -74,5 +104,125 @@ describe("fk cascade delete contract", () => {
     expect(singleTest).not.toContain("conn.delete(events)");
     expect(singleTest).not.toContain("conn.delete(blindBoxEvents)");
     expect(singleTest).not.toContain("conn.delete(eventPools)");
+  });
+});
+
+// ── AC-04(c): retain-option behavior with a fake catalog-backed tx.execute ──
+
+type CatalogFkRow = { child_table: string; child_fk_column: string };
+
+/** Minimal FK graph: users → payments → refund_attempts, users → registrations → attendance. */
+const FK_GRAPH: Record<string, CatalogFkRow[]> = {
+  users: [
+    { child_table: "payments", child_fk_column: "user_id" },
+    { child_table: "event_pool_registrations", child_fk_column: "user_id" },
+  ],
+  payments: [{ child_table: "refund_attempts", child_fk_column: "payment_id" }],
+  refund_attempts: [],
+  event_pool_registrations: [
+    { child_table: "event_attendance", child_fk_column: "registration_id" },
+  ],
+  event_attendance: [],
+};
+
+/** Child PK fixtures — valid UUIDs because the helper validates every recursed id. */
+const CHILD_IDS: Record<string, string[]> = {
+  payments: ["11111111-1111-4111-8111-111111111111"],
+  refund_attempts: ["22222222-2222-4222-8222-222222222222"],
+  event_pool_registrations: ["33333333-3333-4333-8333-333333333333"],
+  event_attendance: ["44444444-4444-4444-8444-444444444444"],
+};
+
+const ROOT_USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
+function createCatalogTx() {
+  const deletedTables: string[] = [];
+  const discoveredParents: string[] = [];
+  const selectedTables: string[] = [];
+
+  const execute = vi.fn(async (query: unknown) => {
+    const statement = renderSql(query);
+
+    // Dependent discovery (pg_constraint) — route by the referenced parent.
+    if (statement.includes("AS child_table")) {
+      const parent = /con\.confrelid = (\S+)::regclass/.exec(statement)?.[1] ?? "";
+      discoveredParents.push(parent);
+      return { rows: FK_GRAPH[parent] ?? [] };
+    }
+
+    // Single-column PK discovery (recursion is possible only with a PK match).
+    if (statement.includes("con.contype = 'p'")) {
+      return { rows: [{ attname: "id" }] };
+    }
+
+    // Child PK value lookup before recursing / deleting.
+    if (statement.startsWith("SELECT ")) {
+      const table = /FROM (\S+) WHERE/.exec(statement)?.[1] ?? "";
+      selectedTables.push(table);
+      return { rows: (CHILD_IDS[table] ?? []).map((id) => ({ id })) };
+    }
+
+    // Deepest-first child delete + final root delete.
+    if (statement.startsWith("DELETE FROM ")) {
+      const table = /^DELETE FROM "?([^"\s]+)"? WHERE/.exec(statement)?.[1] ?? "";
+      deletedTables.push(table);
+      return { rowCount: 1 };
+    }
+
+    return { rows: [] };
+  });
+
+  return { execute, deletedTables, discoveredParents, selectedTables };
+}
+
+describe("cascadeDeleteByIds retain option (AC-02 / AC-04c)", () => {
+  it("retains a configured table without deleting or recursing into its children", async () => {
+    const tx = createCatalogTx();
+
+    await cascadeDeleteByIds(tx, "users", "id", [ROOT_USER_ID], { retain: ["payments"] });
+
+    // (i) Neither the retained table nor its child rows are deleted…
+    expect(tx.deletedTables).toEqual([
+      "event_attendance",
+      "event_pool_registrations",
+      "users",
+    ]);
+    expect(tx.deletedTables).not.toContain("payments");
+    expect(tx.deletedTables).not.toContain("refund_attempts");
+
+    // (ii) …and its subtree (refund_attempts) is never discovered or selected.
+    expect(tx.discoveredParents).not.toContain("payments");
+    expect(tx.selectedTables).not.toContain("refund_attempts");
+
+    // Non-retained branches still recurse and delete normally.
+    expect(tx.discoveredParents).toContain("event_pool_registrations");
+    expect(tx.deletedTables).toContain("event_attendance");
+  });
+
+  it("keeps default (no retain config) behavior unchanged", async () => {
+    const tx = createCatalogTx();
+
+    await cascadeDeleteByIds(tx, "users", "id", [ROOT_USER_ID]);
+
+    expect(tx.deletedTables).toEqual([
+      "refund_attempts",
+      "payments",
+      "event_attendance",
+      "event_pool_registrations",
+      "users",
+    ]);
+    expect(tx.discoveredParents).toContain("payments");
+    expect(tx.selectedTables).toContain("refund_attempts");
+  });
+
+  it("matches schema-qualified / quoted retain entries by normalized table name", async () => {
+    const tx = createCatalogTx();
+
+    await cascadeDeleteByIds(tx, "users", "id", [ROOT_USER_ID], {
+      retain: ['public."payments"'],
+    });
+
+    expect(tx.deletedTables).not.toContain("payments");
+    expect(tx.discoveredParents).not.toContain("payments");
   });
 });

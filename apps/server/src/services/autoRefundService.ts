@@ -346,21 +346,24 @@ async function refundPoolPaidRegistrations(
 
   // Money refunds (per-payment isolation).
   for (const payment of paymentsForPool) {
-    if (unmatchedUserIds && !unmatchedUserIds.has(payment.userId)) {
+    // A retained payment whose user was deleted (user_id NULL) has no
+    // registration to consult — still refund the money (the refund path needs
+    // only id/wechatOrderId), but never attempt a notification for it.
+    if (payment.userId && unmatchedUserIds && !unmatchedUserIds.has(payment.userId)) {
       summary.skippedRefunds += 1;
       continue;
     }
     try {
       await refundMoneyPayment(payment, ctx.reasonMoney);
       summary.refundedPayments += 1;
-      if (!notifiedUserIds.has(payment.userId)) {
+      if (payment.userId && !notifiedUserIds.has(payment.userId)) {
         notifiedUserIds.add(payment.userId);
         notifiedThisRunUserIds.add(payment.userId);
         notificationsAttempted += 1;
         await notifyUserSafely(payment.userId, ctx, false, poolTitle, poolId);
       }
     } catch (error) {
-      failedUserIds.add(payment.userId);
+      if (payment.userId) failedUserIds.add(payment.userId);
       summary.failedRefunds.push({
         paymentId: payment.id,
         reason: error instanceof Error ? error.message : String(error),

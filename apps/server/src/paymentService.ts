@@ -362,7 +362,10 @@ export class PaymentService {
     }
 
     // Invalidate Predictive Shell caches so Profile/Discover reflect new state.
-    shellCache.invalidateUser(result.payment.userId);
+    // Retained payments (account deleted) have no user cache to invalidate.
+    if (result.payment.userId) {
+      shellCache.invalidateUser(result.payment.userId);
+    }
 
     if (result.payment.paymentType === "event") {
       this.notifyPaymentSuccess(result.payment).catch((err) =>
@@ -372,6 +375,8 @@ export class PaymentService {
   }
 
   private async notifyPaymentSuccess(payment: any): Promise<void> {
+    // Retained payments with a detached user have no one to notify.
+    if (!payment.userId) return;
     try {
       const { eventPools } = await import("@shared/schema");
       const [user, pool] = await Promise.all([
@@ -521,6 +526,8 @@ export class PaymentService {
   }
 
   private async notifyRefundProcessed(payment: any): Promise<void> {
+    // Retained payments with a detached user have no one to notify.
+    if (!payment.userId) return;
     try {
       const user = await usersRepo.getUser(payment.userId);
       if (!user) return;

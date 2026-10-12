@@ -1429,7 +1429,10 @@ export const subscriptions = pgTable("subscriptions", {
 // Payments table - Unified payment records
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  // Nullable + SET NULL (2026-10-09, account-deletion retention Option B):
+  // financial rows survive account deletion, de-identified by detaching the
+  // user link. See docs/design/account-deletion-retention-decision-20261006.md.
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
   
   // Payment type
   paymentType: varchar("payment_type").notNull(), // "subscription", "event", "event_bundle"

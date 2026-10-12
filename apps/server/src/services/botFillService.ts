@@ -246,6 +246,10 @@ export async function cleanupBotFillUsers(): Promise<{ deletedBots: number }> {
   await db.delete(matchHistory).where(or(inArray(matchHistory.user1Id, botIds), inArray(matchHistory.user2Id, botIds)));
   await db.delete(eventAttendance).where(inArray(eventAttendance.userId, botIds));
   await db.delete(userInterests).where(inArray(userInterests.userId, botIds));
+  // Accepted risk (account-deletion retention, 2026-10-09): this raw delete now
+  // succeeds-and-orphans payments (user_id → NULL via ON DELETE SET NULL)
+  // instead of FK-blocking. Bot-fill users are prefix-scoped test identities and
+  // must never hold payment rows.
   const deleted = await db.delete(users).where(inArray(users.id, botIds)).returning({ id: users.id });
 
   logger.info("[BotFill] cleanup complete", { data: { deletedBots: deleted.length, phonePrefix: BOT_FILL_PHONE_PREFIX } });

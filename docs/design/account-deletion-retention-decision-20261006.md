@@ -3,7 +3,7 @@
 **Status:** 🔴 Decision required — blocks production use of `DELETE /api/admin/users/:id/data` for users with payment history
 **Prepared:** 2026-10-09 · **Trigger:** §5.3 conflict discovered during HS-11 work (2026-10-06)
 **Decision owners:** Legal (**mandatory sign-off**) + Product + Engineering
-**Sources of record:** `docs/runbooks/account-deletion.md` §5.1–5.3 · `apps/server/src/routes/domains/adminUsers.ts:963-1027` · `apps/server/src/lib/fkCascadeDelete.ts` · `packages/shared/src/schema/_definitions.ts:1407-1546` · `packages/shared/src/legal/joyjoinTermsZh.ts:137-148` · HS-11 in `docs/testing/LAUNCH-QA-HARD-STOP-VERIFICATION.md`
+**Sources of record:** `docs/runbooks/account-deletion.md` §5.1–5.3 · `apps/server/src/routes/domains/adminUsers.ts:963-1027` · `apps/server/src/lib/fkCascadeDelete.ts` · `packages/shared/src/schema/_definitions.ts:1407-1546` · `packages/shared/src/legal/joyjoinTermsZh.ts:137-148` · HS-11 in `docs/testing/LAUNCH-QA-HARD-STOP-VERIFICATION.md` · **legal-context addendum:** `docs/design/account-deletion-retention-legal-context-20261009.md`（已核实法条 + 检索时间，仍须律师复核）
 
 ---
 

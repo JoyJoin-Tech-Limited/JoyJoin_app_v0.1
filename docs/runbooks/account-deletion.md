@@ -68,6 +68,8 @@ SELECT
 
 (Production equivalent: `docker exec postgres psql -U joyjoin -d joyjoin -c "…"`.)
 
+**Retention note (Option B, 2026-10-09):** `payments` rows are retained de-identified (`user_id → NULL`, payload scrubbed). Capture their IDs now for the §6 retained-check: `SELECT id FROM payments WHERE user_id = '<uid>';`
+
 ### 4.3 Execute
 
 Admin UI: user detail → 删除用户数据 (`AdminUserDetailSheet.tsx:336-345`). Or:
@@ -79,12 +81,14 @@ curl -sS -D- -X DELETE https://staging.admin.joyjoinapp.com/api/admin/users/<uid
 
 Expected: HTTP 200, body `{"message":"User data deleted successfully"}`.
 
-Server behavior, in one transaction (`adminUsers.ts:963-1025`):
+Server behavior, in one transaction (`adminUsers.ts:963-1050`):
 
 1. host recovery — reassign/tombstone hosted icebreaker sessions (`reassignOrTombstoneHostedSessions`, `apps/server/src/lib/socialIcebreakerStore.ts:410`);
-2. explicit deletes for the three no-DB-FK user columns;
-3. `cascadeDeleteByIds(tx, "users", "id", [userId])` (`apps/server/src/lib/fkCascadeDelete.ts:166`);
-4. audit action `USER_DATA_DELETED` into `admin_audit_logs`.
+2. **pending-refund guard (fail-closed):** if any `refund_attempts` for the user's payments is `status='pending'`, the request aborts with HTTP 409 + code `PENDING_REFUND_IN_PROGRESS` — retry after the refund attempt resolves (`adminUsers.ts:1005-1019`, error mapping :1067-1072);
+3. **retained-financial detach:** `UPDATE payments SET user_id = NULL, event_registration_payload = NULL WHERE user_id = $userId` (`adminUsers.ts:1024-1029`);
+4. explicit deletes for the three no-DB-FK user columns;
+5. `cascadeDeleteByIds(tx, "users", "id", [userId], { retain: RETAINED_USER_TABLES })` — `payments` (+ its `refund_attempts` children) survive (`apps/server/src/lib/fkCascadeDelete.ts`);
+6. audit action `USER_DATA_DELETED` into `admin_audit_logs` (context includes `retainedTables` + detached count).
 
 #### Manual pre-delete of drizzle-only FKs — verified verdict (2026-10-06)
 
@@ -96,17 +100,10 @@ Server behavior, in one transaction (`adminUsers.ts:963-1025`):
 - `social_icebreaker_sessions.host_user_id` is no-FK (`_definitions_social.ts:20`) but is handled by host recovery and never hard-deleted (contract test line 54; tombstoned rows are kept for history).
 - If the route returns 500 / `23503`: **stop**, capture `docker logs`, escalate to @backend-engineer. Do not improvise deletes.
 
-### 4.4 Sessions — HS-12 dependency
+### 4.4 Sessions — shipped (HS-12, 2026-10-06)
 
-- Current (2026-10-06): the delete route does **not** call `revokeUserSessions`; HS-12 is wiring it. Post-HS-12, sessions are purged automatically — verify with the §6 query either way.
-- Until wired, apply the fallback (same statement as `apps/server/src/lib/revokeUserSessions.ts:11-13`) and record it in the ledger 备注:
-
-```bash
-docker exec postgres-staging psql -U joyjoin -d joyjoin_staging -c \
-  "DELETE FROM sessions WHERE sess->>'userId' = '<uid>';"
-```
-
-- Re-check `sessions = 0` before closing the request. Production fallback requires ops-lead approval.
+- The delete route calls `revokeUserSessions(userId, tx)` as the first transaction statement (`adminUsers.ts:984`); sessions are purged automatically. No manual fallback needed.
+- Re-check `sessions = 0` before closing the request (§6).
 
 ## 5. Retention boundaries
 
@@ -120,15 +117,17 @@ docker exec postgres-staging psql -U joyjoin -d joyjoin_staging -c \
 
 > **Legal decision — 待legal 确认.** Agreed retention period and carve-outs go here before production use: `<retention period TBD>`.
 
-### 5.2 Verified current behavior (2026-10-06 — reconcile before production use)
+### 5.2 Current behavior — Option B implemented (2026-10-09; production use gated by §5.3)
 
-- **Deleted by the cascade today:** `payments` + `refund_attempts` + `coupon_usage` + registrations + FK-backed report rows. `payments.user_id` is a NO ACTION FK (`_definitions.ts:1432`) and the cascade helper follows non-cascade FKs — so a deletion request today **destroys financial records**. The drill pre/post counts (§4.2/§6) empirically confirm this on staging.
-- **NOT deleted:** `admin_audit_logs` (no FK, `_definitions_extended.ts:1430-1447`; rows retain `target_entity_id` plus a before-snapshot including the user's displayName/phoneNumber); `social_icebreaker_sessions` history rows; `matching_results.user_ids` text array (no FK, `_definitions.ts:1992`).
+- **Retained (de-identified):** `payments` (`user_id = NULL`, `event_registration_payload = NULL`) and its `refund_attempts` children. Migration `0096_payments_user_id_retention.sql` makes the link nullable with `ON DELETE SET NULL`. Implementation: `adminUsers.ts` detach step + `cascadeDeleteByIds` retain config; decision memo `docs/design/account-deletion-retention-decision-20261006.md`; legal context `docs/design/account-deletion-retention-legal-context-20261009.md`.
+- **Deleted by the cascade:** registrations, `coupon_usage`, `subscriptions`, `event_credit_*`, `user_coupons`, FK-backed report rows, and all other user-owned data.
+- **NOT deleted:** `admin_audit_logs` (no FK; rows retain `target_entity_id` plus a before-snapshot including the user's displayName/phoneNumber); `social_icebreaker_sessions` history rows; `matching_results.user_ids` text array (no FK).
+- **DB-true smoke:** `npm run smoke:account-deletion-retention -w @joyjoin/server` asserts user-gone / payment retained NULL / refund_attempts retained / payload NULL / non-financial child deleted (self-cleaning).
 
-### 5.3 Decision required (blocks production use, not the staging drill)
+### 5.3 Decision status (production use still blocked)
 
-1. **Legal:** is deletion of `payments`/`refund_attempts` on request compliant, or must financial rows be retained/archived? Record the call here.
-2. **@backend-engineer + product:** if retention is required, the route needs a change (e.g., archive/detach financial rows before cascade). Until decided: pause production deletions for users with payment history.
+1. **Implemented:** Option B (retain + detach + scrub) is in code as of 2026-10-09.
+2. **Still required — Legal:** confirm statutory retention basis + period, and whether the retention set must expand (`coupon_usage`, `subscriptions`, `event_credit_*`, `user_coupons`). The sourced addendum for counsel review: `docs/design/account-deletion-retention-legal-context-20261009.md` (research input, not legal advice). Until sign-off: **pause production deletions for users with payment history** (Option A remains acceptable only for users with zero financial rows).
 
 ## 6. Post-delete verification
 
@@ -141,7 +140,14 @@ SELECT
   (SELECT count(*) FROM admin_audit_logs               WHERE action = 'USER_DATA_DELETED' AND target_entity_id = '<uid>') AS audit_entries;"
 ```
 
-Expected: `users_left=0`; `sessions_left=0` (§4.4 fallback if HS-12 not yet wired); `icebreaker_rows_left=0`; `audit_entries=1`.
+Expected: `users_left=0`; `sessions_left=0`; `icebreaker_rows_left=0`; `audit_entries=1`. Retained-financial check (Option B) — using the payment IDs captured in §4.2:
+
+```bash
+docker exec postgres-staging psql -U joyjoin -d joyjoin_staging -c \
+  "SELECT count(*) AS payments_retained, count(*) FILTER (WHERE user_id IS NULL) AS detached, count(*) FILTER (WHERE event_registration_payload IS NULL) AS payload_scrubbed FROM payments WHERE id IN ('<id1>','<id2>');"
+```
+
+Expected: `payments_retained` = pre-state count, `detached` = `payments_retained`, `payload_scrubbed` = `payments_retained`; `refund_attempts` for those payment IDs unchanged.
 
 ```bash
 docker logs joyjoin-api-staging --since 10m 2>&1 | grep -c '23503'   # expected: 0
@@ -175,10 +181,12 @@ Preconditions: staging admin operator/super_admin session; one test user (non-ad
 - [ ] §4.1: identity fields confirmed; `isAdmin=false`.
 - [ ] §4.2: pre-state counts recorded in `<EV>/HS-11-deletion-drill.log`.
 - [ ] §4.3: execute; HTTP 200 captured.
-- [ ] §4.4: `sessions=0` (fallback if HS-12 not wired).
-- [ ] §6: all checks pass; `<EV>/HS-11-post-delete-auth.txt` shows 401.
+- [ ] §4.4: `sessions=0` (route calls `revokeUserSessions`; no fallback needed).
+- [ ] §6: all checks pass; retained-financial check shows payments with `user_id NULL` + payload NULL; `<EV>/HS-11-post-delete-auth.txt` shows 401.
 - [ ] Ledger row written to `<EV>/HS-11-ledger-entry.md`.
 - [ ] HS-11 result row updated in `docs/testing/LAUNCH-QA-HARD-STOP-VERIFICATION.md`.
+
+> **Deferred re-drill note (Option B):** the HS-11 re-drill with the updated §4.2/§6 expectations is owned by QA/ops; the code contract ships code + docs only.
 
 ## 9. Known gaps / follow-ups
 

@@ -179,7 +179,7 @@ describe("HS-12 call-site contract (source scan)", () => {
   it("delete-data revocation is scoped to the DELETE /api/admin/users/:id/data transaction (AC-02)", () => {
     const routeStart = adminUsersSource.indexOf('app.delete("/api/admin/users/:id/data"');
     const revokeIndex = adminUsersSource.indexOf("await revokeUserSessions(userId, tx);");
-    const cascadeIndex = adminUsersSource.indexOf('cascadeDeleteByIds(tx, "users", "id", [userId])');
+    const cascadeIndex = adminUsersSource.indexOf('cascadeDeleteByIds(tx, "users", "id", [userId], {');
 
     expect(routeStart).toBeGreaterThan(-1);
     expect(revokeIndex).toBeGreaterThan(routeStart);
@@ -378,7 +378,60 @@ describe("admin delete-user-data route (AC-02)", () => {
 
       expect(response.status).toBe(200);
       expect(revokeUserSessions).toHaveBeenCalledWith("user-del", tx);
-      expect(cascadeDeleteByIds).toHaveBeenCalledWith(tx, "users", "id", ["user-del"]);
+      expect(cascadeDeleteByIds).toHaveBeenCalledWith(tx, "users", "id", ["user-del"], {
+        retain: ["payments"],
+      });
+    });
+  });
+
+  it("detaches + scrubs retained payments BEFORE the cascade, and passes the retain config (AC-03)", async () => {
+    const tx = mockDeleteTarget("user-retain");
+
+    await withServer(async (baseUrl) => {
+      const cookie = await adminCookie(baseUrl);
+      const response = await fetch(`${baseUrl}/api/admin/users/user-retain/data`, {
+        method: "DELETE",
+        headers: { Cookie: cookie },
+      });
+
+      expect(response.status).toBe(200);
+      expect(cascadeDeleteByIds).toHaveBeenCalledWith(tx, "users", "id", ["user-retain"], {
+        retain: ["payments"],
+      });
+
+      const sqlCalls = tx.execute.mock.calls.map(([query]) => renderSql(query));
+      const detachIndex = sqlCalls.findIndex((statement) => statement.includes("UPDATE payments"));
+      expect(detachIndex).toBeGreaterThan(-1);
+      expect(sqlCalls[detachIndex]).toContain("SET user_id = NULL");
+      expect(sqlCalls[detachIndex]).toContain("event_registration_payload = NULL");
+      expect(sqlCalls[detachIndex]).toContain("WHERE user_id = user-retain");
+
+      const detachOrder = tx.execute.mock.invocationCallOrder[detachIndex];
+      const cascadeOrder = vi.mocked(cascadeDeleteByIds).mock.invocationCallOrder[0];
+      expect(detachOrder).toBeLessThan(cascadeOrder);
+    });
+  });
+
+  it("blocks deletion with a coded error while a refund attempt is pending (AC-03d)", async () => {
+    const tx = mockDeleteTarget("user-pending-refund");
+    tx.execute
+      .mockResolvedValueOnce({ rowCount: 0 }) // session revocation
+      .mockResolvedValueOnce({ rows: [{ pending: 1 }] }); // pending-refund probe
+
+    await withServer(async (baseUrl) => {
+      const cookie = await adminCookie(baseUrl);
+      const response = await fetch(`${baseUrl}/api/admin/users/user-pending-refund/data`, {
+        method: "DELETE",
+        headers: { Cookie: cookie },
+      });
+
+      expect(response.status).toBe(409);
+      const body = (await response.json()) as { code?: string; message?: string };
+      expect(body.code).toBe("PENDING_REFUND_IN_PROGRESS");
+      expect(cascadeDeleteByIds).not.toHaveBeenCalled();
+
+      const sqlCalls = tx.execute.mock.calls.map(([query]) => renderSql(query));
+      expect(sqlCalls.some((statement) => statement.includes("UPDATE payments"))).toBe(false);
     });
   });
 

@@ -133,6 +133,10 @@ export async function resetTestData(): Promise<{ deletedUsers: number; deletedPo
       await db.delete(eventPools).where(inArray(eventPools.id, poolIds));
     }
 
+    // Accepted risk (account-deletion retention, 2026-10-09): this raw delete now
+    // succeeds-and-orphans payments (user_id → NULL via ON DELETE SET NULL)
+    // instead of FK-blocking. Test-admin users are prefix-scoped test identities
+    // and must never hold payment rows.
     await db.delete(users).where(inArray(users.id, testUserIds));
   }
 

@@ -20,8 +20,26 @@ import { logger } from "./logger";
 
 type DbLike = { execute: (query: ReturnType<typeof sql>) => Promise<unknown> };
 
+export interface CascadeDeleteOptions {
+  /**
+   * Tables that must survive the cascade (retention): their rows are neither
+   * deleted nor recursed into, so children reachable only via a retained table
+   * also survive. `ON DELETE SET NULL` FKs are still followed by discovery
+   * (only `confdeltype <> 'c'` is filtered) — this option is the enforcement
+   * point. Names may be schema-qualified; matching is normalized.
+   */
+  retain?: readonly string[];
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_DEPTH = 10;
+
+/** `conrelid::regclass::text` may be schema-qualified/quoted; normalize both
+ *  sides to the bare lowercase table name before comparing. */
+function normalizeTableName(table: string): string {
+  const unqualified = table.includes(".") ? table.slice(table.lastIndexOf(".") + 1) : table;
+  return unqualified.replace(/^"(.*)"$/, "$1").toLowerCase();
+}
 
 function assertUuidIds(ids: string[]): void {
   for (const id of ids) {
@@ -129,6 +147,7 @@ async function cascadeDeleteInternal(
   ids: string[],
   visited: Set<string>,
   depth: number,
+  retained: Set<string>,
 ): Promise<void> {
   if (ids.length === 0) return;
   if (depth > MAX_DEPTH) {
@@ -139,6 +158,11 @@ async function cascadeDeleteInternal(
 
   const dependents = await getFkDependents(tx, table, pkColumn);
   for (const dep of dependents) {
+    // Retention: neither delete the retained table's rows nor recurse into its
+    // children — a retained table's dependents (e.g. refund_attempts under
+    // payments) must survive with it.
+    if (retained.has(normalizeTableName(dep.childTable))) continue;
+
     const edgeKey = `${table}.${pkColumn}->${dep.childTable}.${dep.childFkColumn}`;
     if (visited.has(edgeKey)) continue;
     visited.add(edgeKey);
@@ -152,7 +176,15 @@ async function cascadeDeleteInternal(
         dep.childFkColumn,
         ids,
       );
-      await cascadeDeleteInternal(tx, dep.childTable, dep.childPkColumn, childIds, visited, depth + 1);
+      await cascadeDeleteInternal(
+        tx,
+        dep.childTable,
+        dep.childPkColumn,
+        childIds,
+        visited,
+        depth + 1,
+        retained,
+      );
     }
     await deleteByFkColumn(tx, dep.childTable, dep.childFkColumn, ids);
   }
@@ -162,17 +194,21 @@ async function cascadeDeleteInternal(
  * Delete rows from `rootTable` where `rootColumn` is in `rootIds`, after first
  * deleting every row that (transitively) references them via a non-cascade FK.
  * Discovered from pg_constraint, so new tables are handled without code edits.
+ * Pass `options.retain` to exempt tables (and everything reachable only
+ * through them) from deletion.
  */
 export async function cascadeDeleteByIds(
   tx: DbLike,
   rootTable: string,
   rootColumn: string,
   rootIds: string[],
+  options?: CascadeDeleteOptions,
 ): Promise<void> {
   if (rootIds.length === 0) return;
   assertUuidIds(rootIds);
   const visited = new Set<string>();
-  await cascadeDeleteInternal(tx, rootTable, rootColumn, rootIds, visited, 0);
+  const retained = new Set((options?.retain ?? []).map(normalizeTableName));
+  await cascadeDeleteInternal(tx, rootTable, rootColumn, rootIds, visited, 0, retained);
   // Finally delete the root rows themselves (cascade FKs handled by the DB).
   const query = sql.raw(
     `DELETE FROM ${quoteIdent(rootTable)} WHERE ${quoteIdent(rootColumn)} IN (${idList(rootIds)})`,

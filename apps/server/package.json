@@ -18,6 +18,7 @@
     "admin:create": "node --env-file=../../.env --import tsx/esm src/cli/createAdminAccount.ts",
     "user:create": "node --env-file=../../.env --import tsx/esm src/cli/createUserAccount.ts",
     "user:bypass": "node --env-file=../../.env --import tsx/esm src/cli/bypassLogin.ts",
+    "smoke:account-deletion-retention": "node --env-file=../../.env --import tsx/esm src/scripts/smoke-account-deletion-retention.ts",
     "smoke:auto-refund": "node --env-file=../../.env --import tsx/esm src/scripts/smoke-auto-refund.ts",
     "smoke:icebreaker-waves": "node --env-file=../../.env --import tsx/esm src/scripts/smoke-icebreaker-waves.ts",
     "seed:test-data": "node --env-file=../../.env --import tsx/esm src/scripts/seed-test-data.ts",

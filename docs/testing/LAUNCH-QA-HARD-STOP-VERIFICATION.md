@@ -192,7 +192,7 @@
   1. 固化基线：`git rev-parse HEAD; git status --short` — 记录 release commit 与 dirty 范围（§17 的 73 个改动面必须在场）。
   2. `npm run guardrails 2>&1 | tee <EV>/HS-08-guardrails.log; echo "EXIT=$?"` — 期望 0。
   3. `npm run test -w @joyjoin/server 2>&1 | tee <EV>/HS-08-server-tests.log; echo "EXIT=$?"` — 期望 0；并确认关键套件在输出中 PASS：`registrationErrorCodes`、`fkCascadeDeleteContract`、`adminRbacCoverage`、`testAdminAuth`、`districtCatalogContract`。
-  4. `npm run harness:gate 2>&1 | tee <EV>/HS-08-harness-gate.log; echo "EXIT=$?"` — 期望 0（exit 2 = concerns，非 pass）。**注意：** 该脚本扫描 `git diff HEAD` + untracked 文件，必须在实际 release 工作树执行以覆盖 release diff。
+  4. `npm run harness:gate 2>&1 | tee <EV>/HS-08-harness-gate.log; echo "EXIT=$?"` — 期望 0（exit 2 = concerns，非 pass）。**注意：** 该脚本扫描 `git diff HEAD` + untracked 文件，必须在实际 release 工作树执行以覆盖 release diff。**现状（2026-10-09 实测）：EXIT=2（CONCERN 85/100）。concerns 全部可追溯到既有模式：botFillService/testAdminService 事务边界与审计（test-only 服务）、paymentFulfillmentRepo 履行路径审计（pre-existing，webhook 系统发起）、`_definitions.ts` 体积 2038/2500。nits：smoke console.*（与 smoke-auto-refund 同模式）、paymentService TODO、shared 中文字符串。Option B 未新增 blocking 项。release owner 须逐条 resolve 或书面 accept。**
   5. （增强，§1 要求）`npm run check:full 2>&1 | tee <EV>/HS-08-check-full.log; echo "EXIT=$?"` — 期望 0。
 - **Pass criteria:** 全部 exit 0。
 - **FAIL signal:** 任一非 0；harness:gate 输出 concerns。
@@ -246,7 +246,7 @@
 - **Trigger：** 无人工注销 runbook + 受理台账；或演练出现级联残留（23503）/ 会话未即时失效 / 台账不完整。
 - **Environment:** docs + staging（演练）+ ops（受理通道）
 - **Procedure:**
-  1. runbook 存在性：`ls docs/runbooks/ | grep -iE '注销|account|deletion' | tee <EV>/HS-11-runbook-exists.log` — 期望非空（建议 `docs/runbooks/account-deletion.md`，含受理入口、身份核验、删除范围、留存边界、15 工作日 SLA 台账格式）。**现状（2026-10-06 更新）：runbook 已落盘 `docs/runbooks/account-deletion.md`（194 行）；本 gate 剩余 FAIL 项 = staging 演练 + §5.3 legal 留存裁定 + §2 受理通道 ops 确认。**
+  1. runbook 存在性：`ls docs/runbooks/ | grep -iE '注销|account|deletion' | tee <EV>/HS-11-runbook-exists.log` — 期望非空（建议 `docs/runbooks/account-deletion.md`，含受理入口、身份核验、删除范围、留存边界、15 工作日 SLA 台账格式）。**现状（2026-10-09 更新）：runbook 已落盘；Option B 已实现（retain+detach+scrub；migration `0096_payments_user_id_retention.sql` + `idx_payments_user_id`；`fkCascadeDelete` retain 选项；pending-refund fail-closed `PENDING_REFUND_IN_PROGRESS`；`adminUsers.ts` 5-arg cascade）+ 契约/单测绿（`fkCascadeDeleteContract` 7/7、`revokeUserSessionsContract` 23/23）+ DB-true smoke `npm run smoke:account-deletion-retention -w @joyjoin/server` 6/6 绿；本 gate 剩余 = staging 演练 + legal 裁定（decision memo + 法条 addendum 已备）+ §2 受理通道 ops 确认。**
   2. 受理入口（`待验证` ops/邮箱）：条款承诺 `support@joyjoinapp.com` + 十五个工作日（`packages/shared/src/legal/joyjoinTermsZh.ts:139-140`）。发一封测试注销申请，确认受理回执 + 台账登记。
   3. 演练（staging，1 个测试用户）：按 runbook 走 身份核验 → 登记 → 执行删除。删除使用 `cascadeDeleteByIds`（`apps/server/src/lib/fkCascadeDelete.ts:166`）；drizzle-only FK（如 `event_attendance.blind_box_event_id`，无 DB FK）必须先手工删（参考 `singleTestService.ts:856-867` 模式）。现有唯一删除面：admin `DELETE /api/admin/users/:id/data`（`adminUsers.ts:963`）。
   4. 即时失效核验：`docker exec postgres-staging psql -U joyjoin -d joyjoin_staging -c "SELECT count(*) FROM sessions WHERE sess->>'userId'='<uid>';"` — 期望 `0`；删除后残留 cookie 调 `/api/auth/user` — 期望 401。

@@ -230,6 +230,19 @@ export const paymentFulfillmentRepo = {
         wechat_order_id: params.wechatOrderId,
       });
 
+      // Account-deletion retention (Option B): a retained payment whose user
+      // was deleted has NULL user_id. The money fact still lands (status
+      // completed) but every user-dependent side effect is skipped — without
+      // this guard the registration insert would 23502 and throw into WeChat
+      // webhook retries.
+      if (!updatedPayment.userId) {
+        logger.warn("Payment fulfillment: user detached (account deleted) — side effects skipped", {
+          payment_id: updatedPayment.id,
+          wechat_order_id: params.wechatOrderId,
+        });
+        return { payment: updatedPayment, alreadyCompleted: true };
+      }
+
       if (updatedPayment.couponId) {
         await tx.insert(couponUsage).values({
           couponId: updatedPayment.couponId,
@@ -488,7 +501,10 @@ export const paymentFulfillmentRepo = {
         return { payment, alreadyRefunded: true };
       }
 
-      if (payment.paymentType === "event_pack") {
+      // Detached (retained) payments have NULL user_id; the user's credit and
+      // coupon rows were deleted with the account, so only the payment-status
+      // transition below applies.
+      if (payment.paymentType === "event_pack" && payment.userId) {
         await eventCreditsRepo.reverseCreditsForPayment(tx, {
           paymentId: payment.id,
           userId: payment.userId,
@@ -501,7 +517,7 @@ export const paymentFulfillmentRepo = {
           .from(couponUsage)
           .where(eq(couponUsage.paymentId, payment.id));
 
-        if (couponUsageRows.length > 0) {
+        if (couponUsageRows.length > 0 && payment.userId) {
           await tx.delete(couponUsage).where(eq(couponUsage.paymentId, payment.id));
 
           await tx
