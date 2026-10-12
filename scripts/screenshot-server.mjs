@@ -1420,6 +1420,71 @@ async function capturePersonalityResultsSignalRetest() {
 register('personality-results-signal-retest', capturePersonalityResultsSignalRetest)
 
 
+// ─── 2026-10-12 pricing-change visual verification (S-7 / invite rewrite) ──
+// Rendered-truth coverage for the surfaces touched by the WELCOME20 change;
+// jsdom unit tests are green but these are the visual sign-off.
+
+async function captureInvitePage() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/invite/index?motion=reduce`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.invite-page__code-card', { timeout: 10000 })
+      await page.waitForTimeout(800)
+
+      return page.screenshot({ fullPage: true })
+    }
+  )
+}
+
+async function captureRewardsPage() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/rewards/index?motion=reduce`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.rewards-page__coupon-card', { timeout: 10000 })
+      await page.waitForTimeout(800)
+
+      return page.screenshot({ fullPage: true })
+    }
+  )
+}
+
+async function captureBlindBoxPaymentWelcomeBanner() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/payments/blind-box-payment/index?motion=reduce`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.first-time-coupon-banner', { timeout: 15000 })
+      await page.waitForTimeout(1500)
+
+      return page.screenshot({ fullPage: true })
+    }
+  )
+}
+register('invite-page', captureInvitePage)
+register('rewards-page', captureRewardsPage)
+register('blind-box-payment-welcome-banner', captureBlindBoxPaymentWelcomeBanner)
+
+
 const server = app.listen(PORT, '127.0.0.1', () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)
   console.log(`[screenshot-server] available URLs:`)

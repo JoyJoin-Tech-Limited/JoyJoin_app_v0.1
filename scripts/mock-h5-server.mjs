@@ -109,9 +109,9 @@ const MOCK_COUPONS = {
     {
       id: 'coupon-welcome-001',
       couponId: 'coupon-welcome-001',
-      code: 'WELCOME50',
-      discountType: 'percentage',
-      discountValue: 50,
+      code: 'WELCOME20',
+      discountType: 'fixed_amount',
+      discountValue: 2000,
       validFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       isUsed: false,
@@ -759,13 +759,39 @@ app.get('/api/user-coupons', (req, res) => {
 app.get('/api/user/welcome-coupon', (req, res) => {
   res.json({
     id: 'user-coupon-welcome-001',
-    code: 'WELCOME50',
-    discountType: 'percentage',
-    discountValue: 50,
+    code: 'WELCOME20',
+    discountType: 'fixed_amount',
+    discountValue: 2000,
     source: 'profile_review_first_view',
     isNewlyAwarded: true,
     createdAt: new Date().toISOString(),
   })
+})
+
+// Canonical coupons path used by shared API (alias of /api/user-coupons).
+app.get('/api/user/coupons', (req, res) => {
+  res.json(MOCK_COUPONS)
+})
+
+// Invite page: permanent referral code + attribution counts (referral codes
+// are attribution-only — no rewards; see 2026-10-12 code-review finding).
+app.get('/api/referrals/stats', (req, res) => {
+  res.json({
+    referralCode: 'inv842',
+    successfulInvites: 3,
+    platformTotal: 128,
+    inviteLink: 'weixin://dl/business/?appid=wx-mock&path=pages/pool-registration/index&query=invitationCode%3Dinv842',
+  })
+})
+
+// Rewards page extras (gamification history + redeemable items).
+app.get('/api/user/gamification/history', (req, res) => {
+  res.json([
+    { id: 'txn-1', type: 'earn', amount: 20, reason: '参加活动奖励', createdAt: new Date().toISOString() },
+  ])
+})
+app.get('/api/user/gamification/redeemable-items', (req, res) => {
+  res.json([])
 })
 
 // Profile review tagline

@@ -44,6 +44,18 @@ const PAGES = {
     url: 'http://localhost:9000/profile-review-welcome-coupon.png',
     altPort: 9003,
   },
+  'invite-page': {
+    url: 'http://localhost:9000/invite-page.png',
+    altPort: 9003,
+  },
+  'rewards-page': {
+    url: 'http://localhost:9000/rewards-page.png',
+    altPort: 9003,
+  },
+  'blind-box-payment-welcome-banner': {
+    url: 'http://localhost:9000/blind-box-payment-welcome-banner.png',
+    altPort: 9003,
+  },
   'icebreaker-micro-challenge': { url: 'http://localhost:9000/icebreaker-micro-challenge.png', altPort: 9003 },
   'icebreaker-lie-detective': { url: 'http://localhost:9000/icebreaker-lie-detective.png', altPort: 9003 },
   'icebreaker-auction': { url: 'http://localhost:9000/icebreaker-auction.png', altPort: 9003 },
