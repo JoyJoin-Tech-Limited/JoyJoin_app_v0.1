@@ -132,6 +132,8 @@ function scanAssetReferences() {
   const wxmlAssetRegex = /src=["']((?:\.\.\/)*assets\/[^"']+)["']/g
 
   walkDir(SRC_DIR, (filePath) => {
+    // Test fixtures never ship; only production references matter here.
+    if (/(^|[\\/])__tests__[\\/]/.test(filePath) || /\.(test|spec)\./.test(path.basename(filePath))) return
     const content = fs.readFileSync(filePath, 'utf-8')
     const lines = content.split('\n')
     const ext = path.extname(filePath)

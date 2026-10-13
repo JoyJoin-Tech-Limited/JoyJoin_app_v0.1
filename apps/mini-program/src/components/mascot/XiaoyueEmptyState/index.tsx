@@ -2,10 +2,17 @@ import { View, Image, Text } from '@tarojs/components'
 import { useState, useMemo } from 'react'
 import { cdnAsset, useCdnFirstSrc } from '@/lib/utils/cdnAssets'
 import { MASCOT_SIZE_RPX } from '@/lib/mascot/mascotSizes'
+import { getWindowInfoCompat } from '@/lib/utils/systemInfo'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import ArchetypeHead from '../ArchetypeHead'
 import './index.scss'
+
+/** H5 drops inline rpx styles (taro-image falls back to its 320×240 default);
+ *  emit px instead — pixel-identical on WeChat native (rpx × windowWidth / 750). */
+function rpxToPx(rpx: number, windowWidth: number): number {
+  return Math.round((rpx * windowWidth) / 750)
+}
 
 export type XiaoyueEmptyStateEmotion =
   | 'coaching'
@@ -81,6 +88,8 @@ export default function XiaoyueEmptyState({
   const [imgError, setImgError] = useState(false)
   const celebrationIcon = useCdnFirstSrc('/assets/icons/ui/icon-check.webp')
   const dim = SIZE_MAP[size]
+  const windowWidth = getWindowInfoCompat().windowWidth || 375
+  const dimPx = rpxToPx(dim, windowWidth)
   const hasArchetypeBadge = Boolean(archetypeId)
   const showArchetypeMain = archetypeAsMainVisual && hasArchetypeBadge
   const archetypeName = archetypeId ? ARCHETYPE_BY_ID[archetypeId]?.nameCn ?? archetypeId : undefined
@@ -95,6 +104,7 @@ export default function XiaoyueEmptyState({
 
   const archetypeTokens = useMemo(() => getArchetypeTokens(archetypeId), [archetypeId])
   const haloDim = Math.round(dim * 1.4)
+  const haloDimPx = rpxToPx(haloDim, windowWidth)
   const haloStyle = useMemo(() => {
     const background = archetypeId
       ? archetypeTokens.background
@@ -103,13 +113,13 @@ export default function XiaoyueEmptyState({
       ? archetypeTokens.surface
       : '#EDE9FE' // brand-primary-light fallback
     return {
-      width: `${haloDim}rpx`,
-      height: `${haloDim}rpx`,
+      width: `${haloDimPx}px`,
+      height: `${haloDimPx}px`,
       background: `radial-gradient(circle, ${background} 0%, ${surface} 70%, transparent 100%)`,
       filter: disableBlur ? 'none' : undefined,
       opacity: disableBlur ? 0.5 : undefined,
     }
-  }, [archetypeId, archetypeTokens, disableBlur, haloDim])
+  }, [archetypeId, archetypeTokens, disableBlur, haloDimPx])
 
   return (
     <View className={classNames('xiaoyue-empty-state', showCelebrationBadge && 'xiaoyue-empty-state--celebration')}>
@@ -130,7 +140,7 @@ export default function XiaoyueEmptyState({
         {showArchetypeMain ? (
           <View
             className={mascotClass}
-            style={{ width: `${dim}rpx`, height: `${dim}rpx` }}
+            style={{ width: `${dimPx}px`, height: `${dimPx}px` }}
             role='img'
             aria-label={archetypeName ? `${archetypeName}头像` : '原型头像'}
           >
@@ -140,7 +150,7 @@ export default function XiaoyueEmptyState({
           <Image
             className={mascotClass}
             src={cdnAsset(`/assets/personality/xiaoyue/${EMOTION_MAP[emotion]}.webp`)}
-            style={{ width: `${dim}rpx`, height: `${dim}rpx` }}
+            style={{ width: `${dimPx}px`, height: `${dimPx}px` }}
             mode='aspectFit'
             lazyLoad={false}
             aria-label='悦仔'
@@ -149,7 +159,7 @@ export default function XiaoyueEmptyState({
         ) : (
           <View
             className='xiaoyue-empty-state__mascot-fallback'
-            style={{ width: `${dim}rpx`, height: `${dim}rpx`, '--fallback-size': `${dim * 0.35}rpx` } as React.CSSProperties}
+            style={{ width: `${dimPx}px`, height: `${dimPx}px`, '--fallback-size': `${rpxToPx(dim * 0.35, windowWidth)}px` } as React.CSSProperties}
             aria-label='悦仔 mascot'
           >
             <Text className='xiaoyue-empty-state__mascot-fallback-text'>
