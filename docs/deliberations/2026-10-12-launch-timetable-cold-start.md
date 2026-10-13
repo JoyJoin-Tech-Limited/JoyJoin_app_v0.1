@@ -282,3 +282,11 @@ A1 seed 双环境应用并核对；A2 发券链测试绿 + staging 返回 `fixed
 - **Q4 远程视觉验证已执行**（本机 H5 + mock + Playwright）：邀请页（新文案渲染 ✓）、奖励页（「见面礼券 · ¥20」✓）、blind-box 见面礼 banner（「首单立减 ¥20」✓）、profile-review 礼品卡（「20元」✓）；截图存 `/tmp/jj-pipeline/*.png`。event-ticket-payment 生成器 500 为**既有 H5 挂载限制**（A/B 对照证实：改动前同样空白，非本批引入）；该页仍需真机/DevTools 过目。
 - 仍待（ops/产品）：S-2 staging ≥¥20.01 券 E2E、S-6 决策已收敛为「泛化」（已完成）、邀请奖励是否接 Duo 邀请码为开放产品题、A1/A4/A5/A9/A10 环境证据。
 
+### 第四轮：邀请页接 Duo 邀请码 → 真实邀请奖励（2026-10-13 凌晨）
+
+- **服务端几乎零改动**：Duo 码创建（幂等 per user+pool）、报名绑定（invitation_uses）、同桌奖励发放（`processInvitationRewards` ← `executePostMatchCommitSideEffects`，正式排桌路径在役）全部已存在。
+- **唯一 seed**：`0098_seed_invite_reward_coupon_20261012.sql` — `INVITE_REWARD` fixed ¥50（PRD §4 正典值）；>¥20 锚价安全帽，永不自动作用于 ¥88 单场局票（已在 generalized invariant 测试中锁定）。
+- **邀请页**：有在报名局 + `duoRegistrationEnabled` 时分享池级 Duo 码（`resolveInviteShareMode`，duo=1 落地链路复用既有 Duo 流程）；否则回退推荐码。Duo 模式文案（「同行码只对这场局有效，排桌锁定前截止」「排进同一桌后你收到一张邀请奖励券」）这次**真实成立**——奖励链路已接通。
+- **验证**：duoContext 单测 5/5（含 resolveInviteShareMode）；mini-program 全量 2615/2616 绿；guardrails + design:audit:changed 绿；H5 渲染实证 duo 模式（同行码卡 + 副标题 + 步骤）。
+- **已知约束**：同一邀请码多人领取时，一桌最多容纳一组 Duo（既有 [DUO] 守卫），其余顺延+全额退——文案以「邀请一位朋友」的单数口吻规避期望偏差。
+

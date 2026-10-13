@@ -3,6 +3,7 @@ import {
   buildDuoSharePath,
   buildDuoShareStorageKey,
   isPendingDuoContextStale,
+  resolveInviteShareMode,
 } from './duoContext'
 
 describe('duoContext pure helpers', () => {
@@ -29,5 +30,11 @@ describe('duoContext pure helpers', () => {
     const stale = { ...fresh, savedAt: now - 31 * 24 * 60 * 60 * 1000 }
     expect(isPendingDuoContextStale(fresh, now)).toBe(false)
     expect(isPendingDuoContextStale(stale, now)).toBe(true)
+  })
+
+  it('resolveInviteShareMode picks duo only when enabled and the code resolved', () => {
+    expect(resolveInviteShareMode({ duoSharePath: '/pages/pool-registration/index?id=p&invitationCode=c&duo=1', duoEnabled: true })).toBe('duo')
+    expect(resolveInviteShareMode({ duoSharePath: null, duoEnabled: true })).toBe('referral')
+    expect(resolveInviteShareMode({ duoSharePath: '/x', duoEnabled: false })).toBe('referral')
   })
 })

@@ -31,6 +31,20 @@ export function buildDuoShareStorageKey(poolId: string): string {
   return `jj_duo_share_${poolId}`
 }
 
+/**
+ * Invite-page share mode (2026-10-12): when the user holds an active pool
+ * registration AND duo registration is enabled AND the duo invite code has
+ * been resolved, the invite page shares the pool-scoped duo code (same-table
+ * pairing + invitation reward are real for that path). Otherwise it falls
+ * back to the permanent referral code (attribution only).
+ */
+export function resolveInviteShareMode(input: {
+  duoSharePath?: string | null
+  duoEnabled: boolean
+}): 'duo' | 'referral' {
+  return input.duoEnabled && input.duoSharePath ? 'duo' : 'referral'
+}
+
 export function isPendingDuoContextStale(context: PendingDuoContext, now: number): boolean {
   return now - context.savedAt > PENDING_DUO_CONTEXT_MAX_AGE_MS
 }

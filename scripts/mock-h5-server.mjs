@@ -711,6 +711,16 @@ app.get('/api/pools/:id/duo-status', (req, res) => {
   }
 })
 
+// Duo invite creation (idempotent per user+pool) — drives the invite page's
+// duo share mode (2026-10-12 iteration: referral → duo wiring).
+app.post('/api/pools/:id/duo-invites', (req, res) => {
+  const code = 'a1b2c3d4e5f6'
+  res.json({
+    code,
+    sharePath: `/pages/pool-registration/index?id=${req.params.id}&invitationCode=${code}&duo=1`,
+  })
+})
+
 // My registrations
 app.get('/api/my-pool-registrations', (req, res) => {
   res.json([

@@ -564,6 +564,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - Auto-issue ¥50 INVITE_REWARD coupon when invited users match together
 - Invitation badges: Purple "已邀请" for inviters, Blue "[name] 邀请的" for invitees
 - Database tracking: `user_coupons` and `invitation_uses` tables
+- **Duo invite wiring (2026-10-12):** the invite page (`pages/profile-linked/invite`) shares the pool-scoped Duo code (`POST /api/pools/:id/duo-invites`, idempotent) when the user has an active pool registration — only that path can promise the same-table pairing + INVITE_REWARD reward; otherwise it shares the permanent referral code (attribution only). INVITE_REWARD is seeded by migration `0098` (fixed ¥50; above the ¥20 anchor-safety cap, so it never rides the 单场局票 anchor).
 
 **5. Event Pool User Flow** 🎭
 - Complete two-stage matching model UI
