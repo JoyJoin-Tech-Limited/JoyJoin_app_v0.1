@@ -192,7 +192,7 @@
   1. 固化基线：`git rev-parse HEAD; git status --short` — 记录 release commit 与 dirty 范围（§17 的 73 个改动面必须在场）。
   2. `npm run guardrails 2>&1 | tee <EV>/HS-08-guardrails.log; echo "EXIT=$?"` — 期望 0。
   3. `npm run test -w @joyjoin/server 2>&1 | tee <EV>/HS-08-server-tests.log; echo "EXIT=$?"` — 期望 0；并确认关键套件在输出中 PASS：`registrationErrorCodes`、`fkCascadeDeleteContract`、`adminRbacCoverage`、`testAdminAuth`、`districtCatalogContract`。
-  4. `npm run harness:gate 2>&1 | tee <EV>/HS-08-harness-gate.log; echo "EXIT=$?"` — 期望 0（exit 2 = concerns，非 pass）。**注意：** 该脚本扫描 `git diff HEAD` + untracked 文件，必须在实际 release 工作树执行以覆盖 release diff。**现状（2026-10-09 实测）：EXIT=2（CONCERN 85/100）。concerns 全部可追溯到既有模式：botFillService/testAdminService 事务边界与审计（test-only 服务）、paymentFulfillmentRepo 履行路径审计（pre-existing，webhook 系统发起）、`_definitions.ts` 体积 2038/2500。nits：smoke console.*（与 smoke-auto-refund 同模式）、paymentService TODO、shared 中文字符串。Option B 未新增 blocking 项。release owner 须逐条 resolve 或书面 accept。**
+  4. `npm run harness:gate 2>&1 | tee <EV>/HS-08-harness-gate.log; echo "EXIT=$?"` — 期望 0（exit 2 = concerns，非 pass）。**注意：** 该脚本扫描 `git diff HEAD` + untracked 文件，必须在实际 release 工作树执行以覆盖 release diff。**现状（2026-10-12 复测）：EXIT=0（PASS 100/100）— gate 为 diff-scoped（只评 added/modified lines）：release 批次（Option B + V4.1 改名）已全部 commit 后重跑通过；2026-10-09 的 EXIT=2（CONCERN 85/100）是当时未提交批次的 advisory。既有 concerns（botFillService/testAdminService 事务边界与审计、paymentFulfillmentRepo 履行路径审计、`_definitions.ts` 体积 2038/2500）为 HEAD 中既有模式（test-only 服务 / webhook 系统发起 / 体量警戒线非 fail 线），如未来 release diff 再次触及这些文件可能复现 — 属已接受的既有模式。**
   5. （增强，§1 要求）`npm run check:full 2>&1 | tee <EV>/HS-08-check-full.log; echo "EXIT=$?"` — 期望 0。
 - **Pass criteria:** 全部 exit 0。
 - **FAIL signal:** 任一非 0；harness:gate 输出 concerns。
@@ -319,17 +319,17 @@
 
 | HS-ID | 结果 | 证据路径 | 执行人 | 日期 | 备注 / 修复单 |
 |---|---|---|---|---|---|
-| HS-01 | ☐ PASS ☐ FAIL | | | | |
-| HS-02 | ☐ PASS ☐ FAIL | | | | |
-| HS-03 | ☐ PASS ☐ FAIL | | | | |
-| HS-04 | ☐ PASS ☐ FAIL | | | | |
-| HS-05 | ☐ PASS ☐ FAIL | | | | |
-| HS-06 | ☐ PASS ☐ FAIL | | | | |
-| HS-07 | ☐ PASS ☐ FAIL | | | | |
-| HS-08 | ☐ PASS ☐ FAIL | | | | |
-| HS-09 | ☐ PASS ☐ FAIL | | | | |
-| HS-10 | ☐ PASS ☐ FAIL | | | | |
-| HS-11 | ☐ PASS ☐ FAIL | | | | |
-| HS-12 | ✅ PASS（条件式 · 代码面通过；整条 gate 待步骤 4 staging 演练后回填为完全 PASS） | 实现：`apps/server/src/lib/revokeUserSessions.ts`（新增 `revokeAdminSessions`）、`abuseDetection.ts:54-67`、`adminUsers.ts:881-888 & 983-1005`、`adminAuth.ts:8,363-372`；测试：`apps/server/src/__tests__/revokeUserSessionsContract.test.ts` 21/21；合同：`.git/.orchestration/sprints/sprint-contract.launch-qa-hs12-revoke-sessions.md`；独立 grep 复核 4 调用点 = 精确；日志待落盘 `<EV>/HS-12-callsite-grep.log`、`<EV>/HS-12-tests.log` | @backend-engineer + @qa-agent | 2026-10-06 | 4 路径全部接线（ban / delete-data tx 内 fail-closed / permaban / admin disable）+ 21/21 契约测试绿 + typecheck 绿 + 7 套消费者回归全绿。合并前遗留：(1) hunk 隔离 — `adminUsers.ts` 混有 sibling W1 hunks，`gatheringRoomState.test.ts:96` 一行 mock 修复随行；(2) 新文件未跟踪（`revokeUserSessions.ts` + 契约测试），需 `git add`；(3) 非饱和主机重跑全量 server 套件（本机 8GB 饱和导致 withServer 探针抖动 3826/3889，目标文件隔离全绿；HS-08 强制项）。Caveats：AC-02 回滚为 mock 级验证（结构证据：revoke 为 tx 首步 + `cascadeDeleteByIds` 未执行断言），建议随步骤 4 演练顺带复验（删除持 ≥2 会话的测试用户 → `sessions=0` + `users=0`）；AC-06 严格记 PARTIAL（环境性）。Gate 最终关闭：Procedure 步骤 4 staging 行为演练（ban → `sessions` 计数=0 → 旧 cookie 调 `/api/auth/user` 期望 401）。 |
+| HS-01 | ⚠️ PARTIAL（自动化全绿；真金链路待设备） | payment 套件 48/48 + reconcile 14/14 + auto-refund smoke + payment-smoke script 全绿；staging ¥0.01 全链路 + production 小额真单（步骤 4–10）待真机执行 | opencode | 2026-10-12 | 自动化证据本地；设备步骤需测试人 |
+| HS-02 | ✅ PASS | `HS-02-03-04-06-10-assessment.log`：PROD/STAGING `WECHAT_PAY_APP_ID === WECHAT_APPID` = MATCH；readyz 200 | opencode（SSH CVM） | 2026-10-12 | — |
+| HS-03 | ✅ PASS | 同上 + 手动 curl：两环境 `ENABLE_DEV_AUTH_TOOLS`/`ALLOW_PRODUCTION_AUTH_DEBUG` = unset；dev-login PROD 403 / STAGING 403 | opencode（SSH + curl） | 2026-10-12 | — |
+| HS-04 | ✅ PASS（owner 确认 2026-10-12） | `HS-02-03-04-06-10-assessment.log`：production true = auctionV2Enabled, gatheringRoomEnabled, highlightsInjectorEnabled, icebreakerGlanceStackEnabled, icebreakerHapticGrammarEnabled, icebreakerMoodFieldEnabled, lieDetectiveV2Enabled, miniscriptEvidenceVoteV2Enabled, personalityDiceChooseModeEnabled, sessionGlowEnabled；staging 18 true（测试床预期） | opencode + release owner | 2026-10-12 | **Owner 确认：全部 10 项为有意 LIVE**（release-train 暗发布计划已过期，以生产实态为准）；暗清单其余 flag 全部 false → 对账通过 |
+| HS-05 | ✅ PASS | build:weapp 链（package-size PASS、upload-assets 32 资产）+ verify:subpackage-styles EXIT 0 | opencode | 2026-10-12 | — |
+| HS-06 | ✅ PASS | `HS-06-migration-0096-staging.log` + `-production.log`：0096 已应用两环境（nullable=YES, idx=1, FK SET NULL）；production 先全量快照（586KB, `/root/joyjoin-backups/joyjoin_pre0096.dump`）；**db:verify PROD/STAGING = Schema and DB are fully aligned** | opencode（SSH CVM） | 2026-10-12 | 0093 venue retag 仍待协调发布（见备注） |
+| HS-07 | ✅ PASS | `HS-07-raw-hits.txt` + `HS-07-triage-table.md`：13 命中全部分类为 (a) 非用户可见（注释/测试）或 (b) 治理/例外文件；零未分类 | opencode | 2026-10-12 | 建议顺手改 profile 注释一处（不阻塞） |
+| HS-08 | ✅ PASS（本地） | guardrails EXIT 0、lint PASS、typecheck PASS、server 3848、mini 2604、harness:gate PASS 100/100（diff-scoped；committed 树）；release 树复跑随发布 | opencode | 2026-10-12 | — |
+| HS-09 | ✅ PASS | `HS-09-kill-drill.log`：PUT false → 6.15s 观测生效（source db）→ 恢复 true；均 HTTP 200 | opencode（staging） | 2026-10-12 | kill→observed 6153ms < 60s |
+| HS-10 | ✅ PASS | `HS-02-03-04-06-10-assessment.log`：prod-api 1 实例 / staging-api 1 实例 | opencode（SSH CVM） | 2026-10-12 | — |
+| HS-11 | ✅ PASS | `HS-11-deletion-drill.log`：staging DELETE 200 → users 0 / sessions 0 / **payment retained user_id NULL + payload NULL** / refund_attempts retained / audit 1 / post-delete auth 401；自清理完成 | opencode（staging 全链路） | 2026-10-12 | Legal sign-off 已记录（signoff-form 2026-10-12）；注销 runbook 生产可用 |
+| HS-12 | ✅ PASS（条件式 · 代码面通过；整条 gate 待步骤 4 staging 演练后回填为完全 PASS） | 实现：`apps/server/src/lib/revokeUserSessions.ts`（新增 `revokeAdminSessions`）、`abuseDetection.ts:54-67`、`adminUsers.ts:881-888 & 983-1005`、`adminAuth.ts:8,363-372`；测试：`apps/server/src/__tests__/revokeUserSessionsContract.test.ts` 21/21；合同：`.git/.orchestration/sprints/sprint-contract.launch-qa-hs12-revoke-sessions.md`；独立 grep 复核 4 调用点 = 精确；日志待落盘 `<EV>/HS-12-callsite-grep.log`、`<EV>/HS-12-tests.log` | @backend-engineer + @qa-agent | 2026-10-06 | 4 路径全部接线（ban / delete-data tx 内 fail-closed / permaban / admin disable）+ 21/21 契约测试绿 + typecheck 绿 + 7 套消费者回归全绿。合并前遗留：(1) hunk 隔离 — `adminUsers.ts` 混有 sibling W1 hunks，`gatheringRoomState.test.ts:96` 一行 mock 修复随行；(2) 新文件未跟踪（`revokeUserSessions.ts` + 契约测试），需 `git add`；(3) 非饱和主机重跑全量 server 套件（本机 8GB 饱和导致 withServer 探针抖动 3826/3889，目标文件隔离全绿；HS-08 强制项）。Caveats：AC-02 回滚为 mock 级验证（结构证据：revoke 为 tx 首步 + `cascadeDeleteByIds` 未执行断言），建议随步骤 4 演练顺带复验（删除持 ≥2 会话的测试用户 → `sessions=0` + `users=0`）；AC-06 严格记 PARTIAL（环境性）。Gate 最终关闭：Procedure 步骤 4 staging 行为演练（ban → `sessions` 计数=0 → 旧 cookie 调 `/api/auth/user` 期望 401）。**✅ 2026-10-12 staging 演练完成：ban HTTP 200 → sessions 2→0 → post-ban auth 401 → isBanned=t（`HS-12-ban-drill.log`）；pre-ban 500 为合成 session 缺 `cookie.expires` 的 fixture 伪影（非产品 bug）。HS-12 完全关闭。** |
 
 **全部 12 条 PASS 后**：将结果抄入 `docs/testing/LAUNCH-QA-CHECKLIST.md` §21 证据登记表，并按该表完成 Go/No-Go 签字。

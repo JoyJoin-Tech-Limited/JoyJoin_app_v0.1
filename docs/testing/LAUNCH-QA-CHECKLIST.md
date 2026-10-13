@@ -28,10 +28,10 @@
 - [ ] `npm run check:full` — release commit 上重跑一次，聚合门全绿
 - [ ] `npm run harness:gate` — 5-pillar 门 PASS
 - [ ] `npm run orchestration:validate` — PASS
-- [ ] `npm run design:audit:changed` + `npm run audit:visual` — 0 error（渲染层遮挡/布局缺陷）
+- [ ] `npm run design:audit:changed` — 0 error（静态 diff 扫描）✅ 2026-10-12 PASS；`audit:visual`（rendered-truth）✅ 2026-10-12 本地 H5 执行：landing/discover/events/connections 全部 PASS（0 blocking）——connections 首扫发现 1 blocking（`XiaoyueEmptyState` 内联 rpx 被 H5 丢弃 → taro-image 320px 默认 → 溢出 7px），已修复（rpx→px 转换，`JoyJoinIcon` 同款模式；WeChat 原生像素等价），复扫 PASS；全量页面清单仍随 staging 执行
 - [ ] `npm run bundle-size:check` — 通过
-- [ ] `npm run check:package-size -w mini-program` — zip ≤ 2MB（WeChat 硬限）
-- [ ] `npm run check:compiled-package-size -w mini-program` — 子包体积均在限内（与上条互补）
+- [ ] `npm run check:package-size -w mini-program` — zip ≤ 2MB（WeChat 硬限）✅ 2026-10-12 PASS（build 链内："Main package within 2.00 MB"）
+- [ ] `npm run check:compiled-package-size -w mini-program` — **CI-only**：需 WeChat 编译产物 `compiled-check/`（`taro-weapp-build.yml` 解压 `compiledResult.zip` 后运行）；本地无编译产物时按 precondition 失败 ≠ 体积违规。本地等价 = 上一条 `check:package-size`
 - [ ] `npm run validate:miniscript-story` — exit 0（离线 QC）
 - [ ] `npm run validate:flash-story` — exit 0（即使 Flash 暗发布，剧情资产不得带病）
 
@@ -40,7 +40,7 @@
 - [ ] `npm run db:journal-check` + `npm run db:verify` — schema 与目标库一致（**staging 和 production 各跑一次**）
 - [ ] 服务器对目标库冷启动无 `validateDbSchema()` fail-fast（`apps/server/src/db.ts`）— 观察启动日志
 - [ ] 所有 `apps/server/migrations/*.sql` 已在目标库手工执行（staging/production 不自动跑 DDL；逐条记录 `psql "$DATABASE_URL" -f <file>`）
-- [ ] budget-tier 迁移 0093（venues 重打标）+ 0094（registrations 重打标）已应用；读侧归一化在役（`venueAssignmentService`）
+- [ ] budget-tier 迁移 0093（venues 重打标）+ 0094（registrations 重打标）已应用；读侧归一化在役（`venueAssignmentService`）— **2026-10-12 实测：staging registrations 已见 id（0094 效果在），venues 两环境仍为 legacy 标签（0093 未应用）；生产 registrations = 0 行（无 mismatch 风险）；按计划 0093 须与归一化同发布窗口执行（T1b 禁单独上线）— 随发布批次完成**
 - [ ] 场地供给白名单核对（**阻塞发布**，`docs/design/budget-tier-t0-signoff-checklist-20260916.md`）：深圳 `dining_150_below`/`dining_150_200`/`dining_300_500` 无餐厅 = 未列白名单档位必须补齐场地；弥所/Bruma/Max 为 `ASSUMED_PENDING_VERIFICATION`，上线后用真实菜单复核
 - [ ] 每个已开放测试池的 `dateTime` 被该档位 ≥1 个 venue slot 覆盖（否则 `地点待定`）
 - [ ] `pricing_settings` 已 seed（`seed_pricing_plans_20260805.sql`）；悦聚月卡/悦聚季卡/三连局包/六连局包/单场局票 名称与价格 DB 驱动一致
@@ -69,7 +69,7 @@
 - [ ] **悬空 pending 订单：** 无服务端过期 sweep（已核实 `payments.ts` 无 expiresAt 逻辑）— 验证 JSAPI 超时（~2h）后用户重进不被 `PendingOrderResume` 卡死、可重新下单
 - [ ] `PAYMENTS_DISABLED` 杀开关行为：客户端显示维护态而非裸 503
 - [ ] 限流：`paymentEndpointLimiter` 10/min → 429 + Retry-After
-- [ ] 优惠券：`POST /api/coupons/validate` 有效/过期/重复用；WELCOME50 banner 展示与自动选中；**社区统计数字全部 DB-backed，零虚构**
+- [ ] 优惠券：`POST /api/coupons/validate` 有效/过期/重复用；WELCOME20（固定减 ¥20，首单 ¥88→¥68）banner 展示与自动选中；旧 WELCOME50 持有券仍可核销；**社区统计数字全部 DB-backed，零虚构**
 - [ ] 权益：订阅/活动包/单场票 entitlement 校验正确；credit 核销与取消回滚（FK 500 已修复路径）
 - [ ] 退款：`POST /api/admin/payments/:id/refund` 成功 + `adminAuditLogger` 留痕
 - [ ] `npm run smoke:auto-refund -w @joyjoin/server` — Trigger A（场次取消）+ Trigger B（未成行）全绿、credits 恢复、幂等、自清理
@@ -96,8 +96,8 @@
 > **现状（2026-10-06 核实）：** 全仓仅 `packages/shared/src/legal/joyjoinTermsZh.ts:139` 一条「联系开发者申请注销，十五个工作日内处理」。**无 in-app 注销入口、无服务端注销路由。** 微信对带登录小程序的审核趋严，且第一个注销申请若无流程即事故。
 
 - [ ] 决定姿态并记录：self-serve 注销页 vs 人工受理通道（**建议 v1 = 人工通道 + 台账，不阻塞上线**）
-- [ ] 人工注销 runbook 落盘（`docs/runbooks/`）：受理入口（客服/邮箱）、身份核验步骤、删除范围（用 `cascadeDeleteByIds` 级联，注意 drizzle-only FK 需先手工删）、支付/订单记录依法保留边界、15 个工作日 SLA 台账格式（**2026-10-06 已落盘 `docs/runbooks/account-deletion.md`，待 staging 演练 + legal 留存裁定**）
-- [ ] 演练一次：对 1 个测试用户走完整注销 — 级联无 23503 残留、会话立即失效（复用 `revokeUserSessions`）、台账登记完整
+- [ ] 人工注销 runbook 落盘（`docs/runbooks/`）：受理入口（客服/邮箱）、身份核验步骤、删除范围（用 `cascadeDeleteByIds` 级联，注意 drizzle-only FK 需先手工删）、支付/订单记录依法保留边界、15 个工作日 SLA 台账格式（**2026-10-12：runbook + Option B 实现（migration 0096，smoke 6/6）已 commit；待 staging 演练 + legal 留存裁定 + 受理通道 ops 确认**）
+- [ ] 演练一次：对 1 个测试用户走完整注销 — 级联无 23503 残留、会话立即失效（复用 `revokeUserSessions`）、台账登记完整（**✅ 2026-10-12 staging 全链路完成：DELETE 200 → user 0 / sessions 0 / payment retained NULL / payload NULL / refund_attempts retained / audit 1 / 401；`HS-11-deletion-drill.log`；台账于首次真实受理时启用**）
 - [ ] 隐私指引/条款中的注销路径描述与实际流程一致
 
 ## §6 P0 — 核心旅程 E2E（单测试池 + 真池各一遍）
@@ -147,7 +147,7 @@
 **打包**
 - [ ] `npm run build:weapp -w mini-program` 成功（自动跑 `validate:wechat-app-config`，scope.* ≤30 字）
 - [ ] `npm run verify:subpackage-styles -w mini-program` — 无缺失选择器、**无任何非空 `sub-common.wxss`**
-- [ ] `npm run verify:upload-assets -w mini-program` + `npm run validate:assets -w mini-program` 通过
+- [ ] `npm run verify:upload-assets -w mini-program` + `npm run validate:assets -w mini-program` 通过 — ✅ 2026-10-12 PASS（upload-assets 32 资产绿；validate:assets 0 errors / 5 warnings：测试 fixture 已从扫描排除 + K3 archetype-strips 记入 `pendingAssets`）
 - [ ] 新增捆绑资产目录已加入 `project.config.json` `packOptions.include` 白名单（漏加 = 设备端静默缺失）
 - [ ] tab bar：`centerHub` 有非空 `iconPath` 且出现在 `MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS`（否则 `switchTab:fail`）
 - [ ] CDN manifest 每个 localPath 存在；avatar sourceAssetCount 与 jq 断言一致；本批新 hash 资产已随 workflow 上传
@@ -169,7 +169,7 @@
 
 - [ ] flag 真相：DB 行 > env 回退，5s LRU；admin 页 super_admin + `FEATURE_FLAG_UPDATED` 审计
 - [ ] 发布列车 BLOCKING（开任何 flag 前，`docs/operations/release-train-gameplay-flags-202609.md` §2）：`LIE_DETECTIVE_MODE` 生产/staging unset 或 v1；`PERSONALITY_DICE_CHOOSE_MODE_ENABLED` env 姿态确认；`SOCIAL_ICEBREAKER_ENABLE_AUCTION` 姿态确认；基线 SQL 已快照；客户端版本门已上线
-- [ ] 暗发布清单在生产**保持 false**（逐一对账 admin/feature-flags）：`alangEnabled`、`flashStoryActionsEnabled`、`gatheringRoomEnabled`、`preRevealRefundEnabled`、`noRefundAfterReveal`、`budgetAdjacencyEnabled`、`icebreakerGroupBeatsEnabled`、`miniscriptEvidenceVoteV2Enabled`、`auctionV2Enabled`、`matchNeverMeetSentinel`、`matchChemistryCalibrationEnabled`、`matchingPuzzlePreludeEnabled`、`socialSquadComposedHeroEnabled`、`profilePixelAvatarEnabled`、`equipmentRewardsEnabled`、`personalStoryEnabled`
+- [ ] 暗发布清单在生产**保持 false**（逐一对账 admin/feature-flags）：`alangEnabled`、`flashStoryActionsEnabled`、`preRevealRefundEnabled`、`noRefundAfterReveal`、`budgetAdjacencyEnabled`、`icebreakerGroupBeatsEnabled`、`matchNeverMeetSentinel`、`matchChemistryCalibrationEnabled`、`matchingPuzzlePreludeEnabled`、`socialSquadComposedHeroEnabled`、`profilePixelAvatarEnabled`、`equipmentRewardsEnabled`、`personalStoryEnabled` — **2026-10-12 实测对账通过（上述全部 false）；owner 同日确认 `auctionV2Enabled`/`gatheringRoomEnabled`/`miniscriptEvidenceVoteV2Enabled` 为有意 LIVE，已从暗清单移除**
 - [ ] 客户端硬编码门核验：`PAYMENT_RITUAL_V2_ENABLED` 仍为 false（或前置 4 项全部满足）
 - [ ] Kill drill（staging 演练，逐条计时）：每个 LIVE flag 从后台置 false → ≤5s 生效 → <1min 完成
 - [ ] 快照语义：进行中会话不被 flag 切换改写（lie/dice/auction/miniscript 阶段快照）
@@ -181,7 +181,7 @@
 - [ ] 敏感动作全审计：退款、封禁、flag 变更、考勤覆盖、密码重置
 - [ ] 管理端财务/用户/活动池/反馈/通知/数据洞察页在 production 数据量下无 500（**本批这批 admin 页面全部有改动 — 逐页冒烟**）
 - [ ] 事件池创建/编辑/关闭 → Discover 可见性联动正确；无 DELETE 端点是已知设计（状态流转）
-- [ ] **`revokeUserSessions.ts`（新增未跟踪文件）验收：** ① 被**所有** ban/disable/注销路径调用，不是只接一处；② 补契约/单测（防 N1 类「以为有保护实际没有」事故）；③ 顺带关 R-05 — admin 账号 disable 后存量会话清理也走此路径（**2026-10-06 已实现：4 路径接线 + `revokeUserSessionsContract.test.ts` 21/21；待 hunk 隔离与全量复跑**）
+- [ ] **`revokeUserSessions.ts`（新增未跟踪文件）验收：** ① 被**所有** ban/disable/注销路径调用，不是只接一处；② 补契约/单测（防 N1 类「以为有保护实际没有」事故）；③ 顺带关 R-05 — admin 账号 disable 后存量会话清理也走此路径（**2026-10-12 已实现并 commit：4 路径接线 + `revokeUserSessionsContract.test.ts` 23/23；全量 server 套件 3848 绿；待 staging 行为演练**）
 - [ ] **反馈闭环（新增）：** 用户反馈提交 → `AdminFeedbackPage` 可见 → 处理留痕；反馈入口在用户端可达
 - [ ] 事故 runbook 就绪：`docs/runbooks/admin-incident-handling.md`
 
@@ -237,6 +237,8 @@
 ## §17 P0 — Dirty-Worktree 回归专区（2026-10-06 快照）
 
 > 73 个未提交改动直接命中上线关键面。**以下改动面的既有 QA 证据全部作废，须用新代码重跑。**
+>
+> **状态（2026-10-12）：** 本批 73 项 + Option B（注销留存）+ DeepSeek V4.1 改名已全部 commit，工作树 clean；本地套件全绿（server 3848、mini-program 2597、guardrails/lint/typecheck/design-audit PASS）；上表 staging 证据重跑仍按章节执行。
 
 | 改动面 | 文件 | 必重跑章节 |
 |---|---|---|
@@ -272,8 +274,8 @@
 8. `guardrails` / `test -w @joyjoin/server` / `harness:gate` 任一红
 9. 任一 LIVE flag 无法 <1min 关停
 10. 单副本契约被破坏（replicas > 1 且未上 Redis）
-11. **用户注销无受理流程（§5 未关闭）**
-12. **`revokeUserSessions` 未接全 ban/disable 路径或无测试（§11 未关闭）**
+11. **用户注销无受理流程（§5 未关闭）** — 2026-10-12：人工通道 runbook + Option B 已 commit；Legal sign-off ✅ 已记录；**staging 演练 ✅ 完成**；剩余 = ops 受理通道确认（inbox/核验方式）
+12. **`revokeUserSessions` 未接全 ban/disable 路径或无测试（§11 未关闭）** — ✅ **完全关闭**（2026-10-12：4 路径 + 23 测试 + staging ban 演练 200/2→0/401；`HS-12-ban-drill.log`）
 
 ## §20 执行顺序与交接
 

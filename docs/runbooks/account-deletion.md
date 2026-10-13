@@ -124,10 +124,10 @@ Server behavior, in one transaction (`adminUsers.ts:963-1050`):
 - **NOT deleted:** `admin_audit_logs` (no FK; rows retain `target_entity_id` plus a before-snapshot including the user's displayName/phoneNumber); `social_icebreaker_sessions` history rows; `matching_results.user_ids` text array (no FK).
 - **DB-true smoke:** `npm run smoke:account-deletion-retention -w @joyjoin/server` asserts user-gone / payment retained NULL / refund_attempts retained / payload NULL / non-financial child deleted (self-cleaning).
 
-### 5.3 Decision status (production use still blocked)
+### 5.3 Decision status — ✅ SIGNED (2026-10-12)
 
 1. **Implemented:** Option B (retain + detach + scrub) is in code as of 2026-10-09.
-2. **Still required — Legal:** confirm statutory retention basis + period, and whether the retention set must expand (`coupon_usage`, `subscriptions`, `event_credit_*`, `user_coupons`). The sourced addendum for counsel review: `docs/design/account-deletion-retention-legal-context-20261009.md` (research input, not legal advice). Until sign-off: **pause production deletions for users with payment history** (Option A remains acceptable only for users with zero financial rows).
+2. **Legal sign-off: RECORDED 2026-10-12** — Vincent Lai (owner, as Legal authority) approved Option B per the "签署裁定" in `docs/design/account-deletion-retention-signoff-form-20261012.md` (retention default: 3 years from payment success; set = `payments` + `refund_attempts`; ledger 3 years; destruction per "未了事项不得销毁"). **The §5.3 production pause for users with payment history is lifted**, subject to: migration 0096 applied to the target DB + the HS-11 staging drill passing.
 
 ## 6. Post-delete verification
 
