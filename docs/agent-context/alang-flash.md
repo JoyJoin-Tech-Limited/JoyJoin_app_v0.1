@@ -23,3 +23,5 @@
 - 30 任务性格分配通过 `apps/server/src/__tests__/flashTaskPersonalityAllocation.test.ts` 锁定：5 NPC × 6 任务（5 生活邀请 + 1 NPC 传话），每 NPC 只从自己 6 条抽取，`npcWeight` 全 100。
 - 所有改动尊重 `prefers-reduced-motion`；CTA 保持纯紫无渐变；不引入 emoji；WeChat WXSS 不使用 `min()` / `max()` / `clamp()`（用 rpx + media query 做响应式）。
 - Canonical plan: `docs/deliberations/2026-08-26-flash-polish-strategy.md`。
+
+**街头盲盒 teaser 模式（2026-10-09，sprint_20261009_flash_teaser_mode）：** `alangEnabled` 保持关闭期间，Discover 入口渲染为「未拆的盒子」teaser 卡（dusk 渐变 + halo 呼吸 + 8s sheen，in-view 门控），点击进入静态 teaser 页（CDN hero + CSS dusk 兜底、承诺文案、点盒 glow 脉冲）。新增 `flashTeaserHeroEnabled`（变体 D，仅原型，与 `alangEnabled` 硬互斥、与卡互斥 XOR）；全部切换走 `/admin/feature-flags` 手工——`alangEnabled` 打开即全量转 live，零发版。门禁 `alangAccess: isStreetBlindBoxLive`（fail-closed）统一服务端与 6 个 alang 子包页面；埋点 `flash_teaser_impression/tap` 已入白名单；素材为 CDN-only Lovart teaser hero/icon（manifest 登记，dist 清理）；截图工具 `generators-flash-teaser.mjs` + env 门控 mock（`MOCK_FLASH_TEASER`/`MOCK_FLASH_TEASER_HERO`）。Brief: `docs/design/lovart-brief-flash-teaser-20261009.md`。

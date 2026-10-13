@@ -380,7 +380,7 @@ With `MOCK_PAYMENTS=true`:
 - The server returns instantly-paid orders (`status: completed`, `mock: true`).
 - The mini-program skips `Taro.requestPayment()` and goes straight to payment verification.
 - Prices still show ¥0.01 because `APP_MODE !== production`.
-- **Zero-discount coupons are skipped (2026-06-30):** percentage coupons such as `WELCOME50` that would compute a zero-cent discount under ¥0.01 pricing are dropped from the payment payload; the server would otherwise reject a 0-cent discount.
+- **Zero-discount / full-cover coupons are skipped (2026-06-30; extended 2026-10-12):** percentage coupons that compute a zero-cent discount under ¥0.01 pricing, and fixed coupons (e.g. the canonical `WELCOME20` 见面礼, fixed ¥20 off) that fully cover the price, are dropped from the payment payload; the server would otherwise reject the order. Route-level coupon validation additionally rejects full-cover cases with the coded `COUPON_FULL_DISCOUNT` error. **Coupon E2E evidence requires the test price to be ≥ ¥20.01** (or unset): at ¥0.01 the coupon is intentionally withheld client-side, so no burn/restore can be observed.
 
 Restart `npm run dev:server` after editing `.env`.
 
