@@ -184,6 +184,15 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 # clear. Also: after regenerating assets with new content hashes (e.g.
 # build-profile-pixel-v2-assets.mjs), re-run the upload — otherwise new-hash
 # references 404 until the next CDN sync.
+# Gotcha (2026-10-14): every emojiToIconMap (tier, assetKey) mapping needs BOTH
+# a committed webp under src/assets/icons/<folder>/ AND a cdn-asset-manifest.json
+# entry — JoyJoinIcon's fallback chain is local → CDN → emoji, and a missing CDN
+# mirror meant devices rendered the generic 🎯 emoji for 尝鲜体验 for two months
+# (mapping landed 07-21, webp 08-05, manifest entry none). Guard:
+# scripts/check/check-cdn-icon-coverage.mjs in the guardrails chain. The
+# Upload CDN Assets workflow now auto-publishes on push when the diff touches
+# the manifest or a manifest-listed asset (previously dispatch-only).
+# Runbook: docs/runbooks/mini-program-asset-delivery.md §4.7.
 # Gotcha (2026-08-17): packOptions.include in project.config.json is an
 # upload ALLOW-LIST — a bundled asset matching no include pattern is silently
 # dropped from the uploaded package (confirmed twice: 2026-08-04 Flash
