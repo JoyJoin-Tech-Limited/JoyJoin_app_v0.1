@@ -92,6 +92,7 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 | Relied on a stale `dist/` or H5 preview to prove styles were bundled | `sub-common.wxss` and simulator-only loads can hide real device regressions |
 | Left `import './X.scss'` in a component that is consumed inside a subpackage | Taro chunks the SCSS into `sub-common.wxss`, which WeChat never loads |
 | Moved/re-exported page-owned components without re-checking `@use` coverage | A page extraction changes the chunk graph and can strand styles silently |
+| Registered an icon mapping in `emojiToIconMap.ts` without committing the webp + CDN manifest entry in the same window (2026-10-14) | Mapping existed 2026-07-21, asset landed 2026-08-05 with no manifest entry, and the `Upload CDN Assets` workflow **skipped** upload jobs on push events (dispatch-only gating), so `JoyJoinIcon`'s local→CDN retry 404'd and devices rendered the fallback 🎯 emoji for 尝鲜体验 |
 
 ---
 
@@ -105,6 +106,19 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 4. Reference the asset with `localAsset('/assets/<new-dir>/file.ext')`.
 5. Run `npm run build:weapp -w mini-program` and confirm the files exist in `dist/assets/<new-dir>/`.
 6. Prefer an actual upload / preview on device; H5 is **not** sufficient.
+
+### 4.7 Icon-system CDN fallback coverage (2026-10-14 incident)
+
+Every `(tier, assetKey)` pair in `packages/shared/src/iconSystem/emojiToIconMap.ts` must satisfy BOTH:
+
+1. A committed bundle file at `apps/mini-program/src/assets/icons/<folder>/<assetKey>.webp`.
+2. A `{ localPath, cdnPath }` entry in `apps/mini-program/scripts/cdn-asset-manifest.json`, so the **Upload CDN Assets** workflow publishes the CDN mirror that `JoyJoinIcon.tsx` retries (local → CDN → emoji) before falling back to the native emoji.
+
+**Why both, even for bundled tiers:** `JoyJoinIcon` treats the CDN as its first retry when a bundled local path fails to load (upload allow-list stripping, partial WeChat caches). A missing CDN entry silently turns "icon degraded" into "icon renders as a generic emoji" — the 🎯 dart-target 尝鲜体验 incident.
+
+**Enforcement (2026-10-14):** `scripts/check/check-cdn-icon-coverage.mjs` runs inside `npm run guardrails` and fails any mapping missing its bundle file or manifest entry. 94 unique pairs were verified; do not bypass it.
+
+**Publishing semantics (also fixed 2026-10-14):** the workflow's `upload-assets` job runs on `workflow_dispatch` **or** on any push to `main` whose diff matches the manifest itself or a manifest-listed asset (`needs.validate-assets.outputs.should_upload == 'true'`). A push that only edits other files skips the CVM upload intentionally. If a push events run shows "Upload assets to CVM CDN — skipped", check the validate job's diff decision before assuming the file shipped.
 
 ### 4.2 Choosing `cdnAsset()` vs `localAsset()`
 
@@ -185,6 +199,8 @@ The per-subpackage `manualChunks` rule in `apps/mini-program/config/miniProgramC
 - [ ] Loaded via `cdnAsset('/assets/<dir>/file.ext')`
 - [ ] `npm run upload:cdn-assets` pushed the file (or the `Upload CDN Assets` workflow ran)
 - [ ] CDN URL returns HTTP 200
+- [ ] If it is an icon-system mapping: bundle file committed **and** manifest entry added before merge
+      (§4.7; `npm run guardrails` blocks otherwise), and the CDN URL verified with a HEAD request
 
 ### After changing a URL utility (`cdnAsset`, `localAsset`, persistent cache)
 
