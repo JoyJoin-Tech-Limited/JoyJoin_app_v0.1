@@ -129,7 +129,8 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
+       (github.event.workflow_run.event == 'push' ||
+        github.event.workflow_run.event == 'workflow_dispatch') &&
        github.event.workflow_run.head_branch == 'main' &&
        needs.check-mini-program-changes.outputs.changed == 'true') ||
       (github.event_name == 'workflow_dispatch' &&
@@ -275,11 +276,16 @@ jobs:
   # commit; transient SSH failures are retried, while miniprogram-ci itself is
   # intentionally single-attempt. Compiled-output verification now runs in the
   # push build (fail-fast), so this job only uploads.
+  # Note: `event == 'push' || 'workflow_dispatch'` — a manually dispatched
+  # staging deploy is the same explicit-intent signal (2026-10-14: the intent
+  # icons 开发版 upload was blocked for ~40 min because a dispatch-approved
+  # staging success didn't satisfy the push-only gating).
   upload-weapp:
     if: >-
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
+       (github.event.workflow_run.event == 'push' ||
+        github.event.workflow_run.event == 'workflow_dispatch') &&
        github.event.workflow_run.head_branch == 'main' &&
        needs.check-mini-program-changes.outputs.changed == 'true') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.should_upload == 'true')
