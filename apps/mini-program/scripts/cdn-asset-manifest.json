@@ -1275,6 +1275,162 @@
       "cdnPath": "assets/icons/flow-icons/flow-7.webp"
     },
     {
+      "localPath": "assets/icons/info-labels/label-calendar.webp",
+      "cdnPath": "assets/icons/info-labels/label-calendar.webp"
+    },
+    {
+      "localPath": "assets/icons/info-labels/label-people.webp",
+      "cdnPath": "assets/icons/info-labels/label-people.webp"
+    },
+    {
+      "localPath": "assets/icons/info-labels/label-target.webp",
+      "cdnPath": "assets/icons/info-labels/label-target.webp"
+    },
+    {
+      "localPath": "assets/icons/info-labels/label-cityscape.webp",
+      "cdnPath": "assets/icons/info-labels/label-cityscape.webp"
+    },
+    {
+      "localPath": "assets/icons/info-labels/label-map.webp",
+      "cdnPath": "assets/icons/info-labels/label-map.webp"
+    },
+    {
+      "localPath": "assets/icons/info-labels/label-globe-asia.webp",
+      "cdnPath": "assets/icons/info-labels/label-globe-asia.webp"
+    },
+    {
+      "localPath": "assets/icons/info-labels/label-globe-meridians.webp",
+      "cdnPath": "assets/icons/info-labels/label-globe-meridians.webp"
+    },
+    {
+      "localPath": "assets/icons/info-labels/label-airplane.webp",
+      "cdnPath": "assets/icons/info-labels/label-airplane.webp"
+    },
+    {
+      "localPath": "assets/icons/mood-icons/mood-funny.webp",
+      "cdnPath": "assets/icons/mood-icons/mood-funny.webp"
+    },
+    {
+      "localPath": "assets/icons/mood-icons/mood-life.webp",
+      "cdnPath": "assets/icons/mood-icons/mood-life.webp"
+    },
+    {
+      "localPath": "assets/icons/mood-icons/mood-relaxed.webp",
+      "cdnPath": "assets/icons/mood-icons/mood-relaxed.webp"
+    },
+    {
+      "localPath": "assets/icons/mood-icons/mood-emotional.webp",
+      "cdnPath": "assets/icons/mood-icons/mood-emotional.webp"
+    },
+    {
+      "localPath": "assets/icons/intent-icons/intent-friends.webp",
+      "cdnPath": "assets/icons/intent-icons/intent-friends.webp"
+    },
+    {
+      "localPath": "assets/icons/intent-icons/intent-networking.webp",
+      "cdnPath": "assets/icons/intent-icons/intent-networking.webp"
+    },
+    {
+      "localPath": "assets/icons/intent-icons/intent-discussion.webp",
+      "cdnPath": "assets/icons/intent-icons/intent-discussion.webp"
+    },
+    {
+      "localPath": "assets/icons/intent-icons/intent-fun.webp",
+      "cdnPath": "assets/icons/intent-icons/intent-fun.webp"
+    },
+    {
+      "localPath": "assets/icons/intent-icons/intent-explore.webp",
+      "cdnPath": "assets/icons/intent-icons/intent-explore.webp"
+    },
+    {
+      "localPath": "assets/icons/intent-icons/intent-romance.webp",
+      "cdnPath": "assets/icons/intent-icons/intent-romance.webp"
+    },
+    {
+      "localPath": "assets/icons/intent-icons/intent-flexible.webp",
+      "cdnPath": "assets/icons/intent-icons/intent-flexible.webp"
+    },
+    {
+      "localPath": "assets/icons/category-icons/category-food.webp",
+      "cdnPath": "assets/icons/category-icons/category-food.webp"
+    },
+    {
+      "localPath": "assets/icons/category-icons/category-play.webp",
+      "cdnPath": "assets/icons/category-icons/category-play.webp"
+    },
+    {
+      "localPath": "assets/icons/category-icons/category-sports.webp",
+      "cdnPath": "assets/icons/category-icons/category-sports.webp"
+    },
+    {
+      "localPath": "assets/icons/category-icons/category-culture.webp",
+      "cdnPath": "assets/icons/category-icons/category-culture.webp"
+    },
+    {
+      "localPath": "assets/icons/category-icons/category-life.webp",
+      "cdnPath": "assets/icons/category-icons/category-life.webp"
+    },
+    {
+      "localPath": "assets/icons/category-icons/category-growth.webp",
+      "cdnPath": "assets/icons/category-icons/category-growth.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-crown.webp",
+      "cdnPath": "assets/icons/status-icons/status-crown.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-waiting.webp",
+      "cdnPath": "assets/icons/status-icons/status-waiting.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-info.webp",
+      "cdnPath": "assets/icons/status-icons/status-info.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-alarm-clock.webp",
+      "cdnPath": "assets/icons/status-icons/status-alarm-clock.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-megaphone.webp",
+      "cdnPath": "assets/icons/status-icons/status-megaphone.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-bar-chart.webp",
+      "cdnPath": "assets/icons/status-icons/status-bar-chart.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-warning.webp",
+      "cdnPath": "assets/icons/status-icons/status-warning.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-prohibited.webp",
+      "cdnPath": "assets/icons/status-icons/status-prohibited.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-bell.webp",
+      "cdnPath": "assets/icons/status-icons/status-bell.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-unlocked.webp",
+      "cdnPath": "assets/icons/status-icons/status-unlocked.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-star.webp",
+      "cdnPath": "assets/icons/status-icons/status-star.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-close.webp",
+      "cdnPath": "assets/icons/status-icons/status-close.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-check.webp",
+      "cdnPath": "assets/icons/status-icons/status-check.webp"
+    },
+    {
+      "localPath": "assets/icons/status-icons/status-mirror.webp",
+      "cdnPath": "assets/icons/status-icons/status-mirror.webp"
+    },
+    {
       "localPath": "assets/profile-pixel/archetypes/corgi/base-v1.webp",
       "cdnPath": "assets/profile-pixel/archetypes/corgi/base-v1.webp"
     },
