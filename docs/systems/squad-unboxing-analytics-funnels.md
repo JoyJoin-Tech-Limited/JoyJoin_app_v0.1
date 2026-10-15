@@ -4,7 +4,18 @@
 > Event union: `apps/mini-program/src/lib/analytics/squadUnboxingAnalytics.ts`.
 > Server whitelist: `apps/server/src/routes/domains/analytics.ts`
 > (`squadUnboxingAnalyticsRoutes.test.ts` locks the accepted set).
-> Last updated: 2026-08-07 (native share event `squad_unboxing_card_shared` added).
+> Last updated: 2026-10-14 (polish pass — `whos_coming_view` added;
+> `card_flip` payload extended; PRD `docs/design/squad-unboxing-polish-prd-20261014.md`).
+
+## 0. Exploration KPIs (2026-10-14 polish pass)
+
+| Metric | Definition | Target |
+| --- | --- | --- |
+| First-flip latency | median `card_flip.msSinceDealSettled` (method=tap, first per session) | ≤ 5s |
+| Reveal-all bypass rate | `reveal_all_tap.remainingCount = 5` ÷ all reveal-all taps (6-member tables) | ≤ 25% |
+| Per-card flip rate | `flippedByTap ÷ (flippedByTap + flippedByRevealAll)` from `all_revealed` | ≥ 60% |
+| Explored confirm | sessions with ≥4 tap-flips AND `confirm_attendance_success` ÷ all confirms | baseline → trend |
+| Tease A/B | `teaseVariant` on every `card_flip` / `all_revealed` (gold / progress-N / diagnosis / base / legacy) | attribution only |
 
 ## 1. Primary funnel (first visit)
 
@@ -15,10 +26,16 @@ box/ribbon open            squad_unboxing_box_tap (source=box) | squad_unboxing_
 reveal milestone           squad_unboxing_box_open_milestone
         │
         ▼
-face-down fan game         squad_unboxing_card_flip { method, index, isBestPartner, groupId, screen }
+face-down fan game         squad_unboxing_card_flip { method, index, isBestPartner, msSinceDealSettled,
+        │                     teaseVariant, groupId, screen }
         │                     • method=auto_me   — 我 card auto-flip ~300ms after deal settle (arrival guard)
         │                     • method=tap       — one-step flip+focus+narration
         │                     • method=reveal_all — burst from the hint chip
+        │                     • msSinceDealSettled — deal-settle → flip latency (0 before settle); the
+        │                       first-flip-latency KPI reads the min per session
+        │                     • teaseVariant — the resting-bubble pool line displayed when the flip fired
+        │                       (gold / progress-4..1 / diagnosis / base; `legacy` when the Tease V2
+        │                       flag is off) — A/B attribution for the 2026-10-14 copy pool
         │
         ├── per focus swap    squad_unboxing_card_focus { source: 'deck_tap', cardIndex,
         │                       focusedUserId, previousIndex, groupId, screen }
@@ -26,7 +43,8 @@ face-down fan game         squad_unboxing_card_flip { method, index, isBestPartn
         ├── reveal-all chip   squad_unboxing_reveal_all_tap { remainingCount, groupId, screen }
         │
         ▼
-completion (single-fire)   squad_unboxing_all_revealed { flippedByTap, flippedByRevealAll, durationMs }
+completion (single-fire)   squad_unboxing_all_revealed { flippedByTap, flippedByRevealAll, durationMs,
+        │                                                teaseVariant }
         │
         ▼
 attendance CTA             squad_unboxing_confirm_attendance_tap
@@ -39,6 +57,8 @@ share (native 转发)        squad_unboxing_card_shared { groupId, screen }
                              from the reveal page (top-right menu). The share
                              card title is 「我在 JoyJoin 开出了这周的同频桌友」
                              and the path lands recipients on `/pages/index/index?source=squad-unboxing-share`.
+                             The 桌卡 poster footer now embeds the referral
+                             mini-program code (2026-10-14, fail-open).
 ```
 
 `squad_unboxing_all_revealed` fires **exactly once per session** — on whichever
@@ -54,6 +74,7 @@ wall-clock from deal-settle to completion, not animation time.
 | `squad_unboxing_bubble_reveal_complete` | TypewriterText finishes a narration beat |
 | `squad_unboxing_scroll_depth` | Scroll-depth buckets (reset per groupId) |
 | `squad_unboxing_tonights_table_view` | Event-brief chapter impression |
+| `squad_unboxing_whos_coming_view` | who's-coming 摘要行 impression (2026-10-14 PRD D15/E20) — 「N 位同桌 · 年龄带 · 化学词的一桌」; fires in the same single-fire effect as `tonights_table_view` (first reveal per group, gated on dealSettled) |
 | `squad_unboxing_connection_story_expand` / `_collapse` | Connection-story chips in the analysis chapter |
 | `squad_unboxing_share_poster_tap` | 截图保存记忆 CTA (toast-based; superseded by the 桌卡 poster pipeline below). The toast itself points users at the native 转发 menu — that follow-through is measured by `squad_unboxing_card_shared` in the primary funnel above. |
 | `squad_unboxing_analysis_retry_tap` | Group-analysis fetch retry |
@@ -112,11 +133,17 @@ rows (focus-dismiss) as distinct semantics.
   (`reveal_all_tap`, `card_flip`, `all_revealed`) plus `card_detail_dismiss`,
   the two pocket-deck events (`deck_collapse`, `deck_reopen`), the three
   table-card poster events (`table_card_tap`, `table_card_saved`,
-  `table_card_save_failed`), and the native share event (`card_shared`), and
+  `table_card_save_failed`), the native share event (`card_shared`), and
+  `whos_coming_view` (2026-10-14), and
   rejects unknown types
   (`apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts`).
 - `all_revealed` single-fire semantics (both completion paths, no re-entry
-  fire) are unit-tested in `squadFlipState.test.ts`.
+  fire) are unit-tested in `squadFlipState.test.ts`; the `card_flip` payload
+  carries `msSinceDealSettled` (0 before deal settle) locked there too.
+- Tease V2 pool selection priority (gold → progress → diagnosis → base,
+  fail-closed) is unit-tested in `squadUnboxingViewModels.test.ts`; the
+  controller wiring (`squadUnboxingTeaseV2Enabled` gate, `teaseVariantRef`
+  injection) is source-locked in `useSquadUnboxingController.test.ts`.
 - `card_detail_dismiss` is emitted exactly once in page source — inside the
   resolver's `dismiss` branch (`composition.test.ts` lock).
 - Deck-phase timing budgets (fold ≤600ms cascade, 最佳拍档 last; unfold ≤480ms),

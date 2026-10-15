@@ -19,6 +19,11 @@ interface SquadUnboxingAnalysisBubbleProps {
   focusedNarrativeModel: FocusedNarrativeModel | null
   showNarrativeDetails: boolean
   tableDiagnosis: SquadDiagnosisSegment[]
+  /** 桌型诊断 footer gate (2026-10-14 PRD A1): the fan-phase locked column
+   *  cannot afford the diagnosis row (~54rpx) — it clipped mid-glyph as the
+   *  designated squeeze victim. Page passes `deckPhase !== 'fan'` so the row
+   *  debuts in the relaxed post-fold column, mirroring the 桌卡 gate. */
+  showDiagnosis: boolean
   aigcMeta?: AIGCMeta
   onVerdictComplete: () => void
 }
@@ -35,6 +40,7 @@ export default function SquadUnboxingAnalysisBubble({
   focusedNarrativeModel,
   showNarrativeDetails,
   tableDiagnosis,
+  showDiagnosis,
   aigcMeta,
   onVerdictComplete,
 }: SquadUnboxingAnalysisBubbleProps) {
@@ -116,13 +122,17 @@ export default function SquadUnboxingAnalysisBubble({
                   showCursor={false}
                   // BUG B (2026-07-28): clamp the narration so a long
                   // member intro can never spill over the 桌卡 strip
-                  // in the locked revealed column. 2026-08-19: the
-                  // budget tightened 4 → 3 lines — the fan-phase
-                  // column only has ~563rpx (bubble + event panel),
-                  // and the auto-pocket handoff below unfolds the
-                  // relaxed column where the transition line + 桌卡
-                  // debut instead of being born clipped.
-                  numberOfLines={3}
+                  // in the locked revealed column.
+                  // 2026-08-19 the budget tightened 4 → 3 lines.
+                  // 2026-10-15 correction: `numberOfLines` is an alipay-only
+                  // Taro prop (inert on WeChat + H5 — it was silently dropped
+                  // by the spread, so long narration was hard-cut mid-glyph),
+                  // so the real clamp now lives in index.scss
+                  // (`-webkit-line-clamp`). The group voice gets 4 lines —
+                  // the 2026-10-15 fold-state budget (soul paragraph + 桌卡 +
+                  // full panel against a non-scrolling column) only ellipsizes
+                  // the rare 3-leg buildSquadSoulBubbleText worst case.
+                  numberOfLines={4}
                   onComplete={() => {
                     squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
                       groupId,
@@ -142,8 +152,11 @@ export default function SquadUnboxingAnalysisBubble({
           {/* 桌型诊断 (2026-07-24 P0/P2): deterministic role mix, shown
               only under the GROUP voice (tease/burst/soul) — hidden
               while the bubble narrates a single member. Lives inside
-              the bubble footer to keep the vertical budget honest. */}
-          {tableDiagnosis.length > 0 && bubbleNarration?.kind !== 'member' ? (
+              the bubble footer to keep the vertical budget honest.
+              2026-10-14 (PRD A1): also gated to the relaxed post-fold
+              column — inside the locked fan column it rendered half-cut
+              (the「这桌…」sliver incident). */}
+          {showDiagnosis && tableDiagnosis.length > 0 && bubbleNarration?.kind !== 'member' ? (
             <View
               className='squad-unboxing__diagnosis'
               aria-label={`这桌配置：${tableDiagnosis.map((segment) => `${segment.count}个${segment.label}`).join('，')}`}

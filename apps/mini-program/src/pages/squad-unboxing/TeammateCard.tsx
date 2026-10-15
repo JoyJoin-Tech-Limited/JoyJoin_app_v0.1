@@ -10,6 +10,24 @@ import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetyp
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { haptics } from '../../lib/utils/haptics'
 import { buildFaceDownCardAriaLabel, buildInterestHookText, getPairChemistryTier, getSelfSquadRoleLabel, shortenConnectionPointForPill } from './squadUnboxingViewModels'
+import { CHEMISTRY_TIER_EMOJI, type ChemistryType } from '../../lib/utils/pairChemistry'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+
+// Static class lookup tables (2026-10-14 PRD X2): template-interpolated class
+// names are invisible to the class-coverage guardrail — the original
+// `--back-${tier}` emission shipped with zero CSS for two months. Static
+// literals keep every emitted class greppable and gate-checked.
+const BACK_TIER_CLASS: Record<ChemistryType, string> = {
+  fire: 'squad-unboxing__deck-card-face--back-fire',
+  warm: 'squad-unboxing__deck-card-face--back-warm',
+  mild: 'squad-unboxing__deck-card-face--back-mild',
+  cold: 'squad-unboxing__deck-card-face--back-cold',
+}
+
+const BACK_FOIL_RARITY_CLASS: Record<'rare' | 'epic', string> = {
+  rare: 'squad-unboxing__deck-card-face--back-rare',
+  epic: 'squad-unboxing__deck-card-face--back-epic',
+}
 
 export interface TeammateCardProps {
   member: PoolGroupMemberSummary
@@ -59,6 +77,8 @@ export interface TeammateCardProps {
   /** Front art finished loading (avatar or archetype image) — feeds the
    *  page-level flip hold-to-onLoad gate (2026-07-24 P1). */
   onArtLoad?: (userId: string) => void
+  /** Full roster size (pre-fan-cap) — drives the back-face 「No.02/06」 serial. */
+  totalCount: number
   onTap: () => void
   onLongPress: () => void
 }
@@ -126,6 +146,7 @@ function getGenderGlyph(gender?: string | null): string {
 export default function TeammateCard({
   member,
   viewerPair,
+  index,
   focused,
   isCurrentUser,
   isBestPartner,
@@ -144,6 +165,7 @@ export default function TeammateCard({
   pocketGlowActive = false,
   slowFlipActive = false,
   onArtLoad,
+  totalCount,
   onTap,
   onLongPress,
 }: TeammateCardProps) {
@@ -201,6 +223,13 @@ export default function TeammateCard({
     () => getPairChemistryTier(viewerPair?.chemistryScore),
     [viewerPair],
   )
+  // Back-foil rarity echo (2026-10-14 PRD B9): the card's strongest (first)
+  // connection point's rarity raises the back foil's lustre — spoiler-safe
+  // scarcity signaling from governed data, never invented.
+  const backRarity = useMemo((): 'rare' | 'epic' | null => {
+    const rarity = viewerPair?.connectionPointsWithRarity?.[0]?.rarity
+    return rarity === 'rare' || rarity === 'epic' ? rarity : null
+  }, [viewerPair])
   // Self role badge (2026-07-24 self-relevance pass): the 我 card names what
   // the viewer brings to the table ("气氛担当"), top-left — the one corner
   // never covered by a neighbour.
@@ -327,11 +356,18 @@ export default function TeammateCard({
   const accent = useMemo(() => {
     const hsl = getArchetypeHSL(archetypeId)
     return {
-      borderColor: formatHSLAsRGBA(hsl, 0.55),
+      // 2026-10-14 (PRD B7): frame alpha 0.55→0.72 — at 2rpx the old value
+      // was imperceptible on face-down cards; the archetype frame now reads
+      // as a real collectible edge in the resting fan.
+      borderColor: formatHSLAsRGBA(hsl, 0.72),
       shadow: formatHSLAsRGBA(hsl, 0.22),
       edgeHighlight: formatHSLAsRGBA({ ...hsl, l: Math.min(100, hsl.l + 22) }, 0.6),
       artStart: formatHSLAsRGBA({ ...hsl, l: Math.min(100, hsl.l + 30) }, 0.5),
       artEnd: formatHSLAsRGBA(hsl, 0.16),
+      // 原型色相耳语 (2026-10-14 PRD B7): the back lattice's top glow whispers
+      // the member's archetype hue — every back reads as a different person
+      // without leaking identity. 0.18 alpha stays under the purple base.
+      hueWhisper: formatHSLAsRGBA({ ...hsl, l: Math.min(100, hsl.l + 18) }, 0.18),
     }
   }, [archetypeId])
 
@@ -435,20 +471,29 @@ export default function TeammateCard({
             BrandLogo sizes via inline rpx, which the H5 postcss pass drops →
             the back logo collapsed to a broken-image glyph in H5 (A8).
 
-            Variable-reward design (2026-07-24): backs are NOT uniform — each
-            back's edge tint carries the pair chemistry tier (fire/warm pink,
-            mild purple, cold quiet) so every flip is a differently-priced
-            bet BEFORE the reveal (盲盒心理: partial information pre-flip).
-            No identity text on any back; the 最佳拍档 gold tease still wins. */}
+            Variable-reward design (2026-07-24, CSS landed 2026-10-14): backs
+            are NOT uniform — each back's edge tint carries the pair chemistry
+            tier (fire/warm pink, mild purple, cold quiet) via the static
+            BACK_TIER_CLASS lookup, the archetype hue whisper tints the top
+            glow, and rare/epic pairs raise the foil lustre — every flip is a
+            differently-priced bet BEFORE the reveal (盲盒心理: partial
+            information pre-flip). No identity text on any back; the 最佳拍档
+            gold tease still wins. */}
         <View
           className={[
             'squad-unboxing__deck-card-face',
             'squad-unboxing__deck-card-face--back',
             isBestPartner ? 'squad-unboxing__deck-card-face--back-gold' : '',
-            !isBestPartner && temperatureTier ? `squad-unboxing__deck-card-face--back-${temperatureTier}` : '',
+            !isBestPartner && temperatureTier ? BACK_TIER_CLASS[temperatureTier] : '',
+            !isBestPartner && backRarity ? BACK_FOIL_RARITY_CLASS[backRarity] : '',
           ].filter(Boolean).join(' ')}
         >
           <View className='squad-unboxing__deck-card-back-lattice' aria-hidden='true' />
+          <View
+            className='squad-unboxing__deck-card-back-hue'
+            style={{ background: `radial-gradient(circle at 50% 20%, ${accent.hueWhisper} 0%, rgba(255, 255, 255, 0) 62%)` }}
+            aria-hidden='true'
+          />
           <View className='squad-unboxing__deck-card-back-foil' />
           <View className='squad-unboxing__deck-card-back-logo'>
             <Image
@@ -459,11 +504,33 @@ export default function TeammateCard({
               aria-hidden='true'
             />
           </View>
+          {/* 温度图标 (PRD B6): top-left is the one fan corner a neighbour
+              never covers — the pair-chemistry tier reads pre-flip. Gold-back
+              cards skip it (the gold foil already signals the jackpot). */}
+          {!isBestPartner && temperatureTier ? (
+            <View className='squad-unboxing__deck-card-back-tier' aria-hidden='true'>
+              <JoyJoinIcon
+                emoji={CHEMISTRY_TIER_EMOJI[temperatureTier].emoji}
+                size={28}
+                className='squad-unboxing__deck-card-back-tier-icon'
+              />
+            </View>
+          ) : null}
           {overflowBadge > 0 ? (
-            <View className='squad-unboxing__deck-card-meta-chip squad-unboxing__deck-card-meta-chip--overflow squad-unboxing__deck-card-back-overflow'>
+            <View
+              className={[
+                'squad-unboxing__deck-card-meta-chip squad-unboxing__deck-card-meta-chip--overflow squad-unboxing__deck-card-back-overflow',
+                !isBestPartner && temperatureTier ? 'squad-unboxing__deck-card-back-overflow--stacked' : '',
+              ].filter(Boolean).join(' ')}
+            >
               <Text className='squad-unboxing__deck-card-meta-chip-text'>+{overflowBadge}</Text>
             </View>
           ) : null}
+          {/* 收藏编号 (PRD B8): the collection frame signal — bottom-left is
+              the corner this card covers over its neighbour, always visible. */}
+          <Text className='squad-unboxing__deck-card-back-serial' aria-hidden='true'>
+            {`No.${String(index + 1).padStart(2, '0')}/${String(totalCount).padStart(2, '0')}`}
+          </Text>
         </View>
 
         {/* Card front — the rich collectible template. */}

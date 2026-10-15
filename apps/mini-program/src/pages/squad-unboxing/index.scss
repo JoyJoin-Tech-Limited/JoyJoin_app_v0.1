@@ -51,6 +51,7 @@ $fan-rotations: (
     .squad-unboxing__blind-box-card--shaking,
     .squad-unboxing__success-overlay,
     .squad-unboxing__chapter,
+    .squad-unboxing__table-card-teaser,
     .squad-unboxing__expand-body,
     .squad-unboxing__analysis-bubble-inner {
       animation: none !important;
@@ -120,11 +121,18 @@ $fan-rotations: (
       //
       // OPAQUE background with a bottom feather keeps the fixed deck visually
       // separate from the centred story panels beneath it.
+      //
+      // 2026-10-14 (PRD A2): clamp floor 440→460rpx and coefficient 44→46dvh.
+      // The audit measured the focused TOP-ROW card rising ~62rpx past the
+      // stage top on a 640rpx stage (→ −29rpx clip) — the 2026-07-28 row-aware
+      // fix only protected row 2. The taller floor + the gentler first-row
+      // lift (see the dealt ladder) restore full-badge visibility in every
+      // focus state; spacer--revealed below must stay byte-identical.
       flex-direction: column;
       align-items: stretch;
       justify-content: flex-start;
-      height: clamp(440rpx, 44vh, 640rpx);
-      height: clamp(440rpx, 44dvh, 640rpx);
+      height: clamp(460rpx, 46vh, 640rpx);
+      height: clamp(460rpx, 46dvh, 640rpx);
       background: linear-gradient(
         180deg,
         $color-bg-tint-cream 0%,
@@ -183,8 +191,8 @@ $fan-rotations: (
 
     &--revealed {
       // Must match &__stage--revealed exactly (fixed-stage sizing rule).
-      height: clamp(440rpx, 44vh, 640rpx);
-      height: clamp(440rpx, 44dvh, 640rpx);
+      height: clamp(460rpx, 46vh, 640rpx);
+      height: clamp(460rpx, 46dvh, 640rpx);
     }
 
     &--composed {
@@ -374,7 +382,26 @@ $fan-rotations: (
   &__scroll--revealed &__scroll-inner {
     height: 100%;
     min-height: 0;
-    @include fixed-footer-reserve(184rpx, $spacing-sm);
+    // 2026-10-15 (visual validation): the reserve must cover the TALLEST dock.
+    // In fan states the dock stacks the reveal/fold chip above the confirm CTA
+    // (measured 256rpx incl. its paddings); the previous 184rpx left the last
+    // ~29px of the column — the panel's bottom padding and its rounded bottom
+    // corners — behind the opaque dock. Pocketed states (CTA only) now keep
+    // extra slack as a result; that is the cheaper failure mode.
+    @include fixed-footer-reserve(244rpx, $spacing-sm);
+  }
+
+  // 2026-10-15 (visual validation): the reserve tracks the dock that is actually
+  // on screen. Folded states drop the reveal/fold chip, so the dock is the CTA
+  // (plus the return thread) alone — for that dock the original 184rpx was
+  // right, while fan states stack the chip above the CTA and need 244rpx. A
+  // single 244rpx reserve cost the folded column the ~42px it needs to fit the
+  // soul paragraph + 桌卡 + the panel's theme row (measured overflow 35px).
+  &__scroll--revealed &__scroll-inner--pocketed {
+    // Folded dock = return thread + CTA only (measured 91px = 175rpx incl. the
+    // dock's own paddings) — reserve exactly that, so the folded column keeps
+    // the ~11px the taller fan reserve was wasting on a chip that is gone.
+    @include fixed-footer-reserve(160rpx, $spacing-sm);
   }
 
   &__scroll-inner {
@@ -407,7 +434,11 @@ $fan-rotations: (
     flex-direction: column;
     justify-content: center;
     gap: $spacing-sm;
-    padding: 0 $container-padding;
+    // 2026-10-14 (PRD A5): the horizontal padding is owned by &__scroll-inner
+    // (40rpx + safe-area). This block previously re-added $container-padding,
+    // double-insetting the revealed column to 80rpx/side — misaligned with the
+    // full-bleed fan (32rpx margins) and force-wrapping the tease one line
+    // early. Column width now matches the fan's 687rpx content band.
   }
 
   // Event-brief panel: always expanded below the Joy bubble. The revealed
@@ -445,6 +476,14 @@ $fan-rotations: (
     @include viewport-min-height;
     padding: 0 $container-padding;
     text-align: center;
+  }
+
+  // Error-state hero (2026-10-14 PRD A-group): the class shipped with no rule
+  // (baseline orphan) — mode='widthFix' without a width rendered the Lovart
+  // art at intrinsic size, able to overflow the viewport. 320rpx keeps it
+  // inside the 750 − 2×40 container.
+  &__error-hero {
+    width: 320rpx;
   }
 
   &__error-actions {
@@ -735,10 +774,19 @@ $fan-rotations: (
 
   &__analysis-bubble-text {
     @include type-body;
-    display: block;
+    // 2026-10-15 fix: the `numberOfLines` prop is an alipay-only Taro prop
+    // (WeChat's native Text uses `maxLines`/`overflow`, and H5 spreads it as an
+    // inert attribute), so the 2026-08-19 「4→3 行 clamp」 was a double no-op —
+    // long narration was hard-cut mid-glyph by the parent's overflow:hidden.
+    // A real CSS clamp restores the graceful 「…」 tail on BOTH platforms; the
+    // box must be -webkit-box for the clamp to take effect.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
     color: $color-text-primary;
     word-break: break-word;
     overflow-wrap: break-word;
+    overflow: hidden;
   }
 
   // Structured 同频分析卡 (2026-07-24 P1) — shipped 2026-07-28; these three
@@ -746,10 +794,16 @@ $fan-rotations: (
   // class-coverage guardrail by a comment-apostrophe extractor desync).
   &__narrative-verdict {
     @include type-body;
-    display: block;
+    // Same clamp rationale as &__analysis-bubble-text (2026-10-15): the focused
+    // verdict is bounded to 3 lines with a real ellipsis so a long pair summary
+    // can never push the evidence row / opener out of the locked column.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
     color: $color-text-primary;
     word-break: break-word;
     overflow-wrap: break-word;
+    overflow: hidden;
   }
 
   &__narrative-evidence {
@@ -814,6 +868,7 @@ $fan-rotations: (
 
   // Chapter cards: fewer, grouped surfaces with surface tints.
   &__chapter {
+    position: relative; // anchor for the corner vignette (2026-10-14)
     border-radius: $card-radius;
     padding: $spacing-md;
     margin-bottom: 0;
@@ -866,10 +921,28 @@ $fan-rotations: (
   // rendered as unstyled full-width blocks with unsized <Image>s — the
   // "giant circles" regression). The on-screen card mirrors the poster:
   // small overlapping head ring + chemistry word · date + save pill.
+  &__table-card-teaser {
+    display: flex;
+    justify-content: center;
+    margin: $spacing-sm 0 0;
+    animation: squad-unboxing-chapter-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &__table-card-teaser-text {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+
   &__table-transition {
     display: flex;
     justify-content: center;
-    margin: $spacing-md 0 $spacing-sm;
+    // 2026-10-15 (visual validation): the element renders only once the deck has
+    // folded, where it is a flex child of the revealed column that already owns
+    // `gap: $spacing-sm`. The previous margins ($spacing-md 0 $spacing-sm) were
+    // additive, costing the tight folded column ~25px of doubled spacing.
+    margin: 0;
     animation: squad-unboxing-chapter-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
@@ -1026,6 +1099,18 @@ $fan-rotations: (
     border-bottom: 1rpx solid rgba($color-text-primary, 0.06);
   }
 
+  // who's-coming 摘要行 (2026-10-14 PRD D15): count · age band · chemistry —
+  // the "people" note that turns the logistics card into an invitation.
+  &__brief-who {
+    display: block;
+    margin-top: $spacing-md;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+
   &__brief-header-main {
     position: relative;
     z-index: 1;
@@ -1115,11 +1200,15 @@ $fan-rotations: (
   }
 
   &__brief-vignette {
+    // 2026-10-14 (PRD A-group): re-anchored from the pill aside to the
+    // chapter's top-right corner (negative bleed + chapter overflow clip) —
+    // OracleCard corner syntax instead of a floating sticker that crossed the
+    // header divider.
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 160rpx;
-    height: 160rpx;
+    top: -28rpx;
+    right: -28rpx;
+    width: 184rpx;
+    height: 184rpx;
     z-index: 0;
     pointer-events: none;
   }
@@ -1223,6 +1312,16 @@ $fan-rotations: (
   &__meta-highlight-text {
     font-size: $font-size-xs;
     color: $color-text-secondary;
+  }
+
+  // 今晚开场钩子 (2026-10-14 PRD D16): the panel's invitation line.
+  &__meta-hook {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-primary;
+    line-height: 1.6;
+    word-break: keep-all;
   }
 
   // Expandable Connection Story header
@@ -1623,15 +1722,17 @@ $fan-rotations: (
     align-items: center;
     justify-content: flex-end;
     padding-bottom: $spacing-md;
-    // 2026-07-24: uniform fan scale — the dealt fan renders at 85% so the
+    // 2026-07-24: uniform fan scale — the dealt fan renders at 84% so the
     // two-row layout clears BOTH the viewport top edge and the Joy chatbox
     // on ~1450rpx-content devices (iPhone X/11 class). A transform
     // scale (not smaller size maps) keeps the card's fixed-rpx typography
-    // proportional; origin bottom-centre + the translateY lift anchors the
-    // visual fan just above the chatbox. Shadow + back-shimmer live inside
+    // proportional; origin bottom-centre + the small translateY lift anchors
+    // the visual fan just above the chatbox. Shadow + back-shimmer live inside
     // this container, so they stay aligned with the scaled fan. Static
     // (no animation), so reduce-motion needs no override.
-    transform: translateY(-16rpx) scale(0.85);
+    // 2026-10-14 (PRD A2): 0.85→0.84 scale + −16→−8rpx lift buy the focused
+    // top-row card its headroom back (see the dealt-ladder lift comment).
+    transform: translateY(-8rpx) scale(0.84);
     transform-origin: 50% 100%;
 
     &--empty {
@@ -1687,6 +1788,24 @@ $fan-rotations: (
     &--armed {
       animation: squad-unboxing-holo-sweep 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
+  }
+
+  // 契合点光迹 (2026-10-14 PRD A4 revive): the 2026-07-24 flip-trail shipped
+  // with zero CSS — a 0×0 invisible block, so the card→bubble "story flows
+  // there" beat never played. Size/position/animation live here; the inline
+  // style carries the per-flip `left` % and archetype tint. transform/opacity
+  // only, ≤560ms, component-gated (never instant tiers; RM killed).
+  &__flip-trail {
+    position: absolute;
+    top: 42%;
+    width: 120rpx;
+    height: 120rpx;
+    margin-left: -60rpx;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 7;
+    opacity: 0;
+    animation: squad-unboxing-flip-trail 0.56s cubic-bezier(0.33, 1, 0.68, 1) forwards;
   }
 
   // ── The fan ───────────────────────────────────────────────────────────────
@@ -1751,12 +1870,25 @@ $fan-rotations: (
             transform: translateY(0) rotate(#{$rot}deg) scale(1);
           }
 
+          // 2026-10-14 (PRD A2): first-row lift softened from −40/1.1 — the
+          // audit measured the top-row focused card clipping ~29rpx above the
+          // 640rpx stage (badge row sliced). −12/1.07 keeps straighten +
+          // grow + shadow as the lift cues; the badge row stays visible on
+          // every device class.
           .squad-unboxing__deck-card.squad-unboxing__deck-card--focused-lift:nth-child(#{$i}) {
-            transform: translateY(-40rpx) rotate(0deg) scale(1.1);
+            transform: translateY(-12rpx) rotate(0deg) scale(1.07);
           }
 
           .squad-unboxing__deck-card.squad-unboxing__deck-card--focused-lift-deg:nth-child(#{$i}) {
-            transform: translateY(-16rpx) rotate(0deg) scale(1.05);
+            transform: translateY(-8rpx) rotate(0deg) scale(1.04);
+          }
+
+          // Press-and-hold anticipation tilt (PRD A4 revive): the gacha
+          // "almost" beat — +3° over the row pose, slight rise + grow. Same
+          // (0,5,0) rung, placed after the focus rules (face-down only, so the
+          // two can never co-occur) and before --pocketing (which wins ties).
+          .squad-unboxing__deck-card.squad-unboxing__deck-card--anticipating:nth-child(#{$i}) {
+            transform: translateY(-6rpx) rotate(#{$rot + 3}deg) scale(1.02);
           }
         }
       }
@@ -1907,12 +2039,62 @@ $fan-rotations: (
       background: linear-gradient(145deg, $color-primary 0%, $color-primary-dark 100%);
     }
 
-    // Best-partner tease (AC-06): the ONLY non-uniform back — a warm gold
-    // foil edge. No identity text; the tease is purely chromatic.
+    // Best-partner tease (AC-06): the gold foil edge — the deck's jackpot
+    // tease. No identity text; the tease is purely chromatic.
+    // 2026-10-14 token unification: the literal gold (232,193,108) is retired
+    // for the canonical $color-landed-gold so back / sheen / pocket-glow read
+    // as one material.
     &--back-gold {
       box-shadow:
-        inset 0 0 0 2rpx rgba(232, 193, 108, 0.85),
-        inset 0 0 18rpx rgba(232, 193, 108, 0.35);
+        inset 0 0 0 2rpx rgba($color-landed-gold, 0.85),
+        inset 0 0 18rpx rgba($color-landed-gold, 0.35);
+    }
+
+    // ── Variable-reward back band (2026-10-14 PRD A3) ───────────────────────
+    // The tier-tinted edge shipped as a TSX class emission on 2026-07-24 with
+    // NO matching CSS — every back rendered pixel-identical for two months
+    // (template-interpolated class names are invisible to the class-coverage
+    // gate; the emission is now a static lookup, BACK_TIER_CLASS). These four
+    // rules are the exploration-yes lever: each pair's chemistry tier reads
+    // pre-flip as its own edge temperature.
+    &--back-fire {
+      box-shadow:
+        inset 0 0 0 2rpx rgba(255, 138, 110, 0.78),
+        inset 0 0 22rpx rgba(255, 138, 110, 0.3);
+    }
+
+    &--back-warm {
+      box-shadow:
+        inset 0 0 0 2rpx rgba(255, 138, 178, 0.72),
+        inset 0 0 22rpx rgba(255, 138, 178, 0.26);
+    }
+
+    &--back-mild {
+      box-shadow:
+        inset 0 0 0 2rpx rgba(167, 139, 250, 0.72),
+        inset 0 0 22rpx rgba(167, 139, 250, 0.26);
+    }
+
+    &--back-cold {
+      box-shadow:
+        inset 0 0 0 2rpx rgba(148, 163, 184, 0.66),
+        inset 0 0 22rpx rgba(148, 163, 184, 0.22);
+    }
+
+    // Rarity foil echo (PRD B9): rare/epic pairs raise the back foil's
+    // lustre — scarcity reads pre-flip without naming anything.
+    &--back-rare {
+      .squad-unboxing__deck-card-back-foil {
+        border-color: rgba($color-surface, 0.78);
+        background: linear-gradient(135deg, rgba($color-surface, 0.58) 0%, rgba($color-surface, 0) 48%);
+      }
+    }
+
+    &--back-epic {
+      .squad-unboxing__deck-card-back-foil {
+        border-color: rgba($color-surface, 0.92);
+        background: linear-gradient(135deg, rgba($color-surface, 0.72) 0%, rgba($color-surface, 0.08) 44%, rgba($color-surface, 0.46) 100%);
+      }
     }
 
     &--front {
@@ -1935,6 +2117,17 @@ $fan-rotations: (
       radial-gradient(circle at 50% 32%, rgba($color-surface, 0.32) 0%, rgba($color-surface, 0) 58%),
       repeating-linear-gradient(45deg, rgba($color-surface, 0.13) 0rpx, rgba($color-surface, 0.13) 2rpx, rgba($color-surface, 0) 2rpx, rgba($color-surface, 0) 16rpx),
       repeating-linear-gradient(-45deg, rgba($color-surface, 0.11) 0rpx, rgba($color-surface, 0.11) 2rpx, rgba($color-surface, 0) 2rpx, rgba($color-surface, 0) 16rpx);
+  }
+
+  // 逐卡格纹相位差 (2026-10-14 PRD B8): per-child background-position shifts so
+  // no two backs are pixel-identical — a "different pack" read with zero data
+  // dependency and zero paint cost (static positions, never animated).
+  &__deck-card:nth-child(2n) &__deck-card-back-lattice {
+    background-position: 6rpx 4rpx, 14rpx 10rpx, 4rpx 12rpx;
+  }
+
+  &__deck-card:nth-child(3n) &__deck-card-back-lattice {
+    background-position: -8rpx 6rpx, 22rpx 4rpx, 10rpx 18rpx;
   }
 
   // Premium card-back: foil edge sheen + centred logo mark. C3: sheen +
@@ -1961,13 +2154,62 @@ $fan-rotations: (
     height: 74rpx;
   }
 
+  // 原型色相耳语 (2026-10-14 PRD B7): a top-glow overlay whose colour is the
+  // member's archetype hue (inline radial gradient, 0.18 alpha). Every back
+  // whispers a different flavour without leaking any identity text.
+  &__deck-card-back-hue {
+    position: absolute;
+    inset: 0;
+    border-radius: $card-radius;
+    pointer-events: none;
+  }
+
+  // 温度图标 chip (PRD B6): top-left is the one fan corner a neighbour never
+  // covers — the pair-chemistry tier icon reads pre-flip. 44rpx quiet disc;
+  // gold-back cards skip it (component gate).
+  &__deck-card-back-tier {
+    position: absolute;
+    left: $spacing-sm;
+    top: $spacing-sm;
+    z-index: 3;
+    width: 44rpx;
+    height: 44rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.2);
+    border: 1rpx solid rgba($color-surface, 0.36);
+    @include flex-center;
+  }
+
+  &__deck-card-back-tier-icon {
+    width: 28rpx;
+    height: 28rpx;
+  }
+
+  // 收藏编号 (PRD B8): bottom-left is the corner every card covers over its
+  // left neighbour — always legible, and it never touches the covered band.
+  &__deck-card-back-serial {
+    position: absolute;
+    left: $spacing-sm;
+    bottom: 12rpx;
+    z-index: 3;
+    font-family: $font-mono;
+    font-size: 18rpx;
+    letter-spacing: 0.06em;
+    color: rgba($color-surface, 0.72);
+  }
+
   // Overflow "+N" chip mirrored on the back of the last visible card (AC-10):
-  // the count is visible whether the card is face-up or face-down.
+  // the count is visible whether the card is face-up or face-down. --stacked
+  // drops it below the 温度图标 chip when both occupy the same corner.
   &__deck-card-back-overflow {
     position: absolute;
     left: $spacing-sm;
     top: $spacing-sm;
     z-index: 3;
+
+    &--stacked {
+      top: 68rpx;
+    }
   }
 
   // Per-card flip sheen (AC-08): a transform-only band across the freshly
@@ -2010,6 +2252,14 @@ $fan-rotations: (
     transform: rotateY(180deg);
   }
 
+  // 最佳拍档 slow reveal (2026-10-14 PRD A4 revive): the 2026-07-24 class
+  // shipped with ZERO CSS — the jackpot flip has been running at the standard
+  // 340ms since. At 0.6× (≈570ms) the gold moment earns its own tempo.
+  // Motion tiers only (component gates slowFlipActive on !instant).
+  &__deck-card--slow-flip &__deck-card-inner {
+    transition-duration: 0.57s;
+  }
+
   &__deck-card--reduce-motion,
   &__deck-card--degradation {
     .squad-unboxing__deck-card-inner {
@@ -2036,14 +2286,17 @@ $fan-rotations: (
     left: $spacing-sm;
     top: $spacing-sm;
     z-index: 3;
-    min-width: 40rpx;
-    height: 40rpx;
+    min-width: 36rpx;
+    height: 36rpx;
     padding: 0 $spacing-xs;
     box-sizing: border-box;
     border-radius: 999rpx;
     background: $color-primary-dark;
     @include flex-center;
     box-shadow: 0 4rpx 12rpx rgba($color-primary-dark, 0.32);
+    // PRD B10: shrinkable — the 我+role pair must fit the covered-band-safe
+    // width on 7–8-card (190rpx) layouts.
+    flex-shrink: 0;
 
     // Inside the front-face badge row it flows next to the meta chip instead
     // of being absolutely positioned.
@@ -2056,25 +2309,36 @@ $fan-rotations: (
   // (气氛担当/深度担当/暖心担当) flows in the top-left badge row next to the
   // 我 marker — top-left is the one corner a neighbour never covers. Quiet
   // outline pill so it supports the solid 我 badge instead of competing.
+  // 2026-10-14 (PRD B10): 40→36rpx height, 18rpx text, ellipsis-capable —
+  // on narrow cards the role badge was the row's overflow point.
   &__deck-card-role-badge {
-    height: 40rpx;
-    padding: 0 $spacing-sm;
+    height: 36rpx;
+    padding: 0 12rpx;
     box-sizing: border-box;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.86);
     border: 1rpx solid rgba($color-primary, 0.32);
     @include flex-center;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   &__deck-card-role-badge-text {
-    font-size: $font-size-2xs;
+    font-size: 18rpx;
     font-weight: $font-weight-semibold;
     color: $color-primary-dark;
     letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 108rpx;
   }
 
   // Front-face top-left badge row: 我 marker + +N overflow chip. Top-left
   // is the one corner never covered by a neighbour in the fan.
+  // 2026-10-14 (PRD B10): capped at the covered-band-safe width (100% −
+  // $fan-safe-inset) so on 7–8-card layouts the row can never slide under the
+  // right neighbour; the role badge ellipsizes inside the cap.
   &__deck-card-badges {
     position: absolute;
     left: $spacing-sm;
@@ -2083,6 +2347,7 @@ $fan-rotations: (
     display: flex;
     align-items: center;
     gap: $spacing-xs;
+    max-width: calc(100% - #{$fan-safe-inset});
   }
 
   // Overflow "+N" chip (hidden tablemates beyond the fan cap). Also used to
@@ -2165,6 +2430,10 @@ $fan-rotations: (
     // balloons to fill it and overpower the card information.
     width: 120rpx;
     height: 120rpx;
+    // 2026-10-14 (PRD B10): nudge the portrait down 10rpx so the top-left
+    // badge row (我 + 气氛担当) sits on the art above the circle instead of
+    // crowding its top arc — sticker-on-card layering, not collision.
+    transform: translateY(10rpx);
 
     &--avatar {
       border-radius: $radius-pill;
@@ -2175,6 +2444,7 @@ $fan-rotations: (
   &__deck-card-placeholder {
     width: 120rpx;
     height: 120rpx;
+    transform: translateY(10rpx);
   }
 
   // Focused-card caption (2026-07-16 PM): education · industry rendered as an
@@ -2824,10 +3094,10 @@ $fan-rotations: (
     pointer-events: none;
     border-radius: $card-radius;
     opacity: 0;
-    background: radial-gradient(circle at 50% 42%, rgba(232, 193, 108, 0.26) 0%, rgba(232, 193, 108, 0) 68%);
+    background: radial-gradient(circle at 50% 42%, rgba($color-landed-gold, 0.26) 0%, rgba($color-landed-gold, 0) 68%);
     box-shadow:
-      inset 0 0 0 2rpx rgba(232, 193, 108, 0.9),
-      0 0 36rpx rgba(232, 193, 108, 0.5);
+      inset 0 0 0 2rpx rgba($color-landed-gold, 0.9),
+      0 0 36rpx rgba($color-landed-gold, 0.5);
 
     &--active {
       animation: squad-unboxing-pocket-glow 0.56s ease-out forwards;
@@ -2870,6 +3140,41 @@ $fan-rotations: (
   }
 
   &__reveal-chip-text {
+    @include type-body;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  // Manual fold affordance (2026-10-15): the fan phase has no fold control at
+  // all — auto-pocket refuses to arm once any card has been focused (掌控感),
+  // so the tap-by-tap path (the North-star 「有探索的确认」 route) could never
+  // reach the relaxed post-fold column where the theme row / 桌卡 / return
+  // thread live. Same dock chip slot as &__reveal-chip (the two never coexist:
+  // reveal chip needs unflippedCount > 0, this one needs all cards up).
+  &__fold-chip {
+    margin: $spacing-md $spacing-lg $spacing-sm;
+    align-self: center;
+    max-width: 100%;
+    min-height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.06);
+    border: 1rpx solid rgba($color-primary, 0.16);
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.12);
+    }
+  }
+
+  &__fold-chip-text {
     @include type-body;
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
@@ -2926,7 +3231,9 @@ $fan-rotations: (
         position: absolute;
         inset: -6rpx;
         border-radius: inherit;
-        box-shadow: 0 0 24rpx 6rpx rgba($color-primary, 0.35);
+        // 2026-10-14: glow hue matched to the button's primary-dark fill —
+        // the lit moment no longer hue-jumps purple→purple.
+        box-shadow: 0 0 24rpx 6rpx rgba($color-primary-dark, 0.4);
         opacity: 0.2;
         animation: squad-unboxing-confirm-lit 2.4s ease-in-out infinite;
         pointer-events: none;
@@ -3043,6 +3350,65 @@ $fan-rotations: (
     color: $color-text-secondary;
     text-align: center;
     line-height: 1.7;
+  }
+
+  // 邀请奖励到账行 (2026-10-14 PRD E19): seeing that the last invite actually
+  // paid off is the strongest next-invite driver. A quiet tappable pill under
+  // the subtitle — the confirm CTA has already succeeded, so nothing competes.
+  &__success-reward {
+    margin-top: $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-secondary, 0.1);
+    border: 1rpx solid rgba($color-secondary, 0.28);
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-secondary, 0.16);
+    }
+  }
+
+  &__success-reward-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-secondary;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  // 权益回显行 (PRD E19): retention nudge for pack/subscription users —
+  // factual, no count (not client-available), never a purchase surface.
+  &__success-entitlement {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-xs;
+
+    &--pressed {
+      opacity: 0.7;
+    }
+  }
+
+  &__success-entitlement-text {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    line-height: 1.5;
+    text-align: center;
+  }
+}
+
+@keyframes squad-unboxing-flip-trail {
+  0% {
+    opacity: 0;
+    transform: translateY(-12rpx) scale(0.7);
+  }
+
+  30% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(300rpx) scale(1.15);
   }
 }
 
@@ -3308,9 +3674,11 @@ $fan-rotations: (
   .squad-unboxing__deck-back-shimmer,
   .squad-unboxing__deck-card-sheen,
   .squad-unboxing__deck-card-pocket-glow,
+  .squad-unboxing__flip-trail,
   .squad-unboxing__deck-pill,
   .squad-unboxing__pocket-hint,
   .squad-unboxing__table-transition,
+  .squad-unboxing__table-card-teaser,
   .squad-unboxing__table-card,
   .squad-unboxing__tonights-panel {
     animation: none !important;

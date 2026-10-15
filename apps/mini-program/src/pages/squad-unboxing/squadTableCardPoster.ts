@@ -4,8 +4,10 @@
  * Renders a 750×1100 collectible poster on the hidden page canvas using the
  * legacy Taro canvas context API (same pattern as the personality share
  * poster). All member art resolves through CDN URLs — canvas drawImage
- * requires a network-resolvable path. Exports via exportCanvasWithRetry
- * (DPR 2→1 fallback); the caller owns saveImageToPhotosAlbum + toasts.
+ * requires a network-resolvable path. The footer embeds the referral
+ * mini-program code when available (2026-10-14 PRD E18, fail-open copy-only
+ * fallback). Exports via exportCanvasWithRetry (DPR 2→1 fallback); the caller
+ * owns saveImageToPhotosAlbum + toasts.
  */
 
 import Taro from '@tarojs/taro'
@@ -13,6 +15,7 @@ import type { PoolGroupMemberSummary } from '@shared/api'
 import { resolveArchetype } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
+import { fetchShareQrCodeImage } from '../../lib/referral/shareQrCode'
 import {
   fillRoundedRect,
   clipRoundedRect,
@@ -187,9 +190,35 @@ export async function drawSquadTableCardPoster(input: SquadTableCardPosterInput)
   ctx.lineTo(cardX + cardW - 64, cardY + cardH - 128)
   ctx.stroke()
 
-  ctx.setFillStyle(COLOR_PRIMARY)
-  ctx.setFontSize(28)
-  ctx.fillText('今晚见 · JoyJoin', W / 2, cardY + cardH - 96)
+  // 小程序码 (2026-10-14 PRD E18): referral-attributed code turns the poster
+  // from a keepsake into an acquisition asset. Fail-open: flag off / network
+  // error / decode failure → the original copy-only footer renders unchanged.
+  const qrPath = await fetchShareQrCodeImage().catch(() => undefined)
+  const qrResolved = qrPath ? await resolveImagePath(qrPath, 3000) : ''
+  const qrSize = 96
+  const footerCenterY = cardY + cardH - 96
+  if (qrResolved) {
+    const qrX = cardX + cardW - 64 - qrSize
+    const qrY = cardY + cardH - 112
+    const copyCenterX = (cardX + 64 + qrX) / 2
+
+    ctx.setTextAlign('center')
+    ctx.setFillStyle(COLOR_PRIMARY)
+    ctx.setFontSize(28)
+    ctx.fillText('今晚见 · JoyJoin', copyCenterX, footerCenterY - 6)
+    ctx.setFillStyle(COLOR_TEXT_SECONDARY)
+    ctx.setFontSize(20)
+    ctx.fillText('扫码开出你的同桌', copyCenterX, footerCenterY + 30)
+
+    ctx.save()
+    ctx.drawImage(qrResolved, qrX, qrY, qrSize, qrSize)
+    ctx.restore()
+  } else {
+    ctx.setTextAlign('center')
+    ctx.setFillStyle(COLOR_PRIMARY)
+    ctx.setFontSize(28)
+    ctx.fillText('今晚见 · JoyJoin', W / 2, footerCenterY)
+  }
 
   await new Promise<void>((resolve, reject) => {
     const watchdog = setTimeout(() => reject(new Error('canvas draw timeout')), 8000)

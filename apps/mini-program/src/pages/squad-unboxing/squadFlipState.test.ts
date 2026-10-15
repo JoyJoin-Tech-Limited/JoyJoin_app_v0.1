@@ -66,7 +66,9 @@ describe('squadFlipState — flipOne', () => {
     expect(session.getSnapshot().flipDelayById.get('u2')).toBe(0)
     expect(tracked).toHaveLength(1)
     expect(tracked[0].eventType).toBe('squad_unboxing_card_flip')
-    expect(tracked[0].payload).toEqual({ method: 'tap', index: 2, isBestPartner: true })
+    // msSinceDealSettled (2026-10-14 PRD E20): 0 when the deal never settled
+    // (this harness path flips before any notifyDealSettled call).
+    expect(tracked[0].payload).toEqual({ method: 'tap', index: 2, isBestPartner: true, msSinceDealSettled: 0 })
   })
 
   it('arms the in-flight guard so concurrent taps are ignored until settle', () => {
@@ -109,7 +111,7 @@ describe('squadFlipState — arrival guard auto-me flip (AC-01/17)', () => {
     expect(session.getSnapshot().flippedIds.has('me')).toBe(false)
     harness.flush()
     expect(session.getSnapshot().flippedIds.has('me')).toBe(true)
-    expect(harness.tracked[0].payload).toEqual({ method: 'auto_me', index: 0, isBestPartner: false })
+    expect(harness.tracked[0].payload).toEqual({ method: 'auto_me', index: 0, isBestPartner: false, msSinceDealSettled: 0 })
   })
 
   it('fires instantly (no timer) under reduced-motion / degradation', () => {

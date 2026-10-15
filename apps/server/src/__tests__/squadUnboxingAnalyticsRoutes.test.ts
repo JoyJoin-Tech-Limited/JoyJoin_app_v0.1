@@ -186,4 +186,22 @@ describe("POST /api/analytics/squad-unboxing", () => {
       expect(body.success).toBe(true);
     });
   });
+
+  it("accepts the who's-coming summary view event (2026-10-14 PRD D15/E20)", async () => {
+    const app = await buildTestApp();
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/analytics/squad-unboxing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: "squad_unboxing_whos_coming_view",
+          metadata: { groupId: "group-1", screen: "squad-unboxing" },
+          timestamp: Date.now(),
+        }),
+      });
+      const body: any = await res.json();
+      expect(res.status).toBe(200);
+      expect(body.success).toBe(true);
+    });
+  });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildDeckPillAriaLabel,
   buildDeckPillStripModel,
+  buildDiagnosisTeaseText,
   buildEventBriefDate,
   buildFaceDownCardAriaLabel,
   buildFocusedMemberBubbleText,
@@ -11,7 +12,9 @@ import {
   buildRevealChipLabel,
   buildSelfCardBubbleText,
   buildSquadSoulBubbleText,
+  buildSquadTease,
   buildTableDiagnosis,
+  buildWhosComingLine,
   computeActionDockState,
   computeBestPartnerUserId,
   DECK_PILL_STRIP_CAP,
@@ -26,6 +29,8 @@ import {
   SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
   SQUAD_SELF_CARD_BUBBLE_TEXT,
   SQUAD_TEASE_BUBBLE_TEXT,
+  SQUAD_TEASE_GOLD_UNFLIPPED_TEXT,
+  SQUAD_TEASE_PROGRESS_POOL,
   stripConnectionPointParens,
 } from './squadUnboxingViewModels'
 
@@ -598,6 +603,105 @@ describe('squadUnboxingViewModels', () => {
     it('never returns an empty pill', () => {
       expect(shortenConnectionPointForPill('都爱')).toBe('都爱')
       expect(shortenConnectionPointForPill('')).toBe('')
+    })
+  })
+
+  describe('tease V2 预告片文案池 (2026-10-14 PRD C11–C13)', () => {
+    const diagnosis = [
+      { key: 'hype', label: '气氛组', count: 2 },
+      { key: 'deep', label: '深度派', count: 1 },
+    ] as never
+
+    it('buildDiagnosisTeaseText turns the role mix into a trailer line with CN counts', () => {
+      expect(buildDiagnosisTeaseText(diagnosis)).toBe(
+        '这桌的配置悦仔先看过了——两位气氛组，一位深度派。翻开看看，谁坐你旁边。',
+      )
+      expect(buildDiagnosisTeaseText([{ key: 'warm', label: '暖心派', count: 1 }] as never)).toBe(
+        '这桌的配置悦仔先看过了——一位暖心派坐镇。翻开看看，谁坐你旁边。',
+      )
+    })
+
+    it('buildDiagnosisTeaseText fails closed to empty on an empty diagnosis', () => {
+      expect(buildDiagnosisTeaseText([])).toBe('')
+    })
+
+    it('buildSquadTease prioritizes the gold claim while ≥3 cards remain', () => {
+      const tease = buildSquadTease({ unflippedCount: 5, goldUnflipped: true, diagnosis })
+      expect(tease).toEqual({ text: SQUAD_TEASE_GOLD_UNFLIPPED_TEXT, variant: 'gold' })
+      // Gold yields to urgency beats once ≤2 cards remain.
+      expect(buildSquadTease({ unflippedCount: 2, goldUnflipped: true, diagnosis }).variant).toBe('progress-2')
+    })
+
+    it('buildSquadTease serves the progress pool for 1–4 remaining cards', () => {
+      for (const count of [4, 3, 2, 1]) {
+        const tease = buildSquadTease({ unflippedCount: count, goldUnflipped: false, diagnosis })
+        expect(tease.text).toBe(SQUAD_TEASE_PROGRESS_POOL[count])
+        expect(tease.variant).toBe(`progress-${count}`)
+      }
+    })
+
+    it('buildSquadTease falls through to diagnosis → base and never renders empty', () => {
+      expect(buildSquadTease({ unflippedCount: 5, goldUnflipped: false, diagnosis }).variant).toBe('diagnosis')
+      expect(buildSquadTease({ unflippedCount: 5, goldUnflipped: false, diagnosis: [] })).toEqual({
+        text: SQUAD_TEASE_BUBBLE_TEXT,
+        variant: 'base',
+      })
+    })
+  })
+
+  describe('buildWhosComingLine (who\'s-coming 摘要行, 2026-10-14 PRD D15)', () => {
+    it('composes count · age band · chemistry across parsed age labels', () => {
+      const members = [
+        { userId: 'a', ageLabel: '25-29岁' },
+        { userId: 'b', ageLabel: '30-34岁' },
+        { userId: 'c', ageLabel: '30-34岁' },
+      ] as never
+      expect(buildWhosComingLine(members, 'warm')).toBe('3 位同桌 · 25–34 岁 · 暖意融融的一桌')
+    })
+
+    it('omits the band when fewer than two labels parse (fail-closed)', () => {
+      const members = [
+        { userId: 'a', ageLabel: '25-29岁' },
+        { userId: 'b' },
+      ] as never
+      expect(buildWhosComingLine(members, 'fire')).toBe('2 位同桌 · 超级火花的一桌')
+    })
+
+    it('excludes age-hidden members from the band (privacy parity with the cards)', () => {
+      const members = [
+        { userId: 'a', ageLabel: '25-29岁' },
+        { userId: 'b', ageLabel: '30-34岁' },
+        { userId: 'c', ageLabel: '45-49岁', ageVisible: false },
+      ] as never
+      // 'c' is hidden — the band must stay 25–34, never widen to 45–49.
+      expect(buildWhosComingLine(members, 'warm')).toBe('3 位同桌 · 25–34 岁 · 暖意融融的一桌')
+      // Hidden-only labels never satisfy the ≥2 parse floor.
+      const hidden = [
+        { userId: 'a', ageLabel: '25-29岁' },
+        { userId: 'b', ageLabel: '30-34岁', ageVisible: false },
+      ] as never
+      expect(buildWhosComingLine(hidden, 'warm')).toBe('2 位同桌 · 暖意融融的一桌')
+    })
+
+    it('falls back to the chemistry fallback word and returns empty for no roster', () => {
+      expect(buildWhosComingLine([{ userId: 'a' }] as never, null)).toBe('1 位同桌 · 今晚有戏的一桌')
+      expect(buildWhosComingLine([], 'warm')).toBe('')
+    })
+  })
+
+  describe('rarity echo in evidence (2026-10-14 PRD C14)', () => {
+    it('prefixes rare/epic connection points with 全桌少见 and keeps common clean', () => {
+      const pair = {
+        pairKey: 'me-a',
+        chemistryScore: 88,
+        connectionPointsWithRarity: [
+          { text: '（都偏内向细腻）', rarity: 'rare' },
+          { text: '爵士乐', rarity: 'common' },
+          { text: '旧书店', rarity: 'epic' },
+        ],
+      } as never
+      const model = buildFocusedNarrativeModel(pair, { isBestPartner: false })
+      expect(model!.evidence).toEqual(['全桌少见：都偏内向细腻', '爵士乐', '全桌少见：旧书店'])
     })
   })
 })

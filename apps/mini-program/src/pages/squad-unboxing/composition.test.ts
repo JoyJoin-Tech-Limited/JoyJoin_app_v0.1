@@ -142,8 +142,13 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).toContain("bubbleNarration?.kind === 'member'")
   })
 
-  it('rests on the tease line while face-down cards remain (C1) — the soul line is earned', () => {
-    expect(pageSource).toContain('SQUAD_TEASE_BUBBLE_TEXT')
+  it('rests on the tease pool while face-down cards remain (C1 + C11–C13) — the soul line is earned', () => {
+    // 2026-10-14 (tease V2): the resting voice is the controller-owned tease
+    // pool (gold claim → progress beats → 配置悬念 → base), not the static
+    // instruction constant — the pool's fallback tier still ships that line
+    // (locked in squadUnboxingViewModels.test.ts).
+    expect(pageSource).toContain('tease.text')
+    expect(pageSource).toContain('SQUAD_TEASE_POCKETED_BUBBLE_TEXT')
     // The tease branch sits strictly after narration and strictly before the
     // soul fallback: burst/member narration always wins, the soul line only
     // shows when every card is face-up (or the session is a re-entry).

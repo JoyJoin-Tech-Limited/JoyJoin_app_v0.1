@@ -110,9 +110,21 @@ it('keeps the hook pill from shrinking into the age row on real-device font metr
     expect(source).not.toContain('temp-chip')
     expect(source).not.toContain('temperatureWord')
     // Back-face tier classes stay (variable-reward backs) — only the gold
-    // 最佳拍档 stamp outranks the tier tint.
+    // 最佳拍档 stamp outranks the tier tint. 2026-10-14 (PRD A3/X2): the
+    // template-interpolated emission is replaced by the static BACK_TIER_CLASS
+    // lookup — the old `${...}` form shipped with ZERO CSS for two months
+    // because the class-coverage gate can't see interpolated names.
     expect(source).toContain('getPairChemistryTier')
-    expect(source).toContain('`squad-unboxing__deck-card-face--back-${temperatureTier}`')
+    expect(source).toContain('BACK_TIER_CLASS[temperatureTier]')
+    expect(source).toContain("fire: 'squad-unboxing__deck-card-face--back-fire'")
+    expect(source).toContain("warm: 'squad-unboxing__deck-card-face--back-warm'")
+    expect(source).toContain("mild: 'squad-unboxing__deck-card-face--back-mild'")
+    expect(source).toContain("cold: 'squad-unboxing__deck-card-face--back-cold'")
+    // The tier CSS must actually exist (the 2026-07-24 regression).
+    expect(styles).toContain('&--back-fire')
+    expect(styles).toContain('&--back-warm')
+    expect(styles).toContain('&--back-mild')
+    expect(styles).toContain('&--back-cold')
   })
 
   it('prefers member avatars and falls back to archetype art after an avatar error', () => {
@@ -282,9 +294,32 @@ it('keeps the hook pill from shrinking into the age row on real-device font metr
     expect(backBlock).not.toContain('archetypeName')
   })
 
-  it('marks the best-partner back with the gold-foil modifier (only back variant)', () => {
-    // AC-06: the gold tease is the only non-uniform back.
+  it('marks the best-partner back with the gold-foil modifier (jackpot wins)', () => {
+    // AC-06: gold is the jackpot tease; the tier/rarity variants render only
+    // on non-best-partner cards (component XOR, 2026-10-14).
     expect(source).toContain("isBestPartner ? 'squad-unboxing__deck-card-face--back-gold' : ''")
+    expect(source).toContain('!isBestPartner && temperatureTier')
+    expect(source).toContain('!isBestPartner && backRarity')
+  })
+
+  it('ships the back-face exploration layer (2026-10-14 PRD B6–B9) with CSS present', () => {
+    // The 2026-07-24 tier-tint regression: TSX emissions with zero CSS. Every
+    // back signal is locked emission AND stylesheet both, so the dead-CSS
+    // bug class cannot recur for these.
+    expect(source).toContain('squad-unboxing__deck-card-back-tier')
+    expect(source).toContain('squad-unboxing__deck-card-back-hue')
+    expect(source).toContain('squad-unboxing__deck-card-back-serial')
+    expect(source).toContain('BACK_FOIL_RARITY_CLASS[backRarity]')
+    expect(source).toContain("No.${String(index + 1).padStart(2, '0')}")
+    expect(source).toContain('CHEMISTRY_TIER_EMOJI[temperatureTier]')
+    // The hue whisper consumes the derived accent (never a hardcoded colour).
+    expect(source).toContain('accent.hueWhisper')
+    // Stylesheet side — the missing-CSS regression is the bug class.
+    expect(styles).toContain('&__deck-card-back-tier {')
+    expect(styles).toContain('&__deck-card-back-hue {')
+    expect(styles).toContain('&__deck-card-back-serial {')
+    expect(styles).toContain('&--back-rare {')
+    expect(styles).toContain('&--back-epic {')
   })
 
   it('mirrors the +N overflow chip on the card back (AC-10)', () => {

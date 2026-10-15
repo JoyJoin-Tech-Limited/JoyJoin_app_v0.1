@@ -21,11 +21,15 @@ import { squadUnboxingAnalytics, type SquadUnboxingEventType } from '../../lib/a
 import { interactionLatency } from '../../lib/analytics/interactionLatency'
 import {
   buildPairKeyMemberMap,
+  buildSquadTease,
+  buildTableDiagnosis,
   computeActionDockState,
   computeBestPartnerUserId,
   getSquadChemistryTokens,
+  SQUAD_TEASE_BUBBLE_TEXT,
   type ActionDockState,
   type FlowState,
+  type SquadTeaseVariant,
 } from './squadUnboxingViewModels'
 import { MAX_FAN_CARDS } from './computeFanLayout'
 import {
@@ -139,6 +143,10 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
   // pocketed — the persisted-state restore (deckPhase init + groupId-change
   // effect) intentionally does NOT consult this flag (no forced re-fan).
   const pocketDeckEnabled = currentUser?.features?.squadUnboxingPocketDeckEnabled ?? true
+  // Tease V2 预告片文案池 (2026-10-14 PRD): when disabled remotely the resting
+  // voice falls back to the legacy static instruction line (variant 'legacy').
+  // Default: true — rollback = DB flag off, no release needed.
+  const teaseV2Enabled = currentUser?.features?.squadUnboxingTeaseV2Enabled ?? true
 
   /** 集结房间 (2026-08-09): post-confirm secondary entry. When the flag is on,
    *  the confirm-attendance success redirect hands off to the gathering room
@@ -424,6 +432,10 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
 
   const flipSessionRef = useRef<SquadFlipSession | null>(null)
   const flipSessionGroupRef = useRef<string | null>(null)
+  // Tease-variant analytics dimension (2026-10-14 PRD E20): every session
+  // event carries the currently displayed tease variant for A/B attribution.
+  // Ref (not state) so the once-created session closure always reads current.
+  const teaseVariantRef = useRef<SquadTeaseVariant>('legacy')
   // B6: the session has a declared groupId dependency (useMemo); the ref
   // guard inside the factory keeps creation safe if React discards the memo
   // cache or double-invokes it — a stale table's session can never survive.
@@ -438,6 +450,7 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
           squadUnboxingAnalytics.track(eventType as SquadUnboxingEventType, {
             groupId,
             screen: 'squad-unboxing',
+            teaseVariant: teaseVariantRef.current,
             ...payload,
           }),
       })
@@ -491,6 +504,26 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
   const unflippedCount = isInteractiveSession
     ? computeUnflippedCount(visibleIds, flipSnapshot.flippedIds)
     : 0
+
+  // 桌型诊断 (deterministic role mix) — shared by the tease voice below and
+  // the bubble footer chips (page consumes this memo; single derivation).
+  const tableDiagnosis = useMemo(() => buildTableDiagnosis(members), [members])
+
+  // Tease voice (2026-10-14 PRD C11–C13): the resting bubble while face-down
+  // cards remain. Flag off → the legacy static instruction line. The variant
+  // ref feeds the session analytics closure created above.
+  const tease = useMemo(() => {
+    if (!teaseV2Enabled) return { text: SQUAD_TEASE_BUBBLE_TEXT, variant: 'legacy' as SquadTeaseVariant }
+    return buildSquadTease({
+      unflippedCount,
+      goldUnflipped: bestPartnerUserId !== null && !flipSnapshot.flippedIds.has(bestPartnerUserId),
+      diagnosis: tableDiagnosis,
+    })
+  }, [teaseV2Enabled, unflippedCount, bestPartnerUserId, flipSnapshot.flippedIds, tableDiagnosis])
+
+  useEffect(() => {
+    teaseVariantRef.current = tease.variant
+  }, [tease.variant])
 
   // ── Pocket-the-deck phase actions (2026-07-15) ────────────────────────────
   // Two-phase reveal: the full-screen fan is the emotional moment; pocketing
@@ -657,6 +690,12 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
     focusedIndexRef.current = focusedIndex
   }, [focusedIndex])
 
+  // 2026-10-15: reactive mirror of the automatic handoff — the dock's fold chip
+  // may only render when the auto-fold will NOT fire (otherwise it would flash
+  // for ~1s on the reveal-all path). The session itself is a ref machine, so
+  // this is re-read whenever a value that can change its outcome changes, which
+  // also self-heals the case where a fire-time `canFire()` probe cancels it.
+  const [autoFoldPending, setAutoFoldPending] = useState(false)
   const autoPocketRef = useRef<SquadAutoPocketSession | null>(null)
   const autoPocketGroupRef = useRef<string | null>(null)
   // Same creation discipline as the flip session (B6): the ref guard keeps
@@ -677,6 +716,7 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
             groupId,
             screen: 'squad-unboxing',
           })
+          setAutoFoldPending(false)
           collapseDeckRef.current()
         },
       })
@@ -713,6 +753,11 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
     motionInstant,
     storyMode,
   ])
+
+  // Mirror the session's true state after the arm attempt (see autoFoldPending).
+  useEffect(() => {
+    setAutoFoldPending(autoPocketRef.current?.getState() === 'armed')
+  }, [deckPhase, focusedIndex, unflippedCount])
 
   // Cancel-permanent: any card focus during the hold = user took control.
   useEffect(() => {
@@ -980,6 +1025,10 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
     flipAll,
     isFlipInFlight,
     notifyDealSettled,
+    // Tease voice + 桌型诊断 (2026-10-14 PRD): page renders tease.text while
+    // face-down cards remain; tableDiagnosis feeds the bubble footer chips.
+    tease,
+    tableDiagnosis,
     // Pocket-the-deck phase (2026-07-15)
     deckPhase,
     pocketDeckEnabled,
@@ -987,6 +1036,9 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
     unfoldDelayById,
     collapseDeck,
     reopenDeck,
+    // 2026-10-15: true while the automatic handoff is holding — the page hides
+    // the manual fold chip until the auto-fold is out of the picture.
+    autoFoldPending,
     notifyFoldSettled,
     notifyUnfoldSettled,
     showPocketHint,

@@ -130,6 +130,8 @@ export function createSquadFlipSession(deps: SquadFlipSessionDeps): SquadFlipSes
       method,
       index: meta.index,
       isBestPartner: meta.isBestPartner,
+      // First-flip latency KPI (2026-10-14 PRD E20): 0 before the deal settles.
+      msSinceDealSettled: dealSettledAt === null ? 0 : Math.max(0, deps.now() - dealSettledAt),
     })
     checkAllRevealed()
     emit()
@@ -188,6 +190,7 @@ export function createSquadFlipSession(deps: SquadFlipSessionDeps): SquadFlipSes
         method: 'reveal_all',
         index: meta.index,
         isBestPartner: meta.isBestPartner,
+        msSinceDealSettled: dealSettledAt === null ? 0 : Math.max(0, deps.now() - dealSettledAt),
       })
     })
     checkAllRevealed()

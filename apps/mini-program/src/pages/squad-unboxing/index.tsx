@@ -39,15 +39,15 @@ import {
   buildRevealChipLabel,
   buildSelfCardBubbleText,
   buildSquadSoulBubbleText,
-  buildTableDiagnosis,
+  buildWhosComingLine,
   getChemistryWord,
   getDeckPillChemistryClass,
   getMemberName,
   getSelfSquadRoleLabel,
   resolveCardFocusInteraction,
   SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
+  SQUAD_FOLD_CHIP_LABEL,
   SQUAD_SELF_CARD_BUBBLE_TEXT,
-  SQUAD_TEASE_BUBBLE_TEXT,
   SQUAD_TEASE_POCKETED_BUBBLE_TEXT,
 } from './squadUnboxingViewModels'
 import { scheduleFlipSettleNarration, FLIP_NARRATION_DELAY_MS, FLIP_IN_FLIGHT_GUARD_MS } from './squadFlipState'
@@ -63,6 +63,7 @@ import {
 } from './squadUnboxingConstants'
 
 import { useSquadUnboxingController } from './useSquadUnboxingController'
+import { useInviteRewardLines } from './useInviteRewardLines'
 import './index.scss'
 
 export default function SquadUnboxingPage() {
@@ -112,7 +113,9 @@ export default function SquadUnboxingPage() {
     deckPhase,
     foldDelayById,
     unfoldDelayById,
+    collapseDeck,
     reopenDeck,
+    autoFoldPending,
     notifyFoldSettled,
     notifyUnfoldSettled,
     showPocketHint,
@@ -120,6 +123,9 @@ export default function SquadUnboxingPage() {
     handleOpenBox,
     handleConfirmAttendance,
     refetch,
+    tease,
+    tableDiagnosis,
+    analysisThemeTags,
   } = useSquadUnboxingController({ groupId, routerParams: router.params, focusedIndex: focusedCardIndex, resetSignal })
 
   const { isDegradation } = useDeviceTier()
@@ -561,8 +567,8 @@ export default function SquadUnboxingPage() {
     })
     : null
 
-  // 桌型诊断 (2026-07-24 P0): deterministic role mix — no LLM.
-  const tableDiagnosis = useMemo(() => buildTableDiagnosis(members), [members])
+  // 桌型诊断 (2026-07-24 P0): deterministic role mix — no LLM. Computed in the
+  // controller (single derivation shared with the tease voice).
 
   // Narrative cascade (2026-07-24 audit fix): evidence chips + opener only
   // enter AFTER the verdict typewriter completes — fixed CSS delays raced
@@ -654,15 +660,28 @@ export default function SquadUnboxingPage() {
       groupId,
       screen: 'squad-unboxing',
     })
+    // E20 (2026-10-14 PRD): the who's-coming summary line debuts at the same
+    // beat — its own exposure event feeds the panel-level funnel.
+    squadUnboxingAnalytics.track('squad_unboxing_whos_coming_view', {
+      groupId,
+      screen: 'squad-unboxing',
+    })
   }, [flowState, dealSettled, groupId])
 
   // Bubble voice: burst-completion line > focused-member narration (only when
   // the narration matches the currently focused card — a pending flip keeps
   // the resting voice until flip-end) > resting voice. While face-down cards
-  // remain in an interactive session the resting voice is the tease line (C1),
+  // remain in an interactive session the resting voice is the tease pool
+  // (C11–C13, 2026-10-14 PRD: gold claim → progress beats → 配置悬念 → base),
   // swapped for the pocket-aware variant once the deck is pocketed so the copy
-  // never invites tapping cards that are hidden inside the pill (CONCERN-1);
-  // the soul line is earned once every card is face-up.
+  // never invites tapping cards that are hidden inside the pill (CONCERN-1).
+  // The soul paragraph is earned once every card is face-up AND the fan has
+  // folded: 2026-10-15 visual validation measured the locked fan column at
+  // ~372px against a 392px stack (5-line paragraph + panel), which pushed the
+  // panel's last row and bottom corners behind the dock — so, like the
+  // transition line, 桌卡 and theme row, the reflection debuts in the relaxed
+  // post-fold column. The fan all-up voice is the short burst line, which
+  // doubles as the invitation to fold.
   const bubbleText = bubbleNarration?.kind === 'burst'
     ? SQUAD_BURST_COMPLETION_BUBBLE_TEXT
     : bubbleNarration?.kind === 'member' && focusedMember && bubbleNarration.userId === focusedMember.userId
@@ -677,13 +696,28 @@ export default function SquadUnboxingPage() {
         )
       : isInteractiveSession && unflippedCount > 0
         ? deckPhase === 'fan'
-          ? SQUAD_TEASE_BUBBLE_TEXT
+          ? tease.text
           : SQUAD_TEASE_POCKETED_BUBBLE_TEXT
-        : buildSquadSoulBubbleText(
-          archetypeMixCopy,
-          groupAnalysis?.groupThemeCompanion || matchExplanationCopy,
-          groupAnalysis?.groupDynamics,
-        )
+        : deckPhase === 'fan' || showPocketHint
+          // The first-fold hint grows the stage spacer by ~50px for 3.6s, which
+          // would clip the panel's tail — hold the short line until the tip
+          // clears, then let the reflection type out (tip → reflection reads
+          // as two beats of the same voice).
+          ? SQUAD_BURST_COMPLETION_BUBBLE_TEXT
+          : buildSquadSoulBubbleText(
+            archetypeMixCopy,
+            groupAnalysis?.groupThemeCompanion || matchExplanationCopy,
+            groupAnalysis?.groupDynamics,
+          )
+
+  // The burst line sits first in the voice chain and is written once by 全部翻开,
+  // so it would outlive its beat and mask the soul paragraph for the reveal-all
+  // path. Clear it when the fan folds so chapter 2 takes over in the relaxed
+  // column (member narration is dismissed by the focus gesture, not the fold).
+  useEffect(() => {
+    if (deckPhase === 'fan') return
+    setBubbleNarration((current) => (current?.kind === 'burst' ? null : current))
+  }, [deckPhase])
 
   // Event-brief card: structured date block + shared OracleCard corner vignette.
   const briefDate = buildEventBriefDate(group?.finalDateTime ?? pool?.dateTime)
@@ -694,6 +728,25 @@ export default function SquadUnboxingPage() {
     : ''
   const tableCardPlaceLine = group?.venueName || [pool?.city, pool?.district].filter(Boolean).join(' · ') || ''
   const tableCardChemistryWord = getChemistryWord(groupAnalysis?.overallChemistry)
+
+  // ── 今晚这桌 panel derivatives (2026-10-14 PRD D15/D16) ────────────────────
+  const whosComingLine = useMemo(
+    () => buildWhosComingLine(members, groupAnalysis?.overallChemistry),
+    [members, groupAnalysis?.overallChemistry],
+  )
+  const openingHook = useMemo(() => {
+    const tag = analysisThemeTags?.[0]
+    return tag ? `今晚的开场，从${tag}聊起。` : ''
+  }, [analysisThemeTags])
+
+  // ── 邀请奖励到账 / 权益回显 (2026-10-14 PRD E19) ──────────────────────────
+  // Extracted to useInviteRewardLines (page-size discipline + unit surface).
+  // Fail-closed: any miss renders no line — never a placeholder.
+  const { rewardLine, entitlementLine, handleRewardTap, handleEntitlementTap } = useInviteRewardLines({
+    enabled: !authLoading && flowState === 'revealed',
+    showSuccessOverlay,
+    entitlementMode: currentUser?.entitlementMode,
+  })
 
   const handleSaveTableCard = useCallback(async () => {
     if (tableCardSaving) return
@@ -899,7 +952,10 @@ export default function SquadUnboxingPage() {
         enhanced
         showScrollbar={false}
       >
-        <View className='squad-unboxing__scroll-inner'>
+        <View className={[
+          'squad-unboxing__scroll-inner',
+          flowState === 'revealed' && deckPhase !== 'fan' ? 'squad-unboxing__scroll-inner--pocketed' : '',
+        ].filter(Boolean).join(' ')}>
           {/* Phase-aware spacer: matches the fixed stage height while the fan
               is up; shrinks to the pill's footprint once pocketed so the
               content-focused phase gets the viewport back (AC-01). The
@@ -948,6 +1004,7 @@ export default function SquadUnboxingPage() {
               focusedNarrativeModel={focusedNarrativeModel}
               showNarrativeDetails={showNarrativeDetails}
               tableDiagnosis={tableDiagnosis}
+              showDiagnosis={deckPhase !== 'fan'}
               aigcMeta={groupAnalysis?.meta?.aigc}
               onVerdictComplete={() => setVerdictComplete(true)}
             />
@@ -978,11 +1035,25 @@ export default function SquadUnboxingPage() {
                 onSave={handleSaveTableCard}
               />
             ) : null}
+            {/* 桌卡预告 (2026-10-14 PRD D17): before the reveal completes, one
+                quiet line seeds the collectible so the save-CTA later is not a
+                cold surprise. Debuts in the relaxed post-fold column (same
+                gate as the 桌卡 it预告s), never clipped inside the fan. */}
+            {!allCardsUp && deckPhase !== 'fan' && dealSettled && members.length > 0 ? (
+              <View className='squad-unboxing__table-card-teaser' aria-hidden='true'>
+                <Text className='squad-unboxing__table-card-teaser-text'>
+                  全员揭晓后，这桌会送你一张桌卡
+                </Text>
+              </View>
+            ) : null}
             <SquadUnboxingTonightsPanel
               group={group}
               pool={pool}
               groupAnalysis={groupAnalysis}
               groupThemeHighlights={groupThemeHighlights}
+              whosComingLine={whosComingLine}
+              openingHook={openingHook}
+              showThemeRow={deckPhase !== 'fan'}
               dealSettled={dealSettled}
               allCardsUp={allCardsUp}
               headerReady={headerReady}
@@ -1149,6 +1220,26 @@ export default function SquadUnboxingPage() {
             </View>
           ) : null}
 
+          {/* Manual fold affordance (2026-10-15): auto-pocket refuses to arm
+              once any card has been focused (掌控感), so the tap-by-tap path —
+              the North-star 「有探索的确认」 route — used to have NO way into the
+              relaxed post-fold column, where the theme row / 桌卡 / return
+              thread live. Same chip slot as the reveal chip (the two are
+              mutually exclusive: that one needs unflippedCount > 0, this one
+              needs every card face-up). `autoFoldPending` keeps it from
+              flashing on the reveal-all path, where the deck folds itself. */}
+          {isInteractiveSession && allCardsUp && deckPhase === 'fan' && dealSettled && !autoFoldPending ? (
+            <View
+              className='squad-unboxing__fold-chip'
+              hoverClass='squad-unboxing__fold-chip--pressed'
+              role='button'
+              aria-label={SQUAD_FOLD_CHIP_LABEL}
+              onClick={collapseDeck}
+            >
+              <Text className='squad-unboxing__fold-chip-text'>{SQUAD_FOLD_CHIP_LABEL}</Text>
+            </View>
+          ) : null}
+
           <View className='squad-unboxing__action-zone'>
             <Button
               className={[
@@ -1175,10 +1266,14 @@ export default function SquadUnboxingPage() {
             </Button>
             {/* Return thread (2026-07-24 full-marks, user-sat angle 5): one
                 quiet line seeding the post-event loop — the screen otherwise
-                ends at the CTA with no pull back. */}
-            {allCardsUp ? (
+                ends at the CTA with no pull back.
+                2026-10-15: gated to the relaxed post-fold column — in the
+                locked fan column it measured top 819.7 (entirely below the
+                viewport, behind the dock), the same born-clipped fate the
+                2026-08-19 work fixed for the transition line + 桌卡. */}
+            {allCardsUp && deckPhase !== 'fan' ? (
               <Text className='squad-unboxing__return-thread'>
-                活动结束后，回来看看这桌的故事
+                活动结束后，悦仔会把这桌的故事收进回忆卡，记得回来。
               </Text>
             ) : null}
 
@@ -1186,7 +1281,14 @@ export default function SquadUnboxingPage() {
         </View>
       ) : null}
 
-      {showSuccessOverlay ? <SquadUnboxingSuccessOverlay /> : null}
+      {showSuccessOverlay ? (
+        <SquadUnboxingSuccessOverlay
+          rewardLine={rewardLine}
+          entitlementLine={entitlementLine}
+          onRewardTap={handleRewardTap}
+          onEntitlementTap={handleEntitlementTap}
+        />
+      ) : null}
 
       {/* Hidden poster canvas (2026-07-24 P2): mounted only when the 桌卡 is
           available so low-end devices never hold the ~13MB bitmap (perf

@@ -491,6 +491,7 @@ export default function SquadDeckStage({
                     slowFlipActive={
                       !instant && justFlippedIds.has(member.userId) && member.userId === bestPartnerUserId
                     }
+                    totalCount={members.length}
                     onArtLoad={onArtLoad}
                     onTap={() => onCardTap(rosterIndex)}
                     onLongPress={() => onCardLongPress(rosterIndex)}

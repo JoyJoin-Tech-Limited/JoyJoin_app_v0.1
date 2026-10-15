@@ -494,8 +494,13 @@ describe('SCSS focus-lift collision guards (2026-07-28 overlap incident)', () =>
     // rises ≈28rpx — inside row 1's padding/art band, never its info zone.
   })
 
-  it('keeps the full lift for first-row cards and the RM flatten override', () => {
-    expect(scss).toContain('transform: translateY(-40rpx) rotate(0deg) scale(1.1)')
+  it('keeps a softened first-row lift (top-edge headroom, 2026-10-14 A2) and the RM flatten override', () => {
+    // PRD A2: the audit measured the focused top-row card clipping ~29rpx
+    // past the 640rpx stage with the original −40/1.1 lift. The softened
+    // −12/1.07 keeps straighten + grow + shadow as the lift cues while the
+    // badge row stays inside the viewport on every device class.
+    expect(scss).toContain('transform: translateY(-12rpx) rotate(0deg) scale(1.07)')
+    expect(scss).not.toContain('transform: translateY(-40rpx) rotate(0deg) scale(1.1)')
     expect(scss).toContain('transform: translateY(0) rotate(0deg) scale(1.04) !important')
   })
 
@@ -534,13 +539,27 @@ describe('BUG B — narration bubble never spills over the 桌卡 strip (2026-07
     expect(bubbleBlock).toContain('overflow: hidden')
   })
 
-  it('clamps both narration typewriters (verdict ≤3 lines, prose ≤3 lines)', () => {
+  it('clamps both narration typewriters (verdict ≤3 lines, prose ≤4 lines)', () => {
+    // 2026-10-15 correction: `numberOfLines` is an ALIPAY-ONLY Taro prop — on
+    // WeChat and H5 it was spread as an inert attribute, so the 2026-08-19
+    // 「4 → 3 行 clamp」 never applied on either shipping platform and long
+    // narration was hard-cut mid-glyph by the parent's `overflow: hidden`.
+    // The effective clamp is CSS (`-webkit-line-clamp`); the props stay aligned
+    // as documentation of the intended ceiling.
+    const proseBlock = scss.split('&__analysis-bubble-text {')[1]?.split('}')[0] ?? ''
+    expect(proseBlock).toContain('-webkit-box-orient: vertical')
+    expect(proseBlock).toContain('-webkit-line-clamp: 4')
+    expect(proseBlock).toContain('overflow: hidden')
+
+    const verdictScssBlock = scss.split('&__narrative-verdict {')[1]?.split('}')[0] ?? ''
+    expect(verdictScssBlock).toContain('-webkit-line-clamp: 3')
+
     const verdictBlock = tsx.split("className='squad-unboxing__narrative-verdict'")[1]?.split('/>')[0] ?? ''
     expect(verdictBlock).toContain('numberOfLines={3}')
-    // 2026-08-19: the prose clamp tightened 4 → 3 — the fan-phase column only
-    // carries the bubble + event panel (~563rpx); the transition line + 桌卡
-    // now debut post-fold via the auto-pocket handoff.
-    const proseBlock = tsx.split("className='squad-unboxing__analysis-bubble-text'")[1]?.split('/>')[0] ?? ''
-    expect(proseBlock).toContain('numberOfLines={3}')
+    // 2026-08-19: prose 4 → 3. 2026-10-15: back to 5 — the group voice carries
+    // buildSquadSoulBubbleText's 3-leg worst case, and the theme row no longer
+    // reserves the fan-phase column (it debuts post-fold).
+    const proseBlockTsx = tsx.split("className='squad-unboxing__analysis-bubble-text'")[1]?.split('/>')[0] ?? ''
+    expect(proseBlockTsx).toContain('numberOfLines={4}')
   })
 })

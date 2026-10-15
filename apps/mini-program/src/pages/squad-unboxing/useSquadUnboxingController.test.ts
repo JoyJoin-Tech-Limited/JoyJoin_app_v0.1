@@ -209,4 +209,19 @@ describe('useSquadUnboxingController auto-pocket handoff (2026-08-19)', () => {
     expect(source).toContain('resetSignal: number')
     expect(source).toContain('{ groupId, routerParams, focusedIndex, resetSignal }')
   })
+
+  it('wires the Tease V2 pool through the controller with the flag gate (2026-10-14 PRD C11–C13/E20)', () => {
+    // Flag gate: default ON, off reverts to the legacy static line.
+    expect(source).toContain('squadUnboxingTeaseV2Enabled')
+    expect(source).toContain('?? true')
+    // Pool selection + single-derivation tableDiagnosis.
+    expect(source).toContain('buildSquadTease')
+    expect(source).toContain('buildTableDiagnosis(members)')
+    // The variant ref feeds every session track payload (A/B attribution).
+    expect(source).toContain('teaseVariantRef.current')
+    expect(source).toContain('teaseVariant: teaseVariantRef.current')
+    // Both surfaces are returned to the page.
+    expect(source).toContain('tease,')
+    expect(source).toContain('tableDiagnosis,')
+  })
 })

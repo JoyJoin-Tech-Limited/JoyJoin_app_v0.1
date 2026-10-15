@@ -320,6 +320,7 @@ const SQUAD_UNBOXING_EVENT_TYPES = [
   "squad_unboxing_table_card_tap",
   "squad_unboxing_table_card_saved",
   "squad_unboxing_table_card_save_failed",
+  "squad_unboxing_whos_coming_view",
   "match_reveal_prelude_started",
   "match_reveal_prelude_completed",
   "match_reveal_prelude_skipped",

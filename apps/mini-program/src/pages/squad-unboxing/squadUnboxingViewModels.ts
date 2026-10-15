@@ -263,6 +263,90 @@ export const SQUAD_BURST_COMPLETION_BUBBLE_TEXT = '全员揭晓，今晚这桌�
  */
 export const SQUAD_TEASE_BUBBLE_TEXT = '桌友卡都扣好了，轻点翻开，看看今晚和谁一桌。'
 
+// ── Tease V2 预告片文案池 (2026-10-14 PRD squad-unboxing-polish) ────────────
+// The static tease was an instruction manual; the pool turns the resting
+// voice into a trailer. Every line is deterministic (roster/flip state) and
+// fail-closed — a missing input drops to the next tier, never a placeholder.
+// Copy discipline: no 匹配/社交/撮合/AI wording, restrained exclamation.
+
+/** 金卡认领句 — highest-priority line while the 最佳拍档 back is still down. */
+export const SQUAD_TEASE_GOLD_UNFLIPPED_TEXT = '有一张卡不太一样——它和你今晚最合拍。'
+
+/** Progress beats by remaining face-down count (early counts fall through). */
+export const SQUAD_TEASE_PROGRESS_POOL: Readonly<Record<number, string>> = {
+  4: '还有四位等着认识你——先从哪张开始？',
+  3: '还剩三张没翻开，说不定最聊得来的就在里面。',
+  2: '最后两张了，悦仔的心跳有点快。',
+  1: '最后一张，悦仔先卖个关子。',
+}
+
+export type SquadTeaseVariant = 'gold' | `progress-${number}` | 'diagnosis' | 'base' | 'legacy'
+
+const DIAGNOSIS_COUNT_CN: Readonly<Record<number, string>> = { 1: '一位', 2: '两位', 3: '三位', 4: '四位' }
+
+/**
+ * 配置悬念句 (tease V2): the deterministic role mix becomes a trailer line —
+ * 「这桌的配置悦仔先看过了——两位气氛组坐镇。翻开看看，谁坐你旁边。」
+ * Returns '' when the roster yields no diagnosis (fail-closed to the base tease).
+ */
+export function buildDiagnosisTeaseText(diagnosis: SquadDiagnosisSegment[]): string {
+  if (diagnosis.length === 0) return ''
+  const parts = diagnosis.map((segment) => `${DIAGNOSIS_COUNT_CN[segment.count] ?? `${segment.count}位`}${segment.label}`)
+  const lead = parts.length === 1 ? `${parts[0]}坐镇` : parts.join('，')
+  return `这桌的配置悦仔先看过了——${lead}。翻开看看，谁坐你旁边。`
+}
+
+/**
+ * Tease voice selector (tease V2). Priority: 金卡认领 (early game, max
+ * curiosity) → progress beats (4→1 remaining) → 配置悬念 → base instruction.
+ * The gold line yields to the urgency beats once two or fewer cards remain.
+ */
+export function buildSquadTease(opts: {
+  unflippedCount: number
+  goldUnflipped: boolean
+  diagnosis: SquadDiagnosisSegment[]
+}): { text: string; variant: SquadTeaseVariant } {
+  const { unflippedCount, goldUnflipped, diagnosis } = opts
+  if (goldUnflipped && unflippedCount >= 3) {
+    return { text: SQUAD_TEASE_GOLD_UNFLIPPED_TEXT, variant: 'gold' }
+  }
+  const progress = SQUAD_TEASE_PROGRESS_POOL[unflippedCount]
+  if (progress) return { text: progress, variant: `progress-${unflippedCount}` }
+  const diagnosisText = buildDiagnosisTeaseText(diagnosis)
+  if (diagnosisText) return { text: diagnosisText, variant: 'diagnosis' }
+  return { text: SQUAD_TEASE_BUBBLE_TEXT, variant: 'base' }
+}
+
+/**
+ * who's-coming 摘要行 (2026-10-14 PRD): 「6 位同桌 · 25–34 岁 · 暖意融融的一桌」.
+ * The age band parses each member's ageLabel ("30-34岁"); when fewer than two
+ * labels parse the band is silently omitted. Returns '' for an empty roster.
+ * Privacy parity with the cards (fact check 2026-10-14): members whose age is
+ * hidden (ageVisible === false) are excluded from the aggregate band — a
+ * hidden age must not widen or narrow what the table discloses.
+ */
+export function buildWhosComingLine(
+  members: PoolGroupMemberSummary[],
+  overallChemistry?: OverallChemistry | ChemistryType | null,
+): string {
+  if (members.length === 0) return ''
+  let minAge = Number.POSITIVE_INFINITY
+  let maxAge = Number.NEGATIVE_INFINITY
+  let parsed = 0
+  for (const member of members) {
+    if (member.ageVisible === false) continue
+    const match = /(\d{2})\s*[-–~]\s*(\d{2})/.exec(member.ageLabel ?? '')
+    if (!match) continue
+    parsed += 1
+    minAge = Math.min(minAge, Number(match[1]))
+    maxAge = Math.max(maxAge, Number(match[2]))
+  }
+  const band = parsed >= 2 ? `${minAge}–${maxAge} 岁` : ''
+  return [`${members.length} 位同桌`, band, `${getChemistryWord(overallChemistry)}的一桌`]
+    .filter(Boolean)
+    .join(' · ')
+}
+
 /**
  * Pocketed-phase resting voice while face-down cards remain (2026-07-15
  * audit CONCERN-1): the plain tease line invites tapping cards that are
@@ -280,6 +364,16 @@ export const SQUAD_TEASE_POCKETED_BUBBLE_TEXT = '拉下小条，继续揭晓今�
 export function buildRevealChipLabel(unflippedCount: number): string {
   return `还有 ${unflippedCount} 位桌友未揭晓 · 轻点全部翻开`
 }
+
+/**
+ * Manual fold affordance label (2026-10-15): the dock chip shown once every
+ * card is face-up while the deck is still fanned — i.e. whenever the automatic
+ * handoff did NOT take over (the user explored card-by-card; auto-pocket is
+ * permanently cancelled by card focus, a deliberate 掌控感 rule). Tapping it
+ * folds the deck into the pill and hands the column the relaxed layout where
+ * the theme row, 桌卡 and return thread live.
+ */
+export const SQUAD_FOLD_CHIP_LABEL = '收起卡组 · 查看今晚这桌'
 
 // ── "Pocket the deck" copy set (2026-07-15) ─────────────────────────────────
 // Two-phase reveal: full-screen fan ⇄ pocketed pill. Copy is craft-owned; the
@@ -569,11 +663,18 @@ export function buildFocusedNarrativeModel(
   if (!pair) return null
   const normalize = (value?: string | null) => (value ?? '').trim().replace(/[。！？，\s]*$/, '')
 
+  // Rarity echo (2026-10-14 PRD C14): rare/epic connection points earn a
+  // 「全桌少见：」prefix inside the evidence chip — scarcity wording from the
+  // governed rarity field, never invented.
   const rawPoints = pair.connectionPointsWithRarity && pair.connectionPointsWithRarity.length > 0
-    ? pair.connectionPointsWithRarity.map((point) => point.text)
-    : (pair.connectionPoints ?? [])
+    ? pair.connectionPointsWithRarity.map((point) => ({ text: point.text, rarity: point.rarity }))
+    : (pair.connectionPoints ?? []).map((text) => ({ text, rarity: 'common' as const }))
   const evidence = rawPoints
-    .map((point) => stripConnectionPointParens(normalize(point)))
+    .map((point) => {
+      const text = stripConnectionPointParens(normalize(point.text))
+      if (!text) return ''
+      return point.rarity === 'rare' || point.rarity === 'epic' ? `全桌少见：${text}` : text
+    })
     .filter(Boolean)
     .slice(0, 3)
 

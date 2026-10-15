@@ -24,6 +24,7 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_connection_story_expand'
   | 'squad_unboxing_connection_story_collapse'
   | 'squad_unboxing_tonights_table_view'
+  | 'squad_unboxing_whos_coming_view'
   | 'squad_unboxing_analysis_retry_tap'
   | 'squad_unboxing_deck_collapse'
   | 'squad_unboxing_deck_reopen'
@@ -52,6 +53,13 @@ export type SquadUnboxingEventType =
 // NOTE: `squad_unboxing_auto_pocket` (2026-08-19 auto-pocket handoff) fires
 // once when the deck folds itself after the live all-cards-up transition; it
 // is whitelisted server-side in the same change.
+//
+// NOTE: `squad_unboxing_whos_coming_view` (2026-10-14 polish pass, PRD D15/
+// E20) fires once with `tonights_table_view` when the who's-coming summary
+// line debuts; whitelisted server-side in the same change and locked by
+// `squadUnboxingAnalyticsRoutes.test.ts`. `card_flip` and `all_revealed`
+// payloads gained `msSinceDealSettled` + `teaseVariant` (metadata-only, no
+// whitelist impact).
 
 export interface SquadUnboxingAnalyticsEvent {
   eventType: SquadUnboxingEventType
