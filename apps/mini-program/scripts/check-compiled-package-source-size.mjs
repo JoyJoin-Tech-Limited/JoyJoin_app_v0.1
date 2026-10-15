@@ -7,24 +7,42 @@ import { fileURLToPath } from 'node:url'
 export const WECHAT_MAIN_PACKAGE_LIMIT_BYTES = 2 * 1024 * 1024
 
 /**
- * WeChat's own upload accounting ("main package source size", errcode 80200)
- * counts more than this script measures on miniprogram-ci's compiled bundle.
- * Measured on three consecutive builds on 2026-10-15:
+ * BASIS LIMITATION — read before trusting any number below (2026-10-15).
  *
- *   script 1889.0 KiB → upload accepted  (WeChat ≈ 2042 KB)
- *   script 1909.1 KiB → rejected at 2063 KB
- *   script 1909.5 KiB → rejected at 2064 KB
+ * `get-compiled-result` returns the *compiler's* emitted tree, not the uploaded
+ * `dist/`. The compiler only emits what it can reach statically, so an asset
+ * referenced solely from a JS string constant — `localAsset('/pages/…/art.webp')`
+ * bound as `src={…}` — is never emitted. Measured the day the two gathering-room
+ * composites (174.8 KiB) moved into their own subpackage:
  *
- * The offset is near-constant (~154 KiB), which made a raw script number
- * misleading: 1909.1 KiB printed "138.9 KiB headroom" while the very same
- * package was refused by WeChat (main package source size 2064KB > 2048KB).
- * Keep this correction in sync with the 80200 error message if it drifts.
+ *   dist/     pages/gathering-room   235.2 KiB
+ *   compiled  pages/gathering-room    61.6 KiB   (code only — art absent)
+ *   compiled  main package          1909.5 KiB   (byte-identical to the pre-move run)
+ *
+ * So this tree can under-count a package by an unknown amount, and a ceiling
+ * verdict here is authoritative in neither direction:
+ *   - unadjusted it under-reports (1909.1 KiB printed "138.9 KiB headroom" for a
+ *     package WeChat refused as "main package source size 2063KB exceed max limit");
+ *   - adjusted by a fixed offset it over-reports whenever the omitted bytes
+ *     exceed that offset — exactly what happens now (175 KiB omitted vs 160 KiB
+ *     offset), so it fails a package that may well fit.
+ * WeChat computes the real number server-side from the uploaded package, and
+ * `upload-weapp` runs that check immediately after this script. Therefore the
+ * size verdicts below are loud WARNINGS, never gates; structural assertions
+ * (cross-package requires) stay fatal. Recalibrate from a real 80200 message.
  */
 export const WECHAT_SOURCE_SIZE_OVERHEAD_BYTES = 160 * 1024
 
 /** Deliberate slack kept below WeChat's real ceiling after the correction. */
 export const JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES = 32 * 1024
 
+/**
+ * Warning threshold, not a gate (see the basis limitation above): exceeding it
+ * prints a GitHub warning annotation and the script still exits 0, so the real
+ * upload verdict is never pre-empted by an estimate computed on an incomplete
+ * tree. Kept non-zero for the case where the tree *is* complete (an upload that
+ * failed on a number this script already reported would need real slack).
+ */
 export const JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES =
   WECHAT_MAIN_PACKAGE_LIMIT_BYTES -
   WECHAT_SOURCE_SIZE_OVERHEAD_BYTES -
@@ -33,10 +51,10 @@ export const JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES =
 /**
  * Subpackages carry the same 2 MB ceiling as the main package, so they get the
  * same arithmetic. The 160 KiB overhead was measured on the main package; it is
- * carried over here deliberately (worst case: the subpackage gate is stricter
- * than WeChat is). If a subpackage ever fails this check while the upload
- * succeeds, re-measure the offset from a real 80200 message instead of raising
- * the limit.
+ * carried over here deliberately (worst case: the warning is stricter than
+ * WeChat is). A subpackage warning that coexists with a successful upload means
+ * the offset is wrong for that package — re-measure it from a real 80200 message
+ * instead of raising the threshold.
  */
 export const JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES = JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES
 
@@ -124,6 +142,51 @@ export function formatBytes(bytes) {
   return `${(bytes / 1024).toFixed(1)} KiB`
 }
 
+/**
+ * Size verdicts on this basis are warnings (the tree omits assets referenced
+ * only from JS string constants — see the basis limitation above); only
+ * basis-independent structural defects are fatal. Extracted from the CLI so the
+ * policy is unit-testable.
+ */
+export function evaluateCompiledPackageSizes(result) {
+  const warnings = []
+  const failures = []
+  const wechatEquivalentBytes = result.mainPackageBytes + WECHAT_SOURCE_SIZE_OVERHEAD_BYTES
+
+  if (result.mainPackageBytes > JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES) {
+    warnings.push(
+      `[compiled-package-size] WARNING: main source ${formatBytes(result.mainPackageBytes)} ` +
+        `exceeds JoyJoin's ${formatBytes(JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES)} estimate ` +
+        `(WeChat estimate ${formatBytes(wechatEquivalentBytes)} vs hard limit ` +
+        `${formatBytes(WECHAT_MAIN_PACKAGE_LIMIT_BYTES)}). This tree omits assets ` +
+        `referenced only from JS string literals, so the number is not authoritative — ` +
+        `the upload job decides.`,
+    )
+  }
+
+  for (const subpackage of result.subpackages) {
+    if (subpackage.bytes <= JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES) continue
+    warnings.push(
+      `[compiled-package-size] WARNING: subpackage ${subpackage.root} source ` +
+        `${formatBytes(subpackage.bytes)} exceeds JoyJoin's ` +
+        `${formatBytes(JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES)} estimate ` +
+        `(WeChat estimate ` +
+        `${formatBytes(subpackage.bytes + WECHAT_SOURCE_SIZE_OVERHEAD_BYTES)}; hard limit ` +
+        `${formatBytes(WECHAT_MAIN_PACKAGE_LIMIT_BYTES)} per package). Serve that ` +
+        `subpackage's heaviest art from the CDN if the upload agrees.`,
+    )
+  }
+
+  for (const reference of result.crossPackageRequires) {
+    failures.push(
+      '[compiled-package-size] FAIL: main package requires a subpackage chunk: ' +
+        `${reference.file} -> ${reference.packageRoot}`,
+    )
+  }
+
+  return { warnings, failures, wechatEquivalentBytes }
+}
+
 function runCli() {
   const compiledDirectory = path.resolve(process.argv[2] ?? 'compiled-check')
   const result = calculateCompiledPackageSourceSize(compiledDirectory)
@@ -133,7 +196,9 @@ function runCli() {
   console.log(
     `[compiled-package-size] basis: miniprogram-ci compiled bundle ` +
       `(CI: compiled-check). A raw Taro dist/ is a much larger tree — its ` +
-      `numbers are not comparable to WeChat's accounting.`,
+      `numbers are not comparable to WeChat's accounting, and this tree in turn ` +
+      `omits assets referenced only from JS string literals. Estimates below; the ` +
+      `WeChat upload decides.`,
   )
   console.log(
     `[compiled-package-size] main source ${formatBytes(result.mainPackageBytes)} ` +
@@ -156,43 +221,24 @@ function runCli() {
     )
   }
 
-  let failed = false
-  if (result.mainPackageBytes > JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES) {
-    console.error(
-      `[compiled-package-size] FAIL: main source exceeds JoyJoin's ` +
-        `${formatBytes(JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES)} safety limit ` +
-        `(WeChat hard limit ${formatBytes(WECHAT_MAIN_PACKAGE_LIMIT_BYTES)}, ` +
-        `WeChat-equivalent ${formatBytes(wechatEquivalentBytes)}). ` +
-        `Move bundled assets into the subpackage that renders them, or serve ` +
-        `them from the CDN.`,
-    )
-    failed = true
-  }
+  const { warnings, failures } = evaluateCompiledPackageSizes(result)
 
-  for (const subpackage of result.subpackages) {
-    if (subpackage.bytes <= JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES) continue
-    console.error(
-      `[compiled-package-size] FAIL: subpackage ${subpackage.root} source ` +
-        `${formatBytes(subpackage.bytes)} exceeds JoyJoin's ` +
-        `${formatBytes(JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES)} safety limit ` +
-        `(WeChat hard limit ${formatBytes(WECHAT_MAIN_PACKAGE_LIMIT_BYTES)} per package, ` +
-        `WeChat-equivalent ` +
-        `${formatBytes(subpackage.bytes + WECHAT_SOURCE_SIZE_OVERHEAD_BYTES)}). ` +
-        `Serve that subpackage's heaviest art from the CDN.`,
-    )
-    failed = true
-  }
+  // GitHub annotations (::warning::) so a size estimate that has drifted shows
+  // up in the Actions UI even though it cannot gate the build.
+  for (const warning of warnings) console.error(`::warning::${warning}`)
+  for (const failure of failures) console.error(failure)
 
-  if (result.crossPackageRequires.length > 0) {
-    console.error('[compiled-package-size] FAIL: main package requires a subpackage chunk:')
-    for (const reference of result.crossPackageRequires) {
-      console.error(`  ${reference.file} -> ${reference.packageRoot}`)
-    }
-    failed = true
-  }
-
-  if (failed) {
+  if (failures.length > 0) {
     process.exitCode = 1
+    return
+  }
+
+  if (warnings.length > 0) {
+    console.log(
+      '[compiled-package-size] ADVISORY: the size warning(s) above are estimates on an ' +
+        'incomplete tree; the authoritative verdict comes from the WeChat upload that ' +
+        'runs after this step.',
+    )
     return
   }
 

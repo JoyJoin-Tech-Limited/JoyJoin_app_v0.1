@@ -88,6 +88,23 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 
 **Fix:** the artifact step now packs on `workflow_dispatch || steps.changes.outputs.should_upload == 'true'`, matching the upload job's gate exactly. The two now-dead gathering-room manifest entries were dropped in the same pass (§1.4).
 
+### 1.6 The size guard blocked the upload on a basis that cannot see the whole package
+
+**Symptom:** after the gathering-room art moved into its subpackage (§1.4), the next `Build Taro WeChat Mini-Program` run failed in `Verify compiled mini-program output`: `check-compiled-package-source-size.mjs compiled-check` printed `main source 1909.5 KiB (WeChat-equivalent 2069.5 KiB …); WeChat headroom -21.5 KiB` and exited 1. `upload-weapp` needs the artifact that step produces, so **no 开发版 upload ran at all** — the question §1.4 was supposed to answer could not even be asked.
+
+**Root cause:** `get-compiled-result` returns miniprogram-ci's **compiler output**, not the uploaded `dist/`, and the compiler only emits what it can reach statically. An asset referenced solely from a JS string constant — `localAsset('/pages/gathering-room/assets/room-composite-v2.webp')` bound as `src={…}` — is never emitted. Measured side by side on the same build:
+
+| tree | `pages/gathering-room` | main package |
+|------|------------------------|--------------|
+| `dist/` (what gets uploaded) | 235.2 KiB | (CI zip-basis report: 1.61 MB) |
+| `compiled-check` (what the guard measured) | 61.6 KiB — code only | 1909.5 KiB — **byte-identical to the pre-move run** |
+
+So the 175 KB relocation was invisible to the guard, and the fixed 160 KiB overhead constant from §1.4 then over-reported by exactly the omitted bytes. A ceiling verdict on this basis is unreliable in both directions: unadjusted it under-reports (§1.4's false PASS), adjusted it over-reports (this incident).
+
+**Fix (2026-10-15):** the size verdicts became `::warning::` annotations that exit 0. `evaluateCompiledPackageSizes()` now returns `{ warnings, failures }`; only basis-independent defects — a main-package chunk `require()`-ing a subpackage chunk — stay fatal. The full per-package table is still printed on every run, and the authoritative number is WeChat's server-side "main package source size" for the real upload, which `upload-weapp` runs immediately after. Hard local gates that remain: `check:package-size` (dist zip basis, fails the main package over 2.00 MB), `verify-upload-assets` (asset classification), `verify:subpackage-styles`, and the compiled-tree asset assertions (Flash contract marker + 34 Street Blind Box files).
+
+**Rule:** never calibrate a size ceiling from a derived tree. Recalibrate from a real `80200` message — it reports WeChat's exact figure (`main package source size 2063KB exceed max limit 2048KB`).
+
 ---
 
 ## 2. What we did right
@@ -119,6 +136,7 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 | Moved/re-exported page-owned components without re-checking `@use` coverage | A page extraction changes the chunk graph and can strand styles silently |
 | Registered an icon mapping in `emojiToIconMap.ts` without committing the webp + CDN manifest entry in the same window (2026-10-14) | Mapping existed 2026-07-21, asset landed 2026-08-05 with no manifest entry, and the `Upload CDN Assets` workflow **skipped** upload jobs on push events (dispatch-only gating), so `JoyJoinIcon`'s local→CDN retry 404'd and devices rendered the fallback 🎯 emoji for 尝鲜体验 |
 | Kept subpackage-only art in the main package until the 2 MB source ceiling was reached (2026-10-15) | The upload failed with `errcode 80200` while every local size command passed — the guard under-measured WeChat's accounting by ~154 KiB (§1.4). Decide the owning package **before** adding art; moving it later costs a release cycle |
+| Calibrated a size ceiling from a derived tree (`get-compiled-result`) instead of from the uploaded package (2026-10-15) | The compiler omits assets referenced only from JS string literals, so after the art move the guard still measured the pre-move main size and blocked every upload — a false FAIL computed on an incomplete tree (§1.6). Keep derived-tree numbers advisory; gate on the uploaded package or WeChat's own verdict |
 
 ---
 
@@ -126,7 +144,7 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 
 ### 4.1 Adding a new bundled asset directory
 
-1. **Decide the owning package first.** If only one subpackage page renders the asset, put it in that subpackage: `src/pages/<pkg>/assets/<new-dir>/` → `dist/pages/<pkg>/assets/<new-dir>/`, referenced as `localAsset('/pages/<pkg>/assets/<new-dir>/file.ext')`. Main-package room is scarce — WeChat's real source ceiling leaves ~1.86 MB of safety budget (§1.4). Subpackages carry the same 2 MB cap each, so check the per-package table the size guard prints before adding heavy art anywhere.
+1. **Decide the owning package first.** If only one subpackage page renders the asset, put it in that subpackage: `src/pages/<pkg>/assets/<new-dir>/` → `dist/pages/<pkg>/assets/<new-dir>/`, referenced as `localAsset('/pages/<pkg>/assets/<new-dir>/file.ext')`. Main-package room is scarce — WeChat's real source ceiling leaves roughly 1.86 MB of estimated budget (§1.4; the 1856 KiB figure is an estimate, §1.6). Subpackages carry the same 2 MB cap each, so check the per-package table the size guard prints before adding heavy art anywhere.
 2. Otherwise place files in `apps/mini-program/src/assets/<new-dir>/`.
 3. Add the copy pattern in `apps/mini-program/config/index.ts`.
 4. **In the same PR**, add a `packOptions.include` regexp in `apps/mini-program/project.config.json` matching the **dist** path (`assets/<new-dir>/.*\.ext$` or `pages/<pkg>/assets/<new-dir>/.*\.ext$`). This is mechanically enforced: `verify-upload-assets.mjs` fails the build for any dist asset with no include pattern.
@@ -142,7 +160,7 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 
 The check is strict on purpose: the two possible readings of `packOptions.include` disagree (`miniprogram-ci@2.1.31` computes `isIgnoredByRules = !isFileIncluded && isFileIgnored`, while this repo's incidents consistently behaved as if it were an allow-list). Requiring an explicit decision per asset is correct under either reading, and the fix for a failure is one line in `project.config.json`.
 
-**Per-package ceilings (2026-10-15):** WeChat caps **each** package at 2 MB, not just the main one. `scripts/check-compiled-package-source-size.mjs` now totals every declared subpackage root on the compiled bundle basis, prints the full table with WeChat-equivalent sizes and headroom, and fails any root over the same 1856 KiB safety limit. `pages/alang` is the tightest (1604 KiB of incompressible art + 273 KiB code → ≈1713 KiB compiled → ≈1873 KB WeChat-equivalent, ~175 KB of real headroom) — an easy place to accidentally re-break the upload.
+**Per-package ceilings (2026-10-15):** WeChat caps **each** package at 2 MB, not just the main one. `scripts/check-compiled-package-source-size.mjs` totals every declared subpackage root on the compiled bundle basis, prints the full table with WeChat-equivalent sizes and headroom, and **warns** (never fails — see §1.6) for any root over the same 1856 KiB estimate. `pages/alang` is the tightest (1604 KiB of incompressible art + 273 KiB code → ≈1713 KiB compiled → ≈1873 KB WeChat-equivalent, ~175 KB of real headroom) — an easy place to accidentally re-break the upload.
 
 ### 4.7 Icon-system CDN fallback coverage (2026-10-14 incident)
 

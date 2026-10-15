@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import {
   calculateCompiledPackageSourceSize,
+  evaluateCompiledPackageSizes,
   JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES,
   JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES,
   JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES,
@@ -109,7 +110,8 @@ describe('compiled package source size', () => {
   it('accounts for the measured gap between this script and WeChat source accounting', () => {
     // 2026-10-15: this script measured 1909.1 KiB while WeChat refused the same
     // package ("main package source size 2063KB exceed max limit 2048KB"), so a
-    // raw comparison would report headroom that does not exist.
+    // raw comparison would report headroom that does not exist. The overhead is
+    // an estimate applied to a warning, not a gate: the upload is authoritative.
     expect(WECHAT_SOURCE_SIZE_OVERHEAD_BYTES).toBeGreaterThanOrEqual(150 * 1024)
     expect(
       JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES +
@@ -125,5 +127,37 @@ describe('compiled package source size', () => {
     expect(JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES).toBeLessThan(
       WECHAT_MAIN_PACKAGE_LIMIT_BYTES - WECHAT_SOURCE_SIZE_OVERHEAD_BYTES,
     )
+  })
+
+  it('warns instead of failing when the estimated size exceeds the limit', () => {
+    // 2026-10-15: the compiled main package measured 1909.5 KiB — byte-identical
+    // to the pre-move run — while 175 KiB of room art had just left the main
+    // package, because the compiler omits assets referenced only from JS string
+    // literals. A size verdict on this basis must therefore never gate the build;
+    // the authoritative verdict is the WeChat upload that runs right after.
+    const { warnings, failures } = evaluateCompiledPackageSizes({
+      mainPackageBytes: JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES + 1,
+      subpackages: [
+        { root: 'pages/alang', bytes: JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES + 1 },
+      ],
+      crossPackageRequires: [],
+    })
+
+    expect(failures).toEqual([])
+    expect(warnings).toHaveLength(2)
+    expect(warnings[0]).toContain('main source')
+    expect(warnings[1]).toContain('subpackage pages/alang')
+  })
+
+  it('keeps cross-package requires fatal regardless of the size estimate', () => {
+    const { warnings, failures } = evaluateCompiledPackageSizes({
+      mainPackageBytes: 1,
+      subpackages: [],
+      crossPackageRequires: [{ file: 'common.js', packageRoot: 'pages/onboarding' }],
+    })
+
+    expect(warnings).toEqual([])
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('common.js -> pages/onboarding')
   })
 })

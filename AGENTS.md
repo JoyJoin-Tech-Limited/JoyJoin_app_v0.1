@@ -224,15 +224,22 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 # (src/pages/<pkg>/assets/… → dist/pages/<pkg>/assets/…, referenced as
 # '/pages/<pkg>/assets/…' via localAsset(), with a matching packOptions.include
 # regexp). The gathering-room composites (175 KB) moved this way on 2026-10-15.
-# The same day added two guards: check-compiled-package-source-size.mjs now
-# buckets the compiled tree per declared subpackage root (longest-prefix match)
-# and fails any package above the same 1856 KiB — pages/alang is tightest at
-# ~175 KB real headroom — and verify-upload-assets.mjs walks every media/font
-# asset in dist/ (196) and fails any that is neither include-covered nor in its
-# INTENTIONALLY_EXCLUDED set. Note miniprogram-ci actually computes
-# isIgnoredByRules = !isFileIncluded && isFileIgnored (include OVERRIDES ignore,
-# it is not an allow-list) — the gate demands an explicit classification either
-# way, and a broad include pattern can silently un-ignore an excluded file.
+# The same day added two guards, then corrected one of them.
+# verify-upload-assets.mjs walks every media/font asset in dist/ (196) and fails
+# any that is neither include-covered nor in its INTENTIONALLY_EXCLUDED set — note
+# miniprogram-ci actually computes isIgnoredByRules = !isFileIncluded &&
+# isFileIgnored (include OVERRIDES ignore, it is not an allow-list), so the gate
+# demands an explicit classification under either reading and a broad include
+# pattern can silently un-ignore an excluded file.
+# check-compiled-package-source-size.mjs buckets the compiled tree per declared
+# subpackage root (longest-prefix match; pages/alang is tightest at ~175 KB of
+# estimated headroom) but only WARNS above the 1856 KiB estimate:
+# miniprogram-ci's compiled tree omits assets reachable only from JS string
+# literals (measured right after the gathering-room move — dist
+# pages/gathering-room 235.2 KiB vs compiled 61.6 KiB, compiled main unchanged at
+# 1909.5 KiB), so a ceiling verdict on that basis is wrong in one direction or
+# the other. WeChat's server-side "main package source size" for the real upload
+# (upload-weapp, immediately after) is the authoritative number.
 # Protocol/runbook: docs/runbooks/mini-program-asset-delivery.md.
 # Details: docs/agent-context/mini-program-assets.md.
 ```
