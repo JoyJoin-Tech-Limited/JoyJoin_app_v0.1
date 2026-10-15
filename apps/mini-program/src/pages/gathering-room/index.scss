@@ -9,68 +9,151 @@
 // both must be @use'd here for the same subpackage style-splitting reason.
 @use '../../components/mascot/XiaoyueEmptyState';
 @use '../../components/mascot/ArchetypeHead';
-// TablemateDetailSheet and SegmentedCountdownClock are rendered by this page;
-// their styles are owned by consuming pages via @use (subpackage style-splitting rule).
+// TablemateDetailSheet is rendered by this page; its styles are owned by
+// consuming pages via @use (subpackage style-splitting rule).
 @use '../../components/TablemateDetailSheet';
-@use '../../components/ui/SegmentedCountdownClock';
 
 .gathering-room {
   @include no-scroll-page-shell;
   @include viewport-min-height;
   background: $color-bg-warm-to;
 
-  &__pill {
+  // Status stack — hero countdown chip + arrival chip + on-the-way caption +
+  // live activity ticker, all centred under the nav bar. Replaces the old
+  // single cramped pill (units-under-digits, three data clusters in one row).
+  &__status-stack {
     position: absolute;
     top: calc(env(safe-area-inset-top) + 24rpx);
     left: 50%;
     z-index: 10;
     transform: translateX(-50%);
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: $spacing-xs;
+    gap: 12rpx;
     max-width: calc(100vw - 48rpx);
-    padding: $spacing-xs $spacing-md;
+  }
+
+  &__countdown-chip {
+    display: flex;
+    align-items: baseline;
+    gap: 6rpx;
+    padding: 14rpx 28rpx;
     border-radius: 999rpx;
-    background: rgba($color-surface, 0.88);
-    border: 2rpx solid rgba($color-border, 0.5);
+    background: rgba($color-surface, 0.92);
+    border: 1rpx solid rgba($color-border, 0.5);
     box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.08);
+    white-space: nowrap;
+  }
+
+  &__countdown-num {
+    font-family: $font-mono;
+    font-size: 32rpx;
+    font-weight: $font-weight-bold;
+    line-height: 1.1;
+    color: $color-text-primary-warm;
+  }
+
+  &__countdown-unit {
+    margin-right: 4rpx;
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary;
+  }
+
+  &__countdown-today {
     font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $flow-accent-human;
+  }
+
+  &__countdown-sep {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+
+  &__countdown-live {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $flow-accent-human;
+  }
+
+  &__arrive-chip {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 8rpx 20rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.78);
+    border: 1rpx solid rgba($color-border, 0.4);
+    font-size: $font-size-xs;
     color: $color-text-secondary;
     white-space: nowrap;
-
-    // Pill children must never shrink-wrap per character — one row or bust.
-    > * {
-      flex-shrink: 0;
-    }
-
-    // The shared clock leaf ships card-rail layout (column, right-aligned,
-    // max-width 48%) — inside the pill it becomes an inline readout.
-    .segmented-countdown-clock {
-      flex-direction: row;
-      align-items: center;
-      max-width: none;
-      gap: 4rpx;
-    }
-
-    .segmented-countdown-clock__digits {
-      align-items: baseline;
-      justify-content: flex-start;
-    }
   }
 
-  &__pill-today {
-    color: $flow-accent-human;
-    font-weight: 600;
-  }
-
-  &__pill-started {
-    font-size: $font-size-sm;
+  &__arrive-label {
+    font-size: $font-size-xs;
     color: $color-text-secondary;
   }
 
-  &__pill-divider {
-    margin: 0 4rpx;
+  &__arrive-total {
+    font-size: $font-size-xs;
     color: $color-text-tertiary;
+  }
+
+  &__arrive-dots {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+    margin: 0 6rpx;
+  }
+
+  // Seat-state dots: purple = locked in, coral = in the room, outline = 在路上.
+  &__arrive-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: $radius-circle;
+    box-sizing: border-box;
+
+    &--confirmed {
+      background: $color-primary;
+    }
+
+    &--present {
+      background: $flow-accent-human;
+    }
+
+    &--absent {
+      background: transparent;
+      border: 1rpx solid rgba($color-text-primary, 0.2);
+    }
+  }
+
+  &__way-caption {
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary;
+  }
+
+  // Live activity ticker ("清风 推门进来了" / "清风 锁定了座位 · 还差 2 人").
+  // Two identical keyframes — toggling animation-name restarts the in/hold/out
+  // cycle per line without keyed remounts (see useCountRollClass note above).
+  &__activity {
+    padding: 8rpx 22rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-text-primary, 0.72);
+    white-space: nowrap;
+
+    &--roll-0 {
+      animation: gathering-room-activity-a 3600ms ease-in-out both;
+    }
+
+    &--roll-1 {
+      animation: gathering-room-activity-b 3600ms ease-in-out both;
+    }
+  }
+
+  &__activity-text {
+    font-size: $font-size-xs;
+    color: $color-surface;
   }
 
   &__scene-wrap {
@@ -115,8 +198,10 @@
   // Attendance/confirmed digits roll up briefly when the counts change. Two
   // identical keyframes — swapping animation-name restarts the animation
   // without remounting the Text (keyed remounts leak stale nodes on H5).
+  // Mono digits keep the readout tabular (no jitter as counts change).
   &__header-count {
     display: inline-block;
+    font-family: $font-mono;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     animation: gathering-room-count-roll-a 240ms ease-out both;
@@ -142,16 +227,82 @@
     width: 100%;
   }
 
-  &__detail-link {
-    display: block;
-    margin-top: $spacing-sm;
-    text-align: center;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
+  // Confirmed success card — the locked-seat state is the win moment, not a
+  // disabled dead end. Purple seal + gold ring + soft glow pulse.
+  &__success-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 24rpx 28rpx;
+    border-radius: 32rpx;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-primary, 0.28);
+    box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.1);
+    overflow: hidden;
+  }
 
-    &:active {
-      color: $color-primary;
-    }
+  &__success-glow {
+    position: absolute;
+    left: -40rpx;
+    top: 50%;
+    width: 220rpx;
+    height: 220rpx;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba($color-glow-gold-hot, 0.5) 0%, rgba($color-glow-gold-hot, 0) 70%);
+    animation: gathering-room-success-glow 2600ms ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  &__success-seal {
+    flex: 0 0 auto;
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: $radius-circle;
+    background: $color-primary;
+    border: 3rpx solid $color-brand-gold;
+    box-shadow: 0 6rpx 16rpx rgba($color-primary, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Pure-CSS white check — crisp at any density, zero asset dependency.
+  &__success-seal-check {
+    width: 24rpx;
+    height: 14rpx;
+    border-left: 5rpx solid $color-surface;
+    border-bottom: 5rpx solid $color-surface;
+    transform: rotate(-45deg) translate(2rpx, -2rpx);
+  }
+
+  &__success-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+    min-width: 0;
+  }
+
+  &__success-title {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__success-sub {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__detail-btn {
+    width: 100%;
+    margin-top: $spacing-sm;
   }
 
   // Full-viewport status surfaces (flag-off / error) — centering safety.
@@ -212,8 +363,27 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes gathering-room-activity-a {
+  0% { opacity: 0; transform: translateY(8rpx); }
+  8%, 86% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-8rpx); }
+}
+
+@keyframes gathering-room-activity-b {
+  0% { opacity: 0; transform: translateY(8rpx); }
+  8%, 86% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-8rpx); }
+}
+
+@keyframes gathering-room-success-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .gathering-room__header-count {
+  .gathering-room__header-count,
+  .gathering-room__activity,
+  .gathering-room__success-glow {
     animation: none;
   }
 }

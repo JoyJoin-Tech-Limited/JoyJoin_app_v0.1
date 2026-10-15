@@ -54,6 +54,9 @@ const ROOM_WS_EVENT_TYPES = [
   'USER_CONFIRMED',
 ] as const
 
+/** How long the arrival/confirmation activity line stays on screen. */
+const ACTIVITY_LINE_MS = 3600
+
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
 
 /** "周六见" style farewell derived from the event's actual date — the
@@ -109,6 +112,10 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
   const [firstArriver, setFirstArriver] = useState(false)
   const [celebrationText, setCelebrationText] = useState<string | null>(null)
   const celebratedRef = useRef(false)
+  // Live activity ticker ("清风 推门进来了" / "清风 锁定了座位 · 还差 2 人").
+  // Derived purely from live WS events — the REST snapshot never fires it, so
+  // reopening the room doesn't replay stale arrivals.
+  const [activityLine, setActivityLine] = useState<{ text: string; ts: number } | null>(null)
 
   // Single managed-timeout map: every ephemeral UI timer (entering bounce per
   // user, own door entry, poke badge, celebration) lives here keyed by name,
@@ -124,6 +131,14 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     if (existing) clearTimeout(existing)
     timers.set(key, setTimeout(() => { timers.delete(key); cb() }, ms))
   }, [])
+
+  const pushActivityLine = useCallback(
+    (text: string) => {
+      setActivityLine({ text, ts: Date.now() })
+      setManagedTimeout('activity-line', () => setActivityLine(null), ACTIVITY_LINE_MS)
+    },
+    [setManagedTimeout],
+  )
 
   const markEntering = useCallback((userId: string) => {
     setEnteringUserIds((current) => {
@@ -181,6 +196,9 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
           if (data.userId !== currentUserId) {
             setFirstArriver(false)
             markEntering(data.userId)
+            const enteredName =
+              roomState?.members.find((member) => member.userId === data.userId)?.displayName || '队友'
+            pushActivityLine(`${enteredName} 推门进来了`)
           }
           return
         }
@@ -229,6 +247,14 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
             setManagedTimeout('celebration', () => {
               setCelebrationText(null)
             }, CELEBRATION_MS)
+          } else if (data.userId !== currentUserId) {
+            // Momentum line for a single confirmation — the all-confirmed
+            // moment is owned by the celebration overlay above.
+            const remaining = Math.max(data.totalParticipants - data.confirmedCount, 0)
+            const name = data.displayName || '队友'
+            pushActivityLine(
+              remaining > 0 ? `${name} 锁定了座位 · 还差 ${remaining} 人` : `${name} 锁定了座位`,
+            )
           }
           // Keep the confirmed counts fresh for the header strip.
           queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })
@@ -237,7 +263,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         default:
       }
     },
-    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, markEntering, setManagedTimeout],
+    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, markEntering, setManagedTimeout, pushActivityLine],
   )
 
   const { send } = useWebSocket({
@@ -437,6 +463,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     pokeBadge,
     firstArriverText: firstArriver ? '你是第一个到的～悦仔陪你等大家推门进来' : null,
     celebrationText,
+    activityLine,
     reducedMotion,
     pageVisible,
     selectedMember,

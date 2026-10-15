@@ -354,9 +354,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
         },
         // Gathering-room composite art fallback — bundled locally (~84KB) so
-        // the room scene never renders a bare background when the CDN copy
-        // 404s (e.g. before the CDN upload pipeline ships it).
-        // GatheringRoomScene loads it via useCdnFirstSrc (CDN-first).
+        // the room scene NEVER renders a bare background: GatheringRoomScene
+        // loads it via localAsset() (package-direct, no CDN attempt), and a
+        // designed CSS room (素胚房) renders underneath until it decodes.
+        // No CDN copy is fetched at runtime, so no CDN upload is required.
+        // Gate: scripts/verify-upload-assets.mjs asserts this file ships.
         {
           from: 'src/assets/gathering-room',
           to: 'dist/assets/gathering-room',

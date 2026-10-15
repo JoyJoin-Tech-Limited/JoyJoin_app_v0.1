@@ -3,7 +3,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
-import { seatIndexFor } from './GatheringRoomScene'
+import {
+  NAME_CARD_PLACEMENT,
+  rowPerspectiveScale,
+  seatIndexFor,
+  seatZIndex,
+} from './GatheringRoomScene'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SCENE_TSX = readFileSync(path.join(HERE, 'GatheringRoomScene.tsx'), 'utf8')
@@ -38,6 +43,49 @@ describe('gathering room seat map', () => {
   })
 })
 
+describe('gathering room name-plate collision contract (2026-10-14)', () => {
+  /**
+   * Regression lock: name plates used to hang at a fixed +48rpx below every
+   * seat anchor with z-index above all avatars — at full house (6 members,
+   * row pitch 125rpx < avatar 144rpx) back-row plates stamped onto the front
+   * row's characters. Placement must be collision-audited per seat: "below"
+   * is only allowed where nothing sits under the plate (front-centre seat 4),
+   * the back-centre seat 0 floats its plate above the head, and every
+   * flanking seat hangs the plate to a side.
+   */
+  it('covers every seat and never places a "below" plate on a flanking row', () => {
+    expect(NAME_CARD_PLACEMENT).toHaveLength(8)
+    // Seats 1,2 (mid row) and 3,5 (front flanks) sit directly above another
+    // row's avatar band — a below-plate there is the original overlap bug.
+    for (const seat of [1, 2, 3, 5]) {
+      expect(NAME_CARD_PLACEMENT[seat]).not.toBe('below')
+    }
+    // Back-centre (0) must not hang below either — its below-band runs into
+    // the mid row's avatars.
+    expect(NAME_CARD_PLACEMENT[0]).not.toBe('below')
+    // Front-centre (4) is the only safe below seat.
+    expect(NAME_CARD_PLACEMENT[4]).toBe('below')
+  })
+
+  it('paints front rows above back rows (painter order)', () => {
+    const back = seatZIndex(36)
+    const mid = seatZIndex(45)
+    const front = seatZIndex(68.5)
+    expect(back).toBeLessThan(mid)
+    expect(mid).toBeLessThan(front)
+    // Every seat must sit above the room-art layers (z 0–2) AND above the
+    // quick-poke catcher (z 40) so a tap on another seat retargets the
+    // bubble instead of dismissing it.
+    expect(back).toBeGreaterThan(40)
+  })
+
+  it('scales deeper rows down and keeps the front row at full size', () => {
+    expect(rowPerspectiveScale(36)).toBeLessThan(rowPerspectiveScale(45))
+    expect(rowPerspectiveScale(45)).toBeLessThan(rowPerspectiveScale(58))
+    expect(rowPerspectiveScale(58)).toBe(1)
+  })
+})
+
 describe('gathering room absent-member rendering contract', () => {
   /**
    * Regression lock (2026-09-10): absent members previously rendered NO avatar
@@ -47,7 +95,11 @@ describe('gathering room absent-member rendering contract', () => {
    * seat; absent ones show a muted silhouette.
    */
   it('never suppresses the avatar/seat for absent members', () => {
-    expect(SCENE_TSX).not.toMatch(/presence\s*===\s*['"]absent['"][^;]*return null/)
+    // The forbidden shape is "absent → render nothing" (literal null branch).
+    // Bounded to the ternary itself: the earlier [^;]* form false-positived
+    // on any `return null` appearing later in the file (JSX has no
+    // semicolons), which broke once sibling Views joined the absent branch.
+    expect(SCENE_TSX).not.toMatch(/presence\s*===\s*['"]absent['"]\s*\?\s*(?:\(\s*)?null/)
     expect(SCENE_TSX).not.toMatch(/\{[^}]*presence\s*===\s*['"]absent['"][^}]*\?\s*null/)
   })
 
