@@ -51,6 +51,7 @@ import { registerEventRoutes } from "./routes/domains/events";
 import { registerConnectionRoutes } from "./routes/domains/connections";
 import { registerMatchCompassRoutes } from "./routes/domains/matchCompass";
 import { registerProfessionUnderstandingRoutes } from "./routes/domains/professionUnderstanding";
+import { registerIndustryCohortRoutes } from "./routes/domains/industryCohort";
 import { registerTestAdminRoutes } from "./routes/domains/testAdmin";
 import { registerSingleTestRoutes } from "./routes/domains/singleTest";
 import { registerMatchingTestRoutes } from "./routes/domains/matchingTest";
@@ -203,6 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerXiaoyueRoutes(app);
   registerCityUnlockRoutes(app);
   registerProfessionUnderstandingRoutes(app);
+  registerIndustryCohortRoutes(app);
   registerMonitoringWebhookRoutes(app);
 
   registerTestAdminRoutes(app);

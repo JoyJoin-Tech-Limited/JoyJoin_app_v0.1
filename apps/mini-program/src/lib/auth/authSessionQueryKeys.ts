@@ -15,6 +15,7 @@ export const MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES = [
   ['mini-program', 'shell/connections'],
   ['mini-program', 'referral-stats'],
   ['mini-program', 'pool-registration'],
+  ['mini-program', 'industry-cohort-count'],
 ] as const
 
 function doesQueryKeyStartWith(queryKey: QueryKey, prefix: readonly unknown[]): boolean {
