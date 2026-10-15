@@ -461,7 +461,10 @@ export default function MyImagePage() {
 
               {data.pendingEntitlements.length > 0 && (
                 <View className={`my-image__section${entitlementSpotlight ? ' my-image__section--spotlight' : ''}`}>
-                  <Text className='my-image__section-title'>待领取装备</Text>
+                  <View className='my-image__section-title-row'>
+                    <View className='my-image__section-dot' aria-hidden='true' />
+                    <Text className='my-image__section-title'>待领取装备</Text>
+                  </View>
                   <Text className='my-image__section-copy'>完成活动获得的机会会永久保留，手动开启后揭晓装备。</Text>
                   {data.pendingEntitlements.map((entitlement) => (
                     <View key={entitlement.id} className='my-image__entitlement'>
@@ -471,6 +474,7 @@ export default function MyImagePage() {
                       </View>
                       <View
                         className={`my-image__draw-button${!rewardsEnabled ? ' my-image__draw-button--disabled' : ''}`}
+                        hoverClass='my-image__draw-button--pressed'
                         onClick={() => { void handleDraw(entitlement.id, entitlement.pool.name) }}
                         role='button'
                         aria-label={`开启${entitlement.pool.name}装备池`}
@@ -712,7 +716,7 @@ export default function MyImagePage() {
               </Text>
               <Text className='my-image__echo-footnote'>下一次机会藏在下一场活动里</Text>
             </View>
-            <View className='my-image__reveal-confirm' onClick={() => setDrawResult(null)} role='button' aria-label='收下装备'><Text>收下</Text></View>
+            <View className='my-image__reveal-confirm' hoverClass='my-image__reveal-confirm--pressed' onClick={() => setDrawResult(null)} role='button' aria-label='收下装备'><Text>收下</Text></View>
           </View>
         </View>
       )}

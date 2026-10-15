@@ -785,7 +785,7 @@ export default function ProfilePage() {
                       // swaps the plain inventory count — the pending claim
                       // is the more actionable fact at this moment; the count
                       // returns inside my-image and after claiming.
-                      <>
+                      <View className='profile-page__equipment-claim-signal' role='presentation'>
                         <View
                           className='profile-page__equipment-wait-dot'
                           aria-hidden='true'
@@ -798,7 +798,7 @@ export default function ProfilePage() {
                         >
                           {equipmentClaimChipCopy}
                         </Text>
-                      </>
+                      </View>
                     ) : equipmentState === 'ready' && (
                       <Text className='profile-page__partner-entry-count'>
                         {`${equipmentInventory.length} 件`}
