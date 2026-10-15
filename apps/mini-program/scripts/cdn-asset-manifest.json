@@ -2143,14 +2143,6 @@
       "cdnPath": "assets/audio/s1-celebration.wav"
     },
     {
-      "localPath": "pages/gathering-room/assets/room-composite-v1.webp",
-      "cdnPath": "pages/gathering-room/assets/room-composite-v1.webp"
-    },
-    {
-      "localPath": "pages/gathering-room/assets/room-composite-v2.webp",
-      "cdnPath": "pages/gathering-room/assets/room-composite-v2.webp"
-    },
-    {
       "localPath": "assets/alang/flash-teaser-hero-v1.webp",
       "cdnPath": "assets/alang/flash-teaser-hero-v1.webp"
     },

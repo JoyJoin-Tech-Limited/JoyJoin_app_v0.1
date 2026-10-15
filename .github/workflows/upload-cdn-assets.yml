@@ -106,9 +106,14 @@ jobs:
           test ! -d apps/mini-program/dist/assets/profile-pixel
 
       - name: Preserve compiled assets for upload
-        # Remote CDN publication is intentionally manual so routine pushes do
-        # not add another bandwidth/disk-heavy task to the shared CVM queue.
-        if: github.event_name == 'workflow_dispatch'
+        # Pack the artifact whenever the upload job below will actually run:
+        # manual dispatch (full-manifest override) or a push whose diff touched
+        # the manifest / a manifest-listed asset (should_upload). Gating this
+        # step on workflow_dispatch alone made every auto-publish push fail in
+        # the upload job with "Artifact not found for name: cdn-weapp-dist"
+        # (2026-10-15). Routine pushes that match nothing still skip both jobs,
+        # so the shared CVM queue stays untouched.
+        if: github.event_name == 'workflow_dispatch' || steps.changes.outputs.should_upload == 'true'
         uses: actions/upload-artifact@v4.6.2
         with:
           name: cdn-weapp-dist
