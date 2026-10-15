@@ -216,8 +216,55 @@
     font-weight: $font-weight-semibold;
   }
 
+  // 保底四格 (W3): solid = draws already consumed toward the guaranteed
+  // new item; the outline slot appears only on the final tick, where the
+  // breathing pulse carries the 「下抽必得保底」 moment. Opacity/transform
+  // only, paused under reduced-motion.
+  &__pity-ticks {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__pity-tick {
+    box-sizing: border-box;
+    width: 40rpx;
+    height: 12rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.14);
+
+    &--filled { background: $color-primary; }
+
+    &--next {
+      border: 2rpx solid $color-brand-gold;
+      background: rgba($color-brand-gold, 0.18);
+      animation: my-image-pity-breathe 1.2s ease-in-out infinite;
+    }
+  }
+
   &__section {
+    position: relative;
     padding: 30rpx;
+
+    // W3 landing spotlight: a soft gold halo breathes twice behind the
+    // 待领取 card while the React spotlight modifier stays mounted
+    // (~1.2s), then the overlay resting opacity is 0. The halo paints
+    // behind the opaque card children, so only the padding gutter glows.
+    &--spotlight::before {
+      position: absolute;
+      inset: -6rpx;
+      pointer-events: none;
+      content: '';
+      border-radius: $card-radius-sm;
+      background: radial-gradient(
+        circle at 50% 38%,
+        rgba($color-brand-gold, 0.32),
+        rgba($color-brand-gold, 0.1) 52%,
+        transparent 76%
+      );
+      animation: my-image-section-spotlight 1200ms ease-in-out both;
+      opacity: 0;
+    }
   }
 
   &__section-title,
@@ -790,6 +837,38 @@
     text-align: center;
   }
 
+  // W3 认知回响卡: three quiet lines under the reveal copy — what just
+  // changed, where the pity counter stands, and the loop line pointing
+  // back to the next live attempt. Informational only, no CTA (grill Q4).
+  &__echo {
+    display: flex;
+    margin-top: 18rpx;
+    align-items: center;
+    flex-direction: column;
+    gap: 6rpx;
+  }
+
+  &__echo-line {
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-relaxed;
+    text-align: center;
+
+    &--muted {
+      color: $color-text-secondary;
+      font-weight: $font-weight-normal;
+    }
+  }
+
+  &__echo-footnote {
+    margin-top: 2rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
+    text-align: center;
+  }
+
   &__reveal-confirm {
     display: flex;
     min-height: $button-height;
@@ -815,6 +894,18 @@
   from { opacity: 0; transform: scale(0.55); }
   to { opacity: 1; transform: scale(1); }
 }
+@keyframes my-image-pity-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+@keyframes my-image-section-spotlight {
+  0% { opacity: 0; }
+  12% { opacity: 0.85; }
+  45% { opacity: 0.12; }
+  62% { opacity: 0.85; }
+  95% { opacity: 0.12; }
+  100% { opacity: 0; }
+}
 
 @media (max-height: 700px) {
   .my-image__stage { min-height: 500rpx; height: 500rpx; }
@@ -825,5 +916,12 @@
   .my-image__loading-dot,
   .my-image__reveal-burst,
   .my-image__reveal-card,
-  .my-image__reveal-art { animation: none; }
+  .my-image__reveal-art,
+  .my-image__pity-tick--next,
+  .my-image__section--spotlight::before { animation: none; }
+
+  // Static poses under reduced-motion: the final tick holds a readable
+  // glint and the spotlight halo rests visible but calm.
+  .my-image__pity-tick--next { opacity: 0.75; }
+  .my-image__section--spotlight::before { opacity: 0.45; }
 }

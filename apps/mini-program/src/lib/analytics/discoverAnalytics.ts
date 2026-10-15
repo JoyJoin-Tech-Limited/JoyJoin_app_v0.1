@@ -113,6 +113,18 @@ export type DiscoverAnalyticsEventType =
   | 'login_cta_tap'
   | 'login_handoff_duration'
   | 'discover_first_arrival'
+  // Equipment guidance V1 funnel (2026-10-15, sprint equipment-guidance-v1;
+  // grill Q6): the FULL V1 six-event set ships in the client union — prompt
+  // → my-image view → draw confirm → post-draw read; zero_intro_seen/_tap +
+  // next_event_cta_tap stay OUT of V1 per the locked P2 deferral. Same
+  // minimal-metadata discipline as the D7 funnel above (enum-only values,
+  // no user text, no device identifiers).
+  | 'equipment_entitlement_prompt_shown'
+  | 'equipment_entitlement_prompt_tap'
+  | 'my_image_entitlement_view'
+  | 'equipment_draw_confirmed'
+  | 'equipment_post_draw_card_read'
+  | 'equipment_guidance_dismiss'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -22,6 +22,7 @@ import {
   getPixelEquipmentThumbnailUrl,
 } from '../../../lib/profile/pixelAvatarAssets'
 import { EQUIPMENT_ME_QUERY_KEY } from '../../../lib/profile/equipmentQueryKeys'
+import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import { haptics } from '../../../lib/utils/haptics'
 import { BRAND_COLORS } from '../../../styles/colors'
 import './index.scss'
@@ -152,6 +153,39 @@ export default function MyImagePage() {
     setFailedArtworkKeys(new Set())
   }, [data?.archetypeId])
 
+  // W3 equipment guidance V1 (grill Q1/Q6): one-shot landing spotlight on the
+  // 待领取区 — 2×600ms breathing pulses, then the page settles. Fires the
+  // my_image_entitlement_view event exactly once per page instance.
+  const [entitlementSpotlight, setEntitlementSpotlight] = useState(false)
+  const entitlementTracedRef = useRef(false)
+  const pendingEntitlementCount = data?.pendingEntitlements?.length ?? 0
+
+  useEffect(() => {
+    if (!rewardsEnabled || pendingEntitlementCount === 0) return
+    if (entitlementTracedRef.current) return
+    entitlementTracedRef.current = true
+    discoverAnalytics.track('my_image_entitlement_view')
+    setEntitlementSpotlight(true)
+    const timer = setTimeout(() => setEntitlementSpotlight(false), 1200)
+    return () => clearTimeout(timer)
+  }, [rewardsEnabled, pendingEntitlementCount])
+
+  // W3: post-draw 认知回响卡 read signal — fires once per reveal after 2s
+  // dwell; cleanup stops the timer when the reveal is closed or unmounted.
+  const echoReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!drawResult) return
+    const timer = setTimeout(() => {
+      echoReadTimerRef.current = null
+      discoverAnalytics.track('equipment_post_draw_card_read')
+    }, 2000)
+    echoReadTimerRef.current = timer
+    return () => {
+      clearTimeout(timer)
+      echoReadTimerRef.current = null
+    }
+  }, [drawResult])
+
   const saveMutation = useMutation({
     mutationFn: (outfit: EquipmentOutfit) => {
       const safeOutfit = sanitizeOutfitForInventory(outfit, usableItemIds)
@@ -260,6 +294,7 @@ export default function MyImagePage() {
     return !!itemId && !usableItemIds.has(itemId)
   })
   const canSave = isDirty && !hasUnavailableDraftItem && !saveMutation.isPending
+  const pityNearGuaranteed = data ? data.wallet.pityMisses >= data.wallet.pityTarget - 1 : false
 
   const markArtworkFailed = (item: Pick<EquipmentItem, 'id' | 'assetKey'>) => {
     const failureKey = getArtworkFailureKey(item)
@@ -290,12 +325,15 @@ export default function MyImagePage() {
     if (!rewardsEnabled || drawMutation.isPending) return
     const modal = await Taro.showModal({
       title: '开启地点装备池',
-      content: `将使用 1 次「${poolName}」抽取机会。装备结果由服务端生成，是否继续？`,
+      content: `这次抽取来自「${poolName}」· 第 4 次抽取必出新品保底。装备结果由服务端生成，是否继续？`,
       confirmText: '开始抽取',
       cancelText: '稍后再说',
       confirmColor: BRAND_COLORS.primary,
     })
-    if (modal.confirm) drawMutation.mutate(entitlementId)
+    if (modal.confirm) {
+      discoverAnalytics.track('equipment_draw_confirmed')
+      drawMutation.mutate(entitlementId)
+    }
   }
 
   const handleRedeem = async (item: EquipmentItem & { price: number; owned: boolean }) => {
@@ -405,12 +443,24 @@ export default function MyImagePage() {
                 <View><Text className='my-image__balance-label'>通用碎片</Text><Text className='my-image__balance-value'>{data.wallet.fragmentBalance}</Text></View>
                 <View className='my-image__pity-copy'>
                   <Text>新品保底</Text>
-                  <Text>{Math.min(data.wallet.pityMisses + 1, data.wallet.pityTarget)} / {data.wallet.pityTarget} 抽</Text>
+                  <View className='my-image__pity-ticks' aria-hidden='true'>
+                    {Array.from({ length: data.wallet.pityTarget }).map((_, tickIndex) => (
+                      <View
+                        key={tickIndex}
+                        className={`my-image__pity-tick${tickIndex < data.wallet.pityMisses ? ' my-image__pity-tick--filled' : ''}${tickIndex === data.wallet.pityMisses && pityNearGuaranteed ? ' my-image__pity-tick--next' : ''}`}
+                      />
+                    ))}
+                  </View>
+                  <Text>
+                    {pityNearGuaranteed
+                      ? '下抽必得保底'
+                      : `${data.wallet.pityMisses + 1} / ${data.wallet.pityTarget} 抽`}
+                  </Text>
                 </View>
               </View>
 
               {data.pendingEntitlements.length > 0 && (
-                <View className='my-image__section'>
+                <View className={`my-image__section${entitlementSpotlight ? ' my-image__section--spotlight' : ''}`}>
                   <Text className='my-image__section-title'>待领取装备</Text>
                   <Text className='my-image__section-copy'>完成活动获得的机会会永久保留，手动开启后揭晓装备。</Text>
                   {data.pendingEntitlements.map((entitlement) => (
@@ -647,6 +697,21 @@ export default function MyImagePage() {
                 ? '拥有新装备，已经放入你的衣橱。'
                 : `重复装备已转化为 ${drawResult.fragmentsAwarded} 通用碎片。`}
             </Text>
+            <View className='my-image__echo' aria-live='polite'>
+              <Text className='my-image__echo-line'>
+                {drawResult.resultKind === 'new'
+                  ? `「${drawResult.item.name}」已收入衣橱，随穿随时换`
+                  : `「${drawResult.item.name}」与衣橱里的它重逢`}
+              </Text>
+              <Text className='my-image__echo-line my-image__echo-line--muted'>
+                {drawResult.guaranteed
+                  ? '第 4 抽保底触发，新一轮保底已重置'
+                  : drawResult.resultKind === 'new'
+                    ? '新品提前到位，保底回到起点'
+                    : `新品保底推进到 ${drawResult.pityMisses} / ${drawResult.pityTarget} 抽`}
+              </Text>
+              <Text className='my-image__echo-footnote'>下一次机会藏在下一场活动里</Text>
+            </View>
             <View className='my-image__reveal-confirm' onClick={() => setDrawResult(null)} role='button' aria-label='收下装备'><Text>收下</Text></View>
           </View>
         </View>

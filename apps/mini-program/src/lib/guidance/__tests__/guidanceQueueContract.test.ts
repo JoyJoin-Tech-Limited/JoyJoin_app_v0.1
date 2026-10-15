@@ -90,10 +90,11 @@ describe('C5 — registry ⊆ shared server enum', () => {
     }
   })
 
-  it('wave ordering: W1 discover_arrival, then W2 (P6) profile_first_visit — never renumbered', () => {
+  it('wave ordering (append-only): W1 discover_arrival, W2 (P6) profile_first_visit, W3 first-entitlement — never renumbered', () => {
     expect(GUIDANCE_TIP_REGISTRY.map((tip) => tip.id)).toEqual([
       'discover_arrival',
       'profile_first_visit',
+      'profile_equipment_first_entitlement',
     ])
   })
 
@@ -293,8 +294,8 @@ describe('P6 — profile_first_visit wiring (2026-09-11)', () => {
   })
 
   it('the profile page consumes the queue for the profile surface with the shared copy', () => {
-    expect(profilePageSource).toContain("useGuidanceQueue({ surface: 'profile', user: authUser })")
-    expect(profilePageSource).toContain("getGuidanceTipCopy('profile_first_visit')")
+    expect(profilePageSource).toContain("useGuidanceQueue({\n    surface: 'profile',\n    user: authUser,")
+    expect(profilePageSource).toContain("getGuidanceTipCopy(profileGuidanceTip?.copyKey ?? 'profile_first_visit')")
   })
 
   it('the tip renders docked above the tab bar — never pushing page content down', () => {
@@ -305,6 +306,77 @@ describe('P6 — profile_first_visit wiring (2026-09-11)', () => {
 
   it('the consuming page SCSS @use\'s the component SCSS (subpackage rule)', () => {
     expect(profileScssSource).toContain("@use '../../components/guidance/GuidanceTipCard.scss'")
+  })
+})
+
+describe('W3 — profile_equipment_first_entitlement (equipment guidance V1, 2026-10-15, grill Q1/Q3/Q5)', () => {
+  const entitlementCtx = {
+    ...baseCtx,
+    surface: 'profile' as const,
+    arrivalPending: false,
+    pendingEntitlements: 1,
+    equipmentGuidanceEligible: true,
+  }
+
+  it('preempts P6 (p15 < p20) exactly when the umbrella is on and an entitlement is pending', () => {
+    expect(evaluateGuidanceQueue(entitlementCtx)?.id).toBe('profile_equipment_first_entitlement')
+    // Same visit without an entitlement still lands on P6 (unchanged).
+    expect(
+      evaluateGuidanceQueue({ ...entitlementCtx, pendingEntitlements: 0 })?.id,
+    ).toBe('profile_first_visit')
+  })
+
+  it('never fires when the equipment umbrella is off (Q5 — all guidance silent)', () => {
+    expect(
+      evaluateGuidanceQueue({ ...entitlementCtx, equipmentGuidanceEligible: false })?.id,
+    ).toBe('profile_first_visit')
+  })
+
+  it('fires once on the FIRST entitlement only; seen-state blocks re-fires (no new seen rules)', () => {
+    expect(evaluateGuidanceQueue(entitlementCtx)?.id).toBe('profile_equipment_first_entitlement')
+    // Server seen-state (the existing dismiss / tap-through semantics) blocks
+    // the equipment tip itself. P6 stays unseen here BY DESIGN — Q3 defers it
+    // (顺延下个会话补发) — so a seen entitlement tip legitimately hands the
+    // slot to P6 on a LATER session.
+    const seenEquipment = {
+      ...entitlementCtx,
+      seenGuidance: { profile_equipment_first_entitlement: '2026-10-15T00:00:00.000Z' },
+    }
+    expect(evaluateGuidanceQueue(seenEquipment)?.id).toBe('profile_first_visit')
+    // Same session: ≤1 tip app-wide, so the entitlement tip can neither
+    // re-fire nor hand the slot to P6 mid-session.
+    markTipShown('profile_equipment_first_entitlement')
+    expect(evaluateGuidanceQueue(seenEquipment)).toBeNull()
+  })
+
+  it('is profile-surface only (no cross-surface pull, Q3)', () => {
+    expect(
+      evaluateGuidanceQueue({ ...entitlementCtx, surface: 'events' }),
+    ).toBeNull()
+    expect(
+      evaluateGuidanceQueue({ ...entitlementCtx, surface: 'discover' }),
+    ).toBeNull()
+  })
+
+  it('copy red lines: zero banned vocabulary, zero emoji, zero countdown/FOMO', async () => {
+    const { GUIDANCE_TIP_COPY } = await import('@shared/copy/guidanceCopy')
+    const copy = GUIDANCE_TIP_COPY.profile_equipment_first_entitlement
+    const text = [
+      copy.kicker,
+      copy.title ?? '',
+      copy.dismissLabel,
+      copy.dismissHint,
+      ...copy.rows.flatMap((row) => [row.title, row.caption]),
+    ].join('\n')
+    expect(text).not.toMatch(/匹配|社交|灵魂|撮合|AI|抽奖|概率|十连/)
+    expect(text).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u)
+    expect(text).not.toMatch(/倒计时|[0-9]+[天日小时分钟秒]内/)
+  })
+
+  it('profile page wires pendingEntitlements + umbrella into the queue and renders the warm dot', () => {
+    expect(profilePageSource).toContain('pendingEntitlements: pendingEntitlementCount')
+    expect(profilePageSource).toContain('profile-page__equipment-wait-dot')
+    expect(profileScssSource).toContain('&__equipment-wait-dot')
   })
 })
 

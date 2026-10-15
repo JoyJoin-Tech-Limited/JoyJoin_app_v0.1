@@ -23,6 +23,12 @@ export const GUIDANCE_TIP_IDS = [
   /** W2 (P6, 2026-09-11): profile first-visit coachmark — 悦仔 explains the
    *  个性化系统 (专属形象 / 当前装备 / 潮流值) on the first profile tab visit. */
   'profile_first_visit',
+  /** W3 (equipment guidance V1, 2026-10-15): first-entitlement hand-off tip.
+   *  Fires the first time a granted 地点装备池 entitlement reaches the
+   *  profile tab (pendingEntitlements ≥ 1, equipment guidance umbrella on);
+   *  recurring entitlements travel on the equipment-bar warm dot alone
+   *  (grill Q1/Q3, deliberation doc §8). */
+  'profile_equipment_first_entitlement',
 ] as const
 
 export type GuidanceTipId = (typeof GUIDANCE_TIP_IDS)[number]

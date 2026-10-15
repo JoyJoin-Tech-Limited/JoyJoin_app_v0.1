@@ -18,7 +18,10 @@
 import { FLOW1_ENTRY_COPY } from './flowAnimationCopy.js';
 import type { ToneMode } from './toneMap.js';
 
-export type GuidanceTipCopyKey = 'discover_arrival' | 'profile_first_visit';
+export type GuidanceTipCopyKey
+  = 'discover_arrival'
+  | 'profile_first_visit'
+  | 'profile_equipment_first_entitlement';
 
 /** Stable row identity — drives row-tap routing (event feed vs 街头盲盒 on
  *  discover; avatar/equipment/trend explainers on profile). */
@@ -96,6 +99,25 @@ export const GUIDANCE_TIP_COPY: Record<GuidanceTipCopyKey, GuidanceTipCopy> = {
         key: 'trend',
         title: '潮流值 · 越玩越旺',
         caption: '多参加活动就会成长',
+      },
+    ],
+    dismissHint: '点右上角收起',
+  },
+  // W3 (equipment guidance V1, 2026-10-15): first-entitlement hand-off.
+  // 悦仔 announces a granted 地点装备池 chance and points the row tap into
+  // my-image. 装备 never expires and is never sold — the caption frames the
+  // hand-off as manual claim (grill Q3), no countdown/FOMO vocabulary.
+  profile_equipment_first_entitlement: {
+    copyKey: 'profile_equipment_first_entitlement',
+    toneMode: 'system-ui',
+    kicker: '装备指南',
+    title: '现场赢的装备到啦',
+    dismissLabel: '知道了',
+    rows: [
+      {
+        key: 'equipment',
+        title: '待领取 · 手动开启',
+        caption: '完成线下活动赢得的机会，点这里去开启',
       },
     ],
     dismissHint: '点右上角收起',

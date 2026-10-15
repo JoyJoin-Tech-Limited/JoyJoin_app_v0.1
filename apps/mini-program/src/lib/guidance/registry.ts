@@ -15,7 +15,9 @@
  *
  * W1 registers ONLY `discover_arrival` (absorbed from the legacy storage-
  * keyed arrival coachmark in pages/discover). W2 (P6, 2026-09-11) appends
- * `profile_first_visit`. Later waves APPEND tips here (tab tips, spotlight,
+ * `profile_first_visit`. W3 (equipment guidance V1, 2026-10-15) appends
+ * `profile_equipment_first_entitlement` — the first-entitlement hand-off
+ * (grill Q1/Q3). Later waves APPEND tips here (tab tips, spotlight,
  * flash/blind-box entries) — never renumber existing priorities.
  */
 
@@ -58,6 +60,13 @@ export interface GuidanceTriggerContext {
   seenGuidance?: Record<string, string> | null
   /** Legacy onboarding-completion signal (storage key inherited by arrivalMigration). */
   arrivalPending: boolean
+  /** Equipment guidance V1 (W3, grill Q3/Q5): count of granted-but-not-claimed
+   *  地点装备池 entitlements, supplied by the profile page from its equipment
+   *  query. Optional — tips outside the equipment wave must not read it. */
+  pendingEntitlements?: number
+  /** Umbrella gate Q5 defaults to ON: true only when both
+   *  equipmentRewardsEnabled and profilePixelAvatarEnabled are on. */
+  equipmentGuidanceEligible?: boolean
 }
 
 export interface GuidanceTipDefinition {
@@ -90,5 +99,19 @@ export const GUIDANCE_TIP_REGISTRY: readonly GuidanceTipDefinition[] = [
     surface: 'profile',
     trigger: () => true,
     copyKey: 'profile_first_visit',
+  },
+  {
+    // W3 (equipment guidance V1, 2026-10-15, grill Q3): first-entitlement
+    // hand-off. Priority 15 preempts P6 (p20) — a first profile visit that
+    // already carries an entitlement gets the equipment tip first, P6 fires
+    // next session (server seen-state pending). Fires ONCE on the FIRST
+    // entitlement; recurring ones travel on the equipment-bar dot alone.
+    // Seen semantics = existing dismiss/tap-through flow (no new rules).
+    id: 'profile_equipment_first_entitlement',
+    priority: 15,
+    surface: 'profile',
+    trigger: (ctx) =>
+      ctx.equipmentGuidanceEligible === true && (ctx.pendingEntitlements ?? 0) > 0,
+    copyKey: 'profile_equipment_first_entitlement',
   },
 ] as const

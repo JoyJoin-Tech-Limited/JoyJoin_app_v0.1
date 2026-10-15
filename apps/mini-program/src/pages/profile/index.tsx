@@ -15,6 +15,7 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
+import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import IdentityStageScene from '../../components/profile/IdentityStageScene'
 import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
@@ -361,6 +362,21 @@ export default function ProfilePage() {
   const equippedCount = outfit
     ? [outfit.topItemId, outfit.bottomItemId, outfit.shoesItemId, outfit.accessoryItemId].filter(Boolean).length
     : 0
+
+  // W3 (2026-10-15, equipment guidance V1): open-claim signal driven by the
+  // equipment/me entitlements. `equipmentGuidanceEligible` is the Q5 umbrella
+  // gate — pixel avatar on AND equipment rewards on; every guidance surface
+  // below (breathing dot, claim chip, C4 first-entitlement tip) stays dark
+  // unless it is true. No per-item flags (Q5: one narrative, one switch).
+  const pendingEntitlementCount = equipmentQuery.data?.pendingEntitlements?.length ?? 0
+  const equipmentRewardsEnabled = authUser?.features?.equipmentRewardsEnabled === true
+  const equipmentGuidanceEligible = pixelAvatarEnabled && equipmentRewardsEnabled
+  const equipmentClaimPending = equipmentState === 'ready'
+    && equipmentGuidanceEligible
+    && pendingEntitlementCount > 0
+  const equipmentClaimChipCopy = pendingEntitlementCount <= 3
+    ? `${pendingEntitlementCount} 份装备待领`
+    : '可领取'
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
 
@@ -497,26 +513,52 @@ export default function ProfilePage() {
     }
   }
 
-  // ── P6 profile first-visit guidance tip (2026-09-11, C4 queue) ──
-  // 悦仔 explains the 个性化系统 (专属形象 / 当前装备 / 潮流值) once per user.
+  // ── Guidance queue dock (C4 queue, profile surface) ──
+  // P6 (2026-09-11): first-visit explainer — 专属形象 / 当前装备 / 潮流值.
+  // W3 (2026-10-15): first-entitlement nudge — fires ONCE on the first open
+  // claim (priority 15, preempts P6 by ordering; P6 then runs next session),
+  // profile-surface only; recurring claims ride the breathing dot instead.
   // The queue hook owns the flag gate (features.guidanceQueueEnabled),
   // arbitration, 6s dwell, and the server-persisted seen-write; the card is
   // docked above the tab bar as an overlay so it never pushes page content
-  // down (zero-scroll policy). Rows are informational — with no onRowTap a
-  // row tap degrades to a tap-through dismiss inside the card.
+  // down (zero-scroll policy). Entitlement data re-arrives async with the
+  // equipment query, so the trigger context is re-evaluated when it lands.
   const {
     activeTip: profileGuidanceTip,
     exiting: profileGuidanceTipExiting,
     dismiss: dismissProfileGuidanceTip,
-  } = useGuidanceQueue({ surface: 'profile', user: authUser })
-  const profileGuidanceCopy = useMemo(() => getGuidanceTipCopy('profile_first_visit'), [])
-  const profileTipShowing = profileGuidanceTip?.id === 'profile_first_visit'
+  } = useGuidanceQueue({
+    surface: 'profile',
+    user: authUser,
+    pendingEntitlements: pendingEntitlementCount,
+    equipmentGuidanceEligible: equipmentGuidanceEligible,
+  })
+  // Copy derives from the ACTIVE tip so both queue tips share one dock with
+  // their own copy blocks (the fixed P6 key was the single-tip era).
+  const profileGuidanceCopy = useMemo(
+    () => getGuidanceTipCopy(profileGuidanceTip?.copyKey ?? 'profile_first_visit'),
+    [profileGuidanceTip?.copyKey],
+  )
+  const profileTipShowing = profileGuidanceTip != null
   const profileTipMascot = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
   const profileTipMascotFallback = useMemo(
     () => localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp'),
     [],
   )
   const [profileTipMascotError, setProfileTipMascotError] = useState(false)
+
+  // W3 funnel (Q6): the claim signal re-applies across sessions, so 'shown'
+  // fires once per session per pending-count value (ref-deduped); enter and
+  // tap analytics are attached at the claim chip + card wiring below.
+  const shownEntitlementCountsRef = useRef<Set<number>>(new Set())
+  useEffect(() => {
+    if (!equipmentGuidanceEligible || pendingEntitlementCount <= 0) return
+    if (shownEntitlementCountsRef.current.has(pendingEntitlementCount)) return
+    shownEntitlementCountsRef.current.add(pendingEntitlementCount)
+    discoverAnalytics.track('equipment_entitlement_prompt_shown', undefined, {
+      pendingEntitlements: pendingEntitlementCount,
+    })
+  }, [equipmentGuidanceEligible, pendingEntitlementCount])
 
   return renderGate(
     <View className={`profile-page ${tabEntranceClass}`}>
@@ -706,6 +748,11 @@ export default function ProfilePage() {
                   hoverClass='profile-page__partner-entry--pressed'
                   onClick={() => {
                     haptics('light')
+                    if (equipmentClaimPending) {
+                      discoverAnalytics.track('equipment_entitlement_prompt_tap', undefined, {
+                        pendingEntitlements: pendingEntitlementCount,
+                      })
+                    }
                     Taro.navigateTo({
                       url: MINI_PROGRAM_ROUTES.myImage,
                       success: () => {
@@ -733,7 +780,26 @@ export default function ProfilePage() {
                         : '当前装备正在同步'}
                   >
                     <Text className='profile-page__equipment-label'>当前装备</Text>
-                    {equipmentState === 'ready' && (
+                    {equipmentClaimPending ? (
+                      // W3 claim signal (warm-gold dot + chip) temporarily
+                      // swaps the plain inventory count — the pending claim
+                      // is the more actionable fact at this moment; the count
+                      // returns inside my-image and after claiming.
+                      <>
+                        <View
+                          className='profile-page__equipment-wait-dot'
+                          aria-hidden='true'
+                          data-testid='profile-equipment-wait-dot'
+                        />
+                        <Text
+                          className='profile-page__equipment-wait-chip'
+                          data-testid='profile-equipment-wait-chip'
+                          aria-label={`${equipmentClaimChipCopy}，进入我的形象与装备开启`}
+                        >
+                          {equipmentClaimChipCopy}
+                        </Text>
+                      </>
+                    ) : equipmentState === 'ready' && (
                       <Text className='profile-page__partner-entry-count'>
                         {`${equipmentInventory.length} 件`}
                       </Text>
@@ -1007,7 +1073,31 @@ export default function ProfilePage() {
             onMascotError={() => setProfileTipMascotError(true)}
             exiting={profileGuidanceTipExiting}
             ariaLabel={`${profileGuidanceCopy.kicker}：${profileGuidanceCopy.title ?? ''}。${profileGuidanceCopy.rows.map((row) => `${row.title}，${row.caption}`).join('。')}。${profileGuidanceCopy.dismissHint}`}
-            onDismiss={(reason) => dismissProfileGuidanceTip(reason)}
+            onDismiss={(reason) => {
+              // W3 funnel (Q6): entitlement-tip dismissals carry the card
+              // reason (× button vs tap-through); the 6s auto-dwell never
+              // reaches this wrapper — the card fires only button/tap_through.
+              if (profileGuidanceTip?.id === 'profile_equipment_first_entitlement') {
+                discoverAnalytics.track('equipment_guidance_dismiss', undefined, { reason })
+              }
+              dismissProfileGuidanceTip(reason)
+            }}
+            onRowTap={(key) => {
+              // W3: the claim row routes to the my-image claim surface.
+              // P6 rows keep the built-in plain tap-through (dismiss below).
+              if (profileGuidanceTip?.id === 'profile_equipment_first_entitlement') {
+                Taro.navigateTo({
+                  url: MINI_PROGRAM_ROUTES.myImage,
+                  success: () => {
+                    logInfo('profile:open_my_image_success')
+                  },
+                  fail: (error) => {
+                    logError('profile:open_my_image_fail', { error: String(error) })
+                  },
+                })
+              }
+              dismissProfileGuidanceTip('tap_through')
+            }}
           />
         </View>
       ) : null}

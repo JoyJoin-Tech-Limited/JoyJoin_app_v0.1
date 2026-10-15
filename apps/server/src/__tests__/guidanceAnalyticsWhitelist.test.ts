@@ -40,6 +40,19 @@ const D7_GUIDANCE_EVENT_TYPES = [
   "guidance_dismissed",
 ] as const;
 
+// Equipment guidance V1 funnel (2026-10-15, sprint equipment-guidance-v1):
+// six V1 events, unconditional like the D7 whitelist above (the 30-day
+// window baseline must start at deploy). Same minimal-metadata pattern;
+// per-event metadata shapes mirror the client payloads.
+const EQUIPMENT_GUIDANCE_EVENT_TYPES = [
+  "equipment_entitlement_prompt_shown",
+  "equipment_entitlement_prompt_tap",
+  "my_image_entitlement_view",
+  "equipment_draw_confirmed",
+  "equipment_post_draw_card_read",
+  "equipment_guidance_dismiss",
+] as const;
+
 async function buildTestApp() {
   const { registerAnalyticsRoutes } = await import("../routes/domains/analytics");
   const app = express();
@@ -110,4 +123,47 @@ describe("POST /api/analytics/discover — D7 guidance funnel whitelist", () => 
       expect(mockTransaction).not.toHaveBeenCalled();
     });
   });
+});
+
+describe("POST /api/analytics/discover — equipment guidance V1 funnel whitelist", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockValues.mockReturnValue(undefined);
+    mockInsert.mockReturnValue({ values: mockValues });
+    mockTransaction.mockImplementation(async (cb: any) => {
+      await cb({ insert: mockInsert });
+    });
+  });
+
+  it.each(EQUIPMENT_GUIDANCE_EVENT_TYPES.map((eventType) => [eventType]))(
+    "accepts %s and persists it",
+    async (eventType) => {
+      const app = await buildTestApp();
+      await withServer(app, async (base) => {
+        const res = await fetch(`${base}/api/analytics/discover`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventType,
+            metadata:
+              eventType === "equipment_entitlement_prompt_shown"
+                ? { pendingEntitlements: 1 }
+                : eventType === "equipment_entitlement_prompt_tap"
+                  ? { pendingEntitlements: 2 }
+                  : eventType === "equipment_guidance_dismiss"
+                    ? { reason: "button" }
+                    : {},
+            timestamp: Date.now(),
+          }),
+        });
+        const body: any = await res.json();
+        expect(res.status).toBe(200);
+        expect(body.success).toBe(true);
+        expect(mockTransaction).toHaveBeenCalledTimes(1);
+        expect(mockValues).toHaveBeenCalledWith(
+          expect.objectContaining({ eventType }),
+        );
+      });
+    },
+  );
 });

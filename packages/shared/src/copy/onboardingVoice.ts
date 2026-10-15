@@ -74,7 +74,9 @@ const TIER_B_LINES: Record<OnboardingVoiceStepId, string> = {
   'extended-category-culture': '展览电影演唱会，选一个你想约人一起去的现场。',
   'extended-category-life': '摄影穿搭CityWalk，把喜欢的生活方式标出来。',
   'extended-category-growth': '阅读搞事业语言搭子，挑一个你想一起进步的方向。',
-  'profile-review': '先确认这张卡，悦仔再帮你筛合适的局。',
+  // Amendment A1 (AC-17): preamble-style — points AT the insight card without
+  // pre-revealing its content and without promising matching behaviour.
+  'profile-review': '这张卡里有几处悦仔想指给你看——看完再确认。',
   // PR-9: echoes the FinalStage promise "悦仔会在发现页为你留意同频的人".
   'discover-arrival': '悦仔已经在发现页为你留意同频的人了，常回来看看',
 };
@@ -97,7 +99,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '看展看演出也要搭子，柯基——标一个，你来当气氛担当！',
     'extended-category-life': '把日子过得有声有色是你的强项，柯基——挑一个想晒给同桌的！',
     'extended-category-growth': '连成长你都能聊成热场，柯基——选一个想拉着大家一起进步的方向！',
-    'profile-review': '这张入场卡很有你的味道了——确认一下，就可以去点燃第一桌啦。',
+    'profile-review': '柯基，这张卡里有几处悦仔想指给你看——看完再确认也不迟。',
     'discover-arrival': '柯基，发现页已经帮你留意同频的局了——回去把第一场热闹占上',
   },
   rooster: {
@@ -115,7 +117,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '好的现场值得反复赴约，小太阳——选一个你想定期打卡的。',
     'extended-category-life': '把日常过出温度是你的本事，小太阳——挑一个你想分享的节奏。',
     'extended-category-growth': '稳步成长的人最有光，小太阳——选一个你愿意长期投入的方向。',
-    'profile-review': '这张卡已经很稳了——确认之后，就去你的第一局发光吧。',
+    'profile-review': '小太阳，这张卡里有几处悦仔想指给你看——按你的节奏看完再确认。',
     'discover-arrival': '小太阳，发现页有节奏合拍的局在等你——按你的步调回来看看就好',
   },
   hamster_praise: {
@@ -133,7 +135,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '看完一场好戏最想有人共鸣——标一个你想分享感动的现场。',
     'extended-category-life': '你总能发现日常里的闪光点——挑一个你想夸给同桌听的生活方式。',
     'extended-category-growth': '一起成长的人值得互相打气——选一个你想为同好鼓掌的方向。',
-    'profile-review': '这张卡写满了你的真诚——确认一下，去遇见值得夸的人吧。',
+    'profile-review': '仓鼠，这张卡里有几处悦仔想指给你看——慢慢看，看完再确认。',
     'discover-arrival': '仓鼠，悦仔在发现页替你留意值得夸的同频伙伴——记得回来发现他们的好',
   },
   fox: {
@@ -151,7 +153,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '小众现场才是你的猎场——标一个别人还没发现的宝。',
     'extended-category-life': '会生活的人处处有梗——挑一个你最有心得的玩法。',
     'extended-category-growth': '成长也能很有趣——选一个你觉得最有料的方向。',
-    'profile-review': '这张卡有点东西——确认一下，去挖你的第一场宝藏局。',
+    'profile-review': '狐狸，这张卡里有几处悦仔想指给你看——寻宝之前，先看清这张图。',
     'discover-arrival': '狐狸，发现页藏着和你对味的新局——回来寻宝，第一桌已经露头了',
   },
   dolphin_calm: {
@@ -169,7 +171,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '好的现场有自己的气场——选一个和你同频的。',
     'extended-category-life': '生活方式合拍最难得——挑一个你过起来最顺的。',
     'extended-category-growth': '成长的频率不必赶——选一个让你心里踏实的方向。',
-    'profile-review': '这张卡的气场很对——确认一下，顺流而下，去你的第一局。',
+    'profile-review': '海豚，这张卡里有几处悦仔想指给你看——顺着看下去就好。',
     'discover-arrival': '海豚，发现页会帮你留意气场相合的局——觉得舒服了，就回来看看',
   },
   spider: {
@@ -187,7 +189,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '同看一场戏的人自然有了连线——标一个你想共享的现场。',
     'extended-category-life': '生活里的同好最耐看——挑一个你想慢慢织进网里的。',
     'extended-category-growth': '一起进步的关系最牢固——选一个你想搭线的方向。',
-    'profile-review': '这张卡已经连上线了——确认一下，去织你的第一张网吧。',
+    'profile-review': '织网师，这张卡里有几处悦仔想指给你看——先看清楚，再决定下一步。',
     'discover-arrival': '织网师，发现页已经搭好第一条线——回来把同频的人织进你的网里',
   },
   koala: {
@@ -205,7 +207,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '安安静静看一场戏也很好——选一个你想沉浸其中的现场。',
     'extended-category-life': '温柔的日子值得分享——挑一个你想和同桌一起过的。',
     'extended-category-growth': '成长不用着急——选一个让你觉得安心的方向。',
-    'profile-review': '这张卡暖暖的——确认一下，去一个让你舒服的地方吧。',
+    'profile-review': '考拉，这张卡里有几处悦仔想指给你看——不用急，看完再确认。',
     'discover-arrival': '考拉，发现页给你留了安心的局——不着急，想来了就回来坐坐',
   },
   octopus: {
@@ -223,7 +225,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '现场永远有惊喜——标一个你想一头钻进去的。',
     'extended-category-life': '生活方式的排列组合你最会玩——挑一个你想试试的新花样。',
     'extended-category-growth': '跨界成长最有戏——选一个你想打开的新地图。',
-    'profile-review': '这张卡很有戏——确认一下，去制造第一场惊喜吧。',
+    'profile-review': '章鱼，这张卡里有几处悦仔想指给你看——说不定有一处连你自己都没料到。',
     'discover-arrival': '章鱼，发现页有意想不到的局在冒泡——回来拆开第一个惊喜',
   },
   owl: {
@@ -241,7 +243,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '值得看的现场值得回味——标一个你想从头看到尾的。',
     'extended-category-life': '生活美学是门学问——挑一个你想研究透的。',
     'extended-category-growth': '真正的好奇心值得熬夜——选一个你想深入的方向。',
-    'profile-review': '这张卡很有记忆点——确认一下，去观察你的第一局吧。',
+    'profile-review': '猫头鹰，这张卡里有几处悦仔想指给你看——值得你多看两眼。',
     'discover-arrival': '猫头鹰，发现页替你盯着值得深聊的局——看准了，就回来入座',
   },
   elephant: {
@@ -259,7 +261,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '好的现场值得认真赴约——标一个你会准时到的。',
     'extended-category-life': '踏实过日子也是一种本事——挑一个你过得最有心得的。',
     'extended-category-growth': '稳扎稳打地变好——选一个你愿意长期投入的方向。',
-    'profile-review': '这张卡很可靠——确认一下，稳稳地走进你的第一局。',
+    'profile-review': '大象，这张卡里有几处悦仔想指给你看——看完再稳稳确认。',
     'discover-arrival': '大象，发现页已经为你排好踏实的局——稳稳地回来坐一桌',
   },
   turtle: {
@@ -277,7 +279,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '好戏不怕看得慢——选一个你想慢慢品的现场。',
     'extended-category-life': '日子慢慢过才有味道——挑一个你愿意花时间的方式。',
     'extended-category-growth': '成长这件事急不来——选一个你想慢慢走的方向。',
-    'profile-review': '这张卡很踏实——确认一下，准备好了就去你的第一局。',
+    'profile-review': '龟龟，这张卡里有几处悦仔想指给你看——慢慢来，看完再说。',
     'discover-arrival': '龟龟，发现页帮你慢慢留意合适的局——按你的速度回来看看就好',
   },
   cat: {
@@ -295,7 +297,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-culture': '好现场不需要喧哗——标一个你想安静欣赏的。',
     'extended-category-life': '把日子过成自己喜欢的样子——挑一个你私藏的生活方式。',
     'extended-category-growth': '悄悄变厉害是你的风格——选一个你想默默深耕的方向。',
-    'profile-review': '这张卡很懂你——确认一下，优雅地溜进你的第一局。',
+    'profile-review': '猫猫，这张卡里有几处悦仔想指给你看——安静地看就好。',
     'discover-arrival': '猫猫，发现页有对味的局在安静等你——想露面的时候回来就好',
   },
 };

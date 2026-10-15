@@ -254,6 +254,18 @@ const DISCOVER_EVENT_TYPES = [
   "miniscript_vote_round1_submitted",
   "miniscript_vote_round2_submitted",
   "miniscript_clue_drawer_opened",
+  // Equipment guidance V1 funnel (2026-10-15, sprint equipment-guidance-v1):
+  // ships WITH the client union UNCONDITIONALLY — not flag-gated — so the
+  // 30-day data window (deliberation Q8 scaling gate) starts at deploy.
+  // Metadata discipline identical to the D7 guidance funnel above:
+  // enum-only payloads — pendingEntitlements counts, dismiss reason enum —
+  // never user text, pool names, or device identifiers.
+  "equipment_entitlement_prompt_shown",
+  "equipment_entitlement_prompt_tap",
+  "my_image_entitlement_view",
+  "equipment_draw_confirmed",
+  "equipment_post_draw_card_read",
+  "equipment_guidance_dismiss",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];

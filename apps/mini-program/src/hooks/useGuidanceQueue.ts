@@ -59,6 +59,10 @@ export interface GuidanceQueueEvalContext {
   surface: GuidanceSurface
   seenGuidance?: Record<string, string> | null
   arrivalPending: boolean
+  /** Equipment guidance V1 (W3): passthrough for the entitlement tip trigger. */
+  pendingEntitlements?: number
+  /** Umbrella gate Q5 — equipmentRewardsEnabled && profilePixelAvatarEnabled. */
+  equipmentGuidanceEligible?: boolean
 }
 
 /**
@@ -87,6 +91,8 @@ export function evaluateGuidanceQueue(ctx: GuidanceQueueEvalContext): GuidanceTi
         surface: ctx.surface,
         seenGuidance: ctx.seenGuidance,
         arrivalPending: ctx.arrivalPending,
+        pendingEntitlements: ctx.pendingEntitlements,
+        equipmentGuidanceEligible: ctx.equipmentGuidanceEligible,
       }),
     )
     .sort((a, b) => a.priority - b.priority)
@@ -113,6 +119,13 @@ export type GuidanceDismissReason = 'button' | 'tap_through' | 'auto'
 interface UseGuidanceQueueOptions {
   surface: GuidanceSurface
   user: AuthUser | undefined
+  /** Equipment guidance V1 (W3, grill Q3): granted-but-unclaimed
+   *  地点装备池 entitlement count, from the profile page's equipment query.
+   *  Re-arrives asynchronously after mount, so changes re-run evaluation. */
+  pendingEntitlements?: number
+  /** Umbrella gate Q5 (default per Q5 intent): true only when both
+   *  equipmentRewardsEnabled and profilePixelAvatarEnabled are on. */
+  equipmentGuidanceEligible?: boolean
 }
 
 export interface UseGuidanceQueueResult {
@@ -121,7 +134,12 @@ export interface UseGuidanceQueueResult {
   dismiss: (reason: GuidanceDismissReason) => void
 }
 
-export function useGuidanceQueue({ surface, user }: UseGuidanceQueueOptions): UseGuidanceQueueResult {
+export function useGuidanceQueue({
+  surface,
+  user,
+  pendingEntitlements,
+  equipmentGuidanceEligible,
+}: UseGuidanceQueueOptions): UseGuidanceQueueResult {
   const flagEnabled = user?.features?.guidanceQueueEnabled === true
   const userId = typeof user?.id === 'string' ? user.id : undefined
   const seenGuidance = (user?.seenGuidance ?? null) as Record<string, string> | null
@@ -207,6 +225,8 @@ export function useGuidanceQueue({ surface, user }: UseGuidanceQueueOptions): Us
       surface,
       seenGuidance,
       arrivalPending: isArrivalTipPending(userId),
+      pendingEntitlements,
+      equipmentGuidanceEligible,
     })
     if (!tip) return
     // Mark BEFORE mounting so a concurrent evaluation can never double-fire.
@@ -218,7 +238,7 @@ export function useGuidanceQueue({ surface, user }: UseGuidanceQueueOptions): Us
       dwellTimerRef.current = null
       dismissRef.current('auto')
     }, GUIDANCE_TIP_DWELL_MS)
-  }, [flagEnabled, surface, seenGuidance, userId])
+  }, [flagEnabled, surface, seenGuidance, userId, pendingEntitlements, equipmentGuidanceEligible])
 
   // C2: evaluated on useDidShow + trigger events (auth payload / flag /
   // surface changes re-run the effect below; the shown-set blocks refires).
