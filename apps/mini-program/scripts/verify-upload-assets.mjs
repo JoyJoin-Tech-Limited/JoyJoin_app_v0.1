@@ -52,8 +52,10 @@ const CRITICAL_ASSETS = [
   'assets/icons/archetype-grid/archetype-octopus-grid.webp',
   'assets/icons/archetype-grid/archetype-turtle-grid.webp',
   'assets/icons/archetype-grid/archetype-hamster_praise-grid.webp',
-  // Gathering-room scene (2026-08-17 incident)
-  'assets/gathering-room/room-composite-v2.webp',
+  // Gathering-room scene (2026-08-17 incident). Subpackage-local since
+  // 2026-10-15: the composites moved out of the main package after WeChat
+  // rejected the upload (errcode 80200, main package source size 2064KB).
+  'pages/gathering-room/assets/room-composite-v2.webp',
   // Personality-test intro tease icons + slot spritesheet (2026-09-07 incident:
   // the 12-icon tease row rendered as empty circles on device)
   'pages/onboarding/assets/archetypes/archetype-spritesheet.webp',

@@ -3,8 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const SRC = path.join(__dirname, '../src/assets/gathering-room/room-composite-v1.webp')
-const OUT = path.join(__dirname, '../src/assets/gathering-room/room-composite-v2.webp')
+const SRC = path.join(__dirname, '../src/pages/gathering-room/assets/room-composite-v1.webp')
+const OUT = path.join(__dirname, '../src/pages/gathering-room/assets/room-composite-v2.webp')
 
 // ── Window frame (measured on 5px grids) ────────────────────────────────────
 // Inner quad the clipped night panel is allowed to occupy.

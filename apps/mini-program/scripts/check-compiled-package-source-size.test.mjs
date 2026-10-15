@@ -5,8 +5,10 @@ import path from 'node:path'
 
 import {
   calculateCompiledPackageSourceSize,
+  JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES,
   JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES,
   WECHAT_MAIN_PACKAGE_LIMIT_BYTES,
+  WECHAT_SOURCE_SIZE_OVERHEAD_BYTES,
 } from './check-compiled-package-source-size.mjs'
 
 const temporaryDirectories = []
@@ -75,5 +77,17 @@ describe('compiled package source size', () => {
     expect(
       WECHAT_MAIN_PACKAGE_LIMIT_BYTES - JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES,
     ).toBeGreaterThanOrEqual(100 * 1024)
+  })
+
+  it('accounts for the measured gap between this script and WeChat source accounting', () => {
+    // 2026-10-15: this script measured 1909.1 KiB while WeChat refused the same
+    // package ("main package source size 2063KB exceed max limit 2048KB"), so a
+    // raw comparison would report headroom that does not exist.
+    expect(WECHAT_SOURCE_SIZE_OVERHEAD_BYTES).toBeGreaterThanOrEqual(150 * 1024)
+    expect(
+      JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES +
+        WECHAT_SOURCE_SIZE_OVERHEAD_BYTES +
+        JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES,
+    ).toBe(WECHAT_MAIN_PACKAGE_LIMIT_BYTES)
   })
 })

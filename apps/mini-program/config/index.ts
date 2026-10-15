@@ -353,15 +353,19 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
           to: 'dist/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
         },
-        // Gathering-room composite art fallback — bundled locally (~84KB) so
-        // the room scene NEVER renders a bare background: GatheringRoomScene
-        // loads it via localAsset() (package-direct, no CDN attempt), and a
-        // designed CSS room (素胚房) renders underneath until it decodes.
-        // No CDN copy is fetched at runtime, so no CDN upload is required.
+        // Gathering-room composite art — ships with the gathering-room
+        // subpackage (~175KB for both composites) so the room scene NEVER
+        // renders a bare background while staying out of the main package's
+        // 2 MB source budget (2026-10-15: WeChat rejected the upload with
+        // errcode 80200 — main package source size 2064KB > 2048KB — and
+        // these two files were the largest movable block). GatheringRoomScene
+        // loads them via localAsset() (package-direct, no CDN attempt), and a
+        // designed CSS room (素胚房) renders underneath until they decode.
+        // v1 is kept alongside v2 as the rollback copy.
         // Gate: scripts/verify-upload-assets.mjs asserts this file ships.
         {
-          from: 'src/assets/gathering-room',
-          to: 'dist/assets/gathering-room',
+          from: 'src/pages/gathering-room/assets',
+          to: 'dist/pages/gathering-room/assets',
         },
         // Matching status heroes — referenced via cdnAsset(); local copies are
         // not bundled because cdnAsset() returns the CDN URL in production.

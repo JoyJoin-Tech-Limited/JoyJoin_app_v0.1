@@ -140,7 +140,7 @@
       },
       {
         "type": "regexp",
-        "value": "assets/gathering-room/.*\\.webp$"
+        "value": "pages/gathering-room/assets/.*\\.webp$"
       },
       {
         "type": "regexp",

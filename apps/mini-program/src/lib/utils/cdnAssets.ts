@@ -60,21 +60,26 @@ export function cdnAsset(localPath: string): string {
 /**
  * Returns a local asset path for bundled mini-program assets.
  *
- * WeChat Mini Program `<image>` resolves absolute paths `/assets/...` from
- * the project root. Relative paths do not work inside Taro-compiled `<Image>`.
+ * WeChat Mini Program `<image>` resolves absolute paths from the project root.
+ * Relative paths do not work inside Taro-compiled `<Image>`.
  *
- * Use this when the asset is shipped inside the WeChat package (under
- * `src/assets/...`) and you want to bypass the CDN entirely.
+ * Two bundled locations are valid:
+ *   - `/assets/...`             → main package (`src/assets/...`)
+ *   - `/pages/<pkg>/assets/...` → inside subpackage `<pkg>`
+ *     (`src/pages/<pkg>/assets/...`), which keeps the asset out of the main
+ *     package's 2 MB source budget (2026-10-15, WeChat errcode 80200).
  *
- * The path must start with `/assets/` and the file must exist in
- * `apps/mini-program/src/assets/`.
+ * Use this when the asset is shipped inside the WeChat package and you want to
+ * bypass the CDN entirely.
  */
+const BUNDLED_ASSET_PATH_PATTERN = /^\/(?:assets\/|pages\/[^/]+\/assets\/)/
+
 export function localAsset(localPath: string): string {
-  if (!localPath.startsWith('/assets/')) {
+  if (!BUNDLED_ASSET_PATH_PATTERN.test(localPath)) {
     // eslint-disable-next-line no-console
     console.warn(
-      `[localAsset] Path "${localPath}" does not start with /assets/. ` +
-        `Only assets under src/assets/ should use localAsset().`
+      `[localAsset] Path "${localPath}" is not a bundled asset path. ` +
+        `Use /assets/... (main package) or /pages/<pkg>/assets/... (subpackage).`
     )
   }
   return localPath

@@ -41,8 +41,13 @@ import './GatheringRoomScene.scss'
  * motion renders everything static at the final state.
  */
 
-/** Single composite background image path (CDN-first, local fallback). */
-const ROOM_COMPOSITE_PATH = '/assets/gathering-room/room-composite-v2.webp'
+/** Single composite background image path — subpackage-local, package-direct.
+ *  2026-10-15: the two room composites were moved out of the main package's
+ *  `assets/` directory (WeChat rejected the upload with errcode 80200, main
+ *  package source size 2064KB > 2048KB). The asset now travels with the
+ *  gathering-room subpackage (see the copy pattern in config/index.ts), which
+ *  has its own budget, and nothing fetches it from the CDN. */
+const ROOM_COMPOSITE_PATH = '/pages/gathering-room/assets/room-composite-v2.webp'
 
 /** Seat anchors in scene-% (x right, y down), origin = scene top-left.
  *  Measured against room-composite-v2.webp's six zabuton cushions (feet land
