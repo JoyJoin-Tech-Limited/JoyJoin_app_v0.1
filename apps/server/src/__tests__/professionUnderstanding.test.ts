@@ -17,6 +17,7 @@ import { withServerForApp as withServer } from "../test-utils/withServer";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   OCCUPATION_RESOLUTION_THRESHOLD,
+  TOP_UP_MIN_COSINE,
   findExactOccupationId,
   findIndexMatch,
   mapCandidateGroups,
@@ -395,6 +396,147 @@ describe("correctionCandidates mapping (D1)", () => {
   });
 });
 
+describe("topUpOccupationCandidates — category scoping + cosine floor (tray fix)", () => {
+  // Mixed-category fake index. Cross-category entries carry HIGHER cosines on
+  // purpose: the pre-fix tray ranked the whole index globally, which is exactly
+  // how 并购顾问 (finance) ended up offering 房产经纪/教育顾问/销售经理.
+  const mixedIndex: VectorEntry[] = [
+    { id: "trader", displayName: "交易员", industryId: "finance", vector: [0.9, 0.1] },
+    { id: "analyst", displayName: "分析师", industryId: "finance", vector: [0.8, 0.2] },
+    { id: "real_estate_agent", displayName: "房产经纪", industryId: "realestate", vector: [0.99, 0.01] },
+    { id: "education_consultant", displayName: "教育顾问", industryId: "education", vector: [0.98, 0.02] },
+    { id: "sales_manager", displayName: "销售经理", industryId: "marketing", vector: [0.97, 0.03] },
+  ];
+
+  it("restricts the tray to the classified category even when cross-category entries score higher", () => {
+    const toppedUp = topUpOccupationCandidates([], [1, 0], mixedIndex, null, {
+      categoryId: "finance",
+      segmentId: "investment_banking",
+    });
+    expect(toppedUp.map((c) => c.id)).toEqual(["trader", "analyst"]);
+    expect(toppedUp.some((c) => c.id === "real_estate_agent")).toBe(false);
+    expect(toppedUp.some((c) => c.id === "education_consultant")).toBe(false);
+    expect(toppedUp.some((c) => c.id === "sales_manager")).toBe(false);
+  });
+
+  it("keeps existing entries, respects dedup + excludeId, and caps at 3 within the scope", () => {
+    const index: VectorEntry[] = [
+      { id: "investor", displayName: "投资人", industryId: "finance", vector: [1, 0] },
+      { id: "trader", displayName: "交易员", industryId: "finance", vector: [0.9, 0.1] },
+      { id: "analyst", displayName: "分析师", industryId: "finance", vector: [0.8, 0.2] },
+      { id: "banker", displayName: "银行家", industryId: "finance", vector: [0.7, 0.3] },
+      ...mixedIndex.filter((e) => e.industryId !== "finance"),
+    ];
+    const toppedUp = topUpOccupationCandidates(
+      [{ id: "investor", label: "投资人" }],
+      [1, 0],
+      index,
+      "banker",
+      { categoryId: "finance" },
+    );
+    expect(toppedUp.map((c) => c.id)).toEqual(["investor", "trader", "analyst"]);
+  });
+
+  it("admits entries whose seedMappings anchor them to the classified category (signal b)", () => {
+    // Real catalog anchors: crypto_trader has industryId "tech" but
+    // seedMappings finance/pe_vc; accountant has industryId "finance" but
+    // seedMappings professional_services/consulting.
+    const index: VectorEntry[] = [
+      { id: "crypto_trader", displayName: "加密货币交易员", industryId: "tech", vector: [0.9, 0.1] },
+      { id: "accountant", displayName: "会计师", industryId: "finance", vector: [0.85, 0.15] },
+      { id: "trader", displayName: "交易员", industryId: "finance", vector: [0.8, 0.2] },
+    ];
+    const financeTray = topUpOccupationCandidates([], [1, 0], index, null, {
+      categoryId: "finance",
+    });
+    expect(financeTray.map((c) => c.id)).toEqual(["crypto_trader", "accountant", "trader"]);
+
+    const profServicesTray = topUpOccupationCandidates([], [1, 0], index, null, {
+      categoryId: "professional_services",
+    });
+    expect(profServicesTray.map((c) => c.id)).toEqual(["accountant"]);
+  });
+
+  it("falls back to the global index when the classified category has no scoped entries", () => {
+    // "gaming" has no industryId mapping and no seedMappings anchor, so the
+    // scoped set is empty — coverage must come from the global pool instead of
+    // returning an empty tray.
+    const toppedUp = topUpOccupationCandidates([], [1, 0], mixedIndex, null, {
+      categoryId: "gaming",
+    });
+    expect(toppedUp).toHaveLength(3);
+    expect(toppedUp[0].id).toBe("real_estate_agent"); // highest cosine globally
+  });
+
+  it("excludes entries below TOP_UP_MIN_COSINE even when that leaves fewer than 3", () => {
+    const below = TOP_UP_MIN_COSINE - 0.01;
+    const above = TOP_UP_MIN_COSINE + 0.01;
+    const index: VectorEntry[] = [
+      { id: "above", displayName: "贴线之上", industryId: "finance", vector: [above, Math.sqrt(1 - above * above)] },
+      { id: "below", displayName: "贴线之下", industryId: "finance", vector: [below, Math.sqrt(1 - below * below)] },
+      { id: "orthogonal", displayName: "完全无关", industryId: "finance", vector: [0, 1] },
+    ];
+    const toppedUp = topUpOccupationCandidates([], [1, 0], index, null, {
+      categoryId: "finance",
+    });
+    expect(toppedUp.map((c) => c.id)).toEqual(["above"]);
+  });
+
+  it("returns an empty occupation group (not garbage) when every candidate falls below the floor", () => {
+    const index: VectorEntry[] = [
+      { id: "noise_a", displayName: "无关甲", industryId: "finance", vector: [0, 1] },
+      { id: "noise_b", displayName: "无关乙", industryId: "finance", vector: [-0.2, 0.9] },
+    ];
+    const toppedUp = topUpOccupationCandidates([], [1, 0], index, null, {
+      categoryId: "finance",
+    });
+    expect(toppedUp).toEqual([]);
+  });
+});
+
+describe("occupation catalog — new finance entries (Fix 2)", () => {
+  it("resolves 并购顾问 and its synonyms to the canonical ma_advisor id", () => {
+    expect(findExactOccupationId("并购顾问")).toBe("ma_advisor");
+    expect(findExactOccupationId("并购")).toBe("ma_advisor");
+    expect(findExactOccupationId("M&A")).toBe("ma_advisor");
+    expect(findExactOccupationId("兼并收购")).toBe("ma_advisor");
+    expect(findExactOccupationId("M&A顾问")).toBe("ma_advisor");
+  });
+
+  it("resolves 投资经理 / 行业研究员 to their canonical ids", () => {
+    expect(findExactOccupationId("投资经理")).toBe("investment_manager");
+    expect(findExactOccupationId("投资管理")).toBe("investment_manager");
+    expect(findExactOccupationId("基金经理助理")).toBe("investment_manager");
+    expect(findExactOccupationId("行业研究员")).toBe("industry_researcher");
+    expect(findExactOccupationId("行研")).toBe("industry_researcher");
+    expect(findExactOccupationId("证券分析师")).toBe("industry_researcher");
+  });
+
+  it("keeps existing exact matches intact after the synonym moves", () => {
+    expect(findExactOccupationId("战投")).toBe("cvc_strategic");
+    expect(findExactOccupationId("CVC")).toBe("cvc_strategic");
+    expect(findExactOccupationId("投资")).toBe("pe_vc");
+    expect(findExactOccupationId("金融分析师")).toBe("finance_analyst");
+    // Pre-existing ambiguities stay null (never a guess), ownership unchanged:
+    // “研究员” is shared by finance_analyst + researcher; “基金经理” is
+    // fund_manager's displayName and still a pe_vc synonym.
+    expect(findExactOccupationId("研究员")).toBeNull();
+    expect(findExactOccupationId("基金经理")).toBeNull();
+  });
+
+  it("drives a non-null standardizedOccupationId for 并购顾问 end to end", async () => {
+    const classification = {
+      category: { id: "finance", label: "金融服务" },
+      segment: { id: "investment_banking", label: "投资银行" },
+      niche: { id: "ma_advisory", label: "并购顾问" },
+      candidates: undefined,
+    };
+    const resolved = await resolveProfessionOccupation("并购顾问", classification);
+    expect(resolved.standardizedOccupationId).toBe("ma_advisor");
+    expect(resolved.standardizedOccupationId).not.toBe(classification.niche.id);
+  });
+});
+
 describe("POST /api/inference/understand-profession (D1 + D2 + fallback)", () => {
   it("passes correctionCandidates through and resolves a canonical standardizedOccupationId", async () => {
     h.classifyUnified.mockResolvedValue(seedCatalogResult());
@@ -420,6 +562,52 @@ describe("POST /api/inference/understand-profession (D1 + D2 + fallback)", () =>
     for (const group of Object.values(body.correctionCandidates) as Array<unknown[]>) {
       expect(group.length).toBeLessThanOrEqual(3);
     }
+  });
+
+  it("scopes the vector top-up tray to the classified category (并购顾问 regression)", async () => {
+    // Verified bug: 并购顾问 classifies as 金融服务 › 投资银行 › 并购顾问 at
+    // 0.98 (no classifier candidates), and the unscoped/floorless top-up then
+    // filled the 角色 tray with 房产经纪/教育顾问/销售经理.
+    h.classifyUnified.mockResolvedValue({
+      category: { id: "finance", label: "金融服务" },
+      segment: { id: "investment_banking", label: "投资银行" },
+      niche: { id: "ma_advisory", label: "并购顾问" },
+      confidence: 0.98,
+      source: "taxonomy" as const,
+      processingTimeMs: 1,
+      rawInput: "并购顾问",
+      normalizedInput: "并购顾问",
+      candidates: undefined,
+    });
+    h.classify.mockResolvedValue(null);
+    h.embed = vi.fn(async () => ({
+      vector: [1, 0],
+      model: "mock-embedding",
+      dimensions: 2,
+      provider: "self_hosted" as const,
+    }));
+    h.safeLoadIndexImpl = () => [
+      { id: "investment_banker", displayName: "投行(IBD)", industryId: "finance", vector: [0.9, 0.1] },
+      { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", vector: [0.8, 0.2] },
+      // Cross-category entries outrank the finance ones on raw cosine — the
+      // pre-fix behaviour this test locks against.
+      { id: "real_estate_agent", displayName: "房产经纪", industryId: "realestate", vector: [0.99, 0.01] },
+      { id: "education_consultant", displayName: "教育顾问", industryId: "education", vector: [0.98, 0.02] },
+      { id: "sales_manager", displayName: "销售经理", industryId: "marketing", vector: [0.97, 0.03] },
+    ];
+
+    const { status, body } = await classify("并购顾问");
+
+    expect(status).toBe(200);
+    expect(body.classification.standardizedOccupationId).toBe("ma_advisor");
+    const occupationTray = body.correctionCandidates.occupation as Array<{
+      id: string;
+      label: string;
+    }>;
+    expect(occupationTray.map((c) => c.id)).toEqual(["investment_banker", "pe_vc"]);
+    expect(occupationTray.some((c) => c.id === "real_estate_agent")).toBe(false);
+    expect(occupationTray.some((c) => c.id === "education_consultant")).toBe(false);
+    expect(occupationTray.some((c) => c.id === "sales_manager")).toBe(false);
   });
 
   it("keeps fallback raw input and resolves to null without guessing or emitting chips", async () => {

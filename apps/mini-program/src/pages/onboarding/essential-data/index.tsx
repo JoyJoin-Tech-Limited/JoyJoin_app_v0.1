@@ -1045,6 +1045,12 @@ export default function EssentialDataPage() {
                   onClick={() => {
                     haptics('light')
                     setProfessionHint('')
+                    // R2 — field-entry measurement: which intent context the
+                    // user arrived with, and whether a value was prefilled.
+                    analytics.interaction('profession_field_tapped', {
+                      intent,
+                      hasPrefill: professionText !== '',
+                    })
                     setShowProfessionOverlay(true)
                   }}
                   aria-label={professionText !== '' ? `职业：${professionText}` : '选填（点击告诉悦仔你的职业）'}
@@ -1216,6 +1222,7 @@ export default function EssentialDataPage() {
         initialValue={professionText}
         smartProfession={user?.features?.smartProfession ?? false}
         userArchetype={userArchetype}
+        userCity={user?.currentCity ?? undefined}
         onSubmit={handleProfessionSubmit}
         onSkip={handleProfessionSkip}
       />

@@ -5,9 +5,6 @@ import { logInfo, logWarn } from '../lib/utils/logger'
 import { isUsableProfessionResponse, sanitizeIndustrySource } from '../lib/onboarding/professionSubmissionGuard'
 
 interface UnderstandProfessionResponse {
-  reaction: string
-  reactionHint: string
-  displayTags: string[]
   classification: {
     category: { id: string; label: string } | null
     segment: { id: string; label: string } | null

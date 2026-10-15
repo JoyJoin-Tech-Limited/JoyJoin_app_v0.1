@@ -17,9 +17,16 @@ export const OPENING_MESSAGES_ARCHETYPE = (archetypeName: string): readonly stri
   '设计师、产品经理、教师、自由职业都可以说。越具体，悦仔越能帮你挑到聊得来的局。',
 ]
 
-export const SKIP_RESPONSE_GENERIC = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
+export const SKIP_RESPONSE_GENERIC = '好呀，先跳过也可以～不过写下职业，第一局的同桌会更对你的味哦'
 
-export const SKIP_RESPONSE_MEMORY = '你刚才说的悦仔也记着呢～等你想完善了，随时可以在个人主页里补充'
+export const SKIP_RESPONSE_MEMORY = '你刚才说的悦仔记着啦～再补上职业，第一局的同桌会更对你的味哦'
+
+// R3 skip guard — armed label of the post-reveal two-tap header 跳过.
+export const SKIP_ARMED_COPY = '仍要跳过？已分析的结果会清空'
+
+// R6 dead-end banner — shown when the send quota is exhausted with no usable
+// classification; the banner itself is tappable and executes skip.
+export const MAX_SEND_SKIP_BANNER_COPY = '悦仔暂时没读懂这题～先跳过，之后随时能在个人主页补充'
 
 export const INVALID_PROFESSION_MESSAGE = '我还没看懂这个职业/身份，可以换成「产品经理」「做设计」「学生」「自由职业」这类描述，或者点跳过。'
 
@@ -117,7 +124,7 @@ export const PROFESSION_REACTION_ENTRIES: [string, string][] = [
     ['宠物','宠物行业的温柔和耐心，很容易在局里建立轻松信任的氛围'],
     ['花艺','花艺/美学行业的感知力和审美，很容易在文化局里遇到同好'],
     ['手工','手工/匠人的专注力和创造力，很容易在深度话题局里被欣赏'],
-    ['烘焙','烘焙人的细腻和分享欲，「美食」本身就是最好的社交语言'],
+    ['烘焙','烘焙人的细腻和分享欲，「美食」本身就是最好的开场白'],
     ['咖啡','咖啡人的品味和节奏感，很容易在慢聊局里找到舒适的位置'],
     ['茶艺','茶艺人的平和和仪式感，适合跟同样向内探索的人深聊'],
     ['红酒','品酒/侍酒师的品味和知识储备，很容易在高端局里建立话题'],
@@ -190,6 +197,16 @@ export const PROFESSION_REACTION_ENTRIES: [string, string][] = [
     ['vet','宠物行业的温柔和耐心，很容易在局里建立轻松信任的氛围'],
     ['florist','花艺/美学行业的感知力和审美，很容易在文化局里遇到同好'],
     ['craftsman','手工/匠人的专注力和创造力，很容易在深度话题局里被欣赏'],
-    ['baker','烘焙人的细腻和分享欲，「美食」本身就是最好的社交语言'],
+    ['baker','烘焙人的细腻和分享欲，「美食」本身就是最好的开场白'],
     ['tea master','茶艺人的平和和仪式感，适合跟同样向内探索的人深聊'],
   ]
+
+/**
+ * 同城排桌线 copy builder (commercialization audit #1) — 「本周{city}有 N 场局在排桌」.
+ * 排桌 vocabulary per the WeChat review posture. The count must be a real
+ * computed value — the caller renders this line only when N ≥ 1 (never a
+ * fabricated 0).
+ */
+export function buildCityPoolLine(city: string, count: number): string {
+  return `本周${city}有 ${count} 场局在排桌`
+}

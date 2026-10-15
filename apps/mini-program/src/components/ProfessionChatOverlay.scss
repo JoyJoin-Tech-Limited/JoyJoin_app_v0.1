@@ -342,6 +342,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
+
+    // R6 dead-end variant — the banner itself executes skip (tappable).
+    &--action {
+      background: rgba($color-primary, 0.06);
+      border-top-color: rgba($color-primary, 0.18);
+
+      &:active,
+      &.profession-overlay__max-send-hint--active {
+        background: rgba($color-primary, 0.12);
+      }
+    }
   }
 
   &__max-send-hint-text {
@@ -349,6 +360,11 @@
     color: $color-text-muted;
     text-align: center;
     display: block;
+
+    &--action {
+      color: $color-primary;
+      font-weight: $font-weight-medium;
+    }
   }
 
   @keyframes profession-hint-fade-in {
@@ -363,14 +379,18 @@
     margin-bottom: $spacing-md;
     padding: $spacing-lg;
     background: linear-gradient(135deg, rgba($color-primary, 0.06), rgba($color-primary, 0.12));
-    border-radius: $card-radius-sm;
+    border-radius: $card-radius;
     border: 2rpx solid rgba($color-primary, 0.12);
+    // Soft brand lift — the card is the flow's emotional peak, it should float.
+    box-shadow: 0 16rpx 48rpx rgba($color-primary, 0.10);
     animation: profession-reveal-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    @include safe-area-inline($container-padding);
+    // NOTE: no safe-area-inline here — the card lives inside &__chat, which
+    // already applies the horizontal safe-area padding.
 
     &--fallback {
       background: linear-gradient(135deg, rgba($color-warning, 0.04), rgba($color-warning, 0.08));
       border-color: rgba($color-warning, 0.18);
+      box-shadow: 0 16rpx 48rpx rgba($color-warning, 0.10);
     }
   }
 
@@ -392,18 +412,24 @@
     align-self: flex-start;
   }
 
-  // Single soft check — one element, no hand-built two-piece tick (§6.1)
+  // Single soft check — verified-badge look pinned to the mascot corner (§6.1).
+  // Lives INSIDE &__reveal-mascot so the absolute offsets anchor to the avatar.
   &__reveal-check {
-    width: 28rpx;
-    height: 28rpx;
-    flex-shrink: 0;
+    position: absolute;
+    right: -4rpx;
+    bottom: -4rpx;
+    width: 32rpx;
+    height: 32rpx;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     background: rgba($color-primary, 0.12);
+    // Surface-coloured ring cuts the badge out of the avatar (verified-badge look)
+    border: 4rpx solid $color-surface;
     animation: profession-checkmark-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    animation-delay: 0.2s;
+    animation-delay: 0.4s;
     opacity: 0;
   }
 
@@ -416,8 +442,12 @@
   &__reveal-mascot {
     width: 64rpx;
     height: 64rpx;
+    position: relative;
+    // overflow must stay visible or the corner badge gets clipped; the circular
+    // clip is owned by the img itself. border-radius remains here so the
+    // loading-tint background keeps its round shape before the image lands.
+    overflow: visible;
     border-radius: 50%;
-    overflow: hidden;
     flex-shrink: 0;
     background: rgba($color-primary, 0.08);
   }
@@ -426,6 +456,8 @@
     width: 100%;
     height: 100%;
     display: block;
+    border-radius: 50%;
+    overflow: hidden;
   }
 
   @keyframes profession-checkmark-pop {
@@ -436,11 +468,20 @@
   &__reveal-title {
     flex: 1;
     min-width: 0;
-    font-size: $font-size-md;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
     color: $color-text-primary;
-    font-weight: $font-weight-semibold;
+    font-weight: $font-weight-bold;
     display: block;
     word-break: keep-all;
+    // `backwards` fill hides the title during the 0.12s delay, then releases to
+    // natural styles — no permanent fill override on the element.
+    animation: profession-reveal-title-fade 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.12s backwards;
+  }
+
+  @keyframes profession-reveal-title-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   // ── 职业坐标阶梯 (类别 › 细分 › 角色) ─────────────────────────────────
@@ -450,16 +491,17 @@
     margin-bottom: $spacing-md;
   }
 
-  // Row entrance: 60ms stagger, total ≤360ms (§6.4 envelope)
+  // Row entrance: staged after the card + title land (choreography envelope
+  // ≤1.2s — see the timeline comment at the top of the reveal section)
   &__ladder-row {
     display: flex;
     flex-direction: column;
     animation: profession-ladder-row-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     opacity: 0;
 
-    &:nth-child(1) { animation-delay: 0s; }
-    &:nth-child(2) { animation-delay: 0.06s; }
-    &:nth-child(3) { animation-delay: 0.12s; }
+    &:nth-child(1) { animation-delay: 0.18s; }
+    &:nth-child(2) { animation-delay: 0.24s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
 
     & + & {
       margin-top: $spacing-xs;
@@ -495,7 +537,9 @@
     overflow: hidden;
   }
 
-  // Single-line pill with ellipsis (§6.1) — fills the middle column, field-like
+  // Single-line pill with ellipsis (§6.1) — fills the middle column, field-like.
+  // The VALUE is the row's payload: it out-ranks the 类别/细分/角色 micro-labels
+  // (which stay 22rpx muted), so it reads at body size + medium weight.
   &__ladder-pill {
     width: 100%;
     min-width: 0;
@@ -507,10 +551,67 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
+      font-size: $font-size-base;
+      font-weight: $font-weight-medium;
+      color: $color-text-primary;
+    }
+
+    // No correction candidates → the pill is a display field, not a button:
+    // neutralize the Chip :active transform + tap shimmer (.chip compound
+    // selectors keep specificity above Chip.scss regardless of chunk order).
+    &--static {
+      &.chip:active {
+        transform: none;
+      }
+
+      &.chip::before {
+        content: none;
+      }
+    }
+
+    // One-shot write-in light band (悦仔 "writing down" each coordinate).
+    // Gated by the reveal-generation `pillSweepActive` flag in the TSX — the
+    // class is removed on the first correction so it can never re-fire on
+    // tray open/close or correction re-renders.
+    &--sweep {
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          105deg,
+          transparent 40%,
+          rgba($color-primary, 0.18) 50%,
+          transparent 60%
+        );
+        transform: translateX(-100%);
+        animation: profession-pill-sweep 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        pointer-events: none;
+      }
     }
   }
 
+  // Cascading write-in delays: 类别 → 细分 → 角色 (visible-row nth-child keeps
+  // the order intact even when the 细分 row is merged into 角色, AC-22).
+  &__ladder-row:nth-child(1) &__ladder-pill--sweep::after {
+    animation-delay: 0.46s;
+  }
+
+  &__ladder-row:nth-child(2) &__ladder-pill--sweep::after {
+    animation-delay: 0.58s;
+  }
+
+  &__ladder-row:nth-child(3) &__ladder-pill--sweep::after {
+    animation-delay: 0.7s;
+  }
+
+  @keyframes profession-pill-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+
   &__ladder-pending {
+    flex: 1; // fill the value column — the dashed pill IS the empty field
     display: flex;
     align-items: center;
     justify-content: center;
@@ -534,7 +635,7 @@
   }
 
   &__ladder-pending-text {
-    font-size: $font-size-xs;
+    font-size: $font-size-sm;
     color: $color-text-muted;
     line-height: 1.2;
   }
@@ -560,9 +661,9 @@
   }
 
   &__ladder-change-text {
-    font-size: $font-size-sm;
+    font-size: $font-size-xs;
     color: $color-primary;
-    font-weight: $font-weight-medium;
+    font-weight: $font-weight-normal;
     line-height: 1.3;
   }
 
@@ -616,12 +717,184 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  // ── Read-only tag section (特质 / 印象) ────────────────────────────────
+  // Visually subordinate to the ladder: smaller, quieter, no tap affordance.
+  &__trait-section {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+    padding-top: $spacing-sm;
+    border-top: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__trait-group {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  // Mixed-size same-line pair (mark + label) — flex row, center aligned (L2)
+  &__trait-group-head {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    animation: profession-hint-fade-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: 0.49s;
+    opacity: 0;
+  }
+
+  &__trait-group-mark {
+    width: 12rpx;
+    height: 12rpx;
+    flex-shrink: 0;
+    border-radius: 4rpx;
+    transform: rotate(45deg);
+
+    &--archetype {
+      background: $color-primary;
+    }
+
+    &--impression {
+      background: transparent;
+      border: 2rpx solid rgba($color-text-muted, 0.55);
+    }
+  }
+
+  &__trait-group-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    font-weight: $font-weight-medium;
+    line-height: 1.4;
+    display: block;
+    word-break: keep-all;
+  }
+
+  &__trait-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+
+    .profession-overlay__trait-pill {
+      &:nth-child(1) { animation-delay: 0.53s; }
+      &:nth-child(2) { animation-delay: 0.6s; }
+      &:nth-child(3) { animation-delay: 0.67s; }
+    }
+
+    // 印象 group streams in right after 特质 (both groups present case)
+    &--impressions {
+      .profession-overlay__trait-pill {
+        &:nth-child(1) { animation-delay: 0.65s; }
+        &:nth-child(2) { animation-delay: 0.72s; }
+        &:nth-child(3) { animation-delay: 0.79s; }
+      }
+    }
+  }
+
+  @keyframes profession-trait-pill-pop-in {
+    from { opacity: 0; transform: translateY(8rpx) scale(0.85); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  &__trait-pill {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    max-width: 100%;
+    padding: 8rpx 20rpx;
+    border-radius: 999rpx;
+    animation: profession-trait-pill-pop-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    opacity: 0;
+
+    // 特质 — warm brand-forward: soft purple tint, subtle border, leading dot
+    &--archetype {
+      background: rgba($color-primary, 0.1);
+      border: 2rpx solid rgba($color-primary, 0.24);
+    }
+
+    // 印象 — quiet neutral: clean surface, muted border, no dot
+    &--impression {
+      background: rgba($color-surface, 0.92);
+      border: 2rpx solid rgba($color-text-muted, 0.26);
+    }
+  }
+
+  &__trait-pill-dot {
+    width: 8rpx;
+    height: 8rpx;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: $color-primary;
+  }
+
+  &__trait-pill-text {
+    font-size: $font-size-xs;
+    line-height: 1.4;
+    display: block;
+    // 孤字 guard — never leave a dangling single character on its own line
+    word-break: keep-all;
+    overflow-wrap: break-word;
+
+    &--archetype {
+      color: $color-primary-dark;
+      font-weight: $font-weight-medium;
+    }
+
+    &--impression {
+      color: $color-text-secondary;
+      font-weight: $font-weight-normal;
+    }
+  }
+
+  // ── PM R5 chemistry banner (2026-10-15) ───────────────────────────────
+  // The archetype chemistry line promoted from the bridge block into the
+  // card's emotional centrepiece. Per-archetype wash + rail colours are
+  // inline (rgba — WeChat WXSS drops hsla); this class owns layout, motion,
+  // and the static degradation fallback. Type stays one notch above the
+  // muted bridge line so it never competes with the ladder values or the CTA.
+  &__reveal-chemistry {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    // Transparent rail — recoloured inline to the contrast-safe archetype accent.
+    border-left: 4rpx solid transparent;
+    animation: profession-fade-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.5s backwards;
+  }
+
+  &__reveal-chemistry-mascot {
+    // 36rpx optical pick inside the PM-specified 32–40rpx band.
+    width: 36rpx;
+    height: 36rpx;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    // Opaque seat so the mascot never blends into the accent wash.
+    background: rgba($color-surface, 0.92);
+  }
+
+  &__reveal-chemistry-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    line-height: 1.5;
+    // Calm secondary tier — the on-light token stays readable on the tint.
+    color: $color-text-secondary-on-light;
+    display: block;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
   &__reveal-bridge {
     margin-bottom: $spacing-lg;
     padding: $spacing-sm $spacing-md;
     background: $color-bg-clean;
     border-radius: $card-radius-sm;
-    border-left: 4rpx solid rgba($color-primary, 0.2);
+    border-left: 4rpx solid rgba($color-primary, 0.45);
+    animation: profession-fade-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.72s backwards;
   }
 
   &__reveal-bridge-line {
@@ -631,12 +904,6 @@
     display: block;
     word-break: keep-all;
     overflow-wrap: break-word;
-
-    &--chemistry {
-      color: $color-primary;
-      font-weight: $font-weight-medium;
-      margin-top: $spacing-xs;
-    }
   }
 
   &__reveal-confirm {
@@ -648,12 +915,22 @@
     border-radius: $button-radius;
     background: $color-primary;
     color: $color-text-white;
+    // `backwards` (not `forwards`) so the fill never overrides the :active
+    // pressed feedback after the entrance completes.
+    animation: profession-fade-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.8s backwards;
 
     &:active,
     &--active {
       opacity: 0.92;
       transform: scale(0.98);
     }
+  }
+
+  // Shared gentle fade + 8rpx rise for the bridge block and the confirm CTA —
+  // the two closing beats of the reveal choreography (0.72s / 0.80s).
+  @keyframes profession-fade-rise {
+    from { opacity: 0; transform: translateY(8rpx); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   &__reveal-confirm-text {
@@ -794,10 +1071,23 @@
   .profession-overlay__ladder-tray,
   .profession-overlay__ladder-tray-chip,
   .profession-overlay__ladder-ack,
-  .profession-overlay__ladder-cascade-hint {
+  .profession-overlay__ladder-cascade-hint,
+  .profession-overlay__trait-group-head,
+  .profession-overlay__trait-pill,
+  .profession-overlay__reveal-title,
+  .profession-overlay__reveal-chemistry,
+  .profession-overlay__reveal-bridge,
+  .profession-overlay__reveal-confirm {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  // One-shot write-in sweep — the pseudo-element must not exist at all in
+  // degraded modes (no flash of the light band without its animation).
+  .profession-overlay__ladder-pill--sweep::after {
+    content: none;
+    animation: none;
   }
 
   .profession-overlay__reveal-check {
@@ -863,10 +1153,23 @@
   .profession-overlay__ladder-tray,
   .profession-overlay__ladder-tray-chip,
   .profession-overlay__ladder-ack,
-  .profession-overlay__ladder-cascade-hint {
+  .profession-overlay__ladder-cascade-hint,
+  .profession-overlay__trait-group-head,
+  .profession-overlay__trait-pill,
+  .profession-overlay__reveal-title,
+  .profession-overlay__reveal-chemistry,
+  .profession-overlay__reveal-bridge,
+  .profession-overlay__reveal-confirm {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  // One-shot write-in sweep — the pseudo-element must not exist at all in
+  // degraded modes (no flash of the light band without its animation).
+  .profession-overlay__ladder-pill--sweep::after {
+    content: none;
+    animation: none;
   }
 
   .profession-overlay__reveal-check {
@@ -900,10 +1203,23 @@
   .profession-overlay__ladder-tray,
   .profession-overlay__ladder-tray-chip,
   .profession-overlay__ladder-ack,
-  .profession-overlay__ladder-cascade-hint {
+  .profession-overlay__ladder-cascade-hint,
+  .profession-overlay__trait-group-head,
+  .profession-overlay__trait-pill,
+  .profession-overlay__reveal-title,
+  .profession-overlay__reveal-chemistry,
+  .profession-overlay__reveal-bridge,
+  .profession-overlay__reveal-confirm {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  // One-shot write-in sweep — the pseudo-element must not exist at all in
+  // degraded modes (no flash of the light band without its animation).
+  .profession-overlay__ladder-pill--sweep::after {
+    content: none;
+    animation: none;
   }
 
   .profession-overlay__reveal-check {

@@ -22,6 +22,13 @@ export const DEBOUNCE_MS = 2000
 export const MAX_SENDS_PER_SESSION = 5
 export const API_TIMEOUT_MS = 14000
 
+/**
+ * R3 skip guard — post-reveal the header 跳过 becomes a two-tap confirm; the
+ * first tap swaps the label to `SKIP_ARMED_COPY`（in professionOverlayCopy.ts）
+ * and auto-reverts after this delay.
+ */
+export const SKIP_ARM_REVERT_MS = 3000
+
 export function getReactionForProfession(text: string): string {
   const lower = text.toLowerCase()
   for (const [keyword, reaction] of PROFESSION_REACTION_ENTRIES) {

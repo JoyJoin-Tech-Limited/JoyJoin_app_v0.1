@@ -10,7 +10,9 @@
  *       c. otherwise                                     → null
  *  2. Map the classifier's existing `generateCandidates()` output
  *     (`classification.candidates`) into the `correctionCandidates` groups,
- *     topping up the occupation group from the existing vector index.
+ *     topping up the occupation group from the existing vector index — scoped
+ *     to the classified taxonomy category and floored by `TOP_UP_MIN_COSINE`,
+ *     so the 换一个 tray never offers cross-category roles.
  *
  * No LLM call is made here. The embedding call (Granite, not an LLM) is the
  * only network dependency; it is skipped entirely when the vector index is
@@ -35,6 +37,25 @@ import { cosine, safeLoadIndex, dataDirCandidates, type VectorEntry } from './oc
 import { logger } from './logger';
 
 export const MAX_CORRECTION_CANDIDATES = 3;
+
+/**
+ * Minimum cosine for a top-up candidate. Entries below the floor are excluded
+ * even if that leaves fewer than three (or zero) candidates — an empty
+ * occupation tray is spec-sanctioned (「无候选即待补充」) and beats showing
+ * irrelevant roles.
+ *
+ * Calibration note (2026-10-14, re-measured 2026-10-15 against the regenerated
+ * 167-entry index via the staging Granite endpoint): query-doc cosines live in
+ * ~[0.66, 0.97] — self-matches (并购顾问 → ma_advisor 0.955, 投资经理 →
+ * investment_manager 0.965, 行业研究员 → industry_researcher 0.901) rank top,
+ * and even the worst cross-domain pair stays ≈0.66. Cross-industry distractors
+ * score high (房产经纪 0.874 on a 并购顾问 query), which is exactly why the
+ * category scoping in `topUpOccupationCandidates` — not the floor — does the
+ * real work. So on the current index this floor filters nothing; 0.45 is a
+ * deliberately conservative corruption net (future re-embedded index with a
+ * wider spread, or corrupt vectors) that never empties a healthy tray.
+ */
+export const TOP_UP_MIN_COSINE = 0.45;
 
 /** Contract AC-11: a usable τ must be strictly above 0.35. */
 const MIN_CALIBRATED_THRESHOLD = 0.35;
@@ -192,14 +213,91 @@ export function mapCandidateGroups(
 }
 
 /**
+ * Classification context for the top-up, passed from the classified result so
+ * the tray stays inside the category the user was classified into.
+ */
+export interface TopUpScope {
+  /** Classified three-tier taxonomy category id (`INDUSTRY_TAXONOMY`). */
+  categoryId?: string | null;
+  /**
+   * Classified taxonomy segment id. Currently unused for filtering (scoping is
+   * category-level per spec); passed so segment-level ranking can be added
+   * without changing the call-site signature again.
+   */
+  segmentId?: string | null;
+}
+
+/**
+ * Vector-index `industryId` vocabulary (17 ids — the `INDUSTRIES` list in
+ * packages/shared/src/occupations.ts, mirrored by every committed
+ * `VectorEntry.industryId`) → three-tier taxonomy category ids
+ * (`INDUSTRY_TAXONOMY` in packages/shared/src/industryTaxonomy.ts, 21 ids).
+ *
+ * Where one industry fans out to several taxonomy categories (e.g. `realestate`
+ * covers 地产建筑 → 房地产 + 建筑工程) the value lists every plausible category;
+ * an entry is in-scope when the classified category appears in its list.
+ * `other` deliberately maps to nothing — those occupations only enter a scoped
+ * tray via their `seedMappings` (signal b below) or the global fallback.
+ */
+const INDUSTRY_TO_TAXONOMY_CATEGORIES: Record<string, readonly string[]> = {
+  ai: ['tech'], // AI/大数据 → tech/ai_ml + tech/data_analytics
+  consulting: ['professional_services'], // 咨询/HR/行政 → 专业服务
+  creative: ['media_creative'], // performers override to culture_sports via seedMappings
+  ecommerce: ['consumer_retail'], // 跨境电商 → 消费品/零售
+  education: ['education'],
+  finance: ['finance'],
+  hardware: ['semiconductor', 'manufacturing'], // 硬科技/芯片 → 半导体 + 制造
+  hospitality: ['life_services'], // 航空酒店旅游 → 生活服务
+  legal: ['professional_services'],
+  lifestyle: ['life_services', 'consumer_retail'], // 咖啡/厨师等 → 生活服务/餐饮
+  marketing: ['media_creative'], // 广告/公关/营销
+  media: ['media_creative'],
+  medical: ['healthcare'],
+  new_energy: ['energy_environment', 'manufacturing'], // 新能源车 → 能源 + 汽车制造
+  other: [], // 其他行业: no taxonomy home; seedMappings or global fallback only
+  realestate: ['real_estate', 'construction'], // 地产建筑 → 房地产 + 建筑工程
+  tech: ['tech'],
+};
+
+/**
+ * occupationId → `seedMappings.category` for the catalog entries that carry an
+ * explicit taxonomy anchor (38/167 at time of writing). Precomputed once —
+ * the top-up must not do a per-entry `OCCUPATIONS.find` on the request path.
+ */
+const OCCUPATION_SEED_CATEGORY_BY_ID: ReadonlyMap<string, string> = new Map(
+  OCCUPATIONS.flatMap((occ) =>
+    occ.seedMappings ? [[occ.id, occ.seedMappings.category] as const] : [],
+  ),
+);
+
+/**
+ * An index entry belongs to the classified category when EITHER signal agrees:
+ *  a. the entry's `industryId` maps to the category (vocabulary bridge above);
+ *  b. the occupation's own `seedMappings.category` IS the category (handles
+ *     deliberate cross-industry anchors like crypto_trader → finance and
+ *     accountant → professional_services).
+ */
+function isEntryInCategoryScope(entry: VectorEntry, categoryId: string): boolean {
+  if (OCCUPATION_SEED_CATEGORY_BY_ID.get(entry.id) === categoryId) return true;
+  return INDUSTRY_TO_TAXONOMY_CATEGORIES[entry.industryId]?.includes(categoryId) ?? false;
+}
+
+/**
  * Top up the occupation group from the vector index when the classifier
  * produced fewer than the cap. Returns a new array.
+ *
+ * When `scope.categoryId` is known the candidate pool is first restricted to
+ * entries belonging to the classified category; if that scoped set is empty
+ * the global index is used instead, so taxonomy categories with no indexed
+ * occupations still receive candidates. Candidates below `TOP_UP_MIN_COSINE`
+ * are excluded even if the tray then holds fewer than the cap.
  */
 export function topUpOccupationCandidates(
   existing: OccupationCandidate[],
   vector: number[],
   index: VectorEntry[],
   excludeId: string | null,
+  scope: TopUpScope = {},
 ): OccupationCandidate[] {
   if (existing.length >= MAX_CORRECTION_CANDIDATES || index.length === 0) {
     return existing;
@@ -208,10 +306,18 @@ export function topUpOccupationCandidates(
   const seen = new Set(existing.map((candidate) => candidate.id));
   if (excludeId) seen.add(excludeId);
 
+  const categoryId = scope.categoryId ?? null;
+  let pool = index;
+  if (categoryId) {
+    const scoped = index.filter((entry) => isEntryInCategoryScope(entry, categoryId));
+    if (scoped.length > 0) pool = scoped;
+  }
+
   const toppedUp = [...existing];
-  const ranked = index
+  const ranked = pool
     .filter((entry) => !seen.has(entry.id))
     .map((entry) => ({ id: entry.id, label: entry.displayName, score: cosine(vector, entry.vector) }))
+    .filter((entry) => entry.score >= TOP_UP_MIN_COSINE)
     .sort((a, b) => b.score - a.score);
 
   for (const entry of ranked) {
@@ -330,6 +436,10 @@ export async function resolveProfessionOccupation(
         vector,
         index,
         standardizedOccupationId,
+        {
+          categoryId: classification.category?.id ?? null,
+          segmentId: classification.segment?.id ?? null,
+        },
       );
     }
   }

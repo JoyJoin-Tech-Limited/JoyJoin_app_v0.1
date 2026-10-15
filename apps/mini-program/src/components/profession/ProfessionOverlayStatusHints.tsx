@@ -1,5 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { haptics } from '../../lib/utils/haptics'
+import { MAX_SEND_SKIP_BANNER_COPY } from '../../lib/onboarding/professionOverlayCopy'
 
 /**
  * Non-blocking status hints layered over the profession overlay: offline
@@ -17,6 +18,8 @@ export default function ProfessionOverlayStatusHints({
   retryMessageId,
   showRevealCard,
   onRetry,
+  maxSendSkippable = false,
+  onMaxSendSkip,
 }: {
   isOnline: boolean
   showShortHint: boolean
@@ -25,7 +28,15 @@ export default function ProfessionOverlayStatusHints({
   retryMessageId: string | null
   showRevealCard: boolean
   onRetry: () => void
+  /**
+   * R6 dead-end: true when the send quota is exhausted with no usable
+   * classification — the banner swaps to the skip copy and becomes tappable.
+   */
+  maxSendSkippable?: boolean
+  /** Executed when the tappable dead-end banner is pressed (runs skip). */
+  onMaxSendSkip?: () => void
 }) {
+  const maxSendActionable = maxSendSkippable && !!onMaxSendSkip
   return (
     <>
       {!isOnline && (
@@ -41,9 +52,25 @@ export default function ProfessionOverlayStatusHints({
       )}
 
       {showMaxSendHint && (
-        <View className='profession-overlay__max-send-hint'>
-          <Text className='profession-overlay__max-send-hint-text'>已达到最大重试次数，先继续吧～</Text>
-        </View>
+        maxSendActionable ? (
+          <View
+            className='profession-overlay__max-send-hint profession-overlay__max-send-hint--action'
+            onClick={() => { haptics('light'); onMaxSendSkip() }}
+            role='button'
+            aria-label='跳过职业输入'
+            hoverClass='profession-overlay__max-send-hint--active'
+            hoverStartTime={0}
+            hoverStayTime={100}
+          >
+            <Text className='profession-overlay__max-send-hint-text profession-overlay__max-send-hint-text--action'>
+              {MAX_SEND_SKIP_BANNER_COPY}
+            </Text>
+          </View>
+        ) : (
+          <View className='profession-overlay__max-send-hint'>
+            <Text className='profession-overlay__max-send-hint-text'>已达到最大重试次数，先继续吧～</Text>
+          </View>
+        )
       )}
 
       {retryMessageId && !isSubmitting && !showRevealCard && (

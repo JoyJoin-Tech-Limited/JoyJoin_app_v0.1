@@ -27,6 +27,7 @@ function fullState(): ProfessionLadderState {
     segment,
     niche,
     occupation,
+    occupationSource: 'canonical',
     standardizedOccupationId: 'backend_engineer',
     corrected: false,
   }
@@ -181,6 +182,7 @@ describe('professionLadderReducer · niche derivation (AC-06)', () => {
       segment: { id: 'pe_vc', label: 'PE/VC' },
       niche: { id: 'venture_capital', label: '风险投资' },
       occupation: { id: 'pe_vc', label: 'PE/VC投资' },
+      occupationSource: 'canonical',
       standardizedOccupationId: 'pe_vc',
       corrected: false,
     }
@@ -286,7 +288,7 @@ describe('professionLadderReducer · classification state + persistence', () => 
     expect(state?.occupation?.label).toBe('前端工程师')
   })
 
-  it('leaves 角色 unresolved when no canonical id exists (never uses raw text)', () => {
+  it('leaves 角色 unresolved when no canonical id AND no niche exists (never uses raw text)', () => {
     const state = createLadderStateFromClassification({
       occupationId: '我是个很特别的自由职业者',
       standardizedOccupationId: null,
@@ -299,7 +301,23 @@ describe('professionLadderReducer · classification state + persistence', () => 
     })
 
     expect(state?.occupation).toBeNull()
+    expect(state?.occupationSource).toBeNull()
     expect(countResolvedTiers(state)).toBe(1)
+  })
+
+  it('marks the canonical 角色 row as occupationSource=canonical', () => {
+    const state = createLadderStateFromClassification({
+      standardizedOccupationId: 'frontend_engineer',
+      industryCategory: 'tech',
+      industryCategoryLabel: '科技互联网',
+      industrySegmentNew: 'software_dev',
+      industrySegmentLabel: '软件开发',
+      industryNiche: 'frontend',
+      industryNicheLabel: '前端工程师',
+    })
+
+    expect(state?.occupationSource).toBe('canonical')
+    expect(state?.standardizedOccupationId).toBe('frontend_engineer')
   })
 
   it('marks corrected state with source=user / confidence=1.0 (AC-07)', () => {
@@ -336,6 +354,76 @@ describe('professionLadderReducer · classification state + persistence', () => 
     expect(createLadderStateFromClassification(undefined)).toBeNull()
     expect(resolveVisibleLadderRows(null)).toEqual([])
     expect(countResolvedTiers(null)).toBe(0)
+  })
+})
+
+describe('professionLadderReducer · niche fallback (display vs persistence namespaces)', () => {
+  // 并购顾问 case: the taxonomy resolves niche ma_advisory but there is no
+  // canonical OCCUPATIONS id — the 角色 row must show 并购顾问, not 待补充.
+  const maAdvisoryClassification = {
+    occupationId: '并购顾问',
+    standardizedOccupationId: null,
+    industryCategory: 'finance',
+    industryCategoryLabel: '金融服务',
+    industrySegmentNew: 'investment_banking',
+    industrySegmentLabel: '投资银行',
+    industryNiche: 'ma_advisory',
+    industryNicheLabel: '并购顾问',
+  }
+
+  it('shows the resolved niche on the 角色 row instead of 待补充', () => {
+    const state = createLadderStateFromClassification(maAdvisoryClassification)
+
+    expect(state?.occupation).toEqual({ id: 'ma_advisory', label: '并购顾问' })
+    expect(state?.occupationSource).toBe('niche')
+    expect(countResolvedTiers(state)).toBe(3)
+  })
+
+  it('never writes the niche id into standardizedOccupationId on submit', () => {
+    const state = createLadderStateFromClassification(maAdvisoryClassification)
+    const fields = toPersistedClassificationFields(state!)
+
+    // canonical column stays null — the niche only round-trips via industryNiche
+    expect(fields.standardizedOccupationId).toBeNull()
+    expect(fields.industryNiche).toBe('ma_advisory')
+    expect(fields.industryNicheLabel).toBe('并购顾问')
+    // an uncorrected state carries no user-source override
+    expect(fields.industrySource).toBeUndefined()
+  })
+
+  it('flips to canonical when the niche-sourced row is corrected via 换一个', () => {
+    const state = createLadderStateFromClassification(maAdvisoryClassification)!
+    const next = applyTierCorrection(state, 'occupation', {
+      id: 'investment_banker',
+      label: '投行(IBD)',
+    })
+
+    expect(next.occupationSource).toBe('canonical')
+    expect(next.standardizedOccupationId).toBe('investment_banker')
+
+    const fields = toPersistedClassificationFields(next)
+    expect(fields.standardizedOccupationId).toBe('investment_banker')
+    expect(fields.industrySource).toBe('user')
+  })
+
+  it('clears occupationSource when a parent tier correction cascades', () => {
+    const state = createLadderStateFromClassification(maAdvisoryClassification)!
+
+    const afterCategory = applyTierCorrection(state, 'category', {
+      id: 'tech',
+      label: '科技互联网',
+    })
+    expect(afterCategory.occupation).toBeNull()
+    expect(afterCategory.occupationSource).toBeNull()
+    expect(afterCategory.standardizedOccupationId).toBeNull()
+
+    const afterSegment = applyTierCorrection(state, 'segment', {
+      id: 'pe_vc',
+      label: 'PE/VC',
+    })
+    expect(afterSegment.occupation).toBeNull()
+    expect(afterSegment.occupationSource).toBeNull()
+    expect(afterSegment.standardizedOccupationId).toBeNull()
   })
 })
 

@@ -1,12 +1,20 @@
 import { View, Text, Input, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import {
+  formatHSLAsRGBA,
+  getArchetypeHSL,
+  getContrastSafeArchetypeColor,
+} from '@shared/archetypeColors'
 import type { AIGCMeta, AIResponseMeta } from '@shared/types/aiMeta'
+import type { EventPoolSummary } from '@shared/api'
 import Chip from './ui/Chip'
 import { haptics } from '../lib/utils/haptics'
 import { getXiaoyueExpressionAsset } from '../lib/mascot/xiaoyueExpressions'
 import { apiRequest } from '../lib/api/api'
+import { POOLS_QUERY_KEY } from '../lib/prefetchEngine'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
 import { useResetOnShow } from '../hooks/useResetOnShow'
@@ -19,10 +27,12 @@ import ProfessionOverlayStatusHints from './profession/ProfessionOverlayStatusHi
 import { evaluateProfessionInputQuality } from '../lib/onboarding/professionInputQuality'
 import { getLocalProfessionClassification } from '../lib/onboarding/localProfessionClassification'
 import {
+  buildCityPoolLine,
   INVALID_PROFESSION_MESSAGE,
   OPENING_MESSAGES_ARCHETYPE,
   OPENING_MESSAGES_GENERIC,
   ROTATING_PLACEHOLDERS,
+  SKIP_ARMED_COPY,
   SKIP_RESPONSE_GENERIC,
   SKIP_RESPONSE_MEMORY,
 } from '../lib/onboarding/professionOverlayCopy'
@@ -30,6 +40,7 @@ import {
   API_TIMEOUT_MS,
   DEBOUNCE_MS,
   MAX_SENDS_PER_SESSION,
+  SKIP_ARM_REVERT_MS,
   generateId,
   getAnticipationExpression,
   getReactionForProfession,
@@ -37,6 +48,7 @@ import {
   mapSuccessExpression,
   type ChatMessage,
 } from '../lib/onboarding/professionOverlayHelpers'
+import { countCityPoolsWithinWeek } from '../lib/onboarding/professionCityPoolLine'
 import {
   isDuplicateProfessionSubmission,
   isUsableProfessionResponse,
@@ -53,6 +65,7 @@ import {
   type LadderValue,
   type ProfessionLadderState,
 } from '../lib/onboarding/professionLadderReducer'
+import { deriveProfessionTraitTagGroups } from '../lib/onboarding/professionTraitTags'
 import './ProfessionChatOverlay.scss'
 import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
@@ -104,6 +117,10 @@ const LADDER_CASCADE_COPY: Record<'category' | 'segment', string> = {
   segment: '角色这行也要再确认一下',
 }
 const CORRECTION_ACK_DURATION_MS = 2400
+/** Read-only tag section group labels (no banned words; 特质 = registry content,
+    印象 = AI-only, gated by meta.aigc.aiGenerated). */
+const TRAIT_ARCHETYPE_GROUP_LABEL = '你的特质'
+const TRAIT_IMPRESSION_GROUP_LABEL = '悦仔的印象'
 
 export interface ProfessionChatOverlayProps {
   visible: boolean
@@ -111,6 +128,11 @@ export interface ProfessionChatOverlayProps {
   initialValue?: string
   smartProfession?: boolean
   userArchetype?: string
+  /**
+   * User's 现居城市 (from auth). Drives the truthful 同城排桌线 in the bridge
+   * block; absent → the generic social-proof fallback line renders instead.
+   */
+  userCity?: string
   onSubmit: (value: string, classificationData?: ProfessionClassificationData) => void
   onSkip: () => void
 }
@@ -146,6 +168,7 @@ export default function ProfessionChatOverlay({
   initialValue = '',
   smartProfession = false,
   userArchetype,
+  userCity,
   onSubmit,
   onSkip,
 }: ProfessionChatOverlayProps) {
@@ -164,6 +187,9 @@ export default function ProfessionChatOverlay({
   const [showShortHint, setShowShortHint] = useState(false)
   const sendCountRef = useRef(0)
   const lastSendTimeRef = useRef(0)
+  // R2 measurement — overlay dwell time + last classify round-trip duration.
+  const openedAtRef = useRef(0)
+  const lastClassifyDurationRef = useRef<number | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bubbleStaggerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -200,6 +226,13 @@ export default function ProfessionChatOverlay({
   const [openTier, setOpenTier] = useState<LadderTier | null>(null)
   const [correctionCandidates, setCorrectionCandidates] = useState<ProfessionCorrectionCandidates | null>(null)
   const [aigcMeta, setAigcMeta] = useState<AIGCMeta | undefined>(undefined)
+  // Read-only tag section source — displayTags + server archetype traits ride
+  // the classify response; kept out of `classificationData` so they never leak
+  // into the persisted profile payload.
+  const [traitTagData, setTraitTagData] = useState<{
+    displayTags: string[]
+    archetypeTraits: string[]
+  } | null>(null)
   const [ladderScrollTarget, setLadderScrollTarget] = useState('')
   const [bottomScrollTarget, setBottomScrollTarget] = useState('')
   const [correctionAck, setCorrectionAck] = useState<{
@@ -208,13 +241,31 @@ export default function ProfessionChatOverlay({
   } | null>(null)
   const correctionAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ladderViewedRef = useRef(false)
+  const traitTagsShownRef = useRef(false)
   const correctedTiersRef = useRef<Set<LadderTier>>(new Set())
+  // Write-in sweep gate (choreography): true only for the initial reveal of a
+  // fresh classification. Cleared on the first correction so the one-shot
+  // light band can never re-fire on tray open/close or correction re-renders.
+  const [pillSweepActive, setPillSweepActive] = useState(false)
+  // R3 skip guard — post-reveal the header 跳过 becomes a two-tap confirm.
+  const [skipArmed, setSkipArmed] = useState(false)
+  const skipArmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Truthful 同城排桌线 — read-only mirror of the shared pools feed
+  // (`enabled: false`, never fetches). Data only appears here once another
+  // surface (Discover shell prefetch / Discover page) has warmed the cache.
+  const { data: poolsCache } = useQuery<EventPoolSummary[]>({
+    queryKey: POOLS_QUERY_KEY,
+    enabled: false,
+  })
   // REL-04 — the overlay lives on a tab-less page kept alive across swipe-back;
   // collapse any open tray when the page is re-shown.
   const resetLadderTrayOnShow = useCallback((_visible: boolean) => {
     setOpenTier(null)
     setLadderScrollTarget('')
     setBottomScrollTarget('')
+    // R3 — a re-shown page never inherits an armed skip button
+    setSkipArmed(false)
+    if (skipArmTimerRef.current) clearTimeout(skipArmTimerRef.current)
   }, [])
   useResetOnShow(resetLadderTrayOnShow)
   const rejectLowQualityProfessionInput = useCallback((rawText: string) => {
@@ -228,9 +279,11 @@ export default function ProfessionChatOverlay({
     setOpenTier(null)
     setCorrectionCandidates(null)
     setAigcMeta(undefined)
+    setTraitTagData(null)
     setClassificationData(null)
     setRetryMessageId(null)
     setThinkingLabel(null)
+    setPillSweepActive(false)
     clearThinkingTimers()
     if (text) {
       setMessages((prev) => [
@@ -281,11 +334,18 @@ export default function ProfessionChatOverlay({
       setOpenTier(null)
       setCorrectionCandidates(null)
       setAigcMeta(undefined)
+      setTraitTagData(null)
       setLadderScrollTarget('')
       setBottomScrollTarget('')
       setCorrectionAck(null)
       if (correctionAckTimerRef.current) clearTimeout(correctionAckTimerRef.current)
       correctedTiersRef.current = new Set()
+      setPillSweepActive(false)
+      // R3 skip guard + R2 dwell measurement reset per open
+      setSkipArmed(false)
+      if (skipArmTimerRef.current) clearTimeout(skipArmTimerRef.current)
+      openedAtRef.current = Date.now()
+      lastClassifyDurationRef.current = null
 
       // Check network status on open
       Taro.getNetworkType({
@@ -311,6 +371,7 @@ export default function ProfessionChatOverlay({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       if (skipTimeoutRef.current) clearTimeout(skipTimeoutRef.current)
+      if (skipArmTimerRef.current) clearTimeout(skipArmTimerRef.current)
       if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
       if (maxSendDismissTimerRef.current) clearTimeout(maxSendDismissTimerRef.current)
       if (placeholderTimerRef.current) clearInterval(placeholderTimerRef.current)
@@ -516,6 +577,8 @@ export default function ProfessionChatOverlay({
         // Deterministic local path carries no server meta → no AIGC label (AC-12)
         setAigcMeta(undefined)
         setCorrectionCandidates(null)
+        setTraitTagData(null)
+        setPillSweepActive(localLadder !== null)
         setShowRevealCard(localLadder !== null)
         haptics('success')
         analytics.interaction('profession_chat_local_classification_success', {
@@ -528,6 +591,7 @@ export default function ProfessionChatOverlay({
     }
 
     try {
+      const requestStartedAt = Date.now()
       const data = await apiRequest<UnderstandProfessionResponse>({
         path: '/api/inference/understand-profession',
         method: 'POST',
@@ -537,6 +601,7 @@ export default function ProfessionChatOverlay({
 
       // Drop stale response — a newer send superseded this one
       if (sendGenerationRef.current !== thisGeneration) return
+      lastClassifyDurationRef.current = Date.now() - requestStartedAt
 
       // Skip low-quality echo hints (e.g., "投资银行！投资银行方向？")
       const hintText = (data.reactionHint ?? '').trim()
@@ -581,6 +646,11 @@ export default function ProfessionChatOverlay({
           setClassificationData(null)
           setCorrectionCandidates(null)
           setAigcMeta(undefined)
+          setTraitTagData(null)
+          setPillSweepActive(false)
+          // R6 — a blocked low-confidence response must not burn send quota
+          // (same refund semantics as the catch/timeout path below).
+          sendCountRef.current = Math.max(0, sendCountRef.current - 1)
           analytics.interaction('profession_chat_low_confidence_blocked', {
             confidence: data.confidence,
             source: data.source,
@@ -620,7 +690,14 @@ export default function ProfessionChatOverlay({
         setLadderState(nextLadder)
         setCorrectionCandidates(data.correctionCandidates ?? null)
         setAigcMeta(aigc)
+        // Read-only tag section source (displayTags + archetype traits) — the
+        // response declares both but they were previously dropped on the floor.
+        setTraitTagData({
+          displayTags: Array.isArray(data.displayTags) ? data.displayTags : [],
+          archetypeTraits: Array.isArray(data.archetypeContext?.traits) ? data.archetypeContext.traits : [],
+        })
         // Render on row data, not tag count (§6.7 / AC-14)
+        setPillSweepActive(nextLadder !== null)
         setShowRevealCard(nextLadder !== null)
         if (nextLadder) {
           haptics('success')
@@ -628,6 +705,9 @@ export default function ProfessionChatOverlay({
             tierCount: countResolvedTiers(nextLadder),
             confidence: data.confidence,
             source: data.source,
+            // R2 — unresolved rows at reveal + classify round-trip time
+            pendingRowCount: resolveVisibleLadderRows(nextLadder).filter((row) => !row.value).length,
+            durationMs: lastClassifyDurationRef.current ?? 0,
           })
         }
       }, 400)
@@ -661,6 +741,8 @@ export default function ProfessionChatOverlay({
       setOpenTier(null)
       setCorrectionCandidates(null)
       setAigcMeta(undefined)
+      setTraitTagData(null)
+      setPillSweepActive(false)
       setShowRevealCard(false)
     }
   }, [
@@ -747,7 +829,12 @@ export default function ProfessionChatOverlay({
 
   const handleSkip = useCallback(() => {
     haptics('light')
-    analytics.interaction('profession_chat_skipped')
+    analytics.interaction('profession_chat_skipped', {
+      sendCount: sendCountRef.current,
+      hadClassification: !!classificationData,
+      source: classificationData?.industrySource ?? 'none',
+      dwellMs: openedAtRef.current > 0 ? Date.now() - openedAtRef.current : 0,
+    })
     // Warm skip with memory: acknowledge if user already sent something
     const hasUserMessage = messages.some((m) => m.sender === 'user')
     const skipText = hasUserMessage ? SKIP_RESPONSE_MEMORY : SKIP_RESPONSE_GENERIC
@@ -758,7 +845,35 @@ export default function ProfessionChatOverlay({
     skipTimeoutRef.current = setTimeout(() => {
       onSkip()
     }, 400)
-  }, [onSkip, analytics, messages])
+  }, [onSkip, analytics, messages, classificationData])
+
+  /**
+   * R3 skip guard — once the reveal card is up, the header 跳过 becomes a
+   * two-tap confirm: first tap arms (label swap, auto-revert after 3s),
+   * second tap executes. Pre-reveal keeps the one-tap behavior.
+   */
+  const handleHeaderSkipTap = useCallback(() => {
+    if (showRevealCard && ladderState && !skipArmed) {
+      haptics('light')
+      setSkipArmed(true)
+      if (skipArmTimerRef.current) clearTimeout(skipArmTimerRef.current)
+      skipArmTimerRef.current = setTimeout(() => setSkipArmed(false), SKIP_ARM_REVERT_MS)
+      return
+    }
+    if (skipArmTimerRef.current) {
+      clearTimeout(skipArmTimerRef.current)
+      skipArmTimerRef.current = null
+    }
+    setSkipArmed(false)
+    handleSkip()
+  }, [showRevealCard, ladderState, skipArmed, handleSkip])
+
+  /** R6 dead-end — the max-send banner itself executes skip when tapped. */
+  const handleMaxSendSkip = useCallback(() => {
+    if (maxSendDismissTimerRef.current) clearTimeout(maxSendDismissTimerRef.current)
+    setShowMaxSendHint(false)
+    handleSkip()
+  }, [handleSkip])
 
   /** Open / collapse the inline correction tray for one row (§6.3 — one row at a time). */
   const handleOpenCorrection = useCallback((tier: LadderTier) => {
@@ -795,6 +910,8 @@ export default function ProfessionChatOverlay({
 
     correctedTiersRef.current.add(tier)
     setLadderState(next)
+    // One-shot sweep gate — any correction ends the initial-reveal choreography
+    setPillSweepActive(false)
     setClassificationData((current) => {
       if (!current) return current
       return { ...current, ...toPersistedClassificationFields(next) }
@@ -814,6 +931,8 @@ export default function ProfessionChatOverlay({
       to: choice.id,
     })
   }, [ladderState, analytics])
+
+  const ladderRows = useMemo(() => resolveVisibleLadderRows(ladderState), [ladderState])
 
   const handleConfirm = useCallback(() => {
     if (inputValue.trim() && rejectLowQualityProfessionInput(inputValue)) {
@@ -835,20 +954,82 @@ export default function ProfessionChatOverlay({
       hasClassification: !!classificationData,
       source: classificationData?.industrySource ?? 'legacy',
       tierCount: countResolvedTiers(ladderState),
+      // R2 — rows still 待补充 at confirm time + classify round-trip time
+      pendingRowCount: ladderRows.filter((row) => !row.value).length,
+      durationMs: lastClassifyDurationRef.current ?? 0,
     })
     if (smartProfession && classificationData) {
       onSubmit(classificationData.occupationId.trim(), classificationData)
     } else {
       onSubmit(inputValue.trim() || lastUserTextRef.current.trim())
     }
-  }, [smartProfession, classificationData, inputValue, onSubmit, analytics, ladderState, rejectLowQualityProfessionInput])
+  }, [smartProfession, classificationData, inputValue, onSubmit, analytics, ladderState, ladderRows, rejectLowQualityProfessionInput])
 
   const canSubmit = inputValue.trim().length > 0 || hasSent
   const canShowFooterConfirm = !smartProfession && canSubmit
 
-  const ladderRows = useMemo(() => resolveVisibleLadderRows(ladderState), [ladderState])
+  // Read-only tag section — 特质 chips (deterministic) + 印象 chips (AIGC-gated,
+  // filtered against the visible ladder rows so the card never restates itself).
+  const traitTagGroups = useMemo(
+    () =>
+      deriveProfessionTraitTagGroups({
+        displayTags: traitTagData?.displayTags,
+        serverArchetypeTraits: traitTagData?.archetypeTraits,
+        userArchetype,
+        aiGenerated: aigcMeta?.aiGenerated === true,
+        ladderRowLabels: ladderRows
+          .map((row) => row.value?.label)
+          .filter((label): label is string => !!label),
+      }),
+    [traitTagData, userArchetype, aigcMeta, ladderRows],
+  )
+
+  // One-shot tag-section impression — counts only, never tag text (§11).
+  useEffect(() => {
+    if (showRevealCard && !traitTagsShownRef.current) {
+      const archetypeCount = traitTagGroups.archetypeTraits.length
+      const impressionCount = traitTagGroups.impressions.length
+      if (archetypeCount + impressionCount > 0) {
+        traitTagsShownRef.current = true
+        analytics.interaction('profession_chat_trait_tags_shown', {
+          archetypeCount,
+          impressionCount,
+        })
+      }
+    }
+    if (!visible) traitTagsShownRef.current = false
+  }, [showRevealCard, traitTagGroups, visible, analytics])
   const isFallbackSource = !!classificationData?.industrySource?.includes('fallback')
   const hasUnresolvedTier = ladderRows.some((row) => !row.value)
+  // Truthful 同城排桌线 (fail-closed): render ONLY when the pools feed is
+  // already cached AND the city is known AND N ≥ 1 — never a fabricated 0
+  // (Discover precedent). Otherwise the generic bridge line renders.
+  const cityPoolCount = useMemo(
+    () => countCityPoolsWithinWeek(poolsCache ?? [], userCity ?? ''),
+    [poolsCache, userCity],
+  )
+  const showCityPoolLine = poolsCache !== undefined && !!userCity && cityPoolCount >= 1
+  const cityPoolLine = showCityPoolLine ? buildCityPoolLine(userCity as string, cityPoolCount) : ''
+  // PM R5 — the archetype chemistry line is promoted from the bridge block into
+  // the card's emotional centrepiece: an accent-tinted banner above the
+  // read-only tag section. It needs a known archetype + industry category;
+  // otherwise the plain bridge block stays exactly as before (no fabricated
+  // chemistry). Fallback-source cards keep the line suppressed (as today) so
+  // the warning-tinted card never overclaims.
+  const chemistryArchetypeName = userArchetype
+    ? ARCHETYPE_BY_ID[userArchetype]?.nameCn ?? ''
+    : ''
+  const showChemistryBanner =
+    !isFallbackSource && !!classificationData?.industryCategoryLabel && chemistryArchetypeName !== ''
+  const chemistryBannerStyle = useMemo(() => {
+    if (chemistryArchetypeName === '' || !userArchetype) return undefined
+    // Low-alpha archetype wash + contrast-safe accent rail. WeChat WXSS
+    // silently drops `hsla()` — both values are rgba() (formatHSLAsRGBA contract).
+    return {
+      background: formatHSLAsRGBA(getArchetypeHSL(userArchetype), 0.12),
+      borderLeftColor: getContrastSafeArchetypeColor(userArchetype),
+    }
+  }, [chemistryArchetypeName, userArchetype])
   // A row is fillable only when it is unresolved AND the tray has candidates —
   // otherwise the benefit hint invites an action the UI cannot complete.
   const hasFillableTier = ladderRows.some(
@@ -892,8 +1073,8 @@ export default function ProfessionChatOverlay({
         <View className='profession-overlay__step-badge'>
           <Text className='profession-overlay__step-badge-text'>2 / 5</Text>
         </View>
-        <View className='profession-overlay__skip' onClick={handleSkip} aria-label='跳过职业输入' hoverClass='profession-overlay__skip--active' hoverStartTime={0} hoverStayTime={100}>
-          <Text className='profession-overlay__skip-text'>跳过</Text>
+        <View className='profession-overlay__skip' onClick={handleHeaderSkipTap} aria-label={skipArmed ? SKIP_ARMED_COPY : '跳过职业输入'} hoverClass='profession-overlay__skip--active' hoverStartTime={0} hoverStayTime={100}>
+          <Text className='profession-overlay__skip-text'>{skipArmed ? SKIP_ARMED_COPY : '跳过'}</Text>
         </View>
       </View>
 
@@ -930,12 +1111,12 @@ export default function ProfessionChatOverlay({
                     src={getXiaoyueExpressionAsset(isFallbackSource ? 'coachGuide' : 'matchSuccess')}
                     mode='aspectFill'
                   />
+                  {showSoftCheck && (
+                    <View className='profession-overlay__reveal-check' aria-hidden='true'>
+                      <Text className='profession-overlay__reveal-check-icon'>✓</Text>
+                    </View>
+                  )}
                 </View>
-                {showSoftCheck && (
-                  <View className='profession-overlay__reveal-check' aria-hidden='true'>
-                    <Text className='profession-overlay__reveal-check-icon'>✓</Text>
-                  </View>
-                )}
                 {/* Unified across all 3 states (Q1) — honesty lives in the ladder rows */}
                 <Text className='profession-overlay__reveal-title'>{LADDER_TITLE}</Text>
                 <AIGCLabel meta={aigcMeta} className='profession-overlay__reveal-aigc' />
@@ -962,9 +1143,18 @@ export default function ProfessionChatOverlay({
                           <View className='profession-overlay__ladder-pill-wrap'>
                             <Chip
                               label={row.value.label}
-                              level={1}
                               compact
-                              className='profession-overlay__ladder-pill'
+                              ariaLabel={
+                                hasCandidates
+                                  ? `更换${row.label}：${row.value.label}`
+                                  : `${row.label}：${row.value.label}`
+                              }
+                              className={[
+                                'profession-overlay__ladder-pill',
+                                pillSweepActive ? 'profession-overlay__ladder-pill--sweep' : '',
+                                hasCandidates ? '' : 'profession-overlay__ladder-pill--static',
+                              ].filter(Boolean).join(' ')}
+                              onClick={hasCandidates ? () => handleOpenCorrection(row.tier) : undefined}
                             />
                           </View>
                         ) : (
@@ -1028,27 +1218,109 @@ export default function ProfessionChatOverlay({
                 })}
               </View>
 
+              {/* Benefit-led hint sits directly under the ladder it refers to —
+                  before the (visually subordinate) tag section. */}
               {showBenefitHint && (
                 <Text className='profession-overlay__reveal-hint profession-overlay__reveal-hint--benefit'>
                   {LADDER_BENEFIT_HINT}
                 </Text>
               )}
+
+              {/* PM R5 — the archetype chemistry line promoted from the bridge
+                  block into the card's emotional centrepiece: accent-tinted
+                  banner (soft archetype wash + contrast-safe accent rail) with
+                  the matchSuccess mascot. Typography stays one notch above the
+                  muted bridge line so it never competes with the ladder values
+                  or the CTA. Only renders when a known archetype + industry
+                  category exist — never fabricated chemistry. */}
+              {showChemistryBanner && (
+                <View
+                  className='profession-overlay__reveal-chemistry'
+                  style={chemistryBannerStyle}
+                >
+                  <Image
+                    className='profession-overlay__reveal-chemistry-mascot'
+                    src={getXiaoyueExpressionAsset('matchSuccess')}
+                    mode='aspectFill'
+                    aria-hidden='true'
+                  />
+                  <Text className='profession-overlay__reveal-chemistry-text'>
+                    {`你的「${chemistryArchetypeName}」特质 + ${classificationData?.industryCategoryLabel ?? ''}背景，在局里会很吃香`}
+                  </Text>
+                </View>
+              )}
+
+              {/* Read-only tag section — visually subordinate to the ladder.
+                  特质 = deterministic registry traits (AIGC-exempt); 印象 = AI
+                  displayTags, fail-closed behind meta.aigc.aiGenerated. No tap
+                  affordance: the 2026-09-15 tag soup sinned by being remove-only. */}
+              {(traitTagGroups.archetypeTraits.length > 0 || traitTagGroups.impressions.length > 0) && (
+                <View className='profession-overlay__trait-section'>
+                  {traitTagGroups.archetypeTraits.length > 0 && (
+                    <View className='profession-overlay__trait-group'>
+                      <View className='profession-overlay__trait-group-head'>
+                        <View
+                          className='profession-overlay__trait-group-mark profession-overlay__trait-group-mark--archetype'
+                          aria-hidden='true'
+                        />
+                        <Text className='profession-overlay__trait-group-label'>{TRAIT_ARCHETYPE_GROUP_LABEL}</Text>
+                      </View>
+                      <View className='profession-overlay__trait-row'>
+                        {traitTagGroups.archetypeTraits.map((trait) => (
+                          <View
+                            key={trait}
+                            className='profession-overlay__trait-pill profession-overlay__trait-pill--archetype'
+                          >
+                            <View className='profession-overlay__trait-pill-dot' aria-hidden='true' />
+                            <Text className='profession-overlay__trait-pill-text profession-overlay__trait-pill-text--archetype'>
+                              {trait}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  {traitTagGroups.impressions.length > 0 && (
+                    <View className='profession-overlay__trait-group'>
+                      <View className='profession-overlay__trait-group-head'>
+                        <View
+                          className='profession-overlay__trait-group-mark profession-overlay__trait-group-mark--impression'
+                          aria-hidden='true'
+                        />
+                        <Text className='profession-overlay__trait-group-label'>{TRAIT_IMPRESSION_GROUP_LABEL}</Text>
+                      </View>
+                      <View className='profession-overlay__trait-row profession-overlay__trait-row--impressions'>
+                        {traitTagGroups.impressions.map((tag) => (
+                          <View
+                            key={tag}
+                            className='profession-overlay__trait-pill profession-overlay__trait-pill--impression'
+                          >
+                            <Text className='profession-overlay__trait-pill-text profession-overlay__trait-pill-text--impression'>
+                              {tag}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {isFallbackSource && (
                 <Text className='profession-overlay__reveal-hint profession-overlay__reveal-hint--secondary'>
                   {LADDER_FALLBACK_HINT}
                 </Text>
               )}
-              {/* Social proof + chemistry bridge lines (demoted to a secondary tier) */}
+              {/* Social-proof bridge line — the archetype chemistry line moved
+                  up into the accent banner (PM R5); the bridge keeps only the
+                  truthful 同城排桌线 / generic social-proof fallback. */}
               {!isFallbackSource && classificationData?.industryCategoryLabel && (
                 <View className='profession-overlay__reveal-bridge'>
                   <Text className='profession-overlay__reveal-bridge-line'>
-                    {`JoyJoin 里还有很多${classificationData.industryCategoryLabel}方向的小伙伴，你们应该很有共鸣～`}
+                    {showCityPoolLine
+                      ? cityPoolLine
+                      : `JoyJoin 里还有很多${classificationData.industryCategoryLabel}方向的小伙伴，你们应该很有共鸣～`}
                   </Text>
-                  {userArchetype && ARCHETYPE_BY_ID[userArchetype]?.nameCn && (
-                    <Text className='profession-overlay__reveal-bridge-line profession-overlay__reveal-bridge-line--chemistry'>
-                      {`你的「${ARCHETYPE_BY_ID[userArchetype].nameCn}」特质 + ${classificationData.industryCategoryLabel}背景，在局里会很吃香`}
-                    </Text>
-                  )}
                 </View>
               )}
               {/* AC-13 — the card's confirm is the only primary CTA while the ladder shows
@@ -1116,6 +1388,8 @@ export default function ProfessionChatOverlay({
         retryMessageId={retryMessageId}
         showRevealCard={showRevealCard}
         onRetry={handleRetry}
+        maxSendSkippable={!isUsableStoredProfessionClassification(classificationData)}
+        onMaxSendSkip={handleMaxSendSkip}
       />
 
       {canShowFooterConfirm && !isSubmitting && !showRevealCard && (

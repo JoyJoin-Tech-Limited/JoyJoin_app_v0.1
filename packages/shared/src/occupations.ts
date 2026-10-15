@@ -134,16 +134,22 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "ecom_manager", displayName: "电商负责人", industryId: "ecommerce", synonyms: ["电商总监", "运营总监", "电商经理", "店长"], keywords: ["管理", "电商"], hot: false },
   
   // ========== 金融投资 (finance) ==========
-  { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研", "金融分析", "股票分析", "行业研究员"], keywords: ["分析", "研究", "金融"], hot: true, seedMappings: { category: "finance", segment: "investment_banking" } },
+  { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "金融分析", "股票分析"], keywords: ["分析", "研究", "金融"], hot: true, seedMappings: { category: "finance", segment: "investment_banking" } },
   { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员", "银行家", "银行从业"], keywords: ["银行", "理财"], hot: true, seedMappings: { category: "finance", segment: "commercial_banking" } },
   { id: "investment_banker", displayName: "投行(IBD)", industryId: "finance", synonyms: ["IBD", "投行", "投资银行", "投资银行家", "中金", "中金公司", "CICC", "中信证券", "华泰证券", "国泰君安", "海通证券", "招商证券", "广发证券", "高盛", "Goldman", "GS", "摩根士丹利", "Morgan Stanley", "MS", "摩根大通", "JP Morgan", "JPM", "瑞银", "UBS", "瑞信", "Credit Suisse", "花旗", "Citi", "美银", "BofA", "巴克莱", "Barclays", "德银", "Deutsche Bank"], keywords: ["投行", "IPO", "投资银行"], hot: true, seedMappings: { category: "finance", segment: "investment_banking" } },
-  { id: "cvc_strategic", displayName: "战投/CVC", industryId: "finance", synonyms: ["战投", "战略投资", "企业投资", "CVC", "Corporate VC", "并购", "M&A", "腾讯投资", "字节战投", "阿里战投", "美团战投", "百度战投", "京东战投", "快手战投", "小米战投", "滴滴战投", "网易战投", "B站战投", "拼多多战投", "华为投资"], keywords: ["战投", "并购", "战略投资", "CVC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
-  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资", "投资经理", "风投", "私募", "基金经理", "红杉", "Sequoia", "高瓴", "Hillhouse", "IDG", "经纬", "真格", "源码资本", "GGV", "光速", "Lightspeed", "启明创投", "北极光", "晨兴", "五源资本", "今日资本", "软银", "Softbank", "老虎环球", "Tiger Global", "DST", "Coatue", "博裕", "KKR", "黑石", "Blackstone", "凯雷", "Carlyle", "TPG", "华平", "Warburg Pincus", "鼎晖", "弘毅", "淡马锡", "Temasek", "GIC"], keywords: ["投资", "基金", "风险投资", "PE", "VC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
+  { id: "cvc_strategic", displayName: "战投/CVC", industryId: "finance", synonyms: ["战投", "战略投资", "企业投资", "CVC", "Corporate VC", "腾讯投资", "字节战投", "阿里战投", "美团战投", "百度战投", "京东战投", "快手战投", "小米战投", "滴滴战投", "网易战投", "B站战投", "拼多多战投", "华为投资"], keywords: ["战投", "并购", "战略投资", "CVC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
+  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资", "风投", "私募", "基金经理", "红杉", "Sequoia", "高瓴", "Hillhouse", "IDG", "经纬", "真格", "源码资本", "GGV", "光速", "Lightspeed", "启明创投", "北极光", "晨兴", "五源资本", "今日资本", "软银", "Softbank", "老虎环球", "Tiger Global", "DST", "Coatue", "博裕", "KKR", "黑石", "Blackstone", "凯雷", "Carlyle", "TPG", "华平", "Warburg Pincus", "鼎晖", "弘毅", "淡马锡", "Temasek", "GIC"], keywords: ["投资", "基金", "风险投资", "PE", "VC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
   { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人", "证券公司"], keywords: ["证券", "股票"], hot: false, seedMappings: { category: "finance", segment: "commercial_banking" } },
   { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师", "保险代理"], keywords: ["保险", "精算"], hot: false, seedMappings: { category: "finance", segment: "insurance" } },
   { id: "fund_manager", displayName: "基金经理", industryId: "finance", synonyms: ["资产管理", "投资总监", "Portfolio Manager", "公募基金", "私募基金"], keywords: ["基金", "资产"], hot: false, seedMappings: { category: "finance", segment: "pe_vc" } },
   { id: "accountant", displayName: "会计师", industryId: "finance", synonyms: ["会计", "审计师", "CPA", "财务", "四大", "德勤", "普华永道", "安永", "毕马威", "PWC", "EY", "KPMG", "Deloitte", "Big4"], keywords: ["会计", "审计", "财务", "四大"], hot: true, seedMappings: { category: "professional_services", segment: "consulting" } },
   { id: "cfo", displayName: "财务负责人", industryId: "finance", synonyms: ["CFO", "财务总监", "财务经理", "财务VP"], keywords: ["财务", "管理"], hot: false, seedMappings: { category: "finance", segment: "commercial_banking" } },
+  // 并购/M&A 通用词专属入口（从 cvc_strategic 迁入，更精确的所有者；taxonomy 利基已存在：investment_banking/ma_advisory）
+  { id: "ma_advisor", displayName: "并购顾问", industryId: "finance", synonyms: ["M&A", "M&A顾问", "兼并收购", "并购"], keywords: ["并购", "M&A", "收购"], hot: false, seedMappings: { category: "finance", segment: "investment_banking", niche: "ma_advisory" } },
+  // “投资经理”由 pe_vc 迁入专属条目（同属 pe_vc 细分，精确到 private_equity 利基）
+  { id: "investment_manager", displayName: "投资经理", industryId: "finance", synonyms: ["投资管理", "基金经理助理"], keywords: ["投资", "基金", "股权"], hot: false, seedMappings: { category: "finance", segment: "pe_vc", niche: "private_equity" } },
+  // “行研/行业研究员”由 finance_analyst 迁入专属条目（卖方/行业研究，投行研究条线；无既有利基可映射，仅挂 segment）
+  { id: "industry_researcher", displayName: "行业研究员", industryId: "finance", synonyms: ["行研", "证券分析师"], keywords: ["研究", "分析", "证券"], hot: false, seedMappings: { category: "finance", segment: "investment_banking" } },
   
   // ========== 咨询服务 (consulting) ==========
   { id: "management_consultant", displayName: "管理咨询顾问", industryId: "consulting", synonyms: ["战略咨询", "MBB", "咨询师", "顾问", "麦肯锡", "McKinsey", "BCG", "Boston Consulting", "波士顿咨询", "贝恩", "Bain", "罗兰贝格", "Roland Berger", "奥纬", "Oliver Wyman", "科尔尼", "AT Kearney", "Monitor", "LEK", "Parthenon", "Strategy&"], keywords: ["咨询", "战略", "MBB"], hot: true },
@@ -377,8 +383,8 @@ export const PINYIN_MAP: Record<string, string[]> = {
   "zt": ["cvc_strategic"], // 战投
   "zhantou": ["cvc_strategic"],
   "cvc": ["cvc_strategic"],
-  "bg": ["cvc_strategic"], // 并购
-  "binggou": ["cvc_strategic"],
+  "bg": ["ma_advisor"], // 并购
+  "binggou": ["ma_advisor"],
   "zltz": ["cvc_strategic"], // 战略投资
   "txtz": ["cvc_strategic"], // 腾讯投资
   "zjzt": ["cvc_strategic"], // 字节战投
@@ -724,38 +730,38 @@ export function getOccupationGuidance(intent: string): { title: string; subtitle
     case "networking":
       return {
         title: "你是做什么的？",
-        subtitle: "悦仔会帮你匹配同行或互补技能的职场搭子",
-        matchPreview: "悦仔会优先帮你匹配：同行伙伴、互补技能搭子"
+        subtitle: "悦仔会帮你把同行或互补技能的人排到同桌",
+        matchPreview: "悦仔会优先帮你排同桌：同行伙伴、互补技能搭子"
       };
     case "friends":
       return {
         title: "你是做什么的？",
-        subtitle: "悦仔会根据你的职业背景，找到同频的社交搭子",
-        matchPreview: "悦仔会根据你的背景和性格，匹配聊得来的人"
+        subtitle: "悦仔会根据你的职业背景，找到同频的聊天搭子",
+        matchPreview: "悦仔会参考你的背景和性格，排一桌聊得来的人"
       };
     case "explore":
       return {
         title: "你是做什么的？",
         subtitle: "悦仔会结合你的职业背景，推荐有意思的新玩法",
-        matchPreview: "悦仔会综合考虑，帮你找到聊得来的人"
+        matchPreview: "说说你的职业，悦仔帮你挑更对味的局和同桌"
       };
     case "fun":
       return {
         title: "你是做什么的？",
-        subtitle: "悦仔会匹配聊得来的人，不聊工作也很开心",
-        matchPreview: "放心，悦仔不会只给你匹配同事类型的人"
+        subtitle: "悦仔会帮你排到聊得来的人，不聊工作也很开心",
+        matchPreview: "放心，悦仔不会只给你排同行，好玩最重要"
       };
     case "discussion":
       return {
         title: "你是做什么的？",
-        subtitle: "悦仔会匹配有深度见解的人，一起碰撞想法",
-        matchPreview: "悦仔会帮你找到有独特视角的交流对象"
+        subtitle: "悦仔会帮你排到有深度见解的同桌，一起碰撞想法",
+        matchPreview: "悦仔会帮你排到有独特视角的同桌，聊出火花"
       };
     default:
       return {
         title: "你是做什么的？",
         subtitle: "告诉我你的职业，悦仔会结合性格和背景，帮你找到真正聊得来的人",
-        matchPreview: "悦仔会参考你的职业背景，匹配价值观和节奏相近的搭子"
+        matchPreview: "说说你的职业，悦仔帮你把第一局的同桌排得更对味"
       };
   }
 }
@@ -902,6 +908,9 @@ export const OCCUPATION_TO_FIELD_SUGGESTIONS: Record<string, string[]> = {
   fund_manager: ["金融学", "投资学", "经济学"],
   accountant: ["会计学", "财务管理", "审计学"],
   cfo: ["财务管理", "会计学", "工商管理"],
+  ma_advisor: ["金融学", "经济学", "工商管理"],
+  investment_manager: ["金融学", "投资学", "经济学"],
+  industry_researcher: ["金融学", "经济学", "统计学"],
   
   // 咨询服务
   management_consultant: ["工商管理", "战略管理", "经济学"],

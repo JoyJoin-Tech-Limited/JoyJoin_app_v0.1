@@ -42,6 +42,6 @@ export function getLocalProfessionClassification(input: string): LocalProfession
     industrySource: 'local_student_identity',
     industryConfidence: 0.92,
     displayTags: ['学生党', '开放探索', '好奇心强'],
-    reaction: '学生党的好奇心是最宝贵的社交货币，保持开放就好',
+    reaction: '学生党的好奇心最珍贵啦，保持开放就好',
   }
 }

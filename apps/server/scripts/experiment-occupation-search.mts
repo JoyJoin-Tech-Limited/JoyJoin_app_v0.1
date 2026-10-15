@@ -2,7 +2,7 @@
  * Experiment: Can Granite embeddings match free-text occupation input
  * to the standard JoyJoin occupation taxonomy?
  *
- * For each of 164 occupations, generates ~6 simulated free-text queries.
+ * For each occupation in OCCUPATIONS, generates ~6 simulated free-text queries.
  * Measures precision@1 / @3 / @5 across 1000 queries.
  */
 

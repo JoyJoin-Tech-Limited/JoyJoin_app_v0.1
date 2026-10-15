@@ -28,6 +28,28 @@ pip install sentence-transformers fastapi uvicorn
 python3 server.py
 ```
 
+## Regenerating occupation vectors without local Docker
+
+The CVM always runs a Granite container; the staging one is published on the
+host at `127.0.0.1:8001` (`deployment/docker-compose.staging.yml`) and serves
+the same model as production (`granite-embedding-97m-multilingual-r2`). From a
+machine with SSH access:
+
+```bash
+# 1. Tunnel to the staging Granite container
+ssh -i ~/.ssh/OpenCode.pem -f -N -L 8001:127.0.0.1:8001 root@1.12.243.104
+
+# 2. Regenerate (run from apps/server)
+EMBEDDING_BASE_URL=http://localhost:8001/v1 npx tsx scripts/build-occupation-vectors.mts
+
+# 3. Close the tunnel
+pkill -f '8001:127.0.0.1:8001'
+```
+
+After regenerating, empty `OCCUPATIONS_AWAITING_VECTORS` in
+`apps/server/src/__tests__/occupationVectorDrift.test.ts` (the tripwire fails
+until you do) and commit the refreshed `apps/server/data/occupation-vectors.json`.
+
 ## Configure JoyJoin to use it
 
 Add to `.env`:

@@ -34,8 +34,19 @@ export interface ProfessionLadderState {
   segment: LadderValue | null
   /** Derived `industryNiche` — persisted, never rendered as its own row (§6.1). */
   niche: LadderValue | null
-  /** 角色 row — the (canonical) occupation shown to the user. */
+  /** 角色 row — the occupation shown to the user (canonical or niche fallback). */
   occupation: LadderValue | null
+  /**
+   * Namespace discriminator for the 角色 row value:
+   *  - 'canonical' — value.id is a canonical `OCCUPATIONS.id`; only this source
+   *    may be persisted into `standardizedOccupationId` (§7.4).
+   *  - 'niche'     — display-only fallback to the resolved taxonomy niche (e.g.
+   *    「并购顾问」) so the row never reads 待补充 while the classifier resolved
+   *    a niche. The niche id is already persisted as `industryNiche`; it must
+   *    NEVER be written into `standardizedOccupationId`.
+   *  - null        — row unresolved (待补充).
+   */
+  occupationSource: 'canonical' | 'niche' | null
   /** Canonical `OCCUPATIONS.id`, decoupled from `niche.id` (§7.4). */
   standardizedOccupationId: string | null
   /** True once the user corrected at least one tier → source='user', confidence=1.0 (§7.3). */
@@ -158,6 +169,7 @@ export function applyTierCorrection(
         segment: null,
         niche: null,
         occupation: null,
+        occupationSource: null,
         standardizedOccupationId: null,
         corrected: true,
       }
@@ -174,6 +186,7 @@ export function applyTierCorrection(
         segment: nextChoice,
         niche: null,
         occupation: null,
+        occupationSource: null,
         standardizedOccupationId: null,
         corrected: true,
       }
@@ -185,6 +198,9 @@ export function applyTierCorrection(
         return {
           ...state,
           occupation: nextChoice,
+          // 换一个 candidates are canonical OCCUPATIONS ids — the row flips to
+          // 'canonical' even when it previously showed the niche fallback.
+          occupationSource: 'canonical',
           standardizedOccupationId: choice.id,
           niche: null,
           corrected: true,
@@ -197,6 +213,7 @@ export function applyTierCorrection(
         segment: derived.segment,
         niche: derived.niche,
         occupation: nextChoice,
+        occupationSource: 'canonical',
         standardizedOccupationId: choice.id,
         corrected: true,
       }
@@ -210,24 +227,46 @@ export function createLadderStateFromClassification(
 ): ProfessionLadderState | null {
   if (!classification) return null
 
+  const category = toValue(classification.industryCategory, classification.industryCategoryLabel)
+  const segment = toValue(classification.industrySegmentNew, classification.industrySegmentLabel)
+  const niche = toValue(classification.industryNiche, classification.industryNicheLabel)
+
   const standardizedOccupationId = classification.standardizedOccupationId ?? null
   const canonical = standardizedOccupationId
     ? OCCUPATIONS.find((occupation) => occupation.id === standardizedOccupationId)
     : undefined
   // Display priority: canonical OCCUPATIONS display name → niche label.
   // The niche label covers the parallel-rollout window in which the server still
-  // returns a niche id (§7.4 landing separately). No row is shown without a
-  // canonical id, and raw user text is never used as a code (SEC-02).
-  const occupationLabel = standardizedOccupationId
-    ? (canonical?.displayName ?? classification.industryNicheLabel ?? null)
-    : null
+  // returns a niche id (§7.4 landing separately). Raw user text is never used as
+  // a code (SEC-02).
+  if (standardizedOccupationId) {
+    const occupation = toValue(
+      standardizedOccupationId,
+      canonical?.displayName ?? classification.industryNicheLabel,
+    )
+    return {
+      category,
+      segment,
+      niche,
+      occupation,
+      occupationSource: occupation ? 'canonical' : null,
+      standardizedOccupationId,
+      corrected: false,
+    }
+  }
 
+  // Niche fallback: the taxonomy resolved a niche but no canonical occupation id
+  // (e.g. 「并购顾问」→ ma_advisory). Show the niche on the 角色 row so the card
+  // is honest about what was resolved instead of reading 待补充. Display-only —
+  // the niche id is already persisted as `industryNiche` and must never be
+  // written into `standardizedOccupationId` (§7.4 decoupling).
   return {
-    category: toValue(classification.industryCategory, classification.industryCategoryLabel),
-    segment: toValue(classification.industrySegmentNew, classification.industrySegmentLabel),
-    niche: toValue(classification.industryNiche, classification.industryNicheLabel),
-    occupation: toValue(standardizedOccupationId, occupationLabel),
-    standardizedOccupationId,
+    category,
+    segment,
+    niche,
+    occupation: niche ? { ...niche } : null,
+    occupationSource: niche ? 'niche' : null,
+    standardizedOccupationId: null,
     corrected: false,
   }
 }
@@ -352,6 +391,10 @@ export interface PersistedClassificationFields {
 /**
  * §7.2 — codes and labels always move together; corrected rows carry the
  * user-confirmed source/confidence so the persisted pair stays coherent.
+ *
+ * Namespace guard: a niche-sourced 角色 row (`occupationSource === 'niche'`)
+ * keeps `standardizedOccupationId: null` — the niche id only ever round-trips
+ * through `industryNiche`, never into the canonical occupation column.
  */
 export function toPersistedClassificationFields(
   state: ProfessionLadderState,

@@ -378,7 +378,7 @@ standardizedOccupationId: string | null;
 **注意**：metadata 只带 code / 计数，**不带**用户原始输入文案。
 
 **清理（评审 P4 / P7）**：
-- `profession_chat_tag_removed` 随 tag 汤移除而**废弃**，本波一并删除该埋点调用；`displayTags` 服务端仍返回但新 UI **不再渲染**，作为向后兼容**保留**（下波清理，勿在本 PR 移除）。
+- `profession_chat_tag_removed` 随 tag 汤移除而**废弃**，本波一并删除该埋点调用；~~`displayTags` 服务端仍返回但新 UI **不再渲染**，作为向后兼容**保留**（下波清理，勿在本 PR 移除）~~ — **2026-10-15 变更：`displayTags` 已被揭示卡「印象」标签组消费（AIGC fail-closed，经阶梯标签去重过滤）——「下波清理」作废，后续任何清理不得移除该字段。**
 - `profession_chat_ladder_viewed` 应替代原 `profession_chat_reveal_card_viewed`（若后者存在），避免同一卡两个语义重复事件。
 
 ---

@@ -568,7 +568,7 @@ export default function EditProfilePage() {
       <ScrollView className='edit-profile__scroll' scrollY enhanced showScrollbar={false} scrollIntoView={scrollIntoViewId || undefined}>
         {/* Xiaoyue Coach */}
         <XiaoyueChatBubble
-          content='来看看你的资料吧，随时更新让匹配更准哦～'
+          content='来看看你的资料吧，随时更新让排桌更对味哦～'
           pose='casual'
           horizontal
           showGlow
@@ -846,6 +846,8 @@ export default function EditProfilePage() {
               <ProfessionDisplayField
                 rawValue={professionText}
                 classification={professionClassification}
+                archetypeId={(user?.primaryArchetype ?? user?.archetype) || undefined}
+                userCity={user?.currentCity ?? undefined}
                 onEdit={() => setShowProfessionOverlay(true)}
               />
             </View>
@@ -990,6 +992,7 @@ export default function EditProfilePage() {
           isClosing={isProfessionOverlayClosing}
           initialValue={professionText}
           userArchetype={(user?.primaryArchetype ?? user?.archetype) || undefined}
+          userCity={user?.currentCity ?? undefined}
           onSubmit={handleProfessionSubmit}
           onSkip={handleProfessionSkip}
         />
