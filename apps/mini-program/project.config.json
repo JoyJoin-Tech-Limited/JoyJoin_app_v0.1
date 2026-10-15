@@ -173,6 +173,34 @@
       {
         "type": "regexp",
         "value": "assets/lovart/profile-review/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/lovart/alang-.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/lovart/squad/.*\\.webp$"
+      },
+      {
+        "type": "file",
+        "value": "assets/tab-bar-notch-bg.png"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/alang-story/assets/.*\\.(png|jpg|jpeg)$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/icebreaker-session/assets/mood-icons/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/matching-status/assets/puzzle/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/pool-registration/assets/pool-persona/.*\\.webp$"
       }
     ]
   },

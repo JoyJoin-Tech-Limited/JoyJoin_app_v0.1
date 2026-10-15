@@ -17,8 +17,23 @@
  * file missing from dist/ (copy rule or clean:cdn-assets), not the upload
  * filter. This gate asserts the contract directly, locally, before upload.
  *
+ * 2026-10-15 hardening — the CRITICAL_ASSETS list below only covers assets
+ * somebody remembered to list, which is how a new asset directory can ship
+ * unverified. The gate now also classifies EVERY asset the build produced: each
+ * dist asset must be either include-covered (ships on purpose) or
+ * ignore-matched (excluded on purpose, and only if it is in
+ * INTENTIONALLY_EXCLUDED). That closes the hand-maintained-list gap without
+ * guessing at WeChat's internal packaging, which matters because the two
+ * available readings disagree: miniprogram-ci@2.1.31 computes
+ * `isIgnoredByRules = !isFileIncluded && isFileIgnored` (include overrides
+ * ignore, not an allow-list), while the runbook has treated include as the
+ * upload allow-list since the 2026-08-04 and 2026-08-17 incidents. Requiring an
+ * explicit decision per asset is correct under either reading, and the fix for
+ * a failure is one line in project.config.json.
+ *
  * Run AFTER `taro build` + `clean:cdn-assets` (wired into build:weapp).
- * Exit 1 if any critical asset is missing from dist or ignore-matched.
+ * Exit 1 if any critical asset is missing from dist or any dist asset is
+ * unclassified.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -111,6 +126,28 @@ const projectConfig = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'project.config.json'), 'utf8'),
 )
 const ignoreRules = projectConfig.packOptions?.ignore ?? []
+const includeRules = projectConfig.packOptions?.include ?? []
+
+/**
+ * Dist assets the upload deliberately does not carry. Keep this list tiny and
+ * justified: each entry is a file the build produced that no surface needs in
+ * the package. The two PNG masters below are superseded by their .webp twins
+ * and are dropped by ignore rule `pages/pool-registration/assets/ceremony/.*\.png$`.
+ */
+const INTENTIONALLY_EXCLUDED = new Set([
+  'pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.png',
+  'pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.png',
+])
+
+/** Asset kinds that ride the upload, and therefore need an explicit decision. */
+const PACKAGE_ASSET_PATTERN = /\.(?:webp|png|jpe?g|gif|svg|woff2?|mp3|wav)$/i
+
+function listFiles(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(directory, entry.name)
+    return entry.isDirectory() ? listFiles(fullPath) : [fullPath]
+  })
+}
 
 if (!fs.existsSync(DIST)) {
   console.error('FAIL: dist/ does not exist — run taro build first.')
@@ -118,18 +155,43 @@ if (!fs.existsSync(DIST)) {
 }
 
 let failed = false
+
+// 1) Known-critical assets. This is the only check that can see a file MISSING
+//    from dist, i.e. the copy-rule / clean-cdn-assets class that caused every
+//    documented "blank on device" incident.
 for (const asset of CRITICAL_ASSETS) {
-  const distPath = path.join(DIST, asset)
-  if (!fs.existsSync(distPath)) {
+  if (!fs.existsSync(path.join(DIST, asset))) {
     console.error(`FAIL missing from dist: ${asset}`)
     console.error('  → check the copy rule in config/index.ts and clean-cdn-assets.mjs exemptions')
     failed = true
+  }
+}
+
+// 2) Catch-all classification of everything the build actually produced.
+const distAssets = listFiles(DIST)
+  .map((filePath) => path.relative(DIST, filePath).replace(/\\/g, '/'))
+  .filter((relativePath) => PACKAGE_ASSET_PATTERN.test(relativePath))
+
+for (const asset of distAssets) {
+  const lowered = asset.toLowerCase()
+  const ignoreHit = ignoreRules.find((rule) => doRule(lowered, rule))
+  if (ignoreHit) {
+    if (!INTENTIONALLY_EXCLUDED.has(asset)) {
+      console.error(`FAIL ignore-matched: ${asset} (rule: ${ignoreHit.type} ${ignoreHit.value})`)
+      console.error('  → the uploaded package would not carry this asset;')
+      console.error('    narrow the ignore rule, or add the asset to INTENTIONALLY_EXCLUDED')
+      failed = true
+    }
     continue
   }
-  const rel = asset.toLowerCase()
-  const hit = ignoreRules.find((rule) => doRule(rel, rule))
-  if (hit) {
-    console.error(`FAIL ignore-matched: ${asset} (rule: ${hit.type} ${hit.value})`)
+
+  const includeHit = includeRules.some((rule) => doRule(lowered, rule))
+  if (!includeHit) {
+    console.error(`FAIL not include-covered: ${asset}`)
+    console.error(
+      '  → add a packOptions.include pattern for it in project.config.json ' +
+        '(runbook: mini-program-asset-delivery.md §4.1)',
+    )
     failed = true
   }
 }
@@ -138,4 +200,7 @@ if (failed) {
   console.error('\nUpload-asset gate FAILED — the listed assets would be blank on device.')
   process.exit(1)
 }
-console.log(`PASS: ${CRITICAL_ASSETS.length} critical bundled assets present in dist and upload-safe.`)
+console.log(
+  `PASS: ${CRITICAL_ASSETS.length} critical bundled assets present in dist, ` +
+    `${distAssets.length} dist assets classified upload-safe.`,
+)

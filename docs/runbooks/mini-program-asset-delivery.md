@@ -126,14 +126,23 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 
 ### 4.1 Adding a new bundled asset directory
 
-1. **Decide the owning package first.** If only one subpackage page renders the asset, put it in that subpackage: `src/pages/<pkg>/assets/<new-dir>/` → `dist/pages/<pkg>/assets/<new-dir>/`, referenced as `localAsset('/pages/<pkg>/assets/<new-dir>/file.ext')`. Main-package room is scarce — WeChat's real source ceiling leaves ~1.86 MB of safety budget (§1.4).
+1. **Decide the owning package first.** If only one subpackage page renders the asset, put it in that subpackage: `src/pages/<pkg>/assets/<new-dir>/` → `dist/pages/<pkg>/assets/<new-dir>/`, referenced as `localAsset('/pages/<pkg>/assets/<new-dir>/file.ext')`. Main-package room is scarce — WeChat's real source ceiling leaves ~1.86 MB of safety budget (§1.4). Subpackages carry the same 2 MB cap each, so check the per-package table the size guard prints before adding heavy art anywhere.
 2. Otherwise place files in `apps/mini-program/src/assets/<new-dir>/`.
 3. Add the copy pattern in `apps/mini-program/config/index.ts`.
-4. **In the same PR**, add a `packOptions.include` regexp in `apps/mini-program/project.config.json` matching the **dist** path (`assets/<new-dir>/.*\.ext$` or `pages/<pkg>/assets/<new-dir>/.*\.ext$`).
+4. **In the same PR**, add a `packOptions.include` regexp in `apps/mini-program/project.config.json` matching the **dist** path (`assets/<new-dir>/.*\.ext$` or `pages/<pkg>/assets/<new-dir>/.*\.ext$`). This is mechanically enforced: `verify-upload-assets.mjs` fails the build for any dist asset with no include pattern.
 5. Reference the asset with `localAsset('/assets/<new-dir>/file.ext')` (or the `pages/<pkg>/…` form).
 6. Run `npm run build:weapp -w mini-program` and confirm the files exist in the expected `dist/` location.
-7. Add/update the assertion in `apps/mini-program/scripts/verify-upload-assets.mjs` for the new dist path.
+7. Add/update the assertion in `apps/mini-program/scripts/verify-upload-assets.mjs` for the new dist path **only if losing this asset would blank a shipped surface** — that list is the "file went missing from `dist/`" detector. The include-pattern requirement is enforced automatically now (see below).
 8. Prefer an actual upload / preview on device; H5 is **not** sufficient.
+
+**New invariant (2026-10-15): every asset in `dist/` must be deliberately classified.** `verify-upload-assets.mjs` no longer only checks the hand-written critical list — it enumerates every media/font file the build produced (196 at the time of writing) and fails unless each one is either include-covered (ships on purpose) or ignore-matched (excluded on purpose). Two consequences:
+
+- Adding a bundled asset directory without a `packOptions.include` pattern now fails `npm run build:weapp` locally and CI's build job, instead of silently depending on whether WeChat honours its own allow-list.
+- An ignore rule that is too broad (e.g. a new `suffix .png` rule) fails too, because every asset it swallows must be listed in `INTENTIONALLY_EXCLUDED` inside the gate script. That list currently holds exactly the two superseded `pool-registration/assets/ceremony/*.png` masters.
+
+The check is strict on purpose: the two possible readings of `packOptions.include` disagree (`miniprogram-ci@2.1.31` computes `isIgnoredByRules = !isFileIncluded && isFileIgnored`, while this repo's incidents consistently behaved as if it were an allow-list). Requiring an explicit decision per asset is correct under either reading, and the fix for a failure is one line in `project.config.json`.
+
+**Per-package ceilings (2026-10-15):** WeChat caps **each** package at 2 MB, not just the main one. `scripts/check-compiled-package-source-size.mjs` now totals every declared subpackage root on the compiled bundle basis, prints the full table with WeChat-equivalent sizes and headroom, and fails any root over the same 1856 KiB safety limit. `pages/alang` is the tightest (1604 KiB of incompressible art + 273 KiB code → ≈1713 KiB compiled → ≈1873 KB WeChat-equivalent, ~175 KB of real headroom) — an easy place to accidentally re-break the upload.
 
 ### 4.7 Icon-system CDN fallback coverage (2026-10-14 incident)
 
@@ -216,9 +225,9 @@ The per-subpackage `manualChunks` rule in `apps/mini-program/config/miniProgramC
 - [ ] Owning package decided — subpackage-only art goes to `src/pages/<pkg>/assets/<dir>/` (main-package budget: §1.4)
 - [ ] File placed under the chosen `src/…/assets/<dir>/`
 - [ ] Copy pattern added in `config/index.ts`
-- [ ] `packOptions.include` regexp added in `project.config.json` (matches the **dist** path prefix)
+- [ ] `packOptions.include` regexp added in `project.config.json` (matches the **dist** path prefix) — `verify-upload-assets.mjs` fails the build if any dist asset has no include pattern
 - [ ] Loaded via `localAsset(...)` with the matching root-relative path
-- [ ] `verify-upload-assets.mjs` expectation updated to the new dist path
+- [ ] `verify-upload-assets.mjs` expectation updated to the new dist path **if the asset is surface-critical** (losing it would blank a page); otherwise the catch-all classification already covers it
 - [ ] `npm run build:weapp` produces the file in the expected `dist/` location
 - [ ] Screenshot or device upload verifies the asset is visible
 

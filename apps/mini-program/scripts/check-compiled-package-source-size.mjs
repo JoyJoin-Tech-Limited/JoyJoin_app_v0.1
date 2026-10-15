@@ -30,6 +30,16 @@ export const JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES =
   WECHAT_SOURCE_SIZE_OVERHEAD_BYTES -
   JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES
 
+/**
+ * Subpackages carry the same 2 MB ceiling as the main package, so they get the
+ * same arithmetic. The 160 KiB overhead was measured on the main package; it is
+ * carried over here deliberately (worst case: the subpackage gate is stricter
+ * than WeChat is). If a subpackage ever fails this check while the upload
+ * succeeds, re-measure the offset from a real 80200 message instead of raising
+ * the limit.
+ */
+export const JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES = JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES
+
 function normalizePackageRoot(root) {
   return root.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
 }
@@ -45,6 +55,16 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function findSubpackageRoot(relativePath, subpackageRoots) {
+  let owner = null
+  for (const root of subpackageRoots) {
+    if (relativePath !== root && !relativePath.startsWith(`${root}/`)) continue
+    // Longest match wins, so a nested root never leaks into its parent.
+    if (!owner || root.length > owner.length) owner = root
+  }
+  return owner
+}
+
 export function calculateCompiledPackageSourceSize(compiledDirectory) {
   const appJsonPath = path.join(compiledDirectory, 'app.json')
   if (!fs.existsSync(appJsonPath)) {
@@ -58,6 +78,7 @@ export function calculateCompiledPackageSourceSize(compiledDirectory) {
 
   let mainPackageBytes = 0
   let totalBytes = 0
+  const subpackageBytes = new Map(subpackageRoots.map((root) => [root, 0]))
   const crossPackageRequires = []
   const subpackageRequirePattern = subpackageRoots.length > 0
     ? new RegExp(
@@ -70,21 +91,33 @@ export function calculateCompiledPackageSourceSize(compiledDirectory) {
     const bytes = fs.statSync(filePath).size
     totalBytes += bytes
 
-    const belongsToSubpackage = subpackageRoots.some(
-      (root) => relativePath === root || relativePath.startsWith(`${root}/`),
-    )
-    if (!belongsToSubpackage) {
-      mainPackageBytes += bytes
-      if (subpackageRequirePattern && relativePath.endsWith('.js')) {
-        const source = fs.readFileSync(filePath, 'utf8')
-        for (const match of source.matchAll(subpackageRequirePattern)) {
-          crossPackageRequires.push({ file: relativePath, packageRoot: match[1] })
-        }
+    const owner = findSubpackageRoot(relativePath, subpackageRoots)
+    if (owner) {
+      subpackageBytes.set(owner, subpackageBytes.get(owner) + bytes)
+      continue
+    }
+
+    mainPackageBytes += bytes
+    if (subpackageRequirePattern && relativePath.endsWith('.js')) {
+      const source = fs.readFileSync(filePath, 'utf8')
+      for (const match of source.matchAll(subpackageRequirePattern)) {
+        crossPackageRequires.push({ file: relativePath, packageRoot: match[1] })
       }
     }
   }
 
-  return { mainPackageBytes, totalBytes, subpackageRoots, crossPackageRequires }
+  return {
+    mainPackageBytes,
+    totalBytes,
+    subpackageRoots,
+    // Every declared root is reported, even when empty, so the CLI shows the
+    // full ceiling picture instead of only what happens to be non-trivial.
+    subpackages: subpackageRoots.map((root) => ({
+      root,
+      bytes: subpackageBytes.get(root) ?? 0,
+    })),
+    crossPackageRequires,
+  }
 }
 
 export function formatBytes(bytes) {
@@ -98,11 +131,30 @@ function runCli() {
   const headroom = WECHAT_MAIN_PACKAGE_LIMIT_BYTES - wechatEquivalentBytes
 
   console.log(
+    `[compiled-package-size] basis: miniprogram-ci compiled bundle ` +
+      `(CI: compiled-check). A raw Taro dist/ is a much larger tree — its ` +
+      `numbers are not comparable to WeChat's accounting.`,
+  )
+  console.log(
     `[compiled-package-size] main source ${formatBytes(result.mainPackageBytes)} ` +
       `(WeChat-equivalent ${formatBytes(wechatEquivalentBytes)} incl. ` +
       `${formatBytes(WECHAT_SOURCE_SIZE_OVERHEAD_BYTES)} accounting overhead); ` +
       `WeChat headroom ${formatBytes(headroom)}`,
   )
+
+  // WeChat enforces the 2 MB ceiling per package, so a subpackage can fail the
+  // upload on its own. Print every root every run: the point is to see a
+  // subpackage approach the ceiling long before an upload refuses it.
+  const rankedSubpackages = [...result.subpackages].sort((a, b) => b.bytes - a.bytes)
+  for (const subpackage of rankedSubpackages) {
+    const subpackageWechatBytes = subpackage.bytes + WECHAT_SOURCE_SIZE_OVERHEAD_BYTES
+    console.log(
+      `[compiled-package-size] subpackage ${subpackage.root.padEnd(26)} ` +
+        `${formatBytes(subpackage.bytes)} ` +
+        `(WeChat-equivalent ${formatBytes(subpackageWechatBytes)}); ` +
+        `headroom ${formatBytes(WECHAT_MAIN_PACKAGE_LIMIT_BYTES - subpackageWechatBytes)}`,
+    )
+  }
 
   let failed = false
   if (result.mainPackageBytes > JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES) {
@@ -113,6 +165,20 @@ function runCli() {
         `WeChat-equivalent ${formatBytes(wechatEquivalentBytes)}). ` +
         `Move bundled assets into the subpackage that renders them, or serve ` +
         `them from the CDN.`,
+    )
+    failed = true
+  }
+
+  for (const subpackage of result.subpackages) {
+    if (subpackage.bytes <= JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES) continue
+    console.error(
+      `[compiled-package-size] FAIL: subpackage ${subpackage.root} source ` +
+        `${formatBytes(subpackage.bytes)} exceeds JoyJoin's ` +
+        `${formatBytes(JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES)} safety limit ` +
+        `(WeChat hard limit ${formatBytes(WECHAT_MAIN_PACKAGE_LIMIT_BYTES)} per package, ` +
+        `WeChat-equivalent ` +
+        `${formatBytes(subpackage.bytes + WECHAT_SOURCE_SIZE_OVERHEAD_BYTES)}). ` +
+        `Serve that subpackage's heaviest art from the CDN.`,
     )
     failed = true
   }
@@ -130,10 +196,18 @@ function runCli() {
     return
   }
 
+  const tightestSubpackage = rankedSubpackages[0]
   console.log(
     `[compiled-package-size] PASS: ${formatBytes(
       JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES - result.mainPackageBytes,
-    )} below the safety limit.`,
+    )} below the main safety limit` +
+      (tightestSubpackage
+        ? `; tightest subpackage ${tightestSubpackage.root} keeps ` +
+          `${formatBytes(
+            WECHAT_MAIN_PACKAGE_LIMIT_BYTES -
+              (tightestSubpackage.bytes + WECHAT_SOURCE_SIZE_OVERHEAD_BYTES),
+          )} of WeChat headroom.`
+        : '.'),
   )
 }
 

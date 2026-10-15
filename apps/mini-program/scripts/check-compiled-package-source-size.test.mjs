@@ -7,6 +7,7 @@ import {
   calculateCompiledPackageSourceSize,
   JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES,
   JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES,
+  JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES,
   WECHAT_MAIN_PACKAGE_LIMIT_BYTES,
   WECHAT_SOURCE_SIZE_OVERHEAD_BYTES,
 } from './check-compiled-package-source-size.mjs'
@@ -49,8 +50,34 @@ describe('compiled package source size', () => {
       mainPackageBytes: appJsonBytes + 150,
       totalBytes: appJsonBytes + 1_350,
       subpackageRoots: ['pages/onboarding', 'pages/alang'],
+      subpackages: [
+        { root: 'pages/onboarding', bytes: 500 },
+        { root: 'pages/alang', bytes: 700 },
+      ],
       crossPackageRequires: [],
     })
+  })
+
+  it('attributes nested roots to the longest match and reports empty roots', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'joyjoin-compiled-size-'))
+    temporaryDirectories.push(root)
+    fs.writeFileSync(
+      path.join(root, 'app.json'),
+      JSON.stringify({
+        subPackages: [
+          { root: 'pages/alang', pages: ['dialogue/index'] },
+          { root: 'pages/alang-story', pages: ['index'] },
+          { root: 'pages/city-unlock', pages: ['index'] },
+        ],
+      }),
+    )
+    writeFixture('pages/alang/dialogue/index.js', 400, root)
+
+    expect(calculateCompiledPackageSourceSize(root).subpackages).toEqual([
+      { root: 'pages/alang', bytes: 400 },
+      { root: 'pages/alang-story', bytes: 0 },
+      { root: 'pages/city-unlock', bytes: 0 },
+    ])
   })
 
   it('rejects a main chunk that reaches back into a subpackage chunk', () => {
@@ -89,5 +116,14 @@ describe('compiled package source size', () => {
         WECHAT_SOURCE_SIZE_OVERHEAD_BYTES +
         JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES,
     ).toBe(WECHAT_MAIN_PACKAGE_LIMIT_BYTES)
+  })
+
+  it('applies the same ceiling to subpackages, which WeChat limits per package', () => {
+    expect(JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES).toBe(
+      JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES,
+    )
+    expect(JOYJOIN_SUBPACKAGE_SAFETY_LIMIT_BYTES).toBeLessThan(
+      WECHAT_MAIN_PACKAGE_LIMIT_BYTES - WECHAT_SOURCE_SIZE_OVERHEAD_BYTES,
+    )
   })
 })
