@@ -203,11 +203,14 @@ const REQUIREMENTS = [
       'gathering-room-scene{',
       'gathering-room-scene__seat-shadow{',
       'gathering-room-scene__seat{',
+      'gathering-room-scene__layer--fallback-room{',
+      'gathering-room-scene__name-card{',
+      'gathering-room-scene__quick-poke{',
       'gathering-room__action-bar{',
-      'gathering-room__pill{',
+      'gathering-room__status-stack{',
+      'gathering-room__success-card{',
       'gathering-room__poke{',
       'tablemate-sheet{',
-      'segmented-countdown-clock{',
     ],
   },
   {
@@ -326,10 +329,22 @@ const REQUIREMENTS = [
     // welcome-gift-card + invite radar: restored on-page 2026-09-07; both
     // components side-effect-import their SCSS — assert the page WXSS keeps
     // them (pre-incident shape of the 2026-07/08 blank-surface regressions).
+    // insight-reveal (entry-card-insight-v2, 2026-10-14): the component has no
+    // TSX-side SCSS import; its rules are @use'd by the page SCSS. If the @use
+    // is dropped, the staged 「悦仔的观察」 rows render unstyled on device.
     selectors: [
       'xiaoyue-inline-error{',
       'welcome-gift-card{',
       'profile-review-invite-card__radar{',
+      'insight-reveal__card{',
+      'insight-reveal__evidence-pill{',
+      // Amendment A1 (AC-16): aggregated AIGC footer row.
+      'insight-reveal__footer{',
+      // Amendment A2 (AC-23): per-line feedback links (tap targets).
+      'insight-reveal__row-feedback-link{',
+      // insight-share-poster (2026-10-15): quiet entry + hidden canvas host.
+      'insight-share-entry__button{',
+      'profile-review__insight-poster-canvas{',
     ],
   },
   {
