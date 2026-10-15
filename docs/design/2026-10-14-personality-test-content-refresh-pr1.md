@@ -1,6 +1,9 @@
 # Personality Test Content Refresh — PR1 Copy Review (Spine)
 
-> Status: **AWAITING COPY APPROVAL** — no bank file may be edited until this doc is signed off.
+> Status: **PR1 SHIPPED 2026-10-15** — the copy gate closed with the §8 owner decisions (2026-10-14);
+> the Tier-3 Sprint Contract is LOCKED (`.git/.orchestration/sprints/sprint-contract.20261014_personality_content_pr1.md`)
+> and the bank edits + P0 content-experience guardrail are merged (`5a08f7ba7`). This doc is now
+> reference material for PR2, not a pending approval.
 > Date: 2026-10-14 · Scope: PR1 of the 2-PR content pass (PR2 = tail re-dress, follow-up).
 > Grill-locked decisions: full content pass; 4/9 anchor re-dress; freeze policy A; copy-first gate;
 > Q51_PureX exception; P0 guardrail (sidecar map + contract test); PR1 green before PR2 starts.

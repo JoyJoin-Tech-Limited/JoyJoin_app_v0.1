@@ -1,7 +1,7 @@
 # Mini-Program Asset & Style Delivery Runbook
 
 > Operational guide for adding, bundling, CDN-hosting, and troubleshooting static assets **and styles** in `apps/mini-program`.
-> Last updated: 2026-08-18
+> Last updated: 2026-10-15
 
 This runbook is the durable record of back-to-back incidents that shipped mini-program features to device with broken visuals, plus the protocol changes that prevent a repeat.
 
@@ -63,6 +63,31 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 - Harden `apps/mini-program/scripts/verify-subpackage-styles.mjs` so that **any non-empty `sub-common.wxss` fails the build**, turning a silent device-only regression into a CI failure.
 - Extend `phaseStyleBundling.test.ts` to assert all 25 `@use` entries are present.
 
+### 1.4 The 开发版 upload was rejected — main package source size over 2 MB (errcode `80200`)
+
+**Symptom:** `Build Taro WeChat Mini-Program` failed on two consecutive pushes (`70a1585b7`, `444210f2b`) in the upload step, after `[upload by cos multi version] running async task...`: `errcode: 80200, errmsg: main package source size 2063KB exceed max limit 2048KB` (then `2064KB`). Every other job — build, `check:package-size`, `verify:subpackage-styles`, the compiled-package check — was green.
+
+**Root cause chain:**
+
+1. WeChat's upload accounting ("main package source size") counts ~154 KiB more than `scripts/check-compiled-package-source-size.mjs` measures on miniprogram-ci's compiled bundle. The guard compared its number straight to the 2048 KB ceiling, so it reported **138.9 KiB of headroom** for a package WeChat rejected, and the last accepted upload had only ~5 KB of real slack.
+2. The two gathering-room composites (`room-composite-v1.webp` 84,420 B + `room-composite-v2.webp` 94,588 B = 174.8 KiB) were still bundled in the **main** package under `src/assets/gathering-room/`, even though only `pages/gathering-room` (a subpackage) renders them.
+3. The batch's net growth (~20 KiB across several features) was enough to tip the package over once the real headroom was near zero.
+
+**Fix (commit `346845773`):**
+
+- Moved both composites to `src/pages/gathering-room/assets/` (copy pattern + `packOptions.include` regexp `pages/gathering-room/assets/.*\.webp$` + `verify-upload-assets.mjs` expectation + `repair-gathering-room-composite.mjs` all repointed). The two **CDN manifest entries were dropped** rather than repointed: the scene loads the art package-direct via `localAsset()`, so no CDN consumer remains — and a `pages/…` `localPath` can never auto-publish anyway (§4.1 / checklist note).
+- Relaxed `localAsset()`'s path guard to accept both bundled forms: `BUNDLED_ASSET_PATH_PATTERN = /^\/(?:assets\/|pages\/[^/]+\/assets\/)/`.
+- Recalibrated the guard: `WECHAT_SOURCE_SIZE_OVERHEAD_BYTES = 160 KiB`, `JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES = 32 KiB`, `JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES = 1856 KiB`; the CLI now prints the WeChat-equivalent size and a remediation hint, and the guard test locks the accounting identity.
+- Kept `room-composite-v1.webp` as the rollback copy (the gathering-room subpackage is ~235 KiB, far under its own 1.8 MB limit).
+
+### 1.5 The CDN auto-publish job failed on push — its artifact was dispatch-only
+
+**Symptom:** on the 2026-10-15 asset-move push, `Upload CDN Assets` → `Upload assets to CVM CDN` failed after 12 s with `Unable to download artifact(s): Artifact not found for name: cdn-weapp-dist`, while the `Validate CDN assets` job was green.
+
+**Root cause:** commit `4392f1ffa` (2026-10-14) removed the `workflow_dispatch`-only gate from the **upload job** so push runs auto-publish manifest changes, but the `Preserve compiled assets for upload` step kept `if: github.event_name == 'workflow_dispatch'`. Any push whose diff matched a manifest entry therefore started the upload job with no artifact to download. It stayed invisible because every earlier push run matched nothing and skipped the upload job entirely.
+
+**Fix:** the artifact step now packs on `workflow_dispatch || steps.changes.outputs.should_upload == 'true'`, matching the upload job's gate exactly. The two now-dead gathering-room manifest entries were dropped in the same pass (§1.4).
+
 ---
 
 ## 2. What we did right
@@ -93,6 +118,7 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 | Left `import './X.scss'` in a component that is consumed inside a subpackage | Taro chunks the SCSS into `sub-common.wxss`, which WeChat never loads |
 | Moved/re-exported page-owned components without re-checking `@use` coverage | A page extraction changes the chunk graph and can strand styles silently |
 | Registered an icon mapping in `emojiToIconMap.ts` without committing the webp + CDN manifest entry in the same window (2026-10-14) | Mapping existed 2026-07-21, asset landed 2026-08-05 with no manifest entry, and the `Upload CDN Assets` workflow **skipped** upload jobs on push events (dispatch-only gating), so `JoyJoinIcon`'s local→CDN retry 404'd and devices rendered the fallback 🎯 emoji for 尝鲜体验 |
+| Kept subpackage-only art in the main package until the 2 MB source ceiling was reached (2026-10-15) | The upload failed with `errcode 80200` while every local size command passed — the guard under-measured WeChat's accounting by ~154 KiB (§1.4). Decide the owning package **before** adding art; moving it later costs a release cycle |
 
 ---
 
@@ -100,12 +126,14 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 
 ### 4.1 Adding a new bundled asset directory
 
-1. Place files in `apps/mini-program/src/assets/<new-dir>/`.
-2. Add the copy pattern in `apps/mini-program/config/index.ts`.
-3. **In the same PR**, add a `packOptions.include` regexp in `apps/mini-program/project.config.json`.
-4. Reference the asset with `localAsset('/assets/<new-dir>/file.ext')`.
-5. Run `npm run build:weapp -w mini-program` and confirm the files exist in `dist/assets/<new-dir>/`.
-6. Prefer an actual upload / preview on device; H5 is **not** sufficient.
+1. **Decide the owning package first.** If only one subpackage page renders the asset, put it in that subpackage: `src/pages/<pkg>/assets/<new-dir>/` → `dist/pages/<pkg>/assets/<new-dir>/`, referenced as `localAsset('/pages/<pkg>/assets/<new-dir>/file.ext')`. Main-package room is scarce — WeChat's real source ceiling leaves ~1.86 MB of safety budget (§1.4).
+2. Otherwise place files in `apps/mini-program/src/assets/<new-dir>/`.
+3. Add the copy pattern in `apps/mini-program/config/index.ts`.
+4. **In the same PR**, add a `packOptions.include` regexp in `apps/mini-program/project.config.json` matching the **dist** path (`assets/<new-dir>/.*\.ext$` or `pages/<pkg>/assets/<new-dir>/.*\.ext$`).
+5. Reference the asset with `localAsset('/assets/<new-dir>/file.ext')` (or the `pages/<pkg>/…` form).
+6. Run `npm run build:weapp -w mini-program` and confirm the files exist in the expected `dist/` location.
+7. Add/update the assertion in `apps/mini-program/scripts/verify-upload-assets.mjs` for the new dist path.
+8. Prefer an actual upload / preview on device; H5 is **not** sufficient.
 
 ### 4.7 Icon-system CDN fallback coverage (2026-10-14 incident)
 
@@ -185,16 +213,18 @@ The per-subpackage `manualChunks` rule in `apps/mini-program/config/miniProgramC
 
 ### Before adding any new bundled asset
 
-- [ ] File placed under `src/assets/<dir>/`
+- [ ] Owning package decided — subpackage-only art goes to `src/pages/<pkg>/assets/<dir>/` (main-package budget: §1.4)
+- [ ] File placed under the chosen `src/…/assets/<dir>/`
 - [ ] Copy pattern added in `config/index.ts`
-- [ ] `packOptions.include` regexp added in `project.config.json`
-- [ ] Loaded via `localAsset('/assets/<dir>/file.ext')`
-- [ ] `npm run build:weapp` produces the file in `dist/assets/<dir>/`
+- [ ] `packOptions.include` regexp added in `project.config.json` (matches the **dist** path prefix)
+- [ ] Loaded via `localAsset(...)` with the matching root-relative path
+- [ ] `verify-upload-assets.mjs` expectation updated to the new dist path
+- [ ] `npm run build:weapp` produces the file in the expected `dist/` location
 - [ ] Screenshot or device upload verifies the asset is visible
 
 ### Before adding any new CDN asset
 
-- [ ] File placed under `src/assets/<dir>/`
+- [ ] File placed under `src/assets/<dir>/` — the workflow's push trigger (`apps/mini-program/src/assets/**`) and its `should_upload` diff match (`apps/mini-program/src/${localPath}`) both assume this prefix, so a `pages/…` entry validates but never auto-publishes
 - [ ] Entry added to `scripts/cdn-asset-manifest.json`
 - [ ] Loaded via `cdnAsset('/assets/<dir>/file.ext')`
 - [ ] `npm run upload:cdn-assets` pushed the file (or the `Upload CDN Assets` workflow ran)

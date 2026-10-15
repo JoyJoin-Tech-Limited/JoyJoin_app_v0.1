@@ -191,8 +191,14 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 # (mapping landed 07-21, webp 08-05, manifest entry none). Guard:
 # scripts/check/check-cdn-icon-coverage.mjs in the guardrails chain. The
 # Upload CDN Assets workflow now auto-publishes on push when the diff touches
-# the manifest or a manifest-listed asset (previously dispatch-only).
-# Runbook: docs/runbooks/mini-program-asset-delivery.md §4.7.
+# the manifest or a manifest-listed asset (previously dispatch-only). Two
+# conditions keep that working (2026-10-15): its artifact step must pack on
+# `should_upload` too (gating it on workflow_dispatch alone made every
+# auto-publish push die with "Artifact not found for name: cdn-weapp-dist"),
+# and manifest localPaths must stay under src/assets/** — the push trigger
+# (`apps/mini-program/src/assets/**`) and the should_upload diff match both
+# assume that prefix, so a pages/… entry validates but can never publish.
+# Runbook: docs/runbooks/mini-program-asset-delivery.md §1.5 + §4.7.
 # Gotcha (2026-08-17): packOptions.include in project.config.json is an
 # upload ALLOW-LIST — a bundled asset matching no include pattern is silently
 # dropped from the uploaded package (confirmed twice: 2026-08-04 Flash
@@ -204,6 +210,20 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 # Gotcha (2026-08-17): cdnAsset() is idempotent for absolute URLs — never
 # double-wrap a value that may already be cdnAsset()-resolved, or persistent
 # cache / downloadFile calls will 404 silently.
+# Gotcha (2026-10-15): WeChat's upload accounting ("main package source size",
+# errcode 80200 above 2048 KB) runs ~154 KiB LARGER than anything our size
+# scripts print. check:package-size measures zip size; check-compiled-package-
+# source-size.mjs measures miniprogram-ci's compiled bundle and used to compare
+# it straight to the 2 MB source ceiling — it printed "1909.1 KiB / 36.5 KiB
+# below the safety limit" for a package WeChat rejected at 2063 KB. The guard
+# now models the offset: WECHAT_SOURCE_SIZE_OVERHEAD_BYTES (160 KiB) +
+# JOYJOIN_MAIN_PACKAGE_HEADROOM_MARGIN_BYTES (32 KiB) →
+# JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES = 1856 KiB (was 1.9 MB = 1945.6 KiB,
+# which sat above WeChat's real ceiling). Placement rule that follows: an asset
+# only a subpackage page renders must LIVE in that subpackage
+# (src/pages/<pkg>/assets/… → dist/pages/<pkg>/assets/…, referenced as
+# '/pages/<pkg>/assets/…' via localAsset(), with a matching packOptions.include
+# regexp). The gathering-room composites (175 KB) moved this way on 2026-10-15.
 # Protocol/runbook: docs/runbooks/mini-program-asset-delivery.md.
 # Details: docs/agent-context/mini-program-assets.md.
 ```

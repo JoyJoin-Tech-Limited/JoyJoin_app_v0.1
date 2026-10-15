@@ -212,6 +212,18 @@ Boundary:
 - `preference_strictness` null is coerced to 50 server-side; no mandatory backfill migration.
 - Eligibility count uses batched `inArray` loads (no N+1).
 
+### Industry cohort count (2026-10-15)
+
+Session-scoped read-only peer count for the authenticated user: same `current_city` + same `industry_category`, banned users and test bots excluded.
+
+Primary files:
+- `apps/server/src/routes/domains/industryCohort.ts` — `GET /api/inference/industry-cohort-count`
+- `apps/server/src/repositories/industryCohortRepo.ts` — cohort count queries
+
+Boundary:
+- Privacy min-count: raw counts `< 10` and missing city/category both collapse to `{ count: null }`; a non-null count is always the exact cohort count.
+- `industryCohortCountEnabled` (env `INDUSTRY_COHORT_COUNT_ENABLED`, default `true`) is a kill switch only — OFF returns `{ count: null }` fail-closed with no identity/cohort queries. Server-only flag, not exposed in auth `features`.
+
 ### Referral & Invitation System
 
 Owns referral codes and event-specific invitations — dual-table system with different lifecycle:
@@ -224,6 +236,8 @@ Owns referral codes and event-specific invitations — dual-table system with di
 
 Primary files:
 - `apps/server/src/routes/domains/referrals.ts` — stats, invites received, invite link generation
+- `apps/server/src/lib/referralCode.ts` — `getOrCreateUserReferralCode` (lazily mints the 6-char permanent code, no confusing chars) — shared by `/api/referral/code` and the share-QR route
+- `apps/server/src/lib/wechatShareQrCode.ts` + `apps/server/src/routes/domains/shareQrCode.ts` — `POST /api/personality/share-qrcode` (wxacode.getUnlimited; scene `ic=<referralCode>` lands on the personality-test intro page and is parsed into `pendingReferralCode`), gated by `shareQrCodeEnabled`, rate-limited (`shareQrCodeLimiter`, 60s / 5 requests)
 - `apps/server/src/wechatAuth.ts` — both login endpoints accept `referralCode` for attribution
 - `apps/server/src/routes/domains/userEventPools.ts` — invitation code lookup, self-referral guard, dedup guard, referral conversion recording
 
