@@ -1,6 +1,6 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildStructuredInterestsPayload,
   submitInterests,
@@ -48,6 +48,12 @@ import './index.scss'
 const MIN_INTERESTS = 3
 // No maximum selection count (product decision 2026-08-03): users may select
 // as many interests as they like. The server likewise enforces only the min.
+
+// Footer thermometer fill — $color-primary as a resolved hex (WeChat resolves
+// inline var() unreliably). The bar is unlock progress (3 neutral ticks), NOT
+// heat: `selectedCount >= level` fills it at 3 plain taps, so heat colours
+// here would claim L3 warmth the user never expressed.
+const THERMOMETER_FILL_COLOR = '#8B5CF6'
 
 // Per-tap coachmark copy keyed by the level the tap just reached.
 // Copy budget: ≤10 chars so the anchored bubble stays clear of card edges.
@@ -134,6 +140,28 @@ const groupedInterests = activeInterests.reduce<Record<MacroCategory, InterestDe
   {} as Record<MacroCategory, InterestDefinition[]>,
 )
 
+// O(1) topicId → macroCategory lookup. Built once at module scope so the
+// per-tap milestone/count paths never rescan INTEREST_TAXONOMY.
+const TOPIC_CATEGORY_MAP = new Map<string, MacroCategory>(
+  activeInterests.map((item) => [item.id, item.macroCategory as MacroCategory]),
+)
+
+// One pass over a levels record → per-category selection counts. Used by the
+// render-path count memo and by the tap handler's milestone arbitration
+// (coverage size = number of keys), so the two can never drift.
+function countSelectionsByCategory(
+  levels: Record<string, InterestSelectionLevel>,
+): Partial<Record<MacroCategory, number>> {
+  const counts: Partial<Record<MacroCategory, number>> = {}
+  for (const topicId of Object.keys(levels)) {
+    const category = TOPIC_CATEGORY_MAP.get(topicId)
+    if (category) {
+      counts[category] = (counts[category] ?? 0) + 1
+    }
+  }
+  return counts
+}
+
 // First-visit gesture demo target: the first card of the first category. A
 // CSS-only "ghost tap" loop plays on this card until the user's first real
 // tap, demonstrating the multi-tap heat gesture before any interaction.
@@ -164,6 +192,118 @@ function InterestTierIndicator({ level }: { level: InterestSelectionLevel }) {
   )
 }
 
+// Pop class per reached heat level (static literals — the class-coverage
+// guard can't resolve `popping-l${level}` template fragments).
+const POPPING_CLASS: Record<InterestSelectionLevel, string> = {
+  1: 'extended-data__interest-card--popping-l1',
+  2: 'extended-data__interest-card--popping-l2',
+  3: 'extended-data__interest-card--popping-l3',
+}
+
+interface InterestCardHint {
+  level: InterestSelectionLevel
+  message: string
+}
+
+interface InterestCardProps {
+  item: InterestDefinition
+  level: InterestSelectionLevel | undefined
+  isPopping: boolean
+  hint: InterestCardHint | null
+  showDemo: boolean
+  demoExiting: boolean
+  isFirstRow: boolean
+  showMetaHint: boolean
+  onToggle: (topicId: string) => void
+}
+
+// Memoized so a tap re-renders only the affected card instead of all 48 —
+// the page flips popping/hint/milestone state on nearly every tap, and
+// without this boundary each of those flips remapped the entire grid.
+const InterestCard = memo(function InterestCard({
+  item,
+  level,
+  isPopping,
+  hint,
+  showDemo,
+  demoExiting,
+  isFirstRow,
+  showMetaHint,
+  onToggle,
+}: InterestCardProps) {
+  const levelMeta = getInterestLevelMeta(level)
+  return (
+    <View
+      className={[
+        'extended-data__interest-card',
+        level ? `extended-data__interest-card--level-${level}` : '',
+        // Pop only fires on heat gain (deselect skips it), so a popping card
+        // always carries its reached level — scale escalates L1→L3.
+        isPopping && level ? POPPING_CLASS[level] : '',
+        hint ? 'extended-data__interest-card--hint' : '',
+        // Kept while the demo overlay exits: its z-index:3 rule (SCSS) holds
+        // the label above the fading overlay. The pop beats the demo dip via
+        // stylesheet order — popping rules are declared AFTER --demo.
+        showDemo ? 'extended-data__interest-card--demo' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      role='button'
+      aria-pressed={!!level}
+      aria-label={level ? `${item.label}，${levelMeta?.label}` : `${item.label}，未选择`}
+      onClick={() => onToggle(item.id)}
+      hoverClass='extended-data__interest-card--pressed'
+      hoverStayTime={100}
+    >
+      {hint ? (
+        <View
+          className={[
+            'extended-data__coachmark',
+            isFirstRow ? 'extended-data__coachmark--below' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          aria-live='polite'
+          role='status'
+        >
+          <View className='extended-data__coachmark-tap' aria-hidden='true'>
+            <View className='extended-data__coachmark-tap-pulse' />
+          </View>
+          <View
+            className={`extended-data__coachmark-dot extended-data__coachmark-dot--level-${hint.level}`}
+            aria-hidden='true'
+          />
+          <Text className='extended-data__coachmark-text'>{hint.message}</Text>
+          <View className='extended-data__coachmark-arrow' aria-hidden='true' />
+        </View>
+      ) : null}
+      {showDemo ? (
+        <View
+          className={[
+            'extended-data__tap-demo',
+            demoExiting ? 'extended-data__tap-demo--exiting' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          aria-hidden='true'
+        >
+          <View className='extended-data__tap-demo-tint extended-data__tap-demo-tint--l1' />
+          <View className='extended-data__tap-demo-tint extended-data__tap-demo-tint--l2' />
+          <View className='extended-data__tap-demo-ring' />
+          <View className='extended-data__tap-demo-ring extended-data__tap-demo-ring--2' />
+        </View>
+      ) : null}
+      <View className='extended-data__interest-card-top'>
+        <Text className='extended-data__interest-label'>{item.label}</Text>
+        {level ? <InterestTierIndicator level={level} /> : null}
+      </View>
+      <Text className='extended-data__interest-meta'>
+        {levelMeta?.shortLabel || (showMetaHint ? '点1次加入，连点升温' : '')}
+      </Text>
+    </View>
+  )
+})
+
 export default function ExtendedDataPage() {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const [levelsById, setLevelsById] = useState<Record<string, InterestSelectionLevel>>({})
@@ -180,6 +320,17 @@ export default function ExtendedDataPage() {
   // Set on the first real tap anywhere — permanently ends the ghost-tap demo
   // for this session (the user has started interacting, demo has done its job).
   const [tapDemoDismissed, setTapDemoDismissed] = useState(false)
+  // First-tap grace window: the demo overlay fades out over ~200ms instead of
+  // hard-cutting, so a mid-loop fake L2 tint never snaps to real L1.
+  const [tapDemoFading, setTapDemoFading] = useState(false)
+  const demoFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Ref mirror of the demo flags so toggleInterestLevel's identity doesn't
+  // change on the first tap (a new callback would re-render all 48 cards on
+  // exactly the interaction the demo fade is trying to smooth).
+  const demoStateRef = useRef({ dismissed: false, fading: false })
+  useEffect(() => {
+    demoStateRef.current = { dismissed: tapDemoDismissed, fading: tapDemoFading }
+  }, [tapDemoDismissed, tapDemoFading])
   const [poppingCardId, setPoppingCardId] = useState<string | null>(null)
   const [milestone, setMilestone] = useState<'unlocked' | 'first-priority' | 'all-categories' | null>(null)
   const poppingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -273,6 +424,9 @@ export default function ExtendedDataPage() {
       if (tapHintTimeoutRef.current) {
         clearTimeout(tapHintTimeoutRef.current)
       }
+      if (demoFadeTimeoutRef.current) {
+        clearTimeout(demoFadeTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -303,7 +457,7 @@ export default function ExtendedDataPage() {
     prevTopPriorityCountRef.current = topPriorityCount
 
     const selectedCategories = new Set(
-      selectionPreview.selections.map((s) => INTEREST_TAXONOMY.find((i) => i.id === s.topicId)?.macroCategory).filter(Boolean),
+      selectionPreview.selections.map((s) => TOPIC_CATEGORY_MAP.get(s.topicId)).filter(Boolean),
     )
     const prevCategories = prevCategoryCoverageRef.current
     prevCategoryCoverageRef.current = selectedCategories as Set<string>
@@ -366,12 +520,38 @@ export default function ExtendedDataPage() {
     .filter(Boolean)
     .join(' ')
 
+  // Ref mirror of levelsById so toggleInterestLevel keeps a stable identity
+  // across taps — a changing callback would defeat InterestCard's memo and
+  // re-render the whole 48-card grid on every tap.
+  const levelsRef = useRef(levelsById)
+  useEffect(() => {
+    levelsRef.current = levelsById
+  }, [levelsById])
+
+  // Per-category selected counts in one pass (was 6 × items.filter per render).
+  const selectedCountByCategory = useMemo(
+    () => countSelectionsByCategory(levelsById),
+    [levelsById],
+  )
+
   const toggleInterestLevel = useCallback(
     (topicId: string) => {
-      setTapDemoDismissed(true)
-      const currentLevel = levelsById[topicId]
+      // First real tap: fade the ghost-tap demo out over ~200ms rather than
+      // unmounting it mid-loop (a fake L2 tint snapping to real L1 read as a
+      // visible glitch on the first interaction of every new user).
+      if (!demoStateRef.current.dismissed && !demoStateRef.current.fading) {
+        demoStateRef.current.fading = true
+        setTapDemoFading(true)
+        demoFadeTimeoutRef.current = setTimeout(() => {
+          demoFadeTimeoutRef.current = null
+          demoStateRef.current.dismissed = true
+          setTapDemoDismissed(true)
+        }, 200)
+      }
+      const prevLevels = levelsRef.current
+      const currentLevel = prevLevels[topicId]
 
-      const nextLevels = { ...levelsById }
+      const nextLevels = { ...prevLevels }
 
       if (!currentLevel) {
         nextLevels[topicId] = 1
@@ -383,18 +563,52 @@ export default function ExtendedDataPage() {
         delete nextLevels[topicId]
       }
 
+      levelsRef.current = nextLevels
       setLevelsById(nextLevels)
-      haptics('light')
-      setPoppingCardId(topicId)
-      if (poppingTimeoutRef.current) {
-        clearTimeout(poppingTimeoutRef.current)
-      }
-      poppingTimeoutRef.current = setTimeout(() => {
-        poppingTimeoutRef.current = null
-        setPoppingCardId((current) => (current === topicId ? null : current))
-      }, 200)
 
       const reachedLevel = nextLevels[topicId]
+
+      // Milestone arbitration — mirrors the milestone effect's transitions,
+      // computed synchronously so the tap haptic can stand down when the
+      // milestone's success haptic is about to fire (was: light+success
+      // double-fire on the unlocking tap).
+      const prevCount = Object.keys(prevLevels).length
+      const nextCount = Object.keys(nextLevels).length
+      let milestoneFiresOnThisTap =
+        (prevCount < MIN_INTERESTS && nextCount >= MIN_INTERESTS) ||
+        (reachedLevel === 3 && topPriorityCount === 0)
+      if (!milestoneFiresOnThisTap) {
+        milestoneFiresOnThisTap =
+          Object.keys(countSelectionsByCategory(nextLevels)).length === CATEGORY_ORDER.length &&
+          Object.keys(countSelectionsByCategory(prevLevels)).length < CATEGORY_ORDER.length
+      }
+
+      // Gesture grammar: heating up escalates the haptic (L1/L2 light → L3
+      // medium); cooling down (deselect) is silent; milestone taps defer to
+      // the milestone effect's success haptic.
+      if (!milestoneFiresOnThisTap) {
+        if (reachedLevel === 3) {
+          haptics('medium')
+        } else if (reachedLevel != null) {
+          haptics('light')
+        }
+      }
+
+      // Pop only on heat gain — deselect fades via the level-class tint
+      // transition alone, so "cooling down" feels distinct from "heating up".
+      // 250ms matches the 0.25s pop keyframes (was 200ms, which clipped the
+      // animation at ~80%).
+      if (reachedLevel != null) {
+        setPoppingCardId(topicId)
+        if (poppingTimeoutRef.current) {
+          clearTimeout(poppingTimeoutRef.current)
+        }
+        poppingTimeoutRef.current = setTimeout(() => {
+          poppingTimeoutRef.current = null
+          setPoppingCardId((current) => (current === topicId ? null : current))
+        }, 250)
+      }
+
       if (reachedLevel === 2 || reachedLevel === 3) {
         hasReachedLevel2Ref.current = true
       }
@@ -402,12 +616,11 @@ export default function ExtendedDataPage() {
       // Anchored per-tap guidance. L2/L3 hints show once per session; the L1
       // discovery hint may repeat on up to 3 distinct cards until the user
       // reaches L2 anywhere. The L3 hint is suppressed when this tap also
-      // fires the first-priority milestone toast (contradictory messages).
+      // fires a milestone toast (contradictory messages).
       if (tapHintTimeoutRef.current) {
         clearTimeout(tapHintTimeoutRef.current)
         tapHintTimeoutRef.current = null
       }
-      const milestoneFiresOnThisTap = reachedLevel === 3 && topPriorityCount === 0
       let hintKey: string | null = null
       if (reachedLevel === 1 && !hasReachedLevel2Ref.current && l1HintCountRef.current < 3) {
         hintKey = `l1:${topicId}`
@@ -428,7 +641,7 @@ export default function ExtendedDataPage() {
         setTapHint(null)
       }
     },
-    [analytics, levelsById, topPriorityCount],
+    [topPriorityCount],
   )
 
   const handleSubmit = useCallback(async () => {
@@ -478,6 +691,7 @@ export default function ExtendedDataPage() {
 
       analytics.stepCompleted({
         selectedInterestCount: selectedCount,
+        topPriorityCount,
         totalHeat: selectionPreview.totalHeat,
         nextStep: nextStep ?? 'profile-review',
       })
@@ -604,7 +818,7 @@ export default function ExtendedDataPage() {
           {(Object.entries(groupedInterests) as [MacroCategory, InterestDefinition[]][])
             .sort((left, right) => CATEGORY_ORDER.indexOf(left[0]) - CATEGORY_ORDER.indexOf(right[0]))
             .map(([category, items]) => {
-              const selectedInCategory = items.filter((item) => levelsById[item.id]).length
+              const selectedInCategory = selectedCountByCategory[category] ?? 0
 
               return (
                 <Card key={category} className='extended-data__category'>
@@ -647,75 +861,31 @@ export default function ExtendedDataPage() {
 
                   <View className='extended-data__interest-grid'>
                     {items.map((item, itemIndex) => {
-                      const level = levelsById[item.id]
-                      const levelMeta = getInterestLevelMeta(level)
                       // Grid is 2-column: first-row cards render the bubble
                       // below so it is not clipped by the category header.
-                      const isFirstRow = itemIndex < 2
-                      const showTapHint = tapHint?.topicId === item.id
                       // Ghost-tap demo plays only on the first card, only
                       // while nothing is selected (covers checkpoint restores
-                      // that pre-populate selections).
-                      const showTapDemo =
-                        !tapDemoDismissed && selectedCount === 0 && item.id === DEMO_TOPIC_ID
-
+                      // that pre-populate selections) — and stays mounted for
+                      // its 200ms exit fade after the first real tap.
+                      // Meta instructional copy shows only on the first 4
+                      // cards of the grid; repeating it on all 48 was noise.
                       return (
-                        <View
+                        <InterestCard
                           key={item.id}
-                          className={[
-                            'extended-data__interest-card',
-                            level ? `extended-data__interest-card--level-${level}` : '',
-                            poppingCardId === item.id ? 'extended-data__interest-card--popping' : '',
-                            showTapHint ? 'extended-data__interest-card--hint' : '',
-                            showTapDemo ? 'extended-data__interest-card--demo' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          role='button'
-                          aria-pressed={!!level}
-                          aria-label={level ? `${item.label}，${levelMeta?.label}` : `${item.label}，未选择`}
-                          onClick={() => toggleInterestLevel(item.id)}
-                          hoverClass='extended-data__interest-card--pressed'
-                          hoverStayTime={100}
-                        >
-                          {showTapHint ? (
-                            <View
-                              className={[
-                                'extended-data__coachmark',
-                                isFirstRow ? 'extended-data__coachmark--below' : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              aria-live='polite'
-                              role='status'
-                            >
-                              <View className='extended-data__coachmark-tap' aria-hidden='true'>
-                                <View className='extended-data__coachmark-tap-pulse' />
-                              </View>
-                              <View
-                                className={`extended-data__coachmark-dot extended-data__coachmark-dot--level-${tapHint.level}`}
-                                aria-hidden='true'
-                              />
-                              <Text className='extended-data__coachmark-text'>{tapHint.message}</Text>
-                              <View className='extended-data__coachmark-arrow' aria-hidden='true' />
-                            </View>
-                          ) : null}
-                          {showTapDemo ? (
-                            <View className='extended-data__tap-demo' aria-hidden='true'>
-                              <View className='extended-data__tap-demo-tint extended-data__tap-demo-tint--l1' />
-                              <View className='extended-data__tap-demo-tint extended-data__tap-demo-tint--l2' />
-                              <View className='extended-data__tap-demo-ring' />
-                              <View className='extended-data__tap-demo-ring extended-data__tap-demo-ring--2' />
-                            </View>
-                          ) : null}
-                          <View className='extended-data__interest-card-top'>
-                            <Text className='extended-data__interest-label'>{item.label}</Text>
-                            {level ? <InterestTierIndicator level={level} /> : null}
-                          </View>
-                          <Text className='extended-data__interest-meta'>
-                            {levelMeta?.shortLabel || '点1次加入，连点升温'}
-                          </Text>
-                        </View>
+                          item={item}
+                          level={levelsById[item.id]}
+                          isPopping={poppingCardId === item.id}
+                          hint={tapHint?.topicId === item.id ? tapHint : null}
+                          showDemo={
+                            item.id === DEMO_TOPIC_ID &&
+                            !tapDemoDismissed &&
+                            (selectedCount === 0 || tapDemoFading)
+                          }
+                          demoExiting={tapDemoFading}
+                          isFirstRow={itemIndex < 2}
+                          showMetaHint={category === CATEGORY_ORDER[0] && itemIndex < 4}
+                          onToggle={toggleInterestLevel}
+                        />
                       )
                     })}
                   </View>
@@ -755,8 +925,11 @@ export default function ExtendedDataPage() {
             stats (热度总值, top-category story) live on the profile-review
             entry card; the CTA below carries the remaining-count coaching. */}
         <View className='extended-data__footer-summary'>
-          <View className='extended-data__footer-thermometer' aria-label='热度温度计'>
+          <View className='extended-data__footer-thermometer' aria-label='解锁进度'>
             {INTEREST_LEVEL_META.map((meta) => {
+              // Unlock progress (1/2/3 selections), not heat — filled segments
+              // are neutral brand purple so the bar never claims L3 warmth
+              // the user hasn't expressed.
               const filled = selectedCount >= meta.level
               return (
                 <View
@@ -765,7 +938,7 @@ export default function ExtendedDataPage() {
                     'extended-data__footer-thermometer-segment',
                     filled ? 'extended-data__footer-thermometer-segment--filled' : '',
                   ].join(' ')}
-                  style={filled ? { backgroundColor: meta.color } : undefined}
+                  style={filled ? { backgroundColor: THERMOMETER_FILL_COLOR } : undefined}
                 />
               )
             })}

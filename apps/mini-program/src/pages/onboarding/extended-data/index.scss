@@ -280,10 +280,6 @@
       transform: translateY(-4rpx);
     }
 
-    &--popping {
-      animation: interest-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
     // While its coachmark is visible, promote the host card above later
     // siblings — L3/popping cards create stacking contexts that would
     // otherwise paint over the bubble.
@@ -296,6 +292,25 @@
     // A short delay lets the page subtitle/legend finish entering first.
     &--demo {
       animation: extended-data-demo-card 2.8s ease-in-out 0.8s infinite;
+    }
+
+    // Pop scale escalates with heat level (1.04 → 1.06 → 1.09): the tap that
+    // sets 必聊项 should land with visibly more weight than a first tap.
+    // Per-level classes (not CSS vars) — inline var() is unreliable in WeChat.
+    // Declared AFTER &--demo deliberately: on the first tap both classes are
+    // present (the card keeps --demo for its z-index:3 label rule while the
+    // overlay exits), and equal specificity means source order decides —
+    // the pop must replace the demo dip, not be suppressed by it.
+    &--popping-l1 {
+      animation: interest-pop-l1 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    &--popping-l2 {
+      animation: interest-pop-l2 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    &--popping-l3 {
+      animation: interest-pop-l3 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
   }
 
@@ -314,6 +329,13 @@
     border-radius: $card-radius-sm;
     overflow: hidden;
     pointer-events: none;
+
+    // First-tap grace: the overlay fades out over 200ms instead of
+    // hard-cutting, so a mid-loop fake tint never snaps to the real L1 fill.
+    &--exiting {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
   }
 
   &__tap-demo-tint {
@@ -383,14 +405,23 @@
     height: 6rpx;
     border-radius: 999rpx;
     background: rgba($color-border, 0.8);
-    transition: background 0.18s ease, transform 0.18s ease;
+    transform-origin: left center;
+    transition: background 0.18s ease;
 
+    // Fill grows in (was a dead `transform: scaleX(1)` — the base never set
+    // scaleX(0), so filling used to be an instant colour swap). Per-level
+    // delay staggers the bar upward: L2 lands 60ms after L1's slot, L3 120ms.
     &--filled {
-      transform: scaleX(1);
+      animation: extended-data-tier-fill 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    &--level-2#{&}--filled {
+      animation-delay: 60ms;
     }
 
     // L3 uses the warm-coral accent shadow for emotional payoff.
     &--level-3#{&}--filled {
+      animation-delay: 120ms;
       box-shadow: 0 0 6rpx rgba($heat-l3, 0.45);
     }
   }
@@ -575,10 +606,11 @@
     min-width: 0;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.12);
-    transition: background 0.2s ease, transform 0.2s ease;
+    transform-origin: left center;
+    transition: background 0.2s ease;
 
     &--filled {
-      transform: scaleY(1);
+      animation: extended-data-thermo-fill 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
   }
 
@@ -635,7 +667,9 @@
     &__interest-card {
       transition: none;
 
-      &--popping {
+      &--popping-l1,
+      &--popping-l2,
+      &--popping-l3 {
         animation: none;
       }
 
@@ -662,10 +696,12 @@
 
     &__tier-indicator-segment {
       transition: none;
+      animation: none;
     }
 
     &__footer-thermometer-segment {
       transition: none;
+      animation: none;
     }
 
     &__milestone-toast {
@@ -770,6 +806,34 @@
   }
 }
 
+@keyframes extended-data-tier-fill {
+  0% {
+    transform: scaleX(0.2);
+  }
+
+  60% {
+    transform: scaleX(1.15);
+  }
+
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes extended-data-thermo-fill {
+  0% {
+    transform: scaleX(0.3);
+  }
+
+  60% {
+    transform: scaleX(1.08);
+  }
+
+  100% {
+    transform: scaleX(1);
+  }
+}
+
 @keyframes extended-data-coachmark-tap {
   0% {
     opacity: 0.9;
@@ -847,13 +911,41 @@
   }
 }
 
-@keyframes interest-pop {
+@keyframes interest-pop-l1 {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.04);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes interest-pop-l2 {
   0% {
     transform: scale(1);
   }
 
   40% {
     transform: scale(1.06);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes interest-pop-l3 {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.09);
   }
 
   100% {

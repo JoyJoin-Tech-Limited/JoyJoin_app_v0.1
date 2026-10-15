@@ -110,7 +110,10 @@
   &__intro-content {
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
+    // 节拍化间距（2026-10-14 UI audit）：不在容器上设统一 gap——统一间距
+    // 会压平层级（倍率规则）。改为各 section 自带 margin-top：
+    // 文案→hero 16rpx（同一拍），hero→trust 32rpx（跨拍呼吸），
+    // trust→tease 16rpx（同为信任脚手架）。矮屏在 max-height 媒体查询里收紧。
     min-height: 0;
     // WeChat drops padding on the native ScrollView element in webview
     // rendering mode, so the fixed-footer reserve must live on this inner
@@ -143,7 +146,7 @@
     display: inline-flex;
     align-items: center;
     padding: 8rpx 16rpx;
-    margin-bottom: $spacing-sm;
+    margin-bottom: 12rpx;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary;
@@ -188,19 +191,24 @@
     margin-top: 8rpx;
     font-family: $font-ui;
     font-size: 26rpx;
-    color: $color-text-secondary-on-light;
+    // 钩子色（2026-10-14）：与副标题同为一段两行，但用 primary-dark 提
+    // 半级重量，成为指向下方 hero 的视觉钩子，而不是第二条灰行。
+    color: $color-primary-dark;
     line-height: $line-height-relaxed;
   }
 
   &__intro-hero {
     @include card-premium;
+    // 16rpx：与上方文案同一拍（承诺→吉祥物安抚），跨拍间隔见 intro-trust。
+    margin-top: $spacing-sm;
     padding: $spacing-sm;
     background: $color-surface;
   }
 
   &__intro-hero-visual {
     position: relative;
-    min-height: 300rpx;
+    // 高度由吉祥物自身决定（2026-10-14）：原 min-height: 300rpx 在 260rpx
+    // 吉祥物之外制造了 ~40rpx 的死空气，把气泡和吉祥物拆成两个孤立元素。
     display: flex;
     align-items: center;
     justify-content: center;
@@ -224,11 +232,48 @@
   }
 
   &__intro-bubble {
-    margin-top: $spacing-sm;
+    position: relative;
+    // 8rpx 缝隙 + 尾巴：绝对定位 top 相对 padding box（边框内侧 2rpx），
+    // 描边三角尖端实际到外框上方 12rpx——比 8rpx 缝隙多出 4rpx，叠进吉祥物
+    // 圆底（z-index:1 把尖端压在下巴后）。文案瞬间读作"它在对你说话"。
+    margin-top: $spacing-xs;
     padding: 20rpx 24rpx;
     border-radius: $card-radius;
     border: 2rpx solid rgba($color-border, 0.92);
     background: rgba($color-surface, 0.9);
+
+    // 气泡尾巴（双层三角：外层描边色、内层填充色下移 2rpx 盖住底边）
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-left-style: solid;
+      border-left-color: transparent;
+      border-right-style: solid;
+      border-right-color: transparent;
+      border-bottom-style: solid;
+    }
+
+    &::before {
+      top: -14rpx;
+      margin-left: -12rpx;
+      border-left-width: 12rpx;
+      border-right-width: 12rpx;
+      border-bottom-width: 14rpx;
+      border-bottom-color: rgba($color-border, 0.92);
+    }
+
+    &::after {
+      top: -10rpx;
+      margin-left: -10rpx;
+      border-left-width: 10rpx;
+      border-right-width: 10rpx;
+      border-bottom-width: 11rpx;
+      border-bottom-color: $color-surface;
+    }
   }
 
   // Coach line stands alone (2026-09-02 PM review): the redundant bubble
@@ -299,24 +344,11 @@
     }
   }
 
-  // Short-viewport compression (2026-09-02 PM R1): the archetype icon row
-  // re-added ~88rpx to a page designed to fit one viewport. On ≤700px-tall
-  // phones (iPhone SE class), shrink the hero so the tease card + its
-  // conversion punchline stay above the fixed CTA without scrolling.
-  @media (max-height: 700px) {
-    &__intro-hero-visual {
-      min-height: 200rpx;
-    }
-
-    &__intro-mascot {
-      width: 200rpx;
-      height: 200rpx;
-    }
-  }
-
   &__intro-trust {
-    @include card-premium;
-    padding: $spacing-md;
+    // 扁平列表（2026-10-14 UI audit）：去掉第三张白卡，hero 成为唯一视觉
+    // 高峰，卡片/无卡交替让缝隙读作节奏而非断裂。与页面左右留白对齐，
+    // 和上方标题块共享同一左缘网格。
+    margin-top: 32rpx; // 跨拍间隔：2 × $spacing-sm
   }
 
   &__intro-trust-title {
@@ -330,7 +362,6 @@
   &__intro-trust-list {
     display: flex;
     flex-direction: column;
-    gap: $spacing-sm;
     margin-top: $spacing-sm;
   }
 
@@ -338,7 +369,20 @@
     display: flex;
     align-items: flex-start;
     gap: $spacing-sm;
-    padding-top: $spacing-xs;
+    padding: $spacing-sm 0;
+
+    &:first-child {
+      padding-top: $spacing-xs;
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+
+    // 发丝分割线：三条读作一个整体清单，而不是三个散装条目
+    & + & {
+      border-top: 2rpx solid rgba($color-border, 0.6);
+    }
   }
 
   &__intro-trust-icon {
@@ -376,6 +420,9 @@
   &__intro-tease {
     @include card-premium;
     position: relative;
+    // 16rpx：trust 与 tease 同为信任脚手架（同一拍），tease 是 CTA 前的
+    // 转化收尾卡片。
+    margin-top: $spacing-sm;
     padding: $spacing-md;
     padding-top: calc(#{$spacing-md} + 8rpx);
     margin-bottom: $spacing-lg;
@@ -467,6 +514,33 @@
   @media (prefers-reduced-motion: reduce) {
     &__intro-tease-icon {
       animation: none;
+    }
+  }
+
+  // Short-viewport compression (2026-09-02 PM R1): the archetype icon row
+  // re-added ~88rpx to a page designed to fit one viewport. On ≤700px-tall
+  // phones (iPhone SE class), shrink the hero so the tease card + its
+  // conversion punchline stay above the fixed CTA without scrolling.
+  // (2026-10-14: 节拍间距同步收紧——16/32/16 → 8/16/8，层级比例不变。)
+  // MUST stay after every base rule it overrides — equal specificity, so
+  // source order decides; SCSS bubbles nested media queries in source order.
+  // (2026-10-14 cascade fix: 原位置在 trust/tease 基础规则之前，收紧被静默覆盖。)
+  @media (max-height: 700px) {
+    &__intro-hero {
+      margin-top: $spacing-xs;
+    }
+
+    &__intro-mascot {
+      width: 200rpx;
+      height: 200rpx;
+    }
+
+    &__intro-trust {
+      margin-top: $spacing-sm;
+    }
+
+    &__intro-tease {
+      margin-top: $spacing-xs;
     }
   }
 

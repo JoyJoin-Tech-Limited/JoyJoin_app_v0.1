@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
-import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import {
   getIntroStaticAsset,
   getIntroStaticFallbackAsset,
@@ -129,8 +128,6 @@ export default function PersonalityTestIntro({
             </Text>
           </View>
 
-          <ResponsiveSpacer heightRpx={16} collapseBelow={700} />
-
           <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
             <View className='personality-test__intro-hero-visual'>
               <View className='personality-test__intro-hero-halo' />
@@ -155,8 +152,6 @@ export default function PersonalityTestIntro({
             </View>
           </View>
 
-          <ResponsiveSpacer heightRpx={16} collapseBelow={720} />
-
           <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
             <Text className='personality-test__intro-trust-title'>开始前，三件事</Text>
             <View className='personality-test__intro-trust-list'>
@@ -173,8 +168,6 @@ export default function PersonalityTestIntro({
               ))}
             </View>
           </View>
-
-          <ResponsiveSpacer heightRpx={16} collapseBelow={780} />
 
           <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
             <Text className='personality-test__intro-tease-title'>完成后，你会看到自己的氛围命格</Text>
