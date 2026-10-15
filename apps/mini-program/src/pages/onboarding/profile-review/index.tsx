@@ -1,5 +1,5 @@
 
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView, Image, Canvas } from '@tarojs/components'
 import Taro, { useDidShow, useDidHide, useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -11,7 +11,6 @@ import {
   type UserInterestsResponse,
   type WelcomeCouponResponse,
 } from '@shared/api'
-import { GENERIC_PROFILE_TAGLINE_FALLBACK } from '@shared/ai/onboarding'
 import { getIntentEmoji, getIntentLabel } from '@shared/constants'
 import { MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { getIndustryDisplayLabel, getOccupationDisplayLabel } from '@shared/occupations'
@@ -42,13 +41,27 @@ import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell, { SHELL_EXIT_HOLD_MS } from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
-import AIGCLabel from '../../../components/ai-content/AIGCLabel'
-import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
+import InsightRevealCard, {
+  type InsightLineFeedbackMeta,
+  type InsightRevealCompleteMeta,
+  type ProfileTaglineV2Response,
+} from '../../../components/onboarding/InsightRevealCard'
+import InsightShareEntry from '../../../components/onboarding/InsightShareEntry'
+import {
+  INSIGHT_POSTER_CANVAS_ID,
+  resolveInsightShareVisibility,
+} from '../../../lib/onboarding/insightPoster'
+import { useInsightPosterShare } from '../../../lib/onboarding/useInsightPosterShare'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import UnboxingCeremony from '../../../components/onboarding/UnboxingCeremony'
+import { resolveGiftRevealDelayMs, GIFT_REVEAL_CAP_MS } from '../../../lib/onboarding/giftRevealTiming'
+import {
+  buildInterestHeatConclusion,
+  getProfileFieldAnnotation,
+} from '../../../lib/onboarding/profileFieldAnnotations'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -130,12 +143,25 @@ export default function ProfileReviewPage() {
   const [couponAttempt, setCouponAttempt] = useState(0)
   const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
   const [showCeremony, setShowCeremony] = useState(false)
+  // entry-card-insight-v2 (AC-10/D7): the gift card waits for the 悦仔的观察
+  // row sequence to land (+1.5s dwell), with a 10s post-reveal hard cap.
+  const [insightRowsLanded, setInsightRowsLanded] = useState(false)
+  const [giftCapReached, setGiftCapReached] = useState(false)
+  // AC-19: bumped on every useDidShow so the insight sequence (and its
+  // telemetry emission) re-runs per page visit on swipe-back.
+  const [insightReplayNonce, setInsightReplayNonce] = useState(0)
   // Loading-shell continuity bridge (same pattern as essential/extended-data):
   // hold the shell through a short exit fade once auth resolves.
   const [shellFading, setShellFading] = useState(false)
   const [shellDismissed, setShellDismissed] = useState(false)
   const shellRenderedRef = useRef(false)
   const hasTrackedInviteImpressionRef = useRef(false)
+  const hasTrackedGiftImpressionRef = useRef(false)
+  // AC-19: per-visit dedupe for the insight_reveal_complete telemetry event.
+  const insightRevealTrackedRef = useRef(false)
+  // AC-19 latencyMs anchor: set once when the tagline query first becomes
+  // eligible to run (same condition as the query's `enabled`).
+  const taglineQueryStartedAtRef = useRef<number | null>(null)
   const hasStagedDiscoverPrefetchRef = useRef(false)
   const isScrolledRef = useRef(false)
   // Server-computed nextStep captured from the completeProfileReview response,
@@ -154,13 +180,16 @@ export default function ProfileReviewPage() {
   // effect (isRevealReady flips false), the in-flight promise's .finally skips
   // its setIsCouponLoading(false), and without this reset the re-run guard
   // would strand the UI on a permanent skeleton with no retry affordance.
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsCouponLoading, setIsInviteCardVisible, setShowCeremony, setShellFading)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsCouponLoading, setIsInviteCardVisible, setShowCeremony, setShellFading, setInsightRowsLanded, setGiftCapReached)
 
   // Reset invite-card impression tracking when the user returns via swipe-back
   // so analytics accurately reflect each visit.
   useDidShow(() => {
     hasTrackedInviteImpressionRef.current = false
+    hasTrackedGiftImpressionRef.current = false
+    insightRevealTrackedRef.current = false
     hasStagedDiscoverPrefetchRef.current = false
+    setInsightReplayNonce((nonce) => nonce + 1)
   })
   const queryClient = useQueryClient()
   const { user, isLoading } = useAuthGuard({
@@ -251,16 +280,6 @@ export default function ProfileReviewPage() {
     // couponAttempt is the manual-retry escape hatch from the error card.
   }, [isRevealReady, user, analytics, welcomeCoupon, couponAttempt])
 
-  // Reveal the on-page gift card after the coupon is committed to state.
-  // Keeping this timer separate prevents the fetch effect's welcomeCoupon
-  // dependency cleanup from cancelling it and leaving a full-height but
-  // transparent gift card in the layout.
-  useEffect(() => {
-    if (!welcomeCoupon || shouldReduceMotion) return
-    const timer = setTimeout(() => setIsCouponCardVisible(true), 200)
-    return () => clearTimeout(timer)
-  }, [welcomeCoupon, shouldReduceMotion])
-
   // Replay the gift-card entrance animation when the user swipes back to this
   // page. useDidShow's return value is discarded by Taro, so the timer lives
   // in a ref and is cleared from useDidHide instead.
@@ -349,6 +368,88 @@ export default function ProfileReviewPage() {
     retry: 1,
   })
 
+  // entry-card-insight-v2: v2 shape detection. The shared DTO is landing in
+  // parallel (AC-01); cast through the local mirror interface until then.
+  const taglineV2 = profileTagline as ProfileTaglineV2Response | undefined
+  // AC-18 kill-switch: `features.entryCardInsightV2Enabled` from
+  // /api/auth/user. Explicitly false → legacy single-line UI + original 200ms
+  // gift timing; true/undefined → v2. Read via a tolerant record cast until
+  // the typed shared feature key lands with the parallel server change.
+  const entryCardInsightV2Enabled =
+    ((user?.features as Record<string, unknown> | undefined)?.entryCardInsightV2Enabled) !== false
+  const isV2Insight =
+    entryCardInsightV2Enabled && Array.isArray(taglineV2?.lines) && taglineV2.lines.length > 0
+
+  // AC-19 latency anchor: stamp the moment the tagline query first becomes
+  // eligible (mirrors the query's `enabled` condition).
+  useEffect(() => {
+    if (isLoading || !user || taglineQueryStartedAtRef.current !== null) return
+    taglineQueryStartedAtRef.current = Date.now()
+  }, [isLoading, user])
+
+  // AC-19: fire `insight_reveal_complete` once per page visit when the reveal
+  // sequence settles (any shape). The component re-fires per visit via the
+  // replay nonce; this ref keeps the emission visit-scoped.
+  const handleInsightRevealComplete = useCallback(
+    (meta: InsightRevealCompleteMeta) => {
+      if (insightRevealTrackedRef.current) return
+      insightRevealTrackedRef.current = true
+      analytics.interaction('insight_reveal_complete', { ...meta })
+    },
+    [analytics],
+  )
+
+  // AC-23 E-1: per-line light feedback. The component already guarantees once
+  // per row per visit (ref-deduped vote); the page only forwards the
+  // anonymous payload to the same onboarding analytics channel.
+  const handleInsightLineFeedback = useCallback(
+    (meta: InsightLineFeedbackMeta) => {
+      analytics.interaction('insight_line_feedback', { ...meta })
+    },
+    [analytics],
+  )
+
+  // AC-10 hard cap: the gift must enter no later than 10s after isRevealReady,
+  // even if the insight sequence (or its query) is still pending.
+  useEffect(() => {
+    if (!isRevealReady || giftCapReached) return
+    const timer = setTimeout(() => setGiftCapReached(true), GIFT_REVEAL_CAP_MS)
+    return () => clearTimeout(timer)
+  }, [isRevealReady, giftCapReached])
+
+  // Reveal the on-page gift card once the insight sequence has settled:
+  // v2 waits for all rows + a 1.5s dwell; tagline error / old shape / cap /
+  // reduced-motion all fall back to the original (immediate-ish) path.
+  // Keeping this timer separate prevents the fetch effect's welcomeCoupon
+  // dependency cleanup from cancelling it and leaving a full-height but
+  // transparent gift card in the layout.
+  useEffect(() => {
+    if (!welcomeCoupon || shouldReduceMotion || isCouponCardVisible) return
+    const delay = resolveGiftRevealDelayMs({
+      isV2Insight,
+      insightRowsLanded,
+      isTaglineError,
+      shouldReduceMotion,
+      giftCapReached,
+      v2Enabled: entryCardInsightV2Enabled,
+    })
+    if (delay === null) return
+    const timer = setTimeout(() => setIsCouponCardVisible(true), delay)
+    return () => clearTimeout(timer)
+  }, [welcomeCoupon, shouldReduceMotion, isCouponCardVisible, isV2Insight, insightRowsLanded, isTaglineError, giftCapReached, entryCardInsightV2Enabled])
+
+  // AC-10: fire `welcome_gift_impression` only on actual exposure of the gift
+  // card (any entry path), once per page visit.
+  useEffect(() => {
+    if (!isCouponCardVisible || !welcomeCoupon || hasTrackedGiftImpressionRef.current) return
+    hasTrackedGiftImpressionRef.current = true
+    analytics.interaction('welcome_gift_impression', {
+      code: welcomeCoupon.code,
+      discountValue: welcomeCoupon.discountValue,
+      isNewlyAwarded: welcomeCoupon.isNewlyAwarded,
+    })
+  }, [isCouponCardVisible, welcomeCoupon, analytics])
+
   const {
     data: interestsData,
     isLoading: isInterestsLoading,
@@ -387,6 +488,28 @@ export default function ProfileReviewPage() {
     if (!visual?.asset) return
     Taro.getImageInfo({ src: visual.asset }).catch(() => { /* fire-and-forget */ })
   }, [visual?.asset])
+
+  // ── Insight share poster (sprint insight-share-poster, AC-01/AC-03) ──
+  // Fail-closed visibility matrix: v2 shape + all rows landed + visual
+  // present + AC-18 kill-switch not explicitly off. Quiet entry — zero
+  // reward/incentive wording; generation + share layer live in the hook.
+  const insightShareVisible = resolveInsightShareVisibility({
+    isV2Insight,
+    insightRowsLanded,
+    hasVisual: visual !== null,
+    flagEnabled: entryCardInsightV2Enabled !== false,
+  })
+  const insightPosterShare = useInsightPosterShare({
+    enabled: insightShareVisible,
+    analytics,
+    displayName,
+    archetypeName: visual?.name,
+    archetypeAsset: visual?.asset,
+    accentText: visual?.accentText,
+    lines: taglineV2?.lines ?? [],
+    evidence: taglineV2?.evidence ?? [],
+    aigcLabelsEnabled,
+  })
 
   const currentCity = typeof user?.currentCity === 'string' ? user.currentCity : ''
   const hometownRegionCity =
@@ -478,6 +601,13 @@ export default function ProfileReviewPage() {
       .map(([categoryId]) => categoryId as MacroCategory)
   }, [interestsData?.categoryHeat])
 
+  // AC-09: deterministic conclusion sentence prepended to 兴趣热量地图,
+  // citing the top interest labels (e.g. 你把最多的热量给了探店和私厨).
+  const heatConclusion = useMemo(
+    () => buildInterestHeatConclusion(topInterestLabels),
+    [topInterestLabels],
+  )
+
   const coachCopy = isCelebrating
     ? '入场卡已确认！去遇见对味的人和局吧。'
     : // R3-9 人格在场: tested users hear the Tier A archetype line (Bet 1);
@@ -487,11 +617,6 @@ export default function ProfileReviewPage() {
       : topInterestLabels.length > 0
         ? `${getMascotDisplayName(user)}会按这张卡上的兴趣热量，挑最对味的局给你。`
         : getOnboardingVoiceLine('profile-review', null)
-
-  const aiInsightLine =
-    !isTaglineLoading && isTaglineError
-      ? GENERIC_PROFILE_TAGLINE_FALLBACK
-      : profileTagline?.insightLine?.trim() || ''
 
   const showInterestSkeleton =
     shouldLoadInterests && !interestsData && !isInterestsError && (isInterestsLoading || isInterestsFetching)
@@ -766,57 +891,44 @@ export default function ProfileReviewPage() {
               ) : null}
             </View>
 
-            {/* AI Social Tag — the first wow moment */}
+            {/* AI Social Tag — the first wow moment (v2: staged 3-row reveal
+                + evidence pills; legacy shape renders the single-line UI) */}
             <View className={`profile-review__section ${getStageClassName(4)}`}>
-              <View className='profile-review__section-label'>
-                <JoyJoinIcon emoji='✨' tier='mood' size={24} className='profile-review__section-label-icon' />
-                <Text className='profile-review__section-label-text'>悦仔的观察</Text>
-                <AIGCLabel meta={profileTagline?.meta?.aigc} />
-              </View>
-
-              {isTaglineLoading ? (
-                <View
-                  className='profile-review__ai-tag profile-review__ai-tag--loading'
-                  aria-busy='true'
-                >
-                  <View className='profile-review__ai-tag-shimmer' />
-                </View>
-              ) : (
-                <View
-                  className={`profile-review__ai-tag${isTaglineError ? ' profile-review__ai-tag--error' : ''}`}
-                >
-                  <Text className='profile-review__ai-tag-quote profile-review__ai-tag-quote--top'>“</Text>
-                  <View className='profile-review__ai-tag-text-wrap'>
-                    <Text className='profile-review__ai-tag-text'>
-                      {aiInsightLine || GENERIC_PROFILE_TAGLINE_FALLBACK}
-                    </Text>
-                  </View>
-                  <Text className='profile-review__ai-tag-quote profile-review__ai-tag-quote--bottom'>”</Text>
-                  {isTaglineError ? (
-                    <Text
-                      className='profile-review__ai-tag-retry'
-                      onClick={() => {
-                        haptics('light')
-                        queryClient.invalidateQueries({
-                          queryKey: ['mini-program', 'onboarding-profile-tagline'],
-                        })
-                      }}
-                    >
-                      重试
-                    </Text>
-                  ) : null}
-                  {aigcLabelsEnabled && !isTaglineError && (
-                    <AIContentReportButton
-                      className='profile-review__ai-tag-report'
-                      options={{
-                        reason: '举报“悦仔的观察”AI 生成内容',
-                      }}
-                    />
-                  )}
-                </View>
-              )}
+              <InsightRevealCard
+                tagline={taglineV2}
+                isLoading={isTaglineLoading}
+                isError={isTaglineError}
+                active={isRevealReady}
+                shouldReduceMotion={shouldReduceMotion}
+                aigcLabelsEnabled={aigcLabelsEnabled}
+                v2Enabled={entryCardInsightV2Enabled}
+                queryStartedAt={taglineQueryStartedAtRef.current}
+                replayNonce={insightReplayNonce}
+                accentColor={visual?.accentText}
+                onRetry={() => {
+                  queryClient.invalidateQueries({
+                    queryKey: ['mini-program', 'onboarding-profile-tagline'],
+                  })
+                }}
+                onAllRowsLanded={() => setInsightRowsLanded(true)}
+                onRevealComplete={handleInsightRevealComplete}
+                onLineFeedback={handleInsightLineFeedback}
+              />
             </View>
           </Card>
+
+          {/* Insight share poster entry (AC-01): quiet, fail-closed, sits
+              between the entry card and the folded summary card — spatially
+              separated from the gift card. */}
+          <InsightShareEntry
+            visible={insightShareVisible}
+            isGenerating={insightPosterShare.isGenerating}
+            reduceMotion={shouldReduceMotion}
+            onPress={() => {
+              void insightPosterShare.handleShare()
+            }}
+            className='profile-review__insight-share-entry'
+          />
 
           {/* Folded summary card (2026-08-18 simplification, R2-5/R2-6): the
               already-filled data (小档案 / 意向 / 兴趣热量地图) collapses into
@@ -847,12 +959,20 @@ export default function ProfileReviewPage() {
                     <View className='profile-review__section-label profile-review__section-label--no-icon'>
                       <Text className='profile-review__section-label-text'>你的小档案</Text>
                     </View>
+                    {/* AC-21④: the 「悦仔记住的」 prefix is said ONCE at section
+                        level — field blocks below carry only their own note. */}
+                    <Text className='profile-review__info-caption'>悦仔记住的</Text>
                     <View className='profile-review__info-grid'>
                       {profileFields.map((field) => (
                         <View key={field.label} className='profile-review__info-block'>
                           <View className='profile-review__info-dot' />
                           <Text className='profile-review__info-label'>{field.label}</Text>
                           <Text className='profile-review__info-value'>{field.value}</Text>
+                          {/* AC-09/AC-17 「悦仔记住的」 deterministic annotation
+                              layer — pure-memory narrative, no matching promises. */}
+                          <Text className='profile-review__info-annotation'>
+                            {getProfileFieldAnnotation(field.label, field.value)}
+                          </Text>
                         </View>
                       ))}
                     </View>
@@ -929,7 +1049,13 @@ export default function ProfileReviewPage() {
                     </View>
                   ) : interestsData ? (
                     <>
-                      <View className='profile-review__interest-stats'>
+                      {/* AC-09: conclusion sentence first; the 9/8/203 stat
+                          trio is visually demoted to a secondary readout. */}
+                      {heatConclusion ? (
+                        <Text className='profile-review__interest-conclusion'>{heatConclusion}</Text>
+                      ) : null}
+
+                      <View className='profile-review__interest-stats profile-review__interest-stats--demoted'>
                         <View className='profile-review__interest-stat'>
                           <Text className='profile-review__interest-value'>
                             {interestsData.totalSelections}
@@ -1078,6 +1204,16 @@ export default function ProfileReviewPage() {
           <View className='profile-review__footer-reserve' />
         </View>
       </ScrollView>
+
+      {/* Hidden insight share-poster canvas (AC-02b): the inline px DOM size
+          must equal the 1080×1560 export bitmap (results-page convention);
+          offscreen via the SCSS class below. */}
+      <Canvas
+        canvasId={INSIGHT_POSTER_CANVAS_ID}
+        className='profile-review__insight-poster-canvas'
+        style={{ width: '1080px', height: '1560px' }}
+        aria-hidden='true'
+      />
 
       {/* Floating bottom CTA */}
       <View

@@ -75,7 +75,8 @@
     "./copy/poolRegistrationInclusionsCopy": "./src/copy/poolRegistrationInclusionsCopy.ts",
     "./copy/guidanceCopy": "./src/copy/guidanceCopy.ts",
     "./copy/auctionV2": "./src/copy/auctionV2.ts",
-    "./copy/sessionGlow": "./src/copy/sessionGlow.ts"
+    "./copy/sessionGlow": "./src/copy/sessionGlow.ts",
+    "./copy/profileTaglineRuleTemplates": "./src/copy/profileTaglineRuleTemplates.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

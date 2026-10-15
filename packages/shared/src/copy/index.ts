@@ -93,3 +93,21 @@ export type {
   PoolInclusionIcon,
   PoolInclusionTileCopy,
 } from './poolRegistrationInclusionsCopy.js';
+
+// 🐾 Entry-card insight v2 rule fallback (server-only consumer, 2026-10-14)
+export {
+  MIN_TAGLINE_LINE_CHARS,
+  MAX_TAGLINE_LINE_CHARS,
+  MAX_ANSWER_SLOT_CHARS,
+  OBSERVATION_INTEREST_TEMPLATES,
+  ARCHETYPE_OBSERVATION_LINES,
+  ARCHETYPE_RULE_TEMPLATES,
+  sanitizeSlotValue,
+  renderRuleTemplate,
+} from './profileTaglineRuleTemplates.js';
+export type {
+  TaglineTemplateSlots,
+  RuleTemplateRole,
+  TaglineTemplateRole,
+  RuleTemplate,
+} from './profileTaglineRuleTemplates.js';

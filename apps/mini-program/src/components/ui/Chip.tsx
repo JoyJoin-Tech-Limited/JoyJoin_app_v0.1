@@ -18,6 +18,8 @@ export interface ChipProps {
   disabled?: boolean
   className?: string
   onClick?: () => void
+  /** Forwarded to the root View as `aria-label` (WeChat a11y). */
+  ariaLabel?: string
 }
 
 /**
@@ -36,6 +38,7 @@ export default function Chip({
   disabled = false,
   className = '',
   onClick,
+  ariaLabel,
 }: ChipProps) {
   const classes = [
     'chip',
@@ -51,6 +54,7 @@ export default function Chip({
     <View
       className={classes.join(' ')}
       onClick={disabled ? undefined : onClick}
+      aria-label={ariaLabel}
     >
       {selected && (
         <View className='chip__check'>

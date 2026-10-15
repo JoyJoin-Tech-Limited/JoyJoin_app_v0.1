@@ -5,8 +5,8 @@ import { logger } from "../../lib/logger";
 import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
 import { db } from "../../db";
-import { eq } from "drizzle-orm";
-import { onboardingAnalytics, userInterests, users } from "@shared/schema";
+import { desc, eq } from "drizzle-orm";
+import { assessmentAnswers, assessmentSessions, onboardingAnalytics, userInterests, users } from "@shared/schema";
 import { normalizeOptionalDuration } from "./helpers";
 
 type DbExecutor = typeof db | any;
@@ -67,6 +67,28 @@ const ONBOARDING_ANALYTICS_EVENT_TYPES = [
   "login_prompt_dismissed",
   "login_handoff_failed",
   "login_handoff_duration",
+  // Entry-card insight v2 (sprint entry-card-insight-v2 advisory, D7):
+  // WelcomeGiftCard actual-impression beacon so the delayed-entry exposure
+  // loss is measurable. Emitted by the mini-program profile-review page.
+  "welcome_gift_impression",
+  // Amendment A1 (AC-19): entry-card insight reveal completion telemetry.
+  // Fired exactly once per page show when all lines have landed (or the
+  // legacy/generic shape has rendered); metadata: { shape: v2|v1|generic,
+  // lineCount, hasReveal, fallbackUsed, latencyMs }.
+  "insight_reveal_complete",
+  // Amendment A2 (AC-23): E-1 per-line light feedback on aigc=true reveal
+  // lines (「准」/「不太准」 → 收到). Anonymous metadata —
+  // { role, vote: 'accurate'|'inaccurate', lineIndex, shape }; no identity
+  // fields by contract (client-side emission rule).
+  "insight_line_feedback",
+  // Insight share poster (sprint insight-share-poster, AC-04): whitelisted
+  // for DIRECT senders only — the client normally rides the already-
+  // whitelisted `interaction` channel with metadata.action set to these
+  // names. Anonymous metadata: { shape: 'v2', lineCount, hasReveal, hasQr,
+  // aigcLabel, option? } where `option` ('menu'|'album') discriminates
+  // insight_poster_shared (share-menu opened vs album save).
+  "insight_poster_created",
+  "insight_poster_shared",
 ] as const;
 
 const ALLOWED_ONBOARDING_EVENT_TYPES = new Set<string>(ONBOARDING_ANALYTICS_EVENT_TYPES);
@@ -281,25 +303,85 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // AI profile tagline — presentation-only, no onboarding state side-effects
+  // AI profile tagline — presentation-only, no onboarding state side-effects.
+  // v2 (entry-card-insight-v2): enriches the payload with the trait vector and
+  // raw Q&A pairs from the user's latest assessment session.
   app.get('/api/onboarding/profile-tagline', requireAuth, aiEndpointLimiter, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-      // Fetch user and interests in parallel
-      const [userRow, interestsRow] = await Promise.all([
+      // Fetch user, interests, latest assessment session, and raw answers in
+      // parallel. The answers query is a SINGLE join through
+      // assessment_sessions (SCA-01: no N+1), bounded by a hard limit.
+      const [userRow, interestsRow, sessionRows, answerRows] = await Promise.all([
         db.query.users.findFirst({ where: eq(users.id, userId) }),
         db.query.userInterests.findFirst({ where: eq(userInterests.userId, userId) }),
+        db
+          .select({
+            traitScores: assessmentSessions.traitScores,
+            topArchetypes: assessmentSessions.topArchetypes,
+            finalResult: assessmentSessions.finalResult,
+            primaryArchetype: assessmentSessions.primaryArchetype,
+          })
+          .from(assessmentSessions)
+          .where(eq(assessmentSessions.userId, userId))
+          .orderBy(desc(assessmentSessions.createdAt))
+          .limit(1),
+        db
+          .select({
+            questionId: assessmentAnswers.questionId,
+            questionLevel: assessmentAnswers.questionLevel,
+            selectedOption: assessmentAnswers.selectedOption,
+            answeredAt: assessmentAnswers.answeredAt,
+          })
+          .from(assessmentAnswers)
+          .innerJoin(assessmentSessions, eq(assessmentAnswers.sessionId, assessmentSessions.id))
+          .where(eq(assessmentSessions.userId, userId))
+          .orderBy(desc(assessmentAnswers.answeredAt))
+          .limit(120),
       ]);
 
       if (!userRow) return res.status(404).json({ message: 'User not found' });
 
+      const sessionRow = sessionRows[0];
+      const finalResult = (sessionRow?.finalResult ?? null) as Record<string, any> | null;
+      const topArchetypes = Array.isArray(sessionRow?.topArchetypes)
+        ? ([...(sessionRow.topArchetypes as any[])].sort(
+            (a, b) => (b?.score ?? 0) - (a?.score ?? 0),
+          ) as Array<{ archetype?: string; score?: number }>)
+        : [];
+      const secondaryArchetype =
+        (userRow.secondaryArchetype as string | null) ??
+        (typeof finalResult?.secondaryArchetype === 'string'
+          ? (finalResult.secondaryArchetype as string)
+          : null) ??
+        (topArchetypes.length > 1 ? (topArchetypes[1]?.archetype ?? null) : null);
+      const topGap =
+        topArchetypes.length >= 2
+          ? (topArchetypes[0]?.score ?? 0) - (topArchetypes[1]?.score ?? 0)
+          : null;
+      // Blend rule mirrors xiaoyueAnalysisService.isBlendMatch: gap ≤ 8.
+      const isBlend = topGap !== null ? topGap <= 8 : false;
+      const traitScores = (sessionRow?.traitScores ?? finalResult?.traitScores ?? null) as
+        | Record<string, number>
+        | null;
+
       const { generateProfileTagline } = await import('../../profileTaglineService');
       const tagline = await generateProfileTagline({
-        archetype: (userRow.archetype ?? userRow.primaryArchetype) as string | undefined,
-        categoryHeat: (interestsRow?.categoryHeat as Record<string, number> | null) ?? {},
-        intentKeys: Array.isArray(userRow.intent) ? (userRow.intent as string[]) : [],
+        archetype: (userRow.archetype ?? userRow.primaryArchetype ?? sessionRow?.primaryArchetype ?? undefined) as
+          | string
+          | undefined,
+        secondaryArchetype,
+        isBlend,
+        traitScores,
+        rawAnswers: answerRows,
+        selections: Array.isArray(interestsRow?.selections)
+          ? (interestsRow.selections as Array<{ topicId?: string; label?: string; heat?: number }>)
+          : [],
+        topPriorities: Array.isArray(interestsRow?.topPriorities)
+          ? (interestsRow.topPriorities as Array<{ topicId?: string; label?: string; heat?: number }>)
+          : [],
       });
 
       res.json(tagline);

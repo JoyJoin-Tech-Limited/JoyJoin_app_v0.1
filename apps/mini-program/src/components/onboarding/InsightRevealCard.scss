@@ -1,0 +1,279 @@
+@use '../../styles/variables' as *;
+
+// InsightRevealCard — 「悦仔的观察」 v2 staged reveal (entry-card-insight-v2,
+// Amendment A1 polish). Consumed via `@use` in
+// pages/onboarding/profile-review/index.scss (the component TSX carries no
+// SCSS side-effect import — subpackage style-split guard). All motion is
+// transform/opacity only; shimmer is an opacity pulse.
+
+.insight-reveal {
+  display: block;
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    // AC-21②: white island nests under the poster's 40rpx radius on its own
+    // layer — no border, no inset shadow (removed; they re-outlined the card).
+    border-radius: $card-radius;
+    background: rgba($color-surface, 0.86);
+  }
+
+  &__row {
+    display: block;
+
+    &--landed {
+      animation: insight-reveal-row-land 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    &--static {
+      animation: none;
+    }
+
+    // AC-14: crescendo breath before the reveal row.
+    // AC-21⑤: one ceremonial quote mark — brand display font, 30% ink,
+    // absolutely hung at -$spacing-sm. Deliberately NOT applied to any other row.
+    &--reveal {
+      position: relative;
+      margin-top: $spacing-xs;
+
+      &::before {
+        content: '「';
+        position: absolute;
+        left: -$spacing-sm;
+        top: 0;
+        font-family: $font-cn-display;
+        font-size: $font-size-md;
+        color: rgba($color-primary, 0.3);
+        line-height: $line-height-relaxed;
+        pointer-events: none;
+      }
+    }
+  }
+
+  &__row-body {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-xs;
+    flex-wrap: wrap;
+  }
+
+  &__row-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-normal;
+    text-align: left;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  // Observation is the calm factual lead-in.
+  &__row--observation &__row-text {
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  // AC-14 peak typography: the reveal row carries the emotional peak —
+  // display font, 32rpx ($font-size-md), taller line-height.
+  &__row--reveal &__row-text {
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: $line-height-relaxed;
+  }
+
+  // AC-23 E-1: per-line light feedback — two 20rpx tertiary text links.
+  // No chrome; min-height keeps the tap target comfortable (~56rpx).
+  &__row-feedback {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: 8rpx;
+  }
+
+  &__row-feedback-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56rpx;
+    padding: 0 16rpx;
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary;
+    line-height: 1.4;
+  }
+
+  &__row-feedback-done {
+    display: inline-flex;
+    align-items: center;
+    min-height: 56rpx;
+    padding: 0 16rpx;
+    font-size: $font-size-2xs;
+    color: $color-text-muted;
+    line-height: 1.4;
+  }
+
+  // AC-15: dual-bar skeleton (82% + 60%, each 32rpx tall, 8rpx apart)
+  // approximates two-line text height — kills the landing height jump.
+  &__row-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    padding: $spacing-xs 0;
+
+    // Mirror the landed row's crescendo breath so the swap doesn't shift layout.
+    &--reveal {
+      margin-top: $spacing-xs;
+    }
+  }
+
+  &__row-skeleton-bar {
+    height: 32rpx;
+    border-radius: 8rpx;
+    background: rgba($color-primary, 0.12);
+    animation: insight-reveal-pulse 1.5s ease-in-out infinite;
+
+    &--long {
+      width: 82%;
+    }
+
+    &--short {
+      width: 60%;
+    }
+  }
+
+  // AC-15 evidence de-tagify: no pill chrome, just the 8rpx citation dot.
+  &__evidence {
+    display: block;
+
+    &--static {
+      animation: none;
+    }
+
+    &--landed {
+      .insight-reveal__evidence-caption {
+        animation: insight-reveal-row-land 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+        // Evidence group micro-beat: ~120ms after the observation row.
+        animation-delay: 0.12s;
+      }
+
+      .insight-reveal__evidence-pill {
+        animation: insight-reveal-row-land 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+        // 60ms cascade between pills, starting after the caption beat.
+        &:nth-child(1) { animation-delay: 0.18s; }
+        &:nth-child(2) { animation-delay: 0.24s; }
+        &:nth-child(3) { animation-delay: 0.3s; }
+        &:nth-child(4) { animation-delay: 0.36s; }
+        &:nth-child(5) { animation-delay: 0.42s; }
+        &:nth-child(6) { animation-delay: 0.48s; }
+      }
+    }
+  }
+
+  &__evidence-caption {
+    display: block;
+    margin-bottom: 8rpx;
+    font-size: $font-size-2xs;
+    color: $color-text-muted;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  &__evidence-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__evidence-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  &__evidence-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.55);
+    flex-shrink: 0;
+  }
+
+  &__evidence-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // AC-16: aggregated AIGC footer — one quiet row, no per-line labels.
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1rpx solid rgba($color-border, 0.5);
+  }
+
+  &__footer-aigc {
+    flex-shrink: 0;
+  }
+
+  &__footer-report {
+    flex-shrink: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__row--landed {
+      animation: none;
+    }
+
+    &__evidence--landed {
+      .insight-reveal__evidence-caption,
+      .insight-reveal__evidence-pill {
+        animation: none;
+      }
+    }
+
+    &__row-skeleton-bar {
+      animation: none;
+      opacity: 0.88;
+    }
+  }
+}
+
+@keyframes insight-reveal-row-land {
+  0% {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes insight-reveal-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 0.65;
+  }
+}

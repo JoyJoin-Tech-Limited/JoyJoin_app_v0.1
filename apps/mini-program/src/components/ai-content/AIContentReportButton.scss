@@ -21,4 +21,24 @@
   &--active {
     background-color: rgba($color-text-tertiary, 0.08);
   }
+
+  // AC-16: chrome-less text-link variant for the insight-card quiet footer —
+  // no border, no background, muted ink. Touch target height preserved.
+  &--text {
+    border: 0;
+    background-color: transparent;
+    padding: 0;
+    min-height: 56rpx;
+
+    .aigc-report-button__text {
+      color: $color-text-muted;
+      text-decoration: underline;
+      text-underline-offset: 4rpx;
+    }
+
+    &.aigc-report-button--active {
+      background-color: transparent;
+      opacity: 0.72;
+    }
+  }
 }

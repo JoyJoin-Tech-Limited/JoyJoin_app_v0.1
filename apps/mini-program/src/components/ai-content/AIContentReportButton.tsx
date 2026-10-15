@@ -12,6 +12,12 @@ export interface AIContentReportButtonProps {
   className?: string
   /** Called after a successful report submission. */
   onReported?: () => void
+  /**
+   * Visual variant. 'default' is the bordered chip; 'text' is a chrome-less
+   * text link (no border, no background) for quiet footer aggregation
+   * (entry-card-insight-v2 Amendment A1 / AC-16).
+   */
+  variant?: 'default' | 'text'
 }
 
 /**
@@ -24,6 +30,7 @@ export default function AIContentReportButton({
   label = '举报此内容',
   className = '',
   onReported,
+  variant = 'default',
 }: AIContentReportButtonProps) {
   const handleTap = async () => {
     haptics('light')
@@ -35,7 +42,11 @@ export default function AIContentReportButton({
     }
   }
 
-  const classes = ['aigc-report-button', className].filter(Boolean).join(' ')
+  const classes = [
+    'aigc-report-button',
+    variant === 'text' ? 'aigc-report-button--text' : '',
+    className,
+  ].filter(Boolean).join(' ')
 
   return (
     <View

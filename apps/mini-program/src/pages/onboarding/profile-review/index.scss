@@ -4,6 +4,11 @@
 // consuming page's SCSS or Taro's chunk graph can drop it.
 @use '../../../components/onboarding/BoxJourneySpine.scss' as *;
 @use '../../../components/onboarding/UnboxingCeremony.scss' as *;
+// entry-card-insight-v2: InsightRevealCard carries no TSX-side SCSS import;
+// its rules compile into this page's WXSS via this @use.
+@use '../../../components/onboarding/InsightRevealCard.scss' as *;
+// insight-share-poster: InsightShareEntry — same pattern, page-level @use.
+@use '../../../components/onboarding/InsightShareEntry.scss' as *;
 // PR-8: XiaoyueInlineError renders in this page's error surface — co-compile
 // its rules into this page's WXSS.
 @use '../../../components/mascot/XiaoyueInlineError.scss' as *;
@@ -154,7 +159,10 @@
     transform: translateX(-150%);
     // Run the sheen twice after reveal, then stop. Continuous shimmer feels
     // decorative/AI-generated and wastes GPU cycles.
+    // AC-14: delay ≥2.5s so the sweep never crosses the landing insight rows
+    // (observation/evidence/LLM rows occupy roughly the first 1.5s).
     animation: profile-review-shimmer 3.2s ease-in-out 2;
+    animation-delay: 2.6s;
   }
 
   &__stamp {
@@ -165,21 +173,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 120rpx;
-    height: 120rpx;
+    // AC-21①: vanity metric demoted — 96rpx and the tertiary ink family, so
+    // it is no longer the page's highest-chroma element. Rotation kept.
+    width: 96rpx;
+    height: 96rpx;
     border-radius: 50%;
-    background: rgba($color-amber, 0.12);
-    border: 2rpx dashed rgba($color-amber, 0.45);
+    background: rgba($color-text-tertiary, 0.08);
+    border: 2rpx dashed rgba($color-text-tertiary, 0.34);
     transform: rotate(12deg);
   }
 
   &__stamp-text {
     display: block;
-    width: 100rpx;
+    width: 80rpx;
     padding: 0 $spacing-xs;
     font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
-    color: $color-amber-700;
+    color: $color-text-tertiary;
     line-height: 1.4;
     text-align: center;
     word-break: keep-all;
@@ -193,7 +203,7 @@
     flex-direction: column;
     align-items: flex-start;
     padding: $spacing-md $spacing-md $spacing-sm;
-    padding-right: 140rpx; // keep poster text clear of the absolute 120rpx stamp
+    padding-right: 140rpx; // keep poster text clear of the absolute 96rpx stamp
     text-align: left;
   }
 
@@ -504,6 +514,28 @@
     overflow: hidden;
   }
 
+  // AC-21④: the 「悦仔记住的」 marker renders once here, above the field grid.
+  &__info-caption {
+    display: block;
+    margin-bottom: 8rpx;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: rgba($color-primary, 0.7);
+    line-height: 1.4;
+  }
+
+  // AC-09 「悦仔记住的」 annotation line under each 小档案 field value.
+  // AC-17: full-sentence pure-memory narrative (no per-field prefix).
+  &__info-annotation {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: $line-height-relaxed;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
   // ─── Intent chips ──────────────────────────────────────────────────────────
   &__intent-wrap {
     display: flex;
@@ -542,11 +574,43 @@
   }
 
   // ─── Interest heat ─────────────────────────────────────────────────────────
+  // AC-09: deterministic conclusion sentence is the primary readout.
+  &__interest-conclusion {
+    display: block;
+    margin-bottom: $spacing-sm;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-normal;
+    text-align: left;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
   &__interest-stats {
     display: flex;
     justify-content: flex-start;
     gap: $spacing-sm;
     margin-bottom: $spacing-sm;
+
+    // AC-09: the 9/8/203 stat trio is demoted to a secondary readout —
+    // tighter padding, muted surface, smaller numerals.
+    &--demoted {
+      .profile-review__interest-stat {
+        min-width: 104rpx;
+        padding: $spacing-xs $spacing-sm;
+        background: rgba($color-bg, 0.96);
+      }
+
+      .profile-review__interest-value {
+        font-size: $font-size-lg;
+        color: $color-text-secondary;
+      }
+
+      .profile-review__interest-label {
+        color: $color-text-muted;
+      }
+    }
   }
 
   &__interest-stat {
@@ -930,4 +994,22 @@
   // Match the gift card's rhythm so the section reads as one continuous
   // stream instead of an isolated island.
   margin-top: $spacing-sm;
+}
+
+// ─── Insight share poster (sprint insight-share-poster, AC-01/AC-02b) ────────
+.profile-review__insight-share-entry {
+  margin-bottom: $spacing-lg;
+}
+
+.profile-review__insight-poster-canvas {
+  // Off-screen but full internal bitmap size — WeChat canvasToTempFilePath
+  // requires the internal bitmap (not the DOM size) to match the export
+  // dimensions or the export comes back blank. The bitmap dimensions are
+  // supplied inline in px on the Canvas so Taro's px→rpx transform cannot
+  // change them (results-page convention, 1080×1560 portrait).
+  position: fixed;
+  left: -9999rpx;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
 }
