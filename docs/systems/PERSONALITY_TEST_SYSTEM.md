@@ -285,7 +285,7 @@ After the adaptive engine reaches its stopping criteria (confidence ≥ 0.7 on a
 #### Q_PLAYFUL_SLIDER — Energy Dial (`slider` type)
 
 ```
-周五下班，终于自由了——
+周五下班，终于自由了
 拖动滑条，找到最符合你此刻感受的位置
 
                 ← 想一个人待着 ──────── 快叫上朋友！→
@@ -355,7 +355,7 @@ The assembled `UserSecondaryData` object (at most `{ conflictPosture }` from the
 
 | ID | Trait | Magnitude | Cohort Target | Scenario |
 |----|-------|-----------|---------------|----------|
-| Q51_PureX | X | ±2 | social_catalyst | 临时陌生人聚会邀约 |
+| Q51_PureX | X | ±2 | social_catalyst | 独自看展，陌生人搭话邀约 |
 | Q52_PureO | O | ±2 | creative_explorer | 冷门历史书籍推荐 |
 | Q53_PureC | C | ±2 | quiet_anchor | 策划活动 deadline 管理 |
 | Q54_PureP | P | ±2 | social_catalyst | 活动因天气取消的反应 |
@@ -1054,7 +1054,7 @@ npm run simulate:expert-packet
 During a systematic audit of the 45 persona trait profiles, 13/33 boundary personas were found to have incorrect `expectedArchetype` labels — the matcher in isolation (fed the true traits) produced a different archetype. The root cause: persona-generation code computed expected labels using a different logic than the matcher itself. Fixed by running `findBestMatchingArchetypesV2` on each persona's true trait profile and setting `expectedArchetype = top match` where the score gap exceeded 5 points. The koala→dolphin boundary-14 was the most impactful fix — it was previously flagged as a "hard miss" even though the matcher correctly assigned dolphin.
 
 **Known Issues:**
-1. **Anchor option conflation** — 8 anchor questions (Q1-Q8) have options scoring 3-5 traits simultaneously. A single answer provides signal to multiple traits, causing measurement drift of 10-26 points on traits like X (extraversion). This is the primary bottleneck for boundary accuracy. Approaches tested (all regressed or had zero net effect): option purity weighting, surgical option edits, pure calibration questions (±3 and ±2 magnitudes), and per-trait normalization multipliers. The only viable solution is question-bank revision — redesigning anchor options to be 1-2 traits each.
+1. **Anchor option conflation** — the 8 option-conflated anchor questions (Q1–Q8; the 9th anchor Q150 is pure-E and not conflated) have options scoring 3-5 traits simultaneously. A single answer provides signal to multiple traits, causing measurement drift of 10-26 points on traits like X (extraversion). This is the primary bottleneck for boundary accuracy. Approaches tested (all regressed or had zero net effect): option purity weighting, surgical option edits, pure calibration questions (±3 and ±2 magnitudes), and per-trait normalization multipliers. The only viable solution is question-bank revision — redesigning anchor options to be 1-2 traits each.
 2. **Calibration system (feature-flagged)** — Q51-Q54 pure single-trait questions exist in the bank. When enabled, 2 are injected after anchors based on cohort detection. Calibration questions use ±2 magnitude (not ±3) to avoid overpowering adaptive measurements. Current impact: +1.8 avg Q, −3 exact matches. Needs shadow-mode data collection before runtime enablement.
 3. **Boundary persona 50/50 blends** — Literal midpoint profiles are inherently ambiguous. The matcher's top-2 score gap is often <10 points. The secondary archetype is surfaced on the results page via a subtle "隐约有[archetype]的影子" indicator when `isDecisive === false`.
 4. **Hard miss (2026-06-02):** spider→dolphin_calm (centroid) — caused by calibration Q injection. Without calibration: no hard misses.

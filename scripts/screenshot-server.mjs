@@ -1023,7 +1023,7 @@ const PERSONALITY_TEST_SLIDER_START = {
   nextQuestion: {
     id: 'Q_PLAYFUL_SLIDER',
     category: '能量感知',
-    scenarioText: '周五下班，终于自由了——',
+    scenarioText: '周五下班，终于自由了',
     questionText: '拖动滑条，找到你现在最接近的感觉',
     questionType: 'slider',
     sliderConfig: { leftLabel: '想一个人待着', rightLabel: '快叫上朋友！' },

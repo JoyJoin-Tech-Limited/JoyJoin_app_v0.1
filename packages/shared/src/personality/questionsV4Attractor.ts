@@ -1157,7 +1157,7 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
     id: "Q_PLAYFUL_SLIDER",
     level: 3,
     category: "能量感知",
-    scenarioText: "周五下班，终于自由了——",
+    scenarioText: "周五下班，终于自由了",
     questionText: "拖动滑条，找到你现在最接近的感觉",
     primaryTraits: ["X", "P"],
     questionType: "slider",

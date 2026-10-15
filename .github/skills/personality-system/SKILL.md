@@ -23,7 +23,7 @@ description: >
 | Archetype registry (12 archetypes) | `packages/shared/src/personality/archetypeRegistry.ts` |
 | Canonical ordering / TYPE numbering | `packages/shared/src/personality/archetypeNames.ts` |
 | ACOEXP trait model + AssessmentConfig | `packages/shared/src/personality/types.ts` |
-| V4 question bank (60+ questions) | `packages/shared/src/personality/questionsV4.ts` |
+| V4 question bank (177 questions across 7 modules) | `packages/shared/src/personality/questionsV4.ts` |
 | Adaptive engine | `packages/shared/src/personality/adaptiveEngine.ts` |
 | MatcherV2 | `packages/shared/src/personality/matcherV2.ts` |
 | Chemistry matrix + Xiaoyue narratives | `packages/shared/src/personality/archetypeCompatibility.ts` |
@@ -53,7 +53,7 @@ Canonical order is **load-bearing**: used for TYPE numbering, slot-machine seque
 | Aspect | V4 Adaptive (canonical) | Legacy V1/V2 |
 |--------|------------------------|--------------|
 | Route prefix | `/api/assessment/v4/*` | `/api/personality-test/*` |
-| Questions | 8–16 adaptive (60+ bank) | Fixed 10 |
+| Questions | 8–16 adaptive (177-item bank) | Fixed 10 |
 | Algorithm | MatcherV2 (v2.4-opposite-pole) | V1 Euclidean / V2 simple weighted |
 | Question types | choice, slider, emoji_tap | choice only |
 See [`references/engine-details.md`](./references/engine-details.md) for full adaptive engine flow, config variants, chemistry system, trait normalization, closing questions, and archetype skill tree.

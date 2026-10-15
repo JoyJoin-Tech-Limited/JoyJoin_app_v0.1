@@ -1184,7 +1184,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q51_PureX",
     level: 2,
     category: "纯X矩阵",
-    scenarioText: "周末你没有任何计划，朋友临时约你参加一个全是陌生人的聚会。",
+    scenarioText: "周末独自看展，几个陌生人来搭话，问你要不要加入一起逛。",
     questionText: "你的真实感受是？",
     primaryTraits: ["X"],
     isForcedChoice: true,
