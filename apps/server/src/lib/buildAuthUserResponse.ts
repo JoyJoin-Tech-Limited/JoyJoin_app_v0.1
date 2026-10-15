@@ -120,6 +120,7 @@ const [
     paymentsEnabledFlag,
     personalityTestEchoEnabled,
     squadUnboxingDragRevealEnabled,
+    squadUnboxingTeaseV2Enabled,
     socialSquadComposedHeroEnabled,
     socialIcebreakerCustomModeEnabled,
     profileRedesignEnabled,
@@ -157,6 +158,7 @@ const [
     personalityDiceChooseModeEnabled,
     preRevealRefundEnabled,
     checkoutSubscriptionUpsellEnabled,
+    entryCardInsightV2Enabled,
     entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
@@ -174,6 +176,8 @@ const [
     getFeatureFlag('paymentsEnabled', false),
     getFeatureFlag('personalityTestEchoEnabled', true),
     getFeatureFlag('squadUnboxingDragRevealEnabled', true),
+    // Tease V2 文案池 (2026-10-14 PRD): flag off → legacy static tease line.
+    getFeatureFlag('squadUnboxingTeaseV2Enabled', true),
     getFeatureFlag('socialSquadComposedHeroEnabled', false),
     getFeatureFlag('socialIcebreakerCustomModeEnabled', true),
     getFeatureFlag('profileRedesignEnabled', true),
@@ -224,6 +228,10 @@ const [
     // Checkout subscription upsell (2026-10-11): gates the 悦聚月卡 upsell
     // card on the event-ticket checkout. Ships dark.
     getFeatureFlag('checkoutSubscriptionUpsellEnabled', false),
+    // Entry-card insight v2 (sprint entry-card-insight-v2, Amendment A1
+    // AC-18): v2 is the shipped state — default true; the flag is the
+    // same-day rollback lever to the legacy single-line UI + gift timing.
+    getFeatureFlag('entryCardInsightV2Enabled', true),
     // Server-resolved entitlement signal (pool-registration gate semantics via
     // lib/entitlement.ts), joined into the flag batch so the cold-start auth
     // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
@@ -286,6 +294,8 @@ const [
       paymentsEnabled: paymentsEnabledFlag,
       personalityTestEchoEnabled,
       squadUnboxingDragRevealEnabled,
+      /** Tease V2 预告片文案池 (2026-10-14 PRD). */
+      squadUnboxingTeaseV2Enabled,
       socialSquadComposedHeroEnabled,
       socialIcebreakerCustomModeEnabled,
       profileRedesignEnabled,
@@ -337,6 +347,9 @@ const [
       /** Checkout subscription upsell (悦聚月卡 card on ticket checkout).
        *  Default: false. */
       checkoutSubscriptionUpsellEnabled,
+      /** Entry-card insight v2 three-line reveal on profile-review. Default:
+       *  true (shipped state); false = rollback to legacy single-line UI. */
+      entryCardInsightV2Enabled,
     },
   };
 

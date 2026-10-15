@@ -49,6 +49,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  keeps the static poster as the share artifact. Default: false.
    *  Env fallback: SHARE_ANIMATED_CLIP_ENABLED. */
   shareAnimatedClipEnabled: "SHARE_ANIMATED_CLIP_ENABLED",
+  /** Share poster mini-program code (2026-10-14): when false,
+   *  POST /api/personality/share-qrcode returns 503 and both share posters
+   *  render a copy-only CTA band. Default: true — the code is the primary
+   *  friend-conversion lever and every failure mode fails open.
+   *  Env fallback: SHARE_QR_CODE_ENABLED. */
+  shareQrCodeEnabled: "SHARE_QR_CODE_ENABLED",
   /** When false, hides the Hero Promo Banner on discover entirely.
    *  Default: true. Use to A/B test banner variants or kill it during
    *  prom content audits. */
@@ -65,6 +71,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  When false: falls back to the legacy "揭晓桌友" button.
    *  Default: true. */
   squadUnboxingDragRevealEnabled: "SQUAD_UNBOXING_DRAG_REVEAL_ENABLED",
+  /** Squad-unboxing Tease V2 预告片文案池 (2026-10-14 PRD).
+   *  When false: the resting bubble falls back to the legacy static
+   *  instruction line. Default: true — rollback = flag off, no release.
+   *  Env fallback: SQUAD_UNBOXING_TEASE_V2_ENABLED. */
+  squadUnboxingTeaseV2Enabled: "SQUAD_UNBOXING_TEASE_V2_ENABLED",
   /** Squad-unboxing ready-state redesign. When true, renders the composed
    *  Xiaoyue+gift hero with a single tap gesture and a hidden drag delight.
    *  When false (default), keeps the existing header + gift + drag-ribbon
@@ -444,6 +455,26 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  ON (any <100% = P1, spec D6).
    *  Env fallback: SESSION_GLOW_ENABLED (default: false). */
   sessionGlowEnabled: "SESSION_GLOW_ENABLED",
+  /** Entry-card insight v2 (sprint entry-card-insight-v2, Amendment A1
+   *  AC-18): the three-line「悦仔的观察」reveal + evidence pills on the
+   *  onboarding profile-review card. v2 is the SHIPPED state — this flag is
+   *  the same-day rollback lever, not a rollout gate. When killed (DB row
+   *  false or env ENTRY_CARD_INSIGHT_V2_ENABLED=false), the client falls
+   *  back to the legacy single-line insightLine UI + the original 200ms
+   *  welcome-gift timing. The server route keeps returning the full v2
+   *  payload either way (insightLine is always populated, REL-02).
+   *  Env fallback: ENTRY_CARD_INSIGHT_V2_ENABLED (default: true). */
+  entryCardInsightV2Enabled: "ENTRY_CARD_INSIGHT_V2_ENABLED",
+  /** Industry cohort count (2026-10-15): read-only
+   *  GET /api/inference/industry-cohort-count — session-scoped count of
+   *  same-city + same-industry-category peers for the authenticated user.
+   *  Privacy min-count: raw counts < 10 and missing city/category both return
+   *  { count: null }; a non-null count is always the exact cohort count.
+   *  Default TRUE (product decision); the flag is a kill switch only — when
+   *  false the endpoint returns { count: null } fail-closed without touching
+   *  the identity/cohort queries. Env fallback:
+   *  INDUSTRY_COHORT_COUNT_ENABLED (default: true). */
+  industryCohortCountEnabled: "INDUSTRY_COHORT_COUNT_ENABLED",
 };
 
 /**
@@ -495,6 +526,11 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   profilePixelAvatarEnabled: false,
   /** Gathering room ships dark until room art + presence flow are verified. */
   gatheringRoomEnabled: false,
+  /** Share poster mini-program code ships ON (2026-10-14) — primary
+   *  friend-conversion lever on the personality share card; every failure
+   *  mode fails open to a copy-only CTA band. Kill switch for WeChat API
+   *  issues. */
+  shareQrCodeEnabled: true,
   /** Haptic grammar ships dark until the playbook §5 field protocols pass. */
   icebreakerHapticGrammarEnabled: false,
   /** Mood field ships dark until the §5 squint/perf field protocols pass. */
@@ -578,6 +614,15 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  admin toggle UI and listFeatureFlags() show a stable default. Flag-off is
    *  byte-for-byte the legacy budget path (see FLAG_ENV_MAP note). */
   budgetAdjacencyEnabled: false,
+  /** Entry-card insight v2 is the SHIPPED state (Amendment A1 AC-18) — default
+   *  true so an unset env/DB row keeps v2 live; the flag exists purely as the
+   *  rollback lever to the legacy single-line UI. */
+  entryCardInsightV2Enabled: true,
+  /** Industry cohort count ships ON (product decision 2026-10-15); the flag
+   *  is a kill switch only. Explicit true so the admin toggle UI and
+   *  listFeatureFlags() show a stable default AND an unset env keeps the
+   *  endpoint live. */
+  industryCohortCountEnabled: true,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

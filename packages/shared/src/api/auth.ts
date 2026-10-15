@@ -117,6 +117,11 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** When false, falls back to the legacy tap button on squad-unboxing.
      *  Kill switch for the drag-to-reveal ribbon. Default: true. */
     squadUnboxingDragRevealEnabled?: boolean
+    /** When false, the squad-unboxing resting bubble falls back to the legacy
+     *  static instruction line (pre-2026-10-14 tease pool: gold claim /
+     *  progress beats / 配置悬念). Instant rollback for the Tease V2 copy.
+     *  Default: true. */
+    squadUnboxingTeaseV2Enabled?: boolean
     /** When true, renders the composed-hero ready state on squad-unboxing
      *  (redesign). Default: false (keeps existing layout). */
     socialSquadComposedHeroEnabled?: boolean
@@ -223,6 +228,12 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  rides the additive `subscriptionPlans` field on
      *  GET /api/payments/ritual-context (flag-independent). Default: false. */
     checkoutSubscriptionUpsellEnabled?: boolean
+    /** Entry-card insight v2 (sprint entry-card-insight-v2, Amendment A1
+     *  AC-18): when true, the profile-review card renders the three-line
+     *  reveal + evidence pills; when false, the client rolls back to the
+     *  legacy single-line insightLine UI + original welcome-gift timing.
+     *  Default: true (v2 is the shipped state; the flag is a rollback lever). */
+    entryCardInsightV2Enabled?: boolean
   }
 }
 
