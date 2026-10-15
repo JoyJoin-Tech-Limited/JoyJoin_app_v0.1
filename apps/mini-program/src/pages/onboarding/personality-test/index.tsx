@@ -32,6 +32,7 @@ import {
 } from '../../../lib/auth/anonymousOnboarding'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { persistPendingReferralCode } from '../../../lib/auth/pendingReferralCode'
+import { parseShareQrSceneCode } from '../../../lib/referral/shareQrScene'
 import {
   navigateToMiniProgramNextStep,
   runMiniProgramRouteTransition,
@@ -201,6 +202,14 @@ export default function PersonalityTestPage() {
   useEffect(() => {
     persistPendingReferralCode(introInvitationCode)
   }, [introInvitationCode])
+
+  // Share-QR arrival (2026-10-14): a friend long-pressing the poster's
+  // mini-program code lands here with `scene=ic%3D<code>`. Decode and persist
+  // into the same pendingReferralCode slot as link shares — no-op when absent.
+  const introSceneCode = parseShareQrSceneCode(router.params.scene)
+  useEffect(() => {
+    persistPendingReferralCode(introSceneCode)
+  }, [introSceneCode])
 
   // Detect reduced-motion preference once for the intro mascot
   useEffect(() => {

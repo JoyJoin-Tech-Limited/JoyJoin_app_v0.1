@@ -1,0 +1,76 @@
+@use '../../styles/variables' as *;
+
+// InsightShareEntry — quiet 「存下这张卡」 share entry (sprint
+// insight-share-poster, AC-01). Consumed via `@use` in
+// pages/onboarding/profile-review/index.scss (no TSX side-effect import —
+// subpackage style-split guard).
+
+.insight-share-entry {
+  display: flex;
+  justify-content: center;
+
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 0 $spacing-lg;
+    border-radius: $radius-pill;
+    border: 2rpx solid rgba($color-primary, 0.22);
+    background: rgba($color-surface, 0.86);
+    transition: background 0.12s ease, transform 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.08);
+      transform: scale(0.98);
+    }
+
+    &--busy {
+      opacity: 0.7;
+    }
+  }
+
+  &__text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    line-height: 1.4;
+  }
+
+  // Busy indicator: GPU-safe opacity pulse while generating…
+  &__button--busy &__text {
+    animation: insight-share-entry-pulse 1.5s ease-in-out infinite;
+  }
+
+  // Reduced-motion: the busy indicator is completely static.
+  &--reduced-motion &__button--busy &__text {
+    animation: none;
+    opacity: 0.88;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__button {
+      transition: none;
+    }
+
+    &__button--pressed {
+      transform: none;
+    }
+
+    &__button--busy &__text {
+      animation: none;
+      opacity: 0.88;
+    }
+  }
+}
+
+@keyframes insight-share-entry-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

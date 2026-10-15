@@ -402,7 +402,7 @@ function drawRankSerialChip(
 
   const parts: string[] = []
   if (typeof archetypeRank === 'number' && archetypeRank > 0) {
-    parts.push(`No.${archetypeRank}`)
+    parts.push(`氛围编号 #${archetypeRank}`)
   }
   if (serialNumber) {
     parts.push(serialNumber)
@@ -421,38 +421,18 @@ function drawRankSerialChip(
   fillRoundedRect(ctx, badgeX, y, badgeWidth, badgeHeight, badgeRadius, 'rgba(255,255,255,0.92)')
   strokeRoundedRect(ctx, badgeX, y, badgeWidth, badgeHeight, badgeRadius, 'rgba(139,92,246,0.15)', 1)
 
+  // Debossed serial (portrait parity — letterpress dent on the plaque).
   ctx.save()
-  ctx.setFillStyle(PALETTE.textMuted)
   ctx.setFontSize(13)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
+  ctx.setFillStyle('rgba(255, 255, 255, 0.65)')
+  ctx.fillText(text, badgeX + badgeWidth / 2, y + badgeHeight / 2 + 1)
+  ctx.setFillStyle(PALETTE.textMuted)
   ctx.fillText(text, badgeX + badgeWidth / 2, y + badgeHeight / 2)
   ctx.restore()
 
   return badgeHeight
-}
-
-function drawHoloStamp(
-  ctx: Taro.CanvasContext,
-  centerX: number,
-  y: number,
-): number {
-  const barWidth = 220
-  const barHeight = 26
-  const barX = centerX - barWidth / 2
-
-  const goldGrad = createMetallicGold(ctx, barX, y, barX + barWidth, y + barHeight)
-  fillRoundedRect(ctx, barX, y, barWidth, barHeight, barHeight / 2, goldGrad)
-
-  ctx.save()
-  ctx.setFillStyle('#4a2e00')
-  ctx.setFontSize(14)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.fillText('全息限定版', centerX, y + barHeight / 2)
-  ctx.restore()
-
-  return barHeight
 }
 
 // ─── Square Personality Poster (1:1 for WeChat Moments) ──────────────────────
@@ -466,13 +446,19 @@ export interface PersonalitySquarePosterTraitEntry {
 
 export interface PersonalitySquarePosterInput {
   archetype: string
-  subtitle?: string
   tagline: string
   shareLine?: string
-  rarityPercentage: number
   archetypeAsset: string
   archetypeAssetPng?: string
   preResolvedImagePath?: string
+  /** Warm card gradient start color (in-app card parity); falls back to a tint of the archetype accent. */
+  accentSoft?: string
+  /**
+   * Archetype accent color (any CSS color; normalized to rgba internally).
+   * Preferred over the legacy-name lookup, which silently misses current
+   * archetype names (e.g. 夸夸仓鼠) and fell back to purple (2026-10-14).
+   */
+  accentColor?: string
   traitEntries?: PersonalitySquarePosterTraitEntry[]
   energyLevel?: number
   skillSet?: {
@@ -481,6 +467,13 @@ export interface PersonalitySquarePosterInput {
   }
   archetypeRank?: number
   serialNumber?: string
+  /** Dark typicality chip text (e.g. 典型夸夸仓鼠) — the in-app card's top badge. */
+  typicalityChip?: string
+  /**
+   * Local temp path of the referral-attributed mini-program code. When
+   * absent, the CTA band renders a copy-only variant (微信搜索「悦聚」).
+   */
+  qrCodeImagePath?: string
 }
 
 export async function generatePersonalitySquarePoster(
@@ -490,7 +483,7 @@ export async function generatePersonalitySquarePoster(
   const ctx = Taro.createCanvasContext(canvasId)
   const S = SQUARE_SIZE
   const M = 40
-  const accentColor = getArchetypeColorHex(input.archetype)
+  const accentColor = input.accentColor ? toCanvasRGBA(input.accentColor, 1) : getArchetypeColorHex(input.archetype)
 
   // Background gradient
   const bgGrad = ctx.createLinearGradient(0, 0, S, S)
@@ -500,39 +493,70 @@ export async function generatePersonalitySquarePoster(
   ctx.setFillStyle(bgGrad)
   ctx.fillRect(0, 0, S, S)
 
-  // Main card
+  // Main card — warm archetype-tinted gradient (portrait poster parity)
   const cardW = S - M * 2
   const cardH = S - M * 2
+  const cardBottom = M + cardH
   fillRoundedRect(ctx, M, M, cardW, cardH, 36, PALETTE.cardWhite)
-  strokeRoundedRect(ctx, M, M, cardW, cardH, 36, PALETTE.borderGold, 4)
+  const cardGrad = ctx.createLinearGradient(M, M, M + cardW * 0.35, M + cardH)
+  cardGrad.addColorStop(0, input.accentSoft ? toCanvasRGBA(input.accentSoft, 0.22) : toCanvasRGBA(accentColor, 0.1))
+  cardGrad.addColorStop(0.5, '#fff8ee')
+  cardGrad.addColorStop(1, 'rgba(255,255,255,0.98)')
+  fillRoundedRect(ctx, M, M, cardW, cardH, 36, cardGrad)
+  const goldBorder = createMetallicGold(ctx, M, M, M + cardW, M)
+  strokeRoundedRect(ctx, M, M, cardW, cardH, 36, goldBorder as unknown as string, 4)
+  // Bevel ridge hairline (portrait parity — foil-stamp edge illusion).
+  strokeRoundedRect(ctx, M + 4, M + 4, cardW - 8, cardH - 8, 32, 'rgba(120, 80, 20, 0.22)', 1)
+  strokeRoundedRect(ctx, M + 6, M + 6, cardW - 12, cardH - 12, 30, 'rgba(255,255,255,0.9)', 1)
 
-  // Top badge
-  drawBadge(ctx, '悦聚 · 氛围命盘', M + 28, M + 20, 170, 34, 17, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
+  // Corner light catches (portrait parity, clipped to the card; old base
+  // libraries without radial-gradient support render no glint — fail-open).
+  ctx.save()
+  clipRoundedRect(ctx, M, M, cardW, cardH, 36)
+  const drawGlow = (cx: number, cy: number, r: number, inner: string): void => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const glow = (ctx as any).createRadialGradient(cx, cy, 0, cx, cy, r)
+      glow.addColorStop(0, inner)
+      glow.addColorStop(1, 'rgba(255, 255, 255, 0)')
+      ctx.setFillStyle(glow)
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
+    } catch {
+      // Cosmetic only — skip when unsupported.
+    }
+  }
+  drawGlow(M + cardW - 40, M + 34, 150, 'rgba(255, 255, 255, 0.42)')
+  drawGlow(M + 36, M + cardH - 52, 130, 'rgba(255, 248, 220, 0.4)')
+  ctx.restore()
+
+  // Top chrome — in-app dark typicality chip + quiet brand lockup
+  const chipText = input.typicalityChip || '悦聚氛围卡'
+  ctx.save()
+  ctx.setFontSize(15)
+  const chipTextWidth = ctx.measureText(chipText).width
+  ctx.restore()
+  drawBadge(ctx, chipText, M + 24, M + 20, Math.ceil(chipTextWidth) + 36, 30, 15, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
+  ctx.save()
+  ctx.setFillStyle(PALETTE.textMuted)
+  ctx.setFontSize(14)
+  ctx.setTextAlign('right')
+  ctx.setTextBaseline('middle')
+  ctx.fillText('JOYJOIN · 悦聚', M + cardW - 24, M + 35)
+  ctx.restore()
 
   // Archetype name (large, centered)
   ctx.save()
   ctx.setFillStyle(PALETTE.textDark)
-  ctx.setFontSize(48)
+  ctx.setFontSize(46)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText(input.archetype, S / 2, M + 72)
+  ctx.fillText(input.archetype, S / 2, M + 64)
   ctx.restore()
 
-  // Archetype nickname subtitle (small, centered)
-  if (input.subtitle) {
-    ctx.save()
-    ctx.setFillStyle(PALETTE.textLight)
-    ctx.setFontSize(20)
-    ctx.setTextAlign('center')
-    ctx.setTextBaseline('top')
-    ctx.fillText(input.subtitle, S / 2, M + 120)
-    ctx.restore()
-  }
-
-  // Hero image (circular, 160px)
+  // Hero image (circular, metallic coin ring + inner rim + accent halo)
   const imgSize = 160
   const imgX = (S - imgSize) / 2
-  const imgY = M + 148
+  const imgY = M + 118
   // Use pre-resolved image path if available to avoid a redundant network fetch.
   // Falls back to resolving archetypeAsset (WebP) then archetypeAssetPng (PNG CDN).
   const imgPath = input.preResolvedImagePath
@@ -540,15 +564,39 @@ export async function generatePersonalitySquarePoster(
     || (input.archetypeAssetPng ? await resolveImagePath(input.archetypeAssetPng) : '')
 
   fillRoundedRect(ctx, imgX - 6, imgY - 6, imgSize + 12, imgSize + 12, imgSize / 2 + 6, 'rgba(139,92,246,0.08)')
+  const ringGrad = createMetallicGold(ctx, imgX - 12, imgY - 12, imgX + imgSize + 12, imgY + imgSize + 12)
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(S / 2, imgY + imgSize / 2, imgSize / 2 + 9, 0, Math.PI * 2)
+  ctx.setStrokeStyle(ringGrad as unknown as string)
+  ctx.setLineWidth(4)
+  ctx.stroke()
+  // Inner rim hairline — medal, not sticker (portrait parity).
+  ctx.beginPath()
+  ctx.arc(S / 2, imgY + imgSize / 2, imgSize / 2 + 3.5, 0, Math.PI * 2)
+  ctx.setStrokeStyle('rgba(180, 140, 40, 0.38)')
+  ctx.setLineWidth(1)
+  ctx.stroke()
+  ctx.restore()
   if (imgPath) {
     ctx.save()
     clipRoundedRect(ctx, imgX, imgY, imgSize, imgSize, imgSize / 2)
+    // Accent halo behind the character (fail-open on old base libraries).
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const halo = (ctx as any).createRadialGradient(S / 2, imgY + imgSize / 2 + 16, 4, S / 2, imgY + imgSize / 2 + 16, imgSize / 2)
+      halo.addColorStop(0, toCanvasRGBA(accentColor, 0.26))
+      halo.addColorStop(1, toCanvasRGBA(accentColor, 0))
+      ctx.setFillStyle(halo)
+      ctx.fillRect(imgX, imgY, imgSize, imgSize)
+    } catch {
+      // No radial-gradient support — skip the halo.
+    }
     ctx.drawImage(imgPath, imgX, imgY, imgSize, imgSize)
     ctx.restore()
   } else {
     // Fallback: colored circle with first char
-    const color = getArchetypeColorHex(input.archetype)
-    fillRoundedRect(ctx, imgX, imgY, imgSize, imgSize, imgSize / 2, color)
+    fillRoundedRect(ctx, imgX, imgY, imgSize, imgSize, imgSize / 2, accentColor)
     ctx.save()
     ctx.setFillStyle('#fff')
     ctx.setFontSize(72)
@@ -572,83 +620,96 @@ export async function generatePersonalitySquarePoster(
     align: 'center',
   })
 
-  // Layout remaining elements in the space between tagline and bottom CTA
+  // Layout remaining elements in the space between tagline and the CTA band
   const contentX = M + 32
   const contentW = cardW - 64
-  let cursorY = taglineY + taglineHeight + 12
+  const ctaBandHeight = 124
+  const ctaBandY = cardBottom - 24 - ctaBandHeight
+  let cursorY = taglineY + taglineHeight + 10
 
   // 3 compact trait bars
   if (input.traitEntries && input.traitEntries.length > 0) {
     const traitHeight = drawCompactTraitBars(ctx, contentX, cursorY, contentW, input.traitEntries, accentColor)
-    cursorY += traitHeight + 4
+    cursorY += traitHeight + 6
   }
 
   // Energy bar
   if (typeof input.energyLevel === 'number') {
     const energyHeight = drawCompactEnergyBar(ctx, contentX, cursorY, contentW, input.energyLevel)
-    cursorY += energyHeight + 4
+    cursorY += energyHeight + 6
   }
 
   // Skill badges
   if (input.skillSet) {
     const skillHeight = drawSkillBadges(ctx, contentX, cursorY, contentW, input.skillSet)
-    cursorY += skillHeight + 4
+    cursorY += skillHeight + 6
   }
 
   // Rank + serial chip
   if ((typeof input.archetypeRank === 'number' && input.archetypeRank > 0) || input.serialNumber) {
-    const rankHeight = drawRankSerialChip(ctx, contentX, cursorY, contentW, input.archetypeRank ?? 0, input.serialNumber ?? '')
-    if (rankHeight > 0) {
-      cursorY += rankHeight + 4
-    }
+    drawRankSerialChip(ctx, contentX, cursorY, contentW, input.archetypeRank ?? 0, input.serialNumber ?? '')
   }
 
-  // Holographic stamp
-  const holoHeight = drawHoloStamp(ctx, S / 2, cursorY)
-  cursorY += holoHeight + 4
-
-  // Share line
-  if (input.shareLine) {
-    const shareHeight = drawTextBlock(ctx, {
-      text: input.shareLine,
-      x: S / 2,
-      y: cursorY,
-      maxChars: 22,
-      maxLines: 1,
-      lineHeight: 22,
-      fontSize: 16,
-      color: PALETTE.textLight,
-      align: 'center',
-    })
-    cursorY += shareHeight + 4
-  }
-
-  // Rarity badge — keep a safe margin from bottom CTA
-  const rarityText = `氛围契合度 ${Math.round(input.rarityPercentage)}%`
-  const rarityY = Math.min(cursorY, S - M - 100)
-  drawBadge(ctx, rarityText, S / 2 - 120, rarityY, 240, 32, 16, PALETTE.badgePurpleFill, PALETTE.badgePurpleText)
-
-// Bottom CTA — match portrait poster attribution
-  drawTextBlock(ctx, {
-    text: '来悦聚测测你的氛围命格',
-    x: S / 2,
-    y: S - M - 56,
-    maxChars: 20,
-    maxLines: 1,
-    lineHeight: 26,
-    fontSize: 20,
-    color: PALETTE.footerText,
-    align: 'center',
-  })
-
-  // JoyJoin watermark
+  // Friend-trigger CTA band — portrait poster parity: dimensional purple
+  // gradient + hairline, playful challenge copy, mini-program code chip on
+  // the right with a gold rim when available.
+  const bandX = M + 24
+  const bandW = cardW - 48
+  const bandGrad = ctx.createLinearGradient(bandX, ctaBandY, bandX, ctaBandY + ctaBandHeight)
+  bandGrad.addColorStop(0, '#9d75f9')
+  bandGrad.addColorStop(0.55, '#8b5cf6')
+  bandGrad.addColorStop(1, '#7c3aed')
+  fillRoundedRect(ctx, bandX, ctaBandY, bandW, ctaBandHeight, 24, bandGrad)
+  strokeRoundedRect(ctx, bandX + 1.5, ctaBandY + 1.5, bandW - 3, ctaBandHeight - 3, 22.5, 'rgba(255, 255, 255, 0.18)', 1.5)
   ctx.save()
-  ctx.setFillStyle('rgba(139, 92, 246, 0.08)')
-  ctx.setFontSize(16)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('top')
-  ctx.fillText('悦聚 · 测测你的氛围命格 · 找到同频的人', S / 2, S - M - 28)
+  clipRoundedRect(ctx, bandX, ctaBandY, bandW, ctaBandHeight, 24)
+  ctx.setFillStyle('rgba(255,255,255,0.09)')
+  ctx.beginPath()
+  ctx.arc(bandX + 36, ctaBandY + 6, 72, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(bandX + bandW - 20, ctaBandY + ctaBandHeight - 4, 88, 0, Math.PI * 2)
+  ctx.fill()
   ctx.restore()
+
+  const hasQr = Boolean(input.qrCodeImagePath)
+  const ctaHeadline = '你是哪一种氛围命格？'
+  const ctaInstruction = hasQr ? '长按识别小程序码，3 分钟开测' : '微信搜索「悦聚」，3 分钟开测'
+  const ctaTextColor = '#fff7d6'
+  const ctaTextSoft = 'rgba(255, 247, 214, 0.85)'
+  if (hasQr && input.qrCodeImagePath) {
+    const qrChipSize = 96
+    const qrChipX = bandX + bandW - 20 - qrChipSize
+    const qrChipY = ctaBandY + (ctaBandHeight - qrChipSize) / 2
+    fillRoundedRect(ctx, qrChipX, qrChipY, qrChipSize, qrChipSize, 16, '#ffffff')
+    strokeRoundedRect(ctx, qrChipX, qrChipY, qrChipSize, qrChipSize, 16, 'rgba(245, 200, 107, 0.9)', 1.5)
+    try {
+      ctx.drawImage(input.qrCodeImagePath, qrChipX + 8, qrChipY + 8, qrChipSize - 16, qrChipSize - 16)
+    } catch {
+      // QR decode failure — band keeps copy-only layout
+    }
+    ctx.save()
+    ctx.setFillStyle(ctaTextColor)
+    ctx.setFontSize(24)
+    ctx.setTextAlign('left')
+    ctx.setTextBaseline('middle')
+    ctx.fillText(ctaHeadline, bandX + 28, ctaBandY + 46)
+    ctx.setFillStyle(ctaTextSoft)
+    ctx.setFontSize(16)
+    ctx.fillText(ctaInstruction, bandX + 28, ctaBandY + 82)
+    ctx.restore()
+  } else {
+    ctx.save()
+    ctx.setFillStyle(ctaTextColor)
+    ctx.setFontSize(24)
+    ctx.setTextAlign('center')
+    ctx.setTextBaseline('middle')
+    ctx.fillText(ctaHeadline, S / 2, ctaBandY + 46)
+    ctx.setFillStyle(ctaTextSoft)
+    ctx.setFontSize(16)
+    ctx.fillText(ctaInstruction, S / 2, ctaBandY + 82)
+    ctx.restore()
+  }
 
   return exportCanvas(ctx, canvasId, S, S)
 }

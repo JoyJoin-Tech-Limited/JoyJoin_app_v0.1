@@ -40,9 +40,6 @@ import {
   PERSONALITY_SQUARE_CANVAS_ID,
 } from '../../../../lib/utils/momentsPosterFactory'
 import {
-  MING_CARD_CANVAS_ID,
-} from '../../../../lib/utils/mingCardImage'
-import {
   buildResolvedResultState,
   buildShareLine,
   buildShareTitle,
@@ -427,14 +424,11 @@ export default function PersonalityTestResultsPage() {
     shareLine,
     summary,
     traitEntries,
-    topMatches,
     skillSet,
     typicalityLabel,
     energyLevel,
     archetypeRank,
     serialNumber,
-    isDecisive,
-    secondaryDisplayName,
     deviceTier,
     shareAnimatedClipEnabled,
     analytics,
@@ -679,17 +673,6 @@ export default function PersonalityTestResultsPage() {
         style={{ width: '1080px', height: '1560px' }}
         aria-hidden='true'
       />
-      {/* Slice 4 (2026-07-19): hidden canvas for 命格卡 generation (shared @shared/ui/mingCard).
-           Gated like the square-poster canvas — low-end devices skip the ~3MB native
-           bitmap; poster generation fails open to raw art (review concern C4). */}
-      {!deviceTier.isDegradation && (
-        <Canvas
-          canvasId={MING_CARD_CANVAS_ID}
-          className='personality-results__poster-canvas'
-          style={{ width: '744px', height: '1039px' }}
-          aria-hidden='true'
-        />
-      )}
       {!deviceTier.isDegradation && (
         <Canvas
           canvasId={PERSONALITY_SQUARE_CANVAS_ID}

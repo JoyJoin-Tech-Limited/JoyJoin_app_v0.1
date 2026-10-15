@@ -5,6 +5,7 @@ import { eq, desc, sql } from "drizzle-orm";
 import { referralCodes, referralConversions, users, invitations } from "@shared/schema";
 import { requireAuth } from "../../middleware/auth";
 import { logger } from "../../lib/logger";
+import { getOrCreateUserReferralCode } from "../../lib/referralCode";
 import { storage } from "../../storage";
 
 const invitationSchema = z.object({
@@ -94,43 +95,13 @@ export function registerReferralRoutes(app: Express): void {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      // Check if user already has a referral code
-      let [existingCode] = await db
+      // Lazily mint the caller's permanent code (shared with the share-QR route).
+      const code = await getOrCreateUserReferralCode(userId);
+      const [existingCode] = await db
         .select()
         .from(referralCodes)
-        .where(eq(referralCodes.userId, userId))
+        .where(eq(referralCodes.code, code))
         .limit(1);
-
-      // If no code exists, create one
-      if (!existingCode) {
-        // Generate unique 6-char code
-        const generateCode = () => {
-          const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // No confusing chars
-          let code = '';
-          for (let i = 0; i < 6; i++) {
-            code += chars[Math.floor(Math.random() * chars.length)];
-          }
-          return code;
-        };
-
-        let code = generateCode();
-        let attempts = 0;
-        while (attempts < 5) {
-          const [existing] = await db
-            .select({ id: referralCodes.id })
-            .from(referralCodes)
-            .where(eq(referralCodes.code, code))
-            .limit(1);
-          if (!existing) break;
-          code = generateCode();
-          attempts++;
-        }
-
-        [existingCode] = await db.insert(referralCodes).values({
-          userId,
-          code,
-        }).returning();
-      }
 
       // Count conversions for this user
       const conversions = await db

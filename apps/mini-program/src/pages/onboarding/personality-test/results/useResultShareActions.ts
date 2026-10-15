@@ -4,15 +4,14 @@ import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 import type { ArchetypeVisual } from '../visuals'
-import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymousOnboarding'
 import { apiRequestBinary } from '../../../../lib/api/api'
 import { haptics } from '../../../../lib/utils/haptics'
 import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
 import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
-import { generateMingCardImage } from '../../../../lib/utils/mingCardImage'
+import { fetchShareQrCodeImage } from '../../../../lib/referral/shareQrCode'
 import { generatePersonalitySquarePoster, type PersonalitySquarePosterInput } from '../../../../lib/utils/momentsPosterFactory'
 import { generatePersonalitySharePoster, type PersonalitySharePosterInput } from './sharePoster'
-import { ARCHETYPE_SEQUENCE, resolveCurrentCanvasImage, type TypicalityLabel } from './resultHelpers'
+import { resolveCurrentCanvasImage, type TypicalityLabel } from './resultHelpers'
 import type { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
 
 type ResultPageAnalytics = ReturnType<typeof useOnboardingAnalytics>
@@ -27,14 +26,11 @@ export interface ResultShareActionsDeps {
   shareLine: string
   summary: string
   traitEntries: Array<{ key: string; label: string; value: number }>
-  topMatches: AnonymousAssessmentTopMatch[]
   skillSet?: ArchetypeSkillSet
   typicalityLabel?: TypicalityLabel
   energyLevel?: number
   archetypeRank?: number
   serialNumber: string
-  isDecisive?: boolean
-  secondaryDisplayName?: string
   deviceTier: { isDegradation: boolean }
   shareAnimatedClipEnabled: boolean
   analytics: ResultPageAnalytics
@@ -57,14 +53,11 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
     shareLine,
     summary,
     traitEntries,
-    topMatches,
     skillSet,
     typicalityLabel,
     energyLevel,
     archetypeRank,
     serialNumber,
-    isDecisive,
-    secondaryDisplayName,
     deviceTier,
     shareAnimatedClipEnabled,
     analytics,
@@ -213,6 +206,13 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
     setPosterError(false)
     setGenerationPhase('准备素材中…')
 
+    // QR temp file is baked into the poster bitmap during canvas draw, so it
+    // is safe — and required — to unlink once generation settles (success,
+    // failure, or transient-retry return path all pass through finally).
+    // Without this, every share tap would leak a ~50KB file into
+    // USER_DATA_PATH (2026-10-14 review finding).
+    let qrCodeImagePath: string | undefined
+
     try {
       const selectedVariant = variants[selectedVariantIndex]
       const accentColor = selectedVariant?.accentColor ?? (visual.accent || '#8B5CF6')
@@ -231,6 +231,15 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
       // preload finishes. Resolve the current asset at save time so both the
       // outer poster and the centered collectible-card avatar use this exact
       // result, never an earlier reel character.
+      // Share-QR (2026-10-14): fetch the referral-attributed mini-program code
+      // for the CTA band. Authenticated users only — guests get the copy-only
+      // band. Fail-open by design (see lib/referral/shareQrCode.ts). Kicked
+      // off BEFORE image resolution so the network round-trip overlaps with
+      // the asset resolve instead of serializing into the critical path.
+      const qrCodePromise: Promise<string | undefined> = user
+        ? fetchShareQrCodeImage()
+        : Promise.resolve(undefined)
+
       const resolvedArchetypeImage = await resolveCurrentCanvasImage(
         displayArchetype,
         [displayAsset, canvasArchetypeAsset, visual.assetPng],
@@ -239,35 +248,11 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
       )
       preResolvedImageRef.current = resolvedArchetypeImage
 
-      // Slice 4 (2026-07-19): canonical 命格卡 for the poster hero panel.
-      // Fail-open: generation failure just means the poster uses raw archetype art.
-      setGenerationPhase('正在绘制命格卡…')
-      const archetypeSequenceIndex = ARCHETYPE_SEQUENCE.indexOf(displayArchetype)
-      if (archetypeSequenceIndex < 0) {
-        // Canonical-order drift guard (review concern C2) — never print a wrong set number silently.
-        logWarn('[PersonalityResults] displayArchetype missing from ARCHETYPE_SEQUENCE; card footer falls back to No.01', { archetype: displayArchetype })
-      }
-      const mingCardImagePath = await generateMingCardImage({
-        name: displayArchetypeName,
-        badge: typicalityLabel?.prefix ?? '典型',
-        // Keep collectible-card keywords on the same canonical archetype key
-        // as its character, skills, color, energy, rarity, and numbering.
-        keywords: visual.traits.slice(0, 3),
-        blendLine: isDecisive === false && secondaryDisplayName
-          ? `隐约有${secondaryDisplayName}的影子`
-          : undefined,
-        accent: accentColor,
-        index: archetypeSequenceIndex >= 0 ? archetypeSequenceIndex + 1 : 1,
-        artImagePath: resolvedArchetypeImage.path,
-        artImageSize: {
-          width: resolvedArchetypeImage.width || 480,
-          height: resolvedArchetypeImage.height || 480,
-        },
-      }) ?? undefined
+      setGenerationPhase('正在渲染全息卡面…')
+      qrCodeImagePath = await qrCodePromise
 
       const posterInput: PersonalitySharePosterInput = {
         archetype: displayArchetypeName,
-        nickname: cardNickname || visual.nickname || displayArchetypeName,
         tagline: visual.tagline || visual.description || summary,
         shareLine,
         accentColor,
@@ -275,7 +260,6 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
         archetypeAsset: canvasArchetypeAsset,
         archetypeAssetPng: visual.assetPng,
         preResolvedImagePath: resolvedArchetypeImage.path,
-        mingCardImagePath,
         confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
         rarityLabel:
           typeof visual.rarityPercentage === 'number'
@@ -285,18 +269,12 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
         activeSkillEffect: skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。',
         passiveSkillTitle: skillSet?.passiveSkill.name ?? '气场持续发光',
         passiveSkillEffect: skillSet?.passiveSkill.shortEffect ?? '不用刻意用力，也会让人想靠近你。',
-        topMatches: topMatches.map((match) => ({
-          archetype: match.archetype,
-          score: Number(match.score) || 0,
-        })),
-        traitEntries: traitEntries.map(({ label, value }) => ({ label, value })),
-        subtitle: visual.nickname || displayArchetypeName,
         energyLevel,
         archetypeRank,
         serialNumber,
+        qrCodeImagePath,
       }
 
-      setGenerationPhase('正在渲染全息卡面…')
       const nextPosterPath = await generatePersonalitySharePoster(posterInput)
       setSharePosterPath(nextPosterPath)
 
@@ -306,13 +284,13 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
         try {
           const squareInput: PersonalitySquarePosterInput = {
             archetype: displayArchetypeName,
-            subtitle: visual.nickname || displayArchetypeName,
             tagline: visual.tagline || visual.description || summary,
             shareLine,
-            rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
             archetypeAsset: canvasArchetypeAsset,
             archetypeAssetPng: visual.assetPng,
             preResolvedImagePath: resolvedArchetypeImage.path,
+            accentColor,
+            accentSoft,
             traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
             energyLevel,
             skillSet: skillSet
@@ -320,6 +298,8 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
               : undefined,
             archetypeRank,
             serialNumber,
+            typicalityChip: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
+            qrCodeImagePath,
           }
           setGenerationPhase('正在生成朋友圈卡片…')
           nextSquarePath = await generatePersonalitySquarePoster(squareInput)
@@ -336,6 +316,7 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
         primaryArchetype: displayArchetypeName,
         variant: selectedVariant?.name,
         hasMoments: Boolean(nextSquarePath),
+        hasQr: Boolean(qrCodeImagePath),
       })
       void Taro.showToast({ title: '氛围卡已生成', icon: 'success', duration: 1500 })
 
@@ -376,6 +357,13 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
     } finally {
       setIsGeneratingPoster(false)
       setGenerationPhase('')
+      if (qrCodeImagePath) {
+        try {
+          Taro.getFileSystemManager().unlinkSync(qrCodeImagePath)
+        } catch {
+          // Best-effort cleanup — a leftover temp file only wastes ~50KB.
+        }
+      }
     }
   }, [
     analytics,
@@ -391,9 +379,9 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
     shareLine,
     skillSet,
     summary,
-    topMatches,
     traitEntries,
     typicalityLabel,
+    user,
     variants,
     visual,
   ])

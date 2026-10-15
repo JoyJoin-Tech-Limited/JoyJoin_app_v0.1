@@ -195,6 +195,16 @@ export const shareClipLimiter = createRateLimiter({
 });
 
 /**
+ * Share QR-code limiter — one wxacode round-trip per share tap; results are
+ * cached per referral code, so 5/min per user is generous headroom.
+ */
+export const shareQrCodeLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 5,
+  keyPrefix: 'sqr',
+});
+
+/**
  * Chat-report submission limiter — bounds abuse-report flooding. Same shape
  * as the reports-domain limiter (routes/domains/reports.ts): 5 submissions
  * per user per 5 minutes.

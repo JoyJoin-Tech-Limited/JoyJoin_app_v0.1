@@ -60,6 +60,7 @@ import { registerAlangFlashRoutes } from "./routes/domains/alangFlash";
 import { registerEquipmentRoutes } from "./routes/domains/equipment";
 import { registerPersonalStoryRoutes } from "./routes/domains/personalStory";
 import { registerShareClipRoutes } from "./routes/domains/shareClip";
+import { registerShareQrCodeRoutes } from "./routes/domains/shareQrCode";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import { SESSION_COOKIE_NAME } from "./lib/sessionCookieName";
@@ -161,6 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAssessmentV4Routes(app);
   registerAssessmentResultRoutes(app);
   registerShareClipRoutes(app);
+  registerShareQrCodeRoutes(app);
   registerProfileRoutes(app);
   registerSocialRoutes(app);
   registerReferralRoutes(app);
