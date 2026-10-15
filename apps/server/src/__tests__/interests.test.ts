@@ -237,8 +237,26 @@ describe('buildCardDeck', () => {
   it('should have category coverage', () => {
     const deck = buildCardDeck(18);
     const categories = new Set(deck.map(c => c.macroCategory));
-    // Should cover all 5 categories
+    // Should cover all 6 macro categories
     expect(categories.size).toBe(6);
+  });
+
+  // Regression lock (2026-10-15, caught by CI as a 1-in-700 "flake"): the deck
+  // builder guaranteed >=2 cards per category and then trimmed with a plain
+  // shuffle-and-slice, which could drop BOTH members of a category. One deck
+  // in ~700 was missing a whole macro category. Repeat the assertion enough
+  // times that the old builder would fail here reliably (~4 failures per 3000).
+  it('should keep every category across repeated decks', () => {
+    const runs = 3000;
+    const missingCategoryRuns: number[] = [];
+
+    for (let i = 0; i < runs; i++) {
+      const deck = buildCardDeck(18);
+      const categories = new Set(deck.map(c => c.macroCategory));
+      if (categories.size !== 6 || deck.length !== 18) missingCategoryRuns.push(i);
+    }
+
+    expect(missingCategoryRuns).toEqual([]);
   });
 });
 

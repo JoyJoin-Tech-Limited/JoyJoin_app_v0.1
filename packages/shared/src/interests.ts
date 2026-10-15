@@ -441,7 +441,44 @@ export function buildCardDeck(targetCount: number = 18): InterestDefinition[] {
     usedIds.add(interest.id);
   }
 
-  return shuffle(selected).slice(0, targetCount);
+  // Final trim. A plain shuffle-and-slice can drop BOTH members of a category,
+  // silently breaking the coverage guarantee above — measured 2026-10-15 at
+  // 0.14% of 18-card decks (~1 in 700) missing an entire macro category (the
+  // `should have category coverage` server test caught one in CI). A dropped
+  // card that is the last of its category is therefore swapped back in for a
+  // kept card whose category AND RIASEC type are both already redundant, so
+  // both guarantees survive the cut.
+  const deck = shuffle(selected);
+  if (deck.length <= targetCount) return deck;
+
+  const kept = deck.slice(0, targetCount);
+  const dropped = deck.slice(targetCount);
+  const categoryCounts = new Map<string, number>();
+  const riasecCounts = new Map<string, number>();
+  for (const item of kept) {
+    categoryCounts.set(item.macroCategory, (categoryCounts.get(item.macroCategory) ?? 0) + 1);
+    riasecCounts.set(item.riasec, (riasecCounts.get(item.riasec) ?? 0) + 1);
+  }
+
+  for (const candidate of dropped) {
+    if ((categoryCounts.get(candidate.macroCategory) ?? 0) > 0) continue;
+    const swapIndex = kept.findIndex(
+      (k) =>
+        (categoryCounts.get(k.macroCategory) ?? 0) > 1 &&
+        (riasecCounts.get(k.riasec) ?? 0) > 1 &&
+        k.macroCategory !== candidate.macroCategory,
+    );
+    if (swapIndex === -1) continue;
+
+    const evicted = kept[swapIndex];
+    categoryCounts.set(evicted.macroCategory, (categoryCounts.get(evicted.macroCategory) ?? 1) - 1);
+    riasecCounts.set(evicted.riasec, (riasecCounts.get(evicted.riasec) ?? 1) - 1);
+    kept[swapIndex] = candidate;
+    categoryCounts.set(candidate.macroCategory, (categoryCounts.get(candidate.macroCategory) ?? 0) + 1);
+    riasecCounts.set(candidate.riasec, (riasecCounts.get(candidate.riasec) ?? 0) + 1);
+  }
+
+  return kept;
 }
 
 /**
