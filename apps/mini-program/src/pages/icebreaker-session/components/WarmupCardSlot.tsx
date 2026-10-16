@@ -13,13 +13,13 @@ import { useTierReveal } from '../../../hooks/useTierReveal'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { MOOD_OPTIONS, PhaseHeaderIcon } from '../phaseUtils'
 import type { SessionParticipant } from '../phaseUtils'
-import { getPhaseFoilStyle } from '../phases/phaseAccents'
 import { WarmupEmberRim, useEmberSync } from './WarmupEmberRim'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import type { TopicsRecoveryState, WarmupCardState } from '../viewModels/warmupViewModels'
 import {
   getDepthCornerText,
   getDepthSealColors,
+  getMoodRevealCopy,
   isBraveTopic,
   shouldShowPermissionLine,
   buildMoodOptions,
@@ -236,12 +236,23 @@ export function WarmupCardSlot({
 
   // ── Campfire Vault Card PR1: foil frame + deal/sheen/quiet-switch ────────
   const isTopicCard = state === 'topic_card'
-  const foil = useMemo(() => (isTopicCard ? getPhaseFoilStyle('warmup') : null), [isTopicCard])
+  // AC-08/#11 — the warmup hero card consumes the L1 ice-card-primary
+  // material in SCSS (white surface + accent-0.32 foil border + single
+  // accent-0.12 shadow); the #FFFAF4 tint that clashed with the page floor
+  // is retired. Inline styles survive only for the halo border melt (H2).
   const sealColors = useMemo(
     () => getDepthSealColors(currentTopic?.depthLevel),
     [currentTopic?.depthLevel],
   )
+  const moodReveal = useMemo(() => getMoodRevealCopy(selectedMood), [selectedMood])
   const showPermissionLine = shouldShowPermissionLine(currentTopic, currentIndex)
+
+  // Bottom-chrome presence (whisper / counter / deep expander) decides the
+  // teaching hint's anchor — it must never cover the persistent bottom slot.
+  const showDeepPrompt = vibe === 'deep_chat' && !!currentTopic?.promptTiers
+  const showBottomCounter = !showPermissionLine && !showDeepPrompt
+  const hasBottomChrome =
+    (showPermissionLine && !!currentTopic?.permissionLine) || showBottomCounter || showDeepPrompt
 
   // ── Campfire Vault Card PR2: ember rim + all-ready halo (E1–E5 / H1–H4) ──
   // Zero added network traffic (G3): the rim derives entirely from the
@@ -258,14 +269,30 @@ export function WarmupCardSlot({
   })
   const haloActive = emberSync.halo !== 'off'
 
-  // P5 — while the halo glow (0.35 alpha) is up, the foil ambient shadow
-  // (0.16 alpha) would stack too bright; halve the ambient alpha so the
-  // card blooms once, not twice.
-  const foilBoxShadow = useMemo(() => {
-    if (!foil) return undefined
-    if (!haloActive) return foil.boxShadow
-    return foil.boxShadow.replace(/0\.16\)/, '0.08)')
-  }, [foil, haloActive])
+  // AC-04 — 首燃教学提示 (first-ignition teaching): the ember rim counts in
+  // the ≤2 card-top symbol quota, so its meaning must be taught, not guessed.
+  // One transient hint the first time any ember lights (seeded re-entry
+  // counts — late joiners need the lesson too), once per page lifetime.
+  const [emberHintVisible, setEmberHintVisible] = useState(false)
+  const emberHintShownRef = useRef(false)
+  // The dismiss timer lives in a ref, NOT in the ignition effect's cleanup —
+  // the poll refreshes the embers array identity every 3s, and an effect
+  // cleanup would clear the pending dismiss before it ever fires (observed:
+  // the hint stuck on screen past its window in the H5 capture).
+  const emberHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (emberHintTimerRef.current) clearTimeout(emberHintTimerRef.current)
+    },
+    [],
+  )
+  useEffect(() => {
+    if (emberHintShownRef.current) return
+    if (!emberSync.embers.some((ember) => ember.lit)) return
+    emberHintShownRef.current = true
+    setEmberHintVisible(true)
+    emberHintTimerRef.current = setTimeout(() => setEmberHintVisible(false), 2600)
+  }, [emberSync.embers])
 
   // E5 — one-shot slot-height measurement per topic entry; below 640rpx the
   // rim degrades to a 「N/6 已准备」 chip. Generation-guarded so a stale
@@ -420,8 +447,18 @@ export function WarmupCardSlot({
     <View className='warmup-card-slot__face warmup-card-slot__face--front'>
       <View className='warmup-card-slot__front'>
         <PhaseHeaderIcon phase='warmup' size={80} />
-        <Text className='warmup-card-slot__front-label'>话题卡</Text>
-        <Text className='warmup-card-slot__front-sub'>话题马上揭晓</Text>
+        {moodReveal ? (
+          <>
+            <Text className='warmup-card-slot__front-eyebrow'>今晚的氛围</Text>
+            <Text className='warmup-card-slot__front-mood'>{moodReveal.label}</Text>
+            <Text className='warmup-card-slot__front-sub'>{moodReveal.line}</Text>
+          </>
+        ) : (
+          <>
+            <Text className='warmup-card-slot__front-label'>话题卡</Text>
+            <Text className='warmup-card-slot__front-sub'>话题马上揭晓</Text>
+          </>
+        )}
       </View>
     </View>
   )
@@ -518,61 +555,51 @@ export function WarmupCardSlot({
               dealPhase === 'dealing' ? 'warmup-card-slot__content--deal-in' : ''
             }`}
           >
+            {/* AC-04 — card-top symbols ≤ 2: (1) this seal row (progress text
+                + user-language depth seal), (2) the ember rim on the border.
+                The bare mood icon is retired — the flip's front face now
+                carries the atmosphere reveal. */}
             <View className='warmup-card-slot__top-row'>
-              <View className='warmup-card-slot__dots'>
-                {Array.from({ length: totalTopics }).map((_, i) => (
-                  <View
-                    key={i}
-                    className={`warmup-card-slot__dot ${
-                      i === currentIndex ? 'warmup-card-slot__dot--active' : ''
-                    }`}
-                  />
-                ))}
-              </View>
-              {cornerText && sealColors && (
-                <Text
-                  className='warmup-card-slot__corner warmup-card-slot__corner--seal'
-                  style={{
-                    color: sealColors.deep,
-                    borderColor: sealColors.borderColor,
-                    background: sealColors.backgroundColor,
-                  }}
-                >
-                  {cornerText}
+              <View className='warmup-card-slot__seal-row'>
+                <Text className='warmup-card-slot__progress'>
+                  {`${currentIndex + 1}/${totalTopics}`}
                 </Text>
-              )}
+                {cornerText && sealColors && (
+                  <Text
+                    className='warmup-card-slot__corner warmup-card-slot__corner--seal'
+                    style={{
+                      color: sealColors.deep,
+                      borderColor: sealColors.borderColor,
+                      background: sealColors.backgroundColor,
+                    }}
+                  >
+                    {cornerText}
+                  </Text>
+                )}
+              </View>
             </View>
 
-            <View
-              className={`warmup-card-slot__mood-wrap ${
-                isDeepPromptExpanded ? 'warmup-card-slot__mood-wrap--hidden' : ''
-              }`}
-            >
-              <JoyJoinIcon
-                className='warmup-card-slot__mood-icon'
-                emoji={TOPIC_MOOD_EMOJI[currentTopic.mood] ?? currentTopic.emoji ?? ''}
-                tier='mood'
-                size={48}
-              />
+            {/* AC-03 — three-band distribution: meta row on top, question
+                vertically centred in the flex:1 zone, persistent bottom slot
+                (permission whisper → deep expander →「第 N/M 题」). No dead
+                lower half on plain cards. */}
+            <View className='warmup-card-slot__question-zone'>
+              <Text
+                className={`warmup-card-slot__question ${
+                  isDeepPromptExpanded ? 'warmup-card-slot__question--expanded' : ''
+                } ${questionSwitching ? 'warmup-card-slot__question--switching' : ''}`}
+              >
+                {stripEmojis(currentTopic.question)}
+              </Text>
             </View>
 
-            <Text
-              className={`warmup-card-slot__question ${
-                isDeepPromptExpanded ? 'warmup-card-slot__question--expanded' : ''
-              } ${questionSwitching ? 'warmup-card-slot__question--switching' : ''}`}
-            >
-              {stripEmojis(currentTopic.question)}
-            </Text>
-
-            {/* 悦仔说 permission whisper (B4). Two lines are reserved ONLY
-                when a whisper actually renders on this card — cards without
-                one carry zero dead space (P4); while typing the reserved box
-                keeps height stable (G2). Cadence: first card or depthLevel
-                ≥ 2 (C6). */}
+            {/* 悦仔说 permission whisper (B4). The bottom slot is persistent:
+                a whisper renders when one exists (C6 cadence); otherwise the
+                topic counter fills the slot so the lower band never gapes. */}
             <View
-              className={`warmup-card-slot__permission ${
+              className={`warmup-card-slot__bottom-slot ${
                 showPermissionLine && currentTopic.permissionLine
-                  ? 'warmup-card-slot__permission--reserved'
+                  ? 'warmup-card-slot__bottom-slot--reserved'
                   : ''
               }`}
             >
@@ -587,6 +614,10 @@ export function WarmupCardSlot({
                     enabled={!reduceMotion}
                     numberOfLines={2}
                   />
+                </Text>
+              ) : showBottomCounter ? (
+                <Text className='warmup-card-slot__bottom-counter'>
+                  {`第 ${currentIndex + 1}/${totalTopics} 题`}
                 </Text>
               ) : null}
             </View>
@@ -643,13 +674,12 @@ export function WarmupCardSlot({
               dealPhase === 'dealing' ? 'warmup-card-slot__foil-shell--dealing' : ''
             }`}
             style={
-              foil
+              haloActive
                 ? {
                     // H2 — the halo melts the foil border into ONE purple hue;
-                    // the outer glow rides the opacity-only overlay below.
-                    borderColor: haloActive ? 'rgba(139, 92, 246, 0.7)' : foil.borderColor,
-                    boxShadow: foilBoxShadow,
-                    background: foil.background,
+                    // the L1 material (white + 0.32 border + 0.12 shadow)
+                    // otherwise comes from ice-card-primary in SCSS.
+                    borderColor: 'rgba(139, 92, 246, 0.7)',
                   }
                 : undefined
             }
@@ -679,6 +709,18 @@ export function WarmupCardSlot({
               entering={emberSync.entering}
               degraded={isDegradation}
             />
+          )}
+          {emberHintVisible && (
+            <View
+              className={`warmup-card-slot__ember-hint ${
+                hasBottomChrome ? 'warmup-card-slot__ember-hint--raised' : ''
+              }`}
+              aria-hidden='true'
+            >
+              <Text className='warmup-card-slot__ember-hint-text'>
+                火苗亮起 = 一位伙伴准备好了
+              </Text>
+            </View>
           )}
         </View>
       ) : (

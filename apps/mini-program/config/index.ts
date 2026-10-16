@@ -157,6 +157,15 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/onboarding/assets/archetypes',
           to: 'dist/pages/onboarding/assets/archetypes',
         },
+        // Phase icons — bundled INSIDE the icebreaker-session subpackage
+        // (~160KB total, 12 webp) so they cost nothing against the main
+        // package budget (2026-10-15 placement rule). Local tier of
+        // PhaseHeaderIcon's local→CDN→brand-placeholder chain (AC-12).
+        // PNG fallbacks stay src-only for the CDN upload pipeline.
+        {
+          from: 'src/assets/icons/phase-icons',
+          to: 'dist/pages/icebreaker-session/assets/phase-icons',
+        },
         // Mood icons — bundled locally (~16KB total).
         {
           from: 'src/assets/icons/mood-icons',

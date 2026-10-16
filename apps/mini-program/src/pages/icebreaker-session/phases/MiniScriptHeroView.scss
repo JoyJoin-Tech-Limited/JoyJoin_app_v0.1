@@ -67,7 +67,7 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__stepper-label {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
 
     &--active {
       color: $ms-deep;
@@ -78,7 +78,7 @@ $ms-deep: $phase-accent-miniscript-deep;
   // Persistent quiet identity line (host paces / players follow).
   &__identity {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     text-align: center;
     margin-bottom: $spacing-xs;
   }
@@ -171,7 +171,7 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__flow-arrow {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
   }
 
   &__script-act {
@@ -266,7 +266,7 @@ $ms-deep: $phase-accent-miniscript-deep;
   &__role-back-scroll-hint {
     @include type-micro;
     flex: none;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
   }
 
   // ── Shared section / disclosure chrome ──
@@ -296,7 +296,7 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__section-toggle {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
   }
 
   // ── Clues: focused new-clue cards + numbered drawer ──
@@ -503,7 +503,7 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__confess-hint {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
   }
 
   // 今晚剧照 — the screenshot-worthy summary block (share artifact).
@@ -556,7 +556,7 @@ $ms-deep: $phase-accent-miniscript-deep;
   &__cta-caption {
     @include type-caption;
     display: block;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     text-align: center;
     margin-top: $spacing-xs;
   }
@@ -801,7 +801,7 @@ $ms-deep: $phase-accent-miniscript-deep;
   &__ceremony-hint {
     @include type-micro;
     display: block;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     margin-top: $spacing-md;
     // Gentle breathing so first-time tables notice the tap-through
     // affordance (opacity-only, GPU-safe; flattened under reduced-motion).
@@ -843,7 +843,7 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__ceremony-waiting {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     animation: ms-ceremony-hint-breathe 2.2s ease-in-out infinite;
   }
 

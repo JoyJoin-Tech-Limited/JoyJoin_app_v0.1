@@ -294,15 +294,42 @@ export function buildWarmupCaption(
   return `${vibeLabel} · 约60分钟`
 }
 
-/** Corner text for the topic card: `深度·L{n}` for deep_chat, hidden for play_fun. */
+/** Corner seal text for the topic card (AC-04): user language, never the
+ *  internal L-scale. deep_chat only; hidden for other vibes. */
+const DEPTH_SEAL_USER_TEXT: Record<number, string> = {
+  1: '轻松',
+  2: '走心',
+  3: '深聊',
+}
+
 export function getDepthCornerText(vibe?: VibeId, depthLevel?: number | null): string | null {
   if (vibe === 'deep_chat' && depthLevel) {
-    return `深度·L${depthLevel}`
+    return DEPTH_SEAL_USER_TEXT[depthLevel] ?? '走心'
   }
   if (vibe === 'play_fun') {
     return null // 快速暖场 per contract, but rendered as hidden.
   }
   return null
+}
+
+/** Front-face mood reveal (AC-21 / plan #10): the flip reveals the host's
+ *  chosen atmosphere — mood name + one atmospheric line, readable inside the
+ *  ~700ms front-face span. Copy stays xiaoyue-warm, zero emoji. */
+export interface MoodRevealCopy {
+  label: string
+  line: string
+}
+
+const MOOD_REVEAL_COPY: Record<AtmosphereMood, MoodRevealCopy> = {
+  funny: { label: '搞笑', line: '笑点低的先坐稳了' },
+  life: { label: '生活', line: '聊聊日子里的小事儿' },
+  relaxed: { label: '轻松', line: '放空一下，随便聊聊' },
+  emotional: { label: '情感', line: '今晚聊点走心的' },
+}
+
+export function getMoodRevealCopy(mood?: AtmosphereMood | null): MoodRevealCopy | null {
+  if (!mood) return null
+  return MOOD_REVEAL_COPY[mood] ?? null
 }
 
 /**

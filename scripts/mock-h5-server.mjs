@@ -66,6 +66,7 @@ const MOCK_USER = {
     squadUnboxingDragRevealEnabled: true,
     socialSquadComposedHeroEnabled: false,
     socialIcebreakerCustomModeEnabled: true,
+    socialIcebreakerMiniScriptEnabled: true,
     profileRedesignEnabled: true,
     matchingPuzzlePreludeEnabled: true,
     oracleCardCornerStatEnabled: true,

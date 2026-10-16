@@ -9,12 +9,9 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  flex: 1;
-  min-height: 0;
   gap: 24rpx;
-  // Safe-area inset lives ONLY on WarmupActionBar — padding it here too
-  // doubled the bottom dead space on notched devices.
-  padding: 0 0 24rpx;
+  // The bottom CTA is a page-level dock (flex sibling of the ScrollView);
+  // this view owns no bottom padding or safe-area at all.
   position: relative;
 }
 
@@ -31,18 +28,23 @@
   }
 }
 
-.icebreaker__warmup-test-strip {
-  width: 100%;
+// AC-15 — 测试局 capsule: centered warning pill replaces the old full-width
+// grey strip. Renders only for test sessions (fail-closed via isTestMode).
+.icebreaker__warmup-test-capsule {
+  align-self: center;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 8rpx 0;
-  background: rgba($color-text-primary, 0.04);
+  gap: 8rpx;
+  padding: 8rpx 24rpx;
+  border-radius: $radius-pill;
+  background: rgba($color-warning, 0.1);
+  border: 2rpx solid rgba($color-warning, 0.32);
 
   &-text {
     font-size: $font-size-2xs;
-    line-height: 1;
-    color: $color-text-muted;
+    line-height: 1.4;
+    font-weight: $font-weight-semibold;
+    color: $color-amber-700;
   }
 }
 

@@ -61,6 +61,12 @@ type EventType =
   // Campfire Vault Card PR1 — brave card + permission whisper views.
   | 'topic_card_brave_view'
   | 'permission_line_view'
+  // icebreaker-uiux-wave1 (contract AC-20 / plan #37) — funnel-metric events
+  // pre-embedded in Wave 1 so the 30-day baseline window starts at deploy:
+  // ready-rate, phase-completion-rate, 纪念卡保存率.
+  | 'warmup_ready_rate'
+  | 'phase_completion_rate'
+  | 'moment_card_saved'
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker. The server gates

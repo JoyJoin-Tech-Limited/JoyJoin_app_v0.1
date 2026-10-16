@@ -1,7 +1,7 @@
-import { Image, View } from '@tarojs/components'
+import { Image, Text, View } from '@tarojs/components'
 import { useState } from 'react'
 import type { AtmosphereMood, SocialIcebreakerPhase } from '@shared/socialIcebreaker'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
 
@@ -37,6 +37,25 @@ export const PHASE_ICON_SRC_MAP: Record<string, string> = {
   speed_friending: cdnAsset('/assets/icons/phase-icons/phase-speed-friending.webp'),
   mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.webp'),
   recap: cdnAsset('/assets/icons/phase-icons/phase-recap.webp'),
+}
+
+// Local bundled tier (icebreaker-uiux-wave1, AC-12): the 12 webp live inside
+// the icebreaker-session SUBPACKAGE (copied via config/index.ts; packOptions
+// include covers them) so they cost nothing against the main-package budget
+// and survive CDN outages on device.
+const PHASE_ICON_LOCAL_MAP: Record<string, string> = {
+  warmup: '/pages/icebreaker-session/assets/phase-icons/phase-warmup.webp',
+  'topic-card': '/pages/icebreaker-session/assets/phase-icons/phase-topic-card.webp',
+  micro_challenge: '/pages/icebreaker-session/assets/phase-icons/phase-micro-challenge.webp',
+  lie_detective: '/pages/icebreaker-session/assets/phase-icons/phase-lie-detective.webp',
+  personality_dice: '/pages/icebreaker-session/assets/phase-icons/phase-personality-dice.webp',
+  auction: '/pages/icebreaker-session/assets/phase-icons/phase-auction.webp',
+  quip_battle: '/pages/icebreaker-session/assets/phase-icons/phase-quip-battle.webp',
+  undercover_word: '/pages/icebreaker-session/assets/phase-icons/phase-undercover-word.webp',
+  group_mirror: '/pages/icebreaker-session/assets/phase-icons/phase-group-mirror.webp',
+  speed_friending: '/pages/icebreaker-session/assets/phase-icons/phase-speed-friending.webp',
+  mini_script: '/pages/icebreaker-session/assets/phase-icons/phase-mini-script.webp',
+  recap: '/pages/icebreaker-session/assets/phase-icons/phase-recap.webp',
 }
 
 export function getPhaseLabel(phase: SessionPhase): string {
@@ -82,6 +101,11 @@ export function getPhaseLabel(phase: SessionPhase): string {
  *   - 80rpx:  phase card header
  *   - 120rpx: hero / modal / loading
  *   - 240rpx: full-screen feature (e.g., phase intro)
+ *
+ * Three-tier fallback chain (icebreaker-uiux-wave1, AC-12): bundled
+ * subpackage asset → CDN → brand placeholder (brand-purple disc + the phase
+ * label's first glyph). The pre-chain fallback was an empty purple RING —
+ * on a CDN 404 it read as an unexplained white/purple block.
  */
 export function PhaseHeaderIcon({
   phase,
@@ -92,11 +116,14 @@ export function PhaseHeaderIcon({
   size?: number
   className?: string
 }) {
-  const [hasError, setHasError] = useState(false)
+  const [srcTier, setSrcTier] = useState<'local' | 'cdn' | 'placeholder'>('local')
   const sizeStr = `${size}rpx`
-  const src = PHASE_ICON_SRC_MAP[phase]
+  const localSrc = PHASE_ICON_LOCAL_MAP[phase]
+  const cdnSrc = PHASE_ICON_SRC_MAP[phase]
 
-  if (!src || hasError) {
+  if ((!localSrc && !cdnSrc) || srcTier === 'placeholder') {
+    // Brand placeholder: solid brand-purple disc + phase name first glyph.
+    const label = getPhaseLabel(phase as SessionPhase)
     return (
       <View
         className={className}
@@ -104,15 +131,30 @@ export function PhaseHeaderIcon({
           width: sizeStr,
           height: sizeStr,
           borderRadius: '50%',
-          background: 'rgba(139, 92, 246, 0.08)',
-          border: '1rpx solid rgba(139, 92, 246, 0.12)',
+          background: '#8B5CF6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           verticalAlign: 'middle',
         }}
-        aria-hidden='true'
-      />
+        aria-label={label}
+      >
+        <Text
+          style={{
+            color: '#FFFFFF',
+            fontSize: `${Math.round(size * 0.44)}rpx`,
+            fontWeight: 600,
+            lineHeight: 1,
+          }}
+        >
+          {label.slice(0, 1)}
+        </Text>
+      </View>
     )
   }
 
+  const effectiveTier = srcTier === 'local' && !localSrc ? 'cdn' : srcTier
+  const src = effectiveTier === 'local' ? localAsset(localSrc) : cdnSrc
   return (
     <Image
       src={src}
@@ -120,7 +162,7 @@ export function PhaseHeaderIcon({
       className={className}
       style={{ width: sizeStr, height: sizeStr, verticalAlign: 'middle' }}
       lazyLoad
-      onError={() => setHasError(true)}
+      onError={() => setSrcTier(effectiveTier === 'local' && cdnSrc ? 'cdn' : 'placeholder')}
     />
   )
 }

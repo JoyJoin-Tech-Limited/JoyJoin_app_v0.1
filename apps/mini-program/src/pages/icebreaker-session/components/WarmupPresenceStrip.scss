@@ -94,21 +94,72 @@
   &__count-text {
     font-size: $font-size-sm;
     line-height: 1;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     font-family: $font-mono;
     font-variant-numeric: tabular-nums;
   }
 
+  // ── #27 / AC-06 ready capsule (topic_card main status slot) ─────────
+  &--capsule-row {
+    height: auto; // row hugs content — the 96rpx avatar-strip line is gone
+    justify-content: center;
+  }
+
+  &__capsule {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    max-width: 100%;
+    padding: 16rpx 32rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.08);
+    border: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__capsule-count {
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    line-height: 1.2;
+    color: $color-text-primary;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  &__capsule-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+    min-width: 0;
+  }
+
+  &__capsule-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+    color: $color-text-primary;
+  }
+
+  &__capsule-names {
+    font-size: $font-size-xs;
+    line-height: 1.4;
+    color: $color-text-secondary-warm;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   // Hangs off the count's real left edge — long counts like "12/12 已准备"
   // exceed the 128rpx min-width, and a fixed `right: 128rpx` fade ended up
-  // stranded over the scroll seam's wrong spot.
+  // stranded over the scroll seam's wrong spot. AC-16: the fade melts into
+  // the WARM page floor ($color-bg-warm-to), never the cold $color-bg.
   &__fade {
     position: absolute;
     top: 0;
     left: -16rpx;
     width: 16rpx;
     height: 100%;
-    background: linear-gradient(90deg, rgba($color-bg, 0) 0%, $color-bg 100%);
+    background: linear-gradient(90deg, rgba($color-bg-warm-to, 0) 0%, $color-bg-warm-to 100%);
     pointer-events: none;
     z-index: 1;
   }

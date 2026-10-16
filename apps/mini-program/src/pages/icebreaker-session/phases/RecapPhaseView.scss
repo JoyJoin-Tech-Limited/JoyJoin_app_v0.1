@@ -93,6 +93,7 @@
 
 .icebreaker__feedback-row {
   display: flex;
+  flex-wrap: wrap;
   gap: $spacing-sm;
   justify-content: center;
   margin-top: $spacing-xs;
@@ -150,7 +151,7 @@
 
 .icebreaker__recap-medal-desc {
   @include type-micro;
-  color: $color-text-muted;
+  color: $color-text-secondary-warm;
   text-align: center;
   max-width: 260rpx;
   display: -webkit-box;
@@ -350,7 +351,7 @@
 
   &-hint {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
   }
 }
 
@@ -429,7 +430,7 @@
   align-items: center;
   justify-content: center;
   padding: $spacing-lg;
-  background: rgba($color-text-primary, 0.3);
+  background: rgba($color-text-primary, 0.45);
 }
 
 .icebreaker__moment-panel {

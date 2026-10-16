@@ -180,7 +180,22 @@ export function buildIcebreakerState(sessionId) {
           completionCTA: '我完成了',
         },
         challengeCompletedBy: [IB_HOST_ID, 'ib-p2'],
-        stallNudgeAt: now - 30_000,
+        // Live stall nudge via the adaptive-suggestion channel (the retired
+        // stallNudgeAt field is gone — see the 'warmup-topic-stall' case).
+        xiaoyueAdaptiveSuggestion: {
+          type: 'advance_ready',
+          message: '有伙伴还在挑战中，可以先聊聊刚才的题目。',
+          actionableHint: '如果不想等了，可以直接继续。',
+          basedOnSignals: {
+            phaseElapsedMinutes: 4,
+            activeRate: 0.5,
+            completionRate: 0.33,
+            avgVibe: 2,
+            playerCount: 6,
+            pulseCheckCount: 0,
+          },
+          generatedAt: new Date(now).toISOString(),
+        },
       }
     case 'lie_detective':
       return {
@@ -420,6 +435,36 @@ export function buildIcebreakerState(sessionId) {
         warmupTopicsMeta: mockAigcMeta('social-warmup-topics-v1'),
         currentTopicIndex: 0,
         warmupReadyUserIds: [IB_HOST_ID, 'ib-p2', 'ib-p3'],
+      }
+    case 'warmup-topic-stall':
+      // Same dealt-topic state + a live stall nudge (adaptive suggestion) so
+      // the host's AC-07 stall exit「不等了，直接继续 ›」is capturable in the dock.
+      return {
+        ...base,
+        currentPhase: 'warmup',
+        completedPhases: [],
+        selectedMood: 'funny',
+        warmupTopics: [
+          { id: 'wt-1', question: '最近一次让你笑出来的小事是什么？', mood: 'funny', emoji: '😄', category: '轻松开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+          { id: 'wt-2', question: '如果你要给今晚这桌起个队名，会叫什么？', mood: 'funny', emoji: '🎲', category: '桌面气氛', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
+          { id: 'wt-3', question: '你朋友最常用哪句话吐槽你？', mood: 'funny', emoji: '🍌', category: '熟人视角', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+        ],
+        currentTopicIndex: 0,
+        warmupReadyUserIds: ['ib-p2'],
+        xiaoyueAdaptiveSuggestion: {
+          type: 'advance_ready',
+          message: '大部分伙伴还在路上，可以先和准备好的聊聊。',
+          actionableHint: '如果不想等了，可以直接继续。',
+          basedOnSignals: {
+            phaseElapsedMinutes: 6,
+            activeRate: 0.5,
+            completionRate: 0.17,
+            avgVibe: 2,
+            playerCount: 6,
+            pulseCheckCount: 0,
+          },
+          generatedAt: new Date(now).toISOString(),
+        },
       }
     // ─── WaitingBeat emotional-layer fixtures (2026-09-17 pre-ship renders) ──
     // Viewer is a PARTICIPANT (hostUserId swapped to 老周) so the waiting

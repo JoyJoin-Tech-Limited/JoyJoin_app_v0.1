@@ -137,6 +137,17 @@ const includeRules = projectConfig.packOptions?.include ?? []
 const INTENTIONALLY_EXCLUDED = new Set([
   'pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.png',
   'pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.png',
+  // Phase-icons PNG fallbacks (AC-12): webp ships inside the icebreaker
+  // subpackage; the 6 PNG twins + the reference grid stay src-only for the
+  // CDN upload pipeline, dropped here by ignore rule
+  // `pages/icebreaker-session/assets/phase-icons/.*\.png$`.
+  'pages/icebreaker-session/assets/phase-icons/phase-auction.png',
+  'pages/icebreaker-session/assets/phase-icons/phase-lie-detective.png',
+  'pages/icebreaker-session/assets/phase-icons/phase-mini-script.png',
+  'pages/icebreaker-session/assets/phase-icons/phase-personality-dice.png',
+  'pages/icebreaker-session/assets/phase-icons/phase-quip-battle.png',
+  'pages/icebreaker-session/assets/phase-icons/phase-topic-card.png',
+  'pages/icebreaker-session/assets/phase-icons/reference-grid.png',
 ])
 
 /** Asset kinds that ride the upload, and therefore need an explicit decision. */

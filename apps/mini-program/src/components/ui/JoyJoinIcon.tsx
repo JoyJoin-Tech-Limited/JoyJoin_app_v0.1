@@ -49,18 +49,6 @@ function getReducedMotion(): boolean {
 
 const REDUCED_MOTION = getReducedMotion()
 
-/** Append a hex alpha channel safely; fall back to the original colour if not hex. */
-function hexWithAlpha(hex: string | undefined, alphaHex: string): string {
-  if (!hex || !hex.startsWith('#')) return hex ?? 'transparent'
-  return hex + alphaHex
-}
-
-/** Fallback placeholder background for loading icons.
- *  Mirrors the SCSS token `rgba($color-text-primary, 0.04)` (#2D3142 at 4% opacity).
- *  Keep in sync with `apps/mini-program/src/styles/_variables.scss`.
- */
-const DEFAULT_ICON_PLACEHOLDER_BG = 'rgba(45, 49, 66, 0.04)'
-
 export default function JoyJoinIcon({
   emoji,
   size,
@@ -186,11 +174,10 @@ export default function JoyJoinIcon({
         opacity: loaded ? 1 : 0,
         transform: loaded ? 'scale(1)' : 'scale(0.85)',
         transition,
-        backgroundColor: loaded
-          ? 'transparent'
-          : mapping.tint
-            ? hexWithAlpha(mapping.tint, '1A')
-            : DEFAULT_ICON_PLACEHOLDER_BG,
+        // Loading placeholder is FULLY TRANSPARENT (icebreaker-uiux-wave1
+        // AC-11): the old tint/4% block read as an unexplained white patch on
+        // warm floors. The icon simply fades/scales in once decoded.
+        backgroundColor: 'transparent',
         ...style,
       }}
       mode='aspectFit'

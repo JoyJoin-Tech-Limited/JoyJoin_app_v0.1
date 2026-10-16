@@ -1,10 +1,17 @@
 @use '../../../styles/variables' as *;
 
 .warmup-action {
+  // Page-level CTA dock (sprint icebreaker-uiux-wave1, AC-01/02): a flex
+  // SIBLING of the page ScrollView, pinned by the root flex column to the
+  // bottom safe-area — full-bleed white bar, zero side inset, no negative
+  // margin, and never position:fixed (the phase shell keeps a transform
+  // that hijacks fixed descendants' containing block on device).
+  flex-shrink: 0;
   width: 100%;
+  box-sizing: border-box;
   background: $color-surface;
   box-shadow: 0 -4rpx 24rpx rgba($color-text-primary, 0.04);
-  padding: 24rpx 0 calc(24rpx + env(safe-area-inset-bottom));
+  padding: 24rpx $container-padding calc(24rpx + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -80,7 +87,7 @@
 
   &__cancel-text {
     font-size: $font-size-sm;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     text-decoration: underline;
     text-underline-offset: 4rpx;
     line-height: 1;
@@ -107,9 +114,31 @@
 
   &__helper {
     font-size: $font-size-xs;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     text-align: center;
     line-height: 1.4;
+  }
+
+  // AC-07 — host stall exit: visible only while the stall nudge (adaptive
+  // suggestion) is live; lets the host stop waiting and advance directly.
+  &__stall-exit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    margin-top: 4rpx;
+    transition: opacity 150ms ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  &__stall-exit-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    line-height: 1;
   }
 
   @keyframes warmup-action-enter {

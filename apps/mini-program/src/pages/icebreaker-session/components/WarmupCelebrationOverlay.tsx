@@ -56,6 +56,9 @@ export function WarmupCelebrationOverlay({
           onDismiss?.()
         }}
       >
+        {/* AC-13 — the single celebration grammar: 55% scrim + light card +
+            confetti. The old no-backdrop white bubble floated unexplained. */}
+        <View className='warmup-celebration__backdrop' aria-hidden='true' />
         <View className='warmup-celebration__burst'>
           <ParticleBurst trigger={visible} type='confetti' count={50} reducedMotion={reducedMotion} />
         </View>

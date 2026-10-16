@@ -59,6 +59,10 @@
       {
         "type": "regexp",
         "value": "pages/pool-registration/assets/ceremony/.*\\.png$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/icebreaker-session/assets/phase-icons/.*\\.png$"
       }
     ],
     "include": [
@@ -101,6 +105,10 @@
       {
         "type": "regexp",
         "value": "assets/icons/status-icons/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/icebreaker-session/assets/phase-icons/.*\\.webp$"
       },
       {
         "type": "regexp",
@@ -157,6 +165,10 @@
       {
         "type": "regexp",
         "value": "assets/tab-icons/.*\\.png$"
+      },
+      {
+        "type": "regexp",
+        "value": "static/images/.*\\.png$"
       },
       {
         "type": "regexp",

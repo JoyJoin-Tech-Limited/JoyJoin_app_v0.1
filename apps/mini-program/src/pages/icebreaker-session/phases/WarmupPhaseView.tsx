@@ -8,25 +8,24 @@ import type { AtmosphereMood, SocialTopic } from '@shared/socialIcebreaker'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { VibeId } from '../../../lib/vibeMapping'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { WarmupWelcomeBand } from '../components/WarmupWelcomeBand'
 import { WarmupCardSlot } from '../components/WarmupCardSlot'
 import { WarmupPresenceStrip } from '../components/WarmupPresenceStrip'
-import { WarmupActionBar } from '../components/WarmupActionBar'
 import { WarmupCelebrationOverlay } from '../components/WarmupCelebrationOverlay'
 import { GyroParallaxSpike } from '../spike/GyroParallaxSpike'
 import { HandshakeRitual } from '../components/HandshakeRitual'
 import { GlancePeek } from '../components/GlancePeek'
 import { isHandshakeRitualGateOpen } from '../viewModels/glanceStackModel'
 import type { SessionParticipant } from '../phaseUtils'
+import type { WarmupReadiness } from '../hooks/useWarmupReadiness'
 import {
   buildWelcomeSegments,
   buildWarmupCaption,
   buildCelebrationLine,
-  buildCTAState,
-  getWarmupCardState,
   buildArchetypeMixText,
 } from '../viewModels/warmupViewModels'
-import type { TopicsRecoveryState, WarmupCardState } from '../viewModels/warmupViewModels'
+import type { TopicsRecoveryState } from '../viewModels/warmupViewModels'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface WarmupPhaseViewProps {
@@ -47,13 +46,7 @@ interface WarmupPhaseViewProps {
   socialSessionId?: string
   icebreakerSessionId?: string
   onGenerateTopics: (mood: AtmosphereMood) => void
-  onToggleReady: () => void
-  onNextTopic: () => void
-  onAdvance: () => void
   isGeneratingTopics: boolean
-  isUpdatingReady: boolean
-  isAdvancingTopic: boolean
-  isAdvancing: boolean
   topicsError?: boolean
   /** Transient-failure auto-retry state (backoff ladder) — renders recovery copy. */
   topicsRecovery?: TopicsRecoveryState | null
@@ -70,6 +63,12 @@ interface WarmupPhaseViewProps {
   /** S8: fired once when the host's ritual tap ends the opening — the page
    *  fires the first Nudge (S1 grammar) alongside. */
   onRitualStart?: () => void
+  /**
+   * Readiness cluster owned by the page (useWarmupReadiness): card state,
+   * optimistic self-ready, mirrored count, CTA state. The page renders the
+   * CTA dock as a flex sibling of the ScrollView from the same source.
+   */
+  readiness: WarmupReadiness
 }
 
 export function WarmupPhaseView({
@@ -90,13 +89,7 @@ export function WarmupPhaseView({
   socialSessionId,
   icebreakerSessionId,
   onGenerateTopics,
-  onToggleReady,
-  onNextTopic,
-  onAdvance,
   isGeneratingTopics,
-  isUpdatingReady,
-  isAdvancingTopic,
-  isAdvancing,
   topicsError = false,
   topicsRecovery = null,
   onAigcFeedbackTap,
@@ -104,10 +97,12 @@ export function WarmupPhaseView({
   advancePrompt,
   glanceStackEnabled = false,
   onRitualStart,
+  readiness,
 }: WarmupPhaseViewProps) {
-  const isReady = readyUserIds.includes(currentUserId)
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
-  const isLastTopic = currentIndex >= Math.max(topics.length - 1, 0)
+  // Readiness cluster (card state + optimistic self-ready) is owned by the
+  // page-level hook so the CTA dock can render as a ScrollView sibling.
+  const { cardState, selfReadyOptimistic, optimisticReadyCount } = readiness
 
   const reduceMotion = useMemo(() => getSystemReducedMotion(), [])
 
@@ -120,18 +115,6 @@ export function WarmupPhaseView({
   const caption = useMemo(
     () => buildWarmupCaption(vibe, currentTier, isCustomMode),
     [vibe, currentTier, isCustomMode],
-  )
-  const cardState = useMemo<WarmupCardState>(
-    () =>
-      getWarmupCardState({
-        topics,
-        currentIndex,
-        isHost,
-        isGeneratingTopics,
-        topicsError,
-        topicsRecovery,
-      }),
-    [topics, currentIndex, isHost, isGeneratingTopics, topicsError, topicsRecovery],
   )
 
   // ── Analytics: mount view ──────────────────────────────────────
@@ -153,79 +136,20 @@ export function WarmupPhaseView({
     )
   }, [socialSessionId, icebreakerSessionId, participants.length, isHost, vibe, currentTier])
 
-  // ── TTC timing for ready tap ───────────────────────────────────
-  const componentMountAtRef = useRef(Date.now())
-  const firstTopicRenderedAtRef = useRef<number | null>(null)
-  useEffect(() => {
-    if (cardState === 'topic_card' && firstTopicRenderedAtRef.current === null) {
-      firstTopicRenderedAtRef.current = Date.now()
-    }
-  }, [cardState])
-
-  // Campfire Vault Card PR2 (S1) — the optimistic self ember hands off to
-  // server truth: cleared when the echo confirms, rolled back (quiet S4 fade
-  // inside the rim) when the update settles without confirmation.
-  const [selfReadyOptimistic, setSelfReadyOptimistic] = useState(false)
-  useEffect(() => {
-    if (!selfReadyOptimistic) return
-    // Clear when the server confirms (isReady), and also when no ready
-    // request is actually in flight — covers the skipped-tap path where
-    // pendingAction never changed and the optimistic flag would otherwise
-    // stick forever (deps wouldn't re-fire without selfReadyOptimistic).
-    if (isReady || !isUpdatingReady) {
-      setSelfReadyOptimistic(false)
-    }
-  }, [isReady, isUpdatingReady, selfReadyOptimistic])
-
-  // P0-4 (2026-07-26): optimistic ready morph — the CTA flips to the calm
-  // "已准备" state at tap time instead of showing a spinner while the
-  // request is in flight. Rollback is the effect above + the warm toast
-  // from the page handler.
-  const effectiveIsReady = isReady || selfReadyOptimistic
-  const effectiveEveryoneReady =
-    everyoneReady ||
-    (selfReadyOptimistic && !isReady && readyUserIds.length + 1 >= participants.length)
-  const ctaState = useMemo(
-    () => buildCTAState(effectiveIsReady, isHost, effectiveEveryoneReady, isLastTopic),
-    [effectiveIsReady, isHost, effectiveEveryoneReady, isLastTopic],
-  )
-
-  // S1 companion — the count mirrors the optimistic self ember so the ready
-  // tally responds to the tap immediately instead of waiting for the server
-  // echo (previously the button spun for seconds with a frozen count).
-  const optimisticReadyCount =
-    selfReadyOptimistic && !readyUserIds.includes(currentUserId)
-      ? readyUserIds.length + 1
-      : readyUserIds.length
-
-  const handleToggleReady = useCallback(() => {
-    const ttcMs = Date.now() - (firstTopicRenderedAtRef.current ?? componentMountAtRef.current)
-    socialIcebreakerAnalytics.track(
-      'warmup_ready_tap',
-      socialSessionId,
-      icebreakerSessionId,
-      'warmup',
-      {
-        ttcMs,
-        isHost,
-        fromReady: isReady,
-        playerCount: participants.length,
-        readyCount: readyUserIds.length,
-      },
-    )
-    // S1 — self ember ignites optimistically on tap (no server wait); the
-    // haptics('medium') for this tap already lives in WarmupActionBar.
-    setSelfReadyOptimistic(!isReady)
-    onToggleReady()
-  }, [
-    onToggleReady,
-    isReady,
-    isHost,
-    participants.length,
-    readyUserIds.length,
-    socialSessionId,
-    icebreakerSessionId,
-  ])
+  // ── Ready capsule (#27 / AC-06): big count + 「还差 N 人」+ names ──
+  const missingCount = Math.max(participants.length - optimisticReadyCount, 0)
+  const missingNamesText = useMemo(() => {
+    if (missingCount === 0) return ''
+    const names = participants
+      .filter(
+        (p) =>
+          !readyUserIds.includes(p.userId) &&
+          !(selfReadyOptimistic && p.userId === currentUserId),
+      )
+      .map((p) => p.displayName ?? '匿名')
+    const shown = names.slice(0, 3).join('、')
+    return names.length > 3 ? `${shown} 等` : shown
+  }, [missingCount, participants, readyUserIds, selfReadyOptimistic, currentUserId])
 
   // ── Topic card flip animation ────────────────────────────────
   const [topicFlipped, setTopicFlipped] = useState(false)
@@ -366,7 +290,6 @@ export function WarmupPhaseView({
     onAigcFeedbackTap?.('card')
   }, [onAigcFeedbackTap])
 
-  const showActionBar = cardState === 'topic_card'
   const celebrationLine = buildCelebrationLine(archetypeMixText)
   const hostUserId = participants.find((p) => p.isHost)?.userId ?? currentUserId
 
@@ -393,9 +316,10 @@ export function WarmupPhaseView({
   return (
     <View className='icebreaker__warmup'>
       {isTestMode && (
-        <View className='icebreaker__warmup-test-strip'>
-          <Text className='icebreaker__warmup-test-strip-text'>
-            {runBots ? '调试局 · 虚拟伙伴参与完整流程' : '调试局 · 仅话题卡预览'}
+        <View className='icebreaker__warmup-test-capsule' role='note'>
+          <JoyJoinIcon emoji='⚠️' tier='status' size={24} />
+          <Text className='icebreaker__warmup-test-capsule-text'>
+            {runBots ? '测试局 · 虚拟伙伴参与完整流程' : '测试局 · 仅话题卡预览'}
           </Text>
         </View>
       )}
@@ -445,18 +369,27 @@ export function WarmupPhaseView({
       </GyroParallaxSpike>
 
       {/* P1 — in topic_card the ember rim carries per-member presence, so the
-          strip slims to a compact count-only row (no duplicate avatar row).
-          Other warmup states keep the full strip. Reuses WarmupPresenceStrip
-          classes (its SCSS is bundled via the import below). */}
+          strip slims to the ready capsule (#27 / AC-06): big mirrored count,
+          「还差 N 人」 and the unready names — social pressure at a 6-seat
+          table is the feature. Other warmup states keep the full strip. */}
       {advancePrompt}
 
       {cardState === 'topic_card' ? (
-        <View className='warmup-presence'>
-          <View style={{ flex: 1 }} />
-          <View className='warmup-presence__count'>
-            <Text className='warmup-presence__count-text'>
-              {optimisticReadyCount}/{participants.length} 已准备
+        <View className='warmup-presence warmup-presence--capsule-row'>
+          <View className='warmup-presence__capsule'>
+            <Text className='warmup-presence__capsule-count'>
+              {optimisticReadyCount}/{participants.length}
             </Text>
+            <View className='warmup-presence__capsule-meta'>
+              <Text className='warmup-presence__capsule-label'>
+                {missingCount > 0 ? '已准备' : '全员就绪，可以开场啦'}
+              </Text>
+              {missingCount > 0 && (
+                <Text className='warmup-presence__capsule-names'>
+                  {`还差 ${missingCount} 人${missingNamesText ? `：${missingNamesText}` : ''}`}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       ) : glanceStackEnabled ? (
@@ -481,21 +414,6 @@ export function WarmupPhaseView({
           currentUserId={currentUserId}
           readyCount={readyUserIds.length}
           totalCount={participants.length}
-        />
-      )}
-
-      {showActionBar && (
-        <WarmupActionBar
-          ctaState={ctaState}
-          isReady={effectiveIsReady}
-          isHost={isHost}
-          everyoneReady={effectiveEveryoneReady}
-          isUpdatingReady={isUpdatingReady && !selfReadyOptimistic}
-          isAdvancingTopic={isAdvancingTopic}
-          isAdvancing={isAdvancing}
-          onToggleReady={handleToggleReady}
-          onNextTopic={onNextTopic}
-          onAdvance={onAdvance}
         />
       )}
         </>

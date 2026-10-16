@@ -1,0 +1,58 @@
+@use '../../../styles/variables' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Icebreaker material system (sprint icebreaker-uiux-wave1, contract AC-08)
+// ═══════════════════════════════════════════════════════════════════════════
+// The three-tier material ladder from
+// docs/deliberations/2026-10-16-icebreaker-uiux-audit.md §1.1, frozen into
+// mixins so the visual language is enforceable code, not doc prose.
+//
+//   L0 页底   — page-warm-bg (shared mixin, unchanged)
+//   L1 主卡   — ice-card-primary   每屏至多一张
+//   L2 次卡   — ice-card-secondary 列表项 / 信息卡
+//   L3 pill   — ice-pill           唯一 pill 配方
+//   scrim     — ice-scrim($tier)   只出 0.45 (sheet) / 0.55 (ritual) 两档
+//
+// Guardrail: scripts/check/check-icebreaker-visuals.mjs scans this directory
+// and fails on scrim alphas outside {0.45, 0.55} and NEW accent alphas
+// outside {0.08, 0.12, 0.32} (existing inventory rides a baseline ratchet).
+
+/// L1 — primary card: white surface, 2rpx accent-0.32 foil border, single
+/// accent-0.12 ambient shadow. At most ONE per screen; tint card faces
+/// (e.g. the warmup cream tint that clashed with the page floor) are retired.
+@mixin ice-card-primary($accent: $color-primary) {
+  background: $color-surface;
+  border-radius: $card-radius;
+  border: 2rpx solid rgba($accent, 0.32);
+  box-shadow: 0 8rpx 24rpx rgba($accent, 0.12);
+}
+
+/// L2 — secondary card: white surface, medium radius, hairline border,
+/// no shadow. For list items and info cards that must not compete with the
+/// screen's single L1 card.
+@mixin ice-card-secondary {
+  background: $color-surface;
+  border-radius: $radius-md;
+  border: 2rpx solid rgba($color-text-primary, 0.06);
+  box-shadow: none;
+}
+
+/// L3 — pill: the only pill recipe. Accent-0.08 fill + accentDeep text.
+@mixin ice-pill($accent: $color-primary, $accent-deep: $color-primary-dark) {
+  border-radius: $radius-pill;
+  background: rgba($accent, 0.08);
+  color: $accent-deep;
+}
+
+/// Scrim — the only two overlay tiers. 'sheet' for bottom-sheet / detail
+/// surfaces, 'ritual' for full-screen ceremony overlays. Any other alpha is
+/// rejected by check-icebreaker-visuals.mjs.
+@mixin ice-scrim($tier: 'sheet') {
+  @if $tier == 'sheet' {
+    background: rgba(0, 0, 0, 0.45);
+  } @else if $tier == 'ritual' {
+    background: rgba(0, 0, 0, 0.55);
+  } @else {
+    @error "ice-scrim: unknown tier `#{$tier}` — only 'sheet' (0.45) and 'ritual' (0.55) exist.";
+  }
+}

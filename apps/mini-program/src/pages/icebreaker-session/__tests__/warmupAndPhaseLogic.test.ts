@@ -834,10 +834,14 @@ describe('isBraveTopic', () => {
 
 // ── getDepthCornerText (audit P1 — keepsake seal parity) ───────────
 describe('getDepthCornerText', () => {
-  it('deep_chat renders the unspaced keepsake form 深度·L{n}', () => {
-    expect(getDepthCornerText('deep_chat', 2)).toBe('深度·L2')
-    expect(getDepthCornerText('deep_chat', 1)).toBe('深度·L1')
-    expect(getDepthCornerText('deep_chat', 3)).toBe('深度·L3')
+  it('deep_chat renders user-language seals (AC-04 — never the internal L-scale)', () => {
+    expect(getDepthCornerText('deep_chat', 1)).toBe('轻松')
+    expect(getDepthCornerText('deep_chat', 2)).toBe('走心')
+    expect(getDepthCornerText('deep_chat', 3)).toBe('深聊')
+  })
+
+  it('deep_chat falls back to 走心 for out-of-range depth levels', () => {
+    expect(getDepthCornerText('deep_chat', 9)).toBe('走心')
   })
 
   it('play_fun hides the seal', () => {

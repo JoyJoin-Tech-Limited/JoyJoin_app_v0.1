@@ -25,6 +25,7 @@ import type { SessionGlowSnapshot } from './viewModels/sessionGlowModel'
 import type { GlowPointBreakdown } from '@shared/socialIcebreaker'
 import type { TopicsRecoveryState } from './viewModels/warmupViewModels'
 import type { SocialRecapResponse } from './icebreakerSessionModel'
+import type { WarmupReadiness } from './hooks/useWarmupReadiness'
 
 /**
  * SessionPhaseViews — presentational phase dispatch for the icebreaker
@@ -50,6 +51,9 @@ export interface SessionPhaseViewsProps {
   lastTopicsMood: AtmosphereMood | undefined
   topicsError: boolean
   topicsRecovery: TopicsRecoveryState | null
+  /** Page-owned warmup readiness cluster (AC-01) — the same source feeds the
+   *  CTA dock rendered as a ScrollView sibling at page level. */
+  warmupReadiness: WarmupReadiness
   myVoteIndex: number | null
   hasGeneratedStatements: boolean
   canMoveToNextPlayer: boolean
@@ -92,8 +96,6 @@ export interface SessionPhaseViewsProps {
   onGenerateSessionPack: () => void
   onAigcFeedbackTap: (location: 'card') => void
   onGenerateTopics: (mood: AtmosphereMood) => void
-  onToggleWarmupReady: () => void
-  onNextWarmupTopic: () => void
   onRitualStart: () => void
   onSelectPhase: (phase: SocialIcebreakerPhase) => void
   onEndSession: () => void
@@ -153,6 +155,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     lastTopicsMood,
     topicsError,
     topicsRecovery,
+    warmupReadiness,
     myVoteIndex,
     hasGeneratedStatements,
     canMoveToNextPlayer,
@@ -180,8 +183,6 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     onGenerateSessionPack,
     onAigcFeedbackTap,
     onGenerateTopics,
-    onToggleWarmupReady,
-    onNextWarmupTopic,
     onRitualStart,
     onSelectPhase,
     onEndSession,
@@ -267,17 +268,12 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           icebreakerSessionId={session.icebreakerSessionId}
           onAigcFeedbackTap={onAigcFeedbackTap}
           onGenerateTopics={onGenerateTopics}
-          onToggleReady={onToggleWarmupReady}
-          onNextTopic={onNextWarmupTopic}
-          onAdvance={onAdvance}
           isGeneratingTopics={pendingAction === 'topics'}
-          isUpdatingReady={pendingAction === 'warmup-ready'}
-          isAdvancingTopic={pendingAction === 'warmup-next-topic'}
-          isAdvancing={pendingAction === 'advance'}
           topicsError={topicsError}
           topicsRecovery={topicsRecovery}
           glanceStackEnabled={glanceStackEnabled}
           onRitualStart={onRitualStart}
+          readiness={warmupReadiness}
         />
       )}
 

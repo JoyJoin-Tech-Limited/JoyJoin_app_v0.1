@@ -17,6 +17,9 @@ interface WarmupActionBarProps {
   onToggleReady: () => void
   onNextTopic: () => void
   onAdvance: () => void
+  /** AC-07 — host stall exit, visible only while the stall nudge is live. */
+  stallExitVisible?: boolean
+  onStallExit?: () => void
 }
 
 export function WarmupActionBar({
@@ -30,6 +33,8 @@ export function WarmupActionBar({
   onToggleReady,
   onNextTopic,
   onAdvance,
+  stallExitVisible = false,
+  onStallExit,
 }: WarmupActionBarProps) {
   const isLoading = isUpdatingReady || isAdvancingTopic || isAdvancing
 
@@ -57,6 +62,12 @@ export function WarmupActionBar({
     if (isLoading) return
     haptics('light')
     onToggleReady()
+  }
+
+  const handleStallExit = () => {
+    if (isLoading) return
+    haptics('medium')
+    onStallExit?.()
   }
 
   const primaryButton = (
@@ -122,6 +133,18 @@ export function WarmupActionBar({
           <Text className='warmup-action__helper'>等主持人开始～</Text>
         )}
       </View> : null}
+
+      {stallExitVisible && isHost && (
+        <View
+          className='warmup-action__stall-exit'
+          onClick={handleStallExit}
+          hoverClass='warmup-action__stall-exit--pressed'
+          role='button'
+          aria-label='不等了，直接继续'
+        >
+          <Text className='warmup-action__stall-exit-text'>不等了，直接继续 ›</Text>
+        </View>
+      )}
     </View>
   )
 }

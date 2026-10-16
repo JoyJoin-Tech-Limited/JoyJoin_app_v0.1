@@ -171,7 +171,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: max($button-height, $cta-min-tap);
+  min-height: $button-height; // $button-height (96rpx) always exceeds $cta-min-tap (88rpx) — max() flattened (WXSS-safe)
   height: $button-height;
   border-radius: $button-radius;
   background: $color-primary;
@@ -187,7 +187,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: max($button-height, $cta-min-tap);
+  min-height: $button-height; // $button-height (96rpx) always exceeds $cta-min-tap (88rpx) — max() flattened (WXSS-safe)
   height: $button-height;
   border-radius: $button-radius;
   background: transparent;
@@ -204,7 +204,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: max($button-height, $cta-min-tap);
+  min-height: $button-height; // $button-height (96rpx) always exceeds $cta-min-tap (88rpx) — max() flattened (WXSS-safe)
   height: $button-height;
   border-radius: $button-radius;
   background: $color-primary;
@@ -544,7 +544,7 @@ $onboarding-stage-shift-ids: (
   align-items: center;
   gap: $spacing-md;
   padding: $spacing-lg;
-  min-height: max(96rpx, $cta-min-tap);
+  min-height: 96rpx; // 96rpx always exceeds $cta-min-tap (88rpx) — max() flattened (WXSS-safe)
   border-bottom: 1rpx solid $color-divider;
   &:last-child { border-bottom: none; }
   &:active { background: rgba(0, 0, 0, 0.02); }

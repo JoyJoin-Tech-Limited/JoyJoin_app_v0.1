@@ -1,5 +1,6 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+@use '../styles/ice-materials' as *;
 
 // Warm rose for soft retry moments — softer than pure $color-error.
 $color-warm-rose: #B83A5E;
@@ -72,8 +73,10 @@ $color-warm-rose: #B83A5E;
     width: 100%;
     display: flex;
     flex-direction: column;
-    border: 2rpx solid transparent; // foil borderColor inline (PhaseHeroCard precedent)
-    border-radius: $card-radius;
+    // AC-08/#11 — L1 material: white surface + accent-0.32 foil border +
+    // single accent-0.12 shadow. The warm cream tint ($phase-accent-warmup-tint)
+    // that blended into the page floor is retired.
+    @include ice-card-primary($phase-accent-warmup);
     overflow: hidden; // clips the sheen band to the rounded card
     // H2 — halo border melts into ONE purple over 500ms (inline color swap).
     transition: border-color 500ms ease;
@@ -219,6 +222,20 @@ $color-warm-rose: #B83A5E;
     }
   }
 
+  &__front-eyebrow {
+    @include type-caption;
+    color: $color-text-secondary-warm;
+    letter-spacing: 2rpx;
+  }
+
+  // AC-21 — the flip reveals the host's chosen atmosphere: mood name carries
+  // the peak typography on the front face.
+  &__front-mood {
+    @include type-heading;
+    color: $color-text-primary;
+    line-height: 1.3;
+  }
+
   &__front-label {
     @include type-heading;
     color: $color-text-secondary;
@@ -227,7 +244,7 @@ $color-warm-rose: #B83A5E;
 
   &__front-sub {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
   }
 
   &__content {
@@ -262,39 +279,39 @@ $color-warm-rose: #B83A5E;
   &__top-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     min-height: 24rpx;
   }
 
-  &__dots {
+  // AC-04 — the seal row is ONE of the ≤2 card-top symbols: progress as
+  // text (replacing the unlabeled dots) sits beside the user-language
+  // depth seal.
+  &__seal-row {
     display: flex;
     align-items: center;
     gap: 16rpx;
   }
 
-  &__dot {
-    width: 8rpx;
-    height: 8rpx;
-    border-radius: $radius-circle;
-    background: $color-divider;
-    transition: background 200ms ease, transform 200ms ease;
-
-    &--active {
-      background: $color-primary;
-      transform: scale(1.25);
-    }
+  &__progress {
+    font-size: $font-size-xs;
+    line-height: 1.2;
+    color: $color-text-secondary-warm;
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   &__corner {
     font-size: $font-size-2xs;
     line-height: 1;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     white-space: nowrap;
 
-    // B2 — depth seal pill. Deep-variant text / rgba border / soft tint fill
-    // ride inline from getDepthSealColors(); static shape lives here.
+    // B2 — depth seal pill (AC-04: user language「走心/轻松/深聊」, ≥20rpx
+    // floor — the old 18rpx「深度·L2」failed both). Deep-variant text /
+    // rgba border / soft tint fill ride inline from getDepthSealColors().
     &--seal {
-      font-size: 18rpx;
+      font-size: $font-size-2xs;
       font-weight: $font-weight-semibold;
       letter-spacing: 1rpx;
       line-height: 1.4;
@@ -304,32 +321,18 @@ $color-warm-rose: #B83A5E;
     }
   }
 
-  &__mood-wrap {
-    @include flex-center;
-    width: 48rpx;
-    height: 48rpx;
-    // B3 rhythm: top-row → 32rpx → mood icon (16rpx content gap + 16rpx here).
-    margin-top: 16rpx;
-    overflow: hidden;
-    transition: opacity 200ms ease, transform 200ms ease;
-
-    &--hidden {
-      opacity: 0;
-      transform: scale(0);
-      margin-top: 0;
-    }
-  }
-
-  &__mood-icon {
-    width: 48rpx;
-    height: 48rpx;
+  // AC-03 — the question owns the flex:1 middle band, vertically centred.
+  &__question-zone {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__question {
-    font-family: $font-cn-display;
-    font-size: 38rpx;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    // AC-21 — one rung up the type ladder (was a hardcoded 38rpx).
+    @include type-heading;
     line-height: 1.55;
     letter-spacing: 0.5rpx;
     text-align: center;
@@ -340,12 +343,12 @@ $color-warm-rose: #B83A5E;
     // footer overflowed it — the bottom content clipped on device.
     -webkit-line-clamp: 3;
     overflow: hidden;
-    // Documented exception to the repo-wide keep-all 孤字 rule: at 38rpx in
-    // the narrow card, an unspaced ~14-glyph question becomes ONE unbreakable
-    // run under keep-all, and the only legal break lands before the trailing
-    // ？ — creating the lone-punctuation orphan it was meant to prevent.
-    // Default CJK per-character breaking + UAX#14 no-break-before-closing-
-    // punctuation keeps ？ attached to its final word instead.
+    // Documented exception to the repo-wide keep-all 孤字 rule: at display
+    // size in the narrow card, an unspaced ~14-glyph question becomes ONE
+    // unbreakable run under keep-all, and the only legal break lands before
+    // the trailing ？ — creating the lone-punctuation orphan it was meant
+    // to prevent. Default CJK per-character breaking + UAX#14
+    // no-break-before-closing-punctuation keeps ？ attached to its final word.
     overflow-wrap: break-word;
     word-break: normal;
     margin-top: 0;
@@ -372,19 +375,28 @@ $color-warm-rose: #B83A5E;
     }
   }
 
-  // B4 — 悦仔说 permission whisper. Two lines (2 × 24rpx × 1.65 ≈ 80rpx)
-  // are reserved ONLY when a whisper actually renders on this card (C6/G2) —
-  // cards without a line carry zero dead space; while typing the reserved
-  // box keeps height stable so content never shifts.
-  &__permission {
+  // AC-03 — persistent bottom slot: the 悦仔说 whisper when present (C6
+  // cadence), otherwise the topic counter — the lower band never gapes.
+  &__bottom-slot {
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: flex-end;
+    min-height: 40rpx;
 
     &--reserved {
+      // Whisper: two lines (2 × 24rpx × 1.65 ≈ 80rpx) reserved so the box
+      // keeps height stable while typing (G2).
       min-height: 80rpx;
-      margin-top: 12rpx; // 16rpx content gap + 12rpx = 28rpx
+      align-items: flex-start;
     }
+  }
+
+  &__bottom-counter {
+    font-size: $font-size-xs;
+    line-height: 1.4;
+    color: $color-text-secondary-warm;
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
   }
 
   &__permission-inner {
@@ -407,7 +419,6 @@ $color-warm-rose: #B83A5E;
   }
 
   &__expander {
-    margin-top: auto;
     padding-top: 8rpx;
   }
 
@@ -533,6 +544,47 @@ $color-warm-rose: #B83A5E;
         text-decoration: underline;
         text-underline-offset: 4rpx;
       }
+    }
+  }
+
+  // AC-04 — first-ignition teaching hint: transient capsule floating above
+  // the rim's bottom seats; transform/opacity only, one-way (never replays).
+  &__ember-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 32rpx;
+    transform: translateX(-50%);
+    z-index: 5;
+    pointer-events: none;
+    padding: 8rpx 24rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.96);
+    border: 2rpx solid rgba($color-primary, 0.32);
+    box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.12);
+    animation: warmup-ember-hint-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    white-space: nowrap;
+
+    // Tall cards push the persistent bottom slot (whisper / counter /
+    // expander) into the hint's default anchor — raise above that band.
+    &--raised {
+      bottom: 136rpx;
+    }
+  }
+
+  &__ember-hint-text {
+    font-size: $font-size-2xs;
+    line-height: 1.4;
+    color: $phase-accent-warmup-deep;
+  }
+
+  @keyframes warmup-ember-hint-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8rpx);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
   }
 
@@ -709,12 +761,14 @@ $color-warm-rose: #B83A5E;
 
 @media (prefers-reduced-motion: reduce) {
   .warmup-card-slot {
-    &__dot,
-    &__mood-wrap,
     &__mood-option,
     &__prompt,
     &__question {
       transition: none !important;
+    }
+
+    &__ember-hint {
+      animation: none;
     }
 
     &__shimmer {

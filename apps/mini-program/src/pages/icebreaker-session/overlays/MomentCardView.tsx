@@ -4,6 +4,7 @@ import { View, Canvas, Text, Image } from '@tarojs/components';
 import { getArchetypeHSL } from '@shared/archetypeColors';
 import { logError } from '../../../lib/utils/logger';
 import { getSystemReducedMotionCompat } from '../../../lib/utils/systemInfo'
+import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics';
 
 // Moment card color constants (avoiding hardcoded hex in inline styles / canvas)
 const CARD_BG_DARK = '#1e1e2f';
@@ -367,7 +368,10 @@ function drawKeepsakeBlock(
   }
 
   if (seal && keepsake.depthLevel) {
-    const sealText = `深度·L${keepsake.depthLevel}`;
+    // User-language seal (AC-04) — mirrors DEPTH_SEAL_USER_TEXT in
+    // warmupViewModels.ts; the internal L-scale never leaks onto shares.
+    const KEEPSAKE_SEAL_USER_TEXT: Record<number, string> = { 1: '轻松', 2: '走心', 3: '深聊' };
+    const sealText = KEEPSAKE_SEAL_USER_TEXT[keepsake.depthLevel] ?? '走心';
     const sealHeight = (layout.compact ? 16 : 18) * SCALE;
     ctx.setFontSize(sealTextSize);
     const sealWidth = ctx.measureText(sealText).width + 16 * SCALE;
@@ -753,6 +757,11 @@ export default function MomentCardView({ payload, visible, onClose }: MomentCard
     try {
       await Taro.saveImageToPhotosAlbum({ filePath: canvasUrl });
       Taro.showToast({ title: '已保存到相册', icon: 'success' });
+      // AC-20 (plan #37) 纪念卡保存率 numerator — fire-and-forget, metadata
+      // only (this overlay carries no session ids today).
+      socialIcebreakerAnalytics.track('moment_card_saved', undefined, undefined, 'recap', {
+        source: 'canvas_overlay',
+      });
     } catch {
       // If unauthorized, show preview for manual save
       Taro.previewImage({ urls: [canvasUrl] });
@@ -799,7 +808,7 @@ export default function MomentCardView({ payload, visible, onClose }: MomentCard
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.85)',
+        backgroundColor: 'rgba(0,0,0,0.55)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

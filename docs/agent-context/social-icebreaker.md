@@ -1,6 +1,8 @@
 # Social Icebreaker — Agent Context
 
 > Extracted from AGENTS.md §6 (2026-07-31). Load when building, debugging, or extending the social icebreaker session flow. Skill: `social-icebreaker-domain`. Canonical doc: `docs/icebreaker/icebreaker-system.md`.
+>
+> **Phase × 状态矩阵（AC-19，2026-10-16 建表）：`docs/agent-context/social-icebreaker-phase-state-matrix.md`** — 13 环节 × 9 状态诚实覆盖清单 + 播报权重表（轻 toast / 中 toast+toneLine / 重 overlay，`viewModels/phaseBroadcast.ts`）。
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. `/icebreaker-game` (AI Card Game) is optional deep-dive, not default. **`/start` failure diagnostics (2026-07-11):** access denial returns a structured `code` (`GROUP_EXPIRED`/`NOT_MEMBER_OF_GROUP`/`SESSION_NOT_FOUND` + event analogues) and logs `[SocialIcebreaker] /start access denied`; the mini-program tier selector writes `tier-selector:start-session-failed` to the WeChat realtime log with a scenario toast instead of the silent `创建没成功，再试试`.
 - **Custom mode (`custom` tier):** host-driven free-form flow. Server enters `phase_selection` between phases; host picks next phase via `POST .../select-phase` and can end early via `POST .../end-session`. Feature flag: `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED` (default `true`). In-flight custom sessions continue if the flag is disabled. **Phase-selection data is host-only (2026-07-31):** `sanitizeStateForClient` strips `phaseSelectionId` for non-host callers and `buildClientState` attaches `selectablePhases` only to the host — players never receive the actionable nonce or picker list. CustomModeSection renders phase emblems via `JoyJoinIcon` (`tier='phase'`), never raw emoji. Route-level locks: `socialIcebreakerCustomRoutes.test.ts` (16 tests).

@@ -109,6 +109,12 @@ $color-text-secondary: #6B7280;
 $color-text-tertiary:  #8E949E;
 $color-text-secondary-on-light: #59616C; // readable secondary copy on white/warm/tinted surfaces
 $color-text-tertiary-on-light:  #626A75; // readable small print on white/warm/tinted surfaces
+// Warm-derived secondary for FUNCTIONAL info (counts / durations / hints) on the
+// page-warm-bg family. $color-text-secondary hits only 4.29:1 on #F5F1E8
+// (<4.5); $color-text-muted is far worse — both are banned from functional
+// info on warm floors (icebreaker-uiux-wave1 AC-18). This token holds
+// 5.25:1 on warm-to, 5.48:1 on warm-mid, 5.70:1 on #FFFAF4, 5.92:1 on white.
+$color-text-secondary-warm: #6B6357;
 $color-text-link:      #A86BFF;
 $color-text-white:     #FFFFFF;
 $color-text-muted:     #9CA3AF;

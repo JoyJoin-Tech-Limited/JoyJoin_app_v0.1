@@ -40,6 +40,9 @@ import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
 import { useMiniScriptGeneration } from './hooks/useMiniScriptGeneration'
 import { useSocialActions } from './hooks/useSocialActions'
+import { useWarmupReadiness } from './hooks/useWarmupReadiness'
+import { getPhaseBroadcastWeight } from './viewModels/phaseBroadcast'
+import { WarmupActionBar } from './components/WarmupActionBar'
 import {
   SENSORY_EVENT_HAPTIC_PATTERNS,
   useSessionSensoryEvents,
@@ -411,9 +414,17 @@ export default function IcebreakerSessionPage() {
     syncLostRef.current = syncLost
   }, [syncLost])
 
-  // Xiaoyue phase-transition toast
+  // Xiaoyue phase-transition toast — gated by the broadcast weight table
+  // (AC-14): light/medium phases get the toast; ritual phases are absorbed
+  // by the intro overlay, so overlay + toast never co-fire.
   useEffect(() => {
-    if (phase && phase !== 'warmup' && phase !== 'phase_selection' && prevPhaseRef.current !== 'waiting') {
+    if (
+      phase &&
+      phase !== 'warmup' &&
+      phase !== 'phase_selection' &&
+      prevPhaseRef.current !== 'waiting' &&
+      getPhaseBroadcastWeight(phase) !== 'ritual'
+    ) {
       const toastText = getPhaseToastText(phase)
       setPhaseToast({ visible: true, text: toastText })
       const timer = setTimeout(() => setPhaseToast({ visible: false, text: '' }), 3000)
@@ -501,6 +512,41 @@ export default function IcebreakerSessionPage() {
   })
 
   const canChangeTier = (phase === 'waiting' || phase === 'warmup') && isHost
+
+  // ── Warmup readiness cluster (AC-01): single source of truth for the CTA
+  // dock (rendered below as a ScrollView sibling) AND the phase view's
+  // ember rim / ready capsule. Hook owns the optimistic-ready logic.
+  const warmupReadiness = useWarmupReadiness({
+    topics: session?.warmupTopics ?? [],
+    currentIndex: session?.currentTopicIndex ?? 0,
+    readyUserIds: session?.warmupReadyUserIds ?? [],
+    participants,
+    currentUserId,
+    isHost,
+    isGeneratingTopics: pendingAction === 'topics',
+    topicsError,
+    topicsRecovery,
+    isUpdatingReady: pendingAction === 'warmup-ready',
+    socialSessionId: socialSessionId ?? undefined,
+    icebreakerSessionId: session?.icebreakerSessionId,
+    onToggleReady: handleToggleWarmupReady,
+  })
+
+  // AC-07 — host stall exit: while the stall nudge (adaptive suggestion) is
+  // live during warmup, the dock surfaces 「不等了，直接继续」. UI-only
+  // surfacing of the existing stall mechanism; no server change. Reuses the
+  // pre-registered `stall_nudge_advance` funnel event (PR1 flow revamp).
+  const stallExitVisible = phase === 'warmup' && isHost && !!adaptiveSuggestion
+  const handleStallExit = useCallback(() => {
+    socialIcebreakerAnalytics.track(
+      'stall_nudge_advance',
+      socialSessionId ?? undefined,
+      session?.icebreakerSessionId,
+      phase,
+      { playerCount },
+    )
+    handleAdvancePhase()
+  }, [socialSessionId, session?.icebreakerSessionId, phase, playerCount, handleAdvancePhase])
 
   // Tier-switch confirm flow: preset↔custom mode transitions need an explicit
   // host confirmation (showModal), handled with page-owned state.
@@ -629,12 +675,14 @@ export default function IcebreakerSessionPage() {
   }, [hapticGrammarEnabled])
 
   // Phase intro overlay: trigger when entering a playable phase (not initial load).
+  // AC-14 broadcast weight table: only ritual phases (mini_script, recap)
+  // keep the overlay — every other phase announces via toast alone.
   // Future refactor: extract into useSessionPhase() hook to reduce God-component size.
   useEffect(() => {
     const prev = prevPhaseRef.current
     const skipPhases: SessionPhase[] = ['waiting', 'ended', 'phase_selection']
     const isRealTransition = prev !== phase && !skipPhases.includes(phase) && prev !== 'waiting'
-    if (isRealTransition) {
+    if (isRealTransition && getPhaseBroadcastWeight(phase) === 'ritual') {
       setShowPhaseIntro(true)
     }
     prevPhaseRef.current = phase
@@ -1013,6 +1061,7 @@ export default function IcebreakerSessionPage() {
     lastTopicsMood: lastTopicsMoodRef.current,
     topicsError,
     topicsRecovery,
+    warmupReadiness,
     myVoteIndex,
     hasGeneratedStatements,
     canMoveToNextPlayer,
@@ -1043,8 +1092,6 @@ export default function IcebreakerSessionPage() {
     onGenerateSessionPack: handleGenerateSessionPack,
     onAigcFeedbackTap: handleAigcFeedbackTap,
     onGenerateTopics: handleGenerateTopics,
-    onToggleWarmupReady: handleToggleWarmupReady,
-    onNextWarmupTopic: handleNextWarmupTopic,
     onRitualStart: handleRitualStart,
     onSelectPhase: handleSelectCustomPhase,
     onEndSession: handleEndCustomSession,
@@ -1080,19 +1127,23 @@ export default function IcebreakerSessionPage() {
     onConnectTap: handleConnectTap,
   }
 
+  // AC-01/02 — the warmup CTA dock is a flex SIBLING of the ScrollView
+  // (pool-reg__footer precedent): full-bleed white bar pinned to the bottom
+  // safe-area by the root flex column, never position:fixed.
+  const showWarmupDock = phase === 'warmup' && warmupReadiness.cardState === 'topic_card'
+
   return (
-    <ScrollView
+    <View
       className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}${moodField ? ` icebreaker--mood-field icebreaker--field-${moodField.state}` : ''}`}
-      // Warmup previously locked scrollY off (zero-scroll contract AC11), but
-      // its stacked fixed minimums can exceed short viewports (568–667pt
-      // class), clipping the CTA with no recovery. scrollY is now always on:
-      // the warmup flex layout still fills the viewport on normal devices so
-      // nothing scrolls in practice, and short devices get an escape hatch.
-      scrollY
-      enhanced
-      showScrollbar={false}
-      enableFlex={phase === 'warmup'}
     >
+      <ScrollView
+        className='icebreaker__scroll'
+        // scrollY stays enabled as the short-viewport escape hatch; the dock
+        // below owns the bottom bar so scrolling content never hides the CTA.
+        scrollY
+        enhanced
+        showScrollbar={false}
+      >
       {/* S2 ambient mood field: static gradient layers cross-faded by the
           derived model (opacity/scale inline — WeChat drops hsla(); computed
           rgba/opacities ride inline per the phaseAccents pattern). Rendered
@@ -1186,6 +1237,24 @@ export default function IcebreakerSessionPage() {
         onConfirm={handleConfirmTierSwitch}
       />
       </View>
-    </ScrollView>
+      </ScrollView>
+
+      {showWarmupDock && (
+        <WarmupActionBar
+          ctaState={warmupReadiness.ctaState}
+          isReady={warmupReadiness.effectiveIsReady}
+          isHost={isHost}
+          everyoneReady={warmupReadiness.effectiveEveryoneReady}
+          isUpdatingReady={pendingAction === 'warmup-ready' && !warmupReadiness.selfReadyOptimistic}
+          isAdvancingTopic={pendingAction === 'warmup-next-topic'}
+          isAdvancing={pendingAction === 'advance'}
+          onToggleReady={warmupReadiness.handleToggleReady}
+          onNextTopic={handleNextWarmupTopic}
+          onAdvance={handleAdvancePhase}
+          stallExitVisible={stallExitVisible}
+          onStallExit={handleStallExit}
+        />
+      )}
+    </View>
   )
 }

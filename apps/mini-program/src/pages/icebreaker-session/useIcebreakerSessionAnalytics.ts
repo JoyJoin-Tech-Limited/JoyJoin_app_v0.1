@@ -77,6 +77,33 @@ export function useIcebreakerSessionAnalytics({
     prevPhaseRef.current = phase
   }, [phase, socialSessionId, session, playerCount])
 
+  // AC-20 (plan #37) ready-rate funnel: one snapshot when the session LEAVES
+  // warmup — the numerator/denominator pair (readyCount / playerCount) rides
+  // a single event so the 30-day baseline is computable without joins.
+  // Dedicated prev ref (the picker-return effect above owns prevPhaseRef).
+  const warmupRateTrackedRef = useRef(false)
+  const warmupPrevPhaseRef = useRef<SessionPhase>('waiting')
+  useEffect(() => {
+    const prev = warmupPrevPhaseRef.current
+    warmupPrevPhaseRef.current = phase
+    if (warmupRateTrackedRef.current || !session) return
+    if (prev === 'warmup' && phase !== 'warmup' && phase !== 'waiting') {
+      warmupRateTrackedRef.current = true
+      const readyCount = session.warmupReadyUserIds?.length ?? 0
+      socialIcebreakerAnalytics.track(
+        'warmup_ready_rate',
+        socialSessionId ?? undefined,
+        session.icebreakerSessionId,
+        'warmup',
+        {
+          readyCount,
+          playerCount,
+          everyoneReady: playerCount > 0 && readyCount >= playerCount,
+        },
+      )
+    }
+  }, [phase, session, socialSessionId, playerCount])
+
   // Stall nudge impression (S7 静默救援): fires once per suggestion arrival,
   // host-only. The retired server field `stallNudgeAt` never gets set in the
   // current server (machinery removed 2026-07-29) — the suggestion's
@@ -108,14 +135,30 @@ export function useIcebreakerSessionAnalytics({
       return
     }
     recapTrackedRef.current = true
+    const source = session.lastAdvanceTrigger === 'early_end_jump' ? 'early_end' : 'natural'
+    const phasesCompleted = (session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length
     socialIcebreakerAnalytics.track(
       'recap_view',
       socialSessionId ?? undefined,
       session.icebreakerSessionId,
       phase,
       {
-        source: session.lastAdvanceTrigger === 'early_end_jump' ? 'early_end' : 'natural',
-        phasesCompleted: (session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length,
+        source,
+        phasesCompleted,
+        playerCount,
+      },
+    )
+    // AC-20 (plan #37) phase-completion-rate: same terminal moment, single
+    // event carrying the completed/enabled pair for the baseline funnel.
+    socialIcebreakerAnalytics.track(
+      'phase_completion_rate',
+      socialSessionId ?? undefined,
+      session.icebreakerSessionId,
+      phase,
+      {
+        completedCount: phasesCompleted,
+        enabledCount: (session.enabledPhases ?? []).filter((p) => p !== 'phase_selection').length,
+        earlyEnd: source === 'early_end',
         playerCount,
       },
     )

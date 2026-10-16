@@ -217,7 +217,7 @@
 
   &__card-meta-item {
     font-size: $font-size-2xs;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     background: rgba($color-text-primary, 0.04);
     padding: 4rpx 12rpx;
     border-radius: $radius-full;
@@ -259,7 +259,7 @@
 
   &__divider-text {
     font-size: $font-size-xs;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
   }
 
   &__footer {

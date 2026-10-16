@@ -73,6 +73,7 @@ export const ICEBREAKER_REVEAL_ASSETS = [
  *  These are CDN tiers (see CDN_ICON_TIERS); preloading warms the CDN cache. */
 export const ICEBREAKER_PHASE_EMBLEM_ASSETS = [
   '/assets/icons/phase-icons/phase-warmup.webp',
+  '/assets/icons/phase-icons/phase-topic-card.webp',
   '/assets/icons/phase-icons/phase-micro-challenge.webp',
   '/assets/icons/phase-icons/phase-lie-detective.webp',
   '/assets/icons/phase-icons/phase-personality-dice.webp',
