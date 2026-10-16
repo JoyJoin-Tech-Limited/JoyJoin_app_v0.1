@@ -3,6 +3,7 @@ import {
   MAX_TAGS_PER_ATTENDEE,
   type ConnectionRadarState,
 } from './feedbackOptions'
+import { validateWechatContactId } from '@shared/wechatContactId'
 
 export interface AttendeeTraitInput {
   displayName: string
@@ -16,13 +17,11 @@ export interface AttendeeTraitInput {
  */
 export interface BalancedFeedbackInput {
   atmosphereScore: number
-  atmosphereNote: string
   attendeeTraits: Record<string, AttendeeTraitInput>
   connectionRadar: ConnectionRadarState
   connectionStatus: string | null
   hasNewConnections: boolean
   improvementAreas: string[]
-  improvementOther: string
   venueStyleRating: 'like' | 'neutral' | 'dislike' | null
 }
 
@@ -33,6 +32,11 @@ interface EventFeedbackPayloadInput {
    * so `comment` would be silently dropped (2026-08-07 wire-contract fix). */
   comment: string
   connections: string[]
+  /** Raw 微信号 input from the conditional collection step. Only rides the
+   * wire when it passes the shared validator — the server's backfill
+   * (social.ts) re-validates and skips invalid values without failing the
+   * feedback write. */
+  wechatContactId?: string
   /** Omit to submit the base 3-step flow without the balanced layer. */
   balanced?: Partial<BalancedFeedbackInput>
 }
@@ -82,6 +86,7 @@ export function buildEventFeedbackPayload({
   rating,
   comment,
   connections,
+  wechatContactId,
   balanced,
 }: EventFeedbackPayloadInput) {
   const payload: Record<string, unknown> = {
@@ -90,13 +95,19 @@ export function buildEventFeedbackPayload({
     connections,
   }
 
+  // 微信号采集（2026-10-16 spec §4.3）: trimmed + validated here so a skipped
+  // or invalid value never reaches the wire; the server treats it as an
+  // auxiliary field (invalid → skip write, never fail the feedback).
+  if (typeof wechatContactId === 'string' && wechatContactId.trim() !== '') {
+    const verdict = validateWechatContactId(wechatContactId)
+    if (verdict.ok) payload.wechatContactId = verdict.value
+  }
+
   if (!balanced) return payload
 
   if (typeof balanced.atmosphereScore === 'number' && balanced.atmosphereScore > 0) {
     payload.atmosphereScore = balanced.atmosphereScore
   }
-  const atmosphereNote = balanced.atmosphereNote?.trim()
-  if (atmosphereNote) payload.atmosphereNote = atmosphereNote
 
   const attendeeTraits = cleanAttendeeTraits(balanced.attendeeTraits)
   if (Object.keys(attendeeTraits).length > 0) payload.attendeeTraits = attendeeTraits
@@ -114,9 +125,6 @@ export function buildEventFeedbackPayload({
     .filter((area) => area.length > 0)
     .slice(0, MAX_IMPROVEMENT_AREAS)
   if (improvementAreas.length > 0) payload.improvementAreas = improvementAreas
-
-  const improvementOther = balanced.improvementOther?.trim()
-  if (improvementOther) payload.improvementOther = improvementOther
 
   if (balanced.venueStyleRating) payload.venueStyleRating = balanced.venueStyleRating
 

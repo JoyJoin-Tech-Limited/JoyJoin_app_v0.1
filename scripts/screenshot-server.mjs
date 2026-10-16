@@ -5,6 +5,7 @@ import { chromium, devices } from 'playwright'
 import { registerSocialGenerators } from './screenshot/generators-social.mjs'
 import { registerDiscoverAreaGenerators } from './screenshot/generators-discover-area.mjs'
 import { registerFlashTeaserGenerators } from './screenshot/generators-flash-teaser.mjs'
+import { registerEventFeedbackGenerators } from './screenshot/generators-event-feedback.mjs'
 import { registerEventDetailGenerators } from './screenshot/generators-event-detail.mjs'
 
 const app = express()
@@ -162,6 +163,7 @@ const generatorCtx = {
 registerSocialGenerators(generatorCtx)
 registerDiscoverAreaGenerators(generatorCtx)
 registerFlashTeaserGenerators(generatorCtx)
+registerEventFeedbackGenerators(generatorCtx)
 registerEventDetailGenerators(generatorCtx)
 
 // ─── Generators ──────────────────────────────────────────────────

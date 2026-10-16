@@ -25,6 +25,8 @@ interface ArchetypeHeadProps {
   fallbackText?: string
   className?: string
   variant?: 'head' | 'grid'
+  /** Fires when both the local and CDN asset tiers fail (see renderer). */
+  onAssetError?: () => void
 }
 
 export default function ArchetypeHead({
@@ -34,6 +36,7 @@ export default function ArchetypeHead({
   fallbackText,
   className = '',
   variant = 'head',
+  onAssetError,
 }: ArchetypeHeadProps) {
   return (
     <ArchetypeHeadRenderer
@@ -43,6 +46,7 @@ export default function ArchetypeHead({
       fallback={fallback}
       fallbackText={fallbackText}
       className={className}
+      onAssetError={onAssetError}
     />
   )
 }

@@ -38,8 +38,6 @@ export const CEREMONY_HEROES = {
   eventPaidConfirmed: cdnAsset(`${BASE}/event-paid-confirmed-20260604-v1.webp`),
   /** C4 — `/pages/invite` share-card section */
   inviteCoBranded: cdnAsset(`${BASE}/invite-co-branded-20260604-v1.webp`),
-  /** C5 — `/pages/event-feedback` success state */
-  eventFeedbackThanks: cdnAsset(`${BASE}/event-feedback-thanks-20260604-v1.webp`),
   /** C6 — `/pages/icebreaker-session/phases/RecapPhaseView` end overlay */
   seeYouNextTime: cdnAsset(`${BASE}/see-you-next-time-20260604-v1.webp`),
 

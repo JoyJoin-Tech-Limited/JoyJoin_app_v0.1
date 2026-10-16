@@ -13,6 +13,45 @@ import { validateContentSafe, validateContentSafeAsync, contentViolationResponse
 import { recordViolation } from "../../abuseDetection";
 import { canonicalEventIdGuard } from "../../lib/resolveCanonicalEventId";
 import { resolveFeedbackState } from "../../lib/feedbackStateResolver";
+import { formatAge } from "@shared/utils";
+import { validateWechatContactId } from "@shared/wechatContactId";
+
+/**
+ * Visibility-gated identity fields for the feedback wrap-up row (2026-10-16).
+ * Mirrors the disclosure tier the pool-group detail already grants tablemates
+ * (userEventPools.ts GET /api/pool-groups/:groupId): age band and industry are
+ * gated by the owner's visibility settings; 不透露 gender is withheld; socialTag
+ * is the user's own self-selected identity label from the assessment.
+ */
+type ParticipantIdentitySource = {
+  birthdate?: string | null;
+  ageVisibility?: string | null;
+  gender?: string | null;
+  workVisibility?: string | null;
+  industrySegmentLabel?: string | null;
+  industryCategoryLabel?: string | null;
+  socialTag?: string | null;
+};
+
+function deriveParticipantIdentity(user: ParticipantIdentitySource | undefined): {
+  ageLabel: string | null;
+  gender: string | null;
+  industryLabel: string | null;
+  socialTag: string | null;
+} {
+  if (!user) {
+    return { ageLabel: null, gender: null, industryLabel: null, socialTag: null };
+  }
+  const industryLabel = user.workVisibility !== 'hide_all'
+    ? firstNonEmptyString(user.industrySegmentLabel, user.industryCategoryLabel) ?? null
+    : null;
+  return {
+    ageLabel: formatAge(user.birthdate ?? null, user.ageVisibility ?? 'hide_all'),
+    gender: user.gender && user.gender !== '不透露' ? user.gender : null,
+    industryLabel,
+    socialTag: firstNonEmptyString(user.socialTag) ?? null,
+  };
+}
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -74,6 +113,10 @@ export function registerSocialRoutes(app: Express): void {
         firstName: string | null;
         archetype: string | null;
         avatarUrl: string | null;
+        ageLabel: string | null;
+        gender: string | null;
+        industryLabel: string | null;
+        socialTag: string | null;
       };
       type ParticipantUserRow = {
         id: string;
@@ -81,9 +124,10 @@ export function registerSocialRoutes(app: Express): void {
         firstName: string | null;
         lastName: string | null;
         archetype: string | null;
+        primaryArchetype: string | null;
         profileImageUrl: string | null;
         wechatAvatarUrl: string | null;
-      };
+      } & ParticipantIdentitySource;
       const seen = new Set<string>();
       const participants: ParticipantRow[] = [];
       const push = (row: ParticipantRow) => {
@@ -119,8 +163,19 @@ export function registerSocialRoutes(app: Express): void {
                 firstName: schema.users.firstName,
                 lastName: schema.users.lastName,
                 archetype: schema.users.archetype,
+                // V4 users + matching-test bots only populate primary_archetype;
+                // legacy rows only have archetype (nameCn). Coalesce client-side
+                // in the row mapping so both work (same pattern as pool-groups).
+                primaryArchetype: schema.users.primaryArchetype,
                 profileImageUrl: schema.users.profileImageUrl,
                 wechatAvatarUrl: schema.users.wechatAvatarUrl,
+                birthdate: schema.users.birthdate,
+                ageVisibility: schema.users.ageVisibility,
+                gender: schema.users.gender,
+                workVisibility: schema.users.workVisibility,
+                industrySegmentLabel: schema.users.industrySegmentLabel,
+                industryCategoryLabel: schema.users.industryCategoryLabel,
+                socialTag: schema.users.socialTag,
               })
               .from(schema.users)
               .where(inArray(schema.users.id, attendeeIds))
@@ -135,10 +190,13 @@ export function registerSocialRoutes(app: Express): void {
               ? getEventChatDisplayName(attendeeUser)
               : attendee.displayName?.trim() || '参与者',
             firstName: attendeeUser?.firstName ?? null,
-            archetype: attendeeUser?.archetype ?? attendee.archetype ?? null,
+            archetype: attendeeUser
+              ? attendeeUser.primaryArchetype ?? attendeeUser.archetype ?? null
+              : attendee.archetype ?? null,
             avatarUrl: attendeeUser
               ? firstNonEmptyString(attendeeUser.profileImageUrl, attendeeUser.wechatAvatarUrl) ?? null
               : null,
+            ...deriveParticipantIdentity(attendeeUser),
           });
         }
         return res.json(participants);
@@ -179,8 +237,16 @@ export function registerSocialRoutes(app: Express): void {
             firstName: schema.users.firstName,
             lastName: schema.users.lastName,
             archetype: schema.users.archetype,
+            primaryArchetype: schema.users.primaryArchetype,
             profileImageUrl: schema.users.profileImageUrl,
             wechatAvatarUrl: schema.users.wechatAvatarUrl,
+            birthdate: schema.users.birthdate,
+            ageVisibility: schema.users.ageVisibility,
+            gender: schema.users.gender,
+            workVisibility: schema.users.workVisibility,
+            industrySegmentLabel: schema.users.industrySegmentLabel,
+            industryCategoryLabel: schema.users.industryCategoryLabel,
+            socialTag: schema.users.socialTag,
           })
           .from(schema.eventPoolRegistrations)
           .innerJoin(schema.users, eq(schema.eventPoolRegistrations.userId, schema.users.id))
@@ -196,8 +262,9 @@ export function registerSocialRoutes(app: Express): void {
             id: row.id,
             displayName: getEventChatDisplayName(row),
             firstName: row.firstName ?? null,
-            archetype: row.archetype ?? null,
+            archetype: row.primaryArchetype ?? row.archetype ?? null,
             avatarUrl: firstNonEmptyString(row.profileImageUrl, row.wechatAvatarUrl) ?? null,
+            ...deriveParticipantIdentity(row),
           });
         }
         return res.json(participants);
@@ -211,8 +278,16 @@ export function registerSocialRoutes(app: Express): void {
           firstName: schema.users.firstName,
           lastName: schema.users.lastName,
           archetype: schema.users.archetype,
+          primaryArchetype: schema.users.primaryArchetype,
           profileImageUrl: schema.users.profileImageUrl,
           wechatAvatarUrl: schema.users.wechatAvatarUrl,
+          birthdate: schema.users.birthdate,
+          ageVisibility: schema.users.ageVisibility,
+          gender: schema.users.gender,
+          workVisibility: schema.users.workVisibility,
+          industrySegmentLabel: schema.users.industrySegmentLabel,
+          industryCategoryLabel: schema.users.industryCategoryLabel,
+          socialTag: schema.users.socialTag,
         })
         .from(schema.eventAttendance)
         .innerJoin(schema.users, eq(schema.eventAttendance.userId, schema.users.id))
@@ -228,8 +303,9 @@ export function registerSocialRoutes(app: Express): void {
           id: row.id,
           displayName: getEventChatDisplayName(row),
           firstName: row.firstName ?? null,
-          archetype: row.archetype ?? null,
+          archetype: row.primaryArchetype ?? row.archetype ?? null,
           avatarUrl: firstNonEmptyString(row.profileImageUrl, row.wechatAvatarUrl) ?? null,
+          ...deriveParticipantIdentity(row),
         });
       }
       return res.json(participants);
@@ -411,11 +487,25 @@ export function registerSocialRoutes(app: Express): void {
         }
       }
 
+      // WeChat contact-ID backfill (2026-10-16, spec
+      // docs/design/wechat-id-collection-spec-20261016.md §5): the mini-program
+      // sends this from the conditional 微信号 step. Revalidated with the
+      // shared validator — an invalid value is skipped with a warn, never a
+      // 400: the ID is an accessory field and must not sink the feedback
+      // submission.
       const { wechatContactId } = req.body;
       if (wechatContactId && typeof wechatContactId === 'string' && wechatContactId.trim()) {
-        const currentUser = await storage.getUser(userId);
-        if (!currentUser?.wechatContactId) {
-          await storage.updateUserWechatId(userId, wechatContactId.trim());
+        const parsedWechatId = validateWechatContactId(wechatContactId);
+        if (!parsedWechatId.ok) {
+          logger.warn("Rejected invalid wechatContactId on feedback backfill", {
+            userId,
+            reason: parsedWechatId.reason,
+          });
+        } else {
+          const currentUser = await storage.getUser(userId);
+          if (!currentUser?.wechatContactId) {
+            await storage.updateUserWechatId(userId, parsedWechatId.value);
+          }
         }
       }
 
@@ -423,6 +513,9 @@ export function registerSocialRoutes(app: Express): void {
       // Any 5-dimension field present ⇒ deep feedback (50xp/50coins) + the
       // has_deep_feedback flag; otherwise the base reward (20xp/20coins).
       // Mirrors the UI promise "完成可得 +30 积分" (50 − 20 = 30).
+      // NOTE (2026-10-16): atmosphereNote/improvementOther are legacy-client-only
+      // — those inputs were removed from the mini-program, but they remain in this
+      // check so older published app versions still earn deep feedback XP.
       const hasDeepFeedback = [
         feedbackData.atmosphereScore,
         feedbackData.atmosphereNote,
