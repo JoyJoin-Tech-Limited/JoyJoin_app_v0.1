@@ -53,10 +53,13 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
         END
       `,
       peerWechatId: sql<string | null>`
-        CASE
-          WHEN ${connections.userAId} = ${userId} THEN ${connections.userBWechatId}
-          ELSE ${connections.userAWechatId}
-        END
+        COALESCE(
+          CASE
+            WHEN ${connections.userAId} = ${userId} THEN ${connections.userBWechatId}
+            ELSE ${connections.userAWechatId}
+          END,
+          ${users.wechatContactId}
+        )
       `,
       peerName: users.displayName,
       peerArchetype: users.archetype,

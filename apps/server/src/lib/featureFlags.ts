@@ -475,6 +475,14 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  the identity/cohort queries. Env fallback:
    *  INDUSTRY_COHORT_COUNT_ENABLED (default: true). */
   industryCohortCountEnabled: "INDUSTRY_COHORT_COUNT_ENABLED",
+  /** WeChat contact-ID collection (2026-10-16, spec
+   *  docs/design/wechat-id-collection-spec-20261016.md): gates the
+   *  event-feedback conditional 微信号 step (A) and the revealed remedy card
+   *  (C) in the mini-program, plus the POST /api/user/wechat-contact endpoint
+   *  (503 when off). Ships dark — flag-on happens only after the pre-launch
+   *  baseline pull (spec §6). Env fallback: WECHAT_ID_COLLECTION_ENABLED
+   *  (default: false). */
+  wechatIdCollectionEnabled: "WECHAT_ID_COLLECTION_ENABLED",
   /** Icebreaker Wave 3 (sprint icebreaker-uiux-wave3, contract AC-02): gates
    *  client visibility of the five per-phase `*ContentStatus` fields
    *  (quip/undercover/groupMirror/auction/dice), the `leftUserIds` leave
@@ -634,6 +642,10 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  listFeatureFlags() show a stable default AND an unset env keeps the
    *  endpoint live. */
   industryCohortCountEnabled: true,
+  /** WeChat contact-ID collection ships dark until the spec §6 baseline pull;
+   *  explicit false so the admin toggle UI and listFeatureFlags() show a
+   *  stable default. Flag-off = byte-identical current production behavior. */
+  wechatIdCollectionEnabled: false,
   /** Icebreaker Wave 3 content-status projection ships dark (contract AC-02);
    *  explicit false so the admin toggle UI and listFeatureFlags() show a
    *  stable default. Flag-off = byte-identical pre-Wave-3 snapshots. */

@@ -72,7 +72,13 @@ export type ErrorCode =
   // ALREADY_REGISTERED posture — a terminal joined state, not a failure.
   | 'FEEDBACK_NOT_OPEN'
   | 'FEEDBACK_NOT_ELIGIBLE'
-  | 'FEEDBACK_ALREADY_SUBMITTED';
+  | 'FEEDBACK_ALREADY_SUBMITTED'
+  // WeChat contact-ID collection (2026-10-16, spec
+  // docs/design/wechat-id-collection-spec-20261016.md): emitted by
+  // POST /api/user/wechat-contact when the server-side revalidation rejects
+  // the value. The detailed rule lives in the persistent field hint
+  // (WECHAT_ID_FORMAT_HINT); the toast stays short.
+  | 'INVALID_WECHAT_CONTACT_ID';
 
 interface ErrorTemplate {
   /** Surface type — determines tone mode */
@@ -317,6 +323,14 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   FEEDBACK_ALREADY_SUBMITTED: {
     surface: 'toast-error',
     default: '你已经评价过这场活动啦',
+  },
+  // Zero-emoji, particle-free system toast. The full format rule is carried
+  // by the persistent field hint; this only fires when the server-side
+  // backstop rejects a value the client validator already had a chance to
+  // catch.
+  INVALID_WECHAT_CONTACT_ID: {
+    surface: 'toast-error',
+    default: '微信号格式不对，检查一下？',
   },
 };
 

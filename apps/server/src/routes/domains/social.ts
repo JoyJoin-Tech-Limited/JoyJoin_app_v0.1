@@ -13,6 +13,7 @@ import { validateContentSafe, validateContentSafeAsync, contentViolationResponse
 import { recordViolation } from "../../abuseDetection";
 import { canonicalEventIdGuard } from "../../lib/resolveCanonicalEventId";
 import { resolveFeedbackState } from "../../lib/feedbackStateResolver";
+import { validateWechatContactId } from "@shared/wechatContactId";
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -411,11 +412,25 @@ export function registerSocialRoutes(app: Express): void {
         }
       }
 
+      // WeChat contact-ID backfill (2026-10-16, spec
+      // docs/design/wechat-id-collection-spec-20261016.md §5): the mini-program
+      // sends this from the conditional 微信号 step. Revalidated with the
+      // shared validator — an invalid value is skipped with a warn, never a
+      // 400: the ID is an accessory field and must not sink the feedback
+      // submission.
       const { wechatContactId } = req.body;
       if (wechatContactId && typeof wechatContactId === 'string' && wechatContactId.trim()) {
-        const currentUser = await storage.getUser(userId);
-        if (!currentUser?.wechatContactId) {
-          await storage.updateUserWechatId(userId, wechatContactId.trim());
+        const parsedWechatId = validateWechatContactId(wechatContactId);
+        if (!parsedWechatId.ok) {
+          logger.warn("Rejected invalid wechatContactId on feedback backfill", {
+            userId,
+            reason: parsedWechatId.reason,
+          });
+        } else {
+          const currentUser = await storage.getUser(userId);
+          if (!currentUser?.wechatContactId) {
+            await storage.updateUserWechatId(userId, parsedWechatId.value);
+          }
         }
       }
 

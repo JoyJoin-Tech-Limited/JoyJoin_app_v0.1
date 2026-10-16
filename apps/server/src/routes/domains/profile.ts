@@ -14,6 +14,9 @@ import { logger } from "../../lib/logger";
 import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
 import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
+import { getFeatureFlag } from "../../lib/featureFlags";
+import { getErrorMessage } from "@shared/copy/errorBaselines";
+import { validateWechatContactId } from "@shared/wechatContactId";
 
 const interestSelectionSchema = z.object({
   topicId: z.string(),
@@ -645,6 +648,49 @@ export function registerProfileRoutes(app: Express): void {
     } catch (error: any) {
       logger.error("Update industry error:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ error: "Update failed", message: error.message });
+    }
+  });
+
+  // POST /api/user/wechat-contact — set-once self-service write for the
+  // event-feedback revealed-page remedy card (2026-10-16, spec
+  // docs/design/wechat-id-collection-spec-20261016.md §5). First-write-only,
+  // mirroring the feedback-POST backfill semantics: an already-set ID is
+  // never overwritten (update semantics are a deferred v2 decision).
+  // Gated by the wechatIdCollectionEnabled kill switch.
+  app.post('/api/user/wechat-contact', requireAuth, async (req: any, res) => {
+    try {
+      if (!(await getFeatureFlag('wechatIdCollectionEnabled', false))) {
+        return res.status(503).json({
+          code: 'WECHAT_ID_COLLECTION_DISABLED',
+          message: '功能暂未开放',
+        });
+      }
+      const userId = req.session.userId;
+      // The client validates before submitting; the server revalidates with
+      // the same shared validator because it is the authority.
+      const parsed = validateWechatContactId(
+        typeof req.body?.wechatContactId === 'string' ? req.body.wechatContactId : '',
+      );
+      if (!parsed.ok) {
+        return res.status(400).json({
+          code: 'INVALID_WECHAT_CONTACT_ID',
+          message: getErrorMessage('INVALID_WECHAT_CONTACT_ID'),
+        });
+      }
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(404).json({ code: 'not-found', message: '用户不存在' });
+      }
+      if (currentUser.wechatContactId) {
+        // Set-once idempotent: repeated saves are success-no-ops, never
+        // overwrites.
+        return res.json({ ok: true, unchanged: true });
+      }
+      await storage.updateUserWechatId(userId, parsed.value);
+      return res.json({ ok: true });
+    } catch (error) {
+      logger.error('Error saving wechat contact id', { error: String(error) });
+      return res.status(500).json({ code: 'save-failed', message: getErrorMessage('save-failed') });
     }
   });
   app.get('/api/personality-test/share-card-data', requireAuth, async (req: any, res) => {

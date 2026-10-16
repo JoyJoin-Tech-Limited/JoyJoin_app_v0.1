@@ -160,6 +160,16 @@ const DISCOVER_EVENT_TYPES = [
   "feedback_locked_tap",
   "feedback_reminder_tap",
   "feedback_page_open",
+  // WeChat contact-ID collection funnel (2026-10-16, spec
+  // docs/design/wechat-id-collection-spec-20261016.md §6): conditional 微信号
+  // step + revealed remedy card. Metadata carries reason enums only — never
+  // the WeChat ID itself.
+  "feedback_wechat_step_shown",
+  "feedback_wechat_saved",
+  "feedback_wechat_skipped",
+  "feedback_wechat_invalid",
+  "feedback_wechat_remedy_saved",
+  "feedback_wechat_remedy_failed",
   "promo_banner_impression",
   "promo_banner_cta_tap",
   "promo_banner_image_error",

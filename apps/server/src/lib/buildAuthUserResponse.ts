@@ -159,6 +159,7 @@ const [
     preRevealRefundEnabled,
     checkoutSubscriptionUpsellEnabled,
     entryCardInsightV2Enabled,
+    wechatIdCollectionEnabled,
     entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
@@ -232,6 +233,9 @@ const [
     // AC-18): v2 is the shipped state — default true; the flag is the
     // same-day rollback lever to the legacy single-line UI + gift timing.
     getFeatureFlag('entryCardInsightV2Enabled', true),
+    // WeChat contact-ID collection (2026-10-16 spec): gates the event-feedback
+    // 微信号 step + revealed remedy card. Ships dark until the §6 baseline.
+    getFeatureFlag('wechatIdCollectionEnabled', false),
     // Server-resolved entitlement signal (pool-registration gate semantics via
     // lib/entitlement.ts), joined into the flag batch so the cold-start auth
     // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
@@ -350,6 +354,9 @@ const [
       /** Entry-card insight v2 three-line reveal on profile-review. Default:
        *  true (shipped state); false = rollback to legacy single-line UI. */
       entryCardInsightV2Enabled,
+      /** WeChat contact-ID collection (ships dark): event-feedback 微信号
+       *  conditional step + revealed remedy card. */
+      wechatIdCollectionEnabled,
     },
   };
 
