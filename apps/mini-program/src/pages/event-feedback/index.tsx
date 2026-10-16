@@ -1,12 +1,20 @@
-import { View, Text, Button, Textarea, Input, Image, ScrollView } from '@tarojs/components'
+import { View, Text, Button, Input, Image, ScrollView, Canvas } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { getEventFeedbackState, getEventParticipants, getMyPoolRegistrations, type EventParticipantSummary } from '@shared/api'
+import {
+  validateWechatContactId,
+  WECHAT_CONTACT_ID_MAX_LENGTH,
+  WECHAT_ID_FORMAT_HINT,
+  WECHAT_ID_WCID_PREFIX_HINT,
+  WECHAT_ID_SET_ONCE_HINT,
+} from '@shared/wechatContactId'
+import { getEventFeedbackState, getEventParticipants, getMyPoolRegistrations, type AuthUserResponse, type EventParticipantSummary } from '@shared/api'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { apiRequest } from '../../lib/api/api'
 import { queryClient } from '../../lib/api/queryClient'
+import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
 import { CONNECTIONS_SHELL_QUERY_KEY, EVENTS_SHELL_QUERY_KEY, JOINED_EVENTS_QUERY_KEY, REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -14,7 +22,6 @@ import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
 import { haptics } from '../../lib/utils/haptics'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
@@ -22,13 +29,13 @@ import RatingFace from '../../components/ui/RatingFace'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import StatusCard from '../../components/ui/StatusCard'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import { ParticleBurst } from '../../components/reveal'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
 import Card from '../../components/ui/Card'
-import Chip from '../../components/ui/Chip'
 import {
-  ATTENDEE_TRAIT_PRESETS,
   ATMOSPHERE_LABELS,
   CONNECTION_STATUS_OPTIONS,
-  IMPROVEMENT_AREA_PRESETS,
   MAX_IMPROVEMENT_AREAS,
   MAX_TAGS_PER_ATTENDEE,
   RADAR_DIMENSIONS,
@@ -40,6 +47,12 @@ import {
 } from './feedbackOptions'
 import { buildEventFeedbackPayload, type AttendeeTraitInput } from './feedbackPayload'
 import { buildGroupOutcomePayload } from './groupOutcomePayload'
+import { formatEventDayLabel } from './feedbackSummary'
+import ParticipantAvatar from './steps/ParticipantAvatar'
+import ConnectionsStep from './steps/ConnectionsStep'
+import WrapupStep from './steps/WrapupStep'
+import { KEEPSAKE_CARD_CANVAS_ID } from './keepsakeCard'
+import { useKeepsakeCard } from './hooks/useKeepsakeCard'
 import './index.scss'
 
 interface MutualMatch {
@@ -53,29 +66,52 @@ interface MutualMatch {
 // invite → deep-atmosphere → deep-people) folded into 3 screens. The rating
 // faces and the 均衡反馈 deep fields all describe the same event experience, so
 // they now share one screen; the invite interstitial is gone.
+// 2026-10-16: 'wechat' is a CONDITIONAL step between connections and wrapup —
+// it renders only when the user picked ≥1 person, has no 微信号 on file, and
+// the wechatIdCollectionEnabled feature flag is on (spec §3).
 type FeedbackStep =
   | 'experience'
   | 'connections'
+  | 'wechat'
   | 'wrapup'
   | 'revealed'
 
-/** Ordered interactive steps (revealed is the terminal celebration, not a step). */
+/** Base ordered interactive steps (revealed is the terminal celebration, not
+ *  a step). When the wechat collection step applies, the flow runs
+ *  WECHAT_STEP_ORDER instead. */
 const FEEDBACK_STEP_ORDER: Array<Exclude<FeedbackStep, 'revealed'>> = ['experience', 'connections', 'wrapup']
 
-/** 1/2/3 progress dots — the flow had no sense of place before (2026-07-28). */
-function renderStepProgress(current: Exclude<FeedbackStep, 'revealed'>) {
-  const activeIndex = FEEDBACK_STEP_ORDER.indexOf(current)
+/** 4-step order with the conditional 微信号 collection step in play. */
+const WECHAT_STEP_ORDER: Array<Exclude<FeedbackStep, 'revealed'>> = ['experience', 'connections', 'wechat', 'wrapup']
+
+/** Progress dots — the flow had no sense of place before (2026-07-28).
+ *  2026-10-16 Batch A (item 2): the denominator is VISIT-STABLE — the page
+ *  passes `dotSteps`, keyed off collection eligibility (flag + no ID on
+ *  file), never off the live selection count, so the dots no longer flip
+ *  3→4 mid-flow when the user picks someone. Past steps render a solid
+ *  --done dot; the current step keeps the elongated --active capsule, so
+ *  the final step still reads "you are here". */
+function renderStepProgress(
+  current: Exclude<FeedbackStep, 'revealed'>,
+  order: ReadonlyArray<Exclude<FeedbackStep, 'revealed'>> = FEEDBACK_STEP_ORDER,
+) {
+  const activeIndex = order.indexOf(current)
   return (
     <View className='event-feedback__progress' aria-hidden='true'>
-      {FEEDBACK_STEP_ORDER.map((stepId, index) => (
+      {order.map((stepId, index) => (
         <View
           key={stepId}
-          className={`event-feedback__progress-dot ${index <= activeIndex ? 'event-feedback__progress-dot--active' : ''}`}
+          className={`event-feedback__progress-dot ${index < activeIndex ? 'event-feedback__progress-dot--done' : ''} ${index === activeIndex ? 'event-feedback__progress-dot--active' : ''}`}
         />
       ))}
     </View>
   )
 }
+
+// Pre-ship (2026-10-16 USA audit): at the moment of failure the format rule
+// must not vanish — the hint slot is taken by the error (item 11, one voice),
+// so the error itself restates the rule.
+const WECHAT_ID_FORMAT_ERROR = `微信号格式不太对：${WECHAT_ID_FORMAT_HINT}`
 
 // ─── Balanced layer primitives (均衡反馈) ──────────────────────────────────
 // The thermometer and the connection radar share ONE 1-5 dot language (灯格):
@@ -87,9 +123,16 @@ interface ScaleDotsProps {
   labels?: readonly string[]
   ariaGroupLabel: string
   compact?: boolean
+  /**
+   * Batch C item 4 (2026-10-16): radar rows show scale copy ONLY once a value
+   * is selected — the row mounts on first selection and non-active anchors
+   * stay invisible (opacity only) so the active word keeps its dot position.
+   * The thermometer leaves this off: its anchors are always visible.
+   */
+  selectedOnlyLabels?: boolean
 }
 
-function ScaleDots({ value, onChange, labels, ariaGroupLabel, compact = false }: ScaleDotsProps) {
+function ScaleDots({ value, onChange, labels, ariaGroupLabel, compact = false, selectedOnlyLabels = false }: ScaleDotsProps) {
   return (
     <View
       className={`event-feedback__scale ${compact ? 'event-feedback__scale--compact' : ''}`}
@@ -116,12 +159,12 @@ function ScaleDots({ value, onChange, labels, ariaGroupLabel, compact = false }:
           )
         })}
       </View>
-      {labels ? (
+      {labels && (!selectedOnlyLabels || value > 0) ? (
         <View className='event-feedback__scale-labels'>
           {labels.map((label, index) => (
             <Text
               key={label}
-              className={`event-feedback__scale-label ${value === index + 1 ? 'event-feedback__scale-label--active' : ''}`}
+              className={`event-feedback__scale-label ${value === index + 1 ? 'event-feedback__scale-label--active' : ''} ${selectedOnlyLabels && value !== index + 1 ? 'event-feedback__scale-label--hidden' : ''}`}
             >
               {label}
             </Text>
@@ -172,7 +215,16 @@ function RadarScale({
         <Text className='event-feedback__radar-label'>{label}</Text>
         <Text className='event-feedback__radar-hint'>{hint}</Text>
       </View>
-      <ScaleDots value={value} onChange={onChange} ariaGroupLabel={`${label}，1 到 5 分`} compact />
+      <ScaleDots
+        value={value}
+        onChange={onChange}
+        ariaGroupLabel={`${label}，1 到 5 分`}
+        compact
+        // Batch C item 4: same shared 灯格 anchors as the thermometer, shown
+        // only once a value is selected (quiet confirmation, no label noise).
+        labels={ATMOSPHERE_LABELS}
+        selectedOnlyLabels
+      />
     </View>
   )
 }
@@ -201,31 +253,6 @@ function SelectPill({
   )
 }
 
-function ParticipantAvatar({ participant, name }: { participant: EventParticipantSummary; name: string }) {
-  const [imageFailed, setImageFailed] = useState(false)
-
-  if (!participant.avatarUrl || imageFailed) {
-    return (
-      <ArchetypeHead
-        archetype={participant.archetype}
-        size={80}
-        fallbackText={name}
-      />
-    )
-  }
-
-  return (
-    <Image
-      className='event-feedback__participant-avatar'
-      src={participant.avatarUrl}
-      mode='aspectFill'
-      ariaLabel={`${name}的头像`}
-      lazyLoad
-      onError={() => setImageFailed(true)}
-    />
-  )
-}
-
 export default function EventFeedbackPage() {
   const router = useRouter()
   const eventId = router.params.id ?? ''
@@ -247,7 +274,6 @@ export default function EventFeedbackPage() {
   const [mutualMatches, setMutualMatches] = useState<MutualMatch[]>([])
   // ─── Balanced layer state (均衡反馈) — every field is optional ───
   const [atmosphereScore, setAtmosphereScore] = useState(0)
-  const [atmosphereNote, setAtmosphereNote] = useState('')
   const [radar, setRadar] = useState<ConnectionRadarState>({
     topicResonance: 0,
     personalityMatch: 0,
@@ -258,7 +284,11 @@ export default function EventFeedbackPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusLiteral | null>(null)
   const [attendeeTraits, setAttendeeTraits] = useState<Record<string, { tags: string[]; note: string }>>({})
   const [improvementAreas, setImprovementAreas] = useState<string[]>([])
-  const [improvementOther, setImprovementOther] = useState('')
+  // Batch C item 5 (2026-10-16): progressive disclosure on the experience
+  // step — radar + venue/status collapse behind a 「再多评几项（可选）」
+  // expander (default collapsed). Values live in page state, so collapsing
+  // after interacting never loses input; the payload path is unchanged.
+  const [deepExpanded, setDeepExpanded] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   // Tier-S wait (M1): optimistic 已提交 flip shown the instant the user taps —
   // the POST runs in the background; on error the button reverts.
@@ -266,15 +296,33 @@ export default function EventFeedbackPage() {
   const [error, setError] = useState('')
   // C5 — Fires success haptic only once per revealed-entry (ref guard prevents re-fire on re-render)
   const revealedHapticFiredRef = useRef(false)
-  // G6 (2026-08-07 audit): CDN failure fallback for the celebration imagery.
-  const [heroFailed, setHeroFailed] = useState(false)
+  // G6 (2026-08-07 audit): CDN failure fallback for the mascot badge.
+  // 2026-10-16 Batch A (item 1): the ceremony hero scene was retired — the
+  // mascot badge is the single mascot moment on the revealed screen.
   const [mascotFailed, setMascotFailed] = useState(false)
+
+  // ─── 微信号采集（2026-10-16, spec wechat-id-collection-spec-20261016）─────
+  // A: conditional step between connections and wrapup. `wechatSaved` is the
+  // payload gate — typing alone never sends the ID; only an explicit valid
+  // 保存并继续 (or the remedy card) does.
+  const [wechatIdInput, setWechatIdInput] = useState('')
+  const [wechatSaved, setWechatSaved] = useState(false)
+  const [wechatError, setWechatError] = useState('')
+  // C: remedy card on the revealed page for users who skipped A but landed a
+  // mutual match. remedySaving is a submit-transient flag (reset on re-show);
+  // the input value deliberately survives swipe-back.
+  const [remedyInput, setRemedyInput] = useState('')
+  const [remedySaving, setRemedySaving] = useState(false)
+  const [remedySaved, setRemedySaved] = useState(false)
+  const [remedyError, setRemedyError] = useState('')
 
   // G12 (2026-08-07 audit): a swipe-back mid-submit would otherwise leave the
   // CTA stuck in 提交中… — reset the transient flag when the page is re-shown.
   // 2026-08-15: also reset the optimistic submitted flip so the button does not
   // show 已提交 while clickable after returning from swipe-back.
-  useResetOnShow(setIsSubmitting, setSubmitted)
+  // 2026-10-16: remedySaving joins the reset set (remedy card mid-save swipe).
+  useResetOnShow(setIsSubmitting, setSubmitted, setRemedySaving)
+
   // ─── Entry gate (2026-10-16 feedback activation, PM plan §3) ─────────────
   // The lifecycle state is server-computed (opens at dateTime+3h, eligibility
   // checked there); recap-push deep links and bookmarked URLs must not bypass
@@ -319,6 +367,44 @@ export default function EventFeedbackPage() {
     }
   }, [effectiveStep])
 
+  // ─── 微信号采集 step gating (spec §3) ───────────────────────────────────
+  // Flag-gated, intent-gated, set-once: only users who picked ≥1 person AND
+  // have no 微信号 on file AND have the feature enabled ever see the step.
+  // Stable within a visit — neither selections nor the auth user can change
+  // while sitting on the wechat/wrapup steps (no selection UI there).
+  const wechatCollectionEnabled = !!currentUser?.features?.wechatIdCollectionEnabled
+  const needWechatStep =
+    wechatCollectionEnabled &&
+    selectedConnections.length > 0 &&
+    !currentUser?.wechatContactId
+  // Batch A item 2 (2026-10-16): dot denominator is VISIT-STABLE — keyed off
+  // collection eligibility (flag + no ID on file), NOT the live selection
+  // count, so picking someone no longer flips the dots 3→4 mid-flow. Only
+  // the dot contract rides this list; the wechat step's render gating stays
+  // selection-dependent via needWechatStep.
+  const dotSteps: Array<Exclude<FeedbackStep, 'revealed'>> =
+    wechatCollectionEnabled && !currentUser?.wechatContactId
+      ? WECHAT_STEP_ORDER
+      : FEEDBACK_STEP_ORDER
+
+  // feedback_wechat_step_shown: once per visit, the anchor of the
+  // shown → saved/skipped collection funnel.
+  const wechatStepTrackedRef = useRef(false)
+  useEffect(() => {
+    if (effectiveStep !== 'wechat' || wechatStepTrackedRef.current || !eventId) return
+    wechatStepTrackedRef.current = true
+    trackFeedbackEvent('feedback_wechat_step_shown', { eventId })
+  }, [effectiveStep, eventId])
+
+  /** Optimistically mirror a freshly-saved 微信号 into the auth cache so the
+   *  revealed remedy gate (and any other surface keying off
+   *  currentUser.wechatContactId) settles without a round-trip. */
+  const syncWechatIdToAuthCache = useCallback((id: string) => {
+    queryClient.setQueryData(AUTH_QUERY_KEY, (old: AuthUserResponse | undefined) =>
+      old ? { ...old, wechatContactId: id } : old,
+    )
+  }, [])
+
   const { data: participants = [], isLoading: participantsLoading, isError: participantsError } = useQuery<EventParticipantSummary[]>({
     queryKey: ['mini-program', 'event-participants', eventId],
     queryFn: async () => {
@@ -343,6 +429,66 @@ export default function EventFeedbackPage() {
     queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: !!eventId && !authLoading && !!currentUserId,
   })
+
+  // 「10.15 那局」title anchor — reuses the shared registrations cache, no
+  // extra request; falls back to 「这局」 when the date is unavailable.
+  const eventDayLabel = formatEventDayLabel(
+    poolRegistrations?.find((registration) => registration.poolId === eventId)?.poolDateTime,
+  )
+
+  // Step-view funnel (2026-10-16 polish batch): once per step per visit, gated
+  // to the states that actually render the form/celebration.
+  const stepViewTrackedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!eventId) return
+    if (feedbackState !== 'open' && feedbackState !== 'submitted') return
+    if (stepViewTrackedRef.current.has(effectiveStep)) return
+    stepViewTrackedRef.current.add(effectiveStep)
+    trackFeedbackEvent('feedback_step_view', { eventId, step: effectiveStep })
+  }, [eventId, feedbackState, effectiveStep])
+
+  // Archetype identity telemetry (2026-10-16): null-archetype fallback rate +
+  // same-table archetype collisions, fired once per roster load. Enum/count
+  // metadata only — never names.
+  const archetypeTelemetryFiredRef = useRef(false)
+  useEffect(() => {
+    if (archetypeTelemetryFiredRef.current || !eventId || participants.length === 0) return
+    archetypeTelemetryFiredRef.current = true
+    const resolvedIds = participants.map((p) =>
+      p.archetype ? resolveArchetype(p.archetype)?.id ?? null : null,
+    )
+    const nullCount = resolvedIds.filter((id) => id === null).length
+    if (nullCount > 0) {
+      trackFeedbackEvent('feedback_archetype_fallback', {
+        eventId,
+        reason: 'null_archetype',
+        count: nullCount,
+      })
+    }
+    const known = resolvedIds.filter((id): id is string => id !== null)
+    if (new Set(known).size < known.length) {
+      trackFeedbackEvent('feedback_archetype_collision', { eventId })
+    }
+  }, [eventId, participants])
+
+  // Archetype asset double-fail telemetry (2026-10-16): the head asset 404s on
+  // BOTH the bundled-local and CDN tiers — on the wrapup's fallback='none'
+  // surface that otherwise renders as an empty ring with no signal. Emitted at
+  // most once per participant per visit (ref Set), count=1 so the server-side
+  // SUM(count) stays valid across both fallback reasons.
+  const archetypeAssetFailRef = useRef<Set<string>>(new Set())
+  const handleArchetypeAssetError = useCallback(
+    (participantId: string) => {
+      if (archetypeAssetFailRef.current.has(participantId)) return
+      archetypeAssetFailRef.current.add(participantId)
+      trackFeedbackEvent('feedback_archetype_fallback', {
+        eventId,
+        reason: 'asset_double_fail',
+        count: 1,
+      })
+    },
+    [eventId],
+  )
 
   /**
    * Best-effort canonical outcome submission. Runs AFTER the primary feedback
@@ -438,20 +584,24 @@ export default function EventFeedbackPage() {
 
   // Up to MAX_TAGS_PER_ATTENDEE tags per person; a 4th tap is ignored.
   const toggleAttendeeTag = useCallback((userId: string, tag: string) => {
+    const entry = attendeeTraits[userId] ?? { tags: [], note: '' }
+    const has = entry.tags.includes(tag)
+    if (!has && entry.tags.length >= MAX_TAGS_PER_ATTENDEE) return
+    markDeepEngaged()
+    if (!has) trackFeedbackEvent('feedback_attendee_tag_selected', { eventId, tag })
     setAttendeeTraits((prev) => {
-      const entry = prev[userId] ?? { tags: [], note: '' }
-      const has = entry.tags.includes(tag)
-      if (!has && entry.tags.length >= MAX_TAGS_PER_ATTENDEE) return prev
-      markDeepEngaged()
+      const current = prev[userId] ?? { tags: [], note: '' }
+      const currentHas = current.tags.includes(tag)
+      if (!currentHas && current.tags.length >= MAX_TAGS_PER_ATTENDEE) return prev
       return {
         ...prev,
         [userId]: {
-          ...entry,
-          tags: has ? entry.tags.filter((t) => t !== tag) : [...entry.tags, tag],
+          ...current,
+          tags: currentHas ? current.tags.filter((t) => t !== tag) : [...current.tags, tag],
         },
       }
     })
-  }, [markDeepEngaged])
+  }, [attendeeTraits, markDeepEngaged, eventId])
 
   const setAttendeeNote = useCallback((userId: string, note: string) => {
     setAttendeeTraits((prev) => ({
@@ -459,6 +609,14 @@ export default function EventFeedbackPage() {
       [userId]: { tags: prev[userId]?.tags ?? [], note },
     }))
   }, [])
+
+  // 印象补充 focus telemetry — once per person per visit.
+  const noteFocusTrackedRef = useRef<Set<string>>(new Set())
+  const trackNoteFocus = useCallback((userId: string) => {
+    if (noteFocusTrackedRef.current.has(userId)) return
+    noteFocusTrackedRef.current.add(userId)
+    trackFeedbackEvent('feedback_attendee_note_focus', { eventId })
+  }, [eventId])
 
   const setRadarDimension = useCallback((key: RadarKey, value: number) => {
     markDeepEngaged()
@@ -505,11 +663,9 @@ export default function EventFeedbackPage() {
       // The same content check drives the feedback_deep_submitted funnel event.
       const hasDeepFields =
         atmosphereScore > 0 ||
-        atmosphereNote.trim() !== '' ||
         venueStyleRating !== null ||
         connectionStatus !== null ||
         improvementAreas.length > 0 ||
-        improvementOther.trim() !== '' ||
         Object.values(radar).some((value) => value > 0) ||
         Object.values(attendeeTraits).some(
           (entry) => entry.tags.length > 0 || entry.note.trim() !== '',
@@ -521,21 +677,29 @@ export default function EventFeedbackPage() {
           rating,
           comment,
           connections: selectedConnections,
+          // Only an explicit valid 保存并继续 sends the ID (spec §4.1) — the
+          // builder re-validates, so a typed-but-skipped value never leaks.
+          wechatContactId: wechatSaved ? wechatIdInput : undefined,
           balanced: {
             atmosphereScore,
-            atmosphereNote,
             attendeeTraits: attendeeTraitsPayload,
             connectionRadar: radar,
             connectionStatus,
             hasNewConnections: selectedConnections.length > 0,
             improvementAreas,
-            improvementOther,
             venueStyleRating,
           },
         }),
       })
       setMutualMatches(res.mutualMatches || [])
       setStep('revealed')
+      // The server backfilled the 微信号 inside the same POST (social.ts
+      // runs the backfill before the connection snapshot flip) — mirror it
+      // into the auth cache so the remedy gate settles immediately.
+      if (wechatSaved) {
+        const verdict = validateWechatContactId(wechatIdInput)
+        if (verdict.ok) syncWechatIdToAuthCache(verdict.value)
+      }
       if (hasDeepFields) {
         trackFeedbackEvent('feedback_deep_submitted', { eventId })
       }
@@ -549,7 +713,6 @@ export default function EventFeedbackPage() {
       // Invalidate the Connections Predictive Shell so the 连接 tab reflects the
       // new feedback-complete / connections state instead of stale feedback-pending.
       queryClient.invalidateQueries({ queryKey: CONNECTIONS_SHELL_QUERY_KEY })
-      Taro.showToast({ title: '反馈已提交', icon: 'success', duration: TOAST_DEFAULT_MS })
       // 2026-10-16 feedback activation: bust joined-events + events shell so the
       // 足迹「去评价」pill disappears immediately (the joined query carries a 30s
       // staleTime), and drop this event's feedback-state cache so event-detail
@@ -584,15 +747,16 @@ export default function EventFeedbackPage() {
     selectedConnections,
     isSubmitting,
     atmosphereScore,
-    atmosphereNote,
     attendeeTraits,
     participants,
     radar,
     connectionStatus,
     improvementAreas,
-    improvementOther,
     venueStyleRating,
     submitGroupOutcome,
+    wechatSaved,
+    wechatIdInput,
+    syncWechatIdToAuthCache,
   ])
 
   const handleCopyWechat = useCallback((wechatId: string) => {
@@ -607,12 +771,150 @@ export default function EventFeedbackPage() {
     })
   }, [])
 
+  // ─── 微信号采集 handlers (spec §4) ───────────────────────────────────────
+  // onInput only clears the error (never validates mid-typing); blur quietly
+  // validates a non-empty draft; save treats EMPTY input as skip-advance — an
+  // optional field never punishes a blank.
+  const handleWechatInput = useCallback((value: string) => {
+    setWechatIdInput(value)
+    setWechatError('')
+  }, [])
+
+  // Batch B item 10: feedback_wechat_input_focus — once per visit, the
+  // engagement anchor of the collection funnel (shown → focused → saved).
+  const wechatFocusTrackedRef = useRef(false)
+  const handleWechatFocus = useCallback(() => {
+    if (wechatFocusTrackedRef.current || !eventId) return
+    wechatFocusTrackedRef.current = true
+    trackFeedbackEvent('feedback_wechat_input_focus', { eventId })
+  }, [eventId])
+
+  const handleWechatBlur = useCallback(() => {
+    const trimmed = wechatIdInput.trim()
+    if (trimmed === '') {
+      setWechatError('')
+      return
+    }
+    const verdict = validateWechatContactId(trimmed)
+    setWechatError(
+      verdict.ok
+        ? ''
+        : verdict.reason === 'wxid-prefix'
+          ? WECHAT_ID_WCID_PREFIX_HINT
+          : WECHAT_ID_FORMAT_ERROR,
+    )
+  }, [wechatIdInput])
+
+  const handleWechatSkip = useCallback(() => {
+    setWechatError('')
+    setWechatSaved(false)
+    haptics('light')
+    trackFeedbackEvent('feedback_wechat_skipped', { eventId, hadInput: wechatIdInput.trim() !== '' })
+    setStep('wrapup')
+  }, [eventId, wechatIdInput])
+
+  const handleWechatSave = useCallback(() => {
+    const trimmed = wechatIdInput.trim()
+    // Empty + 保存并继续 converges with skip (spec §4.3).
+    if (trimmed === '') {
+      handleWechatSkip()
+      return
+    }
+    const verdict = validateWechatContactId(trimmed)
+    if (!verdict.ok) {
+      setWechatError(
+        verdict.reason === 'wxid-prefix'
+          ? WECHAT_ID_WCID_PREFIX_HINT
+          : WECHAT_ID_FORMAT_ERROR,
+      )
+      trackFeedbackEvent('feedback_wechat_invalid', { eventId, reason: verdict.reason, surface: 'step' })
+      return
+    }
+    setWechatError('')
+    setWechatSaved(true)
+    haptics('light')
+    trackFeedbackEvent('feedback_wechat_saved', { eventId })
+    setStep('wrapup')
+  }, [eventId, wechatIdInput, handleWechatSkip])
+
+  // C — remedy card (revealed page): the only path that writes the ID outside
+  // the feedback POST. Client validation is UX; the endpoint re-validates and
+  // answers with coded errors (INVALID_WECHAT_CONTACT_ID).
+  const handleRemedySave = useCallback(async () => {
+    if (remedySaving || remedySaved) return
+    const trimmed = remedyInput.trim()
+    if (trimmed === '') return
+    const verdict = validateWechatContactId(trimmed)
+    if (!verdict.ok) {
+      setRemedyError(
+        verdict.reason === 'wxid-prefix'
+          ? WECHAT_ID_WCID_PREFIX_HINT
+          : WECHAT_ID_FORMAT_ERROR,
+      )
+      trackFeedbackEvent('feedback_wechat_invalid', { eventId, reason: verdict.reason, surface: 'remedy' })
+      return
+    }
+    setRemedySaving(true)
+    setRemedyError('')
+    try {
+      await apiRequest({
+        path: '/api/user/wechat-contact',
+        method: 'POST',
+        data: { wechatContactId: verdict.value },
+      })
+      setRemedySaved(true)
+      // Batch A item 15: light confirmation on save — the revealed-entry
+      // 'success' peak already fired; the remedy is a quiet fix, not a peak.
+      haptics('light')
+      syncWechatIdToAuthCache(verdict.value)
+      trackFeedbackEvent('feedback_wechat_remedy_saved', { eventId })
+    } catch (err) {
+      const errorData = (err as Record<string, unknown>)?.data as Record<string, unknown> | undefined
+      const message = errorData?.code === 'INVALID_WECHAT_CONTACT_ID'
+        ? WECHAT_ID_FORMAT_ERROR
+        : getErrorMessage('save-failed')
+      setRemedyError(message)
+      logError('[EventFeedback] Remedy save failed', { message })
+      trackFeedbackEvent('feedback_wechat_remedy_failed', { eventId })
+    } finally {
+      setRemedySaving(false)
+    }
+  }, [remedySaving, remedySaved, remedyInput, eventId, syncWechatIdToAuthCache])
+
+  // ─── 互选纪念卡 (item 19, 2026-10-16) ────────────────────────────────────
+  // The mutual-match moment gets a passive keepsake entry on the revealed
+  // screen. PII structural exclusion: MutualMatch.wechatContactId is dropped
+  // at this mapping boundary — the card input type cannot carry contact info.
+  const keepsakeViewer = useMemo(
+    () => ({
+      displayName: currentUser?.displayName ?? null,
+      archetype: currentUser?.archetype ?? null,
+    }),
+    [currentUser?.displayName, currentUser?.archetype],
+  )
+  const keepsakeMatches = useMemo(
+    () => mutualMatches.map((match) => ({ displayName: match.displayName, archetype: match.archetype })),
+    [mutualMatches],
+  )
+  const { isKeepsakeGenerating, handleKeepsakeSave } = useKeepsakeCard({
+    enabled: effectiveStep === 'revealed' && mutualMatches.length > 0,
+    eventId,
+    viewer: keepsakeViewer,
+    matches: keepsakeMatches,
+    eventDayLabel: eventDayLabel || undefined,
+  })
+
   if (authLoading || feedbackStateLoading) {
     return (
+      // Batch A item 1: mascot stays scarce — the revealed screen owns the
+      // single mascot moment, so the gate renders the brand mark instead.
+      // Skeleton rows wait 800ms so fast loads never flash placeholders.
       <JoyJoinLoadingScreen
         title='准备反馈页面…'
         subtitle={`${getMascotDisplayName(currentUser)}在确认你的活动参与记录`}
-        showSkeleton={false}
+        hideMascot
+        showSkeleton
+        skeletonDelayMs={800}
       />
     )
   }
@@ -668,7 +970,9 @@ export default function EventFeedbackPage() {
       <JoyJoinLoadingScreen
         title='准备反馈页面…'
         subtitle={`${getMascotDisplayName(currentUser)}在确认你的活动参与记录`}
-        showSkeleton={false}
+        hideMascot
+        showSkeleton
+        skeletonDelayMs={800}
       />
     )
   }
@@ -676,8 +980,12 @@ export default function EventFeedbackPage() {
   // ─── Revealed step ─────────────────────────────────────────────────────────
   if (effectiveStep === 'revealed') {
     const hasMatches = mutualMatches.length > 0
+    const reducedMotion = getSystemReducedMotionCompat()
     return (
       <View className='event-feedback event-feedback--revealed'>
+        {/* Ceremony peak (#19): confetti burst on mutual matches — transform/
+            opacity only, statically downgraded under reduced-motion. */}
+        {hasMatches && <ParticleBurst trigger type='confetti' count={40} reducedMotion={reducedMotion} />}
         <ScrollView
           className='event-feedback__success-scroll'
           scrollY
@@ -685,17 +993,10 @@ export default function EventFeedbackPage() {
           showScrollbar={false}
         >
         <View className='event-feedback__success'>
-          {/* C5 — Ceremony hero backdrop for the thanks moment (Batch C) */}
-          {!heroFailed && (
-            <Image
-              className='event-feedback__success-hero'
-              mode='aspectFit'
-              src={CEREMONY_HEROES.eventFeedbackThanks}
-              ariaLabel=''
-              lazyLoad
-              onError={() => setHeroFailed(true)}
-            />
-          )}
+          {/* Batch A item 1 (2026-10-16): the 360rpx ceremony hero scene was
+              retired — the mascot badge is the SINGLE mascot moment on this
+              screen (mascot stays scarce = emotional premium). The hero's
+              entrance animation moved onto the badge in SCSS. */}
           {!mascotFailed && (
             <Image
               className='event-feedback__success-mascot'
@@ -717,11 +1018,78 @@ export default function EventFeedbackPage() {
               ? `你和 ${mutualMatches.length} 位参与者互相选择了对方`
               : '你的评价帮助我们变得更好'}
           </Text>
+          {/* Batch A item 17 — honest three-branch state: the forward-looking
+              line only renders when the user actually picked people (telling
+              「如果 TA 也选了你」 to someone who picked nobody is a lie).
+              selectedConnections survives the in-session submit; a re-entered
+              (already-submitted) visit honestly falls back to the thanks-only
+              branch. Particles + success haptic stay match-only. */}
+          {!hasMatches && selectedConnections.length > 0 && (
+            <Text className='event-feedback__success-subtext'>你选的人，如果也选了你，连接里第一时间见</Text>
+          )}
+
+          {/* 微信号补救卡 (spec §5): the last-chance capture for users who
+              skipped the collection step but landed a mutual match. remedySaved
+              stays in the gate so the success swap survives the auth-cache
+              sync (currentUser.wechatContactId flipping would otherwise
+              unmount the card mid-confirmation). */}
+          {hasMatches && wechatCollectionEnabled && (remedySaved || (!currentUser?.wechatContactId && !wechatSaved)) ? (
+            <Card className='event-feedback__remedy-card'>
+              {remedySaved ? (
+                <View className='event-feedback__remedy-success-row'>
+                  <JoyJoinIcon emoji='✅' size={24} />
+                  <Text className='event-feedback__remedy-success'>已保存，对方现在就能看到你的微信号</Text>
+                </View>
+              ) : (
+                <View>
+                  <Text className='event-feedback__remedy-title'>你还没留微信号</Text>
+                  {/* Batch A item 15: single-line causal sentence (19 chars) —
+                      no orphan glyph at the wrap point. */}
+                  <Text className='event-feedback__remedy-text'>补上后，互选成功的伙伴就能看到你的微信号</Text>
+                  <View className='event-feedback__remedy-row'>
+                    <Input
+                      className={`event-feedback__remedy-input ${remedyError ? 'event-feedback__remedy-input--error' : ''}`}
+                      placeholder='输入微信号'
+                      value={remedyInput}
+                      onInput={(e) => {
+                        setRemedyInput(e.detail.value)
+                        setRemedyError('')
+                      }}
+                      maxlength={WECHAT_CONTACT_ID_MAX_LENGTH}
+                      confirmType='done'
+                      aria-label='补充微信号'
+                    />
+                    <Button
+                      className='event-feedback__remedy-save'
+                      disabled={remedySaving || remedyInput.trim() === ''}
+                      onClick={() => {
+                        haptics('light')
+                        void handleRemedySave()
+                      }}
+                      ariaLabel='保存微信号'
+                    >
+                      {remedySaving ? '保存中…' : '保存'}
+                    </Button>
+                  </View>
+                  <Text className='event-feedback__wechat-format-hint'>{WECHAT_ID_FORMAT_HINT}</Text>
+                  {remedyError ? (
+                    <View className='event-feedback__wechat-field-error' role='alert' aria-live='polite'>
+                      <Text>{remedyError}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+            </Card>
+          ) : null}
 
           {hasMatches ? (
             <View className='event-feedback__matches'>
-              {mutualMatches.map((match) => (
-                <Card key={match.userId} className='event-feedback__match-card'>
+              {mutualMatches.map((match, index) => (
+                <Card
+                  key={match.userId}
+                  className='event-feedback__match-card'
+                  style={{ animationDelay: `${index * 80}ms` }}
+                >
                   <View className='event-feedback__match-row'>
                     <ArchetypeHead archetype={match.archetype || undefined} size={64} fallbackText={match.displayName} />
                     <View className='event-feedback__match-info'>
@@ -740,7 +1108,9 @@ export default function EventFeedbackPage() {
                           <Text className='event-feedback__match-wechat-hint'>点击复制</Text>
                         </View>
                       ) : (
-                        <Text className='event-feedback__match-no-wechat'>对方尚未设置微信号</Text>
+                        // Batch A item 17: anticipation, not a dead end — the
+                        // 连接 tab is where the ID appears once set.
+                        <Text className='event-feedback__match-no-wechat'>TA 设置后，连接里就能看到</Text>
                       )}
                     </View>
                   </View>
@@ -749,11 +1119,64 @@ export default function EventFeedbackPage() {
             </View>
           ) : null}
 
-          <Button className='event-feedback__back-btn' onClick={() => Taro.navigateBack()}>
-            返回
-          </Button>
+          {/* Exit ramp (#19): the primary CTA carries the connection intent
+              forward to the 连接 tab instead of dead-ending on 返回.
+              Pre-ship (2026-10-16 USA audit, Angle 6): the 互选纪念卡 was
+              promoted from a whisper below the CTAs to a first-class second
+              action — at the emotional peak the share artifact must be
+              discoverable. Hierarchy: 去连接看看 (primary) → 存下这一刻
+              (secondary) → 返回 (quiet text). */}
+          <View className='event-feedback__success-actions'>
+            <Button
+              className='event-feedback__success-primary'
+              onClick={() => {
+                haptics('light')
+                Taro.switchTab({ url: '/pages/connections/index' })
+              }}
+              ariaLabel='去连接看看'
+            >
+              去连接看看
+            </Button>
+            {/* 互选纪念卡 (item 19): passive save-to-album, zero inducement
+                wording (WeChat bans incentivized sharing). No native disabled
+                attribute — the platform disabled colour would repaint the
+                button (2026-10-16 render-caught rule), the busy guard is JS. */}
+            {hasMatches && (
+              <Button
+                className={`event-feedback__success-secondary ${isKeepsakeGenerating ? 'event-feedback__success-secondary--busy' : ''}`}
+                aria-disabled={isKeepsakeGenerating}
+                ariaLabel={isKeepsakeGenerating ? '正在生成纪念卡' : '存下这一刻'}
+                onClick={() => {
+                  if (isKeepsakeGenerating) return
+                  void handleKeepsakeSave()
+                }}
+              >
+                {isKeepsakeGenerating ? '正在生成…' : '存下这一刻'}
+              </Button>
+            )}
+            <View
+              className='event-feedback__success-back'
+              hoverClass='event-feedback__success-back--pressed'
+              role='button'
+              aria-label='返回'
+              onClick={() => Taro.navigateBack()}
+            >
+              <Text>返回</Text>
+            </View>
+          </View>
         </View>
         </ScrollView>
+
+        {/* Hidden keepsake canvas (insight-poster precedent): the inline px
+            DOM size must equal the 1080×1560 export bitmap; offscreen via SCSS. */}
+        {hasMatches && (
+          <Canvas
+            canvasId={KEEPSAKE_CARD_CANVAS_ID}
+            className='event-feedback__keepsake-canvas'
+            style={{ width: '1080px', height: '1560px' }}
+            aria-hidden='true'
+          />
+        )}
       </View>
     )
   }
@@ -765,8 +1188,10 @@ export default function EventFeedbackPage() {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>今晚这局怎么样？</Text>
-          {renderStepProgress('experience')}
+          <Text className='event-feedback__title'>
+            {eventDayLabel ? `${eventDayLabel} 那局，怎么样？` : '这局怎么样？'}
+          </Text>
+          {renderStepProgress('experience', dotSteps)}
           {/* Why-we-ask line: no points pitch (there's no coupon-linked 积分
               system to redeem them against) — just the honest reason. */}
           <Text className='event-feedback__purpose-hint'>你的观察，会让下一场更对味</Text>
@@ -790,74 +1215,95 @@ export default function EventFeedbackPage() {
                 setAtmosphereScore(value)
               }}
             />
-            <Input
-              className='event-feedback__deep-input'
-              placeholder='补充一句（选填）'
-              value={atmosphereNote}
-              onInput={(e) => setAtmosphereNote(e.detail.value)}
-              maxlength={100}
-              aria-label='氛围补充说明（选填）'
+          </View>
+
+          {/* Batch C item 5 (2026-10-16): progressive disclosure — the deep
+              fields (radar + venue/status) collapse behind a quiet expander.
+              Expanding fires the existing deep_engaged funnel event (once,
+              via markDeepEngaged's own guard); values persist on collapse. */}
+          <View
+            className='event-feedback__expander'
+            hoverClass='event-feedback__expander--pressed'
+            role='button'
+            aria-expanded={deepExpanded}
+            aria-label={deepExpanded ? '收起补充反馈' : '再多评几项，展开补充反馈'}
+            onClick={() => {
+              haptics('light')
+              if (!deepExpanded) markDeepEngaged()
+              setDeepExpanded(!deepExpanded)
+            }}
+          >
+            <Text className='event-feedback__expander-label'>再多评几项（可选）</Text>
+            {/* CSS chevron (transform-only rotate, RM-gated): no chevron asset
+                exists in emojiToIconMap, and copy law bars a raw glyph here. */}
+            <View
+              className={`event-feedback__expander-chevron ${deepExpanded ? 'event-feedback__expander-chevron--open' : ''}`}
+              aria-hidden='true'
             />
           </View>
 
-          <View className='event-feedback__card'>
-            <Text className='event-feedback__card-title'>连接雷达</Text>
-            <Text className='event-feedback__card-hint'>凭感觉点一点，不用纠结</Text>
-            <View className='event-feedback__radar'>
-              {RADAR_DIMENSIONS.map((dim) => (
-                <RadarScale
-                  key={dim.key}
-                  label={dim.label}
-                  hint={dim.hint}
-                  value={radar[dim.key]}
-                  onChange={(value) => setRadarDimension(dim.key, value)}
-                />
-              ))}
-            </View>
-          </View>
+          {deepExpanded ? (
+            <>
+              <View className='event-feedback__card'>
+                <Text className='event-feedback__card-title'>连接雷达</Text>
+                <Text className='event-feedback__card-hint'>从「不太合」到「很合」，凭感觉点一点就好</Text>
+                <View className='event-feedback__radar'>
+                  {RADAR_DIMENSIONS.map((dim) => (
+                    <RadarScale
+                      key={dim.key}
+                      label={dim.label}
+                      hint={dim.hint}
+                      value={radar[dim.key]}
+                      onChange={(value) => setRadarDimension(dim.key, value)}
+                    />
+                  ))}
+                </View>
+              </View>
 
-          <View className='event-feedback__card'>
-            <Text className='event-feedback__card-title'>场地印象</Text>
-            <View
-              className='event-feedback__venue-row'
-              role='radiogroup'
-              aria-label='场地风格满意度'
-            >
-              {VENUE_STYLE_OPTIONS.map((option) => (
-                <SelectPill
-                  key={option.value}
-                  label={option.label}
-                  selected={venueStyleRating === option.value}
-                  onClick={() => {
-                    haptics('light')
-                    markDeepEngaged()
-                    setVenueStyleRating(option.value)
-                  }}
-                />
-              ))}
-            </View>
+              <View className='event-feedback__card'>
+                <Text className='event-feedback__card-title'>场地印象</Text>
+                <View
+                  className='event-feedback__venue-row'
+                  role='radiogroup'
+                  aria-label='场地风格满意度'
+                >
+                  {VENUE_STYLE_OPTIONS.map((option) => (
+                    <SelectPill
+                      key={option.value}
+                      label={option.label}
+                      selected={venueStyleRating === option.value}
+                      onClick={() => {
+                        haptics('light')
+                        markDeepEngaged()
+                        setVenueStyleRating(option.value)
+                      }}
+                    />
+                  ))}
+                </View>
 
-            <Text className='event-feedback__card-title event-feedback__card-title--spaced'>散场之后</Text>
-            <Text className='event-feedback__card-hint'>和这些人现在是什么状态？</Text>
-            <View
-              className='event-feedback__status-grid'
-              role='radiogroup'
-              aria-label='散场后与参与者的联系状态'
-            >
-              {CONNECTION_STATUS_OPTIONS.map((status) => (
-                <SelectPill
-                  key={status}
-                  label={status}
-                  selected={connectionStatus === status}
-                  onClick={() => {
-                    haptics('light')
-                    markDeepEngaged()
-                    setConnectionStatus(status)
-                  }}
-                />
-              ))}
-            </View>
-          </View>
+                <Text className='event-feedback__card-title event-feedback__card-title--spaced'>散场之后</Text>
+                <Text className='event-feedback__card-hint'>和这些人现在是什么状态？</Text>
+                <View
+                  className='event-feedback__status-grid'
+                  role='radiogroup'
+                  aria-label='散场后与参与者的联系状态'
+                >
+                  {CONNECTION_STATUS_OPTIONS.map((status) => (
+                    <SelectPill
+                      key={status}
+                      label={status}
+                      selected={connectionStatus === status}
+                      onClick={() => {
+                        haptics('light')
+                        markDeepEngaged()
+                        setConnectionStatus(status)
+                      }}
+                    />
+                  ))}
+                </View>
+              </View>
+            </>
+          ) : null}
         </ScrollView>
 
         <View className='event-feedback__footer'>
@@ -877,213 +1323,135 @@ export default function EventFeedbackPage() {
   }
 
   // ─── Connections step ──────────────────────────────────────────────────────
+  // Render extracted to steps/ConnectionsStep.tsx (2026-10-16 Batch C) — the
+  // page keeps state + navigation, the step gets everything via props.
   if (effectiveStep === 'connections') {
     return (
+      <ConnectionsStep
+        progressDots={renderStepProgress('connections', dotSteps)}
+        participants={participants}
+        participantsError={participantsError}
+        selectedConnections={selectedConnections}
+        onToggleConnection={toggleConnection}
+        onRetryParticipants={() => {
+          haptics('light')
+          void queryClient.refetchQueries({ queryKey: ['mini-program', 'event-participants', eventId] })
+        }}
+        onNext={() => {
+          haptics('light')
+          // Conditional 微信号 step (spec §3): picked ≥1 person + no ID on
+          // file + flag on → collect before the wrap-up screen.
+          setStep(needWechatStep ? 'wechat' : 'wrapup')
+        }}
+      />
+    )
+  }
+
+  // ─── WeChat contact step (conditional, 2026-10-16 spec §4) ──────────────
+  // Single-field, single-action screen: max relevance (right after picking
+  // people), zero cost to everyone else. Empty-save converges with skip;
+  // invalid input blocks with an inline error, never the flow.
+  if (effectiveStep === 'wechat') {
+    // Batch B item 13: selection recap — the people picked on the connections
+    // step are the reason this field exists, so the form tax continues the
+    // emotional arc. Same roster data + avatar identity chain as the grid.
+    const recapParticipants = participants.filter((p) => selectedConnections.includes(p.id))
+    const recapVisible = recapParticipants.slice(0, 4)
+    return (
       <View className='event-feedback'>
+        {/* Batch B item 11: header is title + dots only (like connections/
+            wrapup) — the privacy meaning lives in the contract block below,
+            no more header/card reassurance duet. */}
         <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>想继续了解谁？</Text>
-          {renderStepProgress('connections')}
+          <Text className='event-feedback__title'>留个微信号</Text>
+          {renderStepProgress('wechat', dotSteps)}
         </View>
 
         <ScrollView className='event-feedback__deep-scroll' scrollY enhanced showScrollbar={false}>
-          <View className='event-feedback__card'>
-            <Text className='event-feedback__card-title'>选择想保持联系的人</Text>
-            <Text className='event-feedback__card-hint'>互相选择后，即可看到对方的微信号</Text>
-            {participantsError ? (
-              <View className='event-feedback__participants-error' role='alert' aria-live='polite'>
-                <Text className='event-feedback__participants-error-text'>参与者信息加载失败</Text>
-                <Button
-                  className='event-feedback__participants-retry'
-                  onClick={() => {
-                    haptics('light')
-                    void queryClient.refetchQueries({ queryKey: ['mini-program', 'event-participants', eventId] })
-                  }}
-                  ariaLabel='重试加载参与者'
-                >
-                  重试
-                </Button>
-              </View>
-            ) : participants.length === 0 ? (
-              <Text className='event-feedback__empty-participants'>暂时没有其他参与者信息</Text>
-            ) : (
-              <View className='event-feedback__participant-grid'>
-                {participants.map((p) => {
-                  const isSelected = selectedConnections.includes(p.id)
+          {/* Batch B item 6: scroll-inner + auto margins — the recap+card
+              group centers vertically when short (no 37% dead zone) and the
+              auto margins collapse to plain top-aligned scroll when the
+              keyboard/content overflows. Generic class; Batch C reuses it
+              for the connections step. */}
+          <View className='event-feedback__scroll-inner'>
+            {/* Batch B item 13: selection recap bar, visually attached above
+                the card. Static (no hover/haptics); first face on top via
+                inline z-index, >4 selections fold into a +N chip. */}
+            <View className='event-feedback__recap'>
+              <View className='event-feedback__recap-avatars'>
+                {recapVisible.map((p, index) => {
                   const participantName = p.displayName || p.firstName || '匿名'
                   return (
                     <View
                       key={p.id}
-                      className={`event-feedback__participant-item ${isSelected ? 'event-feedback__participant-item--selected' : ''}`}
-                      onClick={() => {
-                        haptics('light')
-                        toggleConnection(p.id)
-                      }}
-                      role='button'
-                      aria-pressed={isSelected}
-                      aria-label={`选择${participantName}`}
+                      className='event-feedback__recap-avatar'
+                      style={{ zIndex: recapVisible.length - index }}
                     >
-                      <ParticipantAvatar participant={p} name={participantName} />
-                      <Text className='event-feedback__participant-name'>
-                        {participantName}
-                      </Text>
-                      {isSelected && (
-                        <Text className='event-feedback__participant-check'>✓</Text>
-                      )}
+                      <ParticipantAvatar participant={p} name={participantName} size={56} mini />
                     </View>
                   )
                 })}
+                {recapParticipants.length > recapVisible.length && (
+                  <View className='event-feedback__recap-overflow' style={{ zIndex: 0 }}>
+                    <Text className='event-feedback__recap-overflow-text'>
+                      +{recapParticipants.length - recapVisible.length}
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-        </ScrollView>
+              <Text className='event-feedback__recap-text'>
+                你选了 {recapParticipants.length} 位伙伴，互选成功后 TA 们能看到
+              </Text>
+            </View>
 
-        <View className='event-feedback__footer'>
-          <Button
-            className='event-feedback__submit'
-            onClick={() => {
-              haptics('light')
-              setStep('wrapup')
-            }}
-            ariaLabel={selectedConnections.length > 0 ? `已选 ${selectedConnections.length} 人，进入下一步` : '跳过选择，进入下一步'}
-          >
-            {selectedConnections.length > 0
-              ? `已选 ${selectedConnections.length} 人，下一步`
-              : '跳过，下一步'}
-          </Button>
-        </View>
-      </View>
-    )
-  }
-
-  // ─── Wrap-up step (merged 2026-08-15): attendee impressions + improvement ──
-  // areas + free comment. Impressions only render for people picked on the
-  // connections step (轻量原则).
-  if (effectiveStep === 'wrapup') {
-    const attendees = participants.filter((p) => selectedConnections.includes(p.id))
-    const improvementRemaining = MAX_IMPROVEMENT_AREAS - improvementAreas.length
-    return (
-      <View className='event-feedback'>
-        <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>还有什么想说的？</Text>
-          {renderStepProgress('wrapup')}
-        </View>
-
-        <ScrollView className='event-feedback__deep-scroll' scrollY enhanced showScrollbar={false}>
-          {attendees.length > 0 ? (
             <View className='event-feedback__card'>
-              <Text className='event-feedback__card-title'>参与者印象</Text>
-              <Text className='event-feedback__card-hint'>聊聊你在意的 TA</Text>
-              {attendees.map((p, index) => {
-                const entry = attendeeTraits[p.id] ?? { tags: [], note: '' }
-                const name = p.displayName || p.firstName || '匿名'
-                return (
-                  <View
-                    key={p.id}
-                    className='event-feedback__attendee'
-                    style={{ animationDelay: `${index * 60}ms` }}
-                  >
-                    <View className='event-feedback__attendee-head'>
-                      <ArchetypeHead
-                        archetype={p.archetype}
-                        size={64}
-                        variant='head'
-                        fallbackText={name}
-                      />
-                      <View className='event-feedback__attendee-info'>
-                        <Text className='event-feedback__attendee-name'>{name}</Text>
-                        <Text className='event-feedback__attendee-hint'>
-                          最多选 {MAX_TAGS_PER_ATTENDEE} 个印象
-                        </Text>
-                      </View>
-                    </View>
-                    <View className='event-feedback__attendee-tags'>
-                      {ATTENDEE_TRAIT_PRESETS.map((tag) => {
-                        const selected = entry.tags.includes(tag)
-                        const disabled = !selected && entry.tags.length >= MAX_TAGS_PER_ATTENDEE
-                        return (
-                          <Chip
-                            key={tag}
-                            label={tag}
-                            selected={selected}
-                            compact
-                            disabled={disabled}
-                            onClick={() => {
-                              haptics('light')
-                              toggleAttendeeTag(p.id, tag)
-                            }}
-                          />
-                        )
-                      })}
-                    </View>
-                    <Input
-                      className='event-feedback__attendee-note'
-                      placeholder='想给 TA 的悄悄话（选填）'
-                      value={entry.note}
-                      onInput={(e) => setAttendeeNote(p.id, e.detail.value)}
-                      maxlength={100}
-                      aria-label={`给${name}的悄悄话（选填）`}
-                    />
-                  </View>
-                )
-              })}
+              <View className='event-feedback__wechat-lead'>
+                {/* Batch B item 11: the chemistry chat-bubble asset is
+                    brown-tinted (#C0A17B, off the brand family here) — swapped
+                    for the brand-purple link icon: this step is about staying
+                    reachable. Global chem-chat mapping untouched. */}
+                <JoyJoinIcon emoji='🔗' tier='ui' size={32} />
+                <Text className='event-feedback__card-title'>你的微信号</Text>
+              </View>
+              <Input
+                className={`event-feedback__wechat-input ${wechatError ? 'event-feedback__wechat-input--error' : ''}`}
+                placeholder='输入微信号'
+                value={wechatIdInput}
+                onInput={(e) => handleWechatInput(e.detail.value)}
+                onFocus={handleWechatFocus}
+                onBlur={handleWechatBlur}
+                maxlength={WECHAT_CONTACT_ID_MAX_LENGTH}
+                confirmType='done'
+                aria-label='微信号（选填）'
+              />
+              {/* Batch B item 11: hint and error share ONE slot — the format
+                  hint yields to the error in place, never stacking (no layout
+                  jump). Both occupy the same margin-top: $spacing-xs slot. */}
+              {wechatError ? (
+                <View className='event-feedback__wechat-field-error' role='alert' aria-live='polite'>
+                  <Text>{wechatError}</Text>
+                </View>
+              ) : (
+                <Text className='event-feedback__wechat-format-hint'>{WECHAT_ID_FORMAT_HINT}</Text>
+              )}
+              {/* Batch B item 10: privacy contract block — lock icon + two-line
+                  promise (visibility rule + set-once reassurance), the main
+                  line one font step up and toward the primary color range. */}
+              <View className='event-feedback__wechat-privacy'>
+                <JoyJoinIcon
+                  emoji='🛡️'
+                  tier='ui'
+                  size={28}
+                  className='event-feedback__wechat-privacy-icon'
+                />
+                <View className='event-feedback__wechat-privacy-lines'>
+                  <Text className='event-feedback__wechat-privacy-text'>仅互选成功的伙伴可见，不会公开</Text>
+                  <Text className='event-feedback__wechat-privacy-sub'>{WECHAT_ID_SET_ONCE_HINT}</Text>
+                </View>
+              </View>
             </View>
-          ) : null}
-
-          <View className='event-feedback__card'>
-            <Text className='event-feedback__card-title'>改进建议</Text>
-            <Text className='event-feedback__card-hint'>
-              {improvementRemaining > 0
-                ? `最多选 ${MAX_IMPROVEMENT_AREAS} 个，还能选 ${improvementRemaining} 个`
-                : `已经选满 ${MAX_IMPROVEMENT_AREAS} 个，先这样吧`}
-            </Text>
-            <View className='event-feedback__improve-list'>
-              {IMPROVEMENT_AREA_PRESETS.map((area, index) => {
-                const selected = improvementAreas.includes(area)
-                const disabled = !selected && improvementAreas.length >= MAX_IMPROVEMENT_AREAS
-                return (
-                  <View
-                    key={area}
-                    className={`event-feedback__improve-item ${selected ? 'event-feedback__improve-item--selected' : ''} ${disabled ? 'event-feedback__improve-item--disabled' : ''}`}
-                    hoverClass={disabled ? undefined : 'event-feedback__improve-item--pressed'}
-                    style={{ animationDelay: `${index * 45}ms` }}
-                    role='checkbox'
-                    aria-checked={selected}
-                    aria-disabled={disabled || undefined}
-                    onClick={disabled ? undefined : () => {
-                      haptics('light')
-                      toggleImprovementArea(area)
-                    }}
-                  >
-                    <Text className='event-feedback__improve-label'>{area}</Text>
-                    {selected && <Text className='event-feedback__improve-check'>✓</Text>}
-                  </View>
-                )
-              })}
-            </View>
-            <Input
-              className='event-feedback__deep-input'
-              placeholder='还有别的想说的？（选填）'
-              value={improvementOther}
-              onInput={(e) => setImprovementOther(e.detail.value)}
-              maxlength={200}
-              aria-label='其他改进建议（选填）'
-            />
-          </View>
-
-          <View className='event-feedback__card'>
-            <Text className='event-feedback__card-title'>想说点什么？（可选）</Text>
-            <Textarea
-              className='event-feedback__textarea'
-              placeholder='分享你的感受和建议…'
-              value={comment}
-              onInput={(e) => setComment(e.detail.value)}
-              maxlength={500}
-              aria-label='分享你的感受和建议（可选）'
-            />
           </View>
         </ScrollView>
-
-        {error ? <View className='event-feedback__error' role='alert' aria-live='polite'><Text>{error}</Text></View> : null}
 
         <View className='event-feedback__footer'>
           <View className='event-feedback__footer-row'>
@@ -1093,25 +1461,70 @@ export default function EventFeedbackPage() {
                 haptics('light')
                 setStep('connections')
               }}
-              disabled={isSubmitting}
               ariaLabel='返回选择联系人'
             >
               上一步
             </Button>
             <Button
-              className={`event-feedback__submit${submitted ? ' event-feedback__submit--submitted' : ''}`}
-              onClick={() => {
-                haptics('medium')
-                handleSubmit()
-              }}
-              disabled={isSubmitting || submitted}
-              ariaLabel='提交反馈'
+              className='event-feedback__submit'
+              onClick={handleWechatSave}
+              ariaLabel='保存微信号并继续'
             >
-              {submitted ? '已提交' : '提交反馈'}
+              保存并继续
             </Button>
+          </View>
+          {/* Batch B item 12: skip hint merged into the skip bar — one
+              tertiary line, still a ≥88rpx touch target. */}
+          <View
+            className='event-feedback__wechat-skip'
+            hoverClass='event-feedback__wechat-skip--pressed'
+            role='button'
+            aria-label='暂不填写微信号，结果页还能补'
+            onClick={handleWechatSkip}
+          >
+            <Text>暂不填写，结果页还能补</Text>
           </View>
         </View>
       </View>
+    )
+  }
+
+  // ─── Wrap-up step (merged 2026-08-15): attendee impressions + improvement ──
+  // areas + free comment. Impressions only render for people picked on the
+  // connections step (轻量原则).
+  // ─── Wrap-up step (merged 2026-08-15): attendee impressions + improvement ──
+  // areas + free comment. Render extracted to steps/WrapupStep.tsx
+  // (2026-10-16 Batch C) — the page keeps state + submit, the step gets
+  // everything via props.
+  if (effectiveStep === 'wrapup') {
+    return (
+      <WrapupStep
+        progressDots={renderStepProgress('wrapup', dotSteps)}
+        participants={participants}
+        selectedConnections={selectedConnections}
+        attendeeTraits={attendeeTraits}
+        onToggleAttendeeTag={toggleAttendeeTag}
+        onSetAttendeeNote={setAttendeeNote}
+        onNoteFocus={trackNoteFocus}
+        onArchetypeAssetError={handleArchetypeAssetError}
+        improvementAreas={improvementAreas}
+        onToggleImprovementArea={toggleImprovementArea}
+        comment={comment}
+        onCommentChange={setComment}
+        error={error}
+        isSubmitting={isSubmitting}
+        submitted={submitted}
+        onBack={() => {
+          haptics('light')
+          // Mirror of the forward jump: when the wechat step is in the
+          // visible chain, back from wrap-up lands on it (spec §3).
+          setStep(needWechatStep ? 'wechat' : 'connections')
+        }}
+        onSubmit={() => {
+          haptics('medium')
+          handleSubmit()
+        }}
+      />
     )
   }
 
@@ -1120,7 +1533,9 @@ export default function EventFeedbackPage() {
     <JoyJoinLoadingScreen
       title='页面加载中…'
       subtitle={`${getMascotDisplayName(currentUser)}正在准备`}
-      showSkeleton={false}
+      hideMascot
+      showSkeleton
+      skeletonDelayMs={800}
     />
   )
 }

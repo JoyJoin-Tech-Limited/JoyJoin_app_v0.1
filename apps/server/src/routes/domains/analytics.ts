@@ -160,6 +160,20 @@ const DISCOVER_EVENT_TYPES = [
   "feedback_locked_tap",
   "feedback_reminder_tap",
   "feedback_page_open",
+  // Wrap-up identity & funnel telemetry (2026-10-16 polish batch): step views,
+  // per-tag selection, 印象补充 focus, archetype fallback + collision rate.
+  // Enum-only metadata (eventId + step/tag/reason/count) — zero PII.
+  "feedback_step_view",
+  "feedback_attendee_tag_selected",
+  "feedback_attendee_note_focus",
+  "feedback_archetype_fallback",
+  "feedback_archetype_collision",
+  // 2026-10-16 uplift Batch B (item 10): first focus of the 微信号 input —
+  // collection-funnel engagement anchor. eventId metadata only, never the ID.
+  "feedback_wechat_input_focus",
+  // 2026-10-16 uplift item 19: 互选纪念卡 saved to the photo album from the
+  // revealed screen. eventId + matchCount metadata only — zero PII.
+  "feedback_keepsake_save",
   "promo_banner_impression",
   "promo_banner_cta_tap",
   "promo_banner_image_error",

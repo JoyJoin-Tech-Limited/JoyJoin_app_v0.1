@@ -42,7 +42,7 @@ const REDUCED_MOTION = getReducedMotion()
 /** Selected-state glow ring using the brand primary colour at 25% opacity. */
 const SELECTED_GLOW = hexWithAlpha(BRAND_COLORS.primary, '40')
 
-const RATING_LABELS = ['非常不满意', '不满意', '一般', '满意', '非常满意']
+const RATING_LABELS = ['很失望', '有点闷', '还不错', '很尽兴', '超尽兴']
 
 /**
  * RatingFace — Premium 5-face rating selector for event feedback.

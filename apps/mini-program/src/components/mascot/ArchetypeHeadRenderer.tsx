@@ -17,6 +17,12 @@ interface ArchetypeHeadRendererProps {
   fallback?: 'initial' | 'none'
   fallbackText?: string
   className?: string
+  /**
+   * Fires when the head asset fails on BOTH tiers (local bundle → CDN) — the
+   * one failure mode that otherwise renders as an empty ring on
+   * fallback='none' surfaces. Optional; existing consumers are untouched.
+   */
+  onAssetError?: () => void
 }
 
 const HEAD_PATHS: Record<string, string> = {
@@ -95,6 +101,7 @@ export default function ArchetypeHeadRenderer({
   fallback = 'initial',
   fallbackText,
   className = '',
+  onAssetError,
 }: ArchetypeHeadRendererProps) {
   const paths = variant === 'grid' ? GRID_PATHS : HEAD_PATHS
   const localSrc = archetype ? paths[archetype] : undefined
@@ -110,7 +117,11 @@ export default function ArchetypeHeadRenderer({
 
   const handleCdnError = useCallback(() => {
     setHasCdnError(true)
-  }, [])
+    // Both tiers dead → the caller may want to count it (fallback='none'
+    // renders an empty ring with no other signal). Kept out of the fallback
+    // branch on purpose: null-archetype never reaches this callback.
+    onAssetError?.()
+  }, [onAssetError])
 
   if (!localSrc || (hasLocalError && hasCdnError)) {
     if (fallback === 'none') return null

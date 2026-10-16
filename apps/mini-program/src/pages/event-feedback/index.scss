@@ -44,26 +44,24 @@
     padding-top: $spacing-xl;
   }
 
-  // C5 — Ceremony hero backdrop (Batch C eventFeedbackThanks)
-  &__success-hero {
-    width: 360rpx;
+  // Batch A item 1 (2026-10-16): the 360rpx ceremony hero scene is retired —
+  // the mascot badge is the single mascot moment on the revealed screen, now
+  // 240rpx and carrying the hero's old entrance animation (RM-gated below).
+  &__success-mascot {
+    width: 240rpx;
     height: 240rpx;
     display: block;
-    margin-bottom: $spacing-sm;
     opacity: 0;
     animation: event-feedback-hero-enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
-  }
-
-  &__success-mascot {
-    width: 220rpx;
-    height: 220rpx;
-    display: block;
   }
 
   &__success-title-row {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
+    // Gap retune (item 1): mascot→title 16rpx effective (parent gap 24 − 8),
+    // so the badge and the headline read as one beat, not two.
+    margin-top: -$spacing-xs;
   }
 
   &__success-title {
@@ -75,28 +73,104 @@
     color: $color-text-primary;
   }
 
+  // Same 16rpx mascot→title beat when the title is bare (no-match branches
+  // skip the title-row wrapper); the row-nested title is unaffected.
+  // Declared AFTER the base &__success-title block so source-order string
+  // extraction (tests) keeps finding the base block first.
+  &__success > &__success-title {
+    margin-top: -$spacing-xs;
+  }
+
   &__success-text {
     display: block;
     font-size: $font-size-base;
     color: $color-text-secondary;
   }
 
-  &__back-btn {
+  &__success-subtext {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary-on-light;
+    margin-top: -$spacing-xs;
+  }
+
+  // Exit ramp (2026-10-16 #19): primary CTA carries the connection intent to
+  // the 连接 tab; 返回 demoted to a quiet ghost.
+  &__success-actions {
+    width: 100%;
+    // Item 16: no horizontal padding — CTAs align on the 40rpx container
+    // edge with the remedy/match cards (was double-inset).
+    // Item 1 gap retune: 32rpx seam (parent gap 24 + 8) — uniform whether
+    // the CTAs follow the match cards or are the first block under the copy.
+    margin-top: $spacing-xs;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__success-primary {
     @include button-primary;
-    padding: 0 $spacing-xl;
-    margin-top: $spacing-md;
+    width: 100%;
     border: 0;
+  }
+
+  // 互选纪念卡 second action (item 19, promoted pre-ship 2026-10-16 USA
+  // audit): the share artifact must be discoverable at the emotional peak —
+  // it was a whisper below the CTAs. Busy state carries NO native disabled
+  // attribute (the platform disabled colour would repaint the fill;
+  // 2026-10-16 render-caught rule) — the busy guard is JS + aria.
+  &__success-secondary {
+    @include button-secondary;
+    width: 100%;
+
+    &--busy {
+      opacity: 0.72;
+    }
+  }
+
+  // 返回 demoted to a quiet text link: one primary, one secondary, one exit.
+  &__success-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // ≥88rpx tap strip.
+    min-height: 88rpx;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary-on-light;
+    transition: opacity 0.12s ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  // Hidden keepsake canvas: off-screen but full internal bitmap size —
+  // canvasToTempFilePath requires the bitmap (not the DOM size) to match the
+  // export dimensions or the export comes back blank (profile-review insight
+  // poster precedent).
+  &__keepsake-canvas {
+    position: fixed;
+    left: -9999rpx;
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
   }
 
   // ─── Matches reveal ───────────────────────────────────────────────────────
   &__matches {
     width: 100%;
-    padding: 0 $spacing-md;
+    // Item 16: no horizontal padding — cards align on the 40rpx container
+    // edge (was double-inset next to the padded scroll container).
+    // Item 1 gap retune: copy→first-card 32rpx (parent gap 24 + 8) when the
+    // list is the first card under the copy.
+    margin-top: $spacing-xs;
   }
 
   &__match-card {
     margin-bottom: $spacing-md;
     padding: $spacing-lg;
+    // Ceremony stagger (2026-10-16 #19): 80ms inline delay per card.
+    animation: event-feedback-chip-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   &__match-row {
@@ -174,8 +248,11 @@
     margin-bottom: $spacing-xs;
   }
 
-  // 1/2/3 step dots (2026-08-15): bumped to 16rpx so the indicator reads as
-  // part of the header rather than a speck.
+  // Step dots (2026-08-15): 16rpx so the indicator reads as part of the
+  // header rather than a speck. Batch A item 2 (2026-10-16): the denominator
+  // is visit-stable (dotSteps keys off collection eligibility, never the
+  // live selection count — no more 3→4 mid-flow flip), and past steps split
+  // from the current one: --done solid dot behind you, --active capsule here.
   &__progress {
     display: flex;
     justify-content: center;
@@ -186,11 +263,20 @@
   &__progress-dot {
     width: 16rpx;
     height: 16rpx;
-    border-radius: 50%;
+    border-radius: 999rpx;
     background: rgba($color-primary, 0.18);
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, width 0.2s ease;
 
+    // Completed steps fill solid — quiet "stations" already behind you.
+    &--done {
+      background: $color-primary;
+    }
+
+    // The current step alone elongates into a 32rpx capsule — "you are
+    // here" at a glance, including on the final step (was blind before:
+    // every dot ≤ the active index used to stretch).
     &--active {
+      width: 32rpx;
       background: $color-primary;
     }
   }
@@ -238,9 +324,11 @@
   }
 
   // ─── Participant grid ─────────────────────────────────────────────────────
+  // Batch C item 9: 3 → 2 columns — pools cap at 6 (≤5 selectable), so the
+  // wider card always holds; no >6 breakpoint needed.
   &__participant-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: $spacing-md;
   }
 
@@ -253,11 +341,14 @@
     border: 2rpx solid $color-border;
     background: $color-bg;
     position: relative;
-    transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
 
+    // Batch C item 8: selection ceremony — brand 2rpx ring + a quiet lift
+    // (transform-only, RM-gated below) on top of the ✓ + haptics.
     &--selected {
       border-color: $color-primary;
       background: rgba($color-primary, 0.05);
+      transform: translateY(-4rpx);
     }
 
     &:active {
@@ -265,11 +356,44 @@
     }
   }
 
+  // Batch C item 8: avatar ring — same attended-ring language as the wrap-up
+  // attendee rows; the archetype-accent border color is applied inline once
+  // the person is selected. Wrapper doubles as the 112rpx enlargement (item 9).
+  &__participant-ring {
+    width: 112rpx;
+    height: 112rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border: 4rpx solid transparent;
+    background: rgba($color-primary, 0.06);
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+    @include flex-center;
+  }
+
   &__participant-avatar {
     width: 80rpx;
     height: 80rpx;
     border-radius: 50%;
     background: rgba($color-primary, 0.08);
+
+    &--attendee {
+      width: 88rpx;
+      height: 88rpx;
+    }
+
+    // 56rpx circle inside the wechat-step selection recap stack (Batch B #13).
+    &--mini {
+      width: 56rpx;
+      height: 56rpx;
+    }
+
+    // 112rpx circle inside the 2-column grid cards (Batch C #9).
+    &--large {
+      width: 112rpx;
+      height: 112rpx;
+    }
   }
 
   &__participant-name {
@@ -279,6 +403,47 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // 36rpx mini enamel tag (#16): same hue-bonded grammar as the wrap-up
+  // __attendee-tag, scaled down for the selection grid. Colors are inline.
+  &__participant-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36rpx;
+    padding: 0 10rpx;
+    border-radius: 999rpx;
+    border: 1rpx solid transparent;
+    box-sizing: border-box;
+    font-size: 20rpx;
+    font-weight: $font-weight-medium;
+    line-height: 1;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Batch C item 9: memory anchors — visibility-gated meta (age band ·
+  // gender · industry, same server-gated data path as the wrap-up rows) and
+  // the self-selected social identity tag, centered under the name.
+  &__participant-meta {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__participant-socialtag {
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__participant-check {
@@ -292,6 +457,51 @@
     color: $color-surface;
     font-size: 20rpx;
     @include flex-center;
+  }
+
+  // ─── Mutual-selection benefit strip (Batch C item 7) ─────────────────────
+  // The hook moved UP from the retired card-hint into this contract block
+  // under the title — same tint family as the wechat privacy block (one
+  // promise grammar across the flow).
+  &__benefit {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    margin-bottom: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-primary, 0.05);
+  }
+
+  &__benefit-icon {
+    flex-shrink: 0;
+  }
+
+  &__benefit-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-primary;
+  }
+
+  // Batch C item 8: quiet count chip floating above the footer CTA (N>0).
+  &__selection-count {
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48rpx;
+    padding: 0 $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.06);
+    margin-bottom: $spacing-sm;
+  }
+
+  &__selection-count-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-on-light;
   }
 
   &__empty-participants {
@@ -350,8 +560,27 @@
     // Bottom-anchored CTA (2026-07-28): margin-top auto inside the flex
     // column pins the action to the safe area instead of floating mid-screen.
     margin-top: auto;
-    padding-top: $spacing-xl;
+    // Canon bottom action bar (2026-10-16 #7): solid surface + hairline top
+    // shadow, bled edge-to-edge via negative margins that cancel the root
+    // $container-padding (declared as separate sides so the margin-top:auto
+    // anchor above stays intact).
+    margin-left: -$container-padding;
+    margin-right: -$container-padding;
+    margin-bottom: -$container-padding;
+    padding: $spacing-md $container-padding 0;
+    background: $color-surface;
+    box-shadow: 0 -4rpx 24rpx rgba($color-text-primary, 0.05);
     @include safe-area-bottom-padding;
+  }
+
+  // Pre-submit order-summary (#14): one quiet centered line listing what will
+  // be submitted; omitted entirely when the form is empty.
+  &__footer-summary {
+    display: block;
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
+    margin-bottom: $spacing-sm;
   }
 
   &__submit {
@@ -401,6 +630,23 @@
     }
   }
 
+  // Platform disabled-colour guard (AGENTS.md 2026-10-16 render-caught rule):
+  // platform selectors (WeChat `button[disabled]:not([type])`, H5
+  // `taro-button-core[disabled]`) outrank single-class colour rules — a custom
+  // CTA would render in the PLATFORM's disabled colour on device (event-detail
+  // white-on-white incident). Re-assert palette from an ancestor (0,3,0); the
+  // opacity demotion on the base classes stays the only visual change.
+  &__footer-row .event-feedback__submit[disabled] {
+    background: $color-primary;
+    color: $color-text-white;
+  }
+
+  &__footer-row .event-feedback__submit-ghost[disabled] {
+    background: transparent;
+    border: 2rpx solid $color-border;
+    color: $color-text-primary;
+  }
+
   // Why-we-ask hint (2026-08-15 merge): one quiet line under the progress dots
   // giving the reason for feedback — deliberately NOT a points pitch, since
   // there is no coupon-linked 积分 system for users to redeem against.
@@ -421,6 +667,138 @@
     min-height: 0;
   }
 
+  // ─── Scroll-inner (Batch B item 6, 2026-10-16) ──────────────────────────
+  // Dead-zone vertical centering: the wrapper is at least the scroll port's
+  // height so flex auto-margins can center short content; the auto margins
+  // collapse to 0 (plain top-aligned scroll) when content overflows. Generic
+  // — Batch C reuses the same wrapper for the connections step.
+  &__scroll-inner {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    // Free space gathers ABOVE the group's first element …
+    > .event-feedback__recap {
+      margin-top: auto;
+    }
+
+    // Batch C item 6: the connections step joins the same grammar — the
+    // benefit strip takes the top auto margin so strip+card center as one
+    // attached group; a 6-person roster overflows to plain top-aligned
+    // scroll (auto margins collapse to 0).
+    > .event-feedback__benefit {
+      margin-top: auto;
+    }
+
+    // … and BELOW the card, so the group stays visually attached and centers
+    // as one unit (the spec's "card margin auto" adapted for the two-element
+    // group — a bare auto top margin on the card would detach the recap or
+    // the benefit strip sitting above it).
+    > .event-feedback__card {
+      margin-bottom: auto;
+    }
+  }
+
+  // ─── Selection recap bar (Batch B item 13, 2026-10-16) ───────────────────
+  // Overlap-stacked faces + one quiet line directly above the wechat card —
+  // the form tax continues the emotional arc from the connections step.
+  &__recap {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__recap-avatars {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  // 56rpx face circle with a 2rpx surface ring; the negative overlap tucks
+  // each face behind the previous one (inline z-index keeps the first on top).
+  &__recap-avatar {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 2rpx solid $color-surface;
+    background: rgba($color-primary, 0.08);
+    @include flex-center;
+
+    & + &,
+    & + .event-feedback__recap-overflow {
+      margin-left: -16rpx;
+    }
+  }
+
+  &__recap-overflow {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 2rpx solid $color-surface;
+    background: rgba($color-primary, 0.1);
+    flex-shrink: 0;
+    @include flex-center;
+  }
+
+  &__recap-overflow-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  &__recap-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
+  }
+
+  // ─── Progressive-disclosure expander (Batch C item 5, 2026-10-16) ────────
+  // 「再多评几项（可选）」 — one quiet tertiary row between the always-visible
+  // head (faces + thermometer) and the deep fields (radar + venue/status).
+  &__expander {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    // ≥88rpx tap strip.
+    min-height: 88rpx;
+    margin-bottom: $spacing-md;
+    border-radius: $card-radius-sm;
+    transition: opacity 0.12s ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  &__expander-label {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary-on-light;
+  }
+
+  // CSS chevron — no chevron asset exists in emojiToIconMap and copy law bars
+  // a raw glyph. Transform-only rotate between down (45deg) and up (225deg),
+  // RM-gated below.
+  &__expander-chevron {
+    width: 14rpx;
+    height: 14rpx;
+    box-sizing: border-box;
+    border-right: 3rpx solid $color-text-tertiary-on-light;
+    border-bottom: 3rpx solid $color-text-tertiary-on-light;
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+
+    &--open {
+      transform: rotate(225deg);
+    }
+  }
+
   // ─── Shared 1-5 dot scale (thermometer + radar, 灯格 visual language) ─────
   &__scale {
     display: flex;
@@ -431,8 +809,10 @@
         height: 80rpx;
 
         &::after {
-          width: 24rpx;
-          height: 24rpx;
+          // Pre-ship USA audit: 24rpx dots read as tiny/pale on the radar —
+          // one step up, still below the thermometer's 32rpx stations.
+          width: 28rpx;
+          height: 28rpx;
         }
       }
     }
@@ -444,6 +824,8 @@
 
   &__scale-dot {
     position: relative;
+    // Batch C item 3: dots paint above the thermometer's absolute track.
+    z-index: 1;
     flex: 1;
     height: 88rpx;
     display: flex;
@@ -485,15 +867,42 @@
       color: $color-primary;
       font-weight: $font-weight-semibold;
     }
+
+    // Batch C item 4: radar anchors stay invisible except the selected one
+    // (opacity only — the word keeps its dot position, no layout shift).
+    &--hidden {
+      opacity: 0;
+    }
   }
 
   // ─── 氛围温度计 ──────────────────────────────────────────────────────────
   &__thermo {
+    // Batch C item 3: the track rides BEHIND the dot row — stations on a rail.
+    position: relative;
     margin-top: $spacing-sm;
+
+    // Stations: unselected dots become surface-filled rings so the track
+    // reads as the rail between them (scoped to the thermometer — the radar's
+    // compact dots keep the solid border-token disc, one contrast step up).
+    .event-feedback__scale-dot::after {
+      background: $color-surface;
+      border: 2rpx solid $color-border;
+      box-sizing: border-box;
+    }
+
+    .event-feedback__scale-dot--lit::after {
+      background: $color-primary;
+      border-color: $color-primary;
+    }
   }
 
   &__thermo-track {
-    position: relative;
+    // Dot row is 88rpx tall → dot center 44rpx; the 12rpx track centers at
+    // 44 − 6 = 38rpx, threading through the stations.
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 38rpx;
     height: 12rpx;
     border-radius: 6rpx;
     background: $color-border;
@@ -527,11 +936,13 @@
     gap: $spacing-xs;
   }
 
+  // Batch C item 4: label and hint stack vertically — the old baseline-split
+  // left a wide dead gutter between them on narrow cards.
   &__radar-head {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: $spacing-sm;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-2xs;
   }
 
   &__radar-label {
@@ -541,7 +952,7 @@
   }
 
   &__radar-hint {
-    font-size: $font-size-2xs;
+    font-size: $font-size-xs;
     color: $color-text-tertiary-on-light;
   }
 
@@ -598,19 +1009,40 @@
 
   // ─── Attendee impressions (deep screen B) ─────────────────────────────────
   &__attendee {
-    padding: $spacing-md 0;
-    border-bottom: 1rpx solid $color-divider;
+    position: relative;
+    padding: $spacing-lg 0;
     animation: event-feedback-chip-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 
+    // Inset hairline (#8): the divider starts at the text column (88rpx avatar
+    // + 16rpx gap) instead of chopping under the face.
+    &::after {
+      content: '';
+      position: absolute;
+      left: 104rpx;
+      right: 0;
+      bottom: 0;
+      height: 1rpx;
+      background: $color-divider;
+    }
+
+    &:first-child {
+      padding-top: $spacing-sm;
+    }
+
     &:last-child {
-      border-bottom: none;
       padding-bottom: 0;
+
+      &::after {
+        display: none;
+      }
     }
   }
 
   &__attendee-head {
     display: flex;
-    align-items: center;
+    // Top-anchor (#6): the face anchors to the name line, not the vertical
+    // middle of the (now taller) identity stack.
+    align-items: flex-start;
     gap: $spacing-sm;
     margin-bottom: $spacing-sm;
   }
@@ -618,19 +1050,125 @@
   &__attendee-info {
     flex: 1;
     min-width: 0;
+    // Short-stack centering (#6): when meta/socialTag are absent, the name
+    // row still vertically centers against the 88rpx avatar.
+    min-height: 88rpx;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  // Avatar wrapper — owns the circle geometry (88rpx) + the "attended" ring.
+  // The ring color is applied inline (archetype-accent rgba) once the user has
+  // picked ≥1 impression tag for this person.
+  &__attendee-avatar {
+    width: 88rpx;
+    height: 88rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border: 4rpx solid transparent;
+    background: rgba($color-primary, 0.06);
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+    @include flex-center;
+  }
+
+  // Name + enamel archetype tag on one baseline; wraps cleanly on narrow
+  // phones (hero-card flex-wrap contract — the pill never squishes, the name
+  // absorbs truncation).
+  &__attendee-name-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: $spacing-xs;
+    row-gap: $spacing-2xs;
   }
 
   &__attendee-name {
-    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
 
-  &__attendee-hint {
+  // 瓷釉徽章 "enamel pill" — geometry only; the 10% tint / 22% ring /
+  // deep-contrast text colors are applied inline from the archetype hue
+  // (rgba only — WeChat WXSS drops hsla()).
+  &__attendee-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40rpx;
+    padding: 0 12rpx;
+    border-radius: 999rpx;
+    border: 1rpx solid transparent;
+    box-sizing: border-box;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    line-height: 1;
+    max-width: 176rpx;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+
+  // Meta line: age band · gender · industry (visibility-gated server-side).
+  &__attendee-meta {
     display: block;
+    margin-top: $spacing-2xs;
     font-size: $font-size-xs;
     color: $color-text-tertiary-on-light;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Self-selected social identity tag — quoted, quiet, premium.
+  &__attendee-socialtag {
+    display: block;
+    margin-top: $spacing-2xs;
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Chips caption row (#2): state text lives next to the chips it governs;
+  // the live n/3 counter makes the attended ring's signal explicit.
+  &__attendee-tags-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__attendee-tags-hint {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
+
+    &--full {
+      color: $color-text-secondary-on-light;
+    }
+  }
+
+  &__attendee-tags-count {
+    font-size: $font-size-xs;
+    font-family: $font-mono;
+    color: $color-text-tertiary-on-light;
+
+    &--full {
+      font-weight: $font-weight-medium;
+      color: $color-text-secondary-on-light;
+    }
   }
 
   &__attendee-tags {
@@ -640,24 +1178,27 @@
     margin-bottom: $spacing-sm;
   }
 
-  // ─── Improvement areas (recipe list) ──────────────────────────────────────
+  // ─── Improvement areas (Batch C item 14: pill flow) ──────────────────────
+  // Compact chip stream (same grammar as the attendee impression Chips) —
+  // the full-width recipe rows are retired, saving ~400rpx of scroll.
   &__improve-list {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: $spacing-sm;
   }
 
   &__improve-item {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    min-height: 88rpx;
+    justify-content: flex-start;
+    gap: $spacing-xs;
+    min-height: 64rpx;
     padding: 0 $spacing-md;
-    border-radius: $card-radius-sm;
+    border-radius: $radius-pill;
     border: 2rpx solid $color-border;
     background: $color-bg;
     transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
-    animation: event-feedback-chip-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 
     &--selected {
       border-color: $color-primary;
@@ -675,21 +1216,26 @@
 
   &__improve-label {
     font-size: $font-size-sm;
+    line-height: 1.3;
     color: $color-text-primary;
   }
 
-  &__improve-check {
-    width: 32rpx;
-    height: 32rpx;
+  // Right-side circle checkbox: empty ring when unselected; the brand-purple
+  // ✅ JoyJoinIcon (icon-check asset) fills the slot when selected.
+  &__improve-ring {
+    width: 28rpx;
+    height: 28rpx;
     border-radius: 50%;
-    background: $color-primary;
-    color: $color-surface;
-    font-size: 20rpx;
-    @include flex-center;
+    border: 2rpx solid $color-border;
+    box-sizing: border-box;
+    flex-shrink: 0;
   }
 
-  // ─── Deep layer single-line inputs ────────────────────────────────────────
-  &__deep-input,
+  &__improve-check-icon {
+    flex-shrink: 0;
+  }
+
+  // ─── Attendee single-line note input ──────────────────────────────────────
   &__attendee-note {
     box-sizing: border-box;
     display: block;
@@ -704,12 +1250,218 @@
     background: $color-bg;
   }
 
-  &__deep-input {
-    margin-top: $spacing-sm;
-  }
-
   &__card-title--spaced {
     margin-top: $spacing-lg;
+  }
+
+  // ─── 微信号采集步 (2026-10-16, wechat-id-collection-spec §7) ────────────
+  // Icon + card-title share one row.
+  &__wechat-lead {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  // Single-line ID input — mirrors &__attendee-note geometry, mono for an
+  // at-a-glance character check (same grammar as &__match-wechat-id).
+  &__wechat-input {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    height: $input-height;
+    line-height: $input-height;
+    padding: 0 $spacing-md;
+    border: 2rpx solid $color-border;
+    border-radius: $card-radius-sm;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    background: $color-bg;
+    font-family: $font-mono;
+
+    &--error {
+      border-color: $color-error;
+    }
+  }
+
+  // Persistent format hint (a placeholder vanishes once the user types).
+  // Shared by the collection step and the revealed remedy card.
+  &__wechat-format-hint {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-tertiary-on-light;
+  }
+
+  // Inline field error — plain block text (never a flex state block, so the
+  // full-screen centering guardrail does not apply). Shared by both surfaces.
+  &__wechat-field-error {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-error;
+  }
+
+  // Privacy contract block (Batch B item 10, 2026-10-16): lock icon + two
+  // lines (visibility rule + set-once reassurance) — upgraded from the faint
+  // tint strip into a real trust surface next to the field.
+  &__wechat-privacy {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-primary, 0.05);
+  }
+
+  &__wechat-privacy-icon {
+    flex-shrink: 0;
+    // Optical align: the 28rpx glyph sits on the first text line's cap height.
+    margin-top: 4rpx;
+  }
+
+  &__wechat-privacy-lines {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2xs;
+  }
+
+  // Main promise — one font step up (xs→sm) and into the primary range
+  // (#2D3142 on the 5% brand tint over white ≈ 12:1, well above 4.5:1).
+  &__wechat-privacy-text {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-primary;
+  }
+
+  // Set-once reassurance, merged into the block as its second, quieter line
+  // (the standalone __wechat-setonce element is deleted).
+  &__wechat-privacy-sub {
+    display: block;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+  }
+
+  // 暂不填写，结果页还能补 — tertiary text button under the footer row (Batch B
+  // item 12: the skip hint merged into this single line; the standalone
+  // __wechat-skip-hint element is deleted). ≥88rpx tap strip.
+  &__wechat-skip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary-on-light;
+    transition: opacity 0.12s ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  // ─── Revealed remedy card (spec §5) ─────────────────────────────────────
+  // Sits above the match cards; resets the celebration column's centered
+  // text to left. Same pop-in grammar as the match cards, RM-gated below.
+  &__remedy-card {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: $spacing-md;
+    // Item 1 gap retune: copy→first-card 32rpx (parent gap 24 + 8) — the
+    // remedy card is the first card under the copy when it renders.
+    margin-top: $spacing-xs;
+    padding: $spacing-lg;
+    text-align: left;
+    animation: event-feedback-chip-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &__remedy-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__remedy-text {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__remedy-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__remedy-input {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    height: $input-height;
+    line-height: $input-height;
+    padding: 0 $spacing-md;
+    border: 2rpx solid $color-border;
+    border-radius: $card-radius-sm;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    background: $color-bg;
+    font-family: $font-mono;
+
+    &--error {
+      border-color: $color-error;
+    }
+  }
+
+  // Row-matched compact CTA: the primary button's default height exceeds the
+  // 88rpx input, so pin both to $input-height (still the tap-target floor).
+  &__remedy-save {
+    @include button-primary;
+    flex-shrink: 0;
+    width: auto;
+    height: $input-height;
+    min-height: $input-height;
+    padding: 0 $spacing-lg;
+    border: 0;
+    box-shadow: none;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+
+  // Platform disabled-colour guard (same rule as the footer CTAs above): without
+  // this, the empty-input 保存 button renders in the platform's disabled colour
+  // on device while looking correct on H5.
+  &__remedy-row .event-feedback__remedy-save[disabled] {
+    background: $color-primary;
+    color: $color-text-white;
+  }
+
+  // Batch A item 15: ✓ icon + confirmation copy share one row.
+  &__remedy-success-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__remedy-success {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
   }
 }
 
@@ -725,7 +1477,8 @@
   }
 }
 
-// C5 — Ceremony hero entrance: scale + fade-in (matches Batch C brief)
+// Ceremony entrance: scale + fade-in. Batch A item 1 (2026-10-16): moved
+// from the retired 360rpx hero scene onto the single mascot badge.
 @keyframes event-feedback-hero-enter {
   from {
     opacity: 0;
@@ -774,7 +1527,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .event-feedback__success-hero {
+  .event-feedback__success-mascot {
     animation: none;
     opacity: 1;
   }
@@ -799,7 +1552,21 @@
   }
 
   .event-feedback__attendee,
-  .event-feedback__improve-item {
+  .event-feedback__improve-item,
+  .event-feedback__match-card,
+  .event-feedback__remedy-card {
     animation: none;
+  }
+
+  .event-feedback__attendee-avatar,
+  .event-feedback__participant-item,
+  .event-feedback__participant-ring,
+  .event-feedback__expander-chevron,
+  .event-feedback__progress-dot {
+    transition: none;
+  }
+
+  .event-feedback__participant-item--selected {
+    transform: none;
   }
 }

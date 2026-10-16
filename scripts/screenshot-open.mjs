@@ -73,6 +73,7 @@ const PAGES = {
   'flash-teaser-banner': { url: 'http://localhost:9000/flash-teaser-banner.png', altPort: 9003 },
   'flash-teaser-page': { url: 'http://localhost:9000/flash-teaser-page.png', altPort: 9003 },
   'landing-legal-hint': { url: 'http://localhost:9000/landing-legal-hint.png', altPort: 9003 },
+  'event-feedback': { url: 'http://localhost:9000/event-feedback-wechat-step.png', altPort: 9003 },
   'gathering-room': { url: 'http://localhost:9000/gathering-room.png', altPort: 9003 },
   'personality-test-slider': { url: 'http://localhost:9000/personality-test-slider-neutral.png', altPort: 9003 },
   'personality-test-slider-drag': { url: 'http://localhost:9000/personality-test-slider-drag.png', altPort: 9003 },

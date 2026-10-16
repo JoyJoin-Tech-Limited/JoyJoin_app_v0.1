@@ -68,6 +68,13 @@ export interface ConnectionSummary {
   peerCity: string | null
   peerBio: string | null
   peerAgeRange: string | null
+  /**
+   * Top 1–2 positive preset impression tags the PEER gave this user in the
+   * event-feedback wrapup step (e.g. ['温暖', '会聊天']). Display-only
+   * 印象标签回流 on the connections tab (2026-10-16 premium-uplift spec #18).
+   * null/empty when the peer left no tags — clients render nothing.
+   */
+  peerImpressionTags?: string[] | null
 }
 
 export type EventThemeVibe = 'playful' | 'professional' | 'creative' | 'adventurous'

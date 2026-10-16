@@ -26,6 +26,8 @@ interface Connection {
   sharedEventTitle?: string
   chemistryScore?: number | string
   wechatId?: string
+  /** Top 1–2 positive preset tags the peer gave this user (印象标签回流). */
+  peerImpressionTags?: string[] | null
   [key: string]: unknown
 }
 
@@ -131,6 +133,11 @@ export default function ConnectionsPage() {
                 {conn.peerArchetype ? (
                   <Text className='connections-page__card-archetype'>
                     {ARCHETYPE_BY_ID[conn.peerArchetype]?.nameCn || conn.peerArchetype}
+                  </Text>
+                ) : null}
+                {Array.isArray(conn.peerImpressionTags) && conn.peerImpressionTags.length > 0 ? (
+                  <Text className='connections-page__card-impression'>
+                    同桌觉得你：{conn.peerImpressionTags.join('·')}
                   </Text>
                 ) : null}
                 {conn.chemistryScore ? (

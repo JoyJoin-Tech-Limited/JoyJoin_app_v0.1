@@ -22,6 +22,22 @@ export type FeedbackAnalyticsEventType =
   | 'feedback_locked_tap'
   | 'feedback_reminder_tap'
   | 'feedback_page_open'
+  // Wrap-up identity & funnel telemetry (2026-10-16 polish batch): step-level
+  // views, per-tag selection, 印象补充 focus, archetype fallback/collision.
+  // Enum-only metadata (eventId + step/tag/reason/count) — zero PII.
+  | 'feedback_step_view'
+  | 'feedback_attendee_tag_selected'
+  | 'feedback_attendee_note_focus'
+  | 'feedback_archetype_fallback'
+  | 'feedback_archetype_collision'
+  // 2026-10-16 uplift Batch B (item 10): first focus of the 微信号 input,
+  // once per visit — the collection-funnel engagement anchor. No metadata
+  // beyond eventId.
+  | 'feedback_wechat_input_focus'
+  // 2026-10-16 uplift item 19: 互选纪念卡 saved to the photo album from the
+  // revealed screen. Metadata carries eventId + matchCount only — zero PII,
+  // zero contact info (the card structurally excludes it).
+  | 'feedback_keepsake_save'
 
 export function trackFeedbackEvent(
   eventType: FeedbackAnalyticsEventType,

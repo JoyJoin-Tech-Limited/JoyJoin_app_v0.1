@@ -752,7 +752,7 @@ export const eventFeedback = pgTable("event_feedback", {
   // New balanced feedback system fields
   // Dimension 1: Overall Atmosphere - Thermometer
   atmosphereScore: integer("atmosphere_score"), // 1-5 (1=尴尬, 2=平淡, 3=舒适, 4=热烈, 5=完美)
-  atmosphereNote: text("atmosphere_note"), // Optional supplementary note
+  atmosphereNote: text("atmosphere_note"), // DEPRECATED WRITE PATH (2026-10-16): no longer collected by clients; retained for back-compat with older published app versions
   
   // Dimension 2: Attendee Impressions - Trait Tags
   attendeeTraits: jsonb("attendee_traits"), // {userId: {displayName, tags: string[], needsImprovement: boolean, improvementNote: string}}
@@ -764,7 +764,7 @@ export const eventFeedback = pgTable("event_feedback", {
   
   // Dimension 4: Improvement Suggestions - Magic Recipe Cards
   improvementAreas: text("improvement_areas").array(), // Max 3 areas
-  improvementOther: text("improvement_other"), // Custom improvement suggestion
+  improvementOther: text("improvement_other"), // DEPRECATED WRITE PATH (2026-10-16): no longer collected by clients; retained for back-compat with older published app versions
   
   // Dimension 5: Venue Style Rating
   venueStyleRating: varchar("venue_style_rating"), // "like" | "neutral" | "dislike" - 场地风格满意度
@@ -1007,13 +1007,13 @@ export const insertEventFeedbackSchema = createInsertSchema(eventFeedback).omit(
   
   // New balanced feedback system validation
   atmosphereScore: z.number().min(1).max(5).optional(),
-  atmosphereNote: z.string().optional(),
+  atmosphereNote: z.string().optional(), // DEPRECATED (2026-10-16): accepted from legacy clients only
   attendeeTraits: z.any().optional(), // JSON object
   connectionRadar: z.any().optional(), // JSON object  
   hasNewConnections: z.boolean().optional(),
   connectionStatus: z.enum(["已交换联系方式", "有但还没联系", "没有但很愉快", "没有不太合适"]).optional(),
   improvementAreas: z.array(z.string()).max(3).optional(),
-  improvementOther: z.string().optional(),
+  improvementOther: z.string().optional(), // DEPRECATED (2026-10-16): accepted from legacy clients only
   
   // Venue style rating validation
   venueStyleRating: z.enum(["like", "neutral", "dislike"]).optional(),

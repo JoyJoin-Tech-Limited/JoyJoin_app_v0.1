@@ -41,19 +41,14 @@ describe('buildEventFeedbackPayload — balanced layer (均衡反馈)', () => {
     })
   })
 
-  it('carries only the atmosphere fields the user filled', () => {
+  it('carries only the atmosphere score the user filled', () => {
     const payload = buildEventFeedbackPayload({
       rating: 3,
       comment: '',
       connections: [],
       balanced: {
         atmosphereScore: 4,
-        atmosphereNote: '  很舒服  ',
       },
-    })
-    expect(payload).toMatchObject({
-      atmosphereScore: 4,
-      atmosphereNote: '很舒服',
     })
     expect(payload.atmosphereScore).toBe(4)
     expect(payload.connectionRadar).toBeUndefined()
@@ -90,14 +85,13 @@ describe('buildEventFeedbackPayload — balanced layer (均衡反馈)', () => {
     })
   })
 
-  it('caps improvementAreas at 3, trims improvementOther, derives needsImprovement from the note', () => {
+  it('caps improvementAreas at 3 and derives needsImprovement from the note', () => {
     const payload = buildEventFeedbackPayload({
       rating: 4,
       comment: '',
       connections: [],
       balanced: {
         improvementAreas: [' 流程安排再多点惊喜 ', '话题引导想聊得更尽兴', '场地体验更对味一点', '时间节奏再长一点点'],
-        improvementOther: ' 场地空调有点冷  ',
         attendeeTraits: {
           'user-1': { displayName: '小张', tags: [], improvementNote: '可以多听听别人说话' },
         },
@@ -111,7 +105,6 @@ describe('buildEventFeedbackPayload — balanced layer (均衡反馈)', () => {
       '话题引导想聊得更尽兴',
       '场地体验更对味一点',
     ])
-    expect(payload.improvementOther).toBe('场地空调有点冷')
     expect(payload.attendeeTraits).toEqual({
       'user-1': {
         displayName: '小张',
@@ -159,7 +152,6 @@ describe('wire contract vs insertEventFeedbackSchema (server)', () => {
       connections: ['user-2'],
       balanced: {
         atmosphereScore: 4,
-        atmosphereNote: '很舒服',
         attendeeTraits: {
           'user-2': { displayName: '小张', tags: ['有趣'], improvementNote: '多听听' },
         },
@@ -167,7 +159,6 @@ describe('wire contract vs insertEventFeedbackSchema (server)', () => {
         connectionStatus: '已交换联系方式',
         hasNewConnections: true,
         improvementAreas: ['流程安排再多点惊喜'],
-        improvementOther: '空调有点冷',
         venueStyleRating: 'like',
       },
     })
@@ -186,5 +177,57 @@ describe('wire contract vs insertEventFeedbackSchema (server)', () => {
       const r = insertEventFeedbackSchema.safeParse(withEventId({ venueStyleRating: venue }))
       expect(r.success).toBe(true)
     }
+  })
+})
+
+describe('buildEventFeedbackPayload — 微信号采集 (2026-10-16, spec wechat-id-collection-spec-20261016)', () => {
+  it('carries a validated wechatContactId (trimmed) when the step saved one', () => {
+    const payload = buildEventFeedbackPayload({
+      rating: 0,
+      comment: '',
+      connections: ['user-2'],
+      wechatContactId: '  abc_123 ',
+    })
+    expect(payload.wechatContactId).toBe('abc_123')
+  })
+
+  it('omits the field entirely when the step was skipped or left empty', () => {
+    const skipped = buildEventFeedbackPayload({
+      rating: 0,
+      comment: '',
+      connections: ['user-2'],
+    })
+    expect('wechatContactId' in skipped).toBe(false)
+
+    const empty = buildEventFeedbackPayload({
+      rating: 0,
+      comment: '',
+      connections: ['user-2'],
+      wechatContactId: '   ',
+    })
+    expect('wechatContactId' in empty).toBe(false)
+  })
+
+  it('drops invalid values and wxid_ system IDs — the server never sees them', () => {
+    for (const bad of ['1abcdef', 'abc', 'has space x', 'wxid_abc123', ' WXID_99 ']) {
+      const payload = buildEventFeedbackPayload({
+        rating: 0,
+        comment: '',
+        connections: [],
+        wechatContactId: bad,
+      })
+      expect('wechatContactId' in payload).toBe(false)
+    }
+  })
+
+  it('still parses against insertEventFeedbackSchema when the ID rides along (Zod strips it; the route reads it off the raw body)', () => {
+    const payload = buildEventFeedbackPayload({
+      rating: 4,
+      comment: '',
+      connections: ['user-2'],
+      wechatContactId: 'abc_123',
+    })
+    const result = insertEventFeedbackSchema.safeParse({ eventId: 'event-1', ...payload })
+    expect(result.success).toBe(true)
   })
 })

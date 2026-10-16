@@ -29,7 +29,7 @@ export type VenueStyleLiteral = (typeof VENUE_STYLE_OPTIONS)[number]['value']
  * Attendee trait tags — up to MAX_TAGS_PER_ATTENDEE per person.
  * Purely positive first impressions; constructive notes live in the 悄悄话.
  */
-export const ATTENDEE_TRAIT_PRESETS = ['有趣', '会聊天', '温暖', '有想法', '活跃', '同频'] as const
+export const ATTENDEE_TRAIT_PRESETS = ['有趣', '会聊天', '温暖', '会倾听', '有想法', '活跃', '同频'] as const
 export const MAX_TAGS_PER_ATTENDEE = 3
 
 /**
@@ -42,7 +42,7 @@ export const IMPROVEMENT_AREA_PRESETS = [
   '话题引导想聊得更尽兴',
   '场地体验更对味一点',
   '时间节奏再长一点点',
-  '匹配质量更同频一些',
+  '同桌更同频一些',
   '组织服务更贴心周到',
   '开场破冰更热闹一些',
 ] as const

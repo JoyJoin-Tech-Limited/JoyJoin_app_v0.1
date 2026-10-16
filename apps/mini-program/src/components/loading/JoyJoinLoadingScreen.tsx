@@ -5,6 +5,7 @@ import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { localAsset } from '../../lib/utils/cdnAssets'
 import { getRandomWhisper } from '../../lib/utils/loadingWhispers'
 import { logInfo } from '../../lib/utils/logger'
+import BrandLogo from '../ui/BrandLogo'
 import './JoyJoinLoadingScreen.scss'
 
 interface JoyJoinLoadingScreenProps {
@@ -18,6 +19,19 @@ interface JoyJoinLoadingScreenProps {
   showSkeleton?: boolean
   /** Number of skeleton lines (default 3) */
   skeletonLines?: number
+  /**
+   * Swap the Xiaoyue mascot for the BrandLogo mark (2026-10-16 uplift
+   * item 1): mascot appearances stay scarce — one moment per journey — so
+   * flows whose revealed screen features the mascot do not pre-spend the
+   * character on the loading gate.
+   */
+  hideMascot?: boolean
+  /**
+   * Delay (ms) before skeleton rows fade in. 0 = immediate (legacy). With a
+   * delay, fast loads never flash placeholder rows; slow loads still get
+   * reassurance. The rows fade in (transform/opacity only, RM-gated).
+   */
+  skeletonDelayMs?: number
   className?: string
   /** User archetype for personalized whisper copy */
   archetype?: string
@@ -43,18 +57,29 @@ export default function JoyJoinLoadingScreen({
   xiaoyueExpression = 'loadingSystem',
   showSkeleton = true,
   skeletonLines = 3,
+  hideMascot = false,
+  skeletonDelayMs = 0,
   className = '',
   archetype,
 }: JoyJoinLoadingScreenProps) {
   const lineWidths = ['100%', '76%', '52%', '64%', '88%']
   const [imgSrc, setImgSrc] = useState(getXiaoyueExpressionAsset(xiaoyueExpression))
   const [settled, setSettled] = useState(false)
+  // Delayed skeleton: rows mount only after skeletonDelayMs so fast loads
+  // never flash placeholders (0 keeps the legacy immediate behaviour).
+  const [skeletonVisible, setSkeletonVisible] = useState(skeletonDelayMs <= 0)
 
   // A4: settle animations after 6s to save battery on stalled loads
   useEffect(() => {
     const t = setTimeout(() => setSettled(true), 6000)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    if (skeletonDelayMs <= 0) return
+    const t = setTimeout(() => setSkeletonVisible(true), skeletonDelayMs)
+    return () => clearTimeout(t)
+  }, [skeletonDelayMs])
 
   // A5: prefers-reduced-motion is handled by CSS @media (prefers-reduced-motion: reduce).
   // WeChat Mini Program does not expose this API reliably via JS.
@@ -73,16 +98,25 @@ export default function JoyJoinLoadingScreen({
       aria-label={title}
     >
       <View className='joyjoin-loading-screen__content'>
-        {/* Xiaoyue mascot */}
-        <Image
-          className='joyjoin-loading-screen__mascot'
-          src={imgSrc}
-          mode='aspectFit'
-          onError={() => {
-            logInfo('[JoyJoinLoadingScreen] CDN fallback triggered', { original: imgSrc })
-            setImgSrc(localAsset('/assets/xiaoyue-expressions/xiaoyue-loading-system.webp'))
-          }}
-        />
+        {/* Xiaoyue mascot — or the brand mark when the journey reserves the
+            mascot for a later moment (hideMascot). Same 200rpx slot. */}
+        {hideMascot ? (
+          <BrandLogo
+            width={200}
+            height={200}
+            className='joyjoin-loading-screen__mascot'
+          />
+        ) : (
+          <Image
+            className='joyjoin-loading-screen__mascot'
+            src={imgSrc}
+            mode='aspectFit'
+            onError={() => {
+              logInfo('[JoyJoinLoadingScreen] CDN fallback triggered', { original: imgSrc })
+              setImgSrc(localAsset('/assets/xiaoyue-expressions/xiaoyue-loading-system.webp'))
+            }}
+          />
+        )}
 
         {/* Pulsing orbit dots */}
         <View className='joyjoin-loading-screen__orbit'>
@@ -100,9 +134,11 @@ export default function JoyJoinLoadingScreen({
           <Text className='joyjoin-loading-screen__subtitle'>{displaySubtitle}</Text>
         ) : null}
 
-        {/* Skeleton placeholder */}
-        {showSkeleton ? (
-          <View className='joyjoin-loading-screen__skeleton'>
+        {/* Skeleton placeholder — delayed mounts fade in (see skeletonDelayMs) */}
+        {showSkeleton && skeletonVisible ? (
+          <View
+            className={`joyjoin-loading-screen__skeleton ${skeletonDelayMs > 0 ? 'joyjoin-loading-screen__skeleton--delayed' : ''}`}
+          >
             {Array.from({ length: skeletonLines }).map((_, i) => (
               <View
                 key={i}
