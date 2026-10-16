@@ -129,6 +129,11 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  mode are rejected. Existing preset-tier sessions are unaffected.
      *  Default: true. */
     socialIcebreakerCustomModeEnabled?: boolean
+    /** When true, the mini_script (迷你剧本杀) phase is enabled server-side for
+     *  this environment, so tier-selector previews may list it and the custom
+     *  game picker may offer it. Derived from getServerEnabledPhases().
+     *  Default: false (env SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT). */
+    socialIcebreakerMiniScriptEnabled?: boolean
     /** When true, enables the redesigned profile page UI. Default: true. */
     profileRedesignEnabled?: boolean
     /** Enables the Profile-only pixel avatar stage and My Image entry. */

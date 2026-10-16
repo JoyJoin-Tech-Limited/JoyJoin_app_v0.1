@@ -18,6 +18,7 @@ import { computeOnboardingNextStep } from "./computeOnboardingNextStep";
 import { resolveEntitlementMode } from "./entitlement";
 import { getFeatureFlag } from "./featureFlags";
 import { isSingleTestMode } from "./isSingleTestMode";
+import { getServerEnabledPhases } from "../socialIcebreakerPhaseConfig";
 
 // Module-level cached mascot config (env vars are immutable after startup)
 const mascotConfig = buildMascotConfigFromEnv({
@@ -254,6 +255,11 @@ const [
     (process.env.APP_MODE ?? 'production') !== 'production' && isSingleTestMode();
   const appMode: 'production' | 'test' = singleTestMode ? 'test' : 'production';
 
+  // mini_script (迷你剧本杀) is env-driven, not a DB flag: expose the resolved
+  // phase enablement so the mini-program can list it in the tier preview and
+  // the custom game picker instead of leaking an unavailable phase.
+  const miniScriptPhaseEnabled = getServerEnabledPhases().includes('mini_script');
+
   const authUserResponse: AuthUserResponse = {
     ...sanitizeAuthUser(user),
     appMode,
@@ -298,6 +304,7 @@ const [
       squadUnboxingTeaseV2Enabled,
       socialSquadComposedHeroEnabled,
       socialIcebreakerCustomModeEnabled,
+      socialIcebreakerMiniScriptEnabled: miniScriptPhaseEnabled,
       profileRedesignEnabled,
       profilePixelAvatarEnabled,
       /** Gathering room (集结房间) entry CTAs + room page. */
