@@ -246,7 +246,10 @@ function drawKeepsakeBlock(
       : undefined;
   if (level) {
     const seal = KEEPSAKE_SEAL_STYLES[level];
-    const sealText = `深度·L${level}`;
+    // User language, never the internal L-scale — mirrors the client
+    // DEPTH_SEAL_USER_TEXT map (warmupViewModels.ts, AC-04).
+    const MOMENT_DEPTH_SEAL_TEXT: Record<number, string> = { 1: '轻松', 2: '走心', 3: '深聊' };
+    const sealText = MOMENT_DEPTH_SEAL_TEXT[level] ?? '走心';
     setFont(ctx, 10, 600);
     const sealPillH = 18;
     const sealPadX = 8;
