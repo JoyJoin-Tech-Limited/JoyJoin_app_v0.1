@@ -111,6 +111,28 @@ $pd-deep: $phase-accent-dice-deep;
     text-align: center;
   }
 
+  // Wave 2 (AC-07): 「换一个」 ghost — un-ready and pick again.
+  &__change-pick {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($pd-accent, 0.08);
+    }
+  }
+
+  &__change-pick-text {
+    @include type-caption;
+    color: $pd-deep;
+    font-weight: $font-weight-medium;
+  }
+
   &__choose-area {
     display: flex;
     flex-direction: column;

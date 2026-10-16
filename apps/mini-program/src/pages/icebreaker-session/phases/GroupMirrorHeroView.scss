@@ -158,6 +158,46 @@ $gm-deep: $phase-accent-mirror-deep;
     gap: 8rpx;
   }
 
+  // ── Wave 2 (AC-05): one-question stepper ──
+  &__stepper {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__stepper-progress {
+    @include type-label;
+    color: $gm-deep;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__stepper-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__stepper-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($gm-accent, 0.08);
+    }
+  }
+
+  &__stepper-link-text {
+    @include type-caption;
+    color: $gm-deep;
+    font-weight: $font-weight-medium;
+  }
+
   &__error {
     @include type-caption;
     display: block;

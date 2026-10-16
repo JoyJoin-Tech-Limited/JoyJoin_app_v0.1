@@ -28,6 +28,10 @@ import {
   auctionV2OutbidToast,
 } from '../../../lib/copy/auctionV2'
 import {
+  ICE_AUCTION_CLOSE_LOT,
+  formatIceAuctionLotPosition,
+} from '@shared/copy/icebreakerSession'
+import {
   AUCTION_COLLECTION_HINT_THRESHOLD,
   AuctionAllInOneShot,
   AuctionV2BeatCoordinator,
@@ -402,7 +406,7 @@ export function AuctionHeroView({
         <View className='auction-hero__lot-front-icon'>
           <PhaseHeaderIcon phase='auction' size={72} />
         </View>
-        <Text className='auction-hero__lot-front-label'>第 {idx + 1} / {lots.length} 标</Text>
+        <Text className='auction-hero__lot-front-label'>{formatIceAuctionLotPosition(idx, lots.length)}</Text>
         <Text className='auction-hero__lot-front-sub'>即将揭晓…</Text>
       </View>
     ),
@@ -530,7 +534,7 @@ export function AuctionHeroView({
         phase='auction'
         artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
         title={currentLot?.title ?? '竞拍中'}
-        statusChip={`第 ${idx + 1} / ${lots.length} 标`}
+        statusChip={formatIceAuctionLotPosition(idx, lots.length)}
         statusText={
           high
             ? `当前最高 ${high.amount} 币 · 你的余额 ${balance} 币`
@@ -642,7 +646,7 @@ export function AuctionHeroView({
                 disabled={isClosingLot}
                 loading={isClosingLot}
               >
-                {isClosingLot ? '处理中…' : '关闭本标（落槌）'}
+                {isClosingLot ? '处理中…' : ICE_AUCTION_CLOSE_LOT}
               </Button>
               {v2Enabled && highV2?.isAllIn ? (
                 <Text className='auction-hero__host-allin-hint'>

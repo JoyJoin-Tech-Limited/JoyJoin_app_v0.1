@@ -4,11 +4,15 @@ import { localAsset } from '../../../lib/utils/cdnAssets'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import type { VibeId } from '../../../lib/vibeMapping'
+import { ICE_PHASE_MAP_ARROW, ICE_WAITING_FOR_HOST_LINE } from '@shared/copy/icebreakerSession'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
+import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
+import MissingArchetypePlaceholder from '../../../components/mascot/MissingArchetypePlaceholder'
 import IcebreakerTierSelector from './IcebreakerTierSelector'
 import WaitingBeat from './WaitingBeat'
 import { GLANCE_L1_WORD_WAITING } from '../viewModels/glanceStackModel'
+import type { SessionParticipant } from '../phaseUtils'
 
 export interface WaitingPhaseProps {
   playerCount: number
@@ -22,6 +26,12 @@ export interface WaitingPhaseProps {
   /** S3 glance-stack pilot (flag-gated): L1 word「等人齐」+ sequenced 悦仔
    *  cameo; count/host line demotes to a hairline fragment. */
   glanceMode?: boolean
+  /** Wave 2 (AC-13): roster for the table avatar strip. */
+  participants?: SessionParticipant[]
+  currentUserId?: string
+  /** Wave 2 (AC-02/13): tonight's phase sequence preview (same data source
+   *  as the shell's map/chip). */
+  phaseMapItems?: Array<{ key: string; label: string; current: boolean }> | null
 }
 
 export default function WaitingPhase({
@@ -34,6 +44,9 @@ export default function WaitingPhase({
   onChangeTier,
   onAdvance,
   glanceMode = false,
+  participants = [],
+  currentUserId,
+  phaseMapItems = null,
 }: WaitingPhaseProps) {
   const [cameoFailed, setCameoFailed] = useState(false)
   // S3 glance treatment (spec §1.1 row 1): one L1 word + the waiting cameo.

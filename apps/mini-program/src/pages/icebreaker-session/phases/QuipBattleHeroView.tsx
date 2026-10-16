@@ -107,7 +107,6 @@ export function QuipBattleHeroView({
   const [stackIndex, setStackIndex] = useState(0)
   const [burstTrigger, setBurstTrigger] = useState(false)
   const burstTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [reactionCounts, setReactionCounts] = useState<number[]>([0, 0, 0, 0])
   const [selectedReaction, setSelectedReaction] = useState<number | undefined>()
 
   useEffect(() => {
@@ -250,13 +249,9 @@ export function QuipBattleHeroView({
     setStackIndex((i) => Math.min(i + 1, swipeStack.length))
   }, [swipeStack.length, voting])
 
+  // Wave 2 (AC-10): fake local counts removed — expressive taps only.
   const handleReaction = useCallback((index: number) => {
     setSelectedReaction(index)
-    setReactionCounts((prev) => {
-      const next = [...prev]
-      next[index] = (next[index] || 0) + 1
-      return next
-    })
   }, [])
 
   const bestOfAnswers = useMemo(() => {
@@ -505,7 +500,7 @@ export function QuipBattleHeroView({
 
           <View className='quip-battle-hero__reaction-row'>
             <TapReaction
-              reactions={REACTIONS.map((r, i) => ({ ...r, count: reactionCounts[i] }))}
+              reactions={REACTIONS}
               onReact={handleReaction}
               selectedIndex={selectedReaction}
             />

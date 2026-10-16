@@ -84,7 +84,6 @@ export function UndercoverWordHeroView({
 
   const [cardFlipped, setCardFlipped] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
-  const [localReactions, setLocalReactions] = useState<Record<number, number>>({})
   const [selectedReaction, setSelectedReaction] = useState<number | null>(null)
   const [burstTriggered, setBurstTriggered] = useState(false)
   const hasAutoFlippedRef = useRef(false)
@@ -186,12 +185,9 @@ export function UndercoverWordHeroView({
     }
   }
 
+  // Wave 2 (AC-10): fake local counts removed — expressive taps only.
   const handleReact = useCallback((index: number) => {
     setSelectedReaction(index)
-    setLocalReactions((prev) => ({
-      ...prev,
-      [index]: (prev[index] || 0) + 1,
-    }))
   }, [])
 
   const handleSwipeSelect = useCallback((targetId: string) => {
@@ -420,10 +416,7 @@ export function UndercoverWordHeroView({
 
         <View className='undercover-hero__reactions'>
           <TapReaction
-            reactions={REACTION_ITEMS.map((r, i) => ({
-              ...r,
-              count: (localReactions[i] || 0) > 0 ? localReactions[i] : undefined,
-            }))}
+            reactions={REACTION_ITEMS}
             onReact={handleReact}
             selectedIndex={selectedReaction ?? undefined}
           />

@@ -294,6 +294,15 @@ $ms-deep: $phase-accent-miniscript-deep;
     margin-bottom: 0;
   }
 
+  // Wave 2 (AC-09): sub-labels inside the collapsed vote supplement.
+  &__section-sub {
+    display: block;
+    @include type-caption;
+    color: $color-text-secondary-warm;
+    margin-top: $spacing-sm;
+    margin-bottom: $spacing-xs;
+  }
+
   &__section-toggle {
     @include type-caption;
     color: $color-text-secondary-warm;

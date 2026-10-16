@@ -1,6 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import Card from '../../../components/ui/Card'
 import { PhaseHeaderIcon } from '../phaseViews'
+import { ICE_TOOL_BADGE_MINI_SCRIPT } from '@shared/copy/icebreakerSession'
 
 type IcebreakerToolSelectorProps = {
   onOpenMiniScript: () => void
@@ -14,7 +15,8 @@ export function IcebreakerToolSelector({ onOpenMiniScript }: IcebreakerToolSelec
       <View className='icebreaker__tool-cards'>
         <Card className='icebreaker__tool-card' onClick={onOpenMiniScript}>
           <View className='icebreaker__tool-card-badge'>
-            <Text className='icebreaker__tool-card-badge-text'>抓马</Text>
+            {/* Wave 2 (AC-09/AC-15): 「抓马」→「推理」 — user language, no jargon. */}
+            <Text className='icebreaker__tool-card-badge-text'>{ICE_TOOL_BADGE_MINI_SCRIPT}</Text>
           </View>
           <View className='icebreaker__tool-card-icon'>
             <PhaseHeaderIcon phase='mini_script' size={48} />

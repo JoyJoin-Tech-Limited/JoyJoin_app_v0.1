@@ -76,6 +76,7 @@
     "./copy/guidanceCopy": "./src/copy/guidanceCopy.ts",
     "./copy/auctionV2": "./src/copy/auctionV2.ts",
     "./copy/sessionGlow": "./src/copy/sessionGlow.ts",
+    "./copy/icebreakerSession": "./src/copy/icebreakerSession.ts",
     "./copy/profileTaglineRuleTemplates": "./src/copy/profileTaglineRuleTemplates.ts"
   },
   "dependencies": {

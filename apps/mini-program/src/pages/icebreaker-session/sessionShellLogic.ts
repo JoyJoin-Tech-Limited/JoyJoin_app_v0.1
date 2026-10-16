@@ -1,4 +1,5 @@
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { ICE_HOST_MENU_CHANGE_TIER, formatIceModeCaption } from '@shared/copy/icebreakerSession'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { resolveTierDisplay } from '@shared/socialIcebreakerTierManifest'
 import type { VibeId } from '../../lib/vibeMapping'
@@ -60,18 +61,28 @@ const EARLY_END_PHASES: ReadonlySet<string> = new Set([
 ])
 
 /**
- * Menu copy for the tier item, e.g. `更换模式（当前·深度畅聊·60min）`.
- * Falls back to the canonical tier display name for non-preset tier×vibe combos.
+ * Wave 2 (AC-03): the ActionSheet row slims to the bare action — the current
+ * mode info moves to the shell caption (`buildTierModeCaption`), so no
+ * truncation-risk compound string rides the native sheet.
  */
-export function buildChangeTierLabel(tier: TierMachineId | undefined, vibe?: VibeId): string {
+export function buildChangeTierLabel(): string {
+  return ICE_HOST_MENU_CHANGE_TIER
+}
+
+/**
+ * Shell mode caption (AC-03), e.g. 「深度畅聊 · 60min」. Falls back to the
+ * canonical tier display name for non-preset tier×vibe combos; 自由局 for
+ * custom. Rendered while the tier can still change (waiting/warmup).
+ */
+export function buildTierModeCaption(tier: TierMachineId | undefined, vibe?: VibeId): string {
   if (!tier || tier === 'custom') {
-    return '更换模式（当前·自由局）'
+    return '自由局'
   }
   const preset = TIER_PRESETS.find((p) => p.tier === tier && p.vibe === vibe)
   if (preset) {
-    return `更换模式（当前·${preset.title}·${preset.duration}）`
+    return formatIceModeCaption(preset.title, preset.duration)
   }
-  return `更换模式（当前·${resolveTierDisplay(tier, { glowVariant: 'default' })}）`
+  return resolveTierDisplay(tier, { glowVariant: 'default' })
 }
 
 export interface ResolveHostMenuItemsInput {
@@ -92,7 +103,7 @@ export function resolveHostMenuItems(input: ResolveHostMenuItemsInput): HostMenu
   }
   const items: HostMenuItem[] = []
   if (TIER_MENU_PHASES.has(input.phase)) {
-    items.push({ id: 'change-tier', label: buildChangeTierLabel(input.tier, input.vibe) })
+    items.push({ id: 'change-tier', label: buildChangeTierLabel() })
   }
   if (!SUGGESTION_HIDDEN_PHASES.has(input.phase)) {
     items.push({ id: 'suggestion', label: `${DEFAULT_MASCOT_DISPLAY_NAME}，给点建议？` })

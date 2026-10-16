@@ -943,10 +943,23 @@ export function useSocialActions(args: UseSocialActionsArgs) {
       'personality_dice',
       { optionIndex, playerCount },
     )
+    // Wave 2 (AC-07) 门槛合并: a successful choose is the player's readiness
+    // for the reveal — the client fires the EXISTING ready interface
+    // (/personality-dice/complete {ready:true}) as the direct continuation of
+    // the same tap. No new endpoint, no setTimeout/poll side effect, and the
+    // phase advance itself stays host-owned. Failure path: the ready call's
+    // error toast tells the player to re-tap a card (warm-rollback precedent,
+    // REL-02); the choose is not completed server-side, so a re-tap legally
+    // re-enters this chain.
     void performSocialAction('dice-choose', '/personality-dice/choose', {
       userId: currentUserId,
       optionIndex,
       operationId: `${currentUserId}-choose-${Date.now()}`,
+    }).then((result) => {
+      if (result === null || result === undefined) {
+        return
+      }
+      void performSocialAction('dice-ready', '/personality-dice/complete', { ready: true })
     })
   }, [performSocialAction, currentUserId, socialSessionId, session?.icebreakerSessionId, playerCount])
 

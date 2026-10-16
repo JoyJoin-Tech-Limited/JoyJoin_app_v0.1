@@ -69,10 +69,20 @@ import {
 } from './icebreakerSessionModel'
 import {
   HOST_MENU_COACHMARK_STORAGE_KEY,
+  buildTierModeCaption,
   resolveHostMenuItems,
   resolveSyncLossVisible,
   shouldNudgeHostForSuggestion,
 } from './sessionShellLogic'
+import {
+  resolvePhaseChipPayload,
+  resolvePhaseMapPayload,
+} from './viewModels/sessionPhaseSequence'
+import {
+  formatIcePhaseProgress,
+  formatIcePhaseProgressLoose,
+} from '@shared/copy/icebreakerSession'
+import { getPhaseLabel } from './phaseUtils'
 import './index.scss'
 
 // ─── Component ────────────────────────────────────────────────────
@@ -128,7 +138,6 @@ export default function IcebreakerSessionPage() {
   const [lieRosterLocked, setLieRosterLocked] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
-  const coachmarkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const syncLostRef = useRef(false)
   // G1: track the previous pending-action to detect a settle (true → false) and
   // drop the idle-poll backoff — a completed action means fresh state is due.
@@ -511,6 +520,16 @@ export default function IcebreakerSessionPage() {
     onLieRosterLocked: handleLieRosterLocked,
   })
 
+  // Wave 2 (AC-03): coachmark seen-flag persistence — hoisted above the host
+  // menu handler, which is one of the two dismiss paths.
+  const persistCoachmarkSeen = useCallback(() => {
+    try {
+      Taro.setStorageSync(HOST_MENU_COACHMARK_STORAGE_KEY, '1')
+    } catch {
+      // Storage full / unavailable — coachmark may re-show next session; acceptable.
+    }
+  }, [])
+
   const canChangeTier = (phase === 'waiting' || phase === 'warmup') && isHost
 
   // ── Warmup readiness cluster (AC-01): single source of truth for the CTA
@@ -737,12 +756,49 @@ export default function IcebreakerSessionPage() {
     [phase, isHost, session?.eventTier, session?.vibe],
   )
 
+  // ─── Wave 2 壳层定向 (AC-01/02/03) ───────────────────────────────────────
+  // ONE data source (`sessionPhaseSequence`) feeds both orientation states:
+  // the waiting/warmup entry map and the resident progress chip from the
+  // first game phase onward — the two never render together (contract
+  // division of labour). The mode caption carries the tier info slimmed out
+  // of the ActionSheet row while it can still change.
+  const phaseChipText = useMemo(() => {
+    const payload = resolvePhaseChipPayload(session)
+    if (!payload) return null
+    if ('loose' in payload) {
+      return formatIcePhaseProgressLoose(getPhaseLabel(payload.phase))
+    }
+    return formatIcePhaseProgress(payload.index1Based, payload.total, getPhaseLabel(payload.phase))
+  }, [session])
+  const phaseMapItems = useMemo(() => {
+    const payload = resolvePhaseMapPayload(session)
+    if (!payload) return null
+    return payload.items.map((item) => ({
+      key: item.phase,
+      label: getPhaseLabel(item.phase),
+      current: item.current,
+    }))
+  }, [session])
+  // AC-02 ↔ AC-13 division: the waiting-frame map lives INSIDE the upgraded
+  // waiting view (avatar strip + 明示文案); the shell map renders only during
+  // warmup — the two never stack on the same screen.
+  const shellPhaseMapItems = phase === 'warmup' ? phaseMapItems : null
+  const tierModeCaption = useMemo(
+    () =>
+      phase === 'waiting' || phase === 'warmup'
+        ? buildTierModeCaption(session?.eventTier, apiVibeToClient(session?.vibe))
+        : null,
+    [phase, session?.eventTier, session?.vibe],
+  )
+
   const handleHostMenuTap = useCallback(async () => {
     if (!isHost || hostMenuItems.length === 0) {
       return
     }
     haptics('light')
-    // Host discovered the menu on their own — the one-time coachmark has served its purpose.
+    // Host discovered the menu on their own — the coachmark has served its
+    // purpose (Wave 2 AC-03: first real use dismisses it permanently).
+    persistCoachmarkSeen()
     setCoachmarkShown(false)
     socialIcebreakerAnalytics.track(
       'warmup_host_menu_open',
@@ -809,7 +865,7 @@ export default function IcebreakerSessionPage() {
     } catch {
       // User cancelled the action sheet
     }
-  }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion, performSocialAction, playerCount])
+  }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion, performSocialAction, playerCount, persistCoachmarkSeen])
 
   const handleAigcFeedbackTap = useCallback(
     (location: 'footer' | 'suggestion' | 'card') => {
@@ -824,9 +880,12 @@ export default function IcebreakerSessionPage() {
     [socialSessionId, session?.icebreakerSessionId, phase],
   )
 
-  // ─── PR1 壳层: one-time host ⋯ coachmark on first warmup entry ────────────
-  // Persisted via storage at first show (truly once-ever), dismissible by tap,
-  // auto-dismissed after 6s, and covered by useResetOnShow for swipe-back safety.
+  // ─── Wave 2 (AC-03): host coachmark — resident until first use ───────────
+  // Old behaviour: shown once-ever for 6s (storage written at first SHOW) —
+  // miss it and it was gone forever. New contract: the coachmark stays put
+  // (no auto-dismiss timer) until the host actually interacts — opening the
+  // menu OR tapping the coachmark itself both persist the seen flag; from
+  // then on it never renders again.
   useEffect(() => {
     if (phase !== 'warmup' || !isHost || coachmarkShown) {
       return
@@ -840,31 +899,14 @@ export default function IcebreakerSessionPage() {
     if (seen) {
       return
     }
-    try {
-      Taro.setStorageSync(HOST_MENU_COACHMARK_STORAGE_KEY, '1')
-    } catch {
-      // Storage full / unavailable — coachmark still shows, persistence is best-effort.
-    }
     setCoachmarkShown(true)
   }, [phase, isHost, coachmarkShown])
 
-  useEffect(() => {
-    if (!coachmarkShown) {
-      return
-    }
-    coachmarkTimerRef.current = setTimeout(() => setCoachmarkShown(false), 6000)
-    return () => {
-      if (coachmarkTimerRef.current) {
-        clearTimeout(coachmarkTimerRef.current)
-        coachmarkTimerRef.current = null
-      }
-    }
-  }, [coachmarkShown])
-
   const handleDismissCoachmark = useCallback(() => {
     haptics('light')
+    persistCoachmarkSeen()
     setCoachmarkShown(false)
-  }, [])
+  }, [persistCoachmarkSeen])
 
   const handleGoBack = useCallback(() => {
     Taro.navigateBack({
@@ -995,6 +1037,9 @@ export default function IcebreakerSessionPage() {
       onOpenHostMenu={handleHostMenuTap}
       onDismissSuggestion={handleDismissAdaptiveSuggestion}
       onAigcFeedbackTap={handleAigcFeedbackTap}
+      phaseChipText={phaseChipText}
+      phaseMapItems={shellPhaseMapItems}
+      modeCaption={tierModeCaption}
     />
   )
 
@@ -1125,6 +1170,7 @@ export default function IcebreakerSessionPage() {
     lieRosterLocked,
     onGoBack: handleGoBack,
     onConnectTap: handleConnectTap,
+    phaseMapItems,
   }
 
   // AC-01/02 — the warmup CTA dock is a flex SIBLING of the ScrollView
@@ -1181,7 +1227,7 @@ export default function IcebreakerSessionPage() {
             aria-label='知道了'
           >
             <Text className='icebreaker__coachmark-text'>
-              {`点 ⋯ 更换模式，或找${getMascotDisplayName(user)}支招`}
+              {`点「主持人」更换模式，或找${getMascotDisplayName(user)}支招`}
             </Text>
             <View className='icebreaker__coachmark-arrow' aria-hidden='true' />
           </View>

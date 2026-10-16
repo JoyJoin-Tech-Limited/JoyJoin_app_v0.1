@@ -25,6 +25,7 @@ import type { SessionGlowSnapshot } from './viewModels/sessionGlowModel'
 import type { GlowPointBreakdown } from '@shared/socialIcebreaker'
 import type { TopicsRecoveryState } from './viewModels/warmupViewModels'
 import type { SocialRecapResponse } from './icebreakerSessionModel'
+import { formatIceOpeningPackButton } from '@shared/copy/icebreakerSession'
 import type { WarmupReadiness } from './hooks/useWarmupReadiness'
 
 /**
@@ -135,6 +136,9 @@ export interface SessionPhaseViewsProps {
   lieRosterLocked: boolean
   onGoBack: () => void
   onConnectTap: () => void
+  /** Wave 2 (AC-02/13): entry phase-map items — the waiting view renders the
+   *  sequence preview; the shell renders it during warmup. */
+  phaseMapItems?: Array<{ key: string; label: string; current: boolean }> | null
 }
 
 export function SessionPhaseViews(props: SessionPhaseViewsProps) {
@@ -216,6 +220,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     lieRosterLocked,
     onGoBack,
     onConnectTap,
+    phaseMapItems = null,
   } = props
 
   return (
@@ -232,6 +237,9 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
             onChangeTier={onOpenTierSheet}
             onAdvance={onAdvance}
             glanceMode={glanceStackEnabled}
+            participants={participants}
+            currentUserId={currentUserId}
+            phaseMapItems={phaseMapItems}
           />
           {isHost && !session?.xiaoyueSessionPack && (
             <Button
@@ -241,7 +249,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
               disabled={pendingAction !== null}
               loading={pendingAction === 'xiaoyue-pack'}
             >
-              {pendingAction === 'xiaoyue-pack' ? '生成中…' : `生成${mascotDisplayName}开场包`}
+              {pendingAction === 'xiaoyue-pack' ? '生成中…' : formatIceOpeningPackButton(mascotDisplayName)}
             </Button>
           )}
         </>

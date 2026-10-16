@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { View, Text } from '@tarojs/components'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
+import { ICE_MICRO_TAP_HINT } from '@shared/copy/icebreakerSession'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
@@ -105,7 +106,7 @@ export function MicroChallengeHeroView({
       ? '你已完成，等待其他玩家'
       : isCompleting
         ? '提交中…'
-        : '点按节奏球，和大家一起完成'
+        : ICE_MICRO_TAP_HINT
 
   // Zero raw emoji on primary copy: fallback-bank hints are emoji-only
   // decoration (e.g. '❓💬') — strip them and drop the dangling 提示 line;

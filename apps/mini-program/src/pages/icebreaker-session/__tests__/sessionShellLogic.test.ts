@@ -1,31 +1,39 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildChangeTierLabel,
+  buildTierModeCaption,
   resolveHostMenuItems,
   resolveSyncLossVisible,
   shouldNudgeHostForSuggestion,
 } from '../sessionShellLogic'
 
-// ── buildChangeTierLabel ─────────────────────────────────────────────
+// ── buildChangeTierLabel (Wave 2 AC-03: ActionSheet row slimmed) ───────
 describe('buildChangeTierLabel', () => {
+  it('renders the bare action — current-mode info lives in the shell caption', () => {
+    expect(buildChangeTierLabel()).toBe('更换模式')
+  })
+})
+
+// ── buildTierModeCaption (Wave 2 AC-03: shell caption carries the mode) ──
+describe('buildTierModeCaption', () => {
   it('renders preset title + duration for a known tier×vibe combo', () => {
-    expect(buildChangeTierLabel('glow', 'deep_chat')).toBe('更换模式（当前·深度畅聊·60min）')
-    expect(buildChangeTierLabel('breeze', 'balanced')).toBe('更换模式（当前·轻松破冰·40min）')
-    expect(buildChangeTierLabel('blaze', 'play_fun')).toBe('更换模式（当前·游戏狂欢·90min）')
+    expect(buildTierModeCaption('glow', 'deep_chat')).toBe('深度畅聊 · 60min')
+    expect(buildTierModeCaption('breeze', 'balanced')).toBe('轻松破冰 · 40min')
+    expect(buildTierModeCaption('blaze', 'play_fun')).toBe('游戏狂欢 · 90min')
   })
 
   it('renders 自由局 for custom tier', () => {
-    expect(buildChangeTierLabel('custom', 'deep_chat')).toBe('更换模式（当前·自由局）')
+    expect(buildTierModeCaption('custom', 'deep_chat')).toBe('自由局')
   })
 
   it('renders 自由局 when tier is undefined', () => {
-    expect(buildChangeTierLabel(undefined, undefined)).toBe('更换模式（当前·自由局）')
+    expect(buildTierModeCaption(undefined, undefined)).toBe('自由局')
   })
 
   it('falls back to the canonical tier display for non-preset combos', () => {
     // glow × play_fun is not one of the 3 presets → tier manifest display
-    expect(buildChangeTierLabel('glow', 'play_fun')).toBe('更换模式（当前·畅聊局）')
-    expect(buildChangeTierLabel('glow', undefined)).toBe('更换模式（当前·畅聊局）')
+    expect(buildTierModeCaption('glow', 'play_fun')).toBe('畅聊局')
+    expect(buildTierModeCaption('glow', undefined)).toBe('畅聊局')
   })
 })
 
@@ -39,7 +47,7 @@ describe('resolveHostMenuItems', () => {
   it('waiting: tier item only (suggestion hidden per contract Q3⑩)', () => {
     const items = resolveHostMenuItems({ phase: 'waiting', isHost: true, tier: 'glow', vibe: 'deep_chat' })
     expect(items.map((i) => i.id)).toEqual(['change-tier'])
-    expect(items[0].label).toBe('更换模式（当前·深度畅聊·60min）')
+    expect(items[0].label).toBe('更换模式')
   })
 
   it('warmup: tier item first, suggestion second', () => {
@@ -71,9 +79,9 @@ describe('resolveHostMenuItems', () => {
     expect(resolveHostMenuItems({ phase: 'ended', isHost: true, tier: 'glow', vibe: 'deep_chat' })).toEqual([])
   })
 
-  it('custom tier still exposes the tier item in warmup with 自由局 copy', () => {
+  it('custom tier still exposes the tier item in warmup with the slimmed label', () => {
     const items = resolveHostMenuItems({ phase: 'warmup', isHost: true, tier: 'custom', vibe: undefined })
-    expect(items[0].label).toBe('更换模式（当前·自由局）')
+    expect(items[0].label).toBe('更换模式')
   })
 })
 
