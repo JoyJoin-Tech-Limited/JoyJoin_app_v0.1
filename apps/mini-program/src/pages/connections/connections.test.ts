@@ -13,6 +13,17 @@ function getPeerInitial(name?: string | null): string {
   return (name ?? '?')[0]
 }
 
+/**
+ * Mirrors the 印象标签回流 render rule on pages/connections/index.tsx
+ * (2026-10-16 premium-uplift spec #18): the quiet line 「同桌觉得你：…」
+ * renders only when the peer gave ≥1 preset tag; join is the middle dot.
+ */
+function getPeerImpressionLine(conn: { peerImpressionTags?: string[] | null }): string | null {
+  const tags = conn.peerImpressionTags
+  if (!Array.isArray(tags) || tags.length === 0) return null
+  return `同桌觉得你：${tags.join('·')}`
+}
+
 describe('connections page helpers', () => {
   it('returns peerDisplayName when available', () => {
     const conn: MyConnection = {
@@ -87,5 +98,29 @@ describe('connections page helpers', () => {
       createdAt: '2026-04-22T10:00:00Z',
     }
     expect(fullConn.peerWechatId).toBe('test_wechat_id')
+  })
+
+  describe('getPeerImpressionLine (印象标签回流)', () => {
+    it('formats two tags with the middle-dot join', () => {
+      expect(getPeerImpressionLine({ peerImpressionTags: ['温暖', '会聊天'] })).toBe(
+        '同桌觉得你：温暖·会聊天',
+      )
+    })
+
+    it('formats a single tag without a trailing separator', () => {
+      expect(getPeerImpressionLine({ peerImpressionTags: ['有趣'] })).toBe('同桌觉得你：有趣')
+    })
+
+    it('returns null when the peer left no tags (line hidden)', () => {
+      expect(getPeerImpressionLine({ peerImpressionTags: null })).toBeNull()
+      expect(getPeerImpressionLine({ peerImpressionTags: [] })).toBeNull()
+      expect(getPeerImpressionLine({})).toBeNull()
+    })
+
+    it('uses WeChat-review-safe vocabulary (同桌, no 匹配/社交/撮合)', () => {
+      const line = getPeerImpressionLine({ peerImpressionTags: ['温暖'] })
+      expect(line).toContain('同桌觉得你')
+      expect(line).not.toMatch(/匹配|社交|撮合|灵魂|AI/)
+    })
   })
 })

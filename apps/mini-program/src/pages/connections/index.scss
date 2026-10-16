@@ -98,6 +98,16 @@
     margin-top: 4rpx;
   }
 
+  // 印象标签回流 (2026-10-16 spec #18) — quiet tertiary line echoing the
+  // peer-given preset tags: 「同桌觉得你：温暖·会聊天」.
+  &__card-impression {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: 4rpx;
+    @include text-truncate;
+  }
+
   &__card-event {
     display: block;
     font-size: $font-size-xs;
