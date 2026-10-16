@@ -455,6 +455,10 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   "warmup_ready_rate",
   "phase_completion_rate",
   "moment_card_saved",
+  // tier-selector preview card (2026-10-16 polish pass) — exposure + the
+  // custom empty-state `去挑一个` link tap. Funnel metric for start-rate.
+  "preview_viewed",
+  "preview_custom_link_tapped",
 ] as const;
 
 type SocialIcebreakerEventType = (typeof SOCIAL_ICEBREAKER_EVENT_TYPES)[number];

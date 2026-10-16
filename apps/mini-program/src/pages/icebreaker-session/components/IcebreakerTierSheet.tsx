@@ -149,7 +149,7 @@ export function IcebreakerTierSheet({
                     <Text className='tier-sheet__card-title'>自由局</Text>
                     <Text className='tier-sheet__card-badge tier-sheet__card-badge--custom'>自由定制</Text>
                   </View>
-                  <Text className='tier-sheet__card-subtitle'>全场节奏，由你导演</Text>
+                  <Text className='tier-sheet__card-subtitle'>自己挑游戏排顺序，自由度最高</Text>
                   <Text className='tier-sheet__card-description'>手动选择每个环节，适合有明确想法的主持人</Text>
                 </View>
                 {draft.tier === 'custom' && (

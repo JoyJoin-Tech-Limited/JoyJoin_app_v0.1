@@ -1,6 +1,25 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
 
+// ─── Shared tier-card scrim + elevation ─────────────────────────────
+// The Lovart tier art keeps colourful objects (fire, star, plant, gear) as far
+// right as ~52% of the card width while the copy column starts at 42%. The
+// scrim must reach full opacity BEFORE the first glyph: transparent until 24%,
+// four-stop blend (0.55@36%, 0.88@41%), fully opaque from 43% — a wider, softer
+// blend band so saturated art never shows a hard edge. The far-right 6% keeps a
+// 0.94 wash instead of pure white so the card edge doesn't read as "unfinished"
+// (the ✓ check + badge sit on solid chips there, so legibility is unaffected).
+$tier-card-scrim: linear-gradient(
+  90deg,
+  rgba($color-surface, 0) 24%,
+  rgba($color-surface, 0.55) 36%,
+  rgba($color-surface, 0.88) 41%,
+  $color-surface 43%,
+  rgba($color-surface, 0.94) 100%
+);
+$tier-card-shadow: 0 4rpx 20rpx rgba($color-text-primary, 0.05);
+$tier-card-shadow-active: 0 8rpx 32rpx rgba($color-primary, 0.16);
+
 // ─── Root ───────────────────────────────────────────────────────────
 .tier-selector {
   // Zero-page-scroll shell: the ScrollView takes the remaining space above the
@@ -47,199 +66,15 @@
 
   // ── Section ─────────────────────────────────────────────────────
   &__section {
-    margin-bottom: $spacing-md;
+    margin-bottom: 32rpx; // 8rpx rhythm: one step past $spacing-md, under lg
   }
 
   &__section-label {
     @include type-label;
     display: block;
     margin-bottom: $spacing-sm;
-    color: $color-text-primary;
-    font-weight: $font-weight-semibold;
-  }
-
-  // ── Tier × Vibe Grid ────────────────────────────────────────────
-  &__grid {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
-    background: $color-surface;
-    border-radius: $card-radius-sm;
-    border: 2rpx solid $color-border;
-    padding: $spacing-xs;
-    box-shadow: $shadow-sm;
-
-    &--simple {
-      gap: $spacing-sm;
-      padding: $spacing-sm;
-    }
-  }
-
-  &__grid-row {
-    display: grid;
-    grid-template-columns: 144rpx repeat(3, 1fr);
-    gap: $spacing-xs;
-    align-items: stretch;
-
-    &--no-vibe {
-      grid-template-columns: 144rpx 1fr;
-    }
-
-    &:not(.tier-selector__grid-row--header) {
-      animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-
-      &:nth-child(2) {
-        animation-delay: 0.08s;
-      }
-
-      &:nth-child(3) {
-        animation-delay: 0.16s;
-      }
-
-      &:nth-child(4) {
-        animation-delay: 0.24s;
-      }
-    }
-
-    &--simple {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 96rpx;
-      padding: $spacing-sm $spacing-md;
-      border-radius: $card-radius-sm;
-      border: 2rpx solid $color-border;
-      background: $color-surface;
-      transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 200ms ease,
-        background-color 200ms ease,
-        box-shadow 200ms ease;
-
-      &-active {
-        border-color: $color-primary;
-        background: rgba($color-primary, 0.06);
-        box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
-        transform: scale(1.01);
-      }
-
-      &-pressed {
-        transform: scale(0.98);
-      }
-
-      .tier-selector__grid-row-header {
-        min-height: auto;
-        padding: 0;
-        gap: $spacing-xs;
-      }
-
-      .tier-selector__grid-row-check-area {
-        @include flex-center;
-        width: 40rpx;
-        height: 40rpx;
-      }
-    }
-  }
-
-  &__grid-corner {
-    min-width: 144rpx;
-    min-height: 96rpx;
-  }
-
-  &__grid-col-header {
-    @include flex-center;
-    flex-direction: column;
-    gap: $spacing-xs;
-    min-height: 96rpx;
-    padding: $spacing-xs;
-    text-align: center;
-  }
-
-  &__grid-col-name {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    line-height: 1.4;
-  }
-
-  &__grid-col-hint {
-    font-size: $font-size-2xs;
-    color: $color-text-secondary;
-    line-height: 1.4;
-  }
-
-  &__grid-row-header {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
-    min-height: 96rpx;
-  }
-
-  &__grid-row-name {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    line-height: 1.4;
-  }
-
-  &__grid-row-meta {
-    font-size: $font-size-2xs;
-    color: $color-text-secondary;
-    line-height: 1.4;
-    white-space: nowrap;
-  }
-
-  &__grid-row-tag {
-    font-size: $font-size-2xs;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-    background: $color-secondary;
-    padding: 4rpx 12rpx; /* hairline vertical padding */
-    border-radius: $radius-full;
-    line-height: 1;
-    align-self: flex-start;
-    margin-top: 4rpx; /* hairline: single pixel equivalent at 2× */
-  }
-
-  &__grid-cell {
-    @include flex-center;
-    position: relative;
-    min-height: 96rpx;
-    border-radius: $radius-md;
-    border: 2rpx solid $color-divider;
-    background: rgba($color-primary, 0.02);
-    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 200ms ease,
-      background-color 200ms ease,
-      box-shadow 200ms ease;
-
-    &--active {
-      border-color: $color-primary;
-      background: rgba($color-primary, 0.08);
-      box-shadow: 0 2rpx 16rpx rgba($color-primary, 0.12);
-      transform: scale(1.02);
-    }
-
-    &--pressed {
-      transform: scale(0.96);
-    }
-  }
-
-  &__grid-cell-check {
-    @include flex-center;
-    width: 36rpx;
-    height: 36rpx;
-    background: $color-primary;
-    border-radius: 50%;
-    animation: grid-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  &__grid-cell-check-icon {
+    // One step under body size: a quiet grouping cue, not a second headline.
     font-size: $font-size-xs;
-    color: $color-text-white;
-    font-weight: $font-weight-bold;
-    line-height: 1;
   }
 
   // ── Mascot Line ─────────────────────────────────────────────────
@@ -289,6 +124,12 @@
     width: 100%;
   }
 
+  &__footer-note {
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary-on-light;
+    text-align: center;
+  }
+
   // ── Custom Mode Card ────────────────────────────────────────────
   &__custom-card {
     position: relative;
@@ -299,8 +140,8 @@
     padding-left: 42%;
     background: $color-surface;
     border: 2rpx solid $color-border;
-    border-radius: $card-radius-sm;
-    box-shadow: $shadow-sm;
+    border-radius: $card-radius;
+    box-shadow: $tier-card-shadow;
     transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
       border-color 200ms ease,
       box-shadow 200ms ease;
@@ -309,27 +150,23 @@
     // to the card's border-radius and avoids 1px edge bleed.
     will-change: transform;
 
-    // Legibility scrim behind the RIGHT-side text column (padding-left: 42%)
-    // so the full-bleed custom-bg art never fights the copy. Sits above the
-    // bg image (same z, later in tree order), below body/check (z-index: 1).
+    // Legibility scrim behind the RIGHT-side text column (padding-left: 42%),
+    // shared with __preset-card via $tier-card-scrim so both card types stay
+    // in sync. Sits above the bg image (same z, later in tree order), below
+    // body/check (z-index: 1).
     &::after {
       content: '';
       position: absolute;
       inset: 0;
       z-index: 0;
       border-radius: inherit;
-      background: linear-gradient(
-        90deg,
-        rgba($color-surface, 0) 32%,
-        rgba($color-surface, 0.78) 56%,
-        rgba($color-surface, 0.94) 80%
-      );
+      background: $tier-card-scrim;
       pointer-events: none;
     }
 
     &--active {
       border-color: $color-primary;
-      box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
+      box-shadow: $tier-card-shadow-active;
       transform: scale(1.01);
     }
 
@@ -344,7 +181,7 @@
     width: 100%;
     height: 100%;
     z-index: 0;
-    border-radius: $card-radius-sm;
+    border-radius: $card-radius;
     backface-visibility: hidden;
   }
 
@@ -365,8 +202,10 @@
   }
 
   &__custom-card-title {
-    font-size: $font-size-md;
+    @include font-cn-display;
+    font-size: $font-size-lg;
     font-weight: $font-weight-bold;
+    line-height: 1.25;
     color: $color-text-primary;
   }
 
@@ -377,19 +216,20 @@
     // Solid primary — matches tier-sheet__card-badge--custom; a one-off
     // brand-gradient badge broke the single-anchor-color rule.
     background: $color-primary;
-    padding: 4rpx 12rpx;
+    padding: 6rpx 14rpx;
     border-radius: $radius-full;
     line-height: 1;
   }
 
   &__custom-card-tagline {
     font-size: $font-size-sm;
+    line-height: 1.45;
     color: $color-text-secondary;
   }
 
   &__custom-card-meta {
-    font-size: $font-size-2xs;
-    color: $color-text-muted;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
   }
 
   &__custom-card-check {
@@ -401,6 +241,7 @@
     background: $color-warning;
     border-radius: 50%;
     flex-shrink: 0;
+    box-shadow: 0 0 0 6rpx rgba($color-warning, 0.14);
     animation: grid-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
@@ -434,7 +275,7 @@
   &__preset-list {
     display: flex;
     flex-direction: column;
-    gap: $spacing-sm;
+    gap: $spacing-md;
   }
 
   &__preset-card {
@@ -446,8 +287,8 @@
     padding-left: 42%;
     background: $color-surface;
     border: 2rpx solid $color-border;
-    border-radius: $card-radius-sm;
-    box-shadow: $shadow-sm;
+    border-radius: $card-radius;
+    box-shadow: $tier-card-shadow;
     transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
       border-color 200ms ease,
       box-shadow 200ms ease;
@@ -456,20 +297,16 @@
     // to the card's border-radius and avoids 1px edge bleed.
     will-change: transform;
 
-    // Same right-side legibility scrim as __custom-card (text column sits
-    // right of the 42% padding) so preset art never fights the copy.
+    // Legibility scrim behind the RIGHT-side text column, shared with
+    // __custom-card via $tier-card-scrim (see the top-of-file note for why
+    // it must reach full opacity before the 42% copy column).
     &::after {
       content: '';
       position: absolute;
       inset: 0;
       z-index: 0;
       border-radius: inherit;
-      background: linear-gradient(
-        90deg,
-        rgba($color-surface, 0) 32%,
-        rgba($color-surface, 0.78) 56%,
-        rgba($color-surface, 0.94) 80%
-      );
+      background: $tier-card-scrim;
       pointer-events: none;
     }
 
@@ -479,7 +316,7 @@
 
     &--active {
       border-color: $color-primary;
-      box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
+      box-shadow: $tier-card-shadow-active;
       transform: scale(1.01);
     }
 
@@ -494,7 +331,7 @@
     width: 100%;
     height: 100%;
     z-index: 0;
-    border-radius: $card-radius-sm;
+    border-radius: $card-radius;
     backface-visibility: hidden;
   }
 
@@ -515,45 +352,70 @@
   }
 
   &__preset-title {
-    font-size: $font-size-md;
+    @include font-cn-display;
+    font-size: $font-size-lg;
     font-weight: $font-weight-bold;
+    line-height: 1.25;
     color: $color-text-primary;
   }
 
   &__preset-badge {
+    // Corner ribbon, not an inline title sibling: keeps title rows aligned
+    // across cards and stops the pink chip fighting the purple selection system.
+    position: absolute;
+    top: $spacing-md;
+    right: $spacing-md;
+    z-index: 1;
     font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
-    color: $color-text-white;
-    background: $color-secondary;
-    padding: 4rpx 12rpx;
+    color: $color-primary;
+    background: rgba($color-primary, 0.12);
+    border: 1rpx solid rgba($color-primary, 0.24);
+    padding: 6rpx 14rpx;
     border-radius: $radius-full;
-    line-height: 1;
+    line-height: 1.2;
   }
 
   &__preset-subtitle {
     font-size: $font-size-sm;
-    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
+    line-height: 1.45;
+    color: $color-text-secondary-on-light;
   }
 
   &__preset-meta {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
   }
 
   &__preset-meta-item {
     font-size: $font-size-2xs;
-    color: $color-text-muted;
-    background: rgba($color-text-primary, 0.04);
-    padding: 4rpx 12rpx;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-on-light;
+    // Solid warm chip + hairline border — the previous translucent fill let
+    // the card art bleed through and read muddy. 0.10 alpha stays visible at 1x DPR.
+    background: $color-bg-warm-mid;
+    border: 1rpx solid rgba($color-text-primary, 0.1);
+    padding: 6rpx 14rpx;
     border-radius: $radius-full;
-    line-height: 1;
+    line-height: 1.2;
   }
 
   &__preset-description {
     font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.6;
+    color: $color-text-tertiary-on-light;
+    line-height: 1.55;
+    // Lock to exactly two lines so all three preset cards share one height —
+    // a taller middle card made the list rhythm read lopsided.
+    min-height: 68rpx;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    // hairline: opens the meta→description rhythm to 12rpx (8 gap + 4 here)
+    margin-top: $spacing-2xs;
   }
 
   &__preset-check {
@@ -565,21 +427,29 @@
     background: $color-primary;
     border-radius: 50%;
     flex-shrink: 0;
+    box-shadow: 0 0 0 6rpx rgba($color-primary, 0.1);
     animation: grid-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   // ── Advanced mode toggle ────────────────────────────────────────
   &__advanced-toggle {
-    @include flex-center;
-    gap: $spacing-xs;
+    // Full-width card row: a centred text+arrow read as a caption, not a button.
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
     margin-top: $spacing-sm;
-    min-height: 88rpx;
+    min-height: 96rpx;
     padding: $spacing-sm $spacing-md;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
     border-radius: $card-radius-sm;
-    transition: background-color 150ms ease;
+    box-sizing: border-box;
+    transition: background-color 150ms ease, border-color 150ms ease;
 
     &--pressed {
       background: rgba($color-primary, 0.06);
+      border-color: rgba($color-primary, 0.2);
     }
   }
 
@@ -590,10 +460,11 @@
   }
 
   &__advanced-toggle-arrow {
-    width: 16rpx;
-    height: 16rpx;
-    border-right: 4rpx solid $color-primary;
-    border-bottom: 4rpx solid $color-primary;
+    // 20rpx chevron with 5rpx strokes stays crisp at 1x DPR (16rpx/4rpx vanished).
+    width: 20rpx;
+    height: 20rpx;
+    border-right: 5rpx solid $color-primary;
+    border-bottom: 5rpx solid $color-primary;
     transform: rotate(45deg);
     transition: transform 200ms ease;
 
@@ -606,8 +477,21 @@
   &__game-list {
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
-    margin-top: $spacing-xs;
+    // hairline rhythm: 12rpx separates rows inside a padded container
+    gap: 12rpx;
+    margin-top: $spacing-sm;
+    padding: $spacing-sm;
+    // Soft primary tint groups the list as one instrument, distinct from the toggle.
+    background: rgba($color-primary, 0.03);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    border-radius: $card-radius-sm;
+  }
+
+  &__game-list-hint {
+    display: block;
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary-on-light;
+    padding: 0 $spacing-xs;
   }
 
   &__game-row {
@@ -637,12 +521,17 @@
 
   &__game-icon {
     flex-shrink: 0;
+    // Pin size in the stylesheet — Taro H5 drops rpx from inline styles
+    // (pxtransform only processes SCSS), so the icon blew up to natural size.
+    width: 56rpx;
+    height: 56rpx;
     margin-right: $spacing-sm;
   }
 
   &__game-copy {
     display: flex;
-    align-items: baseline;
+    // L2: mixed-size same-line pairs centre-align, never baseline
+    align-items: center;
     gap: $spacing-sm;
     flex: 1;
     min-width: 0;
@@ -657,7 +546,7 @@
 
   &__game-duration {
     font-size: $font-size-2xs;
-    color: $color-text-muted;
+    color: $color-text-secondary-warm;
     white-space: nowrap;
   }
 
@@ -681,17 +570,20 @@
     line-height: 1;
   }
 
-  // ── Tier Vibe Preview (Batch C ceremony backdrop) ────────────────
+  // ── Flow Preview (今晚流程) ────────────────────────────────────────
+  // De-weighted through value structure — no fill, no border, no shadow — so
+  // it reads as an itinerary rather than a fourth tappable option. Horizontal
+  // padding stays 0 so every line aligns with the cards above (the ScrollView
+  // already supplies $container-padding).
   &__preview {
-    @include flex-center;
+    display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
+    margin-top: $spacing-lg;
     margin-bottom: $spacing-md;
-    padding: $spacing-sm;
-    background: $color-surface;
-    border-radius: $card-radius-sm;
-    border: 2rpx solid $color-border;
-    box-shadow: $shadow-sm;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: $card-radius-lg;
     animation: tier-selector-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
     overflow: hidden;
   }
@@ -699,11 +591,25 @@
   &__preview-frame {
     position: relative;
     width: 100%;
-    max-width: 640rpx;
-    padding-bottom: 31.8%;
-    border-radius: $card-radius-sm - 8rpx;
+    // Shorter band keeps the CTA inside the first viewport on small phones.
+    padding-bottom: 24%;
+    margin-bottom: $spacing-md;
+    border-radius: $card-radius-sm;
     overflow: hidden;
     background: $color-bg-warm-mid;
+
+    // The band is cropped card art, so let it melt into the page instead of
+    // ending on a hard image edge (page bg is a near-white gradient here).
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 32rpx;
+      background: linear-gradient(180deg, rgba($color-bg, 0) 0%, $color-bg 100%);
+      pointer-events: none;
+    }
   }
 
   &__preview-frame-image {
@@ -712,22 +618,173 @@
     left: 0;
     width: 100%;
     height: 100%;
-    border-radius: inherit;
   }
 
-  &__preview-label {
-    @include type-caption;
-    color: $color-text-muted;
-    margin-top: $spacing-xs;
+  // Type budget for this card: 28 / 24 / 20rpx, weights 500 / 400, three
+  // colours — near-black, tertiary grey, and brand purple exactly once.
+  &__preview-kicker {
+    display: block;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-medium;
+    letter-spacing: 4rpx;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__preview-figures {
+    display: block;
+    margin-top: $spacing-2xs;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary-warm;
+  }
+
+  &__preview-flow {
+    display: flex;
+    gap: 32rpx;
+    margin-top: $spacing-md;
+  }
+
+  &__preview-flow-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__preview-flow-row {
+    display: flex;
+    align-items: center;
+    padding: 16rpx 0;
+    border-bottom: 1rpx solid rgba($color-text-primary, 0.06);
+    animation: tier-selector-fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--last {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    &--ghost {
+      opacity: 0.55;
+    }
+
+    &--action {
+      animation: none;
+    }
+
+    &--pressed {
+      opacity: 0.7;
+    }
+  }
+
+  &__preview-flow-index {
+    flex-shrink: 0;
+    width: 40rpx;
+    font-size: $font-size-2xs;
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__preview-flow-label {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__preview-flow-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary-warm;
+  }
+
+  &__preview-flow-purpose {
+    margin-left: $spacing-xs;
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__preview-flow-energy {
+    display: flex;
+    align-items: center;
+    gap: 4rpx; // hairline: the dot cluster reads as one glyph
+    margin-left: $spacing-xs;
+    flex-shrink: 0;
+  }
+
+  &__preview-flow-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.15);
+
+    &--on {
+      background: rgba($color-primary, 0.55);
+    }
+  }
+
+  &__preview-flow-minutes {
+    flex-shrink: 0;
+    padding-left: $spacing-xs;
+    font-size: $font-size-2xs;
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__preview-flow-action {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+  }
+
+  &__preview-flow-action-arrow {
+    width: 14rpx;
+    height: 14rpx;
+    margin-left: $spacing-2xs;
+    border-right: 3rpx solid $color-primary;
+    border-bottom: 3rpx solid $color-primary;
+    transform: rotate(-45deg);
   }
 
   &__preview-affirmation {
-    @include type-caption;
+    display: block;
+    margin-top: 28rpx;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
     color: $color-primary;
-    font-weight: $font-weight-semibold;
-    margin-top: 4rpx;
-    text-align: center;
     animation: tier-selector-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--warning {
+      color: $color-text-tertiary-on-light;
+      font-weight: $font-weight-normal;
+    }
+  }
+
+  &__preview-footnote {
+    margin-top: $spacing-xs;
+    padding-top: $spacing-sm;
+    border-top: 1rpx solid rgba($color-text-primary, 0.07);
+  }
+
+  &__preview-anchor {
+    display: block;
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__preview-signature {
+    display: block;
+    margin-top: $spacing-2xs;
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary-on-light;
+  }
+
+  // Optical compensation: the ✓ glyph's visual centroid sits above geometric
+  // centre; 1rpx down reads as truly centred (hairline, not spacing rhythm).
+  &__check-icon {
+    display: flex;
+    transform: translateY(1rpx);
   }
 }
 
@@ -777,32 +834,12 @@
 .tier-selector--reduce-motion {
   .tier-selector__mascot,
   .tier-selector__preview,
-  .tier-selector__advanced-grid {
+  .tier-selector__preview-flow-row {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
-  .tier-selector__grid-row {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  .tier-selector__grid-row--simple {
-    transition: none;
-    transform: none;
-
-    &-active {
-      transform: none;
-    }
-  }
-
-  .tier-selector__grid-row--simple-active {
-    transform: none;
-  }
-
-  .tier-selector__grid-cell,
   .tier-selector__preset-card,
   .tier-selector__custom-card {
     transition: none;
@@ -811,13 +848,11 @@
     transform: none;
   }
 
-  .tier-selector__grid-cell--active,
   .tier-selector__preset-card--active,
   .tier-selector__custom-card--active {
     transform: none;
   }
 
-  .tier-selector__grid-cell-check,
   .tier-selector__preset-check,
   .tier-selector__custom-card-check {
     animation: none;
@@ -858,29 +893,6 @@
     transform: none;
   }
 
-  .tier-selector__grid-cell {
-    transition: none;
-  }
-
-  .tier-selector__grid-cell-check {
-    animation: none;
-  }
-
-  .tier-selector__grid-row--simple {
-    transition: none;
-    transform: none;
-  }
-
-  .tier-selector__grid-row--simple-active {
-    transform: none;
-  }
-
-  .tier-selector__grid-row {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
   .tier-selector__preset-card {
     animation: none;
     opacity: 1;
@@ -892,7 +904,7 @@
     transform: none;
   }
 
-  .tier-selector__advanced-grid {
+  .tier-selector__preview-flow-row {
     animation: none;
     opacity: 1;
     transform: none;

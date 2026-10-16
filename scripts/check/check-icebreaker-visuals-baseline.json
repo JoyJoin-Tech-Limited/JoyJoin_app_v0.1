@@ -98,7 +98,6 @@
     "apps/mini-program/src/pages/icebreaker-session/styles/_glance-stack.scss::rgba($color-primary, 0.045)",
     "apps/mini-program/src/pages/icebreaker-session/styles/_glance-stack.scss::rgba($color-primary, 0.1)",
     "apps/mini-program/src/pages/icebreaker-session/styles/_glance-stack.scss::rgba($color-primary, 0.16)",
-    "apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss::rgba($color-primary, 0.02)",
     "apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss::rgba($color-primary, 0.03)",
     "apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss::rgba($color-primary, 0.05)",
     "apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss::rgba($color-primary, 0.06)",

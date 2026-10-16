@@ -67,6 +67,8 @@ type EventType =
   | 'warmup_ready_rate'
   | 'phase_completion_rate'
   | 'moment_card_saved'
+  | 'preview_viewed'
+  | 'preview_custom_link_tapped'
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker. The server gates
