@@ -193,6 +193,9 @@ export function cleanupPhaseStateForNextPhase(
       state.diceRevealOrder = undefined;
       state.diceRevealCountdownEndsAt = undefined;
       state.diceRevealReadyBy = undefined;
+      // Wave 3 (icebreaker-uiux-wave3, AC-01): a phase re-run starts with no
+      // content, so the generation lifecycle resets with it.
+      state.diceContentStatus = undefined;
       return;
     case 'mini_script':
       state.miniScriptFramework = undefined;
@@ -234,6 +237,8 @@ export function cleanupPhaseStateForNextPhase(
       state.auctionHighBid = undefined;
       state.auctionAllLotsClosed = undefined;
       state.auctionRecapLines = undefined;
+      // Wave 3 (icebreaker-uiux-wave3, AC-01): reset generation lifecycle on re-run.
+      state.auctionContentStatus = undefined;
       return;
     case 'group_mirror':
       state.groupMirrorQuestions = undefined;
@@ -243,6 +248,8 @@ export function cleanupPhaseStateForNextPhase(
       state.groupMirrorSubmittedUserIds = undefined;
       state.groupMirrorRevealed = undefined;
       state.groupMirrorResults = undefined;
+      // Wave 3 (icebreaker-uiux-wave3, AC-01): reset generation lifecycle on re-run.
+      state.groupMirrorContentStatus = undefined;
       return;
     case 'undercover_word':
       state.undercoverWordPair = undefined;
@@ -254,6 +261,8 @@ export function cleanupPhaseStateForNextPhase(
       state.undercoverWordVotedUserIds = undefined;
       state.undercoverWordRevealed = undefined;
       state.undercoverWordResults = undefined;
+      // Wave 3 (icebreaker-uiux-wave3, AC-01): reset generation lifecycle on re-run.
+      state.undercoverContentStatus = undefined;
       return;
     case 'quip_battle':
       state.quipBattlePrompts = undefined;
@@ -264,6 +273,8 @@ export function cleanupPhaseStateForNextPhase(
       state.quipBattleVotedUserIds = undefined;
       state.quipBattleRevealed = undefined;
       state.quipBattleResults = undefined;
+      // Wave 3 (icebreaker-uiux-wave3, AC-01): reset generation lifecycle on re-run.
+      state.quipContentStatus = undefined;
       return;
     case 'speed_friending':
       state.speedFriendingPairs = undefined;

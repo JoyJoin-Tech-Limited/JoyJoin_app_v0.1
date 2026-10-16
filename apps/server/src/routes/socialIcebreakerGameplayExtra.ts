@@ -75,6 +75,10 @@ import {
   isHostAuthorized,
   generateSpeedFriendingPairs,
   ensureRecapSnapshot,
+  markPhaseContentGenerating,
+  persistPhaseContentReady,
+  markPhaseContentFailed,
+  logContentStatusTransition,
 } from './socialIcebreakerHelpers';
 import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 
@@ -317,6 +321,11 @@ router.post('/:socialSessionId/undercover-word/generate', async (req: any, res) 
     return res.status(400).json({ error: 'Word pair already generated' });
   }
 
+  // Wave 3 (icebreaker-uiux-wave3, AC-01): mark generation in-flight BEFORE
+  // any LLM/pre-gen work (merge-owned, warmup 2026-07-24 precedent).
+  const contentGenStart = Date.now();
+  await markPhaseContentGenerating(socialSessionId, 'undercoverContentStatus', state);
+
   try {
     // Pre-generation freshness: check if async pre-gen is available or in-flight
     const preGenStatus = await shouldSkipOnDemandGeneration(socialSessionId, 'undercover_word');
@@ -328,16 +337,19 @@ router.post('/:socialSessionId/undercover-word/generate', async (req: any, res) 
         const undercoverIdx = Math.floor(Math.random() * roster.length);
         const undercoverUserId = roster[undercoverIdx]?.userId;
 
-        state.undercoverWordPair = pair;
-        state.undercoverWordPairMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-undercover-word-v1');
-        state.undercoverUserId = undercoverUserId;
-        state.undercoverWordRounds = [];
-        state.undercoverWordCurrentRound = 0;
-        state.undercoverWordVotes = [];
-        state.undercoverWordVotedUserIds = [];
-        state.undercoverWordRevealed = false;
-        state.undercoverWordResults = undefined;
-        await updateSession(socialSessionId, state);
+        const pairMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-undercover-word-v1');
+        await persistPhaseContentReady(socialSessionId, 'undercoverContentStatus', state, (s) => {
+          s.undercoverWordPair = pair;
+          s.undercoverWordPairMeta = pairMeta;
+          s.undercoverUserId = undercoverUserId;
+          s.undercoverWordRounds = [];
+          s.undercoverWordCurrentRound = 0;
+          s.undercoverWordVotes = [];
+          s.undercoverWordVotedUserIds = [];
+          s.undercoverWordRevealed = false;
+          s.undercoverWordResults = undefined;
+        });
+        logContentStatusTransition({ socialSessionId, phase: 'undercover_word', field: 'undercoverContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: pairMeta.fallbackUsed === true });
 
         logger.info('Undercover word served from pre-generation', { socialSessionId });
         return res.json({ pair, undercoverAssigned: !!undercoverUserId });
@@ -366,24 +378,28 @@ router.post('/:socialSessionId/undercover-word/generate', async (req: any, res) 
     const undercoverIdx = Math.floor(Math.random() * roster.length);
     const undercoverUserId = roster[undercoverIdx]?.userId;
 
-    state.undercoverWordPair = result.data;
-    state.undercoverWordPairMeta = result.meta;
-    state.undercoverUserId = undercoverUserId;
-    state.undercoverWordRounds = [];
-    state.undercoverWordCurrentRound = 0;
-    state.undercoverWordVotes = [];
-    state.undercoverWordVotedUserIds = [];
-    state.undercoverWordRevealed = false;
-    state.undercoverWordResults = undefined;
-    await updateSession(socialSessionId, state);
+    const persisted = await persistPhaseContentReady(socialSessionId, 'undercoverContentStatus', state, (s) => {
+      s.undercoverWordPair = result.data;
+      s.undercoverWordPairMeta = result.meta;
+      s.undercoverUserId = undercoverUserId;
+      s.undercoverWordRounds = [];
+      s.undercoverWordCurrentRound = 0;
+      s.undercoverWordVotes = [];
+      s.undercoverWordVotedUserIds = [];
+      s.undercoverWordRevealed = false;
+      s.undercoverWordResults = undefined;
+    });
+    logContentStatusTransition({ socialSessionId, phase: 'undercover_word', field: 'undercoverContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: result.meta.fallbackUsed === true });
 
     // Bots submit descriptions for the first round.
-    await runBotSimulationSafely(socialSessionId, state, 'undercover-word-generate');
-    await updateSession(socialSessionId, state);
+    await runBotSimulationSafely(socialSessionId, persisted, 'undercover-word-generate');
+    await updateSession(socialSessionId, persisted);
 
     return res.json({ pair: result.data, undercoverAssigned: !!undercoverUserId });
   } catch (error) {
     logger.error('[SocialIcebreaker] generateUndercoverWordPair error:', { error: String(error) });
+    logContentStatusTransition({ socialSessionId, phase: 'undercover_word', field: 'undercoverContentStatus', to: 'failed', durationMs: Date.now() - contentGenStart, error: String(error) });
+    await markPhaseContentFailed(socialSessionId, 'undercoverContentStatus');
     return res.status(500).json({ error: 'Failed to generate undercover word pair' });
   }
 });
@@ -664,6 +680,11 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
     return res.json({ questions: state.groupMirrorQuestions, meta: cachedMeta });
   }
 
+  // Wave 3 (icebreaker-uiux-wave3, AC-01): mark generation in-flight BEFORE
+  // any LLM/pre-gen work (merge-owned, warmup 2026-07-24 precedent).
+  const contentGenStart = Date.now();
+  await markPhaseContentGenerating(socialSessionId, 'groupMirrorContentStatus', state);
+
   // Pre-generation freshness: check if async pre-gen is available or in-flight
   try {
     const preGenStatus = await shouldSkipOnDemandGeneration(socialSessionId, 'group_mirror');
@@ -671,20 +692,24 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
       const result = await getPreGenerationResult(socialSessionId, 'group_mirror');
       if (result) {
         const questions = result.contentJson as unknown as Array<Record<string, unknown>>;
+        const questionsMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-group-mirror-v1');
         // W9 (AC-W9.1): the phase is the closing act — strip any passive
         // judgment framing and backfill with appreciation superlatives.
-        state.groupMirrorQuestions = sanitizeGroupMirrorQuestions(
+        const sanitizedQuestions = sanitizeGroupMirrorQuestions(
           questions as unknown as GroupMirrorQuestion[],
         ) as any;
-        state.groupMirrorQuestionsMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-group-mirror-v1');
-        state.groupMirrorAnswers = [];
-        state.groupMirrorVotes = [];
-        state.groupMirrorSubmittedUserIds = [];
-        state.groupMirrorRevealed = false;
-        state.groupMirrorResults = undefined;
-        await updateSession(socialSessionId, state);
+        const persisted = await persistPhaseContentReady(socialSessionId, 'groupMirrorContentStatus', state, (s) => {
+          s.groupMirrorQuestions = sanitizedQuestions;
+          s.groupMirrorQuestionsMeta = questionsMeta;
+          s.groupMirrorAnswers = [];
+          s.groupMirrorVotes = [];
+          s.groupMirrorSubmittedUserIds = [];
+          s.groupMirrorRevealed = false;
+          s.groupMirrorResults = undefined;
+        });
+        logContentStatusTransition({ socialSessionId, phase: 'group_mirror', field: 'groupMirrorContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: questionsMeta.fallbackUsed === true });
         logger.info('Group mirror served from pre-generation', { socialSessionId });
-        return res.json({ questions: state.groupMirrorQuestions, meta: state.groupMirrorQuestionsMeta });
+        return res.json({ questions: persisted.groupMirrorQuestions, meta: persisted.groupMirrorQuestionsMeta });
       }
     }
     if (preGenStatus.skip && preGenStatus.reason === 'in_flight') {
@@ -713,22 +738,26 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
     // W9 (AC-W9.1): appreciation-only closing act.
     const questions = sanitizeGroupMirrorQuestions(result.data);
 
-    state.groupMirrorQuestions = questions;
-    state.groupMirrorQuestionsMeta = result.meta;
-    state.groupMirrorAnswers = [];
-    state.groupMirrorVotes = [];
-    state.groupMirrorSubmittedUserIds = [];
-    state.groupMirrorRevealed = false;
-    state.groupMirrorResults = undefined;
-    await updateSession(socialSessionId, state);
+    const persisted = await persistPhaseContentReady(socialSessionId, 'groupMirrorContentStatus', state, (s) => {
+      s.groupMirrorQuestions = questions;
+      s.groupMirrorQuestionsMeta = result.meta;
+      s.groupMirrorAnswers = [];
+      s.groupMirrorVotes = [];
+      s.groupMirrorSubmittedUserIds = [];
+      s.groupMirrorRevealed = false;
+      s.groupMirrorResults = undefined;
+    });
+    logContentStatusTransition({ socialSessionId, phase: 'group_mirror', field: 'groupMirrorContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: result.meta.fallbackUsed === true });
 
     // Bots submit their group mirror answers.
-    await runBotSimulationSafely(socialSessionId, state, 'group-mirror-generate');
-    await updateSession(socialSessionId, state);
+    await runBotSimulationSafely(socialSessionId, persisted, 'group-mirror-generate');
+    await updateSession(socialSessionId, persisted);
 
     return res.json({ questions, meta: result.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] generateGroupMirrorQuestions error:', { error: String(error) });
+    logContentStatusTransition({ socialSessionId, phase: 'group_mirror', field: 'groupMirrorContentStatus', to: 'failed', durationMs: Date.now() - contentGenStart, error: String(error) });
+    await markPhaseContentFailed(socialSessionId, 'groupMirrorContentStatus');
     return res.status(500).json({ error: 'Failed to generate group mirror questions' });
   }
 });

@@ -582,6 +582,40 @@ export interface SelectablePhaseInfo {
   disabledReason?: string;
 }
 
+/**
+ * Wave 3 (icebreaker-uiux-wave3, contract AC-01): generation lifecycle
+ * vocabulary for the AI-generative phases. WHY: generalizes the
+ * `warmupTopicsStatus` precedent (2026-07-26) so quip_battle /
+ * undercover_word / group_mirror / auction / personality_dice can render the
+ * same live "出题中" copy. Identical four values, but carried on NEW
+ * per-phase fields (`quipContentStatus` etc.) — warmup's own field name and
+ * semantics are untouched by design (防回退).
+ *
+ * Outcome mapping (server-owned): LLM success → 'ready'; LLM failure/timeout
+ * with a curated fallback served → 'ready' (fallbackUsed recorded via
+ * AITrace, mirroring warmup); hard failure with nothing servable → 'failed'.
+ *
+ * FLAG: these fields reach clients only while `icebreakerContentStatusEnabled`
+ * is on; `sanitizeStateForClient` strips them otherwise (fail-closed, so a
+ * flag-off snapshot is byte-identical to pre-Wave-3). REMOVAL CONDITION: once
+ * the flag has run enabled for a full release train and legacy clients no
+ * longer depend on field absence, the gating may be dropped and these fields
+ * promoted to always-on — until then keep them optional + gated.
+ */
+export type SocialContentStatus = 'idle' | 'generating' | 'ready' | 'failed';
+
+/**
+ * Wave 3 (icebreaker-uiux-wave3, contract AC-07): suppression window for a
+ * client-side stall exit, measured from the moment a phase's
+ * `*ContentStatus === 'generating'`. WHY: a stall affordance must never fire
+ * while the system (not the people) is still working (2026-07-26 出题卡死
+ * incident). Moved to shared from the server's warmup-only
+ * `WARMUP_GENERATING_STALL_SUPPRESS_MS` so the mini-program and the server
+ * compile against one constant; the value is unchanged (30s — comfortably
+ * beyond the 6s LLM race + route overhead).
+ */
+export const GENERATING_STALL_SUPPRESS_MS = 30_000;
+
 export interface SocialSessionState {
   socialSessionId: string;
   icebreakerSessionId: string;
@@ -753,6 +787,40 @@ export interface SocialSessionState {
   groupMirrorSubmittedUserIds?: string[];
   groupMirrorRevealed?: boolean;
   groupMirrorResults?: GroupMirrorResult[];
+  // ── Wave 3 (icebreaker-uiux-wave3, contract AC-01~AC-03): per-phase content
+  // generation lifecycle, one optional field per AI-generative phase. WHY:
+  // lets flag-on clients render the live "悦仔正在出题…" copy instead of a
+  // static wait. Written by the phase's generate route (merge-owned-fields,
+  // warmup 2026-07-24 precedent). FLAG: exposed to clients only while
+  // `icebreakerContentStatusEnabled` is on — `sanitizeStateForClient` strips
+  // them otherwise, so a flag-off snapshot is byte-identical to pre-Wave-3.
+  // REMOVAL CONDITION: once the flag has run enabled for a full release train
+  // and no legacy client depends on field absence, these may be promoted to
+  // always-on; until then keep optional + gated. Warmup's own
+  // `warmupTopicsStatus` is intentionally NOT part of this set (防回退).
+  quipContentStatus?: SocialContentStatus;
+  undercoverContentStatus?: SocialContentStatus;
+  groupMirrorContentStatus?: SocialContentStatus;
+  auctionContentStatus?: SocialContentStatus;
+  diceContentStatus?: SocialContentStatus;
+  /** Wave 3 (icebreaker-uiux-wave3, contract AC-04①): userIds who tapped
+   *  「我离开一下」 via POST /:id/leave. WHY: gives the table an honest
+   *  " stepped away " signal without touching membership, phase guards, or
+   *  host authority (leave never kicks, never auto-advances, never transfers
+   *  the host; rejoin via the same route restores everything because nothing
+   *  else was mutated). FLAG: stripped from client payloads unless
+   *  `icebreakerContentStatusEnabled` is on. REMOVAL CONDITION: same train as
+   *  the contentStatus fields above. */
+  leftUserIds?: string[];
+  /** Wave 3 (icebreaker-uiux-wave3, contract AC-04②): host-activity signal
+   *  DERIVED per poll in `buildClientState` from the already-loaded roster's
+   *  `lastSeenAt` (zero extra DB round-trips) — NEVER persisted. True when
+   *  the host's heartbeat has been silent past
+   *  SOCIAL_ICEBREAKER_HOST_CLAIM_GRACE_MS (default 180s, same threshold the
+   *  manual /transfer-host claim uses; semantics unchanged). Purely
+   *  informational — no auto transfer, no claim affordance. Present only
+   *  while `icebreakerContentStatusEnabled` is on. */
+  hostUnreachable?: boolean;
   // Speed Friending phase data
   speedFriendingPairs?: SpeedFriendingPair[];
   speedFriendingCurrentRound?: number;

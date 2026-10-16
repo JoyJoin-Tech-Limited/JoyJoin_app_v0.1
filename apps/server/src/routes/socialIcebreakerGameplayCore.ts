@@ -54,6 +54,10 @@ import {
   getCurrentLieDetectivePlayer,
   resolveSession,
   isHostAuthorized,
+  markPhaseContentGenerating,
+  persistPhaseContentReady,
+  markPhaseContentFailed,
+  logContentStatusTransition,
 } from './socialIcebreakerHelpers';
 import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
@@ -433,6 +437,11 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
       return res.json({ groups: enrichedGroups, meta: cachedMeta });
     }
 
+    // Wave 3 (icebreaker-uiux-wave3, AC-01): mark generation in-flight BEFORE
+    // any LLM/pre-gen work (merge-owned, warmup 2026-07-24 precedent).
+    const contentGenStart = Date.now();
+    await markPhaseContentGenerating(socialSessionId, 'diceContentStatus', state);
+
     // Pre-generation freshness: check if async pre-gen is available or in-flight
     try {
       const preGenStatus = await shouldSkipOnDemandGeneration(socialSessionId, 'personality_dice');
@@ -444,20 +453,24 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
             archetypeColor: getArchetypeHSL(g.archetype),
             options: g.options.map((o) => ({ ...o, archetypeColor: getArchetypeHSL(o.archetype) })),
           }));
-          state.personalityDiceChallengeGroups = preGenGroups;
-          state.personalityDiceChallengesMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4');
-          state.diceSelectedOption = {};
-          state.diceRevealOrder = undefined;
-          state.diceRevealCountdownEndsAt = undefined;
-          state.diceRevealReadyBy = [];
-          state.currentDicePlayerIndex = 0;
-          state.diceCompletedBy = [];
-          state.dicePassedBy = [];
-          seedSingleTestBotsPersonalityDiceReady(state);
-          await runBotSimulationSafely(socialSessionId, state, 'personality-dice-pregenerated');
-          await updateSession(socialSessionId, state);
+          const preGenMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4');
+          const persisted = await persistPhaseContentReady(socialSessionId, 'diceContentStatus', state, (s) => {
+            s.personalityDiceChallengeGroups = preGenGroups;
+            s.personalityDiceChallengesMeta = preGenMeta;
+            s.diceSelectedOption = {};
+            s.diceRevealOrder = undefined;
+            s.diceRevealCountdownEndsAt = undefined;
+            s.diceRevealReadyBy = [];
+            s.currentDicePlayerIndex = 0;
+            s.diceCompletedBy = [];
+            s.dicePassedBy = [];
+          });
+          logContentStatusTransition({ socialSessionId, phase: 'personality_dice', field: 'diceContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: preGenMeta.fallbackUsed === true });
+          seedSingleTestBotsPersonalityDiceReady(persisted);
+          await runBotSimulationSafely(socialSessionId, persisted, 'personality-dice-pregenerated');
+          await updateSession(socialSessionId, persisted);
           logger.info('Personality dice groups served from pre-generation', { socialSessionId });
-          return res.json({ groups: preGenGroups, meta: state.personalityDiceChallengesMeta });
+          return res.json({ groups: preGenGroups, meta: persisted.personalityDiceChallengesMeta });
         }
       }
       if (preGenStatus.skip && preGenStatus.reason === 'in_flight') {
@@ -486,25 +499,29 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
         archetypeColor: getArchetypeHSL(g.archetype),
         options: g.options.map((o) => ({ ...o, archetypeColor: getArchetypeHSL(o.archetype) })),
       }));
-      state.personalityDiceChallengeGroups = enrichedGroups;
-      state.personalityDiceChallengesMeta = groupResult.meta;
-      state.diceSelectedOption = {};
-      state.diceRevealOrder = undefined;
-      state.diceRevealCountdownEndsAt = undefined;
-      state.diceRevealReadyBy = [];
-      state.currentDicePlayerIndex = 0;
-      state.diceCompletedBy = [];
-      state.dicePassedBy = [];
-      await updateSession(socialSessionId, state);
+      const persisted = await persistPhaseContentReady(socialSessionId, 'diceContentStatus', state, (s) => {
+        s.personalityDiceChallengeGroups = enrichedGroups;
+        s.personalityDiceChallengesMeta = groupResult.meta;
+        s.diceSelectedOption = {};
+        s.diceRevealOrder = undefined;
+        s.diceRevealCountdownEndsAt = undefined;
+        s.diceRevealReadyBy = [];
+        s.currentDicePlayerIndex = 0;
+        s.diceCompletedBy = [];
+        s.dicePassedBy = [];
+      });
+      logContentStatusTransition({ socialSessionId, phase: 'personality_dice', field: 'diceContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: groupResult.meta.fallbackUsed === true });
 
       // Bots choose their dares and default to ready at both gates.
-      seedSingleTestBotsPersonalityDiceReady(state);
-      await runBotSimulationSafely(socialSessionId, state, 'personality-dice-generate');
-      await updateSession(socialSessionId, state);
+      seedSingleTestBotsPersonalityDiceReady(persisted);
+      await runBotSimulationSafely(socialSessionId, persisted, 'personality-dice-generate');
+      await updateSession(socialSessionId, persisted);
 
       return res.json({ groups: enrichedGroups, meta: groupResult.meta });
     } catch (error) {
       logger.error('[SocialIcebreaker] personality-dice/generate (choose-mode) error:', { error });
+      logContentStatusTransition({ socialSessionId, phase: 'personality_dice', field: 'diceContentStatus', to: 'failed', durationMs: Date.now() - contentGenStart, error: String(error) });
+      await markPhaseContentFailed(socialSessionId, 'diceContentStatus');
       return res.status(500).json({ error: 'Failed to generate dice challenge groups' });
     }
   }
@@ -521,6 +538,11 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     return res.json({ challenges: enrichedChallenges, meta: cachedMeta });
   }
 
+  // Wave 3 (icebreaker-uiux-wave3, AC-01): mark generation in-flight BEFORE
+  // any LLM/pre-gen work (merge-owned, warmup 2026-07-24 precedent).
+  const legacyGenStart = Date.now();
+  await markPhaseContentGenerating(socialSessionId, 'diceContentStatus', state);
+
   // Pre-generation freshness: check if async pre-gen is available or in-flight
   try {
     const preGenStatus = await shouldSkipOnDemandGeneration(socialSessionId, 'personality_dice');
@@ -531,14 +553,17 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
           ...c,
           archetypeColor: getArchetypeHSL(c.archetype as string | undefined),
         }));
-        state.personalityDiceChallenges = preGenChallenges as any;
-        state.personalityDiceChallengesMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v1');
-        state.currentDicePlayerIndex = 0;
-        state.diceCompletedBy = [];
-        state.dicePassedBy = [];
-        await updateSession(socialSessionId, state);
+        const preGenMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v1');
+        const persisted = await persistPhaseContentReady(socialSessionId, 'diceContentStatus', state, (s) => {
+          s.personalityDiceChallenges = preGenChallenges as any;
+          s.personalityDiceChallengesMeta = preGenMeta;
+          s.currentDicePlayerIndex = 0;
+          s.diceCompletedBy = [];
+          s.dicePassedBy = [];
+        });
+        logContentStatusTransition({ socialSessionId, phase: 'personality_dice', field: 'diceContentStatus', to: 'ready', durationMs: Date.now() - legacyGenStart, fallbackUsed: preGenMeta.fallbackUsed === true });
         logger.info('Personality dice served from pre-generation', { socialSessionId });
-        return res.json({ challenges: preGenChallenges, meta: state.personalityDiceChallengesMeta });
+        return res.json({ challenges: preGenChallenges, meta: persisted.personalityDiceChallengesMeta });
       }
     }
     if (preGenStatus.skip && preGenStatus.reason === 'in_flight') {
@@ -566,20 +591,24 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
       ...c,
       archetypeColor: getArchetypeHSL(c.archetype),
     }));
-    state.personalityDiceChallenges = enrichedChallenges;
-    state.personalityDiceChallengesMeta = challengeResult.meta;
-    state.currentDicePlayerIndex = 0;
-    state.diceCompletedBy = [];
-    state.dicePassedBy = [];
-    await updateSession(socialSessionId, state);
+    const persisted = await persistPhaseContentReady(socialSessionId, 'diceContentStatus', state, (s) => {
+      s.personalityDiceChallenges = enrichedChallenges;
+      s.personalityDiceChallengesMeta = challengeResult.meta;
+      s.currentDicePlayerIndex = 0;
+      s.diceCompletedBy = [];
+      s.dicePassedBy = [];
+    });
+    logContentStatusTransition({ socialSessionId, phase: 'personality_dice', field: 'diceContentStatus', to: 'ready', durationMs: Date.now() - legacyGenStart, fallbackUsed: challengeResult.meta.fallbackUsed === true });
 
     // Bots complete their challenges.
-    await runBotSimulationSafely(socialSessionId, state, 'personality-dice-generate');
-    await updateSession(socialSessionId, state);
+    await runBotSimulationSafely(socialSessionId, persisted, 'personality-dice-generate');
+    await updateSession(socialSessionId, persisted);
 
     return res.json({ challenges: enrichedChallenges, meta: challengeResult.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] personality-dice/generate error:', { error });
+    logContentStatusTransition({ socialSessionId, phase: 'personality_dice', field: 'diceContentStatus', to: 'failed', durationMs: Date.now() - legacyGenStart, error: String(error) });
+    await markPhaseContentFailed(socialSessionId, 'diceContentStatus');
     return res.status(500).json({ error: 'Failed to generate dice challenges' });
   }
 });
@@ -953,6 +982,11 @@ router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
     return res.json({ prompts: state.quipBattlePrompts, meta: cachedMeta });
   }
 
+  // Wave 3 (icebreaker-uiux-wave3, AC-01): mark generation in-flight BEFORE
+  // any LLM/pre-gen work (merge-owned, warmup 2026-07-24 precedent).
+  const contentGenStart = Date.now();
+  await markPhaseContentGenerating(socialSessionId, 'quipContentStatus', state);
+
   // Pre-generation freshness: check if async pre-gen is available or in-flight
   try {
     const preGenStatus = await shouldSkipOnDemandGeneration(socialSessionId, 'quip_battle');
@@ -964,11 +998,14 @@ router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
           promptText: (p.promptText as string) || '',
           category: (p.category as string) || 'fun',
         }));
-        state.quipBattlePrompts = prompts;
-        state.quipBattlePromptsMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-quip-battle-v1');
-        await updateSession(socialSessionId, state);
+        const promptsMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-quip-battle-v1');
+        const persisted = await persistPhaseContentReady(socialSessionId, 'quipContentStatus', state, (s) => {
+          s.quipBattlePrompts = prompts;
+          s.quipBattlePromptsMeta = promptsMeta;
+        });
+        logContentStatusTransition({ socialSessionId, phase: 'quip_battle', field: 'quipContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: promptsMeta.fallbackUsed === true });
         logger.info('Quip battle served from pre-generation', { socialSessionId });
-        return res.json({ prompts: state.quipBattlePrompts, meta: state.quipBattlePromptsMeta });
+        return res.json({ prompts: persisted.quipBattlePrompts, meta: persisted.quipBattlePromptsMeta });
       }
     }
     if (preGenStatus.skip && preGenStatus.reason === 'in_flight') {
@@ -999,17 +1036,21 @@ router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
       roster,
     });
 
-    state.quipBattlePrompts = result.data;
-    state.quipBattlePromptsMeta = result.meta;
-    await updateSession(socialSessionId, state);
+    const persisted = await persistPhaseContentReady(socialSessionId, 'quipContentStatus', state, (s) => {
+      s.quipBattlePrompts = result.data;
+      s.quipBattlePromptsMeta = result.meta;
+    });
+    logContentStatusTransition({ socialSessionId, phase: 'quip_battle', field: 'quipContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: result.meta.fallbackUsed === true });
 
     // Bots submit answers and votes for the generated prompts.
-    await runBotSimulationSafely(socialSessionId, state, 'quip-battle-generate');
-    await updateSession(socialSessionId, state);
+    await runBotSimulationSafely(socialSessionId, persisted, 'quip-battle-generate');
+    await updateSession(socialSessionId, persisted);
 
     return res.json({ prompts: result.data, meta: result.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] generateQuipBattlePrompts error:', { error: String(error) });
+    logContentStatusTransition({ socialSessionId, phase: 'quip_battle', field: 'quipContentStatus', to: 'failed', durationMs: Date.now() - contentGenStart, error: String(error) });
+    await markPhaseContentFailed(socialSessionId, 'quipContentStatus');
     return res.status(500).json({ error: 'Failed to generate quip battle prompts' });
   }
 });

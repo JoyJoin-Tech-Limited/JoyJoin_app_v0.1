@@ -475,6 +475,17 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  the identity/cohort queries. Env fallback:
    *  INDUSTRY_COHORT_COUNT_ENABLED (default: true). */
   industryCohortCountEnabled: "INDUSTRY_COHORT_COUNT_ENABLED",
+  /** Icebreaker Wave 3 (sprint icebreaker-uiux-wave3, contract AC-02): gates
+   *  client visibility of the five per-phase `*ContentStatus` fields
+   *  (quip/undercover/groupMirror/auction/dice), the `leftUserIds` leave
+   *  marker, and the derived `hostUnreachable` signal on social-icebreaker
+   *  session payloads. Ships dark — flag OFF = `sanitizeStateForClient`
+   *  strips every Wave-3 field, so snapshots stay byte-identical to
+   *  pre-Wave-3 (fail-closed; old clients see zero change). The server-side
+   *  writes (generate routes, POST /:id/leave) are NOT gated — only the
+   *  projection is. Env fallback: ICEBREAKER_CONTENT_STATUS_ENABLED
+   *  (default: false). */
+  icebreakerContentStatusEnabled: "ICEBREAKER_CONTENT_STATUS_ENABLED",
 };
 
 /**
@@ -623,6 +634,10 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  listFeatureFlags() show a stable default AND an unset env keeps the
    *  endpoint live. */
   industryCohortCountEnabled: true,
+  /** Icebreaker Wave 3 content-status projection ships dark (contract AC-02);
+   *  explicit false so the admin toggle UI and listFeatureFlags() show a
+   *  stable default. Flag-off = byte-identical pre-Wave-3 snapshots. */
+  icebreakerContentStatusEnabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

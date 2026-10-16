@@ -5,7 +5,7 @@ import type {
   SocialSessionParticipantSummary,
   AuctionLotResult,
 } from '@shared/socialIcebreaker';
-import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase } from '@shared/socialIcebreaker';
+import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase, GENERATING_STALL_SUPPRESS_MS } from '@shared/socialIcebreaker';
 import {
   getAuctionBiggestSpenderLine,
   getAuctionBargainHunterLine,
@@ -43,6 +43,10 @@ import {
   mergeSessionHighlights,
   HIGHLIGHTS_EXTRACTOR_PROMPT_VERSION,
 } from '../lib/sessionHighlights';
+import {
+  evaluateHostClaimEligibility,
+  getHostClaimGraceMs,
+} from '../lib/socialIcebreakerHostResilience';
 
 function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
@@ -76,9 +80,19 @@ export function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
+export interface SanitizeStateOptions {
+  /** Wave 3 (icebreaker-uiux-wave3, contract AC-02): expose the five
+   *  per-phase `*ContentStatus` fields, the `leftUserIds` leave marker, and
+   *  the derived `hostUnreachable` signal. Default false (fail-closed) —
+   *  every Wave-3 field is stripped, so a flag-off snapshot stays
+   *  byte-identical to pre-Wave-3. */
+  exposeWave3ContentStatus?: boolean;
+}
+
 export function sanitizeStateForClient(
   state: SocialSessionState,
   requestingUserId?: string,
+  options?: SanitizeStateOptions,
 ): SocialSessionState {
   const sanitized = { ...state };
   delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
@@ -90,6 +104,18 @@ export function sanitizeStateForClient(
   // server-side (resolveSession / getSessionWithExpiry); only the client
   // projection omits it.
   delete (sanitized as Partial<SocialSessionState>).expiresAt;
+  // Wave 3 (icebreaker-uiux-wave3, contract AC-02, fail-closed): the five
+  // per-phase contentStatus fields, the leave marker, and the host signal
+  // only leave the server while `icebreakerContentStatusEnabled` is on.
+  if (!options?.exposeWave3ContentStatus) {
+    delete (sanitized as Partial<SocialSessionState>).quipContentStatus;
+    delete (sanitized as Partial<SocialSessionState>).undercoverContentStatus;
+    delete (sanitized as Partial<SocialSessionState>).groupMirrorContentStatus;
+    delete (sanitized as Partial<SocialSessionState>).auctionContentStatus;
+    delete (sanitized as Partial<SocialSessionState>).diceContentStatus;
+    delete (sanitized as Partial<SocialSessionState>).leftUserIds;
+    delete (sanitized as Partial<SocialSessionState>).hostUnreachable;
+  }
   // Wave 3 (contract AC-10): highlights are prompt-context ONLY — aggregate
   // but never a client surface in Wave 3 (no client reader, no auth-user
   // exposure). Strip both the body and the flag snapshot for everyone.
@@ -327,6 +353,10 @@ export async function buildClientState(
     return [];
   });
   const archetypeCtx = buildArchetypeContext(joinedParticipants.map((p) => ({ archetype: p.archetype })));
+  // Wave 3 (icebreaker-uiux-wave3, contract AC-02): resolve the projection
+  // flag once per poll (5s flag LRU — no additional per-poll DB cost) and
+  // pass it into the sanitizer. Flag OFF = byte-identical pre-Wave-3 payload.
+  const exposeWave3ContentStatus = await getFeatureFlag('icebreakerContentStatusEnabled', false);
   const withCustomExtras =
     isCustomMode(state) && requestingUserId === state.hostUserId
       ? { ...state, selectablePhases: computeSelectablePhases(state) }
@@ -346,7 +376,24 @@ export async function buildClientState(
         : {}),
     },
     requestingUserId,
+    { exposeWave3ContentStatus },
   );
+
+  // Wave 3 (icebreaker-uiux-wave3, contract AC-04② + SCA-01): derive the
+  // host-activity signal from the roster ALREADY loaded above (sanitize
+  // strips lastSeenAt — the derivation must happen here, never persisted,
+  // zero extra DB round-trips). Same 180s grace as the manual /transfer-host
+  // claim; purely informational, no auto-transfer semantics.
+  if (exposeWave3ContentStatus) {
+    const hostRow = joinedParticipants.find((p) => p.userId === state.hostUserId);
+    const parsedLastSeen = hostRow?.lastSeenAt ? Date.parse(hostRow.lastSeenAt) : NaN;
+    clientState.hostUnreachable = evaluateHostClaimEligibility({
+      hostLastSeenAtMs: Number.isFinite(parsedLastSeen) ? parsedLastSeen : null,
+      sessionStartedAtMs: state.sessionStartedAt,
+      now: Date.now(),
+      graceMs: getHostClaimGraceMs(),
+    }).eligible;
+  }
 
   // Mask any bot userIds in the client state before it leaves the server.
   if (isTestMode && state.singleTest?.botPersonas?.length) {
@@ -1748,8 +1795,12 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
 /** Bound on stall suppression during warmup topic generation. Well beyond the
  *  6s LLM race + route overhead so a live /topics request is never nudged,
  *  but short enough that a wedged 'generating' state (server restart
- *  mid-request) self-heals and the host gets nudged to retry. */
-const WARMUP_GENERATING_STALL_SUPPRESS_MS = 30_000;
+ *  mid-request) self-heals and the host gets nudged to retry.
+ *  Wave 3 (icebreaker-uiux-wave3, contract AC-07): the constant itself moved
+ *  to `@shared/socialIcebreaker` (GENERATING_STALL_SUPPRESS_MS) so the
+ *  mini-program's stall exits compile against the same value; behavior is
+ *  unchanged (30s). */
+const WARMUP_GENERATING_STALL_SUPPRESS_MS = GENERATING_STALL_SUPPRESS_MS;
 
 /** True while warmup topics are actively generating (bounded window). The
  *  stall detector must never nudge a host who is waiting on the system rather
@@ -1759,6 +1810,141 @@ export function isWarmupTopicsGenerating(state: SocialSessionState, now = Date.n
   const startedAt = state.warmupTopicsGeneratingAt;
   if (!startedAt) return false;
   return now - startedAt < WARMUP_GENERATING_STALL_SUPPRESS_MS;
+}
+
+// ---------------------------------------------------------------------------
+// Wave 3 (icebreaker-uiux-wave3, contract AC-01 / REL-01 / OBS-01):
+// per-phase contentStatus write helpers — merge-owned-fields pattern from the
+// warmup 2026-07-24 lost-update fix. Every write RE-READS the latest
+// persisted state and merges ONLY the fields the caller owns, so a concurrent
+// player mutation (ready / submit / vote) landing mid-generation is never
+// clobbered by the generation write-back.
+// ---------------------------------------------------------------------------
+
+/** The five per-phase contentStatus field keys (warmup keeps its own field). */
+export type PhaseContentStatusField =
+  | 'quipContentStatus'
+  | 'undercoverContentStatus'
+  | 'groupMirrorContentStatus'
+  | 'auctionContentStatus'
+  | 'diceContentStatus';
+
+/** Re-read the latest persisted session state; fall back to the caller's
+ *  snapshot when the re-read fails (same contract as the warmup /topics
+ *  pre-save re-read). */
+async function rereadLatestSessionState(
+  socialSessionId: string,
+  fallbackState: SocialSessionState,
+  warnContext: string,
+): Promise<SocialSessionState> {
+  try {
+    const latest = await getSessionWithExpiry(socialSessionId);
+    if (latest.state) {
+      return hydrateDerivedState({ ...latest.state });
+    }
+  } catch (error) {
+    logger.warn(`[SocialIcebreaker] ${warnContext}; merging onto last-known state`, {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return fallbackState;
+}
+
+/** OBS-01: structured log for every contentStatus transition (phase +耗时). */
+export function logContentStatusTransition(input: {
+  socialSessionId: string;
+  phase: SocialIcebreakerPhase;
+  field: PhaseContentStatusField;
+  to: 'generating' | 'ready' | 'failed';
+  durationMs?: number;
+  fallbackUsed?: boolean;
+  error?: string;
+}): void {
+  const payload = {
+    socialSessionId: input.socialSessionId,
+    phase: input.phase,
+    field: input.field,
+    to: input.to,
+    ...(input.durationMs !== undefined ? { durationMs: input.durationMs } : {}),
+    ...(input.fallbackUsed !== undefined ? { fallbackUsed: input.fallbackUsed } : {}),
+    ...(input.error ? { error: input.error } : {}),
+  };
+  if (input.to === 'failed') {
+    logger.warn('[SocialIcebreaker] content_status_transition', payload);
+  } else {
+    logger.info('[SocialIcebreaker] content_status_transition', payload);
+  }
+}
+
+/** Mark a generative phase's content as 'generating' BEFORE any LLM work.
+ *  Best-effort: a persist failure only logs (the generation itself proceeds),
+ *  mirroring the warmup mood-persistence precedent. */
+export async function markPhaseContentGenerating(
+  socialSessionId: string,
+  field: PhaseContentStatusField,
+  fallbackState: SocialSessionState,
+): Promise<void> {
+  try {
+    const base = await rereadLatestSessionState(
+      socialSessionId,
+      fallbackState,
+      `${field} generating-mark re-read failed`,
+    );
+    base[field] = 'generating';
+    await updateSession(socialSessionId, base);
+  } catch (error) {
+    logger.warn(`[SocialIcebreaker] ${field} generating-mark persist failed; continuing to generate`, {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/** Write generated content back with status 'ready'. Re-reads the latest
+ *  state, applies `mergeOwned` (the route's content fields), stamps 'ready',
+ *  and persists. THROWS on persist failure so the route's existing catch
+ *  keeps its current 500 behavior. Returns the persisted state so follow-up
+ *  work (single-test bot simulation) builds on the freshest snapshot. */
+export async function persistPhaseContentReady(
+  socialSessionId: string,
+  field: PhaseContentStatusField,
+  fallbackState: SocialSessionState,
+  mergeOwned: (state: SocialSessionState) => void,
+): Promise<SocialSessionState> {
+  const base = await rereadLatestSessionState(
+    socialSessionId,
+    fallbackState,
+    `${field} ready-write re-read failed`,
+  );
+  mergeOwned(base);
+  base[field] = 'ready';
+  await updateSession(socialSessionId, base);
+  return base;
+}
+
+/** Mark a generative phase's content as 'failed' after a hard,
+ *  nothing-servable error. Best-effort: never throws (the route is already
+ *  on its error path; the original error must reach the client). */
+export async function markPhaseContentFailed(
+  socialSessionId: string,
+  field: PhaseContentStatusField,
+): Promise<void> {
+  try {
+    const latest = await getSessionWithExpiry(socialSessionId);
+    if (!latest.state) return;
+    const base = hydrateDerivedState({ ...latest.state });
+    // Only a still-in-flight generation flips to failed — a concurrent
+    // successful write-back ('ready') must never be regressed.
+    if (base[field] !== 'generating') return;
+    base[field] = 'failed';
+    await updateSession(socialSessionId, base);
+  } catch (error) {
+    logger.warn(`[SocialIcebreaker] ${field} failed-mark persist failed`, {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 /**

@@ -37,6 +37,10 @@ import {
   isPhaseRosterComplete,
   hasFullPhaseQuorum,
   buildAuctionAwardRecapLines,
+  markPhaseContentGenerating,
+  persistPhaseContentReady,
+  markPhaseContentFailed,
+  logContentStatusTransition,
 } from './socialIcebreakerHelpers';
 import { getPhaseModule } from '@shared/phaseRegistry';
 import { emitSocialGroupBeat, emitAuctionOutbidBeatRateLimited } from '../lib/socialGroupBeats';
@@ -672,6 +676,79 @@ router.post('/:socialSessionId/transfer-host', async (req: any, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/leave
+// Wave 3 (icebreaker-uiux-wave3, contract AC-04①): 「我离开一下」 self-state
+// marker — the ONLY new route in this sprint (§5 路由豁免). Leave never
+// kicks the participant from the session, never mutates anyone else's state,
+// never touches host authority, phase guards, or gameplay fields; the only
+// write is the informational `leftUserIds` marker (clients render a "离开一
+// 下" badge while `icebreakerContentStatusEnabled` is on). Idempotent in both
+// directions: {left:true} (default) marks, {left:false} rejoins — rejoin
+// fully restores because nothing else was ever mutated. True absence keeps
+// being handled by the existing silent-player auto-complete machinery
+// (180s heartbeat timeout); this route adds NO auto-advance and NO auto
+// host transfer (AC-04③).
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/leave', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // `left` defaults to true (a bare POST is a leave); {left:false} = rejoin.
+  const left = (req.body as { left?: unknown } | undefined)?.left !== false;
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  // Only an existing roster participant may mark themselves — self-state only,
+  // never a stranger, never another player.
+  const participant = await getParticipant(socialSessionId, userId);
+  if (!participant) {
+    return res.status(403).json({
+      error: 'Not a participant in this session',
+      code: 'NOT_A_PARTICIPANT',
+    });
+  }
+
+  // Atomic read-modify-write keeps concurrent leaves/rejoins lost-update-free;
+  // the mutator aborts when the marker already matches (idempotent no-op).
+  const result = await updateSessionAtomic(socialSessionId, (current) => {
+    const markers = new Set(current.leftUserIds ?? []);
+    if (left) {
+      if (markers.has(userId)) return false; // already marked — no-op
+      markers.add(userId);
+    } else {
+      if (!markers.has(userId)) return false; // already back — no-op
+      markers.delete(userId);
+    }
+    current.leftUserIds = markers.size > 0 ? [...markers] : undefined;
+  });
+
+  if (result.outcome === 'not_found') {
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  const nextState = result.outcome === 'updated' ? result.state : state;
+  logger.info('[SocialIcebreaker] player leave marker updated', {
+    request_id: req.requestId,
+    socialSessionId,
+    actorUserId: userId,
+    left,
+    changed: result.outcome === 'updated',
+  });
+
+  return res.json({
+    ok: true,
+    left,
+    changed: result.outcome === 'updated',
+    state: await buildClientState(nextState, userId),
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/lie-detective/generate
 // ---------------------------------------------------------------------------
 router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) => {
@@ -1011,6 +1088,11 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
     });
   }
 
+  // Wave 3 (icebreaker-uiux-wave3, AC-01): mark generation in-flight BEFORE
+  // any LLM work (merge-owned, warmup 2026-07-24 precedent).
+  const contentGenStart = Date.now();
+  await markPhaseContentGenerating(socialSessionId, 'auctionContentStatus', state);
+
   try {
     const roster = await listParticipants(socialSessionId);
     const archetypeCtx = buildArchetypeContext(roster);
@@ -1037,25 +1119,29 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
       balances[state.hostUserId] = AUCTION_STARTING_COINS;
     }
 
-    state.auctionLots = lotResult.data;
-    state.auctionLotsMeta = lotResult.meta;
-    state.auctionBalances = balances;
-    state.auctionCurrentLotIndex = 0;
-    state.auctionHighBid = null;
-    state.auctionAllLotsClosed = false;
-    state.auctionRecapLines = [];
-    state.auctionBidHistory = [];
-    await updateSession(socialSessionId, state);
+    const persisted = await persistPhaseContentReady(socialSessionId, 'auctionContentStatus', state, (s) => {
+      s.auctionLots = lotResult.data;
+      s.auctionLotsMeta = lotResult.meta;
+      s.auctionBalances = balances;
+      s.auctionCurrentLotIndex = 0;
+      s.auctionHighBid = null;
+      s.auctionAllLotsClosed = false;
+      s.auctionRecapLines = [];
+      s.auctionBidHistory = [];
+    });
+    logContentStatusTransition({ socialSessionId, phase: 'auction', field: 'auctionContentStatus', to: 'ready', durationMs: Date.now() - contentGenStart, fallbackUsed: lotResult.meta.fallbackUsed === true });
 
     return res.json({
       lots: lotResult.data,
       meta: lotResult.meta,
-      balances: state.auctionBalances,
+      balances: persisted.auctionBalances,
       currentLotIndex: 0,
-      state: await buildClientState(state, userId),
+      state: await buildClientState(persisted, userId),
     });
   } catch (error) {
     logger.error('[SocialIcebreaker] auction/generate-lots error:', { error });
+    logContentStatusTransition({ socialSessionId, phase: 'auction', field: 'auctionContentStatus', to: 'failed', durationMs: Date.now() - contentGenStart, error: String(error) });
+    await markPhaseContentFailed(socialSessionId, 'auctionContentStatus');
     return res.status(500).json({ error: 'Failed to generate auction lots' });
   }
 });
