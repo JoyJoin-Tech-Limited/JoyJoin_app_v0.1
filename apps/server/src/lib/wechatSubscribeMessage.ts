@@ -39,7 +39,8 @@ import { subscribeMessageSendsRepo } from "../repositories/subscribeMessageSends
 const SEND_URL = "https://api.weixin.qq.com/cgi-bin/message/subscribe/send";
 const REQUEST_TIMEOUT_MS = 3_000;
 
-/** Landing page when the user taps the message — events tab (足迹). */
+/** Landing page when the user taps the message — events tab (足迹), unless
+ *  the template overrides it (see TEMPLATES.buildPage). */
 const LANDING_PAGE = "pages/events/index";
 
 /** WeChat `thing` fields cap at 20 chars. */
@@ -66,11 +67,27 @@ export interface SubscribePushContext {
 type TemplateKey = "result" | "reminder" | "recap";
 type Moment = "match_success" | "refund" | "event_day" | "recap";
 
+/**
+ * Landing page for one template send. Exported so the recap deep-link contract
+ * stays locked by a test: the recap template lands on the feedback page
+ * (2026-10-16 — the events tab has no feedback entry), every other template
+ * keeps the events tab.
+ */
+export function resolveTemplatePage(templateKey: TemplateKey, ctx: SubscribePushContext): string {
+  return TEMPLATES[templateKey].buildPage?.(ctx) ?? LANDING_PAGE;
+}
+
 const TEMPLATES: Record<
   TemplateKey,
   {
     envVar: string;
     buildData: (ctx: SubscribePushContext) => Record<string, { value: string }>;
+    /**
+     * Per-template landing page override (2026-10-16). The recap template
+     * deep-links straight into the feedback flow — the events tab it used to
+     * land on has no feedback entry, so the summons led nowhere actionable.
+     */
+    buildPage?: (ctx: SubscribePushContext) => string;
   }
 > = {
   result: {
@@ -97,6 +114,11 @@ const TEMPLATES: Record<
       time4: { value: formatEventTime(ctx.eventTime) },
       thing3: { value: clampThing(ctx.hint) },
     }),
+    // Deep-link into the feedback page. WeChat accepts query strings on the
+    // `page` field; the feedback flow canonicalizes pool ids via
+    // resolveCanonicalEventId, so passing the pool id directly is safe.
+    buildPage: (ctx) =>
+      `pages/event-feedback/index?id=${encodeURIComponent(ctx.poolId)}&from=recap_push`,
   },
 };
 
@@ -122,6 +144,7 @@ async function sendOne(
   openid: string,
   data: Record<string, { value: string }>,
   moment: Moment,
+  page: string,
 ): Promise<void> {
   let result: { errcode?: number; errmsg?: string };
   try {
@@ -132,7 +155,7 @@ async function sendOne(
         body: JSON.stringify({
           touser: openid,
           template_id: templateId,
-          page: LANDING_PAGE,
+          page,
           miniprogram_state: process.env.APP_MODE === "production" ? "formal" : "trial",
           lang: "zh_CN",
           data,
@@ -198,6 +221,7 @@ async function sendTemplateToUsers(
     }
 
     const data = template.buildData(ctx);
+    const page = resolveTemplatePage(templateKey, ctx);
     await Promise.all(
       recipients.map(async (recipient: { id: string; openid: string }) => {
         try {
@@ -208,7 +232,7 @@ async function sendTemplateToUsers(
             templateId,
           });
           if (!claimed) return; // a previous run/tick already handled this slot
-          await sendOne(token, templateId, recipient.openid, data, moment);
+          await sendOne(token, templateId, recipient.openid, data, moment, page);
         } catch (err) {
           logger.warn("[SubscribeMsg] send error", {
             openid: recipient.openid,

@@ -13,8 +13,10 @@
 
 import { eq, desc, and, inArray, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { events, eventAttendance, eventPools, eventPoolRegistrations, eventPoolGroups } from "@shared/schema";
+import { events, eventAttendance, eventFeedback, eventPools, eventPoolRegistrations, eventPoolGroups } from "@shared/schema";
 import type { JoinedEventSummary } from "@shared/api";
+import { POOL_COMPLETION_BUFFER_MS } from "../lib/poolCompletionSweep";
+import { FEEDBACK_ELIGIBLE_MATCH_STATUSES } from "../lib/feedbackStateResolver";
 
 /**
  * Derive a user-facing status for pool events from the matching + venue lifecycle.
@@ -39,6 +41,11 @@ export function derivePoolDisplayStatus(
 ): JoinedEventSummary["displayStatus"] {
   if (poolStatus === "cancelled") return "cancelled";
   if (poolStatus === "completed") return "attended";
+
+  // Registration-level completion (poolCompletionSweep flips matched →
+  // completed at start +3h in the same tx as the pool status; this branch is
+  // the belt-and-braces read for any row where only the registration moved).
+  if (matchStatus === "completed") return "attended";
 
   if (matchStatus === "pending") return "pending";
   if (matchStatus === "matched") {
@@ -79,6 +86,76 @@ export function deriveLegacyDisplayStatus(
     default:
       return "upcoming";
   }
+}
+
+// ── feedbackPending derivation (2026-10-16 feedback activation, plan D8) ────
+//
+// A joined event carries the 足迹「去评价」pill when the viewer is eligible,
+// the event has been over for POOL_COMPLETION_BUFFER_MS (the same +3h rule
+// lib/feedbackStateResolver enforces — the resolver stays the authority for
+// the detail page and the POST gate; these predicates only drive the pill),
+// and no event_feedback row exists yet. Feedback rows key on canonical
+// events.id, so pool rows map through their matched group's eventId — never
+// the pool id itself (the connectionsContextResolver id-family mismatch,
+// plan §2.1). One batched existence query; no N+1.
+
+function toEpochMs(dateTime: Date | string | null | undefined): number | null {
+  if (!dateTime) return null;
+  const ms = dateTime instanceof Date ? dateTime.getTime() : new Date(dateTime).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Pool-row eligibility + window for the 去评价 pill (D5: matched/completed). */
+export function isPoolFeedbackPending(params: {
+  matchStatus: string | null;
+  poolStatus: string | null;
+  dateTime: Date | string | null;
+  hasCanonicalEventId: boolean;
+  hasSubmittedFeedback: boolean;
+  nowMs: number;
+}): boolean {
+  if (!params.hasCanonicalEventId || params.hasSubmittedFeedback) return false;
+  if (!params.matchStatus || !FEEDBACK_ELIGIBLE_MATCH_STATUSES.includes(params.matchStatus)) return false;
+  if (params.poolStatus === "cancelled" || params.poolStatus === "archived") return false;
+  const startMs = toEpochMs(params.dateTime);
+  if (startMs === null) return false;
+  return startMs + POOL_COMPLETION_BUFFER_MS <= params.nowMs;
+}
+
+/** Legacy-row eligibility + window (D5: non-cancelled attendance + event). */
+export function isLegacyFeedbackPending(params: {
+  attendanceStatus: string | null;
+  eventStatus: string | null;
+  dateTime: Date | string | null;
+  hasSubmittedFeedback: boolean;
+  nowMs: number;
+}): boolean {
+  if (params.hasSubmittedFeedback) return false;
+  if (params.attendanceStatus === "cancelled" || params.eventStatus === "cancelled") return false;
+  const startMs = toEpochMs(params.dateTime);
+  if (startMs === null) return false;
+  return startMs + POOL_COMPLETION_BUFFER_MS <= params.nowMs;
+}
+
+/**
+ * Batch-load the canonical event ids this user already submitted feedback
+ * for, restricted to the candidate set — one round-trip, no N+1.
+ */
+async function loadSubmittedFeedbackEventIds(
+  userId: string,
+  candidateEventIds: string[],
+): Promise<Set<string>> {
+  if (candidateEventIds.length === 0) return new Set();
+  const rows = await db
+    .select({ eventId: eventFeedback.eventId })
+    .from(eventFeedback)
+    .where(
+      and(
+        eq(eventFeedback.userId, userId),
+        inArray(eventFeedback.eventId, candidateEventIds),
+      ),
+    );
+  return new Set(rows.map((row: { eventId: string }) => row.eventId));
 }
 
 /**
@@ -131,6 +208,10 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       finalDateTime: eventPoolGroups.finalDateTime,
       venueAssignmentStatus: eventPoolGroups.venueAssignmentStatus,
       memberCount: eventPoolGroups.memberCount,
+      // Canonical events.id of the matched group — the event_feedback FK
+      // target. Needed to derive feedbackPending without the
+      // connectionsContextResolver id-family mismatch (plan §2.1).
+      canonicalEventId: eventPoolGroups.eventId,
     })
     .from(eventPoolRegistrations)
     .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
@@ -138,12 +219,43 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     .where(
       and(
         eq(eventPoolRegistrations.userId, userId),
-        inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"])
+        // 'completed' included (2026-10-16): poolCompletionSweep flips
+        // matched → completed at event start +3h; without it a finished
+        // pool vanished from the footprint instead of landing in 已完成,
+        // and the 去评价 pill (feedbackPending) could never attach.
+        inArray(eventPoolRegistrations.matchStatus, ["pending", "matched", "completed"])
       )
     )
     .orderBy(desc(eventPools.dateTime));
 
-  // 3. Merge into unified shape
+  // 3. feedbackPending derivation — batch existence check over the eligible
+  //    candidates (1 extra round-trip). Candidate = eligible + window passed,
+  //    ignoring submission; the flag additionally requires no feedback row.
+  const nowMs = Date.now();
+  const isLegacyCandidate = (row: (typeof legacyRows)[number]): boolean =>
+    isLegacyFeedbackPending({
+      attendanceStatus: row.attendanceStatus,
+      eventStatus: row.status,
+      dateTime: row.dateTime,
+      hasSubmittedFeedback: false,
+      nowMs,
+    });
+  const isPoolCandidate = (row: (typeof poolRows)[number]): boolean =>
+    isPoolFeedbackPending({
+      matchStatus: row.matchStatus,
+      poolStatus: row.status,
+      dateTime: row.dateTime,
+      hasCanonicalEventId: !!row.canonicalEventId,
+      hasSubmittedFeedback: false,
+      nowMs,
+    });
+  const candidateEventIds: string[] = [
+    ...legacyRows.filter(isLegacyCandidate).map((row: typeof legacyRows[number]) => row.id),
+    ...poolRows.filter(isPoolCandidate).map((row: typeof poolRows[number]) => row.canonicalEventId as string),
+  ];
+  const submittedEventIds = await loadSubmittedFeedbackEventIds(userId, candidateEventIds);
+
+  // 4. Merge into unified shape
   const legacyEvents: JoinedEventSummary[] = legacyRows.map((row: typeof legacyRows[number]) => ({
     id: row.id,
     title: row.title ?? undefined,
@@ -153,6 +265,8 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     status: row.attendanceStatus ?? row.status ?? undefined,
     description: row.description ?? undefined,
     displayStatus: deriveLegacyDisplayStatus(row.attendanceStatus, row.status),
+    feedbackPending:
+      isLegacyCandidate(row) && !submittedEventIds.has(row.id) ? true : undefined,
   }));
 
   const poolEvents: JoinedEventSummary[] = poolRows.map((row: typeof poolRows[number]) => ({
@@ -181,9 +295,13 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       row.venueName,
       row.status,
     ),
+    feedbackPending:
+      isPoolCandidate(row) && !submittedEventIds.has(row.canonicalEventId as string)
+        ? true
+        : undefined,
   }));
 
-  // 4. Merge and sort by dateTime descending
+  // 5. Merge and sort by dateTime descending
   const allEvents = [...legacyEvents, ...poolEvents];
   allEvents.sort((a, b) => {
     const dateA = a.dateTime ? new Date(a.dateTime).getTime() : 0;

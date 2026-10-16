@@ -66,7 +66,13 @@ export type ErrorCode =
   // "出了点问题，稍后再试" toast — and a retry with the same invalid value can
   // never succeed, so the generic copy was actively wrong (2026-09-10 class).
   | 'INVALID_BUDGET_TIER'
-  | 'BUDGET_TIER_REQUIRED';
+  | 'BUDGET_TIER_REQUIRED'
+  // Event-feedback activation gates (2026-10-16): POST /api/events/:eventId/feedback
+  // rejects with these codes. FEEDBACK_ALREADY_SUBMITTED mirrors the
+  // ALREADY_REGISTERED posture — a terminal joined state, not a failure.
+  | 'FEEDBACK_NOT_OPEN'
+  | 'FEEDBACK_NOT_ELIGIBLE'
+  | 'FEEDBACK_ALREADY_SUBMITTED';
 
 interface ErrorTemplate {
   /** Surface type — determines tone mode */
@@ -297,6 +303,20 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   BUDGET_TIER_REQUIRED: {
     surface: 'toast-error',
     default: '请先选择预算区间',
+  },
+  // Event-feedback activation gates (2026-10-16). Zero-emoji, particle-free,
+  // 排桌/合拍 vocabulary per WeChat review posture.
+  FEEDBACK_NOT_OPEN: {
+    surface: 'toast-error',
+    default: '活动还没结束，结束后再来聊聊感受吧',
+  },
+  FEEDBACK_NOT_ELIGIBLE: {
+    surface: 'toast-error',
+    default: '这场活动未成行，无法评价',
+  },
+  FEEDBACK_ALREADY_SUBMITTED: {
+    surface: 'toast-error',
+    default: '你已经评价过这场活动啦',
   },
 };
 

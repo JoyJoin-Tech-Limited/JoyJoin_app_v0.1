@@ -15,6 +15,11 @@ import { fileURLToPath } from 'node:url'
 // The invite interstitial and the second "均衡反馈" progress language are gone;
 // deep fields are inline and optional, and the server keeps keying
 // hasDeepFeedback / XP tier off payload CONTENT, so no server change.
+//
+// 2026-10-16 feedback activation: render branches key off `effectiveStep`
+// (server feedback-state 'submitted' forces the revealed/thank-you branch
+// without a one-frame form flash); the block-content contracts below are
+// unchanged.
 
 const here = dirname(fileURLToPath(import.meta.url))
 const tsx = readFileSync(resolve(here, '..', 'index.tsx'), 'utf-8')
@@ -113,8 +118,8 @@ describe('event-feedback merged 3-screen flow (2026-08-15)', () => {
   })
 
   it('puts the whole event experience on one screen (faces + thermometer + radar + venue/status)', () => {
-    expect(tsx).toContain("if (step === 'experience')")
     expect(tsx).toContain('今晚这局怎么样？')
+    expect(tsx).toContain("if (effectiveStep === 'experience')")
     expect(tsx).toContain('整体体验如何？')
     expect(tsx).toContain('氛围温度计')
     expect(tsx).toContain('连接雷达')
@@ -125,12 +130,12 @@ describe('event-feedback merged 3-screen flow (2026-08-15)', () => {
   })
 
   it('merges comment + people into the wrap-up screen', () => {
-    expect(tsx).toContain("if (step === 'wrapup')")
+    expect(tsx).toContain("if (effectiveStep === 'wrapup')")
     expect(tsx).toContain('参与者印象')
     expect(tsx).toContain('改进建议')
     expect(tsx).toContain('想说点什么？（可选）')
     // The free comment textarea now lives inside the wrap-up scroll port.
-    const wrapupBlock = tsx.split("if (step === 'wrapup')")[1] ?? ''
+    const wrapupBlock = tsx.split("if (effectiveStep === 'wrapup')")[1] ?? ''
     expect(wrapupBlock).toContain("className='event-feedback__textarea'")
     expect(wrapupBlock).toContain('提交反馈')
   })
@@ -208,7 +213,7 @@ describe('event-feedback merged 3-screen flow (2026-08-15)', () => {
   })
 
   it('keeps the connections screen scrollable so the bottom CTA stays anchored', () => {
-    const connectionsBlock = tsx.split("if (step === 'connections')")[1] ?? ''
+    const connectionsBlock = tsx.split("if (effectiveStep === 'connections')")[1] ?? ''
     expect(connectionsBlock).toContain('event-feedback__deep-scroll')
     const scrollBlock = scss.split('&__deep-scroll {')[1]?.split('}')[0] ?? ''
     expect(scrollBlock).toContain('flex: 1')
@@ -272,7 +277,7 @@ describe('event-feedback merged 3-screen flow (2026-08-15)', () => {
   })
 
   it('guards the wrap-up submit button against double taps and swipe-back resurrection', () => {
-    const wrapupBlock = tsx.split("if (step === 'wrapup')")[1] ?? ''
+    const wrapupBlock = tsx.split("if (effectiveStep === 'wrapup')")[1] ?? ''
     expect(wrapupBlock).toContain('disabled={isSubmitting || submitted}')
   })
 

@@ -150,6 +150,16 @@ const DISCOVER_EVENT_TYPES = [
   "feedback_invite_seen",
   "feedback_deep_engaged",
   "feedback_deep_submitted",
+  // Feedback-activation funnel (2026-10-16, PM plan §7): lifecycle-gated entry
+  // shown (state metadata: locked/open/submitted), locked-state teaching tap,
+  // footprint「去评价」pill tap, and feedback page open with `source`
+  // attribution. Enum-only event names; metadata carries eventId + state/source
+  // enums only — no user text, no device identifiers (flash_search_started
+  // pattern).
+  "feedback_entry_shown",
+  "feedback_locked_tap",
+  "feedback_reminder_tap",
+  "feedback_page_open",
   "promo_banner_impression",
   "promo_banner_cta_tap",
   "promo_banner_image_error",

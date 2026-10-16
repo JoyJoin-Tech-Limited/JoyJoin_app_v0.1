@@ -67,6 +67,15 @@ vi.mock("../repositories/eventFeedbackRepo", () => ({
   resolveCanonicalFeedbackEventId: vi.fn(async (eventId: string) => eventId),
 }));
 
+// The feedback-activation gate (2026-10-16) runs before content moderation.
+// These tests exercise the moderation layer, so the resolver is pinned to
+// `open`; the gate's own state mapping is covered by feedbackGatesRoute.test.ts.
+vi.mock("../lib/feedbackStateResolver", () => ({
+  resolveFeedbackState: vi.fn(async () => ({ state: "open", canonicalEventId: "event-1" })),
+  FEEDBACK_OPEN_OFFSET_MS: 3 * 60 * 60 * 1000,
+  FEEDBACK_ELIGIBLE_MATCH_STATUSES: ["matched", "completed"],
+}));
+
 vi.mock("../lib/logger", () => ({
   logger: {
     info: vi.fn(),

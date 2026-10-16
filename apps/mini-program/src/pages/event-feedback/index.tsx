@@ -3,11 +3,12 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { getEventParticipants, getMyPoolRegistrations, type EventParticipantSummary } from '@shared/api'
+import { getEventFeedbackState, getEventParticipants, getMyPoolRegistrations, type EventParticipantSummary } from '@shared/api'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { apiRequest } from '../../lib/api/api'
 import { queryClient } from '../../lib/api/queryClient'
-import { CONNECTIONS_SHELL_QUERY_KEY, REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { CONNECTIONS_SHELL_QUERY_KEY, EVENTS_SHELL_QUERY_KEY, JOINED_EVENTS_QUERY_KEY, REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
@@ -19,6 +20,7 @@ import { logInfo, logError } from '../../lib/utils/logger'
 import { TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import RatingFace from '../../components/ui/RatingFace'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
+import StatusCard from '../../components/ui/StatusCard'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
 import Chip from '../../components/ui/Chip'
@@ -230,6 +232,14 @@ export default function EventFeedbackPage() {
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
   const currentUserId = currentUser?.id
 
+  // Source attribution (PM plan §7): recap push / events tab / event detail /
+  // in-app notification deep links carry `from`; unknown or absent values omit
+  // the metadata key rather than polluting the enum.
+  const fromParam = router.params.from ?? ''
+  const feedbackSource = ['recap_push', 'events_tab', 'event_detail', 'notification'].includes(fromParam)
+    ? fromParam
+    : undefined
+
   const [step, setStep] = useState<FeedbackStep>('experience')
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -265,14 +275,49 @@ export default function EventFeedbackPage() {
   // 2026-08-15: also reset the optimistic submitted flip so the button does not
   // show 已提交 while clickable after returning from swipe-back.
   useResetOnShow(setIsSubmitting, setSubmitted)
+  // ─── Entry gate (2026-10-16 feedback activation, PM plan §3) ─────────────
+  // The lifecycle state is server-computed (opens at dateTime+3h, eligibility
+  // checked there); recap-push deep links and bookmarked URLs must not bypass
+  // it. Fail-closed: a failed lookup never opens the form.
+  const {
+    data: feedbackStateData,
+    isLoading: feedbackStateLoading,
+    isError: feedbackStateError,
+    refetch: refetchFeedbackState,
+  } = useQuery({
+    queryKey: ['mini-program', 'event-feedback-state', eventId],
+    queryFn: () => getEventFeedbackState(apiRequest, eventId),
+    enabled: !!eventId && !authLoading && !!currentUserId,
+    staleTime: 30_000,
+    retry: 1,
+  })
+  const feedbackState = feedbackStateData?.state
+
+  // feedback_page_open (PM plan §7): once per mount, with source attribution
+  // when the deep link carried a known `from`.
+  const pageOpenTrackedRef = useRef(false)
+  useEffect(() => {
+    if (pageOpenTrackedRef.current || !eventId) return
+    pageOpenTrackedRef.current = true
+    trackFeedbackEvent('feedback_page_open', {
+      eventId,
+      ...(feedbackSource ? { source: feedbackSource } : {}),
+    })
+  }, [eventId, feedbackSource])
+
+  // Already submitted → land directly on the thank-you state (direct URL
+  // visits / re-entries). Derived at render (not via an effect) so the form
+  // never flashes for one frame; in-session submits setStep('revealed')
+  // themselves, which this mirrors.
+  const effectiveStep: FeedbackStep = feedbackState === 'submitted' ? 'revealed' : step
 
   // C5 — Fire success haptic when entering the revealed step (effect, not render)
   useEffect(() => {
-    if (step === 'revealed' && !revealedHapticFiredRef.current) {
+    if (effectiveStep === 'revealed' && !revealedHapticFiredRef.current) {
       revealedHapticFiredRef.current = true
       haptics('success')
     }
-  }, [step])
+  }, [effectiveStep])
 
   const { data: participants = [], isLoading: participantsLoading, isError: participantsError } = useQuery<EventParticipantSummary[]>({
     queryKey: ['mini-program', 'event-participants', eventId],
@@ -282,7 +327,9 @@ export default function EventFeedbackPage() {
       const res = await getEventParticipants(apiRequest, eventId)
       return res.filter((p) => p.id !== currentUserId)
     },
-    enabled: !!eventId && !authLoading && !!currentUserId,
+    // The roster is only needed once the gate says open — locked / ineligible /
+    // submitted visits never render the form.
+    enabled: !!eventId && !authLoading && !!currentUserId && feedbackState === 'open',
   })
 
   // W4 (AC-W4.2a): resolve the caller's matched group for this event so the
@@ -503,7 +550,27 @@ export default function EventFeedbackPage() {
       // new feedback-complete / connections state instead of stale feedback-pending.
       queryClient.invalidateQueries({ queryKey: CONNECTIONS_SHELL_QUERY_KEY })
       Taro.showToast({ title: '反馈已提交', icon: 'success', duration: TOAST_DEFAULT_MS })
+      // 2026-10-16 feedback activation: bust joined-events + events shell so the
+      // 足迹「去评价」pill disappears immediately (the joined query carries a 30s
+      // staleTime), and drop this event's feedback-state cache so event-detail
+      // re-derives 已评价 on return. Mirrors bustRegistrationCaches discipline.
+      queryClient.invalidateQueries({ queryKey: JOINED_EVENTS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: EVENTS_SHELL_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-feedback-state', eventId] })
+      evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
     } catch (err) {
+      // 2026-10-16 race: a second device (or a stale re-opened page) can submit
+      // first, and this POST settles as 409 FEEDBACK_ALREADY_SUBMITTED. That is
+      // a success from the user's point of view — land on the thank-you state
+      // instead of re-showing the form with a re-tappable submit button.
+      const errorCode = (err as { data?: { code?: string } } | null)?.data?.code
+      if (errorCode === 'FEEDBACK_ALREADY_SUBMITTED') {
+        queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-feedback-state', eventId] })
+        setSubmitted(true)
+        setStep('revealed')
+        setIsSubmitting(false)
+        return
+      }
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       logError('[EventFeedback] Submit failed', { message })
@@ -540,7 +607,63 @@ export default function EventFeedbackPage() {
     })
   }, [])
 
-  if (authLoading || participantsLoading) {
+  if (authLoading || feedbackStateLoading) {
+    return (
+      <JoyJoinLoadingScreen
+        title='准备反馈页面…'
+        subtitle={`${getMascotDisplayName(currentUser)}在确认你的活动参与记录`}
+        showSkeleton={false}
+      />
+    )
+  }
+
+  // ─── Gate states (fail-closed): only 'open' reaches the form ─────────────
+  if (feedbackStateError || !feedbackState) {
+    return (
+      <View className='event-feedback'>
+        <View className='event-feedback__gate'>
+          <StatusCard
+            tone='error'
+            title='加载失败'
+            description='网络有点调皮，再试一次吧'
+            action={{ label: '重试', onClick: () => refetchFeedbackState(), variant: 'primary' }}
+          />
+        </View>
+      </View>
+    )
+  }
+
+  if (feedbackState === 'locked') {
+    return (
+      <View className='event-feedback'>
+        <View className='event-feedback__gate'>
+          <StatusCard
+            tone='info'
+            title='活动还没结束'
+            description='结束后，来聊聊你的感受吧'
+            action={{ label: '返回', onClick: () => Taro.navigateBack(), variant: 'primary' }}
+          />
+        </View>
+      </View>
+    )
+  }
+
+  // ineligible (未成行/已退订/塌组/已取消) + reserved closed share one honest card.
+  if (feedbackState === 'ineligible' || feedbackState === 'closed') {
+    return (
+      <View className='event-feedback'>
+        <View className='event-feedback__gate'>
+          <StatusCard
+            tone='info'
+            title='这场活动未成行，无法评价'
+            action={{ label: '返回', onClick: () => Taro.navigateBack(), variant: 'primary' }}
+          />
+        </View>
+      </View>
+    )
+  }
+
+  if (participantsLoading) {
     return (
       <JoyJoinLoadingScreen
         title='准备反馈页面…'
@@ -551,7 +674,7 @@ export default function EventFeedbackPage() {
   }
 
   // ─── Revealed step ─────────────────────────────────────────────────────────
-  if (step === 'revealed') {
+  if (effectiveStep === 'revealed') {
     const hasMatches = mutualMatches.length > 0
     return (
       <View className='event-feedback event-feedback--revealed'>
@@ -638,7 +761,7 @@ export default function EventFeedbackPage() {
   // ─── Experience step (merged 2026-08-15): faces + thermometer + radar + ───
   // venue/status all describe the same night, so they share ONE screen. Every
   // field is optional — the CTA is always 下一步, never a skip-or-answer fork.
-  if (step === 'experience') {
+  if (effectiveStep === 'experience') {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
@@ -754,7 +877,7 @@ export default function EventFeedbackPage() {
   }
 
   // ─── Connections step ──────────────────────────────────────────────────────
-  if (step === 'connections') {
+  if (effectiveStep === 'connections') {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
@@ -835,7 +958,7 @@ export default function EventFeedbackPage() {
   // ─── Wrap-up step (merged 2026-08-15): attendee impressions + improvement ──
   // areas + free comment. Impressions only render for people picked on the
   // connections step (轻量原则).
-  if (step === 'wrapup') {
+  if (effectiveStep === 'wrapup') {
     const attendees = participants.filter((p) => selectedConnections.includes(p.id))
     const improvementRemaining = MAX_IMPROVEMENT_AREAS - improvementAreas.length
     return (

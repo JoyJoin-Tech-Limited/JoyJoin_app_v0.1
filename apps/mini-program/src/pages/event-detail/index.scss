@@ -2,7 +2,10 @@
 @use '../../styles/mixins' as *;
 
 .event-detail {
-  min-height: 100dvh;
+  // Zero-scroll shell (2026-10-16 action-bar redesign): the page root is a flex
+  // column; the ScrollView below is the single scroll port and the action bar
+  // is its flex sibling — content can never slide beneath the bar.
+  @include no-scroll-page-shell;
   background: $color-bg-gradient;
 
   // Padding lives on inner wrappers — WeChat ignores padding on the native
@@ -10,6 +13,11 @@
   // modifier; the scrolling branch wraps children in __scroll-inner.
   &--static {
     padding: $container-padding;
+  }
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
   }
 
   &__scroll-inner {
@@ -226,18 +234,118 @@
     line-height: $line-height-relaxed;
   }
 
-  &__actions {
-    margin-top: $spacing-lg;
+  // ─── Fixed bottom action bar (2026-10-16 redesign, design doc §2/§3/§5) ──
+  // Brand-standard bar: solid white surface + subtle top shadow + safe-area
+  // inset (same pattern as onboarding footers / pool-registration). Rendered
+  // only when the lifecycle yields at least one button.
+  &__action-bar {
+    flex-shrink: 0;
+    padding: $spacing-md $container-padding;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
+    background: $color-surface;
+    box-shadow: 0 -4rpx 16rpx rgba($color-text-primary, 0.04);
+    box-sizing: border-box;
+    animation: fade-slide-up 0.28s ease-out both;
   }
 
-  &__feedback-btn {
+  &__action-stack {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__cta {
     @include button-primary;
+    @include type-brand-cta-label;
     width: 100%;
     border: 0;
+
+    // Live-window 进入破冰: [icon chip] label [breathing live dot], 12rpx gaps.
+    &--live {
+      gap: 12rpx;
+    }
+
+    // Live + feedback-open overlap (blind-box events still 'ongoing' past the
+    // +3h feedback gate): the live CTA owns primary, feedback stays reachable
+    // as a brand-secondary outline — enforces the "at most one solid primary"
+    // rule for every lifecycle combination, not just the happy path.
+    &--secondary {
+      background: $color-surface;
+      border: 2rpx solid rgba($color-primary, 0.35);
+      color: $color-primary;
+      box-shadow: none;
+    }
+
+    // Locked-but-tappable 去评价 (PM D3): an explicit, honest grey — a
+    // half-transparent purple would read as "broken", not "not yet".
+    // Tap stays live for the teaching toast + analytics; pressed scale killed.
+    &--locked {
+      background: rgba($color-text-muted, 0.12);
+      color: $color-text-tertiary;
+      box-shadow: none;
+
+      &:active {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    // Post-submission static state: white surface, success hairline, ✓ prefix.
+    &--done {
+      gap: $spacing-xs;
+      background: $color-surface;
+      border: 2rpx solid rgba($color-success, 0.4);
+      color: $color-success-text-on-light;
+      box-shadow: none;
+
+      &:active {
+        transform: none;
+        opacity: 1;
+      }
+    }
   }
 
-  &__spacer {
-    height: 80rpx;
+  // Native `disabled` hands the element to the platform's built-in disabled
+  // styling, which outranks a single class: on H5 the runtime injects
+  // `taro-button-core[disabled] { color: rgba(255,255,255,.6) }` (0,1,1) and
+  // WeChat's own `button[disabled]:not([type])` sits higher still — both beat
+  // `&--done` (0,1,0), which rendered 已评价 + ✓ invisible on the white surface
+  // (caught by rendering the state, 2026-10-16). We keep the native attribute
+  // for real interactivity blocking and re-assert the confirmed state from one
+  // level up (0,3,0), which wins on both renderers.
+  &__action-stack .event-detail__cta--done[disabled] {
+    background: $color-surface;
+    color: $color-success-text-on-light;
+    opacity: 1;
+  }
+
+  &__cta-icon-chip {
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: rgba($color-surface, 0.92);
+    @include flex-center;
+    flex-shrink: 0;
+  }
+
+  // The ONE crafted micro-interaction on this surface: a breathing live dot.
+  // GPU-safe opacity/scale only (repo shimmer discipline). Reduced-motion
+  // degrades to a static dot — the "live" semantics survive.
+  &__cta-live-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: $color-text-white;
+    animation: event-detail-live-dot-pulse 1.6s ease-in-out infinite;
+  }
+
+  &__action-hint {
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    line-height: $line-height-normal;
+    margin-top: $spacing-xs;
   }
 }
 
@@ -252,6 +360,28 @@
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+
+  .event-detail__action-bar {
+    animation: none !important;
+  }
+
+  .event-detail__cta-live-dot {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes event-detail-live-dot-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

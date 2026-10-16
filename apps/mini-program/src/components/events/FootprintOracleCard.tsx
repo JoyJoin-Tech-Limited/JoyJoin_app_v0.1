@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { View, Text } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import type { JoinedEventSummary } from '@shared/api'
 import { haptics } from '../../lib/utils/haptics'
+import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import {
@@ -36,6 +38,31 @@ export default React.memo(function FootprintOracleCard({
     haptics('light')
     onClick?.(event)
   }, [event, onClick])
+
+  // 2026-10-16 feedback activation (PM plan §5.3): terminal + server-flagged
+  // feedbackPending rows carry a persistent「去评价」entry — the recall channel
+  // for users without push authorization. Brand-secondary pill, NOT a solid
+  // primary CTA (the card itself stays the primary touch surface).
+  const showFeedbackPill = isTerminal && event.feedbackPending === true
+
+  // Impression mirrors corner_badge_impression discipline: once per mount.
+  useEffect(() => {
+    if (!showFeedbackPill) return
+    trackFeedbackEvent('feedback_entry_shown', { eventId: event.id, state: 'open', surface: 'events_tab' })
+  }, [showFeedbackPill, event.id])
+
+  // stopPropagation: the pill must not trigger the card's own detail navigation.
+  const handleFeedbackPillTap = React.useCallback(
+    (e: { stopPropagation: () => void }) => {
+      e.stopPropagation()
+      haptics('light')
+      trackFeedbackEvent('feedback_reminder_tap', { eventId: event.id, from: 'events_tab' })
+      Taro.navigateTo({
+        url: `/pages/event-feedback/index?id=${encodeURIComponent(event.id)}&from=events_tab`,
+      })
+    },
+    [event.id],
+  )
 
   const animDelay = !effectiveDegradation && !reduceMotion ? String(Math.min(index, 4) * 60) + 'ms' : undefined
 
@@ -80,6 +107,17 @@ export default React.memo(function FootprintOracleCard({
             compact
           />
         )}
+        {showFeedbackPill && (
+          <View
+            className='footprint-oracle-card__feedback-pill'
+            hoverClass='footprint-oracle-card__feedback-pill--pressed'
+            role='button'
+            aria-label='去评价这场活动'
+            onClick={handleFeedbackPillTap}
+          >
+            <Text className='footprint-oracle-card__feedback-pill-label'>去评价</Text>
+          </View>
+        )}
         {hasGroupSize && (
           <Text className='footprint-oracle-card__rail-hint'>
             {status === 'matched' || status === 'confirmed' || status === 'venue_unlocked'
@@ -92,17 +130,21 @@ export default React.memo(function FootprintOracleCard({
             {price > 0 ? `¥${price}` : '免费'}
           </Text>
         )}
-        {isSparse && (
+        {isSparse && !showFeedbackPill && (
           <Text className='footprint-oracle-card__rail-hint footprint-oracle-card__rail-hint--placeholder'>
             待公布
           </Text>
         )}
-        <Text className='footprint-oracle-card__rail-cue' aria-hidden='true'>
-          ›
-        </Text>
+        {/* The generic › cue is superseded when the pill is present — the pill
+            IS the affordance; stacking both reads as two competing CTAs. */}
+        {!showFeedbackPill && (
+          <Text className='footprint-oracle-card__rail-cue' aria-hidden='true'>
+            ›
+          </Text>
+        )}
       </>
     )
-  }, [displayDateTime, event.dateTime, event.finalDateTime, event.id, groupSize, isTerminal, price, status])
+  }, [displayDateTime, event.dateTime, event.finalDateTime, event.id, groupSize, handleFeedbackPillTap, isTerminal, price, showFeedbackPill, status])
 
   return (
     <EventSummaryCard

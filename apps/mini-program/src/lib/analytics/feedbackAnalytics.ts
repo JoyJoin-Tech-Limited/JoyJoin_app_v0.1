@@ -13,6 +13,15 @@ import { logWarn } from '../utils/logger'
 export type FeedbackAnalyticsEventType =
   | 'feedback_deep_engaged'
   | 'feedback_deep_submitted'
+  // Feedback-activation funnel (2026-10-16, PM plan §7): entry visibility on
+  // event-detail / footprint pill, locked-state teaching taps, and feedback page
+  // opens with source attribution (event_detail / events_tab / recap_push /
+  // notification). Same minimal-metadata fail-open discipline as the deep
+  // funnel; enum-only types registered in the discover-channel allowlist.
+  | 'feedback_entry_shown'
+  | 'feedback_locked_tap'
+  | 'feedback_reminder_tap'
+  | 'feedback_page_open'
 
 export function trackFeedbackEvent(
   eventType: FeedbackAnalyticsEventType,

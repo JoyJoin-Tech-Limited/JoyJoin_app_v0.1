@@ -52,3 +52,86 @@ describe('event-detail native customer-service entry (2026-07-28)', () => {
     expect(scss).not.toContain('&__support-helper')
   })
 })
+
+// 2026-10-16 feedback activation + action-bar redesign. These lock the two
+// reconciliation decisions that are easy to silently regress: the locked state
+// must stay tappable (native `disabled` swallows the teaching toast in WeChat)
+// and the live/open overlap must not stack two solid-primary CTAs.
+describe('event-detail action bar (2026-10-16 feedback activation)', () => {
+  const openFeedbackBlock = tsx.slice(
+    tsx.indexOf('{showOpenFeedback ?'),
+    tsx.indexOf('</Button>', tsx.indexOf('{showOpenFeedback ?')),
+  )
+  const lockedBlock = tsx.slice(
+    tsx.indexOf("event-detail__cta--locked'"),
+    tsx.indexOf('</Button>', tsx.indexOf("event-detail__cta--locked'")),
+  )
+  const doneBlock = tsx.slice(
+    tsx.indexOf("event-detail__cta--done'"),
+    tsx.indexOf('</Button>', tsx.indexOf("event-detail__cta--done'")),
+  )
+
+  it('demotes 去评价 to --secondary while the live 进入破冰 CTA is present', () => {
+    expect(openFeedbackBlock).toContain('icebreakerTarget')
+    expect(openFeedbackBlock).toContain('event-detail__cta--secondary')
+    expect(scss).toContain('&--secondary')
+  })
+
+  it('keeps the locked state tappable — no native `disabled` (aria-disabled only)', () => {
+    expect(lockedBlock).toContain('onClick={handleFeedbackTap}')
+    expect(lockedBlock).toContain('aria-disabled')
+    expect(lockedBlock).not.toMatch(/\sdisabled\b/)
+    expect(tsx).toContain("Taro.showToast({ title: '活动结束后才能评价哦'")
+  })
+
+  it('keeps the submitted state non-interactive (native `disabled` allowed)', () => {
+    expect(doneBlock).toMatch(/\sdisabled\b/)
+    expect(doneBlock).not.toContain('onClick')
+  })
+
+  it('renders the bar as a ScrollView flex sibling, never position:fixed', () => {
+    expect(scss).toMatch(/&__action-bar\s*\{[^}]*flex-shrink:\s*0/)
+    expect(scss).not.toMatch(/&__action-bar\s*\{[^}]*position:\s*fixed/)
+  })
+})
+
+// 2026-10-16 fix: the pool 进入破冰 CTA used to be gated on
+// `status ∈ {started, active, ongoing}` — a set the server never writes for
+// pools — while a group id only exists once the status is matching/matched.
+// The CTA was therefore unreachable in production (only test pools, parked on
+// `active`, ever showed it). Pools now use the dateTime window helper.
+describe('event-detail pool icebreaker window (2026-10-16 fix)', () => {
+  it('derives pool liveness from the dateTime window, not the status set', () => {
+    expect(tsx).toContain("from '../../lib/utils/eventLiveWindow'")
+    expect(tsx).toContain('isWithinPoolIcebreakerWindow({ status: event?.status, dateTime: event?.dateTime })')
+    expect(tsx).toContain('const icebreakerLive = isPoolEvent ? poolIcebreakerOpen : isActiveEvent')
+  })
+
+  it('resolves the group id only while that window is open', () => {
+    expect(tsx).toContain('enabled: isPoolEvent && poolIcebreakerOpen')
+    expect(tsx).not.toContain('enabled: isPoolEvent && isActiveEvent')
+  })
+
+  it('gates the icebreaker target on the merged liveness (both families)', () => {
+    expect(tsx).toContain('const icebreakerTarget = !icebreakerLive')
+    expect(tsx).not.toContain('const icebreakerTarget = !isActiveEvent')
+  })
+})
+
+// 2026-10-16 render-caught fix: the platform's built-in disabled styling
+// outranks a single class (H5 runtime injects
+// `taro-button-core[disabled] { color: rgba(255,255,255,.6) }` (0,1,1);
+// WeChat's `button[disabled]:not([type])` sits higher). The custom-coloured
+// `--done` CTA therefore inherited the platform colour and rendered
+// white-on-white — invisible until we re-asserted the state from an ancestor
+// (0,3,0). Lock the override so the next disabled CTA can't regress the same way.
+describe('event-detail done CTA survives the platform disabled styling', () => {
+  it('re-asserts the confirmed state from an ancestor selector', () => {
+    expect(scss).toContain('&__action-stack .event-detail__cta--done[disabled]')
+    expect(scss).toContain('color: $color-success-text-on-light')
+  })
+
+  it('still keeps native disabled for real interactivity blocking', () => {
+    expect(tsx).toMatch(/event-detail__cta--done[\s\S]{0,300}?\sdisabled\b/)
+  })
+})

@@ -5,6 +5,7 @@ import { chromium, devices } from 'playwright'
 import { registerSocialGenerators } from './screenshot/generators-social.mjs'
 import { registerDiscoverAreaGenerators } from './screenshot/generators-discover-area.mjs'
 import { registerFlashTeaserGenerators } from './screenshot/generators-flash-teaser.mjs'
+import { registerEventDetailGenerators } from './screenshot/generators-event-detail.mjs'
 
 const app = express()
 const PORT = process.env.SCREENSHOT_PORT || 9000
@@ -161,6 +162,7 @@ const generatorCtx = {
 registerSocialGenerators(generatorCtx)
 registerDiscoverAreaGenerators(generatorCtx)
 registerFlashTeaserGenerators(generatorCtx)
+registerEventDetailGenerators(generatorCtx)
 
 // ─── Generators ──────────────────────────────────────────────────
 

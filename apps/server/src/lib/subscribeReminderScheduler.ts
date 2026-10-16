@@ -1,9 +1,10 @@
-import { and, eq, gte, isNotNull, lte, ne } from "drizzle-orm";
-import { eventPoolGroups, eventPoolRegistrations, eventPools } from "@shared/schema";
+import { and, eq, gte, inArray, isNotNull, lte, ne } from "drizzle-orm";
+import { eventPoolGroups, eventPoolRegistrations, eventPools, notifications } from "@shared/schema";
 import { db } from "../db";
 import { getFeatureFlag } from "./featureFlags";
 import { logger } from "./logger";
 import { sendEventDayReminders, sendRecapReminders } from "./wechatSubscribeMessage";
+import { notificationsRepo } from "../repositories/notificationsRepo";
 
 /**
  * Subscribe-message reminder scheduler (notification-strategy batch 2 + 4).
@@ -48,6 +49,11 @@ export interface SubscribeReminderDependencies {
   isEnabled: () => Promise<boolean>;
   sendEventDay: typeof sendEventDayReminders;
   sendRecap: typeof sendRecapReminders;
+  /**
+   * D8 no-grant fallback (2026-10-16): in-app activities notifications fanned
+   * out to recap recipients in the same tick. Injectable for tests.
+   */
+  createFeedbackInvites: (poolId: string, userIds: string[]) => Promise<number>;
 }
 
 function inSendHours(date: Date, hours: { start: number; end: number }): boolean {
@@ -99,6 +105,9 @@ async function findMatchedPoolsInReminderRange(now: Date): Promise<PoolRow[]> {
       and(
         isNotNull(eventPools.matchedAt),
         ne(eventPools.status, "cancelled"),
+        // Test pools (is_test_pool=true) are tester+synthetic-bot fixtures —
+        // pushing real WeChat subscribe messages for them is spam.
+        eq(eventPools.isTestPool, false),
         gte(eventPools.dateTime, new Date(now.getTime() - RECAP_MAX_AGO_MS)),
         lte(eventPools.dateTime, new Date(now.getTime() + EVENT_DAY_MAX_AHEAD_MS)),
       ),
@@ -121,7 +130,13 @@ async function findMatchedMembers(poolId: string): Promise<MatchedMemberRow[]> {
     .where(
       and(
         eq(eventPoolRegistrations.poolId, poolId),
-        eq(eventPoolRegistrations.matchStatus, "matched"),
+        // P0 fix (2026-10-16): poolCompletionSweep flips matched registrations
+        // to matchStatus='completed' at event start +3h, so a 'matched'-only
+        // query returns ZERO rows by the time the recap window (T+20–30h)
+        // arrives — recap pushes silently never delivered since 2026-10-06.
+        // Both statuses mean "this user attended/was placed". 'unmatched'
+        // stays excluded (they went through the refund path instead).
+        inArray(eventPoolRegistrations.matchStatus, ["matched", "completed"]),
       ),
     );
   return rows;
@@ -139,6 +154,69 @@ async function findGroupVenues(poolId: string): Promise<Map<string, string>> {
   return map;
 }
 
+/**
+ * D8 no-grant fallback (2026-10-16 feedback activation): every recap recipient
+ * ALSO gets an in-app activities notification, because WeChat subscribe-message
+ * grants are one-shot — a refused/consumed grant (43101) would otherwise leave
+ * the user with zero召回. Push is easy to miss, the in-app row persists; the
+ * two channels deliberately complement each other (plan §5.3).
+ *
+ * Idempotent via select-then-insert on (userId, type='feedback_invite',
+ * relatedResourceId=poolId) — the same precedent as the mutual_match
+ * notification in social.ts; the scheduler tick is single-threaded and the
+ * 10-minute replay must never duplicate. Fail-open per recipient: one bad
+ * insert never aborts the batch. Copy stays service-tone 排桌/合拍 vocabulary
+ * with zero incentive language (WeChat bans marketing in reminder surfaces).
+ */
+export const FEEDBACK_INVITE_NOTIFICATION = {
+  type: "feedback_invite",
+  category: "activities",
+  title: "昨晚的活动怎么样？",
+  message: "来说一句感受，帮下次排桌更合拍",
+} as const;
+
+export async function createFeedbackInviteNotifications(
+  poolId: string,
+  userIds: string[],
+): Promise<number> {
+  let created = 0;
+  for (const userId of userIds) {
+    try {
+      const [existing] = await db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, userId),
+            eq(notifications.type, FEEDBACK_INVITE_NOTIFICATION.type),
+            eq(notifications.relatedResourceId, poolId),
+          ),
+        )
+        .limit(1);
+      if (existing) continue;
+      await notificationsRepo.createNotification({
+        userId,
+        category: FEEDBACK_INVITE_NOTIFICATION.category,
+        type: FEEDBACK_INVITE_NOTIFICATION.type,
+        title: FEEDBACK_INVITE_NOTIFICATION.title,
+        message: FEEDBACK_INVITE_NOTIFICATION.message,
+        relatedResourceId: poolId,
+      });
+      created += 1;
+    } catch (error) {
+      logger.warn("[SubscribeReminder] feedback invite notification failed (fail-open)", {
+        poolId,
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  if (created > 0) {
+    logger.info("[SubscribeReminder] feedback invite notifications created", { poolId, created });
+  }
+  return created;
+}
+
 export function createSubscribeReminderScheduler(
   dependencies: SubscribeReminderDependencies = {
     logger,
@@ -146,6 +224,7 @@ export function createSubscribeReminderScheduler(
     isEnabled: () => getFeatureFlag("subscribeRemindersEnabled", true),
     sendEventDay: sendEventDayReminders,
     sendRecap: sendRecapReminders,
+    createFeedbackInvites: createFeedbackInviteNotifications,
   },
 ) {
   let stopped = false;
@@ -205,15 +284,25 @@ export function createSubscribeReminderScheduler(
         } else {
           const members = await findMatchedMembers(pool.id);
           if (members.length === 0) continue;
+          const memberIds = members.map((member) => member.userId);
           await dependencies.sendRecap(
-            members.map((member) => member.userId),
+            memberIds,
             {
               poolId: pool.id,
               poolTitle: pool.title || "活动",
               eventTime,
-              hint: "回顾已生成，来说一句感受吧",
+              // 2026-10-16: service-tone summons into the feedback page
+              // (≤20 chars, zero incentive language per WeChat policy; the
+              // reward copy lives on the feedback page itself).
+              hint: "来聊聊感受，帮下次排桌更合拍",
             },
           );
+          // D8 no-grant fallback: fan out the in-app feedback_invite
+          // notification to every recap recipient regardless of push grant
+          // state (the server only learns about refusals at send time).
+          // Idempotent across the 10-min ticks; test pools never reach this
+          // branch (excluded in findMatchedPoolsInReminderRange).
+          await dependencies.createFeedbackInvites(pool.id, memberIds);
         }
       }
     } catch (error) {

@@ -12,6 +12,7 @@ import { shellCache } from "../../lib/shellCache";
 import { validateContentSafe, validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
 import { canonicalEventIdGuard } from "../../lib/resolveCanonicalEventId";
+import { resolveFeedbackState } from "../../lib/feedbackStateResolver";
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -300,6 +301,29 @@ export function registerSocialRoutes(app: Express): void {
     }
   });
 
+  // GET /api/events/:eventId/feedback-state — per-viewer feedback lifecycle
+  // for the event-detail button state machine and the feedback page's own
+  // entry gate (2026-10-16 feedback activation, plan §3/D1/D5). Accepts all
+  // three event id families (events.id / blind_box_events.id / event_pools.id)
+  // — lib/feedbackStateResolver is the single source of truth; the client
+  // never derives state from dateTime itself.
+  app.get('/api/events/:eventId/feedback-state', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const rawEventId = req.params.eventId;
+      const resolution = await resolveFeedbackState(rawEventId, userId);
+      if (!resolution) {
+        // Unknown to all three id families — same not-found shape the
+        // canonicalEventIdGuard uses on sibling routes.
+        return res.status(404).json({ message: "未找到对应的活动" });
+      }
+      return res.json({ state: resolution.state });
+    } catch (error) {
+      logger.error("Error resolving feedback state", { error: String(error), route: req.originalUrl });
+      return res.status(500).json({ code: "server", message: "服务器有点忙，稍后再试" });
+    }
+  });
+
   app.post('/api/events/:eventId/feedback', requireAuth, canonicalEventIdGuard(), async (req: any, res) => {
     try {
       const userId = req.session.userId;
@@ -314,6 +338,28 @@ export function registerSocialRoutes(app: Express): void {
         logger.warn("Feedback event could not be resolved", { routeEventId, userId });
         return res.status(404).json({ message: "未找到对应的活动" });
       }
+
+      // Feedback-activation gates (2026-10-16, plan D4/D5): eligibility →
+      // window → duplicate, mapped from the single resolveFeedbackState call.
+      // Runs AFTER canonicalEventIdGuard (which 404s unresolvable ids) and
+      // BEFORE content moderation, so a rejected submission never burns the
+      // tier-1 WeChat check budget — and a duplicate submit can no longer
+      // double-award XP (the pre-gate loophole, plan §4).
+      // Messages mirror the shared ERROR_TEMPLATES copy verbatim.
+      const feedbackState = await resolveFeedbackState(routeEventId, userId);
+      // The guard already resolved this id, so a null here means the event
+      // vanished mid-request — fail closed as ineligible.
+      const state = feedbackState?.state ?? "ineligible";
+      if (state === "ineligible") {
+        return res.status(403).json({ code: "FEEDBACK_NOT_ELIGIBLE", message: "这场活动未成行，无法评价" });
+      }
+      if (state === "locked" || state === "closed") {
+        return res.status(403).json({ code: "FEEDBACK_NOT_OPEN", message: "活动还没结束，结束后再来聊聊感受吧" });
+      }
+      if (state === "submitted") {
+        return res.status(409).json({ code: "FEEDBACK_ALREADY_SUBMITTED", message: "你已经评价过这场活动啦" });
+      }
+
       const result = insertEventFeedbackSchema.safeParse({
         ...req.body,
         feedback: req.body.feedback ?? req.body.comment,

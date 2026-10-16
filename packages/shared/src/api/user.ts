@@ -91,7 +91,31 @@ export interface JoinedEventSummary {
    * Venue assignment state for pool events. Only meaningful when `groupId` is set.
    */
   venueAssignmentStatus?: 'pending' | 'assigned' | 'unassigned' | 'manual_override'
+  /**
+   * True when the user is eligible to submit feedback for this event and has
+   * not yet done so (2026-10-16 feedback activation). Drives the 足迹「去评价」
+   * pill; server-derived (pool events map registration → canonical event id),
+   * absent/false for events where feedback does not apply.
+   */
+  feedbackPending?: boolean
   [key: string]: unknown
+}
+
+/**
+ * Feedback lifecycle state for one event + viewer (2026-10-16 feedback
+ * activation). Server-computed by `GET /api/events/:eventId/feedback-state`
+ * (`lib/feedbackStateResolver.ts` is the single source of truth) — the client
+ * never derives this from dateTime itself.
+ *   locked     — eligible, but the event is not over yet (opens at dateTime + 3h)
+ *   open       — window open, not yet submitted
+ *   submitted  — already submitted by this user
+ *   ineligible — no eligibility (not matched / refunded / cancelled / collapsed)
+ *   closed     — reserved for a future feedback window close
+ */
+export type EventFeedbackState = 'locked' | 'open' | 'submitted' | 'ineligible' | 'closed'
+
+export interface EventFeedbackStateResponse {
+  state: EventFeedbackState
 }
 
 /** @deprecated Use {@link JoinedEventSummary} + {@link getJoinedEvents} instead — `/api/my-events` has no server handler. */
@@ -157,6 +181,20 @@ export function getUserInterests(api: ApiTransport): Promise<UserInterestsRespon
 
 export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]> {
   return api<JoinedEventSummary[]>({ path: '/api/events/joined' })
+}
+
+/**
+ * Per-event feedback lifecycle for the signed-in viewer (2026-10-16 feedback
+ * activation). Accepts any of the three event id families — the route
+ * canonicalizes internally (events.id / blind_box_events.id / event_pools.id).
+ */
+export function getEventFeedbackState(
+  api: ApiTransport,
+  eventId: string,
+): Promise<EventFeedbackStateResponse> {
+  return api<EventFeedbackStateResponse>({
+    path: `/api/events/${encodeURIComponent(eventId)}/feedback-state`,
+  })
 }
 
 /** @deprecated Use {@link getJoinedEvents} instead — `/api/my-events` has no server handler. */

@@ -17,6 +17,16 @@
     padding: 0;
   }
 
+  // Entry-gate states (2026-10-16 feedback activation): locked / ineligible /
+  // error StatusCards vertically centered inside the dvh flex column.
+  &__gate {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   &__success-scroll {
     // Same bounded-port pattern as __deep-scroll: flex:1 + min-height:0 inside
     // the dvh flex column (the design-audit gate rejects a bare full-height rule).
