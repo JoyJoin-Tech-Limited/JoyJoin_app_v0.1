@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from '@tarojs/components'
+import { RootPortal, ScrollView, Text, View } from '@tarojs/components'
 import { useCallback, useMemo, useState } from 'react'
 import type { MiniScriptStoryFrameworkPublic } from '@shared/miniscriptStoryFramework'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
@@ -79,7 +79,12 @@ export function MiniScriptClueDrawer({
       </View>
 
       {open ? (
-        <View className='miniscript-clues' catchMove onClick={closeDrawer}>
+        // Wave 2 (AC-12): RootPortal — the phase shell keeps a transform,
+        // which hijacks position:fixed descendants (clue drawer clipped to
+        // the shell box on device). SCSS keeps position:fixed; portal
+        // mounting makes it viewport-relative again.
+        <RootPortal>
+          <View className='miniscript-clues' catchMove onClick={closeDrawer}>
           <View className='miniscript-clues__backdrop' />
           <View
             className='miniscript-clues__surface'
@@ -132,7 +137,8 @@ export function MiniScriptClueDrawer({
               <Text className='miniscript-clues__close-text'>收起</Text>
             </View>
           </View>
-        </View>
+          </View>
+        </RootPortal>
       ) : null}
     </>
   )

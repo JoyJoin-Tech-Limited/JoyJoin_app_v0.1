@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { View, Text } from '@tarojs/components'
+import { RootPortal, View, Text } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
@@ -64,8 +64,9 @@ export function GroupMirrorHeroView({
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [voteMap, setVoteMap] = useState<Record<string, string>>({})
+  // Wave 2 (AC-05): one-question-at-a-time stepper (replaces the 18-button wall).
+  const [questionIndex, setQuestionIndex] = useState(0)
   const [selectedReaction, setSelectedReaction] = useState<number | null>(null)
-  const [reactionCounts, setReactionCounts] = useState<Record<number, number>>({})
   const [showBurst, setShowBurst] = useState(false)
   const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null)
 
@@ -89,6 +90,22 @@ export function GroupMirrorHeroView({
 
   const hasSubmitted = userId ? submittedUserIds.includes(userId) : false
   const allSubmitted = submittedUserIds.length >= playerCount
+  // Wave 2 (AC-05): stepper derivations — current question + honest progress.
+  const answeredCount = questions.filter((q) => voteMap[q.id]).length
+  const currentQuestion =
+    questions.length > 0 ? questions[Math.min(questionIndex, questions.length - 1)] : undefined
+
+  // Picking a person records the vote and walks to the next unanswered
+  // question (wraps to the last question when everything is answered, so the
+  // submit CTA + progress stay on screen).
+  const handleVoteOption = useCallback(
+    (questionId: string, targetUserId: string) => {
+      haptics('light')
+      setVoteMap((prev) => ({ ...prev, [questionId]: targetUserId }))
+      setQuestionIndex((index) => Math.min(questions.length - 1, index + 1))
+    },
+    [questions.length],
+  )
 
   const handleGenerate = async () => {
     setIsGenerating(true)
@@ -140,12 +157,10 @@ export function GroupMirrorHeroView({
     }
   }
 
+  // Wave 2 (AC-10): fake local counts removed — the row keeps the expressive
+  // tap (selection + pulse) without fabricating a per-device tally.
   const handleReact = useCallback((index: number) => {
     setSelectedReaction(index)
-    setReactionCounts((prev) => ({
-      ...prev,
-      [index]: (prev[index] ?? 0) + 1,
-    }))
   }, [])
 
   // ── Not generated ──
@@ -182,11 +197,15 @@ export function GroupMirrorHeroView({
           </View>
         )}
         {expandedQuestionId ? (
-          <View
-            className='group-mirror-hero__detail-backdrop'
-            onClick={() => setExpandedQuestionId(null)}
-            aria-label='收起全部回答'
-          />
+          // Wave 2 (AC-12): RootPortal — the detail backdrop must cover the
+          // viewport, not the transform-keeping phase shell box.
+          <RootPortal>
+            <View
+              className='group-mirror-hero__detail-backdrop'
+              onClick={() => setExpandedQuestionId(null)}
+              aria-label='收起全部回答'
+            />
+          </RootPortal>
         ) : null}
         <PhaseHeroCard
           phase='group_mirror'
@@ -270,7 +289,7 @@ export function GroupMirrorHeroView({
       <PhaseHeroCard
         phase='group_mirror'
         title='群像镜像'
-        prompt='为每个问题选择最符合的人 · 揭晓后可查看每位成员的选择'
+        prompt='一次一题，选最符合的人 · 答几题都可以'
         statusText={
           hasSubmitted
             ? `已提交，等待其他人… ${submittedUserIds.length}/${playerCount}`
@@ -296,39 +315,66 @@ export function GroupMirrorHeroView({
         {!hasSubmitted && !revealed && (
           <View className='group-mirror-hero__reactions'>
             <TapReaction
-              reactions={REACTIONS.map((r, i) => ({
-                ...r,
-                count: reactionCounts[i] ?? 0,
-              }))}
+              reactions={REACTIONS}
               onReact={handleReact}
               selectedIndex={selectedReaction ?? undefined}
             />
           </View>
         )}
 
-        {!hasSubmitted && (
-          <View className='group-mirror-hero__questions'>
-            {questions.map((q) => (
-              <View key={q.id} className='group-mirror-hero__question-block'>
-                <Text className='group-mirror-hero__question-text'>{q.questionText}</Text>
-                <View className='group-mirror-hero__question-options'>
-                  {participants.map((p) => (
-                    <Button
-                      key={p.userId}
-                      onClick={() => {
-                        haptics('light')
-                        setVoteMap((prev) => ({ ...prev, [q.id]: p.userId }))
-                      }}
-                      variant={voteMap[q.id] === p.userId ? 'primary' : 'secondary'}
-                    >
-                      {p.displayName}
-                    </Button>
-                  ))}
-                </View>
+        {!hasSubmitted && currentQuestion ? (
+          <View className='group-mirror-hero__stepper'>
+            {/* Wave 2 (AC-05): one question at a time + honest progress.
+                Partial submit is allowed, so the copy never demands 每题都选. */}
+            <Text className='group-mirror-hero__stepper-progress'>
+              {`第 ${questionIndex + 1}/${questions.length} 题 · 已选 ${answeredCount}/${questions.length}`}
+            </Text>
+            <View key={currentQuestion.id} className='group-mirror-hero__question-block'>
+              <Text className='group-mirror-hero__question-text'>{currentQuestion.questionText}</Text>
+              <View className='group-mirror-hero__question-options'>
+                {participants.map((p) => (
+                  <Button
+                    key={p.userId}
+                    onClick={() => handleVoteOption(currentQuestion.id, p.userId)}
+                    variant={voteMap[currentQuestion.id] === p.userId ? 'primary' : 'secondary'}
+                  >
+                    {p.displayName}
+                  </Button>
+                ))}
               </View>
-            ))}
+            </View>
+            <View className='group-mirror-hero__stepper-nav'>
+              {questionIndex > 0 ? (
+                <View
+                  className='group-mirror-hero__stepper-link'
+                  hoverClass='group-mirror-hero__stepper-link--pressed'
+                  onClick={() => {
+                    haptics('light')
+                    setQuestionIndex((index) => Math.max(0, index - 1))
+                  }}
+                  role='button'
+                  aria-label='上一题'
+                >
+                  <Text className='group-mirror-hero__stepper-link-text'>‹ 上一题</Text>
+                </View>
+              ) : null}
+              {questionIndex < questions.length - 1 ? (
+                <View
+                  className='group-mirror-hero__stepper-link'
+                  hoverClass='group-mirror-hero__stepper-link--pressed'
+                  onClick={() => {
+                    haptics('light')
+                    setQuestionIndex((index) => Math.min(questions.length - 1, index + 1))
+                  }}
+                  role='button'
+                  aria-label='下一题'
+                >
+                  <Text className='group-mirror-hero__stepper-link-text'>下一题 ›</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
-        )}
+        ) : null}
         <PhaseAigcRow meta={questionsMeta} reason='AI 生成群像镜像问题' />
         {error ? <View className='group-mirror-hero__error' role='alert'><Text>{error}</Text></View> : null}
       </PhaseHeroCard>

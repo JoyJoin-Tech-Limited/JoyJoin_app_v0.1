@@ -111,3 +111,21 @@ export type {
   TaglineTemplateRole,
   RuleTemplate,
 } from './profileTaglineRuleTemplates.js';
+
+// 🧊 Icebreaker session Wave 2 terms (sprint icebreaker-uiux-wave2, AC-15)
+export {
+  formatIcePhaseProgress,
+  formatIcePhaseProgressLoose,
+  ICE_PHASE_MAP_ARROW,
+  ICE_WAITING_FOR_HOST_LINE,
+  ICE_HOST_MENU_PILL_LABEL,
+  ICE_HOST_MENU_CHANGE_TIER,
+  formatIceModeCaption,
+  formatIceOpeningPackButton,
+  ICE_AIGC_REASON_OPENING_PACK,
+  ICE_TOOL_BADGE_MINI_SCRIPT,
+  formatIceAuctionLotPosition,
+  ICE_AUCTION_CLOSE_LOT,
+  ICE_MICRO_TAP_HINT,
+  formatIceLieFooledLine,
+} from './icebreakerSession.js';

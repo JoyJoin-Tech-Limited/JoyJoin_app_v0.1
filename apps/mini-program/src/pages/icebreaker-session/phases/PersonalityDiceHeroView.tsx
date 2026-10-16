@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { RootPortal, View, Text } from '@tarojs/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
@@ -254,13 +254,19 @@ export function PersonalityDiceHeroView({
           const isSelected = mySelectedIdx === idx
           const isDimmed = readOnly && hasChosen && mySelectedIdx !== idx
           const isLoading = isChoosing && !hasChosen && !readOnly
+          // Wave 2 (AC-07): a same-card re-tap while chosen-but-not-confirmed
+          // retries the merged choose→ready chain (idempotent server-side);
+          // without it a failed auto-ready could only retry by picking a
+          // DIFFERENT card (the old guard blocks same-index re-taps).
+          const retrySameCard =
+            isMyChallenge && !readOnly && !isChoosing && !isReadying && isSelected
           return (
             <View
               key={idx}
               className={`personality-dice-hero__choose-card${isSelected ? ' personality-dice-hero__choose-card--selected personality-dice-hero__choose-card--settle' : ''}${isDimmed ? ' personality-dice-hero__choose-card--dimmed' : ''}${isLoading ? ' personality-dice-hero__choose-card--loading' : ''}`}
               hoverClass='personality-dice-hero__choose-card--pressed'
               onClick={() => {
-                if (canChoosePersonalityDiceOption(readOnly, isChoosing, mySelectedIdx, idx)) {
+                if (canChoosePersonalityDiceOption(readOnly, isChoosing, mySelectedIdx, idx) || retrySameCard) {
                   handleChooseWithSettle(idx)
                 }
               }}
@@ -349,26 +355,34 @@ export function PersonalityDiceHeroView({
             })}
             </View>
         </PhaseHeroCard>
-        <View className='personality-dice-hero__fixed-action'>
-          {allRevealReady ? (
-            isHost && onAdvance ? (
-              <Button variant='primary' onClick={onAdvance}>进入下一游戏</Button>
+        {/* Wave 2 (AC-12): RootPortal — the fixed action bar must anchor to
+            the viewport; the phase shell's entrance transform would otherwise
+            hijack its containing block on device. */}
+        <RootPortal>
+          <View className='personality-dice-hero__fixed-action'>
+            {allRevealReady ? (
+              isHost && onAdvance ? (
+                <Button variant='primary' onClick={onAdvance}>进入下一游戏</Button>
+              ) : (
+                <Button variant='secondary' disabled>等待主持人进入下一游戏</Button>
+              )
             ) : (
-              <Button variant='secondary' disabled>等待主持人进入下一游戏</Button>
-            )
-          ) : (
-            <Button
-              variant={isRevealReady ? 'secondary' : 'primary'}
-              onClick={() => onRevealReady?.(!isRevealReady)}
-              disabled={!onRevealReady || isRevealReadying}
-              loading={isRevealReadying}
-            >
-              {isRevealReady
-                ? `取消准备（${revealReadyBy.length}/${participants.length}）`
-                : `准备进入下一游戏（${revealReadyBy.length}/${participants.length}）`}
-            </Button>
-          )}
-        </View>
+              <Button
+                variant={isRevealReady ? 'secondary' : 'primary'}
+                onClick={() => onRevealReady?.(!isRevealReady)}
+                disabled={!onRevealReady || isRevealReadying}
+                loading={isRevealReadying}
+                aria-label={isRevealReady ? '取消继续' : '继续'}
+              >
+                {/* Wave 2 (AC-07): short CTA copy — 「准备进入下一游戏（3/6）」
+                    slims to 「继续（3/6）」. */}
+                {isRevealReady
+                  ? `已就绪（${revealReadyBy.length}/${participants.length}）`
+                  : `继续（${revealReadyBy.length}/${participants.length}）`}
+              </Button>
+            )}
+          </View>
+        </RootPortal>
       </View>
     )
   }
@@ -503,15 +517,30 @@ export function PersonalityDiceHeroView({
                 <Text className='personality-dice-hero__status-badge-text'>已认怂</Text>
               </View>
             ) : null}
-            {hasContent && chooseModeEnabled && isMyChallenge && hasChosen(selectedOption[currentUserId]) && onReady ? (
-              <Button
-                variant={hasCompleted ? 'secondary' : 'primary'}
-                onClick={() => onReady(!hasCompleted)}
-                disabled={isReadying}
-                loading={isReadying}
-              >
-                {hasCompleted ? '取消准备' : '准备好了'}
-              </Button>
+            {/* Wave 2 (AC-07) 门槛合并: choosing a difficulty IS the ready
+                gesture — no second independent ready click. While the ready
+                lands we show a quiet confirming status; once completed the
+                only affordance is 换一个 (un-ready → pick again). */}
+            {hasContent && chooseModeEnabled && isMyChallenge && hasChosen(selectedOption[currentUserId]) ? (
+              hasCompleted ? (
+                <View
+                  className='personality-dice-hero__change-pick'
+                  hoverClass='personality-dice-hero__change-pick--pressed'
+                  role='button'
+                  aria-label='换一个挑战'
+                  onClick={() => {
+                    if (isReadying) return
+                    haptics('light')
+                    onReady?.(false)
+                  }}
+                >
+                  <Text className='personality-dice-hero__change-pick-text'>换一个</Text>
+                </View>
+              ) : (
+                <Text className='personality-dice-hero__helper'>
+                  {isReadying || isChoosing ? '确认为你的选择…' : '已选好 · 点卡片可更换'}
+                </Text>
+              )
             ) : null}
           </>
         }

@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { RootPortal, View, Text } from '@tarojs/components'
 import { useCallback, useMemo, useState } from 'react'
 import type { MiniScriptPresentedEvidence } from '@shared/socialIcebreaker'
 import type {
@@ -209,7 +209,10 @@ export function MiniScriptEvidenceTray({
       </View>
 
       {pendingEvidence ? (
-        <View className='miniscript-evidence__picker-mask' catchMove onClick={closePicker}>
+        // Wave 2 (AC-12): RootPortal — fixed-in-transformed-shell escape
+        // (picker sheet clipped to the shell box on device without it).
+        <RootPortal>
+          <View className='miniscript-evidence__picker-mask' catchMove onClick={closePicker}>
           <View
             className='miniscript-evidence__picker'
             onClick={(e) => {
@@ -262,11 +265,14 @@ export function MiniScriptEvidenceTray({
               {isPresenting ? '出示中…' : '出示给 TA'}
             </Button>
           </View>
-        </View>
+          </View>
+        </RootPortal>
       ) : null}
 
       {activeReaction ? (
-        <View className='miniscript-evidence__reveal-mask' catchMove>
+        // Wave 2 (AC-12): RootPortal — same fixed-in-transformed-shell escape.
+        <RootPortal>
+          <View className='miniscript-evidence__reveal-mask' catchMove>
           <View className='miniscript-evidence__reveal'>
             <Text className='miniscript-evidence__reveal-target'>{reactionTargetLabel} 的反应</Text>
             <Text className='miniscript-evidence__reveal-text'>「{activeReaction.reactionText}」</Text>
@@ -285,7 +291,8 @@ export function MiniScriptEvidenceTray({
               已读完
             </Button>
           </View>
-        </View>
+          </View>
+        </RootPortal>
       ) : null}
     </View>
   )

@@ -1,5 +1,6 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+@use '../styles/ice-materials' as ice;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // RecapPhaseView — Sprint B Redesign Styles
@@ -166,7 +167,44 @@
   flex-direction: column;
   gap: $spacing-sm;
   width: 100%;
-  
+
+}
+
+// Wave 2 (AC-06): collapsed data-recap toggle — L2 material, one quiet row.
+.icebreaker__recap-data-toggle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 88rpx;
+  padding: 0 $spacing-md;
+  @include ice.ice-card-secondary;
+  transition: background 0.12s ease;
+}
+
+.icebreaker__recap-data-toggle--pressed {
+  background: rgba($color-primary, 0.06);
+}
+
+.icebreaker__recap-data-toggle-text {
+  @include type-body-emphasis;
+  color: $color-text-primary;
+}
+
+.icebreaker__recap-data-toggle-hint {
+  flex: 1;
+  min-width: 0;
+  @include type-caption;
+  color: $color-text-secondary-warm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.icebreaker__recap-data-toggle-arrow {
+  flex-shrink: 0;
+  @include type-caption;
+  color: $color-text-secondary-warm;
 }
 
 .icebreaker__recap-section {

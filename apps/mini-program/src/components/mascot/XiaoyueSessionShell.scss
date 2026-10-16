@@ -1,4 +1,5 @@
 @use '../../styles/variables' as *;
+@use '../../pages/icebreaker-session/styles/ice-materials' as ice;
 
 // ─── XiaoyueSessionShell — slim host band (PR1 壳层) ─────────────────────────
 // R1: the band itself carries NO background / border / shadow — the hero card
@@ -79,16 +80,16 @@
     background: $color-text-muted;
   }
 
-  // ── Host ⋯ menu trigger — outlined circle, distinct from the native capsule ──
+  // ── Host menu trigger — labelled text pill (Wave 2, AC-03; L3 pill recipe) ──
   &__menu {
     flex-shrink: 0;
-    width: 88rpx;
-    height: 88rpx;
+    min-width: 88rpx;
+    min-height: 88rpx;
     // Bleed the 88rpx tap target over the band edges so the row stays slim.
     margin: -16rpx -16rpx -16rpx 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     transition: opacity 150ms ease;
 
     &:active {
@@ -96,25 +97,81 @@
     }
   }
 
-  &__menu-circle {
-    width: 48rpx;
-    height: 48rpx;
-    border-radius: 50%;
-    border: 2rpx solid rgba($color-primary, 0.45);
-    background: transparent; // outlined, not filled — visual break from CTAs
+  &__menu-pill {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 4rpx;
+    height: 52rpx;
+    padding: 0 $spacing-sm;
+    @include ice.ice-pill;
   }
 
-  &__menu-icon {
-    font-size: 32rpx;
+  &__menu-pill-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
     line-height: 1;
-    color: $color-primary;
+    white-space: nowrap;
+  }
+
+  &__menu-pill-dots {
+    font-size: $font-size-xs;
     font-weight: $font-weight-bold;
-    letter-spacing: 2rpx;
-    // Optical: the ⋯ glyph rides low in its em box; nudge up to optically centre.
-    transform: translateY(-6rpx);
+    line-height: 1;
+    letter-spacing: 1rpx;
+    // Optical: the middot glyphs ride low in their em box; nudge up to centre.
+    transform: translateY(-4rpx);
+  }
+
+  // ── Wave 2 orientation row (AC-01/02/03): map XOR chip, plus mode caption ──
+  &__orientation {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+    min-height: 40rpx;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  &__mode-caption {
+    flex-shrink: 0;
+    font-size: 20rpx;
+    line-height: 1.4;
+    color: $color-text-secondary;
+  }
+
+  &__phase-map {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__phase-map-item {
+    font-size: 20rpx;
+    line-height: 1.4;
+    color: $color-text-muted;
+
+    &--current {
+      color: $color-primary-dark;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  &__phase-map-arrow {
+    color: $color-text-muted;
+  }
+
+  &__phase-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    height: 40rpx;
+    padding: 0 $spacing-sm;
+    font-size: 20rpx;
+    font-weight: $font-weight-medium;
+    line-height: 1;
+    @include ice.ice-pill;
   }
 
   // ── Merged quiet AIGC footer (contract Q9) ────────────────────────────────

@@ -276,6 +276,9 @@ export function MiniScriptHeroView({
   const [showBeats, setShowBeats] = useState(false)
   const [showAllClues, setShowAllClues] = useState(false)
   const [showDeductionHints, setShowDeductionHints] = useState(false)
+  // Wave 2 (AC-09): what/why chips demote to an OPTIONAL supplement behind a
+  // collapsed toggle — the ballot's one question is 凶手 (round 2: 动机).
+  const [voteExtrasOpen, setVoteExtrasOpen] = useState(false)
   // Final act and the consensus vote are two screens client-side (the server
   // opens the vote when the last act lands): the act view gets its 自由聊 beat,
   // then 去投票 › moves everyone to the ballot. Local-only — no server state.
@@ -295,6 +298,7 @@ export function MiniScriptHeroView({
     setShowBeats,
     setShowAllClues,
     setShowDeductionHints,
+    setVoteExtrasOpen,
   )
   useDidShow(() => setFinalActSubView('act'))
 
@@ -1119,54 +1123,69 @@ export function MiniScriptHeroView({
             </View>
 
             {voteOptions ? (
-              <>
-                <View className='miniscript-hero__section'>
-                  <Text className='miniscript-hero__section-title'>具体做了什么？</Text>
-                  <View className='miniscript-hero__vote-chips'>
-                    {voteOptions.what.map((option) => {
-                      const selected = voteWhat === option
-                      return (
-                        <View
-                          key={option}
-                          className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
-                          role='button'
-                          aria-pressed={selected}
-                          aria-label={option}
-                          onClick={() => {
-                            haptics('light')
-                            setVoteWhat(selected ? '' : option)
-                          }}
-                        >
-                          <Text>{option}</Text>
-                        </View>
-                      )
-                    })}
-                  </View>
+              <View className='miniscript-hero__section'>
+                {/* Wave 2 (AC-09): the ballot asks ONE question (谁). what/why
+                    chips survive only as an optional, collapsed supplement. */}
+                <View
+                  className='miniscript-hero__section-header'
+                  onClick={() => {
+                    haptics('light')
+                    setVoteExtrasOpen((v) => !v)
+                  }}
+                  role='button'
+                  aria-expanded={voteExtrasOpen}
+                  aria-label='补充你的判断（可选）'
+                >
+                  <Text className='miniscript-hero__section-title'>补充你的判断（可选）</Text>
+                  <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{voteExtrasOpen ? '▼' : '▶'}</Text>
                 </View>
-                <View className='miniscript-hero__section'>
-                  <Text className='miniscript-hero__section-title'>随口聊聊你的推理</Text>
-                  <View className='miniscript-hero__vote-chips'>
-                    {voteOptions.why.map((option) => {
-                      const selected = voteWhy === option
-                      return (
-                        <View
-                          key={option}
-                          className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
-                          role='button'
-                          aria-pressed={selected}
-                          aria-label={option}
-                          onClick={() => {
-                            haptics('light')
-                            setVoteWhy(selected ? '' : option)
-                          }}
-                        >
-                          <Text>{option}</Text>
-                        </View>
-                      )
-                    })}
-                  </View>
-                </View>
-              </>
+                {voteExtrasOpen ? (
+                  <>
+                    <Text className='miniscript-hero__section-sub'>具体做了什么？</Text>
+                    <View className='miniscript-hero__vote-chips'>
+                      {voteOptions.what.map((option) => {
+                        const selected = voteWhat === option
+                        return (
+                          <View
+                            key={option}
+                            className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
+                            role='button'
+                            aria-pressed={selected}
+                            aria-label={option}
+                            onClick={() => {
+                              haptics('light')
+                              setVoteWhat(selected ? '' : option)
+                            }}
+                          >
+                            <Text>{option}</Text>
+                          </View>
+                        )
+                      })}
+                    </View>
+                    <Text className='miniscript-hero__section-sub'>随口聊聊你的推理</Text>
+                    <View className='miniscript-hero__vote-chips'>
+                      {voteOptions.why.map((option) => {
+                        const selected = voteWhy === option
+                        return (
+                          <View
+                            key={option}
+                            className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
+                            role='button'
+                            aria-pressed={selected}
+                            aria-label={option}
+                            onClick={() => {
+                              haptics('light')
+                              setVoteWhy(selected ? '' : option)
+                            }}
+                          >
+                            <Text>{option}</Text>
+                          </View>
+                        )
+                      })}
+                    </View>
+                  </>
+                ) : null}
+              </View>
             ) : (
               <View className='miniscript-hero__section'>
                 <Text className='miniscript-hero__section-title'>还有想说的吗？</Text>
@@ -1215,6 +1234,7 @@ export function MiniScriptHeroView({
       voteWhat,
       voteWhy,
       voteReason,
+      voteExtrasOpen,
       isVoting,
       totalActs,
       handleSubmitVote,

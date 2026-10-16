@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView } from '@tarojs/components'
+import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
@@ -19,6 +19,7 @@ import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { haptics } from '../../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
+import { formatIceLieFooledLine } from '@shared/copy/icebreakerSession'
 import { emitMomentCardGenerateOnce } from '../momentCardTelemetry'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { MedalIcon, RecapGlowBlock } from './RecapGlowBlock'
@@ -83,101 +84,63 @@ function RecapAiFeedbackBar({
   )
 }
 
-function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
-  const [showPanel, setShowPanel] = useState(false)
-  const [panel, setPanel] = useState<MomentHighlightsPanel | null>(null)
-  const [panelMeta, setPanelMeta] = useState<AIResponseMeta | null>(null)
-  const [loading, setLoading] = useState(false)
+/**
+ * Wave 2 (AC-06): presentational moment-highlights panel. State + the
+ * generate action live in RecapPhaseView so the 「破冰记忆翻卡」 share card
+ * and 「生成本局高光」 merge into ONE share unit (no two separate blocks).
+ */
+function MomentHighlightsPanelView({
+  panel,
+  panelMeta,
+  onClose,
+}: {
+  panel: MomentHighlightsPanel
+  panelMeta: AIResponseMeta | null
+  onClose: () => void
+}) {
   const aigcEnabled = useAIGCLabelsEnabled()
-
-  const handleOpen = async () => {
-    if (loading) return
-    setLoading(true)
-    try {
-      const res = await apiRequest<{ panel?: MomentHighlightsPanel; meta?: AIResponseMeta }>({
-        path: buildSocialPath(socialSessionId, '/moment-card'),
-      })
-      if (res?.panel) {
-        setPanel(res.panel)
-        setPanelMeta(res.meta ?? null)
-        setShowPanel(true)
-        // Wave 5 T-1 (G3 numerator): the panel only opens on a successful
-        // generation, so this is the honest "card generated" signal. Deduped
-        // once per session; fire-and-forget (never blocks the panel).
-        emitMomentCardGenerateOnce(socialSessionId)
-      }
-    } catch {
-      void Taro.showToast({ title: '高光整理没成功，再试一次', icon: 'none' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
-    <>
-      <Card className='icebreaker__recap-moment-cta'>
-        <View className='icebreaker__recap-moment-cta-glow' />
-        <View className='icebreaker__recap-moment-cta-content'>
-          <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
-            <JoyJoinIcon emoji='✨' tier='reveal' size={28} />
-            <Text className='icebreaker__recap-moment-cta-title'>生成本局高光</Text>
-          </View>
-          <Text className='icebreaker__recap-moment-cta-sub'>
-            悦仔从参与、成员印象和合作片段里认真整理
-          </Text>
-        </View>
-        <Button
-          variant='primary'
-          className='icebreaker__recap-moment-cta-btn'
-          onClick={handleOpen}
-          loading={loading}
-          disabled={loading}
-          aria-label={loading ? '正在整理本局高光' : '生成本局高光'}
-        >
-          {loading ? '正在整理' : '生成高光'}
-        </Button>
-      </Card>
-
-      {panel && showPanel ? (
-        <View
-          className='icebreaker__moment-panel-backdrop'
-          onClick={() => setShowPanel(false)}
-          catchMove
-        >
-          <View
-            className='icebreaker__moment-panel'
-            onClick={(event) => event.stopPropagation()}
-            role='dialog'
-            aria-modal='true'
-            aria-label={panel.headline}
-          >
-            <ScrollView className='icebreaker__moment-panel-scroll' scrollY>
-              <View className='icebreaker__moment-panel-content'>
-                <Text className='icebreaker__moment-panel-title'>{panel.headline}</Text>
-                <Text className='icebreaker__moment-panel-overview'>{panel.overview}</Text>
-                <View className='icebreaker__moment-panel-list'>
-                  {panel.highlights.map((highlight, index) => (
-                    <View className='icebreaker__moment-panel-item' key={`${highlight.aspect}-${index}`}>
-                      <Text className='icebreaker__moment-panel-item-title'>{highlight.title}</Text>
-                      {highlight.personDisplayName ? (
-                        <Text className='icebreaker__moment-panel-person'>{highlight.personDisplayName}</Text>
-                      ) : null}
-                      <Text className='icebreaker__moment-panel-evidence'>依据：{highlight.evidence}</Text>
-                      <Text className='icebreaker__moment-panel-narrative'>{highlight.narrative}</Text>
-                    </View>
-                  ))}
+    // Wave 2 (AC-12): RootPortal — the recap phase shell keeps a transform,
+    // so an inline position:fixed backdrop clips to the shell box on device.
+    <RootPortal>
+      <View
+        className='icebreaker__moment-panel-backdrop'
+        onClick={onClose}
+        catchMove
+      >
+      <View
+        className='icebreaker__moment-panel'
+        onClick={(event) => event.stopPropagation()}
+        role='dialog'
+        aria-modal='true'
+        aria-label={panel.headline}
+      >
+        <ScrollView className='icebreaker__moment-panel-scroll' scrollY>
+          <View className='icebreaker__moment-panel-content'>
+            <Text className='icebreaker__moment-panel-title'>{panel.headline}</Text>
+            <Text className='icebreaker__moment-panel-overview'>{panel.overview}</Text>
+            <View className='icebreaker__moment-panel-list'>
+              {panel.highlights.map((highlight, index) => (
+                <View className='icebreaker__moment-panel-item' key={`${highlight.aspect}-${index}`}>
+                  <Text className='icebreaker__moment-panel-item-title'>{highlight.title}</Text>
+                  {highlight.personDisplayName ? (
+                    <Text className='icebreaker__moment-panel-person'>{highlight.personDisplayName}</Text>
+                  ) : null}
+                  <Text className='icebreaker__moment-panel-evidence'>依据：{highlight.evidence}</Text>
+                  <Text className='icebreaker__moment-panel-narrative'>{highlight.narrative}</Text>
                 </View>
-                <Text className='icebreaker__moment-panel-closing'>{panel.closingLine}</Text>
-                {aigcEnabled ? (
-                  <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
-                ) : null}
-                <Button variant='primary' onClick={() => setShowPanel(false)}>看完了</Button>
-              </View>
-            </ScrollView>
+              ))}
+            </View>
+            <Text className='icebreaker__moment-panel-closing'>{panel.closingLine}</Text>
+            {aigcEnabled ? (
+              <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
+            ) : null}
+            <Button variant='primary' onClick={onClose}>看完了</Button>
           </View>
-        </View>
-      ) : null}
-    </>
+        </ScrollView>
+      </View>
+      </View>
+    </RootPortal>
   )
 }
 
@@ -260,6 +223,13 @@ export function RecapPhaseView({
   const [showBurst, setShowBurst] = useState(false)
   const [headlineRevealed, setHeadlineRevealed] = useState(false)
   const [shareFlipped, setShareFlipped] = useState(false)
+  // Wave 2 (AC-06): merged share unit — the flip card and the AI highlight
+  // generation are one block; the data recap collapses into one expandable
+  // section. Render order is locked: headline → 高光/勋章 → 分享 → 数据 → 告别 → 出口.
+  const [momentPanel, setMomentPanel] = useState<MomentHighlightsPanel | null>(null)
+  const [momentPanelMeta, setMomentPanelMeta] = useState<AIResponseMeta | null>(null)
+  const [momentLoading, setMomentLoading] = useState(false)
+  const [dataRecapOpen, setDataRecapOpen] = useState(false)
   // D5 — Fires success haptic only once per recap-render when the stamp seals
   const stampHapticFiredRef = useRef(false)
   const handleStampSealed = useCallback(() => {
@@ -287,7 +257,40 @@ export function RecapPhaseView({
     setShareFlipped((prev) => !prev)
   }, [])
 
+  // Wave 2 (AC-06): 生成高光 lives inside the share flip card's back face.
+  const handleMomentOpen = useCallback(async () => {
+    if (momentLoading || !socialSessionId) return
+    setMomentLoading(true)
+    try {
+      const res = await apiRequest<{ panel?: MomentHighlightsPanel; meta?: AIResponseMeta }>({
+        path: buildSocialPath(socialSessionId, '/moment-card'),
+      })
+      if (res?.panel) {
+        setMomentPanel(res.panel)
+        setMomentPanelMeta(res.meta ?? null)
+        // Wave 5 T-1 (G3 numerator): the panel only opens on a successful
+        // generation, so this is the honest "card generated" signal. Deduped
+        // once per session; fire-and-forget (never blocks the panel).
+        emitMomentCardGenerateOnce(socialSessionId)
+      }
+    } catch {
+      void Taro.showToast({ title: '高光整理没成功，再试一次', icon: 'none' })
+    } finally {
+      setMomentLoading(false)
+    }
+  }, [momentLoading, socialSessionId])
+
   const aigcEnabled = useAIGCLabelsEnabled()
+
+  // Wave 2 (AC-06): collapsed data-recap summary line (「话题 N · 挑战 M · 侦探 · 瞬间 K」).
+  const dataRecapSummary = (() => {
+    const parts: string[] = []
+    if (recapData?.topicsDiscussed.length) parts.push(`话题 ${recapData.topicsDiscussed.length}`)
+    if ((recapData?.challengesCompleted ?? 0) > 0) parts.push(`挑战 ${recapData?.challengesCompleted}`)
+    if (recapData?.lieDetective) parts.push('侦探')
+    if (recapMoments.length > 0) parts.push(`瞬间 ${recapMoments.length}`)
+    return parts.length > 0 ? parts.join(' · ') : '展开看看'
+  })()
 
   // Build dynamic share card lines
   const shareLines = useCallback(() => {
@@ -309,8 +312,9 @@ export function RecapPhaseView({
           : `卧底 ${recapData.undercoverWord.undercoverDisplayName} 成功隐藏`,
       )
     }
-    if (recapData?.lieDetective) {
-      lines.push(`悦仔谎言胜率 ${(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%`)
+    if (recapData?.lieDetective && recapData.lieDetective.fooledEveryone > 0) {
+      // Wave 2 (AC-06/AC-15): internal metric 「悦仔胜率」→ user language.
+      lines.push(formatIceLieFooledLine(recapData.lieDetective.fooledEveryone))
     }
     return lines
   }, [playerCount, recapData, medals.length])
@@ -401,9 +405,80 @@ export function RecapPhaseView({
         )
       )}
 
-      {/* V2 Data cards */}
+      {/* Wave 2 (AC-06): share — ONE merged unit. The flip card carries the
+          static memory lines; 「生成高光」 (the old standalone 生成本局高光
+          block) lives on its back face. Locked position: right after
+          高光/勋章, before the collapsed data recap. */}
+      {socialSessionId && (
+        <View className='icebreaker__recap-share-wrap'>
+          <CardFlip
+            front={
+              <View className='icebreaker__recap-share-front'>
+                <JoyJoinIcon emoji='🎉' tier='reaction' size={56} className='icebreaker__recap-share-front-emoji' />
+                <Text className='icebreaker__recap-share-front-title'>今晚的破冰记忆</Text>
+                <Text className='icebreaker__recap-share-front-hint'>点我查看详情</Text>
+              </View>
+            }
+            back={
+              <View className='icebreaker__recap-share-back'>
+                {shareLines().map((line, i) => (
+                  <Text key={i} className='icebreaker__recap-share-back-line'>
+                    {line}
+                  </Text>
+                ))}
+                <View className='icebreaker__recap-share-back-cta'>
+                  <Button
+                    variant='secondary'
+                    onClick={() => void handleMomentOpen()}
+                    loading={momentLoading}
+                    disabled={momentLoading}
+                    aria-label={momentLoading ? '正在整理本局高光' : '生成本局高光'}
+                  >
+                    {momentLoading ? '正在整理' : '生成高光'}
+                  </Button>
+                </View>
+              </View>
+            }
+            flipped={shareFlipped}
+            onFlip={handleShareFlip}
+            duration={500}
+            reducedMotion={shouldReduceMotion}
+          />
+        </View>
+      )}
+
+      {momentPanel ? (
+        <MomentHighlightsPanelView
+          panel={momentPanel}
+          panelMeta={momentPanelMeta}
+          onClose={() => setMomentPanel(null)}
+        />
+      ) : null}
+
+      {/* V2 Data cards — Wave 2 (AC-06): collapsed into ONE expandable block. */}
       {(recapData || recapMoments.length > 0) && (
         <View className='icebreaker__recap-details'>
+          <View
+            className='icebreaker__recap-data-toggle'
+            hoverClass='icebreaker__recap-data-toggle--pressed'
+            onClick={() => {
+              haptics('light')
+              setDataRecapOpen((v) => !v)
+            }}
+            role='button'
+            aria-expanded={dataRecapOpen}
+            aria-label='今晚的数据回顾'
+          >
+            <Text className='icebreaker__recap-data-toggle-text'>今晚的数据回顾</Text>
+            <Text className='icebreaker__recap-data-toggle-hint'>
+              {dataRecapOpen ? '收起' : dataRecapSummary}
+            </Text>
+            <Text className='icebreaker__recap-data-toggle-arrow' aria-hidden='true'>
+              {dataRecapOpen ? '▲' : '▶'}
+            </Text>
+          </View>
+          {dataRecapOpen ? (
+          <>
           {/* Topics */}
           {recapData?.topicsDiscussed.length ? (
             <Card className='icebreaker__recap-section'>
@@ -439,12 +514,9 @@ export function RecapPhaseView({
                 <Text className='icebreaker__recap-section-title'>侦探风云</Text>
               </View>
               <View className='icebreaker__recap-stats-row'>
-                <View className='icebreaker__recap-stat-box'>
-                  <Text className='icebreaker__recap-stat-value'>
-                    {(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%
-                  </Text>
-                  <Text className='icebreaker__recap-stat-label'>悦仔胜率</Text>
-                </View>
+                {/* Wave 2 (AC-06): the internal 「悦仔胜率」 stat is removed —
+                    the 骗过全场 box already carries the same truth in user
+                    language; a win-rate percentage reads as a machine metric. */}
                 <View className='icebreaker__recap-stat-box'>
                   <Text className='icebreaker__recap-stat-value'>
                     第 {recapData.lieDetective.hardestRound} 轮
@@ -528,39 +600,8 @@ export function RecapPhaseView({
               ))}
             </Card>
           )}
-        </View>
-      )}
-
-      {/* Dynamic share card with CardFlip */}
-      {socialSessionId && (
-        <View className='icebreaker__recap-share-wrap'>
-          <CardFlip
-            front={
-              <View className='icebreaker__recap-share-front'>
-                <JoyJoinIcon emoji='🎉' tier='reaction' size={56} className='icebreaker__recap-share-front-emoji' />
-                <Text className='icebreaker__recap-share-front-title'>今晚的破冰记忆</Text>
-                <Text className='icebreaker__recap-share-front-hint'>点我查看详情</Text>
-              </View>
-            }
-            back={
-              <View className='icebreaker__recap-share-back'>
-                {shareLines().map((line, i) => (
-                  <Text key={i} className='icebreaker__recap-share-back-line'>
-                    {line}
-                  </Text>
-                ))}
-                <View className='icebreaker__recap-share-back-cta'>
-                  <Button variant='secondary' onClick={onLeave}>
-                    收好今晚，回到活动
-                  </Button>
-                </View>
-              </View>
-            }
-            flipped={shareFlipped}
-            onFlip={handleShareFlip}
-            duration={500}
-            reducedMotion={shouldReduceMotion}
-          />
+          </>
+          ) : null}
         </View>
       )}
 
@@ -574,9 +615,6 @@ export function RecapPhaseView({
           </Text>
         </Card>
       )}
-
-      {/* Moment card CTA */}
-      {socialSessionId && <MomentCardCTA socialSessionId={socialSessionId} />}
 
       {/* Xiaoyue farewell — PM-locked permission line (2026-07-17) */}
       <View className='icebreaker__recap-farewell'>

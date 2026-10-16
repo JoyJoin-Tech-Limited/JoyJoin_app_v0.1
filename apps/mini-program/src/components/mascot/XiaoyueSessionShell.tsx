@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { ICE_AIGC_REASON_OPENING_PACK, ICE_HOST_MENU_PILL_LABEL, ICE_PHASE_MAP_ARROW } from '@shared/copy/icebreakerSession'
 import type { SocialSessionState, SocialIcebreakerPhase, XiaoyueAdaptiveSuggestion } from '@shared/socialIcebreaker'
 import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
@@ -47,6 +48,22 @@ export interface XiaoyueSessionShellProps {
   onDismissSuggestion?: (source: 'tap' | 'auto') => void;
   /** Fired when the host taps 反馈 in a shell-level AIGC footer (analytics). */
   onAigcFeedbackTap?: (location: 'footer' | 'suggestion') => void;
+  /**
+   * Wave 2 (AC-01): resident phase-progress chip text (「第 N/M 环 · 环节名」),
+   * computed by the page from session state. Rendered from the first game
+   * phase onward; null during waiting/warmup (the map owns those frames).
+   */
+  phaseChipText?: string | null;
+  /**
+   * Wave 2 (AC-02): entry phase-map items (「话题卡 → 挑战 → 回顾」) for the
+   * waiting/warmup first frames. Same data source as the chip.
+   */
+  phaseMapItems?: Array<{ key: string; label: string; current: boolean }> | null;
+  /**
+   * Wave 2 (AC-03): current mode caption (「深度畅聊 · 60min」) — the tier
+   * info slimmed out of the ActionSheet row lives here while it can change.
+   */
+  modeCaption?: string | null;
 }
 
 function getPhaseCoachingLine(
@@ -118,6 +135,9 @@ export default function XiaoyueSessionShell({
   onOpenHostMenu,
   onDismissSuggestion,
   onAigcFeedbackTap,
+  phaseChipText = null,
+  phaseMapItems = null,
+  modeCaption = null,
 }: XiaoyueSessionShellProps) {
   const expressionId = ICEBREAKER_XIAOYUE_EXPRESSION[phase] ?? 'coachGuide'
   const { main, hint } = getPhaseCoachingLine(phase, sessionPack, isHost)
@@ -192,12 +212,48 @@ export default function XiaoyueSessionShell({
             role='button'
             aria-label='主持人菜单'
           >
-            <View className='xiaoyue-session-shell__menu-circle'>
-              <Text className='xiaoyue-session-shell__menu-icon'>⋯</Text>
+            {/* Wave 2 (AC-03): labelled text pill replaces the bare glyph
+                circle — a word reads; an ornament gets missed. */}
+            <View className='xiaoyue-session-shell__menu-pill'>
+              <Text className='xiaoyue-session-shell__menu-pill-label'>{ICE_HOST_MENU_PILL_LABEL}</Text>
+              <Text className='xiaoyue-session-shell__menu-pill-dots' aria-hidden='true'>···</Text>
             </View>
           </View>
         )}
       </View>
+
+      {/* Wave 2 orientation row (AC-01/02/03): ONE row, exactly one tenant —
+          the entry phase map on waiting/warmup first frames, the resident
+          progress chip from the first game phase onward. Never both. */}
+      {modeCaption || phaseMapItems || phaseChipText ? (
+        <View className='xiaoyue-session-shell__orientation'>
+          {modeCaption ? (
+            <Text className='xiaoyue-session-shell__mode-caption'>{modeCaption}</Text>
+          ) : null}
+          {phaseMapItems ? (
+            <View className='xiaoyue-session-shell__phase-map' aria-label='今晚的环节顺序'>
+              {phaseMapItems.map((item, index) => (
+                <Text
+                  key={item.key}
+                  className={`xiaoyue-session-shell__phase-map-item${item.current ? ' xiaoyue-session-shell__phase-map-item--current' : ''}`}
+                >
+                  {index > 0 ? (
+                    <Text className='xiaoyue-session-shell__phase-map-arrow' aria-hidden='true'>
+                      {` ${ICE_PHASE_MAP_ARROW} `}
+                    </Text>
+                  ) : null}
+                  {item.label}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+          {phaseChipText ? (
+            <Text className='xiaoyue-session-shell__phase-chip' aria-live='polite'>
+              {phaseChipText}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
       {/* Merged quiet AIGC footer (contract Q9): single muted line, shell-level.
           Regulatory floor copy `内容由 AI 生成` is preserved verbatim. */}
@@ -210,7 +266,7 @@ export default function XiaoyueSessionShell({
             onClick={() => onAigcFeedbackTap?.('footer')}
           >
             <AIContentReportButton
-              options={{ reason: 'AI 生成开场包/主持提示' }}
+              options={{ reason: ICE_AIGC_REASON_OPENING_PACK }}
               label='反馈'
             />
           </View>
