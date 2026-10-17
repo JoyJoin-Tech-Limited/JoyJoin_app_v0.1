@@ -1,6 +1,7 @@
 import { RootPortal, View, Text } from '@tarojs/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
+import type { SocialContentStatus } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import { getArchetypeHSL } from '@shared/archetypeColors'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
@@ -18,6 +19,7 @@ import {
   canChoosePersonalityDiceOption,
   getPersonalityDiceCountdownSeconds,
 } from '../viewModels/phaseProgressionModels'
+import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -64,6 +66,13 @@ export interface PersonalityDiceHeroViewProps {
   onRevealReady?: (ready: boolean) => void
   isRevealReadying?: boolean
   challengesMeta?: AIResponseMeta
+  /**
+   * Wave 3 (contract AC-07): server-owned generation lifecycle for the
+   * challenges (`diceContentStatus`), present only while the
+   * `icebreakerContentStatusEnabled` flag is on. Undefined → the waiting
+   * state renders the pre-Wave-3 static copy unchanged.
+   */
+  contentStatus?: SocialContentStatus
 }
 
 export function PersonalityDiceHeroView({
@@ -93,6 +102,7 @@ export function PersonalityDiceHeroView({
   onRevealReady,
   isRevealReadying = false,
   challengesMeta,
+  contentStatus,
 }: PersonalityDiceHeroViewProps) {
   const currentChallenge = challenges[currentPlayerIndex] ?? null
   const currentDisplayName =
@@ -114,6 +124,10 @@ export function PersonalityDiceHeroView({
   // F6: ref-tracked timeouts — no setState-after-unmount.
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Wave 3 (AC-07): live 「悦仔正在准备挑战…」 copy while the server reports
+  // the challenges as generating (flag-gated field; absent → null → static).
+  const generatingLiveCopy = useGeneratingLiveCopy('personality_dice', contentStatus)
 
   useEffect(() => {
     return () => {
@@ -443,9 +457,9 @@ export function PersonalityDiceHeroView({
 
   const hasContent = challenges.length > 0 || challengeGroups.length > 0
   const statusText = !hasContent
-    ? isHost
+    ? (generatingLiveCopy ?? (isHost
       ? '掷出骰子后开始'
-      : '等待主持人掷出人格骰子…'
+      : '等待主持人掷出人格骰子…'))
     : isMyChallenge
       ? hasResponded
         ? '你的选择已记录'

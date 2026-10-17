@@ -11,6 +11,8 @@ import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PHASE_ACCENTS } from './phaseAccents'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
+import type { SocialContentStatus } from '@shared/socialIcebreaker'
+import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface UndercoverWordHeroViewProps {
@@ -45,6 +47,13 @@ interface UndercoverWordHeroViewProps {
    * reused across rounds).
    */
   completedUserIds?: string[]
+  /**
+   * Wave 3 (contract AC-07): server-owned generation lifecycle for the word
+   * pair (`undercoverContentStatus`), present only while the
+   * `icebreakerContentStatusEnabled` flag is on. Undefined → the waiting
+   * state renders the pre-Wave-3 static copy unchanged.
+   */
+  contentStatus?: SocialContentStatus
 }
 
 const REACTION_ITEMS = [
@@ -72,6 +81,7 @@ export function UndercoverWordHeroView({
   isAdvancing = false,
   pairMeta,
   completedUserIds = [],
+  contentStatus,
 }: UndercoverWordHeroViewProps) {
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -87,6 +97,10 @@ export function UndercoverWordHeroView({
   const [selectedReaction, setSelectedReaction] = useState<number | null>(null)
   const [burstTriggered, setBurstTriggered] = useState(false)
   const hasAutoFlippedRef = useRef(false)
+
+  // Wave 3 (AC-07): live 「悦仔正在想词…」 copy while the server reports the
+  // word pair as generating (flag-gated field; absent → null → static copy).
+  const generatingLiveCopy = useGeneratingLiveCopy('undercover_word', contentStatus)
 
   // ── Derived ──
   const isUndercover = userId === undercoverUserId
@@ -236,7 +250,7 @@ export function UndercoverWordHeroView({
           phase='undercover_word'
           title='谁是卧底'
           prompt='描述你的词，找出卧底'
-          statusText={isHost ? '生成词对后开始' : '等待主持人生成词对…'}
+          statusText={generatingLiveCopy ?? (isHost ? '生成词对后开始' : '等待主持人生成词对…')}
           actions={
             isHost ? (
               <Button variant='primary' onClick={handleGenerate} disabled={isGenerating} loading={isGenerating}>

@@ -6,6 +6,44 @@
 
 $motion-entrance-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
+// ─── Victory pulse (sprint icebreaker-uiux-wave3, contract AC-09 / plan #35) ─
+// THE one shared victory moment vocabulary — dice reveal, hammer drop, vote
+// hit, challenge complete … all ride this single pulse. Hard rules (locked
+// by victoryPulseContract in __tests__): transform/opacity only, ≤500ms,
+// the entrance easing above, and ONE reduced-motion block that collapses the
+// pulse to a 150ms static settle. Do NOT invent per-surface victory
+// keyframes — apply `ice-victory-pulse` instead.
+@keyframes ice-victory-pulse {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.045);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/// One-shot victory pulse. $duration must stay ≤500ms (contract AC-09).
+@mixin ice-victory-pulse($duration: 420ms, $delay: 0ms) {
+  animation: ice-victory-pulse $duration $motion-entrance-ease $delay both;
+
+  // ONE reduced-motion block for the whole vocabulary: motion collapses to a
+  // 150ms opacity settle (phase-hero precedent).
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: none;
+    animation-duration: 150ms;
+    animation-timing-function: ease-out;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+
 @keyframes phase-hero-deal-in {
   0% {
     opacity: 0;

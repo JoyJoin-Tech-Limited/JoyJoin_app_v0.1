@@ -542,6 +542,24 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     })
   }, [performSocialAction, session, socialSessionId])
 
+  // Wave 3 (contract AC-08): 「我离开一下」 self-state marker — the ONLY new
+  // route in this sprint (POST /:id/leave, self-state only, idempotent in
+  // both directions: {left:true} marks, {left:false} rejoins). Leave never
+  // kicks, never auto-advances, never transfers the host; rejoin restores
+  // everything because nothing else was mutated. The response carries the
+  // authoritative state, which syncSocialActionResponse applies immediately.
+  const handleToggleLeave = useCallback(
+    (left: boolean) => {
+      logInfo('[IcebreakerSession] Toggling leave marker', { socialSessionId, left })
+      return performSocialAction<{ ok?: boolean; left?: boolean; state?: SocialSessionState }>(
+        'leave',
+        '/leave',
+        { left },
+      )
+    },
+    [performSocialAction, socialSessionId],
+  )
+
   // PR1 flow revamp — stall nudge: host explicitly skips stragglers (force)
   // or suppresses stall automation for the rest of the phase.
   const handleSelectCustomPhase = useCallback(
@@ -1050,6 +1068,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     handleRevealSolution,
     handleMiniScriptReady,
     handleAdvancePhase,
+    handleToggleLeave,
     handleSelectCustomPhase,
     handleEndCustomSession,
     executeTierSwitch,

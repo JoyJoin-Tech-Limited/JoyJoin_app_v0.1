@@ -4,6 +4,7 @@ import Taro, { useDidShow, useRouter, useUnload } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import type { SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
+import { GENERATING_STALL_SUPPRESS_MS } from '@shared/socialIcebreaker'
 import type { WSMessage } from '@shared/wsEvents'
 import type {
   MiniScriptGenre,
@@ -468,6 +469,7 @@ export default function IcebreakerSessionPage() {
     handleRevealSolution,
     handleMiniScriptReady,
     handleAdvancePhase,
+    handleToggleLeave,
     handleSelectCustomPhase,
     handleEndCustomSession,
     executeTierSwitch,
@@ -555,7 +557,29 @@ export default function IcebreakerSessionPage() {
   // live during warmup, the dock surfaces 「不等了，直接继续」. UI-only
   // surfacing of the existing stall mechanism; no server change. Reuses the
   // pre-registered `stall_nudge_advance` funnel event (PR1 flow revamp).
-  const stallExitVisible = phase === 'warmup' && isHost && !!adaptiveSuggestion
+  //
+  // Wave 3 (contract AC-07 stall 条款): the exit must never render within
+  // GENERATING_STALL_SUPPRESS_MS of topic generation start — while the system
+  // (not the people) is still working, a "skip the wait" affordance reads as
+  // a hang (2026-07-26 出题卡死 incident). The window opens at the
+  // poll-observed flip into 'generating' (device-local clock) — never compare
+  // against the server-stamped `warmupTopicsGeneratingAt` (2026-08-13
+  // clock-skew canon). A wedged 'generating' self-heals: the exit reappears
+  // once the 30s window lapses.
+  const topicsGeneratingNow = session?.warmupTopicsStatus === 'generating'
+  const [topicsGeneratingObservedAt, setTopicsGeneratingObservedAt] = useState<number | null>(null)
+  useEffect(() => {
+    if (topicsGeneratingNow) {
+      setTopicsGeneratingObservedAt((prev) => prev ?? Date.now())
+    } else {
+      setTopicsGeneratingObservedAt(null)
+    }
+  }, [topicsGeneratingNow])
+  const stallExitSuppressed =
+    topicsGeneratingNow &&
+    topicsGeneratingObservedAt !== null &&
+    Date.now() - topicsGeneratingObservedAt < GENERATING_STALL_SUPPRESS_MS
+  const stallExitVisible = phase === 'warmup' && isHost && !!adaptiveSuggestion && !stallExitSuppressed
   const handleStallExit = useCallback(() => {
     socialIcebreakerAnalytics.track(
       'stall_nudge_advance',
@@ -914,6 +938,35 @@ export default function IcebreakerSessionPage() {
     })
   }, [])
 
+  // ─── Wave 3 (contract AC-08): 「我离开一下」 + host 失联纯告知 ───────────
+  // Local optimistic away state: the leave route works regardless of the
+  // `icebreakerContentStatusEnabled` flag, but the `leftUserIds` field only
+  // reaches the client while the flag is on — so the immediate "已暂时离开"
+  // flip must live locally (contract: 离开/回来不丢任何本地乐观状态). When
+  // the field IS present it is the server truth and reconciles the local
+  // marker (covers cold re-entry with the flag on).
+  const [localAway, setLocalAway] = useState<boolean | null>(null)
+  const serverAway = session?.leftUserIds?.includes(currentUserId)
+  const iAmAway = serverAway ?? localAway ?? false
+  const handleLeaveToggleTap = useCallback(() => {
+    haptics('light')
+    const next = !iAmAway
+    setLocalAway(next)
+    void handleToggleLeave(next).then((result) => {
+      // null = request failed (toast already shown), undefined = skipped
+      // because another action is in flight — either way the marker was not
+      // applied, so release the optimistic state back to the server truth.
+      if (result == null) {
+        setLocalAway(null)
+      }
+    })
+  }, [iAmAway, handleToggleLeave])
+  // hostUnreachable is derived per-poll from the host's heartbeat (180s
+  // grace, same threshold as the manual /transfer-host claim). Pure
+  // informational — no claim affordance, no auto-advance wording. Field
+  // absent (flag off / legacy session) → nothing renders.
+  const showHostAwayHint = !isHost && session?.hostUnreachable === true
+
   // Post-session hook: connections tab at peak warmth (audit C10).
   const handleConnectTap = useCallback(() => {
     haptics('light')
@@ -1233,6 +1286,39 @@ export default function IcebreakerSessionPage() {
           </View>
         )}
       </View>
+
+      {/* Wave 3 (AC-08): host 失联纯告知 — honest, calm, zero claim UI. */}
+      {showHostAwayHint ? (
+        <View className='icebreaker__host-away' role='status' aria-live='polite'>
+          <Text className='icebreaker__host-away-text'>
+            主持人暂时离开了，大家先聊着，主持人回来就继续～
+          </Text>
+        </View>
+      ) : null}
+
+      {/* Wave 3 (AC-08): 「我离开一下」次级入口 — shell-layer quiet affordance,
+          never competing with the phase CTA. Leave keeps membership and all
+          phase state; rejoin restores everything (server marker is
+          informational only). */}
+      {session && phase !== 'ended' && phase !== 'recap' ? (
+        <View className='icebreaker__leave-row'>
+          {iAmAway ? (
+            <Text className='icebreaker__leave-note'>已暂时离开，不影响大家，回来接着玩</Text>
+          ) : null}
+          <View
+            className={`icebreaker__leave-toggle${iAmAway ? ' icebreaker__leave-toggle--away' : ''}`}
+            onClick={handleLeaveToggleTap}
+            hoverClass='icebreaker__leave-toggle--pressed'
+            hoverStartTime={0}
+            role='button'
+            aria-label={iAmAway ? '我回来了' : '我离开一下'}
+          >
+            <Text className='icebreaker__leave-toggle-text'>
+              {iAmAway ? '我回来了' : '我离开一下'}
+            </Text>
+          </View>
+        </View>
+      ) : null}
 
       <PhaseIntroOverlay
         phase={phase}

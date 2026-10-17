@@ -449,6 +449,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           onRevealReady={onDiceRevealReady}
           isRevealReadying={pendingAction === 'dice-reveal-ready'}
           challengesMeta={session.personalityDiceChallengesMeta}
+          contentStatus={session.diceContentStatus}
           onAdvance={onAdvance}
         />
       )}
@@ -469,6 +470,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           onAdvance={onAdvance}
           isAdvancing={pendingAction === 'advance'}
           promptsMeta={session.quipBattlePromptsMeta}
+          contentStatus={session.quipContentStatus}
         />
       )}
 
@@ -490,6 +492,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           onAdvance={onAdvance}
           isAdvancing={pendingAction === 'advance'}
           pairMeta={session.undercoverWordPairMeta}
+          contentStatus={session.undercoverContentStatus}
           completedUserIds={[
             ...(session.phaseOptOutUserIds ?? []),
             ...(session.phaseSilentCompletedUserIds ?? []),
@@ -512,6 +515,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           onAdvance={onAdvance}
           isAdvancing={pendingAction === 'advance'}
           questionsMeta={session.groupMirrorQuestionsMeta}
+          contentStatus={session.groupMirrorContentStatus}
         />
       )}
 

@@ -11,6 +11,8 @@ import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { haptics } from '../../../lib/utils/haptics'
 import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
+import type { SocialContentStatus } from '@shared/socialIcebreaker'
+import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 import { buildGroupMirrorAnswerRows } from '../viewModels/phaseProgressionModels'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
@@ -35,6 +37,13 @@ interface GroupMirrorHeroViewProps {
   onAdvance?: () => void
   isAdvancing?: boolean
   questionsMeta?: AIResponseMeta
+  /**
+   * Wave 3 (contract AC-07): server-owned generation lifecycle for the
+   * questions (`groupMirrorContentStatus`), present only while the
+   * `icebreakerContentStatusEnabled` flag is on. Undefined → the waiting
+   * state renders the pre-Wave-3 static copy unchanged.
+   */
+  contentStatus?: SocialContentStatus
 }
 
 const REACTIONS = [
@@ -58,11 +67,16 @@ export function GroupMirrorHeroView({
   onAdvance,
   isAdvancing = false,
   questionsMeta,
+  contentStatus,
 }: GroupMirrorHeroViewProps) {
   const [submitting, setSubmitting] = useState(false)
   const [revealing, setRevealing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
+
+  // Wave 3 (AC-07): live 「悦仔正在出题…」 copy while the server reports the
+  // questions as generating (flag-gated field; absent → null → static copy).
+  const generatingLiveCopy = useGeneratingLiveCopy('group_mirror', contentStatus)
   const [voteMap, setVoteMap] = useState<Record<string, string>>({})
   // Wave 2 (AC-05): one-question-at-a-time stepper (replaces the 18-button wall).
   const [questionIndex, setQuestionIndex] = useState(0)
@@ -171,7 +185,7 @@ export function GroupMirrorHeroView({
           phase='group_mirror'
           title='群像镜像'
           prompt='匿名投票，看看大家眼中的彼此'
-          statusText={isHost ? '生成问题后开始投票' : '等待主持人生成问题…'}
+          statusText={generatingLiveCopy ?? (isHost ? '生成问题后开始投票' : '等待主持人生成问题…')}
           actions={
             isHost ? (
               <Button variant='primary' onClick={handleGenerate} disabled={isGenerating} loading={isGenerating}>

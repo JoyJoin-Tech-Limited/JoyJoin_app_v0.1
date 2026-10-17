@@ -1,5 +1,6 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+@use '../styles/phase-motion' as *;
 
 $au-accent: $phase-accent-auction;
 $au-deep: $phase-accent-auction-deep;
@@ -40,6 +41,17 @@ $au-deep: $phase-accent-auction-deep;
     position: absolute;
     inset: 0;
     pointer-events: none;
+  }
+
+  // Wave 3 (AC-09): 落槌脉冲 frame — wraps the live lot card; the `--go`
+  // modifier carries the shared victory pulse (lifted 500ms after each
+  // hammer so the next close re-runs it).
+  &__pulse-frame {
+    display: block;
+
+    &--go {
+      @include ice-victory-pulse(420ms);
+    }
   }
 
   &__outbid {

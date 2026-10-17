@@ -1,5 +1,6 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+@use '../styles/phase-motion' as *;
 
 $qb-accent: $phase-accent-quip;
 $qb-deep: $phase-accent-quip-deep;
@@ -140,6 +141,9 @@ $qb-deep: $phase-accent-quip-deep;
     &--winner {
       background: rgba($qb-accent, 0.12);
       border: 2rpx solid rgba($qb-deep, 0.5);
+      // Wave 3 (AC-09): 投票命中 — the winning quip lands with the shared
+      // victory pulse (transform/opacity only, ≤500ms, RM-collapsed).
+      @include ice-victory-pulse(400ms);
     }
   }
 

@@ -12,6 +12,8 @@ import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { haptics } from '../../../lib/utils/haptics'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
+import type { SocialContentStatus } from '@shared/socialIcebreaker'
+import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface QuipBattlePrompt {
@@ -51,6 +53,13 @@ interface QuipBattleHeroViewProps {
   onAdvance?: () => void
   isAdvancing?: boolean
   promptsMeta?: AIResponseMeta
+  /**
+   * Wave 3 (contract AC-07): server-owned generation lifecycle for the
+   * prompts (`quipContentStatus`), present only while the
+   * `icebreakerContentStatusEnabled` flag is on. Undefined → the waiting
+   * state renders the pre-Wave-3 static copy unchanged.
+   */
+  contentStatus?: SocialContentStatus
 }
 
 const REACTIONS = [
@@ -96,6 +105,7 @@ export function QuipBattleHeroView({
   onAdvance,
   isAdvancing = false,
   promptsMeta,
+  contentStatus,
 }: QuipBattleHeroViewProps) {
   const [answerMap, setAnswerMap] = useState<Record<string, string>>({})
   const [voteMap, setVoteMap] = useState<Record<string, string>>({})
@@ -108,6 +118,10 @@ export function QuipBattleHeroView({
   const [burstTrigger, setBurstTrigger] = useState(false)
   const burstTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [selectedReaction, setSelectedReaction] = useState<number | undefined>()
+
+  // Wave 3 (AC-07): live 「悦仔正在出题…」 copy while the server reports the
+  // prompts as generating (flag-gated field; absent → null → static copy).
+  const generatingLiveCopy = useGeneratingLiveCopy('quip_battle', contentStatus)
 
   useEffect(() => {
     return () => {
@@ -290,9 +304,9 @@ export function QuipBattleHeroView({
           prompt='填空造句，秀出你的脑洞 · 答案会对全桌公开'
           statusText={
             prompts.length === 0
-              ? isHost
+              ? (generatingLiveCopy ?? (isHost
                 ? '生成题目后开始作答'
-                : '等待主持人生成题目…'
+                : '等待主持人生成题目…'))
               : `已提交 ${submittedOrCompleted.size}/${playerCount} 人`
           }
           doneCount={submittedOrCompleted.size}

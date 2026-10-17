@@ -17,6 +17,7 @@ import {
   resolveAuctionRoleControls,
   type AuctionPreviewRole,
 } from '../viewModels/phaseProgressionModels'
+import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 import { AuctionFinaleView } from './AuctionFinaleView'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
@@ -113,6 +114,11 @@ export function AuctionHeroView({
   const [showWinBurst, setShowWinBurst] = useState(false)
   const [outbidNotice, setOutbidNotice] = useState('')
   const [previewRole, setPreviewRole] = useState<AuctionPreviewRole>('host')
+  // Wave 3 (AC-09): 落槌脉冲 — one shared victory pulse on the lot frame when
+  // a hammer falls (lot advances OR the final lot closes), table-wide (the
+  // winner-only ParticleBurst already covers the personal moment).
+  const [hammerPulse, setHammerPulse] = useState(false)
+  const hammerPulseTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const lots = session.auctionLots ?? []
   const idx = session.auctionCurrentLotIndex ?? 0
@@ -120,6 +126,11 @@ export function AuctionHeroView({
   const high = session.auctionHighBid
   const balance = session.auctionBalances?.[currentUserId] ?? 0
   const allClosed = session.auctionAllLotsClosed ?? false
+
+  // Wave 3 (AC-07): live 「悦仔正在准备拍品…」 copy while the server reports
+  // the lots as generating (`auctionContentStatus`, flag-gated; absent →
+  // null → the pre-Wave-3 static waiting copy renders unchanged).
+  const generatingLiveCopy = useGeneratingLiveCopy('auction', session.auctionContentStatus)
 
   const prevAllClosedRef = useRef(false)
   const prevIdxRef = useRef(idx)
@@ -142,8 +153,21 @@ export function AuctionHeroView({
     }, 900)
   }, [])
 
+  // Hammer pulse: table-wide, fires for everyone (winner burst stays
+  // personal). 500ms matches the pulse ceiling, then the class lifts so the
+  // next hammer can re-run the animation.
+  const fireHammerPulse = useCallback(() => {
+    setHammerPulse(true)
+    if (hammerPulseTimerRef.current) clearTimeout(hammerPulseTimerRef.current)
+    hammerPulseTimerRef.current = setTimeout(() => {
+      setHammerPulse(false)
+      hammerPulseTimerRef.current = undefined
+    }, 500)
+  }, [])
+
   useEffect(() => () => {
     if (winnerBurstTimerRef.current) clearTimeout(winnerBurstTimerRef.current)
+    if (hammerPulseTimerRef.current) clearTimeout(hammerPulseTimerRef.current)
   }, [])
 
   // A lot closes only when the host acts. Show one short firework and remove
@@ -152,20 +176,22 @@ export function AuctionHeroView({
     if (idx > prevIdxRef.current && prevIdxRef.current >= 0) {
       const prevHigh = prevHighRef.current
       if (prevHigh?.userId === currentUserId) fireWinnerBurst()
+      fireHammerPulse()
       setBidText('10')
       setBidError('')
     }
     prevIdxRef.current = idx
-  }, [idx, currentUserId, fireWinnerBurst])
+  }, [idx, currentUserId, fireWinnerBurst, fireHammerPulse])
 
   // ── All-closed detection: the final lot's stamp fires here (no idx change) ──
   useEffect(() => {
     if (allClosed && !prevAllClosedRef.current) {
       const prevHigh = prevHighRef.current
       if (prevHigh?.userId === currentUserId) fireWinnerBurst()
+      fireHammerPulse()
     }
     prevAllClosedRef.current = allClosed
-  }, [allClosed, currentUserId, fireWinnerBurst])
+  }, [allClosed, currentUserId, fireWinnerBurst, fireHammerPulse])
 
   // ── Auction V2 (Wave 2): snapshot-gated branch ─────────────────────────
   // When the server snapshotted `auctionV2Enabled` OFF/absent at auction
@@ -439,7 +465,7 @@ export function AuctionHeroView({
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
           title='脑洞拍卖会'
           prompt='虚拟币竞拍，仅供娱乐。主持人生成竞拍条目后，大家按轮出价。'
-          statusText={roleControls.canHostControl ? '生成竞拍条目后开拍' : '等待主持人生成竞拍条目…'}
+          statusText={generatingLiveCopy ?? (roleControls.canHostControl ? '生成竞拍条目后开拍' : '等待主持人生成竞拍条目…')}
           actions={
             roleControls.canHostControl ? (
               <Button
@@ -530,6 +556,12 @@ export function AuctionHeroView({
         </View>
       ) : null}
 
+      {/* Wave 3 (AC-09): the hammer pulse wraps the lot card — one shared
+          victory pulse when a lot closes (class lifts after 500ms so the
+          next hammer re-runs the animation). */}
+      <View
+        className={`auction-hero__pulse-frame${hammerPulse ? ' auction-hero__pulse-frame--go' : ''}`}
+      >
       <PhaseHeroCard
         phase='auction'
         artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
@@ -701,6 +733,7 @@ export function AuctionHeroView({
           </View>
         )}
       </PhaseHeroCard>
+      </View>
     </View>
   )
 }

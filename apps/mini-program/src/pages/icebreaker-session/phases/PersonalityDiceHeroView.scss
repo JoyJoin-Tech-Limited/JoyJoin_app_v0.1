@@ -1,5 +1,6 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+@use '../styles/phase-motion' as *;
 
 $pd-accent: $phase-accent-dice;
 $pd-deep: $phase-accent-dice-deep;
@@ -187,6 +188,16 @@ $pd-deep: $phase-accent-dice-deep;
   &__reveal-card {
     min-width: 0;
     padding: $spacing-sm;
+    // Wave 3 (AC-09): 骰子揭晓 — every reveal card lands with the shared
+    // victory pulse, lightly staggered by seat order (delay is not duration;
+    // each pulse itself stays ≤500ms, RM collapses to a static settle).
+    @include ice-victory-pulse(420ms);
+
+    @for $i from 2 through 6 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{($i - 1) * 60}ms;
+      }
+    }
   }
 
   &__reveal-identity {

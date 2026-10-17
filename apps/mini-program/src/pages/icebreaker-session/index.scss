@@ -178,6 +178,59 @@
     color: $color-text-primary;
   }
 
+  // ── Wave 3 (AC-08): host 失联纯告知 + 「我离开一下」次级入口 ─────────────
+  // Quiet shell-layer rows: secondary text on the warm page floor, the only
+  // accent is the pressed-state wash (0.08 — the sanctioned fill tier).
+  &__host-away {
+    margin: 0 0 $spacing-sm;
+    padding: 14rpx 24rpx;
+    border-radius: $radius-md;
+    background: rgba($color-primary, 0.08);
+  }
+
+  &__host-away-text {
+    @include type-caption;
+    line-height: 1.5;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__leave-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $spacing-sm;
+    min-height: 64rpx;
+    margin: 0 0 $spacing-xs;
+  }
+
+  &__leave-note {
+    @include type-caption;
+    line-height: 1.4;
+    color: $color-text-secondary;
+  }
+
+  &__leave-toggle {
+    flex-shrink: 0;
+    padding: 14rpx 24rpx;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease;
+  }
+
+  &__leave-toggle--pressed {
+    background: rgba($color-primary, 0.08);
+  }
+
+  &__leave-toggle-text {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__leave-toggle--away &__leave-toggle-text {
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+  }
+
   // ── Error State ───────────────────────────────────────────────
   &__error {
     @include flex-center;
