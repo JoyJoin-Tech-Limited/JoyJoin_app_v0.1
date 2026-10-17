@@ -5,7 +5,7 @@
 - 排查方式：taro-engineer（视觉系统逐行排查，全 file:line 证据）× product-manager（13 环节端到端 UX 走查）双专家并行
 - 范围：`apps/mini-program/src/pages/icebreaker-session/` 全部（壳层、13 个 phase 视图、18 个组件、6 个弹层、viewModels、hooks）+ 共享 UI 件 + 设计 token
 - v2 修订：合并评审发现的 6 处内部张力修正（§3）+ 8 个盲区新增 #31–#38 + 防回退附录（§4）
-- 执行状态：**第一波「壳层与材质统一」✅ 完成（2026-10-16）** — Sprint Contract `sprint_20261016_icebreaker_uiux_wave1` accepted→completed，QA verdict ACCEPT 21/21；第二波（定向与减负，纯客户端）与第三波（状态泛化与度量，需服务端+flag）待各自 Sprint Contract。
+- 执行状态：**三波全部 ✅ 完成** — Wave 1「壳层与材质统一」（2026-10-16，`eb3e154c2`，ACCEPT 21/21）；Wave 2「定向与减负」（2026-10-16，`9a00d9534`，ACCEPT 16/16）；Wave 3「状态泛化与度量」Track B 服务端（`bd3e136a7`，ACCEPT 6/6）+ Track C 客户端（2026-10-17，`482dd57ef`，ACCEPT 4/4）。Sprint Contracts 与 verdict JSON 在 `.git/.orchestration/sprints/`。遗留：WeChat DevTools 实机复核、`icebreakerContentStatusEnabled` 上线节奏、30 天后漏斗复盘（`apps/server/scripts/icebreaker-wave3-funnel-metrics.sql`）。
 
 ---
 
