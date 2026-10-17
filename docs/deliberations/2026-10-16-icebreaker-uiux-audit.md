@@ -62,7 +62,7 @@
 - 改法：入场首屏一行预览（话题卡 → 侦探 → 回顾），与 #2 共用数据
 
 **#4 host「⋯」空心圆钮 → 文字 pill**
-- 问题：`XiaoyueSessionShell.tsx:188-199` 纯 glyph「⋯」无标签；coachmark 一生一次 6 秒（`index.tsx:782-814`），错过即永远
+- 问题：`XiaoyueSessionShell.tsx:188-199` 纯 glyph「⋯」无标签；coachmark 一生一次 6 秒（`index.tsx:827-866` effect + `:1172-1186` 渲染；原注 782-814 已漂移，2026-10-16 修正），错过即永远
 - 改法：「主持人 ···」文字 pill；coachmark 改首次点击前常驻；ActionSheet 菜单行瘦身（「更换模式」，当前模式移壳层 caption）
 
 **#5 切环节播报 → 权重表（v2 修正）**
