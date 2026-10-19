@@ -524,6 +524,19 @@ export function buildIcebreakerState(sessionId) {
         hostDisplayName: '老周',
         currentPhase: 'king_game',
       }
+    case 'waiting':
+      // Session-entry waiting (AC-13 候场屏): host view at a full 6-seat table
+      // → 满员 headline branch + roster strip + phase preview.
+      return { ...base, currentPhase: 'waiting', completedPhases: [] }
+    case 'waiting-player':
+      // Player view of the same full-table waiting screen (host is 老周).
+      return {
+        ...base,
+        hostUserId: 'ib-p5',
+        hostDisplayName: '老周',
+        currentPhase: 'waiting',
+        completedPhases: [],
+      }
     default:
       return { ...base, currentPhase: 'warmup' }
   }

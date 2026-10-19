@@ -45,7 +45,7 @@ describe('auctionV2Model · bid ladder math (AC-11)', () => {
   it('no-bid state (high=0) renders 5 / 15 / 全押', () => {
     const ladder = computeAuctionLadder({ high: 0, balance: 100, ownEscrowedBid: 0 })
     expect(ladder.tiers.map((t) => t.amount)).toEqual([5, 15, 100])
-    expect(ladder.tiers.map((t) => t.label)).toEqual(['5', '15', '全力一击 100'])
+    expect(ladder.tiers.map((t) => t.label)).toEqual(['5', '15', '100'])
     expect(ladder.tiers.every((t) => !t.disabled)).toBe(true)
     expect(ladder.allTiersDisabled).toBe(false)
   })
@@ -65,7 +65,7 @@ describe('auctionV2Model · bid ladder math (AC-11)', () => {
     const ladder = computeAuctionLadder({ high: 15, balance: 80, ownEscrowedBid: 0 })
     expect(ladder.tiers[0].label).toBe('20')
     expect(ladder.tiers[1].label).toBe('30')
-    expect(ladder.tiers[2].label).toBe('全力一击 80')
+    expect(ladder.tiers[2].label).toBe('80')
     // Contract example 「35」: 加一点 at high=20 → 20 + max(15, round5(6)) = 35.
     expect(
       computeAuctionLadder({ high: 20, balance: 80, ownEscrowedBid: 0 }).tiers[1].label,

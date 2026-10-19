@@ -30,7 +30,9 @@
 
     &--ready {
       background: rgba($color-success, 0.08) !important;
-      color: $color-success !important;
+      // $color-success (#2ECC71) on the 0.08 tint measured 1.98:1 (visual-gate
+      // Class A). The pre-allocated accessible token holds ≥4.5:1 on the tint.
+      color: $color-success-text-on-light !important;
       border: 2rpx solid rgba($color-success, 0.72) !important;
       // Static glow ring — the old pulsing box-shadow loop repainted every
       // frame (motion rule: transform/opacity only); restraint keeps the

@@ -1,6 +1,7 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useCallback } from 'react'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 import './ArchetypeHead.scss'
 
 /**
@@ -105,9 +106,15 @@ export default function ArchetypeHeadRenderer({
 }: ArchetypeHeadRendererProps) {
   const paths = variant === 'grid' ? GRID_PATHS : HEAD_PATHS
   const localSrc = archetype ? paths[archetype] : undefined
-  const sizeStr = `${size}rpx`
+  // H5's style parser silently drops inline rpx (AGENTS.md §3), collapsing
+  // the image to taro-image's 320×240 default (2026-10-19 audit: blew up the
+  // waiting-room roster strip). Emit computed px — pixel-identical to rpx on
+  // WeChat native at any device width (JoyJoinIcon convention).
+  const windowWidth = getWindowInfoCompat().windowWidth || 375
+  const rpxToPx = (rpx: number) => Math.round((rpx * windowWidth) / 750)
+  const sizeStr = `${rpxToPx(size)}px`
   const imageSize = variant === 'grid' ? size : Math.round(size * 0.9)
-  const imageSizeStr = `${imageSize}rpx`
+  const imageSizeStr = `${rpxToPx(imageSize)}px`
   const [hasLocalError, setHasLocalError] = useState(false)
   const [hasCdnError, setHasCdnError] = useState(false)
 
@@ -130,7 +137,7 @@ export default function ArchetypeHeadRenderer({
         className={`archetype-head archetype-head--fallback ${className}`}
         style={{ width: sizeStr, height: sizeStr }}
       >
-        <Text style={{ fontSize: `${size * 0.4}rpx` }}>{getFallbackInitial(fallbackText)}</Text>
+        <Text style={{ fontSize: `${rpxToPx(size * 0.4)}px` }}>{getFallbackInitial(fallbackText)}</Text>
       </View>
     )
   }
@@ -148,7 +155,7 @@ export default function ArchetypeHeadRenderer({
     <View className={`archetype-head ${className}`} style={{ width: sizeStr, height: sizeStr }}>
       <View
         className='archetype-head__inner'
-        style={{ transform: `translateX(${tx}rpx) translateY(${ty}rpx)` }}
+        style={{ transform: `translateX(${rpxToPx(tx)}px) translateY(${rpxToPx(ty)}px)` }}
       >
         <Image
           className='archetype-head__image'

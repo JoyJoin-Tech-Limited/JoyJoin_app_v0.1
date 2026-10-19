@@ -1,4 +1,4 @@
-import { View, Text, Input } from '@tarojs/components'
+import { RootPortal, View, Text, Input } from '@tarojs/components'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { haptics, socialHaptics } from '../../../lib/utils/haptics'
@@ -536,8 +536,23 @@ export function AuctionHeroView({
     )
   }
 
+  // 2026-10-19 Class A fix (auction bid dock): the bid controls are the
+  // phase's page-level primary action, so they leave the card's action zone
+  // for a RootPortal bottom dock (warmup dock precedent + dice AC-12
+  // portal pattern). In-card placement let the CardFlip frame + art band push
+  // the ladder below the first viewport on short screens.
+  const hasBidDock = showBidControls || roleControls.canHostControl
+  // Content reserve must match the dock's rendered height: the full dock
+  // carries the ladder (or V1 controls) + host close; a host who cannot bid
+  // gets the close button alone (close-only tier).
+  const dockModifier = !hasBidDock
+    ? ''
+    : showBidControls
+      ? ' auction-hero--bid-dock'
+      : ' auction-hero--bid-dock-close-only'
+
   return (
-    <View className='auction-hero'>
+    <View className={`auction-hero${dockModifier}`}>
       {roleSwitcher}
       {showWinBurst && (
         <View className='auction-hero__burst'>
@@ -572,8 +587,60 @@ export function AuctionHeroView({
             ? `当前最高 ${high.amount} 币 · 你的余额 ${balance} 币`
             : `暂无出价 · 你的余额 ${balance} 币`
         }
-        actions={
-          <>
+      >
+        {/* Lot flip reveal */}
+        <View className='auction-hero__lot-wrap'>
+          <CardFlip front={<LotFront />} back={<LotBack />} flipped={lotFlipped} duration={500} />
+        </View>
+
+        {high && (
+          <View className='auction-hero__high-bidder'>
+            <Text className='auction-hero__high-bidder-label'>当前领先</Text>
+            {v2Enabled && highV2?.isAllIn ? (
+              <View className='auction-hero__high-bidder-row'>
+                <Text className='auction-hero__high-bidder-value'>
+                  {nameOf(high.userId)} · {high.amount} 币
+                </Text>
+                <View className='auction-hero__allin-badge'>
+                  <JoyJoinIcon emoji='🔥' tier='reaction' size={24} />
+                  <Text className='auction-hero__allin-badge-text'>{AUCTION_V2_ALL_IN_LABEL}</Text>
+                </View>
+              </View>
+            ) : (
+              <Text className='auction-hero__high-bidder-value'>
+                {nameOf(high.userId)} · {high.amount} 币
+              </Text>
+            )}
+          </View>
+        )}
+
+        <PhaseAigcRow meta={lotsMeta} reason='AI 生成竞拍条目' />
+
+        {bidHistory.length > 0 && (
+          <View className='auction-hero__history'>
+            <Text className='auction-hero__history-title'>出价记录</Text>
+            {bidHistory.slice(0, 6).map((bid, i) => (
+              <View key={`${bid.userId}-${bid.amount}-${i}`} className='auction-hero__history-row'>
+                <Text className='auction-hero__history-name'>{bid.displayName}</Text>
+                <Text className='auction-hero__history-amount'><Text className='auction-hero__numeral'>{bid.amount}</Text> 币</Text>
+                {v2Enabled && bid.isAllIn ? (
+                  <Text className='auction-hero__history-allin'>{AUCTION_V2_ALL_IN_LABEL}</Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        )}
+      </PhaseHeroCard>
+      </View>
+
+      {/* Page-level bid dock (2026-10-19 Class A fix): the bid controls are
+          the auction phase's primary action — they pin to the viewport bottom
+          through RootPortal (the phase shell's entrance transform hijacks
+          fixed descendants' containing block on device; dice AC-12 pattern).
+          The card keeps the lot/leaderboard/history; the dock owns bidding. */}
+      {hasBidDock ? (
+        <RootPortal>
+          <View className='auction-hero__bid-dock'>
             {showBidControls ? (
               v2Enabled && ladder ? (
                 <View className='auction-hero__bid-zone'>
@@ -687,53 +754,9 @@ export function AuctionHeroView({
               ) : null}
               </>
             ) : null}
-          </>
-        }
-      >
-        {/* Lot flip reveal */}
-        <View className='auction-hero__lot-wrap'>
-          <CardFlip front={<LotFront />} back={<LotBack />} flipped={lotFlipped} duration={500} />
-        </View>
-
-        {high && (
-          <View className='auction-hero__high-bidder'>
-            <Text className='auction-hero__high-bidder-label'>当前领先</Text>
-            {v2Enabled && highV2?.isAllIn ? (
-              <View className='auction-hero__high-bidder-row'>
-                <Text className='auction-hero__high-bidder-value'>
-                  {nameOf(high.userId)} · {high.amount} 币
-                </Text>
-                <View className='auction-hero__allin-badge'>
-                  <JoyJoinIcon emoji='🔥' tier='reaction' size={24} />
-                  <Text className='auction-hero__allin-badge-text'>{AUCTION_V2_ALL_IN_LABEL}</Text>
-                </View>
-              </View>
-            ) : (
-              <Text className='auction-hero__high-bidder-value'>
-                {nameOf(high.userId)} · {high.amount} 币
-              </Text>
-            )}
           </View>
-        )}
-
-        <PhaseAigcRow meta={lotsMeta} reason='AI 生成竞拍条目' />
-
-        {bidHistory.length > 0 && (
-          <View className='auction-hero__history'>
-            <Text className='auction-hero__history-title'>出价记录</Text>
-            {bidHistory.slice(0, 6).map((bid, i) => (
-              <View key={`${bid.userId}-${bid.amount}-${i}`} className='auction-hero__history-row'>
-                <Text className='auction-hero__history-name'>{bid.displayName}</Text>
-                <Text className='auction-hero__history-amount'><Text className='auction-hero__numeral'>{bid.amount}</Text> 币</Text>
-                {v2Enabled && bid.isAllIn ? (
-                  <Text className='auction-hero__history-allin'>{AUCTION_V2_ALL_IN_LABEL}</Text>
-                ) : null}
-              </View>
-            ))}
-          </View>
-        )}
-      </PhaseHeroCard>
-      </View>
+        </RootPortal>
+      ) : null}
     </View>
   )
 }

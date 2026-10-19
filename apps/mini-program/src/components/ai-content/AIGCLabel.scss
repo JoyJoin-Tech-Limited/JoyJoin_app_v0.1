@@ -15,7 +15,10 @@
     font-family: $font-ui;
     font-size: 18rpx;
     line-height: 1.3;
-    color: $color-text-tertiary;
+    // $color-text-tertiary measured 2.5–2.8:1 on phase tint cards (visual-gate
+    // Class A on a compliance label). The on-light token holds ≥4.5:1 on
+    // white/warm/tinted surfaces.
+    color: $color-text-tertiary-on-light;
     white-space: nowrap;
   }
 

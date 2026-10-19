@@ -1,5 +1,6 @@
 import { View } from '@tarojs/components'
 import BrandLogo from '../ui/BrandLogo'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 import './MissingArchetypePlaceholder.scss'
 
 interface MissingArchetypePlaceholderProps {
@@ -18,7 +19,10 @@ export default function MissingArchetypePlaceholder({
   size = 80,
   className = '',
 }: MissingArchetypePlaceholderProps) {
-  const sizeStr = `${size}rpx`
+  // Inline rpx is dropped by the H5 style parser (AGENTS.md §3) — emit
+  // computed px (pixel-identical on WeChat native; JoyJoinIcon convention).
+  const windowWidth = getWindowInfoCompat().windowWidth || 375
+  const sizeStr = `${Math.round((size * windowWidth) / 750)}px`
   const logoSize = Math.round(size * 0.55)
 
   return (

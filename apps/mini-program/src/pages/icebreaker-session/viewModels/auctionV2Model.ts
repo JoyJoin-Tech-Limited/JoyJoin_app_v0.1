@@ -103,7 +103,10 @@ export function computeAuctionLadder(input: AuctionLadderInput): AuctionLadderSt
       tier: 'all_in',
       name: AUCTION_V2_ALL_IN_LABEL,
       amount: allInAmount,
-      label: `${AUCTION_V2_ALL_IN_LABEL} ${allInAmount}`,
+      // Amount-only label: the ladder button renders `name` on the line above,
+      // so embedding the label here printed 「全力一击 全力一击 100」 (visual-gate
+      // Class A, 2026-10-19 audit). The history row adds the badge separately.
+      label: `${allInAmount}`,
       disabled: isDisabled(allInAmount),
     },
   ]

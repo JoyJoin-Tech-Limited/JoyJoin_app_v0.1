@@ -2,6 +2,7 @@ import { Image, Text, View } from '@tarojs/components'
 import { useState } from 'react'
 import type { AtmosphereMood, SocialIcebreakerPhase } from '@shared/socialIcebreaker'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
 
@@ -117,7 +118,14 @@ export function PhaseHeaderIcon({
   className?: string
 }) {
   const [srcTier, setSrcTier] = useState<'local' | 'cdn' | 'placeholder'>('local')
-  const sizeStr = `${size}rpx`
+  // H5's style parser silently drops inline rpx (AGENTS.md §3), collapsing the
+  // image to taro-image's 320×240 default — which blew out the recap medals
+  // grid and inflated the auction CardFlip front face (2026-10-19 audit).
+  // Emit computed px instead (JoyJoinIcon convention): px = rpx × windowWidth
+  // / 750 is pixel-identical on WeChat native at any device width.
+  const windowWidth = getWindowInfoCompat().windowWidth || 375
+  const sizeStr = `${Math.round((size * windowWidth) / 750)}px`
+  const glyphSizeStr = `${Math.round((size * 0.44 * windowWidth) / 750)}px`
   const localSrc = PHASE_ICON_LOCAL_MAP[phase]
   const cdnSrc = PHASE_ICON_SRC_MAP[phase]
 
@@ -142,7 +150,7 @@ export function PhaseHeaderIcon({
         <Text
           style={{
             color: '#FFFFFF',
-            fontSize: `${Math.round(size * 0.44)}rpx`,
+            fontSize: glyphSizeStr,
             fontWeight: 600,
             lineHeight: 1,
           }}

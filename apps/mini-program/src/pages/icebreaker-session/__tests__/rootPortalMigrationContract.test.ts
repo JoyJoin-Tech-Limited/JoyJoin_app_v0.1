@@ -47,6 +47,11 @@ const PORTAL_TARGETS: Array<{ file: string; overlayClass: string; note: string }
     overlayClass: "className='personality-dice-hero__fixed-action'",
     note: 'dice fixed CTA',
   },
+  {
+    file: 'src/pages/icebreaker-session/phases/AuctionHeroView.tsx',
+    overlayClass: "className='auction-hero__bid-dock'",
+    note: 'auction bid dock (2026-10-19 Class A fix — ladder pinned to viewport)',
+  },
 ]
 
 /** True when `needle` sits inside some `<RootPortal>…</RootPortal>` span. */
@@ -58,7 +63,7 @@ function insideRootPortal(source: string, needle: string): boolean {
   return openBefore !== -1 && openBefore > closeBefore
 }
 
-describe('RootPortal migration · six fixed overlays (wave2 AC-12)', () => {
+describe('RootPortal migration · fixed overlays (wave2 AC-12 + 2026-10-19 auction bid dock)', () => {
   for (const target of PORTAL_TARGETS) {
     it(`${target.note} renders through <RootPortal>`, () => {
       const source = readSrc(target.file)

@@ -54,6 +54,38 @@ $au-deep: $phase-accent-auction-deep;
     }
   }
 
+  // ── 2026-10-19 Class A fix: page-level bid dock ──────────────────────────
+  // The bid controls are the auction phase's page-level primary action — the
+  // warmup dock recipe (full-bleed white bar + top shadow + single safe-area
+  // padding), portal-mounted so `position: fixed` anchors to the viewport
+  // (the phase shell's entrance transform hijacks fixed descendants on
+  // device). In-card placement let the flip frame + art band push the ladder
+  // below the first viewport on 375×667.
+  &__bid-dock {
+    position: fixed;
+    z-index: $z-tab-bar;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    background: $color-surface;
+    box-shadow: 0 -4rpx 24rpx rgba($color-text-primary, 0.04);
+    padding: $spacing-md $container-padding calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  }
+
+  // Content reserves so the fixed dock never covers the card tail / the
+  // opt-out row (ScrollView content ends above the dock).
+  &--bid-dock {
+    padding-bottom: calc(300rpx + env(safe-area-inset-bottom) + #{$spacing-lg});
+  }
+
+  &--bid-dock-close-only {
+    padding-bottom: calc(200rpx + env(safe-area-inset-bottom) + #{$spacing-lg});
+  }
+
   &__outbid {
     display: flex;
     justify-content: center;

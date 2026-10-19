@@ -42,8 +42,16 @@ export function registerSocialGenerators(ctx) {
   register('icebreaker-auction', () => captureIcebreaker('mock-auction'))
   register('icebreaker-personality-dice', () => captureIcebreaker('mock-personality_dice'))
   register('icebreaker-speed-friending', () => captureIcebreaker('mock-speed_friending'))
-  register('icebreaker-fuse', () => captureIcebreaker('mock-fuse', '.icebreaker__fuse-banner'))
-  register('icebreaker-stall', () => captureIcebreaker('mock-stall', '.icebreaker__stall-nudge'))
+  // icebreaker-fuse retired with the auto-advance fuse UI — the mock variant
+  // survives in mock-h5-icebreaker.mjs but no client surface renders it.
+  // Stall nudge = the adaptive-suggestion overlay card in the session shell
+  // (Wave 1 AC-07 exit button lives in the warmup dock, WarmupActionBar).
+  register('icebreaker-stall', () => captureIcebreaker('mock-stall', '.xiaoyue-session-shell__suggestion'))
+  // AC-13 候场屏 (session-entry waiting): roster strip + phase preview +
+  // 满员 headline branch, host and player views.
+  register('icebreaker-waiting', () => captureIcebreaker('mock-waiting', '.icebreaker__waiting-roster'))
+  register('icebreaker-waiting-player', () =>
+    captureIcebreaker('mock-waiting-player', '.icebreaker__waiting-roster'))
   register('icebreaker-recap', () => captureIcebreaker('mock-recap', '.icebreaker__recap-hero'))
   register('icebreaker-warmup-mood', () => captureIcebreaker('mock-warmup-mood', '.warmup-card-slot__mood-grid'))
   register('icebreaker-warmup-topic', () => captureIcebreaker('mock-warmup-topic', '.warmup-card-slot__foil-shell', 5000))
@@ -59,7 +67,10 @@ export function registerSocialGenerators(ctx) {
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
       await waitForContent(page, '.warmup-card-slot__mood-grid')
       await page.click('.warmup-card-slot__mood-option')
-      await page.waitForSelector(waitSelector, { state: 'visible', timeout: 15000 })
+      // The error path walks the server-retry ladder (2s + 5s + 10s backoff
+      // before the terminal error text) — 15s timed out before the final
+      // state; 25s covers the ladder plus render slack.
+      await page.waitForSelector(waitSelector, { state: 'visible', timeout: 25000 })
       await page.waitForTimeout(settleMs)
       return screenshotPage(page)
     })

@@ -15,7 +15,9 @@
     font-family: $font-ui;
     font-size: 22rpx;
     line-height: 1.4;
-    color: $color-text-tertiary;
+    // Same visual-gate Class A as AIGCLabel — tertiary grey fell to 2.5–2.8:1
+    // on phase tint cards; the on-light token is ≥4.5:1 there.
+    color: $color-text-tertiary-on-light;
   }
 
   &--active {
