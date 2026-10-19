@@ -232,3 +232,13 @@
 ## 6. 效果度量
 
 #37 指标 30 天窗口对照：ready-rate、phase-completion-rate、纪念卡保存率。事件在 Wave 1 即预埋（无条件注册，两侧白名单 parity），保证基线窗口从部署即开始。
+
+## 7. Pre-ship 审计登记（2026-10-19 full-marks 管线产出；阻塞项由 fix 循环处理，此处登记非阻塞遗留）
+
+- CONCERN：`index.tsx` `iAmAway = serverAway ?? localAway` 顺序在 flag on 且他人在离开态时会被 3s 轮询短暂压回跳（窄 cosmetic）；改 `localAway ?? serverAway` 需同步 leaveEntryContract 测试
+- CONCERN：`hooks/useMiniScriptGeneration.ts` 800ms 进度 interval 仅 POST finally 清理，页面 unload 时存活至 settle（≤35s，纯浪费请求；既有问题非三波引入）
+- NIT（存量）：recap→ended 转场弹 toast「新阶段开始啦」（`phaseToastText.tsx` 无 ended 条目）；`index.tsx` glanceStack mode 死分支；`check-icebreaker-visuals.mjs` scrim 词法匹配可绕（8 位 hex / 现代写法）；`index.config.ts` 导航色硬编码 #FDFCFA；`markPhaseContentGenerating` 起点不落日志
+- P1（用户满意度 16/24 封顶解封杠杆）：recap 峰值屏零分享通路——MomentCardView 孤儿代码、无 onShareAppMessage、「生成高光」面板只有「看完了」；侦探 compose 标题错位 + AI 帮写 3-9s 空窗无「写稿中」态
+- P2：环节地图 7 项 20rpx 截尾需像素验证；warmup 失败终态 ~17s 偏长且 recovering 期无手动重试出口；「大家都被悦仔骗了」按 mode 分文案（V1 归功玩家）；骰子「已就绪（N/6）」按钮语义与取消动作分离
+- 流程债：UI 类 AC 验收需强制附渲染截图证据（AC-13 死 props 漏检即纯代码审查盲区实证）；harness 生成器六屏零覆盖
+- 真机欠账（三波累积，flag 2026-10-19 已开后首批回归重点）：直播文案 4s 翻段 ×3s 轮询观感、胜利脉冲帧率、leave/rejoin 后台 reconcile、host 180s 失联提示时机、弱网 backoff、矮屏骰子/拍卖 CTA
