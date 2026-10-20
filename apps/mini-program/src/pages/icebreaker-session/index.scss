@@ -1231,6 +1231,26 @@
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
     letter-spacing: 4rpx;
   }
+
+  // P0 补1/补4 (2026-10-20): host opener prompt + first-time one-line rule.
+  // Same cream-on-ritual-scrim treatment as the label, one rung quieter.
+  &__host-prompt {
+    @include type-body;
+    color: $color-bg-tint-cream;
+    text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
+    text-align: center;
+    max-width: 560rpx;
+    line-height: 1.6;
+  }
+
+  &__rule {
+    @include type-caption;
+    color: $color-bg-tint-cream;
+    text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
+    text-align: center;
+    max-width: 560rpx;
+    line-height: 1.6;
+  }
 }
 
 @keyframes phase-intro-fade-in {

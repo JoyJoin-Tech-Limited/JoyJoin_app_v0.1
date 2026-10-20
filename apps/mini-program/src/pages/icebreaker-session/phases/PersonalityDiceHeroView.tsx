@@ -427,7 +427,7 @@ export function PersonalityDiceHeroView({
           actions={
             isHost && onAdvance ? (
               <Button variant='primary' onClick={onAdvance}>
-                进入回顾
+                进入回顾 ›
               </Button>
             ) : undefined
           }

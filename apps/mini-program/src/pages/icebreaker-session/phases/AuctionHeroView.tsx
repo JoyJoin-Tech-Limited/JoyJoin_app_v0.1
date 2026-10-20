@@ -1,4 +1,5 @@
 import { RootPortal, View, Text, Input } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { haptics, socialHaptics } from '../../../lib/utils/haptics'
@@ -111,6 +112,10 @@ export function AuctionHeroView({
 }: AuctionHeroViewProps) {
   const [bidText, setBidText] = useState('10')
   const [bidError, setBidError] = useState('')
+  // P0 ② (2026-10-20): in-flight ladder echo — which tier this device just
+  // tapped, so the ladder can spin that one tier and the card can show a
+  // pending pill until the synced state lands. Cleared on settle.
+  const [tappedTier, setTappedTier] = useState<{ tier: string; amount: number } | null>(null)
   const [showWinBurst, setShowWinBurst] = useState(false)
   const [outbidNotice, setOutbidNotice] = useState('')
   const [previewRole, setPreviewRole] = useState<AuctionPreviewRole>('host')
@@ -169,6 +174,17 @@ export function AuctionHeroView({
     if (winnerBurstTimerRef.current) clearTimeout(winnerBurstTimerRef.current)
     if (hammerPulseTimerRef.current) clearTimeout(hammerPulseTimerRef.current)
   }, [])
+
+  // P0 ②: clear the tapped-tier echo when the bid settles — success is
+  // already visible in the synced high-bid state; failure surfaces via the
+  // existing error toast + immediate refetch (useSocialActions V2 path).
+  const prevIsPlacingBidRef = useRef(isPlacingBid)
+  useEffect(() => {
+    if (prevIsPlacingBidRef.current && !isPlacingBid) {
+      setTappedTier(null)
+    }
+    prevIsPlacingBidRef.current = isPlacingBid
+  }, [isPlacingBid])
 
   // A lot closes only when the host acts. Show one short firework and remove
   // its canvas wrapper immediately afterwards.
@@ -614,6 +630,15 @@ export function AuctionHeroView({
           </View>
         )}
 
+        {/* P0 ②: in-flight echo under the leader line — replaced by the real
+            high-bid state on success, removed on failure (toast + refetch
+            already own that surface). */}
+        {isPlacingBid && tappedTier ? (
+          <View className='auction-hero__bid-pending'>
+            <Text className='auction-hero__bid-pending-text'>我的 {tappedTier.amount} 币 · 出价中…</Text>
+          </View>
+        ) : null}
+
         <PhaseAigcRow meta={lotsMeta} reason='AI 生成竞拍条目' />
 
         {bidHistory.length > 0 && (
@@ -651,14 +676,33 @@ export function AuctionHeroView({
                         variant={tierState.tier === 'all_in' ? 'primary' : 'secondary'}
                         onClick={() => {
                           if (tierState.disabled || isPlacingBid) return
-                          haptics('medium')
-                          onPlaceBid(tierState.amount, {
-                            tier: tierState.tier,
-                            lotIndex: idx,
-                            isAllIn: tierState.tier === 'all_in',
-                          })
+                          const placeBid = () => {
+                            haptics('medium')
+                            setTappedTier({ tier: tierState.tier, amount: tierState.amount })
+                            onPlaceBid(tierState.amount, {
+                              tier: tierState.tier,
+                              lotIndex: idx,
+                              isAllIn: tierState.tier === 'all_in',
+                            })
+                          }
+                          // P0 补7 (2026-10-20): all-in is irreversible —
+                          // confirm before the bid leaves the device. Every
+                          // other tier stays one-tap.
+                          if (tierState.tier === 'all_in') {
+                            void Taro.showModal({
+                              title: '全押确认',
+                              content: `全押 ${tierState.amount} 币，不可撤回`,
+                              confirmText: '全押',
+                              cancelText: '再想想',
+                            }).then((res) => {
+                              if (res.confirm) placeBid()
+                            })
+                            return
+                          }
+                          placeBid()
                         }}
                         disabled={tierState.disabled || isPlacingBid}
+                        loading={isPlacingBid && tappedTier?.tier === tierState.tier}
                       >
                         <View className='auction-hero__ladder-btn'>
                           <Text className='auction-hero__ladder-name'>{tierState.name}</Text>

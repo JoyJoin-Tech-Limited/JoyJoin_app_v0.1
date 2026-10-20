@@ -34,6 +34,7 @@ import {
 } from '../viewModels/phaseOptOutModel'
 import { isAuctionV2SnapshotOn } from '../viewModels/auctionV2Model'
 import type { AuctionBidClientMeta } from '../viewModels/auctionV2Model'
+import { countPendingSubmissionsForAdvance } from '../viewModels/advanceGuardModel'
 import type { TierSheetSelection } from '../components/IcebreakerTierSheet'
 
 // Warmup topic generation is LLM-backed (6s server LLM race + curated-topic
@@ -229,8 +230,10 @@ export function useSocialActions(args: UseSocialActionsArgs) {
         // Some flows own a persistent error surface (e.g. the topics error
         // card with 重试) — a transient toast on top is double-signalling.
         if (!options?.suppressErrorToast) {
+          // P0 ⑨ (2026-10-20): server copy is already short — pass it
+          // through; the 12-char truncation rule is deleted.
           Taro.showToast({
-            title: message.length > 12 ? '操作没成功' : message,
+            title: message,
             icon: 'none',
             duration: TOAST_MEDIUM_MS,
           })
@@ -359,7 +362,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
         if (result === null) {
           // Rollback path (the optimistic morph in WarmupPhaseView reverts via
           // the isUpdatingReady effect) — acknowledge warmly and keep the CTA.
-          void Taro.showToast({ title: '刚才那一下没传到，再点一次试试', icon: 'none', duration: 2000 })
+          void Taro.showToast({ title: '刚才那一下没传到，再试试', icon: 'none', duration: TOAST_MEDIUM_MS })
         }
       })
   }, [performSocialAction, session?.warmupReadyUserIds, currentUserId])
@@ -532,15 +535,38 @@ export function useSocialActions(args: UseSocialActionsArgs) {
       return
     }
 
-    logInfo('[IcebreakerSession] Advancing phase', {
-      socialSessionId,
-      phase: session.currentPhase,
-    })
+    const fireAdvance = () => {
+      logInfo('[IcebreakerSession] Advancing phase', {
+        socialSessionId,
+        phase: session.currentPhase,
+      })
 
-    void performSocialAction('advance', '/advance', {
-      currentPhase: session.currentPhase,
-    })
-  }, [performSocialAction, session, socialSessionId])
+      void performSocialAction('advance', '/advance', {
+        currentPhase: session.currentPhase,
+      })
+    }
+
+    // P0 E2 (2026-10-20): host-only mis-tap guard — when the current phase is
+    // a submission-type activity with players still out (group_mirror 未全投 /
+    // undercover 未全描述 / quip 未全提交), confirm before the table moves.
+    // Fully-submitted and host-paced phases never prompt (zero disturbance).
+    if (isHost) {
+      const pendingCount = countPendingSubmissionsForAdvance(session, playerCount)
+      if (pendingCount > 0) {
+        void Taro.showModal({
+          title: '进入下一阶段',
+          content: `还有 ${pendingCount} 人没交，确定继续？`,
+          confirmText: '确定继续',
+          cancelText: '再等等',
+        }).then((res) => {
+          if (res.confirm) fireAdvance()
+        })
+        return
+      }
+    }
+
+    fireAdvance()
+  }, [performSocialAction, session, socialSessionId, isHost, playerCount])
 
   // Wave 3 (contract AC-08): 「我离开一下」 self-state marker — the ONLY new
   // route in this sprint (POST /:id/leave, self-state only, idempotent in
@@ -598,7 +624,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
           void Taro.showToast({
             title: '选择没成功，再试试',
             icon: 'none',
-            duration: 2000,
+            duration: TOAST_MEDIUM_MS,
           })
         }
       })
@@ -655,7 +681,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
           void Taro.showToast({
             title: '结束派对没成功，再试试',
             icon: 'none',
-            duration: 2000,
+            duration: TOAST_MEDIUM_MS,
           })
           return
         }
@@ -772,7 +798,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
         void Taro.showToast({
           title: '切换没成功，再试试',
           icon: 'none',
-          duration: 2000,
+          duration: TOAST_MEDIUM_MS,
         })
       }
     },
@@ -832,8 +858,9 @@ export function useSocialActions(args: UseSocialActionsArgs) {
           return
         }
         const message = getErrorText(error, '生成没成功，再试试')
+        // P0 ⑨: pass-through like the shared dispatcher — no 12-char rule.
         void Taro.showToast({
-          title: message.length > 12 ? '生成没成功，再试试' : message,
+          title: message,
           icon: 'none',
           duration: TOAST_MEDIUM_MS,
         })
@@ -908,7 +935,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
       }
       if (diceGenerationRetryCountRef.current >= 8) {
         diceGenerationRetryCountRef.current = 0
-        void Taro.showToast({ title: '生成仍在进行，请稍后再试', icon: 'none', duration: 2000 })
+        void Taro.showToast({ title: '生成仍在进行，请稍后再试', icon: 'none', duration: TOAST_MEDIUM_MS })
         return
       }
       diceGenerationRetryCountRef.current += 1

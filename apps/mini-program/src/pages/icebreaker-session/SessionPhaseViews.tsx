@@ -339,6 +339,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           onAdvance={onAdvance}
           isAdvancing={pendingAction === 'advance'}
           statementsMeta={session.lieDetectiveStatementsMeta}
+          socialSessionId={socialSessionId ?? undefined}
           onGenerateFromTag={onGenerateLieStatementFromTag}
           isGeneratingFromTag={pendingAction === 'lie-tag-generate'}
           completedUserIds={session.lieDetectiveCompletedUserIds ?? []}

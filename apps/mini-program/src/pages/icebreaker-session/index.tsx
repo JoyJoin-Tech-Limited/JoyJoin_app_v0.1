@@ -50,6 +50,7 @@ import {
   type SessionSensoryEvent,
 } from './hooks/useSessionSensoryEvents'
 import { useKeepScreenOn } from './hooks/useKeepScreenOn'
+import { resolveKeepScreenOn } from './viewModels/keepScreenOnModel'
 import { useIdlePollBackoff } from './hooks/useIdlePollBackoff'
 import { MOOD_FIELD_BLOOM_MS, deriveMoodField } from './viewModels/ambientFieldModel'
 import { GroupBeatTracker, parseSocialGroupBeat } from './viewModels/groupBeatModel'
@@ -108,8 +109,8 @@ export default function IcebreakerSessionPage() {
   // S1 haptic grammar: server-owned flag (default off) gates every
   // social-pattern firing on this page — detector events AND action Confirm.
   const hapticGrammarEnabled = features?.icebreakerHapticGrammarEnabled ?? false
-  // S2 mood field: server-owned flag (default off) gates the ambient field,
-  // its reveal bloom, and the keep-screen-on POCKET posture.
+  // S2 mood field: server-owned flag (default off) gates the ambient field
+  // and its reveal bloom. (keepScreenOn decoupled from this flag — P0 ⑧.)
   const moodFieldEnabled = features?.icebreakerMoodFieldEnabled ?? false
   // S3 glance-stack pilot (warmup + micro_challenge): L1/L2/L3 stack, S8
   // handshake ritual, S4 pilot motion. Default off.
@@ -268,10 +269,10 @@ export default function IcebreakerSessionPage() {
   }, [pendingAction, resetIdlePoll])
 
   // S2 / playbook §10 ruling 4: POCKET is screen-on, face-down, app
-  // foreground — hold the screen awake while the field is live on this page;
-  // released on hide/unmount so the rest of the app is unaffected.
-  useKeepScreenOn(moodFieldEnabled && isPageVisible)
-
+  // foreground — the screen holds while the table is anywhere live on this
+  // page. P0 ⑧ (2026-10-20): the gate is the session lifecycle itself
+  // (resolveKeepScreenOn), decoupled from moodFieldEnabled; it lives below
+  // the phase derivation.
   // S6: join the session's beats room. Room key = resolvedSessionId — the id
   // this device POSTed to /start; the server emits with
   // state.icebreakerSessionId, the same string (no id mapping on either
@@ -385,6 +386,10 @@ export default function IcebreakerSessionPage() {
   const phaseRef = useRef(phase)
   phaseRef.current = phase
   auctionV2LiveRef.current = isLiveAuctionV2Session(session)
+
+  // P0 ⑧ (2026-10-20): hold the screen awake for the whole session lifecycle
+  // (ended releases; page-hide releases) — decoupled from moodFieldEnabled.
+  useKeepScreenOn(resolveKeepScreenOn({ phase, isPageVisible }))
 
   // W3: an opt-out failure notice and the roster-locked observer flag are
   // phase-scoped — clear them the moment the phase changes so a stale notice
@@ -1324,6 +1329,8 @@ export default function IcebreakerSessionPage() {
         phase={phase}
         visible={showPhaseIntro}
         mode={glanceStackEnabled && (phase === 'warmup' || phase === 'micro_challenge') ? 'field' : 'overlay'}
+        isHost={isHost}
+        onAutoHide={() => setShowPhaseIntro(false)}
       />
 
       {phaseToast.visible && (

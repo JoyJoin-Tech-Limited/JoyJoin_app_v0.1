@@ -131,7 +131,7 @@ export function SpeedFriendingHeroView({
                 disabled={isAdvancing}
                 loading={isAdvancing}
               >
-                {isAdvancing ? '推进中…' : '进入下一阶段 ›'}
+                {isAdvancing ? '切换中…' : '进入下一阶段 ›'}
               </Button>
             ) : undefined
           }

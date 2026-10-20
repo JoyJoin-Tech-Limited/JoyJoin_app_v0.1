@@ -35,6 +35,23 @@ $uw-deep: $phase-accent-undercover-deep;
     margin-bottom: $spacing-sm;
   }
 
+  // P0 ①: peek auto-close warning — 300ms shrink/dim (transform/opacity
+  // only, GPU-safe). Reduced-motion never applies this class (direct close).
+  &__word-card {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+
+    &--warn {
+      transform: scale(0.94);
+      opacity: 0.55;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__word-card {
+      transition: none;
+    }
+  }
+
   &__word-front,
   &__word-back {
     display: flex;

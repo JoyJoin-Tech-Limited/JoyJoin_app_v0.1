@@ -128,4 +128,8 @@ export {
   ICE_AUCTION_CLOSE_LOT,
   ICE_MICRO_TAP_HINT,
   formatIceLieFooledLine,
+  ICE_HOST_PHASE_PROMPT_PREFIX,
+  getIceHostPhasePrompt,
+  ICE_PHASE_ONE_LINE_RULE_PREFIX,
+  getIcePhaseOneLineRule,
 } from './icebreakerSession.js';

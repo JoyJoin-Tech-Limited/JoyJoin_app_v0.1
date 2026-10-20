@@ -12,6 +12,8 @@ import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { resolveReadyParticipantIds } from '../viewModels/phaseOptOutModel'
+import { useIcebreakerDraft } from '../hooks/useIcebreakerDraft'
+import { buildIcebreakerDraftKey } from '../viewModels/draftPersistence'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
@@ -52,6 +54,8 @@ export interface LieDetectiveHeroViewProps {
   onGenerateFromTag: (tag: string) => Promise<string | null>
   isGeneratingFromTag: boolean
   statementsMeta?: AIResponseMeta
+  /** P0 E1: session scope for the compose-draft storage key. */
+  socialSessionId?: string
   /**
    * W3: players who opted out / were auto-completed this phase. The server
    * appends them to `lieDetectiveCompletedUserIds`, so counting them here keeps
@@ -84,6 +88,7 @@ export function LieDetectiveHeroView({
   onGenerateFromTag,
   isGeneratingFromTag,
   statementsMeta,
+  socialSessionId,
   completedUserIds,
   rosterLocked = false,
 }: LieDetectiveHeroViewProps) {
@@ -120,7 +125,25 @@ export function LieDetectiveHeroView({
   const [assistTags, setAssistTags] = useState(['', '', ''])
   const [assistOpenRow, setAssistOpenRow] = useState<number | null>(null)
   const [generatingRow, setGeneratingRow] = useState<number | null>(null)
-  const [customStatements, setCustomStatements] = useState(['', '', ''])
+  // P0 E1 (2026-10-20): the three compose lines persist as a draft — restore
+  // on mount, debounced write on edit, clear on confirmed submit / table
+  // move-on / phase switch.
+  const draftKey = socialSessionId && currentUserId
+    ? buildIcebreakerDraftKey(socialSessionId, 'lie_detective', currentUserId)
+    : null
+  const draft = useIcebreakerDraft(draftKey)
+  const [customStatements, setCustomStatements] = useState<string[]>(() => {
+    const raw = draft.readDraft()
+    if (!raw) return ['', '', '']
+    try {
+      const parsed = JSON.parse(raw) as string[]
+      return Array.isArray(parsed) && parsed.length === 3 && parsed.every((s) => typeof s === 'string')
+        ? parsed
+        : ['', '', '']
+    } catch {
+      return ['', '', '']
+    }
+  })
   const [customLieIndex, setCustomLieIndex] = useState<number | null>(null)
   // AI prefill lands via the poll (the generate call saves server-side); the
   // ref makes it one-shot per compose entry so user edits are never clobbered.
@@ -165,10 +188,16 @@ export function LieDetectiveHeroView({
       if (myStatementsSignature === lieSubmitSigRef.current) {
         setComposeStep('choose')
         lieSubmitSigRef.current = null
+        draft.clearDraft() // P0 E1: confirmed submit cleans the stored draft
       }
     }
     wasGeneratingRef.current = isGeneratingStatements
-  }, [isGeneratingStatements, composeStep, myStatementsSignature])
+  }, [isGeneratingStatements, composeStep, myStatementsSignature, draft])
+
+  // P0 E1: latest-wins debounced draft write for the three compose lines.
+  useEffect(() => {
+    draft.writeDraftDebounced(JSON.stringify(customStatements))
+  }, [customStatements, draft])
 
   // The table moved on (everyone submitted) — the turn UI takes over; the
   // already-saved set (AI or custom) stands as the submission.
@@ -176,8 +205,9 @@ export function LieDetectiveHeroView({
     if (everyoneGenerated && composeStep !== 'choose') {
       setComposeStep('choose')
       aiPrefillRef.current = false
+      draft.clearDraft() // P0 E1: the draft is moot once the table moved on
     }
-  }, [everyoneGenerated, composeStep])
+  }, [everyoneGenerated, composeStep, draft])
 
   const updateCustomStatement = useCallback((index: number, value: string) => {
     setCustomStatements((current) =>
@@ -532,7 +562,7 @@ export function LieDetectiveHeroView({
                 disabled={isAdvancing}
                 loading={isAdvancing}
               >
-                {isAdvancing ? '切换中…' : '进入下一阶段'}
+                {isAdvancing ? '切换中…' : '进入下一阶段 ›'}
               </Button>
             ) : null}
           </>

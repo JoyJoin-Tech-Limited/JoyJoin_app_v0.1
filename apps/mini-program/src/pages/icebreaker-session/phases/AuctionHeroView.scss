@@ -194,6 +194,21 @@ $au-deep: $phase-accent-auction-deep;
     white-space: nowrap;
   }
 
+  // P0 ②: in-flight bid echo — L3 pill recipe (accent 0.08 fill + deep text).
+  &__bid-pending {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-sm;
+  }
+
+  &__bid-pending-text {
+    @include type-caption;
+    padding: 6rpx $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($au-accent, 0.08);
+    color: $au-deep;
+  }
+
   &__history {
     margin-top: $spacing-sm;
     padding: $spacing-sm $spacing-md;

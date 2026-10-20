@@ -75,3 +75,34 @@ export const ICE_MICRO_TAP_HINT = '跟着节奏点一点，和大家一起完成
 export function formatIceLieFooledLine(count: number): string {
   return `悦仔骗过全场 ${count} 次`
 }
+
+// ─── P0 补1/补4 host 开场提词 + 新人一句规则（2026-10-20）─────────────────
+// PhaseIntroOverlay 只在 ritual phase（mini_script / recap）出现，所以只需
+// 这两个环节的策展文案；零 LLM、零 emoji、微信审核姿态（无社交/匹配/灵魂词）。
+// 「你可以这样说：」「一句话规则：」前缀由渲染层拼接，此处只放口语正文。
+
+/** 补1: host 专属开场提词正文（1 句，悦仔温暖口语）。 */
+const ICE_HOST_PHASE_PROMPT_BY_PHASE: Partial<Record<string, string>> = {
+  mini_script: '接下来我们演一出小戏，每个人都拿到了自己的角色，跟着每幕的提示往下走就好',
+  recap: '今晚大家都很棒，我们一起回头看看这一桌的高光时刻',
+}
+
+/** 补1: host 提词渲染前缀。 */
+export const ICE_HOST_PHASE_PROMPT_PREFIX = '你可以这样说：'
+
+export function getIceHostPhasePrompt(phase: string): string | null {
+  return ICE_HOST_PHASE_PROMPT_BY_PHASE[phase] ?? null
+}
+
+/** 补4: 首次参会的一句规则正文（每 phase 一句，一次性展示）。 */
+const ICE_PHASE_ONE_LINE_RULE_BY_PHASE: Partial<Record<string, string>> = {
+  mini_script: '拿到角色先别声张，跟着每幕的提示往下演',
+  recap: '这是今晚的回顾环节，看看自己的高光，也为同桌喝彩',
+}
+
+/** 补4: 一句规则渲染前缀。 */
+export const ICE_PHASE_ONE_LINE_RULE_PREFIX = '一句话规则：'
+
+export function getIcePhaseOneLineRule(phase: string): string | null {
+  return ICE_PHASE_ONE_LINE_RULE_BY_PHASE[phase] ?? null
+}

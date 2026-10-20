@@ -14,6 +14,8 @@ import { haptics } from '../../../lib/utils/haptics'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SocialContentStatus } from '@shared/socialIcebreaker'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
+import { useIcebreakerDraft } from '../hooks/useIcebreakerDraft'
+import { buildIcebreakerDraftKey } from '../viewModels/draftPersistence'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface QuipBattlePrompt {
@@ -107,7 +109,23 @@ export function QuipBattleHeroView({
   promptsMeta,
   contentStatus,
 }: QuipBattleHeroViewProps) {
-  const [answerMap, setAnswerMap] = useState<Record<string, string>>({})
+  // P0 E1 (2026-10-20): draft persistence — a host advance / app kill no
+  // longer wipes in-progress answers. Restore on mount, debounced write on
+  // input, clear on submit success or phase switch (hook unmount).
+  const draftKey = socialSessionId && userId
+    ? buildIcebreakerDraftKey(socialSessionId, 'quip_battle', userId)
+    : null
+  const draft = useIcebreakerDraft(draftKey)
+  const [answerMap, setAnswerMap] = useState<Record<string, string>>(() => {
+    const raw = draft.readDraft()
+    if (!raw) return {}
+    try {
+      const parsed = JSON.parse(raw) as Record<string, string>
+      return parsed && typeof parsed === 'object' ? parsed : {}
+    } catch {
+      return {}
+    }
+  })
   const [voteMap, setVoteMap] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [voting, setVoting] = useState(false)
@@ -131,6 +149,11 @@ export function QuipBattleHeroView({
       }
     }
   }, [])
+
+  // P0 E1: latest-wins debounced draft write (remount restores above).
+  useEffect(() => {
+    draft.writeDraftDebounced(JSON.stringify(answerMap))
+  }, [answerMap, draft])
 
   // W3: an opted-out / silent player is appended to the phase completion array
   // (`quipBattleVotedUserIds`) but never submits an answer, so the submit gate
@@ -203,6 +226,7 @@ export function QuipBattleHeroView({
         method: 'POST',
         data: { answers: answersToSubmit },
       })
+      draft.clearDraft() // P0 E1: submit success cleans the stored draft
       onRefresh?.()
     } catch {
       setError('提交没成功，再试一次')
@@ -373,7 +397,7 @@ export function QuipBattleHeroView({
           totalCount={swipeStack.length}
           actions={
             <Button variant='primary' onClick={handleVote} disabled={voting || !votingState.canSubmit}>
-              {voting ? '投票中…' : '提交投票'}
+              {voting ? '提交中…' : '提交投票'}
             </Button>
           }
         >

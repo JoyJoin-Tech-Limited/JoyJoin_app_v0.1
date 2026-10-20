@@ -156,7 +156,7 @@ export function MicroChallengeHeroView({
                   disabled={isAdvancing || canAdvance === false}
                   loading={isAdvancing}
                 >
-                  {isAdvancing ? '推进中…' : '进入下一阶段 ›'}
+                  {isAdvancing ? '切换中…' : '进入下一阶段 ›'}
                 </Button>
                 {canAdvance === false && advanceDisabledReason ? (
                   <Text className='phase-hero-card__ghost-link'>{advanceDisabledReason}</Text>

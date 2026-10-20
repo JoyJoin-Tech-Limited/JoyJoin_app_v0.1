@@ -95,6 +95,7 @@ const USER_SCOPED_PREFIX_KEYS = [
   'jj_duo_share_',            // duo share timestamps per pool
   'joyjoin_discover_first_arrival_tracked:', // discover_first_arrival tombstone per user
   'joyjoin_signal_retest_dismissed', // P5a signal-quality retest prompt dismissed per session
+  'jj_draft_',             // icebreaker per-(session, phase, user) input drafts (P0 E1)
 ] as const
 
 // ─── Device-level keys (NOT cleared on user reset) ─────────────────────────
@@ -110,6 +111,11 @@ export const DEVICE_LEVEL_STORAGE_KEYS: readonly string[] = [
   'jj_flow_street_banner_tapped:v1', // street banner tapped (device-level)
   'joyjoin_cache_meta',              // persistent asset cache metadata
   '__jj_mock_auth_for_devtools__',   // dev-only mock auth
+  // P0 补4 (2026-10-20): per-phase one-line rule, seen-once flags. Written
+  // with a phase suffix (`jj_ib_phase_rule_seen_v1_mini_script` / `_recap`);
+  // coachmark-class device state, survives account reset by design.
+  'jj_ib_phase_rule_seen_v1_mini_script',
+  'jj_ib_phase_rule_seen_v1_recap',
 ]
 
 // ─── Clear functions ────────────────────────────────────────────────────────

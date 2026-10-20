@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { View, Text, Input } from '@tarojs/components'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
@@ -7,6 +7,9 @@ import { buildSocialPath } from '../icebreakerSessionModel'
 import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal'
 import { SwipeCard, TapReaction } from '../../../components/gesture'
 import { haptics } from '../../../lib/utils/haptics'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
+import { useIcebreakerDraft } from '../hooks/useIcebreakerDraft'
+import { buildIcebreakerDraftKey } from '../viewModels/draftPersistence'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PHASE_ACCENTS } from './phaseAccents'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
@@ -63,6 +66,12 @@ const REACTION_ITEMS = [
   { emoji: '👏', label: '点赞' },
 ]
 
+// P0 ① (2026-10-20): the identity card never auto-flips. A tap peeks; the
+// peek auto-closes after 5s with a 300ms shrink/dim warning (transform /
+// opacity only). Reduced-motion collapses the warning into a direct close.
+const WORD_CARD_AUTO_CLOSE_MS = 5000
+const WORD_CARD_WARN_BEFORE_CLOSE_MS = 300
+
 export function UndercoverWordHeroView({
   socialSessionId,
   isHost,
@@ -83,7 +92,13 @@ export function UndercoverWordHeroView({
   completedUserIds = [],
   contentStatus,
 }: UndercoverWordHeroViewProps) {
-  const [description, setDescription] = useState('')
+  // P0 E1 (2026-10-20): description draft — restore on mount, debounced
+  // write on input, clear on submit success or phase switch.
+  const draftKey = socialSessionId && userId
+    ? buildIcebreakerDraftKey(socialSessionId, 'undercover_word', userId)
+    : null
+  const draft = useIcebreakerDraft(draftKey)
+  const [description, setDescription] = useState(() => draft.readDraft() ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [voting, setVoting] = useState(false)
   const [revealing, setRevealing] = useState(false)
@@ -93,10 +108,11 @@ export function UndercoverWordHeroView({
   const [showSecret, setShowSecret] = useState(false)
 
   const [cardFlipped, setCardFlipped] = useState(false)
+  const [cardFlipWarn, setCardFlipWarn] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState<number | null>(null)
   const [burstTriggered, setBurstTriggered] = useState(false)
-  const hasAutoFlippedRef = useRef(false)
+  const { shouldReduceMotion } = useMiniRevealMotion()
 
   // Wave 3 (AC-07): live 「悦仔正在想词…」 copy while the server reports the
   // word pair as generating (flag-gated field; absent → null → static copy).
@@ -119,17 +135,48 @@ export function UndercoverWordHeroView({
   const describedCount = currentRoundData ? describedUserIds.size : 0
 
   // ── Effects ──
+  // P0 ①: pair (re)issue resets the card to face-down — never auto-flip.
+  // Remount / re-show also lands face-down (useState initial), closing the
+  // word-reminder plaintext backdoor the 500ms auto-flip used to open in the
+  // describe / vote states (the same card renders there).
   useEffect(() => {
-    if (pair && !hasAutoFlippedRef.current) {
-      hasAutoFlippedRef.current = true
-      const timer = setTimeout(() => setCardFlipped(true), 500)
-      return () => clearTimeout(timer)
-    }
-    if (!pair) {
-      hasAutoFlippedRef.current = false
-      setCardFlipped(false)
-    }
+    setCardFlipped(false)
+    setCardFlipWarn(false)
   }, [pair])
+
+  // P0 ①: peek lifecycle — 5s auto-close with a 300ms shrink/dim warning;
+  // reduced-motion skips the warning and closes directly. Manual toggles
+  // cancel the schedule via the cleanup.
+  useEffect(() => {
+    if (!cardFlipped) return
+    if (shouldReduceMotion) {
+      const closeTimer = setTimeout(() => setCardFlipped(false), WORD_CARD_AUTO_CLOSE_MS)
+      return () => clearTimeout(closeTimer)
+    }
+    const warnTimer = setTimeout(
+      () => setCardFlipWarn(true),
+      WORD_CARD_AUTO_CLOSE_MS - WORD_CARD_WARN_BEFORE_CLOSE_MS,
+    )
+    const closeTimer = setTimeout(() => {
+      setCardFlipped(false)
+      setCardFlipWarn(false)
+    }, WORD_CARD_AUTO_CLOSE_MS)
+    return () => {
+      clearTimeout(warnTimer)
+      clearTimeout(closeTimer)
+    }
+  }, [cardFlipped, shouldReduceMotion])
+
+  const handleWordCardFlip = useCallback(() => {
+    haptics('light')
+    setCardFlipped((f) => !f)
+    setCardFlipWarn(false)
+  }, [])
+
+  // P0 E1: latest-wins debounced draft write for the description input.
+  useEffect(() => {
+    draft.writeDraftDebounced(description)
+  }, [description, draft])
 
   // Signature wow: unmask sheen fires with the reveal (CSS handles the sweep)
   useEffect(() => {
@@ -163,6 +210,7 @@ export function UndercoverWordHeroView({
         data: { text: description.trim() },
       })
       setDescription('')
+      draft.clearDraft() // P0 E1: submit success cleans the stored draft
     } catch {
       setError('提交没成功，再试一次')
     } finally {
@@ -219,27 +267,29 @@ export function UndercoverWordHeroView({
   }
 
   const wordCard = (
-    <CardFlip
-      front={
-        <View className='undercover-hero__word-front'>
-          <JoyJoinIcon emoji='🕵️' tier='phase' size={56} />
-          <Text className='undercover-hero__word-front-title'>你的身份是？</Text>
-          <Text className='undercover-hero__word-front-hint'>点击或等待揭晓</Text>
-        </View>
-      }
-      back={
-        <View className={`undercover-hero__word-back${isUndercover ? ' undercover-hero__word-back--undercover' : ''}`}>
-          <Text className='undercover-hero__word-back-word'>{myWord || '?'}</Text>
-          <View className={`undercover-hero__word-back-pill${isUndercover ? ' undercover-hero__word-back-pill--undercover' : ''}`}>
-            <Text className='undercover-hero__word-back-pill-text'>{isUndercover ? '卧底' : '平民'}</Text>
+    <View className={`undercover-hero__word-card${cardFlipped && cardFlipWarn ? ' undercover-hero__word-card--warn' : ''}`}>
+      <CardFlip
+        front={
+          <View className='undercover-hero__word-front'>
+            <JoyJoinIcon emoji='🕵️' tier='phase' size={56} />
+            <Text className='undercover-hero__word-front-title'>你的身份是？</Text>
+            <Text className='undercover-hero__word-front-hint'>轻触查看，看完记得翻回</Text>
           </View>
-          <Text className='undercover-hero__word-back-hint'>{isUndercover ? '不要暴露自己' : '找出卧底'}</Text>
-        </View>
-      }
-      flipped={cardFlipped}
-      onFlip={() => setCardFlipped((f) => !f)}
-      duration={400}
-    />
+        }
+        back={
+          <View className={`undercover-hero__word-back${isUndercover ? ' undercover-hero__word-back--undercover' : ''}`}>
+            <Text className='undercover-hero__word-back-word'>{myWord || '?'}</Text>
+            <View className={`undercover-hero__word-back-pill${isUndercover ? ' undercover-hero__word-back-pill--undercover' : ''}`}>
+              <Text className='undercover-hero__word-back-pill-text'>{isUndercover ? '卧底' : '平民'}</Text>
+            </View>
+            <Text className='undercover-hero__word-back-hint'>{isUndercover ? '不要暴露自己' : '找出卧底'}</Text>
+          </View>
+        }
+        flipped={cardFlipped}
+        onFlip={handleWordCardFlip}
+        duration={400}
+      />
+    </View>
   )
 
   // ══ State 0 — waiting for pair ══
@@ -333,7 +383,7 @@ export function UndercoverWordHeroView({
             <>
               {!hasVoted ? (
                 <Button variant='primary' onClick={handleVote} disabled={!selectedTarget || voting}>
-                  {voting ? '提交中…' : selectedTarget ? '确认投票' : '请选择目标'}
+                  {voting ? '提交中…' : selectedTarget ? '提交投票' : '请选择目标'}
                 </Button>
               ) : null}
               {isHost && allVoted ? (
