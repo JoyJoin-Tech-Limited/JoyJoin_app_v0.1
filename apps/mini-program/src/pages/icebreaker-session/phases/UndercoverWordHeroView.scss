@@ -198,6 +198,12 @@ $uw-deep: $phase-accent-undercover-deep;
       border-color: rgba($uw-deep, 0.75);
       box-shadow: 0 0 20rpx rgba($uw-accent, 0.3);
     }
+
+    // AC-03④ tap-to-select press feedback (the row is tappable as well as
+    // swipeable — hoverClass lands here).
+    &--pressed {
+      background: rgba($uw-accent, 0.08);
+    }
   }
 
   &__target-avatar {

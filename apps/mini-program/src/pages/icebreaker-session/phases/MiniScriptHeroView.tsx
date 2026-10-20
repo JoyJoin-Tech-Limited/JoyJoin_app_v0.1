@@ -300,7 +300,12 @@ export function MiniScriptHeroView({
     setShowDeductionHints,
     setVoteExtrasOpen,
   )
-  useDidShow(() => setFinalActSubView('act'))
+  useDidShow(() => {
+    setFinalActSubView('act')
+    // Wave 2 P1 (contract AC-04): re-show lands the role card face-down —
+    // the secret agenda must never sit open on a returned-to screen.
+    setRoleFlipped(false)
+  })
 
   // Vote form
   const [voteEditing, setVoteEditing] = useState(!myVote)
@@ -802,7 +807,10 @@ export function MiniScriptHeroView({
           <CardFlip
             flipped={roleFlipped}
             onFlip={() => {
-              if (!roleFlipped) setRoleFlipped(true)
+              // Wave 2 P1 (contract AC-04): double-flip — the card covers
+              // back up on a second tap (was one-way: if (!roleFlipped)).
+              haptics('light')
+              setRoleFlipped((v) => !v)
             }}
             front={
               <View className='miniscript-hero__role-front'>

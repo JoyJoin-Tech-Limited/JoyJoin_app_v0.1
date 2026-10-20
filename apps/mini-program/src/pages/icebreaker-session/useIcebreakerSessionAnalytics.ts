@@ -3,6 +3,7 @@ import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerA
 import type { IcebreakerSession } from './icebreakerSessionModel'
 import type { SessionPhase } from './phaseViews'
 import { shouldNudgeHostForSuggestion } from './sessionShellLogic'
+import { countMySessionActions } from './viewModels/sessionHealthModel'
 
 /**
  * Session-level analytics effects extracted from index.tsx (maintainability:
@@ -17,6 +18,8 @@ export interface UseIcebreakerSessionAnalyticsInput {
   socialSessionId: string | null
   playerCount: number
   isHost: boolean
+  /** Wave 2 P1 (contract AC-06): needed for myActionCount derivation. */
+  currentUserId?: string
 }
 
 export function useIcebreakerSessionAnalytics({
@@ -25,6 +28,7 @@ export function useIcebreakerSessionAnalytics({
   socialSessionId,
   playerCount,
   isHost,
+  currentUserId,
 }: UseIcebreakerSessionAnalyticsInput) {
   const phaseViewTrackedRef = useRef<string | null>(null)
   const stallNudgeShownForRef = useRef<string | null>(null)
@@ -162,7 +166,21 @@ export function useIcebreakerSessionAnalytics({
         playerCount,
       },
     )
-  }, [phase, session, socialSessionId, playerCount])
+    // Wave 2 P1 (sprint icebreaker-polish-p1, contract AC-06 补6): session
+    // health snapshot — once per user at recap first display. myActionCount
+    // is derived locally from the final session state (zero new requests).
+    socialIcebreakerAnalytics.track(
+      'session_health_snapshot',
+      socialSessionId ?? undefined,
+      session.icebreakerSessionId,
+      phase,
+      {
+        phaseCount: phasesCompleted,
+        myActionCount: countMySessionActions(session, currentUserId ?? ''),
+        playerCount,
+      },
+    )
+  }, [phase, session, socialSessionId, playerCount, currentUserId])
 
   // Keep latest session metadata in refs for unmount-time abandonment tracking.
   useEffect(() => {

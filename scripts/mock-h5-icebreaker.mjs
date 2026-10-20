@@ -410,6 +410,87 @@ export function buildIcebreakerState(sessionId) {
         completedPhases: ['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice'],
         lastAdvanceTrigger: 'auto_all_ready',
       }
+    // ─── Wave 2 P1 (sprint icebreaker-polish-p1) fixtures ───
+    case 'quip-battle-vote':
+      // AC-03⑤ pre-submit preview step: every answer submitted, the viewer
+      // has NOT voted — the swipe stack + 「你投出 N 票 · 点查看」 汇总步
+      // render. Also a valid AC-02a catch-up state (duty = 你还没投票).
+      return {
+        ...base,
+        currentPhase: 'quip_battle',
+        completedPhases: ['warmup', 'micro_challenge'],
+        quipBattlePrompts: [
+          { id: 'qp-1', promptText: '如果今晚这桌是一部电影，片名应该叫《____》', category: '脑洞' },
+          { id: 'qp-2', promptText: '我敢打赌，在座没有人比我更擅长____', category: '自信' },
+        ],
+        quipBattleAnswers: [
+          { userId: 'ib-p2', displayName: '小鹿', answerText: '六个人和一只悦仔', promptId: 'qp-1' },
+          { userId: 'ib-p3', displayName: '阿澈', answerText: '下班不积极，思想有问题', promptId: 'qp-1' },
+          { userId: 'ib-p2', displayName: '小鹿', answerText: '一口气报出所有奶茶配料', promptId: 'qp-2' },
+          { userId: 'ib-p3', displayName: '阿澈', answerText: '假装听懂任何黑话', promptId: 'qp-2' },
+        ],
+        quipBattleSubmittedUserIds: IB_PARTICIPANTS.map((p) => p.userId),
+        quipBattleVotedUserIds: [],
+        quipBattleRevealed: false,
+        quipBattlePromptsMeta: mockAigcMeta('social-quip-battle-v1'),
+      }
+    case 'undercover-word-away':
+      // AC-02b 补5: describe state mid-round with 阿澈 marked away — the
+      // waiting count renders 「 · 等阿澈（暂离）」. Viewer HAS described, so
+      // the waiting statusText branch is on screen. leftUserIds is the
+      // flag-gated server field (present here to preview the flag-ON path).
+      return {
+        ...base,
+        currentPhase: 'undercover_word',
+        completedPhases: ['warmup', 'micro_challenge'],
+        undercoverWordPair: { civilianWord: '火锅', undercoverWord: '麻辣烫', category: '美食' },
+        undercoverUserId: 'ib-p6',
+        undercoverWordRounds: [
+          {
+            roundNumber: 1,
+            descriptions: [
+              { userId: IB_HOST_ID, displayName: '悦仔测试', text: '冬天吃最舒服' },
+              { userId: 'ib-p2', displayName: '小鹿', text: '一群人可以围着吃' },
+              { userId: 'ib-p4', displayName: '桃桃', text: '辣度可以自己选' },
+            ],
+          },
+        ],
+        undercoverWordCurrentRound: 0,
+        undercoverWordVotedUserIds: [],
+        undercoverWordRevealed: false,
+        leftUserIds: ['ib-p3'],
+      }
+    case 'group-mirror-waiting-away':
+      // AC-02b: viewer submitted, waiting on the table; 桃桃 away → the
+      // status line carries the 暂离 suffix.
+      return {
+        ...base,
+        currentPhase: 'group_mirror',
+        completedPhases: ['warmup', 'micro_challenge'],
+        groupMirrorQuestions: [
+          { id: 'gm-1', questionText: '谁最像会把群公告认真读完的人？', category: '群像' },
+          { id: 'gm-2', questionText: '谁最可能在旅行时做出最详细的攻略？', category: '群像' },
+        ],
+        groupMirrorAnswers: [
+          { userId: IB_HOST_ID, displayName: '悦仔测试', questionId: 'gm-1', targetUserId: 'ib-p5' },
+          { userId: IB_HOST_ID, displayName: '悦仔测试', questionId: 'gm-2', targetUserId: 'ib-p2' },
+        ],
+        groupMirrorSubmittedUserIds: [IB_HOST_ID, 'ib-p2', 'ib-p3', 'ib-p5', 'ib-p6'],
+        groupMirrorRevealed: false,
+        leftUserIds: ['ib-p4'],
+      }
+    case 'catchup-miniscript':
+      // AC-02a cold re-entry: bootstrap lands mid-mini_script with the
+      // viewer assigned but not ready → the catch-up chip derivation has a
+      // duty to surface (「现在：剧本准备中 · 你还没点『准备好了』」).
+      return {
+        ...base,
+        currentPhase: 'mini_script',
+        completedPhases: ['warmup', 'micro_challenge'],
+        miniScriptRoleAssignments: Object.fromEntries(IB_PARTICIPANTS.map((p, i) => [p.userId, i])),
+        miniScriptPlayerReady: { 'ib-p2': true, 'ib-p3': true },
+        miniScriptCurrentAct: 0,
+      }
     case 'warmup-mood':
       // Host with no topics yet → mood grid (host_no_topics).
       return { ...base, currentPhase: 'warmup', completedPhases: [] }

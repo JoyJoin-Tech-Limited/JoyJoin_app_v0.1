@@ -834,6 +834,72 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     void performSocialAction('micro-complete', '/micro-challenge/complete', {})
   }, [performSocialAction, socialSessionId, session?.icebreakerSessionId, playerCount])
 
+  // ── Wave 2 P1 (sprint icebreaker-polish-p1, contract AC-01): action-layer
+  // 归口 for the four phase views that used to fire apiRequest directly.
+  // Every self-state write below rides the shared dispatcher: success →
+  // immediate state sync + refetch (no 3s dead air), confirm haptic (flag
+  // gated), pending mutual exclusion. Error toasts are suppressed so each
+  // view keeps its inline error surface (result === null → view sets copy;
+  // undefined = skipped by the mutex, throttled ack toast already shown).
+
+  // ── Undercover word ──
+  const handleUndercoverGenerate = useCallback(
+    () => performSocialAction('undercover-generate', '/undercover-word/generate', {}, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+  const handleUndercoverDescribe = useCallback(
+    (text: string) =>
+      performSocialAction('undercover-describe', '/undercover-word/describe', { text }, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+  const handleUndercoverVote = useCallback(
+    (targetUserId: string) =>
+      performSocialAction('undercover-vote', '/undercover-word/vote', { targetUserId }, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+  const handleUndercoverReveal = useCallback(
+    () => performSocialAction('undercover-reveal', '/undercover-word/reveal', {}, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+
+  // ── Group mirror ──
+  const handleGroupMirrorGenerate = useCallback(
+    () => performSocialAction('group-mirror-generate', '/group-mirror/generate', {}, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+  const handleGroupMirrorSubmit = useCallback(
+    (answers: Array<{ questionId: string; targetUserId: string }>) =>
+      performSocialAction('group-mirror-submit', '/group-mirror/submit', { answers }, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+  const handleGroupMirrorReveal = useCallback(
+    () => performSocialAction('group-mirror-reveal', '/group-mirror/reveal', {}, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+
+  // ── Quip battle ──
+  const handleQuipGenerate = useCallback(
+    () => performSocialAction('quip-generate', '/quip-battle/generate', {}, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+  const handleQuipSubmit = useCallback(
+    (answers: Array<{ promptId: string; answerText: string }>) =>
+      performSocialAction('quip-submit', '/quip-battle/submit', { answers }, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+  const handleQuipVote = useCallback(
+    (votes: Array<{ answerId: string; promptId: string }>) =>
+      performSocialAction('quip-vote', '/quip-battle/vote', { votes }, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+
+  // ── Recap AI feedback (RecapAiFeedbackBar) ──
+  const handleRecapAiFeedback = useCallback(
+    (payload: { phase: 'recap'; promptVersion: string; aiCorrelationId: string; rating: 'helpful' | 'neutral' | 'awkward' }) =>
+      performSocialAction('recap-ai-feedback', '/ai-feedback', payload, { suppressErrorToast: true }),
+    [performSocialAction],
+  )
+
   const handleNextSpeedFriendingRound = useCallback(() => {
     void performSocialAction('speed-next', '/speed-friending/next-round', {})
   }, [performSocialAction])
@@ -1119,5 +1185,17 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     handleGenerateSessionPack,
     handleRequestAdaptiveSuggestion,
     handleDismissAdaptiveSuggestion,
+    // Wave 2 P1 (AC-01): phase-view write 归口
+    handleUndercoverGenerate,
+    handleUndercoverDescribe,
+    handleUndercoverVote,
+    handleUndercoverReveal,
+    handleGroupMirrorGenerate,
+    handleGroupMirrorSubmit,
+    handleGroupMirrorReveal,
+    handleQuipGenerate,
+    handleQuipSubmit,
+    handleQuipVote,
+    handleRecapAiFeedback,
   }
 }

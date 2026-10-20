@@ -253,6 +253,98 @@ $qb-deep: $phase-accent-quip-deep;
     margin-top: $spacing-md;
   }
 
+  // ── AC-03⑤ (sprint icebreaker-polish-p1): pre-submit vote preview ──
+  &__vote-preview {
+    margin-top: $spacing-md;
+  }
+
+  &__vote-preview-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($qb-accent, 0.08);
+  }
+
+  &__vote-preview-toggle--pressed {
+    background: rgba($qb-accent, 0.12);
+  }
+
+  &__vote-preview-toggle-text {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $qb-deep;
+  }
+
+  &__vote-preview-toggle-hint {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__vote-preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
+  }
+
+  &__vote-preview-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    min-height: 88rpx;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    border: 2rpx solid rgba($color-text-primary, 0.06);
+    background: $color-surface;
+  }
+
+  &__vote-preview-item--voted {
+    border-color: rgba($qb-accent, 0.32);
+  }
+
+  &__vote-preview-item--pressed {
+    background: rgba($qb-accent, 0.08);
+  }
+
+  &__vote-preview-item-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+  }
+
+  &__vote-preview-item-prompt {
+    @include type-caption;
+    color: $color-text-secondary;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__vote-preview-item-answer {
+    @include type-label;
+    color: $color-text-primary;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__vote-preview-item-state {
+    @include type-caption;
+    flex-shrink: 0;
+    color: $color-text-secondary;
+  }
+
+  &__vote-preview-item--voted &__vote-preview-item-state {
+    font-weight: $font-weight-semibold;
+    color: $qb-deep;
+  }
+
   &__error {
     @include type-caption;
     display: block;

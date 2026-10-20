@@ -483,6 +483,10 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   // custom empty-state `去挑一个` link tap. Funnel metric for start-rate.
   "preview_viewed",
   "preview_custom_link_tapped",
+  // icebreaker-polish-p1 (contract AC-06 补6) — session health snapshot at
+  // recap first display (phaseCount / myActionCount / playerCount). Whitelist
+  // parity only — no aggregation, no tables, no routes, no dashboards.
+  "session_health_snapshot",
 ] as const;
 
 type SocialIcebreakerEventType = (typeof SOCIAL_ICEBREAKER_EVENT_TYPES)[number];

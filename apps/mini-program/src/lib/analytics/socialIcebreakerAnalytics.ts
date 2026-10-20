@@ -69,6 +69,10 @@ type EventType =
   | 'moment_card_saved'
   | 'preview_viewed'
   | 'preview_custom_link_tapped'
+  // icebreaker-polish-p1 (contract AC-06 补6) — session health snapshot at
+  // recap first display: phaseCount / myActionCount (derived locally, zero
+  // new requests) / playerCount. Whitelist parity only — no aggregation.
+  | 'session_health_snapshot'
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker. The server gates

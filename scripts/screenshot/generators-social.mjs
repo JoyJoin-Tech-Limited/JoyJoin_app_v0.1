@@ -361,4 +361,107 @@ export function registerSocialGenerators(ctx) {
       await scrollSelectorIntoView(page, '.recap-glow', 'start')
       return screenshotViewport(page)
     }))
+
+  // ─── Wave 2 P1 (sprint icebreaker-polish-p1) previews ───
+  // Mock states live in scripts/mock-h5-icebreaker.mjs:
+  //   mock-quip-battle-vote        AC-03⑤ swipe-stack voting (catch-up chip
+  //                                also fires here — dismissed pre-capture)
+  //   mock-undercover-word-away    AC-02b 暂离 suffix on the describe wait
+  //   mock-group-mirror-waiting-away  AC-02b 暂离 suffix on the submit wait
+  //   mock-catchup-miniscript      AC-02a bootstrap catch-up chip
+  //   mock-recap                   AC-05 fixed 「本场主持」 card (legacy medals)
+
+  // AC-03⑤ quip voting surface: the swipe stack renders with the direction
+  // hints. The pre-submit 「你投出 N 票 · 点查看」 汇总步 only opens after the
+  // forward-only stack is fully viewed, so its expanded capture belongs to
+  // the 波次 3 真机日 (unit + contract tests cover it here).
+  register('icebreaker-quip-vote', () =>
+    withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+      await gotoIcebreakerSession(page, 'mock-quip-battle-vote')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await waitForContent(page, '.quip-battle-hero__stack-card')
+      // The bootstrap catch-up chip (viewer owes a vote) dismisses on tap.
+      const chip = await page.$('.icebreaker__catchup-chip')
+      if (chip) await chip.click()
+      await page.waitForFunction(
+        () => !document.querySelector('.icebreaker__catchup-chip'),
+        undefined,
+        { timeout: 6000 },
+      )
+      await page.waitForTimeout(800)
+      return screenshotViewport(page)
+    }))
+
+  // AC-02b: describe-state wait — viewer described, 阿澈 away → the status
+  // line carries 「 · 等阿澈（暂离）」.
+  register('icebreaker-undercover-away', () =>
+    withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+      await gotoIcebreakerSession(page, 'mock-undercover-word-away')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await waitForContent(page, '.undercover-hero')
+      await page.waitForFunction(
+        () => document.querySelector('.phase-hero-card__status-text')?.textContent?.includes('暂离') === true,
+        undefined,
+        { timeout: 10000 },
+      )
+      await page.waitForTimeout(800)
+      return screenshotViewport(page)
+    }))
+
+  // AC-02b: submit-state wait — 桃桃 away → 暂离 suffix.
+  register('icebreaker-group-mirror-away', () =>
+    withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+      await gotoIcebreakerSession(page, 'mock-group-mirror-waiting-away')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await waitForContent(page, '.group-mirror-hero')
+      await page.waitForFunction(
+        () => document.querySelector('.phase-hero-card__status-text')?.textContent?.includes('暂离') === true,
+        undefined,
+        { timeout: 10000 },
+      )
+      await page.waitForTimeout(800)
+      return screenshotViewport(page)
+    }))
+
+  // AC-02a: cold re-entry bootstrap — the ≤4s catch-up chip renders with
+  // 「现在：剧本准备中 · 你还没点『准备好了』」 (quick capture before the
+  // auto-dismiss window lapses).
+  register('icebreaker-catchup-chip', () =>
+    withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+      await gotoIcebreakerSession(page, 'mock-catchup-miniscript')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await waitForContent(page, '.icebreaker__catchup-chip')
+      await page.waitForFunction(
+        () => document.querySelector('.icebreaker__catchup-chip-text')?.textContent?.includes('你还没') === true,
+        undefined,
+        { timeout: 10000 },
+      )
+      await page.waitForTimeout(300)
+      return screenshotViewport(page)
+    }))
+
+  // AC-05 补2: fixed 「本场主持」 recognition card in the legacy medal mode —
+  // mock-recap carries hostUserId + roster (the glow-mode equivalent renders
+  // inside icebreaker-recap-glow above).
+  register('icebreaker-recap-host-card', () =>
+    withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+      await gotoIcebreakerSession(page, 'mock-recap')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await waitForContent(page, '.icebreaker__recap-hero')
+      await page.waitForFunction(
+        () => {
+          const sections = [...document.querySelectorAll('.icebreaker__recap-section-title')]
+          return sections.some((el) => el.textContent?.includes('本场主持'))
+        },
+        undefined,
+        { timeout: 10000 },
+      )
+      await scrollSelectorIntoView(page, '.icebreaker__recap-medals-grid--single', 'center')
+      return screenshotViewport(page)
+    }))
 }

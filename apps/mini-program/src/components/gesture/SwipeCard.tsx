@@ -1,8 +1,15 @@
 import { type ReactNode, useRef, useState, useCallback, useEffect } from 'react'
 import { View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
+import { getSystemReducedMotionCompat, getWindowInfoCompat } from '../../lib/utils/systemInfo'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
+import {
+  SWIPE_LEFT_EDGE_DEAD_ZONE_RPX,
+  isHorizontalSwipeIntent,
+  isLeftEdgeDeadZone,
+  shouldStartTracking,
+  swipeRpxToPx,
+} from './swipeCardModel'
 // No SCSS side-effect import: Taro's per-subpackage chunking would strand it
 // in a page-invisible sub-common.wxss. Consuming pages must @use
 // '../../components/gesture/SwipeCard.scss' in their page SCSS.
@@ -32,7 +39,8 @@ interface TouchState {
   startX: number
   startY: number
   currentX: number
-  cardWidth: number
+  /** False until the gesture proves horizontally dominant (direction lock). */
+  tracking: boolean
 }
 
 type SnapState = 'idle' | 'snapping-left' | 'snapping-right'
@@ -43,6 +51,16 @@ type SnapState = 'idle' | 'snapping-left' | 'snapping-right'
  * Used in lie_detective, undercover_word, quip_battle.
  * Touch-driven translateX with natural tilt.
  * Reduced motion: immediate callback on threshold cross, no animation.
+ *
+ * Craft rules (sprint icebreaker-polish-p1, contract AC-03):
+ *  - Card width is measured ONCE at mount into a ref — touchstart never
+ *    blocks on a bridge round-trip (the old live measure cost ~20-30ms of
+ *    first-frame lag).
+ *  - Direction lock: the card follows the finger only after the gesture is
+ *    clearly horizontal (|dx| > 1.5×|dy|) — vertical scroll intent no longer
+ *    wiggles the card.
+ *  - The leftmost 40rpx is a dead zone (iOS swipe-back): touches starting
+ *    there are ignored.
  */
 export default function SwipeCard({
   children,
@@ -55,46 +73,62 @@ export default function SwipeCard({
   const idRef = useRef(`swipe-card-${Math.random().toString(36).slice(2, 9)}`)
   const touchRef = useRef<TouchState | null>(null)
   const snapTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const cardWidthRef = useRef(350)
   const [deltaX, setDeltaX] = useState(0)
   const [snap, setSnap] = useState<SnapState>('idle')
 
-  const measureCard = useCallback(() => {
-    return new Promise<number>((resolve) => {
-      Taro.createSelectorQuery()
-        .select(`#${idRef.current}`)
-        .boundingClientRect()
-        .exec((res) => {
-          resolve((res[0] as { width?: number })?.width ?? 350)
-        })
-    })
+  // Mount-time width measure (contract AC-03③): one bridge call per card,
+  // cached for every later gesture. A failed/raced read keeps the 350px
+  // fallback — never a per-gesture bridge round-trip again.
+  useEffect(() => {
+    Taro.createSelectorQuery()
+      .select(`#${idRef.current}`)
+      .boundingClientRect()
+      .exec((res) => {
+        const width = (res[0] as { width?: number } | undefined)?.width
+        if (typeof width === 'number' && width > 0) {
+          cardWidthRef.current = width
+        }
+      })
   }, [])
 
   const handleTouchStart = useCallback(
-    async (e: any) => {
+    (e: any) => {
       if (snap !== 'idle') return
       const touch = e.touches[0]
-      const cardWidth = await measureCard()
+      // Left-edge dead zone (contract AC-03②): iOS 右滑返回 owns the leftmost
+      // 40rpx — a card swipe must never start there.
+      const deadZonePx = swipeRpxToPx(SWIPE_LEFT_EDGE_DEAD_ZONE_RPX, getWindowInfoCompat().windowWidth)
+      if (isLeftEdgeDeadZone(touch.clientX, deadZonePx)) return
       touchRef.current = {
         startX: touch.clientX,
         startY: touch.clientY,
         currentX: touch.clientX,
-        cardWidth,
+        tracking: false,
       }
     },
-    [snap, measureCard],
+    [snap],
   )
 
   const handleTouchMove = useCallback(
     (e: any) => {
       if (!touchRef.current || snap !== 'idle') return
       const touch = e.touches[0]
-      touchRef.current.currentX = touch.clientX
       const dx = touch.clientX - touchRef.current.startX
-      // Only horizontal swipes — ignore if vertical dominates
       const dy = touch.clientY - touchRef.current.startY
-      if (Math.abs(dx) > Math.abs(dy) || Math.abs(dx) > 16) {
-        setDeltaX(dx)
+      if (!touchRef.current.tracking) {
+        // Direction lock (contract AC-03①): only a clearly horizontal gesture
+        // starts tracking — the old `|dx|>|dy| || |dx|>16` rule let vertical
+        // scrolls wiggle the card.
+        if (!shouldStartTracking(dx, dy)) return
+        touchRef.current.tracking = true
+      } else if (!isHorizontalSwipeIntent(dx, dy)) {
+        // Already tracking but the finger went vertical — hold the last
+        // position instead of following into the scroll axis.
+        return
       }
+      touchRef.current.currentX = touch.clientX
+      setDeltaX(dx)
     },
     [snap],
   )
@@ -124,9 +158,15 @@ export default function SwipeCard({
 
   const handleTouchEnd = useCallback(() => {
     if (!touchRef.current || snap !== 'idle') return
-    const { startX, currentX, cardWidth } = touchRef.current
+    // Never tracked (vertical scroll / dead-zone tap) — release silently.
+    if (!touchRef.current.tracking) {
+      touchRef.current = null
+      setDeltaX(0)
+      return
+    }
+    const { startX, currentX } = touchRef.current
     const dx = currentX - startX
-    const thresholdPx = cardWidth * threshold
+    const thresholdPx = cardWidthRef.current * threshold
 
     if (dx > thresholdPx) {
       commitSwipe('right')

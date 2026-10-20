@@ -2,8 +2,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { View, Text, Input } from '@tarojs/components'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
-import { apiRequest } from '../../../lib/api/api'
-import { buildSocialPath } from '../icebreakerSessionModel'
 import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal'
 import { SwipeCard, TapReaction } from '../../../components/gesture'
 import { haptics } from '../../../lib/utils/haptics'
@@ -16,6 +14,7 @@ import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SocialContentStatus } from '@shared/socialIcebreaker'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
+import { formatAwayWaitSuffix } from '../viewModels/rejoinCatchUpModel'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface UndercoverWordHeroViewProps {
@@ -57,6 +56,26 @@ interface UndercoverWordHeroViewProps {
    * state renders the pre-Wave-3 static copy unchanged.
    */
   contentStatus?: SocialContentStatus
+  /**
+   * Wave 2 P1 (contract AC-01): every write rides the page's shared action
+   * dispatcher (`performSocialAction`) — success syncs + refetches
+   * immediately, failures resolve `null` (the view keeps its inline error
+   * copy), `undefined` means the mutex skipped the tap.
+   */
+  onGenerate: () => Promise<unknown>
+  onDescribe: (text: string) => Promise<unknown>
+  onVote: (targetUserId: string) => Promise<unknown>
+  onReveal: () => Promise<unknown>
+  isGenerating?: boolean
+  isSubmitting?: boolean
+  isVoting?: boolean
+  isRevealing?: boolean
+  /**
+   * Wave 2 P1 (contract AC-02b / 补5): displayNames of away members —
+   * rendered as 「 · 等 {名}（暂离）」 next to the waiting counts. Empty when
+   * the flag is off / nobody is away.
+   */
+  awayNames?: string[]
 }
 
 const REACTION_ITEMS = [
@@ -91,6 +110,15 @@ export function UndercoverWordHeroView({
   pairMeta,
   completedUserIds = [],
   contentStatus,
+  onGenerate,
+  onDescribe,
+  onVote,
+  onReveal,
+  isGenerating = false,
+  isSubmitting = false,
+  isVoting = false,
+  isRevealing = false,
+  awayNames = [],
 }: UndercoverWordHeroViewProps) {
   // P0 E1 (2026-10-20): description draft — restore on mount, debounced
   // write on input, clear on submit success or phase switch.
@@ -99,10 +127,6 @@ export function UndercoverWordHeroView({
     : null
   const draft = useIcebreakerDraft(draftKey)
   const [description, setDescription] = useState(() => draft.readDraft() ?? '')
-  const [submitting, setSubmitting] = useState(false)
-  const [voting, setVoting] = useState(false)
-  const [revealing, setRevealing] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [selectedTarget, setSelectedTarget] = useState('')
   const [showSecret, setShowSecret] = useState(false)
@@ -187,64 +211,39 @@ export function UndercoverWordHeroView({
   }, [revealed, results])
 
   // ── Handlers ──
+  // AC-01: every write goes through the shared dispatcher (props) — success
+  // syncs + refetches instantly; `null` = failed (inline copy below);
+  // `undefined` = mutex-skipped (ack toast already shown by the dispatcher).
   const handleGenerate = async () => {
-    setIsGenerating(true)
     setError('')
-    try {
-      await apiRequest({ path: buildSocialPath(socialSessionId, '/undercover-word/generate'), method: 'POST' })
-    } catch {
-      setError('词对没生成成功')
-    } finally {
-      setIsGenerating(false)
-    }
+    const result = await onGenerate()
+    if (result === null) setError('词对没生成成功')
   }
 
   const handleDescribe = async () => {
     if (!userId || !description.trim()) return
-    setSubmitting(true)
     setError('')
-    try {
-      await apiRequest({
-        path: buildSocialPath(socialSessionId, '/undercover-word/describe'),
-        method: 'POST',
-        data: { text: description.trim() },
-      })
+    const result = await onDescribe(description.trim())
+    if (result) {
       setDescription('')
       draft.clearDraft() // P0 E1: submit success cleans the stored draft
-    } catch {
+    } else if (result === null) {
       setError('提交没成功，再试一次')
-    } finally {
-      setSubmitting(false)
     }
   }
 
   const handleVote = async () => {
     if (!userId || !selectedTarget) return
-    setVoting(true)
     setError('')
-    try {
-      await apiRequest({
-        path: buildSocialPath(socialSessionId, '/undercover-word/vote'),
-        method: 'POST',
-        data: { targetUserId: selectedTarget },
-      })
-    } catch {
-      setError('投票没成功，再试试')
-    } finally {
-      setVoting(false)
-    }
+    const result = await onVote(selectedTarget)
+    if (result === null) setError('投票没成功，再试试')
   }
 
   const handleReveal = async () => {
     if (!isHost) return
-    setRevealing(true)
-    try {
-      await apiRequest({ path: buildSocialPath(socialSessionId, '/undercover-word/reveal'), method: 'POST' })
-    } catch {
-      setError('揭晓遇到小状况')
-    } finally {
-      setRevealing(false)
-    }
+    setError('')
+    const result = await onReveal()
+    if (result === null) setError('揭晓遇到小状况')
   }
 
   // Wave 2 (AC-10): fake local counts removed — expressive taps only.
@@ -252,9 +251,18 @@ export function UndercoverWordHeroView({
     setSelectedReaction(index)
   }, [])
 
+  // AC-03④: the vote target row is selectable by TAP as well as by swipe —
+  // the swipe gesture stays, but accessibility / iOS gesture conflicts never
+  // strand a voter. Tapping the selected row again deselects (mirrors the
+  // left-swipe clear).
   const handleSwipeSelect = useCallback((targetId: string) => {
     haptics('light')
     setSelectedTarget(targetId)
+  }, [])
+
+  const handleTapSelect = useCallback((targetId: string) => {
+    haptics('light')
+    setSelectedTarget((current) => (current === targetId ? '' : targetId))
   }, [])
 
   const getDescriptionsForUser = (targetUserId: string) => {
@@ -375,20 +383,22 @@ export function UndercoverWordHeroView({
           title='投票环节'
           prompt='谁最有可能是卧底？'
           statusText={
-            hasVoted ? `已投票，等待其他人… ${votedUserIds.length}/${playerCount}` : '右滑选择目标'
+            hasVoted
+              ? `已投票，等待其他人… ${votedUserIds.length}/${playerCount}${formatAwayWaitSuffix(awayNames)}`
+              : '右滑或点选目标'
           }
           doneCount={votedUserIds.length}
           totalCount={playerCount}
           actions={
             <>
               {!hasVoted ? (
-                <Button variant='primary' onClick={handleVote} disabled={!selectedTarget || voting}>
-                  {voting ? '提交中…' : selectedTarget ? '提交投票' : '请选择目标'}
+                <Button variant='primary' onClick={handleVote} disabled={!selectedTarget || isVoting} loading={isVoting}>
+                  {isVoting ? '提交中…' : selectedTarget ? '提交投票' : '请选择目标'}
                 </Button>
               ) : null}
               {isHost && allVoted ? (
-                <Button variant='primary' onClick={handleReveal} disabled={revealing}>
-                  {revealing ? '揭晓中…' : '揭晓结果'}
+                <Button variant='primary' onClick={handleReveal} disabled={isRevealing} loading={isRevealing}>
+                  {isRevealing ? '揭晓中…' : '揭晓结果'}
                 </Button>
               ) : null}
             </>
@@ -408,7 +418,14 @@ export function UndercoverWordHeroView({
                     onSwipeLeft={() => setSelectedTarget('')}
                     threshold={0.35}
                   >
-                    <View className={`undercover-hero__target${isSelected ? ' undercover-hero__target--selected' : ''}`}>
+                    <View
+                      className={`undercover-hero__target${isSelected ? ' undercover-hero__target--selected' : ''}`}
+                      onClick={() => handleTapSelect(p.userId)}
+                      hoverClass='undercover-hero__target--pressed'
+                      hoverStartTime={0}
+                      role='button'
+                      aria-label={`投票给${p.displayName ?? '这位玩家'}`}
+                    >
                       <View className='undercover-hero__target-avatar'>
                         <Text className='undercover-hero__target-avatar-text'>{(p.displayName || '?')[0]}</Text>
                       </View>
@@ -445,7 +462,7 @@ export function UndercoverWordHeroView({
         title={`谁是卧底 · 第${currentRound + 1}轮`}
         statusText={
           hasSubmittedDesc
-            ? `已提交，等待其他人… ${describedCount}/${playerCount}`
+            ? `已提交，等待其他人… ${describedCount}/${playerCount}${formatAwayWaitSuffix(awayNames)}`
             : `已描述 ${describedCount}/${playerCount} 人`
         }
         doneCount={describedCount}
@@ -453,13 +470,13 @@ export function UndercoverWordHeroView({
         actions={
           <>
             {!hasSubmittedDesc ? (
-              <Button variant='primary' onClick={handleDescribe} disabled={!description.trim() || submitting}>
-                {submitting ? '提交中…' : '提交描述'}
+              <Button variant='primary' onClick={handleDescribe} disabled={!description.trim() || isSubmitting} loading={isSubmitting}>
+                {isSubmitting ? '提交中…' : '提交描述'}
               </Button>
             ) : null}
             {isHost && allDescribed ? (
-              <Button variant='primary' onClick={handleReveal} disabled={revealing}>
-                {revealing ? '处理中…' : currentRound >= 1 ? '进入投票' : '下一轮'}
+              <Button variant='primary' onClick={handleReveal} disabled={isRevealing} loading={isRevealing}>
+                {isRevealing ? '处理中…' : currentRound >= 1 ? '进入投票' : '下一轮'}
               </Button>
             ) : null}
           </>

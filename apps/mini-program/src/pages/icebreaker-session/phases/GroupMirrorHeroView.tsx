@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { RootPortal, View, Text } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
-import { apiRequest } from '../../../lib/api/api'
-import { buildSocialPath } from '../icebreakerSessionModel'
 import { ParticleBurst } from '../../../components/reveal'
 import { TapReaction } from '../../../components/gesture'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
@@ -14,6 +12,7 @@ import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SocialContentStatus } from '@shared/socialIcebreaker'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 import { buildGroupMirrorAnswerRows } from '../viewModels/phaseProgressionModels'
+import { formatAwayWaitSuffix } from '../viewModels/rejoinCatchUpModel'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface GroupMirrorHeroViewProps {
@@ -44,6 +43,22 @@ interface GroupMirrorHeroViewProps {
    * state renders the pre-Wave-3 static copy unchanged.
    */
   contentStatus?: SocialContentStatus
+  /**
+   * Wave 2 P1 (contract AC-01): writes ride the page's shared action
+   * dispatcher — success syncs + refetches immediately, `null` = failure
+   * (inline copy below), `undefined` = mutex-skipped.
+   */
+  onGenerate: () => Promise<unknown>
+  onSubmit: (answers: Array<{ questionId: string; targetUserId: string }>) => Promise<unknown>
+  onReveal: () => Promise<unknown>
+  isGenerating?: boolean
+  isSubmitting?: boolean
+  isRevealing?: boolean
+  /**
+   * Wave 2 P1 (contract AC-02b / 补5): away-member displayNames rendered as
+   * 「 · 等 {名}（暂离）」 next to the waiting count.
+   */
+  awayNames?: string[]
 }
 
 const REACTIONS = [
@@ -54,7 +69,7 @@ const REACTIONS = [
 ]
 
 export function GroupMirrorHeroView({
-  socialSessionId,
+  socialSessionId: _socialSessionId,
   isHost,
   userId,
   questions = [],
@@ -68,10 +83,14 @@ export function GroupMirrorHeroView({
   isAdvancing = false,
   questionsMeta,
   contentStatus,
+  onGenerate,
+  onSubmit,
+  onReveal,
+  isGenerating = false,
+  isSubmitting = false,
+  isRevealing = false,
+  awayNames = [],
 }: GroupMirrorHeroViewProps) {
-  const [submitting, setSubmitting] = useState(false)
-  const [revealing, setRevealing] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
 
   // Wave 3 (AC-07): live 「悦仔正在出题…」 copy while the server reports the
@@ -121,16 +140,13 @@ export function GroupMirrorHeroView({
     [questions.length],
   )
 
+  // AC-01: writes ride the shared dispatcher (props) — success syncs +
+  // refetches instantly; `null` = failed (inline copy); `undefined` =
+  // mutex-skipped (ack toast already shown by the dispatcher).
   const handleGenerate = async () => {
-    setIsGenerating(true)
     setError('')
-    try {
-      await apiRequest({ path: buildSocialPath(socialSessionId, '/group-mirror/generate'), method: 'POST' })
-    } catch {
-      setError('问题没生成成功')
-    } finally {
-      setIsGenerating(false)
-    }
+    const result = await onGenerate()
+    if (result === null) setError('问题没生成成功')
   }
 
   const handleSubmit = async () => {
@@ -144,31 +160,16 @@ export function GroupMirrorHeroView({
       return
     }
 
-    setSubmitting(true)
     setError('')
-    try {
-      await apiRequest({
-        path: buildSocialPath(socialSessionId, '/group-mirror/submit'),
-        method: 'POST',
-        data: { answers: answersToSubmit },
-      })
-    } catch {
-      setError('提交没成功，再试一次')
-    } finally {
-      setSubmitting(false)
-    }
+    const result = await onSubmit(answersToSubmit)
+    if (result === null) setError('提交没成功，再试一次')
   }
 
   const handleReveal = async () => {
     if (!isHost) return
-    setRevealing(true)
-    try {
-      await apiRequest({ path: buildSocialPath(socialSessionId, '/group-mirror/reveal'), method: 'POST' })
-    } catch {
-      setError('揭晓遇到小状况')
-    } finally {
-      setRevealing(false)
-    }
+    setError('')
+    const result = await onReveal()
+    if (result === null) setError('揭晓遇到小状况')
   }
 
   // Wave 2 (AC-10): fake local counts removed — the row keeps the expressive
@@ -306,7 +307,7 @@ export function GroupMirrorHeroView({
         prompt='一次一题，选最符合的人 · 答几题都可以'
         statusText={
           hasSubmitted
-            ? `已提交，等待其他人… ${submittedUserIds.length}/${playerCount}`
+            ? `已提交，等待其他人… ${submittedUserIds.length}/${playerCount}${formatAwayWaitSuffix(awayNames)}`
             : `已提交 ${submittedUserIds.length}/${playerCount} 人`
         }
         doneCount={submittedUserIds.length}
@@ -314,13 +315,13 @@ export function GroupMirrorHeroView({
         actions={
           <>
             {hasSubmitted ? null : (
-              <Button variant='primary' onClick={handleSubmit} disabled={submitting}>
-                {submitting ? '提交中…' : '提交投票'}
+              <Button variant='primary' onClick={handleSubmit} disabled={isSubmitting} loading={isSubmitting}>
+                {isSubmitting ? '提交中…' : '提交投票'}
               </Button>
             )}
             {isHost && allSubmitted ? (
-              <Button variant='primary' onClick={handleReveal} disabled={revealing}>
-                {revealing ? '揭晓中…' : '揭晓结果'}
+              <Button variant='primary' onClick={handleReveal} disabled={isRevealing} loading={isRevealing}>
+                {isRevealing ? '揭晓中…' : '揭晓结果'}
               </Button>
             ) : null}
           </>

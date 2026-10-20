@@ -16,6 +16,7 @@ import type { SocialContentStatus } from '@shared/socialIcebreaker'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 import { useIcebreakerDraft } from '../hooks/useIcebreakerDraft'
 import { buildIcebreakerDraftKey } from '../viewModels/draftPersistence'
+import { formatAwayWaitSuffix } from '../viewModels/rejoinCatchUpModel'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface QuipBattlePrompt {
@@ -62,6 +63,23 @@ interface QuipBattleHeroViewProps {
    * state renders the pre-Wave-3 static copy unchanged.
    */
   contentStatus?: SocialContentStatus
+  /**
+   * Wave 2 P1 (contract AC-01): writes ride the page's shared action
+   * dispatcher — success syncs + refetches immediately (the post-write
+   * `onRefresh` calls are gone), `null` = failure (inline copy below),
+   * `undefined` = mutex-skipped.
+   */
+  onGenerate: () => Promise<unknown>
+  onSubmit: (answers: Array<{ promptId: string; answerText: string }>) => Promise<unknown>
+  onVote: (votes: Array<{ answerId: string; promptId: string }>) => Promise<unknown>
+  isGenerating?: boolean
+  isSubmitting?: boolean
+  isVoting?: boolean
+  /**
+   * Wave 2 P1 (contract AC-02b / 补5): away-member displayNames rendered as
+   * 「 · 等 {名}（暂离）」 next to the waiting counts.
+   */
+  awayNames?: string[]
 }
 
 const REACTIONS = [
@@ -92,6 +110,59 @@ export function buildQuipBattleVotes(voteMap: Record<string, string>) {
   }))
 }
 
+// ── AC-03⑤ (sprint icebreaker-polish-p1): pre-submit vote preview step ────
+// The stack only walks forward, so a mis-swipe used to be irreversible. The
+// 汇总步 below lists every viewed card with its vote state; tapping a row
+// flips the vote before submission — swipe stays the fast path, the preview
+// is the correction path.
+
+export interface QuipVotePreviewItem {
+  /** voteMap key: `${answerUserId}::${promptId}`. */
+  key: string
+  promptId: string
+  promptText: string
+  displayName: string
+  answerText: string
+  voted: boolean
+}
+
+export interface QuipVotePreview {
+  votedCount: number
+  items: QuipVotePreviewItem[]
+}
+
+export function buildQuipVotePreview(
+  stack: Array<{ prompt: QuipBattlePrompt; answer: QuipBattleAnswer }>,
+  voteMap: Record<string, string>,
+): QuipVotePreview {
+  const items = stack.map(({ prompt, answer }) => {
+    const key = `${answer.userId}::${prompt.id}`
+    return {
+      key,
+      promptId: prompt.id,
+      promptText: prompt.promptText,
+      displayName: answer.displayName,
+      answerText: answer.answerText,
+      voted: Object.prototype.hasOwnProperty.call(voteMap, key),
+    }
+  })
+  return { votedCount: items.filter((item) => item.voted).length, items }
+}
+
+/** Toggle one card's vote in the map (immutable — returns a new map). */
+export function toggleQuipVoteInMap(
+  voteMap: Record<string, string>,
+  key: string,
+  promptId: string,
+): Record<string, string> {
+  if (Object.prototype.hasOwnProperty.call(voteMap, key)) {
+    const next = { ...voteMap }
+    delete next[key]
+    return next
+  }
+  return { ...voteMap, [key]: promptId }
+}
+
 export function QuipBattleHeroView({
   socialSessionId,
   isHost,
@@ -108,6 +179,13 @@ export function QuipBattleHeroView({
   isAdvancing = false,
   promptsMeta,
   contentStatus,
+  onGenerate,
+  onSubmit,
+  onVote,
+  isGenerating = false,
+  isSubmitting = false,
+  isVoting = false,
+  awayNames = [],
 }: QuipBattleHeroViewProps) {
   // P0 E1 (2026-10-20): draft persistence — a host advance / app kill no
   // longer wipes in-progress answers. Restore on mount, debounced write on
@@ -127,15 +205,15 @@ export function QuipBattleHeroView({
     }
   })
   const [voteMap, setVoteMap] = useState<Record<string, string>>({})
-  const [submitting, setSubmitting] = useState(false)
-  const [voting, setVoting] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [showChampion, setShowChampion] = useState(false)
   const [stackIndex, setStackIndex] = useState(0)
   const [burstTrigger, setBurstTrigger] = useState(false)
   const burstTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [selectedReaction, setSelectedReaction] = useState<number | undefined>()
+  // AC-03⑤: pre-submit preview step — expandable 汇总 of my votes, each row
+  // tap-to-flip (the correction path the forward-only stack never had).
+  const [votePreviewOpen, setVotePreviewOpen] = useState(false)
 
   // Wave 3 (AC-07): live 「悦仔正在出题…」 copy while the server reports the
   // prompts as generating (flag-gated field; absent → null → static copy).
@@ -194,17 +272,13 @@ export function QuipBattleHeroView({
     setAnswerMap((prev) => ({ ...prev, [promptId]: text.slice(0, 100) }))
   }
 
+  // AC-01: writes ride the shared dispatcher (props) — success syncs +
+  // refetches instantly (the old post-write `onRefresh` is absorbed);
+  // `null` = failed (inline copy); `undefined` = mutex-skipped.
   const handleGenerate = async () => {
-    setIsGenerating(true)
     setError('')
-    try {
-      await apiRequest({ path: buildSocialPath(socialSessionId, '/quip-battle/generate'), method: 'POST' })
-      onRefresh?.()
-    } catch {
-      setError('题目没生成成功')
-    } finally {
-      setIsGenerating(false)
-    }
+    const result = await onGenerate()
+    if (result === null) setError('题目没生成成功')
   }
 
   const handleSubmit = async () => {
@@ -218,20 +292,12 @@ export function QuipBattleHeroView({
       return
     }
 
-    setSubmitting(true)
     setError('')
-    try {
-      await apiRequest({
-        path: buildSocialPath(socialSessionId, '/quip-battle/submit'),
-        method: 'POST',
-        data: { answers: answersToSubmit },
-      })
+    const result = await onSubmit(answersToSubmit)
+    if (result) {
       draft.clearDraft() // P0 E1: submit success cleans the stored draft
-      onRefresh?.()
-    } catch {
+    } else if (result === null) {
       setError('提交没成功，再试一次')
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -239,22 +305,13 @@ export function QuipBattleHeroView({
     if (!userId) return
     const votesToSubmit = buildQuipBattleVotes(voteMap)
 
-    setVoting(true)
     setError('')
-    try {
-      await apiRequest({
-        path: buildSocialPath(socialSessionId, '/quip-battle/vote'),
-        method: 'POST',
-        data: { votes: votesToSubmit },
-      })
-      onRefresh?.()
-    } catch {
-      setError('投票没成功，再试试')
-    } finally {
-      setVoting(false)
-    }
+    const result = await onVote(votesToSubmit)
+    if (result === null) setError('投票没成功，再试试')
   }
 
+  // Read-only reveal fetch (contract AC-01 exempts reads); the follow-up
+  // onRefresh reconciles the polled state.
   const handleReveal = async () => {
     try {
       await apiRequest({ path: buildSocialPath(socialSessionId, '/quip-battle/results'), method: 'GET' })
@@ -265,7 +322,7 @@ export function QuipBattleHeroView({
   }
 
   const handleSwipeRight = useCallback(() => {
-    if (voting) return
+    if (isVoting) return
     const current = swipeStack[stackIndex]
     if (!current) return
     haptics('light')
@@ -280,12 +337,23 @@ export function QuipBattleHeroView({
     burstTimeoutRef.current = setTimeout(() => setBurstTrigger(false), 300)
 
     setStackIndex((i) => Math.min(i + 1, swipeStack.length))
-  }, [stackIndex, swipeStack, voting])
+  }, [stackIndex, swipeStack, isVoting])
 
   const handleSwipeLeft = useCallback(() => {
-    if (voting) return
+    if (isVoting) return
     setStackIndex((i) => Math.min(i + 1, swipeStack.length))
-  }, [swipeStack.length, voting])
+  }, [swipeStack.length, isVoting])
+
+  // AC-03⑤: preview derivation + tap-to-flip correction path.
+  const votePreview = useMemo(() => buildQuipVotePreview(swipeStack, voteMap), [swipeStack, voteMap])
+  const handleToggleVotePreview = useCallback(() => {
+    haptics('light')
+    setVotePreviewOpen((open) => !open)
+  }, [])
+  const handlePreviewItemTap = useCallback((key: string, promptId: string) => {
+    haptics('light')
+    setVoteMap((prev) => toggleQuipVoteInMap(prev, key, promptId))
+  }, [])
 
   // Wave 2 (AC-10): fake local counts removed — expressive taps only.
   const handleReaction = useCallback((index: number) => {
@@ -343,8 +411,8 @@ export function QuipBattleHeroView({
                 </Button>
               ) : null}
               {prompts.length > 0 ? (
-                <Button variant='primary' onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? '提交中…' : '提交答案'}
+                <Button variant='primary' onClick={handleSubmit} disabled={isSubmitting} loading={isSubmitting}>
+                  {isSubmitting ? '提交中…' : '提交答案'}
                 </Button>
               ) : null}
             </>
@@ -396,8 +464,8 @@ export function QuipBattleHeroView({
           doneCount={votingState.viewedCount}
           totalCount={swipeStack.length}
           actions={
-            <Button variant='primary' onClick={handleVote} disabled={voting || !votingState.canSubmit}>
-              {voting ? '提交中…' : '提交投票'}
+            <Button variant='primary' onClick={handleVote} disabled={isVoting || !votingState.canSubmit} loading={isVoting}>
+              {isVoting ? '提交中…' : '提交投票'}
             </Button>
           }
         >
@@ -416,6 +484,57 @@ export function QuipBattleHeroView({
               所有卡片已浏览，可以提交投票
             </Text>
           )}
+          {/* AC-03⑤: pre-submit preview step — every viewed card with its
+              vote state; tap a row to flip before submitting. Renders only
+              once the stack is fully viewed (the 汇总步 gate). */}
+          {votingState.canSubmit && votePreview.items.length > 0 ? (
+            <View className='quip-battle-hero__vote-preview'>
+              <View
+                className='quip-battle-hero__vote-preview-toggle'
+                hoverClass='quip-battle-hero__vote-preview-toggle--pressed'
+                hoverStartTime={0}
+                onClick={handleToggleVotePreview}
+                role='button'
+                aria-expanded={votePreviewOpen}
+                aria-label={`你投出 ${votePreview.votedCount} 票，点查看`}
+              >
+                <Text className='quip-battle-hero__vote-preview-toggle-text'>
+                  你投出 {votePreview.votedCount} 票
+                </Text>
+                <Text className='quip-battle-hero__vote-preview-toggle-hint'>
+                  {votePreviewOpen ? '收起' : '点查看'}
+                </Text>
+              </View>
+              {votePreviewOpen ? (
+                <View className='quip-battle-hero__vote-preview-list'>
+                  {votePreview.items.map((item) => (
+                    <View
+                      key={item.key}
+                      className={`quip-battle-hero__vote-preview-item${item.voted ? ' quip-battle-hero__vote-preview-item--voted' : ''}`}
+                      hoverClass='quip-battle-hero__vote-preview-item--pressed'
+                      hoverStartTime={0}
+                      onClick={() => handlePreviewItemTap(item.key, item.promptId)}
+                      role='button'
+                      aria-pressed={item.voted}
+                      aria-label={`${item.displayName} 的回答，${item.voted ? '已投，点按取消' : '未投，点按投票'}`}
+                    >
+                      <View className='quip-battle-hero__vote-preview-item-copy'>
+                        <Text className='quip-battle-hero__vote-preview-item-prompt'>
+                          {item.promptText}
+                        </Text>
+                        <Text className='quip-battle-hero__vote-preview-item-answer'>
+                          {item.displayName}：“{item.answerText}”
+                        </Text>
+                      </View>
+                      <Text className='quip-battle-hero__vote-preview-item-state'>
+                        {item.voted ? '已投' : '未投'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           {error ? <View className='quip-battle-hero__error' role='alert'><Text>{error}</Text></View> : null}
         </PhaseHeroCard>
       </View>
@@ -429,7 +548,7 @@ export function QuipBattleHeroView({
         <PhaseHeroCard
           phase='quip_battle'
           title='等待其他玩家'
-          statusText={`已提交 ${submittedUserIds.length}/${playerCount}`}
+          statusText={`已提交 ${submittedUserIds.length}/${playerCount}${formatAwayWaitSuffix(awayNames)}`}
           doneCount={submittedOrCompleted.size}
           totalCount={playerCount}
           actions={
@@ -448,7 +567,7 @@ export function QuipBattleHeroView({
         <PhaseHeroCard
           phase='quip_battle'
           title='等待投票'
-          statusText={`已投票 ${votedUserIds.length}/${playerCount}`}
+          statusText={`已投票 ${votedUserIds.length}/${playerCount}${formatAwayWaitSuffix(awayNames)}`}
           doneCount={votedUserIds.length}
           totalCount={playerCount}
           actions={

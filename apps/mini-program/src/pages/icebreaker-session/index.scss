@@ -294,6 +294,41 @@
     overflow-wrap: break-word;
   }
 
+  // ── Wave 2 P1 (contract AC-02a): rejoin catch-up chip ──
+  // One quiet line under the header band telling the returnee where the
+  // table is and what they still owe. ≤4s auto-dismiss; tap to dismiss.
+  &__catchup-chip {
+    position: fixed;
+    // Sits just above the phase-toast slot (they never co-fire in practice:
+    // the toast belongs to a phase transition, the chip to a rejoin).
+    top: calc(180rpx + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    max-width: calc(100vw - 64rpx);
+    display: flex;
+    align-items: center;
+    min-height: 88rpx;
+    padding: $spacing-sm $spacing-lg;
+    background: $color-surface;
+    border-radius: $radius-full;
+    box-shadow: $shadow-md;
+    z-index: 100;
+    animation: fade-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__catchup-chip--pressed {
+    background: rgba($color-primary, 0.08);
+  }
+
+  &__catchup-chip-text {
+    @include type-label;
+    color: $color-text-primary;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
   // ═══════════════════════════════════════════════════════════════
   //  Waiting Phase
   // ═══════════════════════════════════════════════════════════════

@@ -27,6 +27,7 @@ import type { TopicsRecoveryState } from './viewModels/warmupViewModels'
 import type { SocialRecapResponse } from './icebreakerSessionModel'
 import { formatIceOpeningPackButton } from '@shared/copy/icebreakerSession'
 import type { WarmupReadiness } from './hooks/useWarmupReadiness'
+import { deriveAwayMemberNames } from './viewModels/rejoinCatchUpModel'
 
 /**
  * SessionPhaseViews — presentational phase dispatch for the icebreaker
@@ -139,6 +140,28 @@ export interface SessionPhaseViewsProps {
   /** Wave 2 (AC-02/13): entry phase-map items — the waiting view renders the
    *  sequence preview; the shell renders it during warmup. */
   phaseMapItems?: Array<{ key: string; label: string; current: boolean }> | null
+  /**
+   * Wave 2 P1 (sprint icebreaker-polish-p1, contract AC-01): the four phase
+   * views' self-state writes ride the shared action dispatcher via these
+   * handlers (success syncs + refetch + confirm haptic + mutex). Views
+   * resolve `null` = failure (inline copy), `undefined` = mutex-skipped.
+   */
+  onUndercoverGenerate: () => Promise<unknown>
+  onUndercoverDescribe: (text: string) => Promise<unknown>
+  onUndercoverVote: (targetUserId: string) => Promise<unknown>
+  onUndercoverReveal: () => Promise<unknown>
+  onGroupMirrorGenerate: () => Promise<unknown>
+  onGroupMirrorSubmit: (answers: Array<{ questionId: string; targetUserId: string }>) => Promise<unknown>
+  onGroupMirrorReveal: () => Promise<unknown>
+  onQuipGenerate: () => Promise<unknown>
+  onQuipSubmit: (answers: Array<{ promptId: string; answerText: string }>) => Promise<unknown>
+  onQuipVote: (votes: Array<{ answerId: string; promptId: string }>) => Promise<unknown>
+  onSubmitRecapFeedback: (payload: {
+    phase: 'recap'
+    promptVersion: string
+    aiCorrelationId: string
+    rating: 'helpful' | 'neutral' | 'awkward'
+  }) => Promise<unknown>
 }
 
 export function SessionPhaseViews(props: SessionPhaseViewsProps) {
@@ -221,7 +244,23 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     onGoBack,
     onConnectTap,
     phaseMapItems = null,
+    onUndercoverGenerate,
+    onUndercoverDescribe,
+    onUndercoverVote,
+    onUndercoverReveal,
+    onGroupMirrorGenerate,
+    onGroupMirrorSubmit,
+    onGroupMirrorReveal,
+    onQuipGenerate,
+    onQuipSubmit,
+    onQuipVote,
+    onSubmitRecapFeedback,
   } = props
+
+  // Wave 2 P1 (contract AC-02b / 补5): away-member displayNames for the
+  // waiting views' 「 · 等 {名}（暂离）」 suffix. Optional-chaining all the
+  // way — flag off / field absent → empty → nothing renders.
+  const awayNames = deriveAwayMemberNames(session, participants)
 
   return (
     <>
@@ -472,6 +511,13 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           isAdvancing={pendingAction === 'advance'}
           promptsMeta={session.quipBattlePromptsMeta}
           contentStatus={session.quipContentStatus}
+          onGenerate={onQuipGenerate}
+          onSubmit={onQuipSubmit}
+          onVote={onQuipVote}
+          isGenerating={pendingAction === 'quip-generate'}
+          isSubmitting={pendingAction === 'quip-submit'}
+          isVoting={pendingAction === 'quip-vote'}
+          awayNames={awayNames}
         />
       )}
 
@@ -498,6 +544,15 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
             ...(session.phaseOptOutUserIds ?? []),
             ...(session.phaseSilentCompletedUserIds ?? []),
           ]}
+          onGenerate={onUndercoverGenerate}
+          onDescribe={onUndercoverDescribe}
+          onVote={onUndercoverVote}
+          onReveal={onUndercoverReveal}
+          isGenerating={pendingAction === 'undercover-generate'}
+          isSubmitting={pendingAction === 'undercover-describe'}
+          isVoting={pendingAction === 'undercover-vote'}
+          isRevealing={pendingAction === 'undercover-reveal'}
+          awayNames={awayNames}
         />
       )}
 
@@ -517,6 +572,13 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           isAdvancing={pendingAction === 'advance'}
           questionsMeta={session.groupMirrorQuestionsMeta}
           contentStatus={session.groupMirrorContentStatus}
+          onGenerate={onGroupMirrorGenerate}
+          onSubmit={onGroupMirrorSubmit}
+          onReveal={onGroupMirrorReveal}
+          isGenerating={pendingAction === 'group-mirror-generate'}
+          isSubmitting={pendingAction === 'group-mirror-submit'}
+          isRevealing={pendingAction === 'group-mirror-reveal'}
+          awayNames={awayNames}
         />
       )}
 
@@ -571,6 +633,8 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           currentUserId={currentUserId}
           ownGlowBreakdown={ownGlowBreakdown}
           hapticGrammarEnabled={hapticGrammarEnabled}
+          hostUserId={session.hostUserId}
+          onSubmitRecapFeedback={onSubmitRecapFeedback}
         />
       )}
 

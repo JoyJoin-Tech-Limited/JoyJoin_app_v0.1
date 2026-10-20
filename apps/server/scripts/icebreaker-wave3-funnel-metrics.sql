@@ -123,3 +123,89 @@ SELECT
 --   WHERE metadata->>'socialSessionId' = 'social_<sessionId>'
 --     AND event_type IN ('warmup_ready_rate', 'phase_completion_rate', 'moment_card_saved')
 --   ORDER BY "timestamp";
+
+-- ============================================================================
+-- Wave 2 P1 (sprint icebreaker-polish-p1, contract AC-06 补6): session health
+-- ============================================================================
+--
+-- `session_health_snapshot` — emitted once per user at recap first display
+-- (same ref-guarded one-shot discipline as recap_view). metadata:
+--   phaseCount     — playable phases completed (phase_selection excluded)
+--   myActionCount  — viewer's own visible contributions, DERIVED client-side
+--                    from the final session state (zero new requests):
+--                    descriptions/answers/statements/votes/bids/completions
+--   playerCount    — roster size at display time
+--   (+ socialSessionId, icebreakerSessionId, phase='recap'|'ended')
+-- Same 口径 CAVEAT as above: client-side funnel, per acting client, not a
+-- per-session server truth.
+
+-- ── Q6: per-capita action distribution (last 30 days) ────────────────────────
+-- 补6 健康指标 ②: how much did the average viewer actually DO? Median is the
+-- honest center; the zero-action share flags ghost passengers.
+SELECT
+  COUNT(*)                                                              AS snapshots,
+  ROUND(AVG((metadata->>'myActionCount')::numeric), 2)                  AS avg_actions_per_user,
+  ROUND(
+    percentile_cont(0.5) WITHIN GROUP (
+      ORDER BY (metadata->>'myActionCount')::numeric
+    )::numeric,
+    1
+  )                                                                     AS median_actions_per_user,
+  COUNT(*) FILTER (WHERE (metadata->>'myActionCount')::numeric = 0)     AS zero_action_users,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE (metadata->>'myActionCount')::numeric = 0) / NULLIF(COUNT(*), 0),
+    1
+  )                                                                     AS zero_action_pct
+FROM discover_analytics_events
+WHERE event_type = 'session_health_snapshot'
+  AND "timestamp" >= now() - interval '30 days';
+
+-- ── Q7: recap reach (last 30 days) ───────────────────────────────────────────
+-- 补6 健康指标 ③: of the tables that STARTED a playable phase (phase_view),
+-- how many distinct sessions had at least one member reach the recap and
+-- fire the health snapshot. Denominator excludes same-day sessions still
+-- mid-run (sessions whose latest phase_view is < 3h old).
+SELECT
+  (SELECT COUNT(DISTINCT metadata->>'socialSessionId')
+     FROM discover_analytics_events
+    WHERE event_type = 'phase_view'
+      AND "timestamp" >= now() - interval '30 days'
+      AND "timestamp" <= now() - interval '3 hours')                    AS started_sessions,
+  (SELECT COUNT(DISTINCT metadata->>'socialSessionId')
+     FROM discover_analytics_events
+    WHERE event_type = 'session_health_snapshot'
+      AND "timestamp" >= now() - interval '30 days'
+      AND "timestamp" <= now() - interval '3 hours')                    AS recap_reached_sessions,
+  ROUND(
+    100.0
+    * (SELECT COUNT(DISTINCT metadata->>'socialSessionId')
+         FROM discover_analytics_events
+        WHERE event_type = 'session_health_snapshot'
+          AND "timestamp" >= now() - interval '30 days'
+          AND "timestamp" <= now() - interval '3 hours')
+    / NULLIF((SELECT COUNT(DISTINCT metadata->>'socialSessionId')
+         FROM discover_analytics_events
+        WHERE event_type = 'phase_view'
+          AND "timestamp" >= now() - interval '30 days'
+          AND "timestamp" <= now() - interval '3 hours'), 0),
+    1
+  )                                                                     AS recap_reach_pct;
+
+-- ── Q8: phaseCount at recap vs. per-capita actions (joint read, 30 days) ─────
+-- Healthy tables finish more phases AND act more; a quadrant split shows
+-- whether low-action sessions also bail early.
+SELECT
+  ROUND(AVG((metadata->>'phaseCount')::numeric), 2)                     AS avg_phase_count,
+  ROUND(
+    percentile_cont(0.5) WITHIN GROUP (
+      ORDER BY (metadata->>'phaseCount')::numeric
+    )::numeric,
+    1
+  )                                                                     AS median_phase_count,
+  ROUND(
+    corr((metadata->>'phaseCount')::numeric, (metadata->>'myActionCount')::numeric)::numeric,
+    3
+  )                                                                     AS phase_action_corr
+FROM discover_analytics_events
+WHERE event_type = 'session_health_snapshot'
+  AND "timestamp" >= now() - interval '30 days';

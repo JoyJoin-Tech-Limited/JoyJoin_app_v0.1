@@ -29,11 +29,16 @@ import type { SessionParticipant } from '../phaseUtils'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 function RecapAiFeedbackBar({
-  socialSessionId,
   recapMeta,
+  onSubmit,
 }: {
-  socialSessionId: string
   recapMeta?: AIResponseMeta | null
+  /**
+   * Wave 2 P1 (contract AC-01): the rating write rides the page's shared
+   * action dispatcher. Resolves true only on success (null = failed,
+   * undefined = mutex-skipped — both leave the bar retryable).
+   */
+  onSubmit: (rating: 'helpful' | 'neutral' | 'awkward') => Promise<boolean>
 }) {
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -50,19 +55,10 @@ function RecapAiFeedbackBar({
   const submit = async (rating: 'helpful' | 'neutral' | 'awkward') => {
     if (busy) return
     setBusy(true)
-    try {
-      await apiRequest({
-        path: buildSocialPath(socialSessionId, '/ai-feedback'),
-        method: 'POST',
-        data: {
-          phase: 'recap',
-          promptVersion: recapMeta.promptVersion,
-          aiCorrelationId: recapMeta.aiCorrelationId,
-          rating,
-        },
-      })
+    const ok = await onSubmit(rating)
+    if (ok) {
       setDone(true)
-    } catch {
+    } else {
       setBusy(false)
     }
   }
@@ -199,6 +195,22 @@ interface RecapPhaseViewProps {
   ownGlowBreakdown?: GlowPointBreakdown
   /** S1 haptic grammar flag — gates the glow block's entrance celebration. */
   hapticGrammarEnabled?: boolean
+  /**
+   * Wave 2 P1 (contract AC-05 补2): the session host — drives the fixed
+   * 「本场主持」 card (recognition for the supply side). DisplayName resolves
+   * from the roster; unknown host → the card stays hidden (no fabrication).
+   */
+  hostUserId?: string
+  /**
+   * Wave 2 P1 (contract AC-01): recap AI-feedback write via the shared
+   * action dispatcher (success syncs + refetch + confirm haptic + mutex).
+   */
+  onSubmitRecapFeedback?: (payload: {
+    phase: 'recap'
+    promptVersion: string
+    aiCorrelationId: string
+    rating: 'helpful' | 'neutral' | 'awkward'
+  }) => Promise<unknown>
 }
 
 export function RecapPhaseView({
@@ -217,6 +229,8 @@ export function RecapPhaseView({
   currentUserId,
   ownGlowBreakdown,
   hapticGrammarEnabled,
+  hostUserId,
+  onSubmitRecapFeedback,
 }: RecapPhaseViewProps) {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
@@ -281,6 +295,31 @@ export function RecapPhaseView({
   }, [momentLoading, socialSessionId])
 
   const aigcEnabled = useAIGCLabelsEnabled()
+
+  // Wave 2 P1 (contract AC-05 补2): fixed 「本场主持」 recognition card —
+  // the supply side (host 复玩率) gets one guaranteed slot at peak warmth.
+  // DisplayName resolves from the roster; unknown host → hidden (no fabrication).
+  const hostDisplayName = hostUserId
+    ? participants?.find((p) => p.userId === hostUserId)?.displayName
+    : undefined
+
+  // AC-01: recap AI feedback rides the shared dispatcher (props). `null` =
+  // failed, `undefined` = mutex-skipped — both leave the bar retryable.
+  const handleRecapFeedback = useCallback(
+    async (rating: 'helpful' | 'neutral' | 'awkward'): Promise<boolean> => {
+      if (!recapMeta?.promptVersion || !recapMeta.aiCorrelationId || !onSubmitRecapFeedback) {
+        return false
+      }
+      const result = await onSubmitRecapFeedback({
+        phase: 'recap',
+        promptVersion: recapMeta.promptVersion,
+        aiCorrelationId: recapMeta.aiCorrelationId,
+        rating,
+      })
+      return result != null
+    },
+    [recapMeta, onSubmitRecapFeedback],
+  )
 
   // Wave 2 (AC-06): collapsed data-recap summary line (「话题 N · 挑战 M · 侦探 · 瞬间 K」).
   const dataRecapSummary = (() => {
@@ -404,6 +443,24 @@ export function RecapPhaseView({
         </Card>
         )
       )}
+
+      {/* Wave 2 P1 (contract AC-05 补2): fixed 「本场主持」 recognition card —
+          renders in BOTH glow and legacy-medal modes, locked right after the
+          高光/勋章 block, reusing the medal-grid visual pattern. */}
+      {hostDisplayName ? (
+        <Card className='icebreaker__recap-section'>
+          <Text className='icebreaker__recap-section-title icebreaker__recap-section-title--center'>
+            <JoyJoinIcon emoji='🎤' size={28} /> 本场主持
+          </Text>
+          <View className='icebreaker__recap-medals-grid icebreaker__recap-medals-grid--single'>
+            <View className='icebreaker__recap-medal'>
+              <MedalIcon title='本场主持' emoji='🎤' />
+              <Text className='icebreaker__recap-medal-recipient'>{hostDisplayName}</Text>
+              <Text className='icebreaker__recap-medal-desc'>把今晚的每个环节串了起来</Text>
+            </View>
+          </View>
+        </Card>
+      ) : null}
 
       {/* Wave 2 (AC-06): share — ONE merged unit. The flip card carries the
           static memory lines; 「生成高光」 (the old standalone 生成本局高光
@@ -674,8 +731,8 @@ export function RecapPhaseView({
       </View>
 
       {/* AI feedback lives below the exits — it must not interrupt the arc */}
-      {socialSessionId ? (
-        <RecapAiFeedbackBar socialSessionId={socialSessionId} recapMeta={recapMeta} />
+      {socialSessionId && onSubmitRecapFeedback ? (
+        <RecapAiFeedbackBar recapMeta={recapMeta} onSubmit={handleRecapFeedback} />
       ) : null}
     </View>
   )

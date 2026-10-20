@@ -37,6 +37,7 @@ import { apiVibeToClient } from '../../lib/vibeMapping'
 import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
 import { getPhaseToastText } from './phaseToastText'
 import { useIcebreakerSessionAnalytics } from './useIcebreakerSessionAnalytics'
+import { useRejoinCatchUp } from './hooks/useRejoinCatchUp'
 import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
 import { useMiniScriptGeneration } from './hooks/useMiniScriptGeneration'
@@ -498,6 +499,18 @@ export default function IcebreakerSessionPage() {
     handleGenerateSessionPack,
     handleRequestAdaptiveSuggestion,
     handleDismissAdaptiveSuggestion,
+    // Wave 2 P1 (AC-01): phase-view write 归口
+    handleUndercoverGenerate,
+    handleUndercoverDescribe,
+    handleUndercoverVote,
+    handleUndercoverReveal,
+    handleGroupMirrorGenerate,
+    handleGroupMirrorSubmit,
+    handleGroupMirrorReveal,
+    handleQuipGenerate,
+    handleQuipSubmit,
+    handleQuipVote,
+    handleRecapAiFeedback,
   } = useSocialActions({
     socialSessionId,
     session,
@@ -631,7 +644,19 @@ export default function IcebreakerSessionPage() {
   }, [pendingTierSwitch, handleAcceptCustomConfirm, handleDismissCustomConfirm])
 
 
-  useIcebreakerSessionAnalytics({ session, phase, socialSessionId, playerCount, isHost })
+  useIcebreakerSessionAnalytics({ session, phase, socialSessionId, playerCount, isHost, currentUserId })
+
+  // Wave 2 P1 (contract AC-02a): rejoin catch-up chip — away→back edge and
+  // cold re-entry bootstrap both resolve the pure duty derivation; the chip
+  // self-dismisses inside 4s or on tap.
+  const { chipText: catchUpChipText, dismissChip: dismissCatchUpChip } = useRejoinCatchUp({
+    session,
+    currentUserId,
+  })
+  const handleCatchUpChipTap = useCallback(() => {
+    haptics('light')
+    dismissCatchUpChip()
+  }, [dismissCatchUpChip])
 
   // S7 静默救援: the suggestion's arrival is rerouted to the S1 grammar's
   // host-private Nudge — two light taps, never mistakable for the group
@@ -1229,6 +1254,18 @@ export default function IcebreakerSessionPage() {
     onGoBack: handleGoBack,
     onConnectTap: handleConnectTap,
     phaseMapItems,
+    // Wave 2 P1 (AC-01): phase-view writes ride the shared dispatcher.
+    onUndercoverGenerate: handleUndercoverGenerate,
+    onUndercoverDescribe: handleUndercoverDescribe,
+    onUndercoverVote: handleUndercoverVote,
+    onUndercoverReveal: handleUndercoverReveal,
+    onGroupMirrorGenerate: handleGroupMirrorGenerate,
+    onGroupMirrorSubmit: handleGroupMirrorSubmit,
+    onGroupMirrorReveal: handleGroupMirrorReveal,
+    onQuipGenerate: handleQuipGenerate,
+    onQuipSubmit: handleQuipSubmit,
+    onQuipVote: handleQuipVote,
+    onSubmitRecapFeedback: handleRecapAiFeedback,
   }
 
   // AC-01/02 — the warmup CTA dock is a flex SIBLING of the ScrollView
@@ -1343,6 +1380,22 @@ export default function IcebreakerSessionPage() {
           <View className='icebreaker__phase-toast-text'>{phaseToast.text}</View>
         </View>
       )}
+
+      {/* Wave 2 P1 (contract AC-02a): rejoin catch-up chip — one quiet line
+          telling the returnee where the table is and what they still owe.
+          ≤4s auto-dismiss, tap to dismiss. */}
+      {catchUpChipText ? (
+        <View
+          className='icebreaker__catchup-chip'
+          hoverClass='icebreaker__catchup-chip--pressed'
+          hoverStartTime={0}
+          onClick={handleCatchUpChipTap}
+          role='button'
+          aria-label={catchUpChipText}
+        >
+          <Text className='icebreaker__catchup-chip-text'>{catchUpChipText}</Text>
+        </View>
+      ) : null}
 
       {flowSyncCopy && (
         <View className='icebreaker__flow-sync'>
