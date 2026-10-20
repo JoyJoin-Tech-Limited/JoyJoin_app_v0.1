@@ -181,6 +181,18 @@ function createApp() {
 }
 const withServer = createWithServer(createApp);
 
+/** Shape of the nudge-incomplete route's JSON responses (typecheck fix:
+ *  `await response.json()` returns unknown; repo pattern is an inline cast). */
+type NudgeTestBody = {
+  code?: string;
+  ok?: boolean;
+  beatEmitted?: boolean;
+  phase?: string;
+  segmentName?: string | null;
+  missingCount?: number;
+  retryAfterMs?: number;
+};
+
 function cookieHeader(response: Response): string {
   const raw = response.headers.get('set-cookie');
   return raw ? raw.split(';')[0] : '';
@@ -288,7 +300,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — auth gates', () =
       const cookie = await login(baseUrl, 'p1');
       const response = await postNudge(baseUrl, 'nudge-auth-2', cookie);
       expect(response.status).toBe(403);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.code).toBe('HOST_ONLY');
       expect(broadcastToUsersSpy).not.toHaveBeenCalled();
     });
@@ -301,7 +313,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — auth gates', () =
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-auth-3', cookie);
       expect(response.status).toBe(403);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.code).toBe('NOT_A_PARTICIPANT');
       expect(broadcastToUsersSpy).not.toHaveBeenCalled();
     });
@@ -315,7 +327,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-warmup', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body).toMatchObject({
         ok: true,
         phase: 'warmup',
@@ -347,7 +359,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-lie', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.missingCount).toBe(2);
       expect(body.segmentName).toBe('谎言侦探');
       const [targetUserIds, message] = broadcastToUsersSpy.mock.calls[0];
@@ -368,7 +380,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-undercover', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       // Only the CURRENT round (index 1) counts — p1's round-1 description does not complete round 2.
       expect(body.missingCount).toBe(3);
       const [targetUserIds, message] = broadcastToUsersSpy.mock.calls[0];
@@ -385,7 +397,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-mirror', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.missingCount).toBe(2);
       const [targetUserIds, message] = broadcastToUsersSpy.mock.calls[0];
       expect([...targetUserIds].sort()).toEqual(['host-user', 'p3']);
@@ -401,7 +413,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-quip', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.missingCount).toBe(2);
       const [targetUserIds, message] = broadcastToUsersSpy.mock.calls[0];
       expect([...targetUserIds].sort()).toEqual(['p2', 'p3']);
@@ -423,7 +435,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-dice', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.missingCount).toBe(2);
       const [targetUserIds, message] = broadcastToUsersSpy.mock.calls[0];
       expect([...targetUserIds].sort()).toEqual(['host-user', 'p2']);
@@ -437,7 +449,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-dice-na', cookie);
       expect(response.status).toBe(400);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.code).toBe('NUDGE_NOT_APPLICABLE');
     });
   });
@@ -454,7 +466,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-scoped', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.missingCount).toBe(1);
       const [targetUserIds] = broadcastToUsersSpy.mock.calls[0];
       expect([...targetUserIds]).toEqual(['p1']);
@@ -467,7 +479,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — per-phase target 
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-host-missing', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.missingCount).toBe(1);
       const [targetUserIds] = broadcastToUsersSpy.mock.calls[0];
       expect([...targetUserIds]).toEqual(['host-user']);
@@ -503,7 +515,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — rate limit', () =
 
       const second = await postNudge(baseUrl, 'nudge-rl', cookie);
       expect(second.status).toBe(429);
-      const body = await second.json();
+      const body = (await second.json()) as NudgeTestBody;
       expect(body.code).toBe('NUDGE_RATE_LIMITED');
       expect(body.retryAfterMs).toBeGreaterThan(0);
       expect(body.retryAfterMs).toBeLessThanOrEqual(NUDGE_INCOMPLETE_MIN_INTERVAL_MS);
@@ -555,7 +567,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — NUDGE_NOT_APPLICA
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, `nudge-na-${phase}`, cookie);
       expect(response.status).toBe(400);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.code).toBe('NUDGE_NOT_APPLICABLE');
       expect(body.phase).toBe(phase);
       expect(broadcastToUsersSpy).not.toHaveBeenCalled();
@@ -570,7 +582,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — NUDGE_NOT_APPLICA
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-all-done', cookie);
       expect(response.status).toBe(400);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.code).toBe('NUDGE_NOT_APPLICABLE');
       expect(broadcastToUsersSpy).not.toHaveBeenCalled();
     });
@@ -585,7 +597,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — emission gating',
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-flag-off', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body).toMatchObject({ ok: true, missingCount: 3, beatEmitted: false });
       expect(broadcastToUsersSpy).not.toHaveBeenCalled();
       expect(featureFlagCtx.getFeatureFlagMock).toHaveBeenCalledWith('icebreakerGroupBeatsEnabled', false);
@@ -601,7 +613,7 @@ describe('POST /api/social-icebreaker/:id/nudge-incomplete — emission gating',
       const cookie = await login(baseUrl, 'host-user');
       const response = await postNudge(baseUrl, 'nudge-flag-on', cookie);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as NudgeTestBody;
       expect(body.beatEmitted).toBe(true);
       expect(broadcastToUsersSpy).toHaveBeenCalledTimes(1);
       const [targetUserIds] = broadcastToUsersSpy.mock.calls[0];
