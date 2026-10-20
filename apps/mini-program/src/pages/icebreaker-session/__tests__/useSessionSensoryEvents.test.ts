@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import type { PersonalityDiceChallenge, SocialSessionState } from '@shared/socialIcebreaker'
+import type { MiniScriptPresentedEvidence, PersonalityDiceChallenge, SocialSessionState } from '@shared/socialIcebreaker'
 import {
+  REVEAL_SOURCES,
+  REVEAL_SOURCE_HAPTIC_PATTERNS,
   SENSORY_EVENT_HAPTIC_PATTERNS,
   diffSessionSensoryEvents,
+  resolveSensoryEventHapticPattern,
   useSessionSensoryEvents,
   type SessionSensoryEvent,
   type SessionSensoryEventKind,
@@ -263,6 +266,161 @@ describe('diffSessionSensoryEvents transition matrix', () => {
     for (const kind of expectedKinds) {
       expect(typeof SENSORY_EVENT_HAPTIC_PATTERNS[kind]).toBe('string')
     }
+  })
+})
+
+describe('Wave 3 reveal grading (S7 分级降级 — notification-fatigue ladder)', () => {
+  const event = (source: string | undefined): SessionSensoryEvent => ({
+    kind: 'reveal_appeared',
+    phase: 'warmup',
+    source,
+    at: 0,
+  })
+
+  it('classifies every reveal source in the ladder (ratchet — a new source must be graded here)', () => {
+    for (const source of REVEAL_SOURCES) {
+      expect(
+        REVEAL_SOURCE_HAPTIC_PATTERNS[source.id],
+        `reveal source '${source.id}' is missing an explicit grading in REVEAL_SOURCE_HAPTIC_PATTERNS`,
+      ).toBeDefined()
+    }
+  })
+
+  it('degrades pure-information reveals (new topic card, single-player reveal) to a mid-tap Nudge', () => {
+    expect(resolveSensoryEventHapticPattern(event('warmup_topic'))).toBe('socialNudge')
+    expect(resolveSensoryEventHapticPattern(event('lie_detective'))).toBe('socialNudge')
+  })
+
+  it('keeps action-changing reveals (truth / results / group sync) on the group-long Reveal', () => {
+    for (const source of ['group_mirror', 'quip_battle', 'undercover_word', 'personality_dice']) {
+      expect(resolveSensoryEventHapticPattern(event(source))).toBe('socialReveal')
+    }
+  })
+
+  it('falls back to the kind map for an unclassified source (never a silent drop)', () => {
+    expect(resolveSensoryEventHapticPattern(event('some_future_source'))).toBe(
+      SENSORY_EVENT_HAPTIC_PATTERNS.reveal_appeared,
+    )
+  })
+
+  it('resolves non-reveal kinds straight from the kind map, ignoring the source field', () => {
+    expect(
+      resolveSensoryEventHapticPattern({ kind: 'own_turn_started', phase: 'warmup', source: 'warmup_topic', at: 0 }),
+    ).toBe('socialYourTurn')
+    expect(resolveSensoryEventHapticPattern({ kind: 'recap_started', phase: 'recap', at: 0 })).toBe('socialCelebration')
+    expect(resolveSensoryEventHapticPattern({ kind: 'phase_entered', phase: 'warmup', at: 0 })).toBe('socialNudge')
+    expect(resolveSensoryEventHapticPattern({ kind: 'all_ready', phase: 'warmup', at: 0 })).toBe('socialNudge')
+  })
+})
+
+describe('Wave 3 mini_script presenter turn source', () => {
+  function makeEvidence(
+    presentedBy: string,
+    presentedAt: number,
+    readConfirmedAt?: number,
+  ): MiniScriptPresentedEvidence {
+    return {
+      evidenceId: `e-${presentedBy}-${presentedAt}`,
+      targetRoleSlot: 1,
+      presentedBy,
+      actNo: 1,
+      presentedAt,
+      ...(readConfirmedAt === undefined ? {} : { readConfirmedAt }),
+    }
+  }
+
+  it('fires own_turn_started when the latest unconfirmed evidence becomes the viewer\'s to read aloud', () => {
+    const events = diffSessionSensoryEvents(
+      makeState({ currentPhase: 'mini_script' }),
+      makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [makeEvidence('me', 100)] }),
+      { currentUserId: 'me' },
+    )
+    expect(kinds(events)).toEqual(['own_turn_started'])
+    expect(events[0].source).toBe('mini_script')
+  })
+
+  it('stays silent when the presenter is someone else, and while the floor stays the viewer\'s', () => {
+    const ctx = { currentUserId: 'me' }
+    // Someone else's presentation → no personal beat.
+    expect(
+      diffSessionSensoryEvents(
+        makeState({ currentPhase: 'mini_script' }),
+        makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [makeEvidence('u2', 100)] }),
+        ctx,
+      ),
+    ).toEqual([])
+    // Floor stays mine → no re-fire.
+    expect(
+      diffSessionSensoryEvents(
+        makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [makeEvidence('me', 100)] }),
+        makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [makeEvidence('me', 100)] }),
+        ctx,
+      ),
+    ).toEqual([])
+  })
+
+  it('passes the floor to the newest unconfirmed presenter and back', () => {
+    const ctx = { currentUserId: 'me' }
+    const mineFirst = makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [makeEvidence('me', 100)] })
+    const theirs = makeState({
+      currentPhase: 'mini_script',
+      miniScriptPresentedEvidence: [makeEvidence('me', 100), makeEvidence('u2', 200)],
+    })
+    // A newer presentation by u2 takes the floor — no beat for me.
+    expect(diffSessionSensoryEvents(mineFirst, theirs, ctx)).toEqual([])
+    // …and when I present again after theirs, the floor returns → beat.
+    const mineAgain = makeState({
+      currentPhase: 'mini_script',
+      miniScriptPresentedEvidence: [makeEvidence('me', 100), makeEvidence('u2', 200), makeEvidence('me', 300)],
+    })
+    expect(kinds(diffSessionSensoryEvents(theirs, mineAgain, ctx))).toEqual(['own_turn_started'])
+  })
+
+  it('clears the floor on readConfirmedAt and re-arms for the next presentation', () => {
+    const ctx = { currentUserId: 'me' }
+    const pending = makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [makeEvidence('me', 100)] })
+    const confirmed = makeState({
+      currentPhase: 'mini_script',
+      miniScriptPresentedEvidence: [makeEvidence('me', 100, 150)],
+    })
+    // Confirm lands → floor clears; nothing became mine, so no beat.
+    expect(diffSessionSensoryEvents(pending, confirmed, ctx)).toEqual([])
+    // A new presentation after the confirm → fresh beat.
+    const next = makeState({
+      currentPhase: 'mini_script',
+      miniScriptPresentedEvidence: [makeEvidence('me', 100, 150), makeEvidence('me', 300)],
+    })
+    expect(kinds(diffSessionSensoryEvents(confirmed, next, ctx))).toEqual(['own_turn_started'])
+  })
+
+  it('resolves the floor by max presentedAt among unconfirmed entries, ignoring array order', () => {
+    // Defensive: me@300 (unconfirmed) outranks u2@100 (unconfirmed) and
+    // u2@200 (confirmed) regardless of array position — a confirmed latest
+    // entry must NOT mask a fresher unconfirmed one.
+    const next = makeState({
+      currentPhase: 'mini_script',
+      miniScriptPresentedEvidence: [makeEvidence('me', 300), makeEvidence('u2', 100), makeEvidence('u2', 200, 250)],
+    })
+    expect(
+      kinds(diffSessionSensoryEvents(makeState({ currentPhase: 'mini_script' }), next, { currentUserId: 'me' })),
+    ).toEqual(['own_turn_started'])
+  })
+
+  it('resolves no turn for pre-V2 sessions and never fires without viewer context', () => {
+    expect(
+      diffSessionSensoryEvents(
+        makeState({ currentPhase: 'mini_script' }),
+        makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [] }),
+        { currentUserId: 'me' },
+      ),
+    ).toEqual([])
+    expect(
+      diffSessionSensoryEvents(
+        makeState({ currentPhase: 'mini_script' }),
+        makeState({ currentPhase: 'mini_script', miniScriptPresentedEvidence: [makeEvidence('me', 100)] }),
+        {},
+      ),
+    ).toEqual([])
   })
 })
 

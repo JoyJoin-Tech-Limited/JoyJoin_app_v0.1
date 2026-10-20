@@ -237,7 +237,7 @@ export function LieDetectiveHeroView({
   }, [assistTags, isGeneratingFromTag, onGenerateFromTag, updateCustomStatement])
 
   const handleAiCompose = useCallback(() => {
-    haptics('medium')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     aiPrefillRef.current = false
     setComposeStep('edit')
     onGenerateStatements()
@@ -591,7 +591,7 @@ export function LieDetectiveHeroView({
                 style={flipIn ? { animationDelay: `${stmtPosition * 90}ms` } : undefined}
                 onClick={() => {
                   if (!isOwnTurn && !isVoting && !isRevealed) {
-                    haptics('light')
+                    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
                     onVote(stmt.index)
                   }
                 }}

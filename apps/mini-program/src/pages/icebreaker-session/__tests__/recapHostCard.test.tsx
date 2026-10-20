@@ -44,6 +44,17 @@ vi.mock('../../../hooks/useAIGCLabelsEnabled', () => ({
   useAIGCLabelsEnabled: () => false,
 }))
 
+// Recap share poster (2026-10-20, spec 规格一): flag OFF in these tests —
+// the share hook is still invoked unconditionally by the view, so it needs a
+// stub; the flag hook returning false keeps every share surface unmounted.
+vi.mock('../../../hooks/useRecapSharePosterEnabled', () => ({
+  useRecapSharePosterEnabled: () => false,
+}))
+
+vi.mock('../hooks/useRecapSharePoster', () => ({
+  useRecapSharePoster: () => ({ isGenerating: false, handleShare: vi.fn() }),
+}))
+
 vi.mock('../../../hooks/useMiniRevealMotion', () => ({
   useMiniRevealMotion: () => ({ shouldReduceMotion: true }),
 }))

@@ -2,7 +2,6 @@ import { View, Text } from '@tarojs/components'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import type { CTAState } from '../viewModels/warmupViewModels'
-import { haptics } from '../../../lib/utils/haptics'
 // Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
 // import would be chunked into the page-invisible sub-common.wxss.
 
@@ -40,7 +39,7 @@ export function WarmupActionBar({
 
   const handlePrimary = () => {
     if (isLoading) return
-    haptics('medium')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     if (ctaState.primaryAction === 'advance_phase') {
       onAdvance()
       return
@@ -54,19 +53,16 @@ export function WarmupActionBar({
 
   const handleSecondary = () => {
     if (isLoading) return
-    haptics('light')
     onNextTopic()
   }
 
   const handleCancel = () => {
     if (isLoading) return
-    haptics('light')
     onToggleReady()
   }
 
   const handleStallExit = () => {
     if (isLoading) return
-    haptics('medium')
     onStallExit?.()
   }
 

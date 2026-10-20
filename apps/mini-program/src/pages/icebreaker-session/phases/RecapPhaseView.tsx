@@ -1,12 +1,18 @@
-import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import { View, Text, Image, ScrollView, RootPortal, Canvas } from '@tarojs/components'
+import Taro, { useShareAppMessage } from '@tarojs/taro'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
 import type { MomentHighlightsPanel } from '@shared/socialIcebreaker'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
+import { TIER_DISPLAY_MANIFEST, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
+import { getReferralStats } from '@shared/api'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
+import { useAuth } from '../../../hooks/useAuth'
+import { useRecapSharePosterEnabled } from '../../../hooks/useRecapSharePosterEnabled'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
@@ -17,16 +23,61 @@ import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
+import { ARCHETYPE_ASSET_MAP } from '../../../lib/utils/archetypeAssets'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { haptics } from '../../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import { formatIceLieFooledLine } from '@shared/copy/icebreakerSession'
 import { emitMomentCardGenerateOnce } from '../momentCardTelemetry'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { MedalIcon, RecapGlowBlock } from './RecapGlowBlock'
+import { useRecapSharePoster } from '../hooks/useRecapSharePoster'
+import {
+  RECAP_SHARE_POSTER_CANVAS_ID,
+  buildRecapSharePath,
+  buildRecapShareTitle,
+  formatRecapShareDateLabel,
+  resolveRecapShareQuote,
+} from '../recapSharePoster'
 import type { SessionGlowSnapshot } from '../viewModels/sessionGlowModel'
 import type { GlowPointBreakdown } from '@shared/socialIcebreaker'
 import type { SessionParticipant } from '../phaseUtils'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
+
+/**
+ * Recap share poster (2026-10-20, spec 规格一): the page-level forward
+ * channel, mounted ONLY when recapSharePosterEnabled is on. WeChat falls back
+ * to a default share card carrying the CURRENT page path when
+ * onShareAppMessage returns undefined — on the session page that path is a
+ * 403 trap for non-participants — so flag-off must not register the hook at
+ * all (conditional mount, not a conditional return).
+ *
+ * Attribution: path reuses the invite-page convention — referralCode rides
+ * `?invitationCode=` onto the LANDING page (never the session page); the
+ * landing page persists it into joyjoin_pending_referral_code, closing into
+ * the existing pendingReferralCode / referral_conversions pipeline.
+ */
+function RecapShareAppMessageBridge({ playerCount }: { playerCount: number }) {
+  const { user } = useAuth()
+  const { data: referralStats } = useQuery({
+    queryKey: ['mini-program', 'referral-stats'],
+    queryFn: () => getReferralStats(apiRequest),
+    staleTime: 60_000,
+    retry: 1,
+  })
+  useShareAppMessage(() => {
+    const code =
+      referralStats?.referralCode ||
+      (user as { referralCode?: string } | null | undefined)?.referralCode ||
+      ''
+    return {
+      title: buildRecapShareTitle(playerCount),
+      path: buildRecapSharePath(code),
+      imageUrl: getXiaoyueExpressionAsset('thanksFeedback'),
+    }
+  })
+  return null
+}
 
 function RecapAiFeedbackBar({
   recapMeta,
@@ -84,15 +135,28 @@ function RecapAiFeedbackBar({
  * Wave 2 (AC-06): presentational moment-highlights panel. State + the
  * generate action live in RecapPhaseView so the 「破冰记忆翻卡」 share card
  * and 「生成本局高光」 merge into ONE share unit (no two separate blocks).
+ *
+ * Recap share poster (2026-10-20, spec 规格一 AC-2): when the flag is on the
+ * panel footer becomes the primary conversion surface — 主 CTA
+ * 「存下这张高光卡」 (generate → save/share action sheet) + 次级
+ * 「转发给微信朋友」 (openType='share'; WeChat hard constraint: the forward
+ * panel can only be opened by such a button) + 「看完了」. Flag off renders
+ * the legacy single 「看完了」 byte-identically.
  */
 function MomentHighlightsPanelView({
   panel,
   panelMeta,
   onClose,
+  sharePoster,
 }: {
   panel: MomentHighlightsPanel
   panelMeta: AIResponseMeta | null
   onClose: () => void
+  /** Present only when recapSharePosterEnabled is on. */
+  sharePoster?: {
+    isGenerating: boolean
+    onSaveCard: () => void
+  }
 }) {
   const aigcEnabled = useAIGCLabelsEnabled()
   return (
@@ -131,7 +195,27 @@ function MomentHighlightsPanelView({
             {aigcEnabled ? (
               <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
             ) : null}
-            <Button variant='primary' onClick={onClose}>看完了</Button>
+            {sharePoster ? (
+              <View className='icebreaker__moment-panel-actions'>
+                <Button
+                  variant='primary'
+                  onClick={sharePoster.onSaveCard}
+                  loading={sharePoster.isGenerating}
+                  disabled={sharePoster.isGenerating}
+                  aria-label={sharePoster.isGenerating ? '正在生成高光卡' : '存下这张高光卡'}
+                >
+                  {sharePoster.isGenerating ? '正在生成' : '存下这张高光卡'}
+                </Button>
+                <View className='icebreaker__moment-panel-action-row'>
+                  <Button variant='secondary' openType='share' aria-label='转发给微信朋友'>
+                    转发给微信朋友
+                  </Button>
+                  <Button variant='secondary' onClick={onClose}>看完了</Button>
+                </View>
+              </View>
+            ) : (
+              <Button variant='primary' onClick={onClose}>看完了</Button>
+            )}
           </View>
         </ScrollView>
       </View>
@@ -211,6 +295,13 @@ interface RecapPhaseViewProps {
     aiCorrelationId: string
     rating: 'helpful' | 'neutral' | 'awkward'
   }) => Promise<unknown>
+  /**
+   * Recap share poster (2026-10-20, spec 规格一): the session's event tier
+   * (machine id) and start timestamp — poster 「局名日期」 line only. Both
+   * optional; the poster omits the line halves it doesn't have.
+   */
+  eventTier?: string
+  sessionStartedAt?: number
 }
 
 export function RecapPhaseView({
@@ -231,6 +322,8 @@ export function RecapPhaseView({
   hapticGrammarEnabled,
   hostUserId,
   onSubmitRecapFeedback,
+  eventTier,
+  sessionStartedAt,
 }: RecapPhaseViewProps) {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
@@ -295,6 +388,59 @@ export function RecapPhaseView({
   }, [momentLoading, socialSessionId])
 
   const aigcEnabled = useAIGCLabelsEnabled()
+
+  // ── Recap share poster (2026-10-20, spec 规格一) ────────────────────
+  // Flag-gated: flag off = zero share surface (legacy panel/CardFlip/···
+  // menu byte-identical). All poster inputs derive from EXISTING props/state
+  // — zero new server fields. Privacy hard contract: other players enter the
+  // poster ONLY as archetype icons + a head count; the quote is unsigned;
+  // the medal block carries the viewer's OWN medal title only.
+  const recapShareEnabled = useRecapSharePosterEnabled() && Boolean(socialSessionId)
+  const ownDisplayName = currentUserId
+    ? participants?.find((p) => p.userId === currentUserId)?.displayName
+    : undefined
+  const medalPool: Array<{ title: string; recipientDisplayName: string }> = glow?.medals ?? medals
+  const ownMedalTitle = ownDisplayName
+    ? medalPool.find((medal) => medal.recipientDisplayName === ownDisplayName)?.title
+    : undefined
+  const shareQuote = resolveRecapShareQuote({
+    panelQuote: momentPanel?.highlights?.[0]?.narrative,
+    summaryMoments: summary?.moments,
+    funMoments: recapData?.funMoments,
+  })
+  // AIGC bake is fail-closed: only when the quote's actual source carries AI
+  // meta (panel → panelMeta, recap summary/moments → recapMeta); the static
+  // fallback sentence never earns the label.
+  const shareQuoteAigc =
+    shareQuote.source === 'panel'
+      ? Boolean(momentPanelMeta?.promptVersion)
+      : shareQuote.source === 'recap'
+        ? Boolean(recapMeta?.promptVersion)
+        : false
+  // 自定义 sessions carry no meaningful tier name for friends — omit the half.
+  const shareTierName =
+    eventTier && eventTier !== 'custom'
+      ? TIER_DISPLAY_MANIFEST[eventTier as TierMachineId]?.default
+      : undefined
+  const shareDateLabel = formatRecapShareDateLabel(sessionStartedAt)
+  const shareTablemateAssets = (participants ?? [])
+    .map((p) => (p.archetype ? resolveArchetype(p.archetype)?.assetKey : undefined))
+    .filter((key): key is string => Boolean(key))
+    .map((key) => ARCHETYPE_ASSET_MAP[key]?.webp)
+    .filter((url): url is string => Boolean(url))
+    .slice(0, 6)
+  const recapSharePoster = useRecapSharePoster({
+    enabled: recapShareEnabled,
+    socialSessionId: socialSessionId ?? '',
+    tierName: shareTierName,
+    dateLabel: shareDateLabel,
+    ownMedalTitle,
+    highlightQuote: shareQuote.quote,
+    tablemateArchetypeAssets: shareTablemateAssets,
+    tablemateCount: participants?.length ?? playerCount,
+    aigcLabelsEnabled: aigcEnabled,
+    quoteAigc: shareQuoteAigc,
+  })
 
   // Wave 2 P1 (contract AC-05 补2): fixed 「本场主持」 recognition card —
   // the supply side (host 复玩率) gets one guaranteed slot at peak warmth.
@@ -483,7 +629,9 @@ export function RecapPhaseView({
                     {line}
                   </Text>
                 ))}
-                <View className='icebreaker__recap-share-back-cta'>
+                <View
+                  className={`icebreaker__recap-share-back-cta${recapShareEnabled ? ' icebreaker__recap-share-back-cta--duo' : ''}`}
+                >
                   <Button
                     variant='secondary'
                     onClick={() => void handleMomentOpen()}
@@ -493,6 +641,20 @@ export function RecapPhaseView({
                   >
                     {momentLoading ? '正在整理' : '生成高光'}
                   </Button>
+                  {/* Recap share poster (spec 规格一 AC-2): 「直接存卡」 — the
+                      fallback quote chain feeds the poster when the panel was
+                      never opened. Flag off = this CTA does not exist. */}
+                  {recapShareEnabled ? (
+                    <Button
+                      variant='secondary'
+                      onClick={() => void recapSharePoster.handleShare()}
+                      loading={recapSharePoster.isGenerating}
+                      disabled={recapSharePoster.isGenerating}
+                      aria-label={recapSharePoster.isGenerating ? '正在生成高光卡' : '直接存卡'}
+                    >
+                      {recapSharePoster.isGenerating ? '正在生成' : '直接存卡'}
+                    </Button>
+                  ) : null}
                 </View>
               </View>
             }
@@ -509,8 +671,31 @@ export function RecapPhaseView({
           panel={momentPanel}
           panelMeta={momentPanelMeta}
           onClose={() => setMomentPanel(null)}
+          sharePoster={
+            recapShareEnabled
+              ? {
+                  isGenerating: recapSharePoster.isGenerating,
+                  onSaveCard: () => void recapSharePoster.handleShare(),
+                }
+              : undefined
+          }
         />
       ) : null}
+
+      {/* Recap share poster (2026-10-20, spec 规格一; flag-gated): the hidden
+          canvas — the inline px DOM size must equal the 1080×1560 export
+          bitmap (results-page convention); offscreen via the SCSS class. */}
+      {recapShareEnabled ? (
+        <Canvas
+          canvasId={RECAP_SHARE_POSTER_CANVAS_ID}
+          className='icebreaker__recap-share-poster-canvas'
+          style={{ width: '1080px', height: '1560px' }}
+          aria-hidden='true'
+        />
+      ) : null}
+      {/* Page-level forward registration — mounted ONLY with the flag on (the
+          bridge component owns the hook; see its comment for the 403 trap). */}
+      {recapShareEnabled ? <RecapShareAppMessageBridge playerCount={playerCount} /> : null}
 
       {/* V2 Data cards — Wave 2 (AC-06): collapsed into ONE expandable block. */}
       {(recapData || recapMoments.length > 0) && (

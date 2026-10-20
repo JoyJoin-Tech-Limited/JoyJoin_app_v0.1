@@ -46,7 +46,7 @@ import { useWarmupReadiness } from './hooks/useWarmupReadiness'
 import { getPhaseBroadcastWeight } from './viewModels/phaseBroadcast'
 import { WarmupActionBar } from './components/WarmupActionBar'
 import {
-  SENSORY_EVENT_HAPTIC_PATTERNS,
+  resolveSensoryEventHapticPattern,
   useSessionSensoryEvents,
   type SessionSensoryEvent,
 } from './hooks/useSessionSensoryEvents'
@@ -708,7 +708,9 @@ export default function IcebreakerSessionPage() {
   const handleSensoryEvent = useCallback(
     (event: SessionSensoryEvent) => {
       if (hapticGrammarEnabled) {
-        const pattern = SENSORY_EVENT_HAPTIC_PATTERNS[event.kind]
+        // Wave 3: reveal grading lives in the resolver (config-only
+        // degradation ladder) — never inline the kind map here.
+        const pattern = resolveSensoryEventHapticPattern(event)
         // S6 double-fire contract: a group beat that already buzzed this
         // moment suppresses the poll-detector's haptic for the same pattern
         // (the S2 bloom below is not a haptic and is never suppressed).
@@ -897,7 +899,7 @@ export default function IcebreakerSessionPage() {
           cancelText: '手滑了',
         })
         if (modalRes.confirm) {
-          haptics('medium')
+          // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
           socialIcebreakerAnalytics.track(
             'early_end_confirm',
             socialSessionId ?? undefined,
@@ -979,7 +981,7 @@ export default function IcebreakerSessionPage() {
   const serverAway = session?.leftUserIds?.includes(currentUserId)
   const iAmAway = serverAway ?? localAway ?? false
   const handleLeaveToggleTap = useCallback(() => {
-    haptics('light')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     const next = !iAmAway
     setLocalAway(next)
     void handleToggleLeave(next).then((result) => {

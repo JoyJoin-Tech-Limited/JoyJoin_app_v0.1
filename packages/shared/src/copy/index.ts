@@ -114,6 +114,18 @@ export type {
 
 // 🧊 Icebreaker session Wave 2 terms (sprint icebreaker-uiux-wave2, AC-15)
 export {
+  QUIP_INSPIRATION_CHIPS,
+  QUIP_CHIP_ROW_LABEL,
+  QUIP_CHIP_REPLACE_CONFIRM_TEXT,
+  QUIP_CHIP_REPLACE_CONFIRM_OK,
+  QUIP_CHIP_REPLACE_CONFIRM_CANCEL,
+  pickQuipInspirationChips,
+} from './quipInspirationChips.js';
+export type {
+  QuipInspirationChip,
+  QuipChipFamily,
+} from './quipInspirationChips.js';
+export {
   formatIcePhaseProgress,
   formatIcePhaseProgressLoose,
   ICE_PHASE_MAP_ARROW,

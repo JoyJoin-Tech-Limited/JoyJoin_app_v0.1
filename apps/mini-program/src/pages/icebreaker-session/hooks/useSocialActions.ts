@@ -12,7 +12,7 @@ import type { MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
 import { apiRequest } from '../../../lib/api/api'
 import { TOAST_DEFAULT_MS, TOAST_MEDIUM_MS } from '../../../lib/utils/uiConstants'
 import { logError, logInfo, logWarn } from '../../../lib/utils/logger'
-import { socialHaptics } from '../../../lib/utils/haptics'
+import { haptics, socialHaptics } from '../../../lib/utils/haptics'
 import { VIBE_TO_API, type VibeId } from '../../../lib/vibeMapping'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import { trackMiniScriptGameplay } from '../../../lib/analytics/miniscriptGameplayAnalytics'
@@ -167,7 +167,19 @@ export function useSocialActions(args: UseSocialActionsArgs) {
       actionKey: string,
       suffix: string,
       data?: unknown,
-      options?: { timeoutMs?: number; suppressErrorToast?: boolean; onError?: (error: unknown) => void },
+      options?: {
+        timeoutMs?: number
+        suppressErrorToast?: boolean
+        onError?: (error: unknown) => void
+        /** Wave 3 haptic pack (动作归口): the confirm haptic lives ONLY in
+         *  this dispatcher — call sites fire no raw tap buzz (that was the
+         *  「raw 震 + socialConfirm 间隔一个 RTT」 double). Pass false for
+         *  background retries / auto-chained writes (topics backoff, dice
+         *  generation retry, choose→ready chain) — a confirm the user did
+         *  not gesture for is noise. Default true (every user-tapped action
+         *  confirms). */
+        confirmHaptic?: boolean
+      },
     ): Promise<T | null | undefined> => {
       if (!socialSessionId) {
         return null
@@ -210,11 +222,19 @@ export function useSocialActions(args: UseSocialActionsArgs) {
             })
           },
         })
-        // S1: Confirm fires on the success path of every mutating action, so
-        // a felt "land" replaces visual verification. Flag-gated; failure and
-        // skipped-action paths stay silent.
-        if (hapticGrammarEnabled) {
-          socialHaptics('socialConfirm')
+        // S1 + Wave 3 归口: Confirm fires on the success path of every
+        // user-gestured mutating action, so a felt "land" replaces visual
+        // verification. Failure and skipped-action paths stay silent.
+        // Grammar on → arbitrated socialConfirm; grammar off → the legacy
+        // raw light tap (primary-CTA haptics stay mandatory while the flag
+        // is dark). Both fire at the SAME land moment, so enabling the flag
+        // changes the pattern, never the timing.
+        if (options?.confirmHaptic !== false) {
+          if (hapticGrammarEnabled) {
+            socialHaptics('socialConfirm')
+          } else {
+            haptics('light')
+          }
         }
         return response
       } catch (error) {
@@ -251,7 +271,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
   const topicsRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const topicsRecoveryRetryCountRef = useRef(0)
   const topicsRecoveryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const generateTopicsRef = useRef<(mood: AtmosphereMood) => void>(() => {})
+  const generateTopicsRef = useRef<(mood: AtmosphereMood, options?: { confirmHaptic?: boolean }) => void>(() => {})
   // Last mood the host actually requested — retry path survives even when the
   // server never persisted selectedMood (e.g. request died before the write).
   const lastTopicsMoodRef = useRef<AtmosphereMood | undefined>(undefined)
@@ -263,7 +283,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
   const topicsServerRetryCountRef = useRef(0)
   const [topicsError, setTopicsError] = useState(false)
 
-  const generateTopics = useCallback((mood: AtmosphereMood) => {
+  const generateTopics = useCallback((mood: AtmosphereMood, options?: { confirmHaptic?: boolean }) => {
     setTopicsError(false)
     lastTopicsMoodRef.current = mood
     void performSocialAction<WarmupTopicsResponse>('topics', '/topics', {
@@ -274,6 +294,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     }, {
       timeoutMs: TOPICS_REQUEST_TIMEOUT_MS,
       suppressErrorToast: true,
+      confirmHaptic: options?.confirmHaptic,
       onError: (error) => {
         topicsFailureKindRef.current = classifyTopicsFailure(error)
       },
@@ -301,7 +322,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
               // during the backoff window — never regenerate topics for a
               // phase that no longer displays them.
               if (phaseRef.current !== 'warmup' && phaseRef.current !== 'waiting') return
-              generateTopicsRef.current(mood)
+              generateTopicsRef.current(mood, { confirmHaptic: false })
             },
             getTopicsServerRetryDelayMs(attempt),
           )
@@ -319,7 +340,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
         // otherwise be lost. Retry briefly until the in-flight action settles.
         if (topicsSkipRetryRef.current < TOPICS_SKIP_RETRY_MAX) {
           topicsSkipRetryRef.current += 1
-          topicsRetryTimerRef.current = setTimeout(() => generateTopicsRef.current(mood), TOPICS_SKIP_RETRY_DELAY_MS)
+          topicsRetryTimerRef.current = setTimeout(() => generateTopicsRef.current(mood, { confirmHaptic: false }), TOPICS_SKIP_RETRY_DELAY_MS)
         }
       } else {
         if (Array.isArray(result.topics) && result.topics.length > 0) {
@@ -733,7 +754,9 @@ export function useSocialActions(args: UseSocialActionsArgs) {
       topicsRecoveryTimerRef.current = undefined
       const mood = (session?.selectedMood ?? lastTopicsMoodRef.current) as AtmosphereMood | undefined
       if (mood) {
-        generateTopicsRef.current(mood)
+        // Background auto-recovery (also the host's initial auto-generate):
+        // no confirm buzz for a write the user never gestured.
+        generateTopicsRef.current(mood, { confirmHaptic: false })
       }
     }, TOPICS_RECOVERY_RETRY_DELAY_MS)
 
@@ -984,16 +1007,16 @@ export function useSocialActions(args: UseSocialActionsArgs) {
 
   const diceGenerationRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const diceGenerationRetryCountRef = useRef(0)
-  const generateDiceChallengesRef = useRef<() => void>(() => {})
+  const generateDiceChallengesRef = useRef<(options?: { confirmHaptic?: boolean }) => void>(() => {})
 
-  const handleGenerateDiceChallenges = useCallback(() => {
+  const handleGenerateDiceChallenges = useCallback((options?: { confirmHaptic?: boolean }) => {
     void performSocialAction<GenerationPendingResponse>('dice-generate', '/personality-dice/generate', {
       participants: participants.map((participant) => ({
         userId: participant.userId,
         displayName: participant.displayName ?? '匿名',
         archetype: participant.archetype,
       })),
-    }).then((response) => {
+    }, { confirmHaptic: options?.confirmHaptic }).then((response) => {
       const retryDelay = getGenerationRetryDelayMs(response)
       if (retryDelay === null) {
         diceGenerationRetryCountRef.current = 0
@@ -1012,7 +1035,8 @@ export function useSocialActions(args: UseSocialActionsArgs) {
           diceGenerationRetryCountRef.current = 0
           return
         }
-        generateDiceChallengesRef.current()
+        // Background retry — no confirm buzz for a write the user never gestured.
+        generateDiceChallengesRef.current({ confirmHaptic: false })
       }, retryDelay)
     })
   }, [performSocialAction, participants, phaseRef])
@@ -1070,7 +1094,9 @@ export function useSocialActions(args: UseSocialActionsArgs) {
       if (result === null || result === undefined) {
         return
       }
-      void performSocialAction('dice-ready', '/personality-dice/complete', { ready: true })
+      // Chained auto-ready: same gesture as the choose (Wave 2 AC-07), so the
+      // choose's own confirm is the ONE land the player feels — no second buzz.
+      void performSocialAction('dice-ready', '/personality-dice/complete', { ready: true }, { confirmHaptic: false })
     })
   }, [performSocialAction, currentUserId, socialSessionId, session?.icebreakerSessionId, playerCount])
 

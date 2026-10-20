@@ -393,6 +393,19 @@ export function registerSocialGenerators(ctx) {
       return screenshotViewport(page)
     }))
 
+  // P2 #6 (2026-10-20, spec 规格二): quip answer phase with the 灵感起手
+  // chips — deterministic 3-chip row under each prompt input (flag-ON mock;
+  // flag-off = byte-identical legacy card, covered by unit tests).
+  register('icebreaker-quip-answer-chips', () =>
+    withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+      await gotoIcebreakerSession(page, 'mock-quip-battle-answer')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await waitForContent(page, '.quip-inspiration-chips')
+      await page.waitForTimeout(800)
+      return screenshotViewport(page)
+    }))
+
   // AC-02b: describe-state wait — viewer described, 阿澈 away → the status
   // line carries 「 · 等阿澈（暂离）」.
   register('icebreaker-undercover-away', () =>

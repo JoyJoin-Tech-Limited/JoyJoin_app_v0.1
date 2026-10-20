@@ -13,6 +13,7 @@ import MissingArchetypePlaceholder from '../../../components/mascot/MissingArche
 import IcebreakerTierSelector from './IcebreakerTierSelector'
 import WaitingBeat from './WaitingBeat'
 import { GLANCE_L1_WORD_WAITING } from '../viewModels/glanceStackModel'
+import { getApproxPhaseDurationLabel } from '../viewModels/phaseDurationModel'
 import type { SessionParticipant } from '../phaseUtils'
 
 export interface WaitingPhaseProps {
@@ -149,26 +150,39 @@ export default function WaitingPhase({
 
         {/* AC-13 + AC-02 素材复用 — tonight's phase sequence preview. The
             shell strip carries the same data up top; the in-card chain is the
-            reading-size version inside the waiting card. */}
+            reading-size version inside the waiting card.
+            P2 #4 (2026-10-20): each phase name carries its 「约N分钟」
+            expectation (compiled runPlan first, static sources as fallback;
+            always approximate — never a countdown). */}
         {phaseMapItems && phaseMapItems.length > 0 && (
           <View className='icebreaker__waiting-phases' aria-label='今晚的环节顺序'>
             <Text className='icebreaker__waiting-phases-title'>今晚的环节</Text>
             <View className='icebreaker__waiting-phases-chain'>
-              {phaseMapItems.map((item, index) => (
-                <Text
-                  key={item.key}
-                  className={`icebreaker__waiting-phase${
-                    item.current ? ' icebreaker__waiting-phase--current' : ''
-                  }`}
-                >
-                  {index > 0 ? (
-                    <Text className='icebreaker__waiting-phase-arrow' aria-hidden='true'>
-                      {` ${ICE_PHASE_MAP_ARROW} `}
-                    </Text>
-                  ) : null}
-                  {item.label}
-                </Text>
-              ))}
+              {phaseMapItems.map((item, index) => {
+                // Snapshot-first (compiled runPlan); the tier prop is the
+                // static fallback for standalone renders / pre-poll frames.
+                const durationLabel = getApproxPhaseDurationLabel(item.key, {
+                  eventTier: currentTier,
+                })
+                return (
+                  <Text
+                    key={item.key}
+                    className={`icebreaker__waiting-phase${
+                      item.current ? ' icebreaker__waiting-phase--current' : ''
+                    }`}
+                  >
+                    {index > 0 ? (
+                      <Text className='icebreaker__waiting-phase-arrow' aria-hidden='true'>
+                        {` ${ICE_PHASE_MAP_ARROW} `}
+                      </Text>
+                    ) : null}
+                    {item.label}
+                    {durationLabel ? (
+                      <Text className='icebreaker__waiting-phase-min'>{` ${durationLabel}`}</Text>
+                    ) : null}
+                  </Text>
+                )
+              })}
             </View>
           </View>
         )}

@@ -410,6 +410,31 @@
   }
 }
 
+// Recap share poster (2026-10-20, spec 规格一): two-CTA layout on the
+// CardFlip back face when recapSharePosterEnabled is on (生成高光 + 直接存卡).
+.icebreaker__recap-share-back-cta--duo {
+  display: flex;
+  gap: $spacing-sm;
+  width: 100%;
+
+  .joy-button {
+    flex: 1;
+  }
+}
+
+// Recap share poster (2026-10-20, spec 规格一): offscreen poster canvas —
+// WeChat canvasToTempFilePath requires the internal bitmap (not the DOM
+// size) to match the export dimensions or the export comes back blank. The
+// bitmap dimensions are supplied inline in px on the Canvas so Taro's
+// px→rpx transform cannot change them (results-page convention, 1080×1560).
+.icebreaker__recap-share-poster-canvas {
+  position: fixed;
+  left: -9999rpx;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 // ── Moment card CTA ──────────────────────────────────────────────
 .icebreaker__recap-moment-cta {
   @include card-premium;
@@ -543,6 +568,23 @@
 .icebreaker__moment-panel-closing {
   color: $color-primary-dark;
   font-weight: $font-weight-semibold;
+}
+
+// Recap share poster (2026-10-20, spec 规格一): panel footer action stack —
+// 主 CTA 「存下这张高光卡」 full-width, 次级 row 转发 + 看完了 split evenly.
+.icebreaker__moment-panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.icebreaker__moment-panel-action-row {
+  display: flex;
+  gap: $spacing-sm;
+
+  .joy-button {
+    flex: 1;
+  }
 }
 
 // ── Farewell bubble ──────────────────────────────────────────────

@@ -4,6 +4,7 @@ import type { IcebreakerSession } from './icebreakerSessionModel'
 import type { SessionPhase } from './phaseViews'
 import { shouldNudgeHostForSuggestion } from './sessionShellLogic'
 import { countMySessionActions } from './viewModels/sessionHealthModel'
+import { clearPhaseDurationSource, syncPhaseDurationSource } from './viewModels/phaseDurationModel'
 
 /**
  * Session-level analytics effects extracted from index.tsx (maintainability:
@@ -34,6 +35,15 @@ export function useIcebreakerSessionAnalytics({
   const stallNudgeShownForRef = useRef<string | null>(null)
   const recapTrackedRef = useRef(false)
   const customSessionCompletedRef = useRef(false)
+
+  // P2 #4 环节时长预期 (2026-10-20): publish the session's duration source
+  // (compiled runPlan + tier) for WaitingPhase's 「今晚的环节」 chain and the
+  // PhaseIntroOverlay's 「约 N 分钟」 line. Written in the render body so the
+  // module snapshot is fresh before any child re-renders (idempotent; the
+  // customSessionCompletedRef write below is the established precedent), and
+  // cleared on unmount so a stacked page never reads a foreign session.
+  syncPhaseDurationSource(session)
+  useEffect(() => () => clearPhaseDurationSource(), [])
   const customSessionMetaRef = useRef({
     socialSessionId: '',
     icebreakerSessionId: '',

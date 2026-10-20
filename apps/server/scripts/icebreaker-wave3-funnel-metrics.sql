@@ -209,3 +209,68 @@ SELECT
 FROM discover_analytics_events
 WHERE event_type = 'session_health_snapshot'
   AND "timestamp" >= now() - interval '30 days';
+
+-- ============================================================================
+-- P2 #6 quip 灵感 chips funnel (2026-10-20, spec 规格二 §4/§5)
+-- ============================================================================
+--
+-- Static-curation chips on the quip_battle answer phase (flag
+-- `quipInspirationChipsEnabled`, ships dark). Three client-emitted events
+-- (whitelist parity only — no aggregation tables):
+--   quip_chip_shown   — per-prompt chips-row first render.
+--                       metadata: promptId (+ socialSessionId, phase='quip_battle')
+--   quip_chip_tap     — chip text actually landed in the box (a cancelled
+--                       replace-confirm emits nothing).
+--                       metadata: promptId, chipId, replaced
+--   quip_chip_adopted — 采纳率分子: submit success with an answer that starts
+--                       with the chip's original text (edits still count).
+--                       metadata: promptId, chipId
+-- Same 口径 CAVEAT as Wave 1 events: CLIENT-SIDE funnel per acting client,
+-- not per-session server truth; shown is ref-guarded once per
+-- (socialSessionId, promptId) per page lifecycle, so re-mounts/rejoins can
+-- re-emit on another device. Ratios below read within-client.
+
+-- ── Q9: chips funnel overview (last 30 days) ────────────────────────────────
+-- tap_rate = taps / showns (row appeal); adopt_rate = adopteds / taps (fill
+-- quality). Both raw-row and distinct (session, prompt) grains are reported.
+SELECT
+  COUNT(*) FILTER (WHERE event_type = 'quip_chip_shown')             AS shown_rows,
+  COUNT(*) FILTER (WHERE event_type = 'quip_chip_tap')               AS tap_rows,
+  COUNT(*) FILTER (WHERE event_type = 'quip_chip_adopted')           AS adopted_rows,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE event_type = 'quip_chip_tap')
+    / NULLIF(COUNT(*) FILTER (WHERE event_type = 'quip_chip_shown'), 0),
+    1
+  )                                                                  AS tap_rate_pct,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE event_type = 'quip_chip_adopted')
+    / NULLIF(COUNT(*) FILTER (WHERE event_type = 'quip_chip_tap'), 0),
+    1
+  )                                                                  AS adopt_rate_pct,
+  COUNT(DISTINCT metadata->>'socialSessionId')
+    FILTER (WHERE event_type = 'quip_chip_shown')                    AS shown_sessions
+FROM discover_analytics_events
+WHERE event_type IN ('quip_chip_shown', 'quip_chip_tap', 'quip_chip_adopted')
+  AND "timestamp" >= now() - interval '30 days';
+
+-- ── Q10: per-chip appeal ranking (last 30 days) ──────────────────────────────
+-- Which curated starters actually get used; bottom performers are pool-refresh
+-- candidates (content decision, no schema change).
+SELECT
+  metadata->>'chipId'                                                AS chip_id,
+  COUNT(*) FILTER (WHERE event_type = 'quip_chip_tap')               AS taps,
+  COUNT(*) FILTER (WHERE event_type = 'quip_chip_adopted')           AS adopteds,
+  COUNT(*) FILTER (
+    WHERE event_type = 'quip_chip_tap'
+      AND (metadata->>'replaced')::boolean
+  )                                                                  AS replaced_handtyped,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE event_type = 'quip_chip_adopted')
+    / NULLIF(COUNT(*) FILTER (WHERE event_type = 'quip_chip_tap'), 0),
+    1
+  )                                                                  AS adopt_rate_pct
+FROM discover_analytics_events
+WHERE event_type IN ('quip_chip_tap', 'quip_chip_adopted')
+  AND "timestamp" >= now() - interval '30 days'
+GROUP BY 1
+ORDER BY taps DESC, chip_id;

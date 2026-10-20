@@ -2,7 +2,7 @@ import { RootPortal, View, Text, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { haptics, socialHaptics } from '../../../lib/utils/haptics'
+import { socialHaptics } from '../../../lib/utils/haptics'
 import type { SocialSessionState } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import Button from '../../../components/ui/Button'
@@ -422,7 +422,7 @@ export function AuctionHeroView({
       return
     }
     setBidError('')
-    haptics('medium')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     onPlaceBid(amount)
   }
 
@@ -677,7 +677,7 @@ export function AuctionHeroView({
                         onClick={() => {
                           if (tierState.disabled || isPlacingBid) return
                           const placeBid = () => {
-                            haptics('medium')
+                            // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
                             setTappedTier({ tier: tierState.tier, amount: tierState.amount })
                             onPlaceBid(tierState.amount, {
                               tier: tierState.tier,
@@ -770,7 +770,7 @@ export function AuctionHeroView({
                       return
                     }
                     setBidError('')
-                    haptics('medium')
+                    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
                     onPlaceBid(n)
                   }}
                   disabled={isPlacingBid}

@@ -28,6 +28,7 @@
 @use './components/PhaseAigcRow';
 @use './components/PhaseHeroCard';
 @use './components/PhaseOptOutControl';
+@use './components/QuipInspirationChips';
 @use './components/WaitingBeat';
 @use './components/WarmupActionBar';
 @use './components/WarmupCardSlot';
@@ -452,6 +453,14 @@
   }
 
   &__waiting-phase-arrow {
+    color: $color-text-secondary-warm;
+  }
+
+  // P2 #4 (2026-10-20): 「约N分钟」 duration suffix beside each phase name
+  // in the waiting chain — one rung quieter than the name itself, never a
+  // countdown (expectation copy always carries 约, set by the viewModel).
+  &__waiting-phase-min {
+    @include type-micro;
     color: $color-text-secondary-warm;
   }
 
@@ -1265,6 +1274,15 @@
     color: $color-bg-tint-cream;
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
     letter-spacing: 4rpx;
+  }
+
+  // P2 #4 (2026-10-20): 「约 N 分钟」 expectation, the line directly under
+  // the ritual-phase label — same cream-on-scrim treatment, caption rung.
+  &__duration {
+    @include type-caption;
+    color: $color-bg-tint-cream;
+    text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
+    letter-spacing: 2rpx;
   }
 
   // P0 补1/补4 (2026-10-20): host opener prompt + first-time one-line rule.

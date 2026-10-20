@@ -151,3 +151,9 @@
 - 改文件：`phases/QuipBattleHeroView.tsx`（作答相位挂载 + 填入/确认逻辑 + 3 埋点）、`lib/analytics/socialIcebreakerAnalytics.ts`（union +3）、`apps/server/src/routes/domains/analytics.ts`（白名单 +3）、`index.scss`（@use）、`verify-subpackage-styles.mjs`（登记）。
 - flag：`quipInspirationChipsEnabled` dark；依赖：`Chip.tsx`(L3)、`useIcebreakerDraft` 既有链路、fnv1a32/mulberry32 自实现（~30 行，零新依赖）。
 - 不做：LLM 生成 chips、chips 入敏感词管线、全桌共享子集（备选已登记不采用）。
+
+---
+
+# 退役债登记（2026-10-20 实施注记）
+
+- `apps/mini-program/src/pages/icebreaker-session/overlays/MomentCardView.tsx` 按规格一 §1 决议**保持孤儿现状**：本次 recap 分享通路以路线 (b)（insightPoster 管线海报）落地，未复活、未挂载 MomentCardView，未新增任何消费方（其 keepsake 导出函数仍仅被 `momentCardKeepsake.test.ts` 消费）。服务端 `GET moment-card.png` 路由继续维持 flag-OFF（`SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`），本次不通电。海报上线且分享率数据（(save+share)/generate ≥15%）验证后，另立清理项删除 MomentCardView + 服务端 `momentCardRenderer.ts`（双实现漂移源）。

@@ -138,7 +138,7 @@ export function useWarmupReadiness({
       },
     )
     // S1 — self ember ignites optimistically on tap (no server wait); the
-    // haptics('medium') for this tap already lives in WarmupActionBar.
+    // confirm haptic for this tap is action-owned (performSocialAction, Wave 3).
     setSelfReadyOptimistic(!isReady)
     onToggleReady()
   }, [

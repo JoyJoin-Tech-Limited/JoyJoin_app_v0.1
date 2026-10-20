@@ -280,6 +280,19 @@ const REQUIREMENTS = [
       // WXSS — same subpackage style-splitting guard as the families above.
       'auction-hero__ladder{',
       'auction-finale__award-front{',
+      // Recap share poster (2026-10-20, spec 规格一): the poster CTAs, the
+      // panel action stack, and the offscreen canvas SCSS are @use'd via
+      // phases/RecapPhaseView.scss and must reach this page WXSS — same
+      // subpackage style-splitting guard as the families above.
+      'icebreaker__recap-share-poster-canvas{',
+      'icebreaker__moment-panel-actions{',
+      'icebreaker__recap-share-back-cta--duo{',
+      // Quip 灵感 chips (2026-10-20, spec 规格二): the answer-phase chips
+      // row SCSS is @use'd via components/QuipInspirationChips.scss and must
+      // reach this page WXSS — same subpackage style-splitting guard as the
+      // families above.
+      'quip-inspiration-chips{',
+      'quip-inspiration-chips__chip-wrap{',
     ],
   },
   {

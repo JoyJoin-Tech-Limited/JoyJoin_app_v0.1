@@ -80,6 +80,11 @@ const MOCK_USER = {
     personalStoryEnabled: true,
     aigcLabelsEnabled: true,
     gatheringRoomEnabled: true,
+    // Recap share poster + quip 灵感 chips (2026-10-20 spec 规格一/二): the
+    // H5 mock previews the flag-ON surface (screenshots capture the new UI;
+    // flag-off parity is covered by unit/contract tests).
+    recapSharePosterEnabled: true,
+    quipInspirationChipsEnabled: true,
   },
 }
 

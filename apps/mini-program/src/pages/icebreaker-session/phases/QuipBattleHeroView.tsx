@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { View, Text, Input } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { apiRequest } from '../../../lib/api/api'
@@ -10,9 +11,20 @@ import { ParticleBurst } from '../../../components/reveal'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
+import QuipInspirationChips from '../components/QuipInspirationChips'
 import { haptics } from '../../../lib/utils/haptics'
+import { useAuth } from '../../../hooks/useAuth'
+import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SocialContentStatus } from '@shared/socialIcebreaker'
+import {
+  pickQuipInspirationChips,
+  QUIP_CHIP_REPLACE_CONFIRM_TEXT,
+  QUIP_CHIP_REPLACE_CONFIRM_OK,
+  QUIP_CHIP_REPLACE_CONFIRM_CANCEL,
+  type QuipInspirationChip,
+} from '@shared/copy/quipInspirationChips'
+import { findAdoptedQuipChip, resolveQuipChipTapAction } from '../viewModels/quipChipModel'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 import { useIcebreakerDraft } from '../hooks/useIcebreakerDraft'
 import { buildIcebreakerDraftKey } from '../viewModels/draftPersistence'
@@ -215,6 +227,31 @@ export function QuipBattleHeroView({
   // tap-to-flip (the correction path the forward-only stack never had).
   const [votePreviewOpen, setVotePreviewOpen] = useState(false)
 
+  // ── P2 #6 灵感 chips (2026-10-20, spec 规格二) ─────────────────────────
+  // Static curated sentence-starters under each answer input. Flag-dark
+  // (`quipInspirationChipsEnabled` via /api/auth/user features); flag-off =
+  // zero render, zero events, pixel-identical legacy answer phase.
+  const { user: authUser } = useAuth()
+  const chipsEnabled = authUser?.features?.quipInspirationChipsEnabled === true
+  // Deterministic per-prompt 3-chip subsets — the triple seed
+  // (sessionId∥promptId∥userId) keeps one user's subset stable across
+  // remounts/rejoins while table-mates see different subsets (no 撞车 at the
+  // public vote). Pure client-side curation: zero LLM, zero requests.
+  const chipSubsets = useMemo(() => {
+    const map = new Map<string, QuipInspirationChip[]>()
+    if (chipsEnabled && socialSessionId && userId) {
+      for (const prompt of prompts) {
+        map.set(prompt.id, pickQuipInspirationChips(socialSessionId, prompt.id, userId))
+      }
+    }
+    return map
+  }, [chipsEnabled, socialSessionId, userId, prompts])
+  // 采纳即收起：once a chip lands in a prompt's box the row collapses for
+  // that prompt (the filled text stays freely editable).
+  const [chipAdoptedPromptIds, setChipAdoptedPromptIds] = useState<ReadonlySet<string>>(new Set())
+  // quip_chip_shown one-shot guard — per (session, prompt) per page lifecycle.
+  const chipsShownRef = useRef<Set<string>>(new Set())
+
   // Wave 3 (AC-07): live 「悦仔正在出题…」 copy while the server reports the
   // prompts as generating (flag-gated field; absent → null → static copy).
   const generatingLiveCopy = useGeneratingLiveCopy('quip_battle', contentStatus)
@@ -268,9 +305,67 @@ export function QuipBattleHeroView({
     }
   }, [revealed, championResult])
 
+  // P2 #6: quip_chip_shown — once per (session, prompt) per page lifecycle,
+  // only while the answer phase can actually render the row.
+  const answerPhaseActive = !hasSubmitted && !revealed
+  useEffect(() => {
+    if (!chipsEnabled || !socialSessionId || !answerPhaseActive) return
+    for (const prompt of prompts) {
+      const key = `${socialSessionId}::${prompt.id}`
+      if (chipsShownRef.current.has(key)) continue
+      if (!chipSubsets.has(prompt.id)) continue
+      chipsShownRef.current.add(key)
+      socialIcebreakerAnalytics.track(
+        'quip_chip_shown',
+        socialSessionId,
+        undefined,
+        'quip_battle',
+        { promptId: prompt.id },
+      )
+    }
+  }, [chipsEnabled, socialSessionId, answerPhaseActive, prompts, chipSubsets])
+
   const handleAnswerChange = (promptId: string, text: string) => {
     setAnswerMap((prev) => ({ ...prev, [promptId]: text.slice(0, 100) }))
   }
+
+  // P2 #6: chip tap → fill / replace / confirm-replace (spec §4). The filled
+  // text becomes ordinary editable input (existing 100-char slice + char bar
+  // + draft persistence all apply unchanged); the row collapses on adopt.
+  // quip_chip_tap fires only when text actually lands (a cancelled confirm
+  // is not an adoption step in the funnel). haptics('light') on every path.
+  const handleChipTap = useCallback(
+    async (promptId: string, chip: QuipInspirationChip) => {
+      const promptChips = chipSubsets.get(promptId) ?? []
+      const currentValue = answerMap[promptId] ?? ''
+      const action = resolveQuipChipTapAction(currentValue, promptChips)
+      haptics('light')
+      if (action === 'confirm-replace') {
+        try {
+          const modal = await Taro.showModal({
+            title: '',
+            content: QUIP_CHIP_REPLACE_CONFIRM_TEXT,
+            confirmText: QUIP_CHIP_REPLACE_CONFIRM_OK,
+            cancelText: QUIP_CHIP_REPLACE_CONFIRM_CANCEL,
+          })
+          if (!modal.confirm) return
+        } catch {
+          return
+        }
+      }
+      const replaced = currentValue.trim().length > 0
+      handleAnswerChange(promptId, chip.text)
+      setChipAdoptedPromptIds((prev) => new Set(prev).add(promptId))
+      socialIcebreakerAnalytics.track(
+        'quip_chip_tap',
+        socialSessionId ?? undefined,
+        undefined,
+        'quip_battle',
+        { promptId, chipId: chip.id, replaced },
+      )
+    },
+    [answerMap, chipSubsets, socialSessionId],
+  )
 
   // AC-01: writes ride the shared dispatcher (props) — success syncs +
   // refetches instantly (the old post-write `onRefresh` is absorbed);
@@ -296,6 +391,28 @@ export function QuipBattleHeroView({
     const result = await onSubmit(answersToSubmit)
     if (result) {
       draft.clearDraft() // P0 E1: submit success cleans the stored draft
+      // P2 #6: quip_chip_adopted — 采纳率分子. Verdict rule (spec AC5): the
+      // submitted answer starts with the chip's original text (edits after
+      // the fill still count as adopted). Flag-off fires nothing.
+      if (chipsEnabled && socialSessionId) {
+        for (const answer of answersToSubmit) {
+          const adopted = findAdoptedQuipChip(
+            socialSessionId,
+            answer.promptId,
+            userId,
+            answer.answerText,
+          )
+          if (adopted) {
+            socialIcebreakerAnalytics.track(
+              'quip_chip_adopted',
+              socialSessionId,
+              undefined,
+              'quip_battle',
+              { promptId: answer.promptId, chipId: adopted.id },
+            )
+          }
+        }
+      }
     } else if (result === null) {
       setError('提交没成功，再试一次')
     }
@@ -432,6 +549,17 @@ export function QuipBattleHeroView({
                     onInput={(e) => handleAnswerChange(prompt.id, e.detail.value)}
                     maxlength={100}
                   />
+                  {/* P2 #6 灵感 chips (spec 规格二): deterministic 3-chip
+                      subset under each answer input; collapses once a chip
+                      lands (采纳即收起). Answer phase only — voting / waiting
+                      / reveal branches never render it. Flag-off = zero
+                      render (byte-identical legacy card). */}
+                  {chipsEnabled && !chipAdoptedPromptIds.has(prompt.id) ? (
+                    <QuipInspirationChips
+                      chips={chipSubsets.get(prompt.id) ?? []}
+                      onChipTap={(chip) => { void handleChipTap(prompt.id, chip) }}
+                    />
+                  ) : null}
                   <Text className='quip-battle-hero__char-count'>
                     {(answerMap[prompt.id] || '').length}/100
                   </Text>

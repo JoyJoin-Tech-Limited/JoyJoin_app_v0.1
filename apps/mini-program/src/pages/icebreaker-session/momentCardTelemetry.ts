@@ -32,7 +32,35 @@ export function emitMomentCardGenerateOnce(socialSessionId: string): void {
   })
 }
 
-/** Test-only: clear the per-app-lifetime dedupe set. */
+/**
+ * Recap share poster (2026-10-20, spec 规格一 AC-6): the save/share
+ * numerators for 分享率 = (save+share)/generate. Rides the SAME
+ * moment-card-event route — the 'save'/'share' actions were whitelisted
+ * server-side from day one but had zero callers until now.
+ *
+ * Semantics mirror the generate emitter: fire-and-forget, fail-open
+ * (logWarn only), deduped ONCE per session per action per app lifetime so
+ * repeat taps and nav-stack remounts never re-emit (the metric counts
+ * distinct sessions).
+ */
+const emittedActionKeys = new Set<string>()
+
+export function emitMomentCardAction(socialSessionId: string, action: 'save' | 'share'): void {
+  if (!socialSessionId) return
+  const key = `${socialSessionId}:${action}`
+  if (emittedActionKeys.has(key)) return
+  emittedActionKeys.add(key)
+  void apiRequest({
+    path: buildSocialPath(socialSessionId, '/moment-card-event'),
+    method: 'POST',
+    data: { action },
+  }).catch(() => {
+    logWarn(`[MomentCard] ${action} telemetry dropped`)
+  })
+}
+
+/** Test-only: clear the per-app-lifetime dedupe sets. */
 export function __resetMomentCardGenerateTelemetryForTests(): void {
   emittedGenerateSessions.clear()
+  emittedActionKeys.clear()
 }

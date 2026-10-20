@@ -487,6 +487,13 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   // recap first display (phaseCount / myActionCount / playerCount). Whitelist
   // parity only — no aggregation, no tables, no routes, no dashboards.
   "session_health_snapshot",
+  // P2 #6 quip 灵感 chips (2026-10-20, spec 规格二 §4) — static-curation
+  // chips funnel: shown → tap → adopted (采纳率分子 = submit success with an
+  // answer starting with the chip text). Whitelist parity only — no
+  // aggregation, no tables, no routes, no dashboards.
+  "quip_chip_shown",
+  "quip_chip_tap",
+  "quip_chip_adopted",
 ] as const;
 
 type SocialIcebreakerEventType = (typeof SOCIAL_ICEBREAKER_EVENT_TYPES)[number];

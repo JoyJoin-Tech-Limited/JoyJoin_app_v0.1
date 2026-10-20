@@ -161,6 +161,8 @@ const [
     checkoutSubscriptionUpsellEnabled,
     entryCardInsightV2Enabled,
     wechatIdCollectionEnabled,
+    recapSharePosterEnabled,
+    quipInspirationChipsEnabled,
     entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
@@ -237,6 +239,14 @@ const [
     // WeChat contact-ID collection (2026-10-16 spec): gates the event-feedback
     // 微信号 step + revealed remedy card. Ships dark until the §6 baseline.
     getFeatureFlag('wechatIdCollectionEnabled', false),
+    // Recap share poster (2026-10-20 spec 规格一): gates the recap canvas
+    // poster CTAs + the session page's forward registration. Ships dark;
+    // flag-off = zero share surface on the recap.
+    getFeatureFlag('recapSharePosterEnabled', false),
+    // Quip 灵感 chips (2026-10-20 spec 规格二): gates the quip_battle
+    // answer-phase static-curation chips row. Ships dark; flag-off =
+    // byte-identical legacy answer phase (zero render, zero events).
+    getFeatureFlag('quipInspirationChipsEnabled', false),
     // Server-resolved entitlement signal (pool-registration gate semantics via
     // lib/entitlement.ts), joined into the flag batch so the cold-start auth
     // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
@@ -364,6 +374,12 @@ const [
       /** WeChat contact-ID collection (ships dark): event-feedback 微信号
        *  conditional step + revealed remedy card. */
       wechatIdCollectionEnabled,
+      /** Recap share poster (ships dark): recap 「存下这张高光卡」/「直接存卡」
+       *  CTAs + page-level forward registration on the session page. */
+      recapSharePosterEnabled,
+      /** Quip 灵感 chips (ships dark): quip_battle answer-phase 灵感起手
+       *  static-curation chips row (zero LLM / zero AIGC label). */
+      quipInspirationChipsEnabled,
     },
   };
 

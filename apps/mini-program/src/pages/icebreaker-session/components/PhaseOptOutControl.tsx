@@ -1,6 +1,5 @@
 import { View, Text } from '@tarojs/components'
 import type { SocialSessionState } from '@shared/socialIcebreaker'
-import { haptics } from '../../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import {
   PHASE_OPT_OUT_COPY,
@@ -94,7 +93,7 @@ export function PhaseOptOutControl({
 
   const handleTap = () => {
     if (isOptingOut) return
-    haptics('light')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     onOptOut()
   }
 

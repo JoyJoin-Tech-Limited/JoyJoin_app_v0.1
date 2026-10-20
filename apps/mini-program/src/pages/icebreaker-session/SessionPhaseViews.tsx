@@ -635,6 +635,8 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           hapticGrammarEnabled={hapticGrammarEnabled}
           hostUserId={session.hostUserId}
           onSubmitRecapFeedback={onSubmitRecapFeedback}
+          eventTier={session.eventTier}
+          sessionStartedAt={session.sessionStartedAt}
         />
       )}
 

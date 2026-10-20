@@ -73,6 +73,15 @@ type EventType =
   // recap first display: phaseCount / myActionCount (derived locally, zero
   // new requests) / playerCount. Whitelist parity only — no aggregation.
   | 'session_health_snapshot'
+  // P2 #6 quip 灵感 chips (2026-10-20, spec 规格二 §4) — static-curation
+  // chips funnel: shown (per prompt row first render) → tap (chip text
+  // lands in the box; replaced flags hand-typed displacement) → adopted
+  // (submit success with an answer starting with the chip text — 采纳率
+  // 分子). Flag-gated client-side; whitelist parity lives in the server
+  // SOCIAL_ICEBREAKER_EVENT_TYPES array (parity test guards drift).
+  | 'quip_chip_shown'
+  | 'quip_chip_tap'
+  | 'quip_chip_adopted'
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker. The server gates

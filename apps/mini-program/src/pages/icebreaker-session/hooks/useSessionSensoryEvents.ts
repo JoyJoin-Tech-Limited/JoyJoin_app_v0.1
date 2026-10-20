@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
+import type { MiniScriptPresentedEvidence, SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
 import type { SocialHapticPattern } from '../../../lib/utils/haptics'
 
 // ─── Session sensory-event detector (icebreaker fluid-UX S1, 2026-08-11) ─────
@@ -47,10 +47,49 @@ export const SENSORY_EVENT_HAPTIC_PATTERNS: Record<SessionSensoryEventKind, Soci
   recap_started: 'socialCelebration',
 }
 
+/**
+ * Wave 3 haptic pack (S7 reveal 分级降级 — notification-fatigue governance):
+ * per-reveal-source classification, still the same §10 ruling-3 config layer
+ * (edit maps, never the detector or the grammar).
+ *
+ * 行动改变类 (the table must react NOW — truth/results/group sync moments)
+ * keep the group-long socialReveal. 纯信息揭示类 (glance-when-ready beats: a
+ * new warmup topic card, ONE player's lie-detector reveal) degrade to a
+ * single mid-tap socialNudge. Before this ladder, reveal_appeared fired
+ * socialReveal for every source — 25-35 long buzzes in a 60-minute session,
+ * well past the notification ceiling. Long buzzes now land only at
+ * phase-scale moments (≈3 per session).
+ *
+ * Every REVEAL_SOURCES id must be classified here (test-locked); an
+ * unclassified future source falls back to the kind map (socialReveal) —
+ * the pre-ladder behaviour, never a silent drop.
+ */
+export const REVEAL_SOURCE_HAPTIC_PATTERNS: Record<string, SocialHapticPattern> = {
+  // 行动改变类 — truth/results the whole table reacts to at once.
+  group_mirror: 'socialReveal',
+  quip_battle: 'socialReveal',
+  undercover_word: 'socialReveal',
+  personality_dice: 'socialReveal',
+  // 纯信息揭示类 — per-card / per-player information beats.
+  warmup_topic: 'socialNudge',
+  lie_detective: 'socialNudge',
+}
+
+/** Event → haptic pattern resolution. The detector emits typed events; this
+ *  map is the ONLY place reveal grading lives (config-only degradation). */
+export function resolveSensoryEventHapticPattern(event: SessionSensoryEvent): SocialHapticPattern {
+  if (event.kind === 'reveal_appeared' && event.source) {
+    return REVEAL_SOURCE_HAPTIC_PATTERNS[event.source] ?? SENSORY_EVENT_HAPTIC_PATTERNS.reveal_appeared
+  }
+  return SENSORY_EVENT_HAPTIC_PATTERNS[event.kind]
+}
+
 // Reveal sources: a stable string key per source; a key change to a non-null
 // value means "a reveal appeared". Boolean reveals keep one key while true
 // (no re-fire) and re-arm when the server scrubs them between rounds.
-const REVEAL_SOURCES: ReadonlyArray<{
+// Exported for the Wave 3 classification ratchet (every id here must carry an
+// explicit grading in REVEAL_SOURCE_HAPTIC_PATTERNS — test-locked).
+export const REVEAL_SOURCES: ReadonlyArray<{
   id: string
   key: (state: SocialSessionState) => string | null
 }> = [
@@ -102,6 +141,21 @@ function resolveActiveTurnUserId(state: SocialSessionState): string | null {
     case 'personality_dice':
       if (state.personalityDiceChooseModeEnabled) return null
       return state.personalityDiceChallenges?.[state.currentDicePlayerIndex ?? 0]?.userId ?? null
+    case 'mini_script': {
+      // Wave 3 haptic pack: V2 证物出示 presenter as a turn source — the
+      // presenter of the latest presented evidence holds the floor ("轮到
+      // 你出示证物" → the table waits on them to read the reaction aloud).
+      // Server fields only: `readConfirmedAt` releases the floor, a newer
+      // presentation passes it; never compare presentedAt against a device
+      // clock (2026-08-13 clock-skew canon). Pre-V2 sessions carry no
+      // evidence list and naturally resolve to no-turn.
+      let latest: MiniScriptPresentedEvidence | null = null
+      for (const entry of state.miniScriptPresentedEvidence ?? []) {
+        if (entry.readConfirmedAt) continue
+        if (!latest || entry.presentedAt >= latest.presentedAt) latest = entry
+      }
+      return latest?.presentedBy ?? null
+    }
     default:
       return null
   }

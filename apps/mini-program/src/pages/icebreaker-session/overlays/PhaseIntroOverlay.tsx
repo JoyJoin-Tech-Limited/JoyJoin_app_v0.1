@@ -9,6 +9,7 @@ import {
   getIceHostPhasePrompt,
   getIcePhaseOneLineRule,
 } from '@shared/copy/icebreakerSession'
+import { getApproxPhaseDurationLabel } from '../viewModels/phaseDurationModel'
 
 const OVERLAY_DURATION_MS = 1600
 const FADE_OUT_START_MS = 1200
@@ -115,6 +116,11 @@ export function PhaseIntroOverlay({
   const hostPrompt = isHost ? getIceHostPhasePrompt(phase) : null
   // P0 补4: one-line rule for first-time attendees of this phase.
   const oneLineRule = ruleDue ? getIcePhaseOneLineRule(phase) : null
+  // P2 #4 (2026-10-20): 「约 N 分钟」 expectation under the label (ritual
+  // phases only — the overlay is gated to them). Reads the session duration
+  // snapshot (compiled runPlan first); null → no line, never a fabricated
+  // number. Always approximate — this is an expectation, not a countdown.
+  const durationLabel = getApproxPhaseDurationLabel(phase)
 
   return (
     <View
@@ -125,6 +131,9 @@ export function PhaseIntroOverlay({
       <View className='phase-intro-overlay__content'>
         <PhaseHeaderIcon phase={phase} size={160} />
         <Text className='phase-intro-overlay__label'>{getPhaseLabel(phase)}</Text>
+        {durationLabel ? (
+          <Text className='phase-intro-overlay__duration'>{durationLabel}</Text>
+        ) : null}
         {hostPrompt ? (
           <Text className='phase-intro-overlay__host-prompt'>
             {ICE_HOST_PHASE_PROMPT_PREFIX}{hostPrompt}

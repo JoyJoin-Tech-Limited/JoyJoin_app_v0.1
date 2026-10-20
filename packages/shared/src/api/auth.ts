@@ -242,6 +242,18 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  legacy single-line insightLine UI + original welcome-gift timing.
      *  Default: true (v2 is the shipped state; the flag is a rollback lever). */
     entryCardInsightV2Enabled?: boolean
+    /** Recap share poster (2026-10-20 spec 规格一): when true, the icebreaker
+     *  recap renders the 「存下这张高光卡」/「直接存卡」 canvas-poster CTAs and
+     *  registers the page-level forward (useShareAppMessage); when false, the
+     *  recap has zero share surface (byte-identical legacy).
+     *  Default: false (ships dark). */
+    recapSharePosterEnabled?: boolean
+    /** Quip 灵感 chips (2026-10-20 spec 规格二): when true, the quip_battle
+     *  answer phase renders a deterministic 3-chip static-curation
+     *  sentence-starter row under each prompt input; when false, the answer
+     *  phase is byte-identical legacy (zero render, zero events).
+     *  Default: false (ships dark). */
+    quipInspirationChipsEnabled?: boolean
   }
 }
 

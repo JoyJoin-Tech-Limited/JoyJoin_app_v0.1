@@ -411,6 +411,28 @@ export function buildIcebreakerState(sessionId) {
         lastAdvanceTrigger: 'auto_all_ready',
       }
     // ─── Wave 2 P1 (sprint icebreaker-polish-p1) fixtures ───
+    case 'quip-battle-answer':
+      // P2 #6 (2026-10-20, spec 规格二): answer phase with the 灵感起手
+      // chips — prompts dealt, viewer (host) has NOT submitted, two
+      // table-mates already in. Chips render because MOCK_USER.features
+      // carries quipInspirationChipsEnabled: true (mock-h5-server.mjs).
+      return {
+        ...base,
+        currentPhase: 'quip_battle',
+        completedPhases: ['warmup', 'micro_challenge'],
+        quipBattlePrompts: [
+          { id: 'qp-1', promptText: '如果今晚这桌是一部电影，片名应该叫《____》', category: '脑洞' },
+          { id: 'qp-2', promptText: '我敢打赌，在座没有人比我更擅长____', category: '自信' },
+        ],
+        quipBattleAnswers: [
+          { userId: 'ib-p2', displayName: '小鹿', answerText: '六个人和一只悦仔', promptId: 'qp-1' },
+          { userId: 'ib-p3', displayName: '阿澈', answerText: '下班不积极，思想有问题', promptId: 'qp-1' },
+        ],
+        quipBattleSubmittedUserIds: ['ib-p2', 'ib-p3'],
+        quipBattleVotedUserIds: [],
+        quipBattleRevealed: false,
+        quipBattlePromptsMeta: mockAigcMeta('social-quip-battle-v1'),
+      }
     case 'quip-battle-vote':
       // AC-03⑤ pre-submit preview step: every answer submitted, the viewer
       // has NOT voted — the swipe stack + 「你投出 N 票 · 点查看」 汇总步

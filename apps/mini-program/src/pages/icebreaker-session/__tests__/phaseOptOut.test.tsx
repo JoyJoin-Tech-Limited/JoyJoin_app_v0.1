@@ -287,14 +287,17 @@ describe('W3 phase opt-out — control rendering', () => {
     baseProps.onOptOut.mockClear()
   })
 
-  it('renders the 只想听 affordance and fires opt-out with a light haptic', () => {
+  it('renders the 只想听 affordance and fires opt-out (confirm haptic is action-owned)', () => {
     render(<PhaseOptOutControl {...baseProps} state={makeState()} />)
     expect(screen.getByText(PHASE_OPT_OUT_COPY.affordanceLabel)).toBeTruthy()
     expect(screen.getByText(PHASE_OPT_OUT_COPY.affordanceHint)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: PHASE_OPT_OUT_COPY.affordanceLabel }))
-    expect(haptics).toHaveBeenCalledWith('light')
     expect(baseProps.onOptOut).toHaveBeenCalledTimes(1)
+    // Wave 3 动作归口: the component fires NO raw confirm haptic — the shared
+    // dispatcher (performSocialAction) owns the confirm for this action, so a
+    // tap can never double-buzz (raw at tap + socialConfirm one RTT later).
+    expect(haptics).not.toHaveBeenCalled()
   })
 
   it('renders the opt_out state once the viewer opted out, with no affordance', () => {

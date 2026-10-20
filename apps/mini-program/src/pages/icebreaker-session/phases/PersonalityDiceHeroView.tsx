@@ -12,7 +12,6 @@ import { CardFlip, ParticleBurst } from '../../../components/reveal'
 import { SwipeCard } from '../../../components/gesture'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import WaitingBeat from '../components/WaitingBeat'
-import { haptics } from '../../../lib/utils/haptics'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import {
@@ -199,7 +198,7 @@ export function PersonalityDiceHeroView({
 
   const handleAccept = useCallback(() => {
     if (isCompleting || pendingUserId) return
-    haptics('medium')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     setPendingUserId(currentUserId)
     setBurstTrigger(true)
     if (burstTimerRef.current) clearTimeout(burstTimerRef.current)
@@ -209,17 +208,16 @@ export function PersonalityDiceHeroView({
 
   const handlePass = useCallback(() => {
     if (isCompleting || pendingUserId) return
-    haptics('light')
     setPendingUserId(currentUserId)
     setShowPassReveal(true)
     onComplete(true)
   }, [isCompleting, pendingUserId, currentUserId, onComplete])
 
-  // Signature wow: dice settle — chosen dare lands with a squash + haptic
+  // Signature wow: dice settle — chosen dare lands with a squash (the confirm
+  // haptic is action-owned: performSocialAction fires it on the land).
   const handleChooseWithSettle = useCallback(
     (idx: number) => {
       if (!onChoose) return
-      haptics('medium')
       onChoose(idx)
     },
     [onChoose],
@@ -544,7 +542,7 @@ export function PersonalityDiceHeroView({
                   aria-label='换一个挑战'
                   onClick={() => {
                     if (isReadying) return
-                    haptics('light')
+                    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
                     onReady?.(false)
                   }}
                 >

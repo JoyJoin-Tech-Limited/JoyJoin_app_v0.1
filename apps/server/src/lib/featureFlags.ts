@@ -494,6 +494,28 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  projection is. Env fallback: ICEBREAKER_CONTENT_STATUS_ENABLED
    *  (default: false). */
   icebreakerContentStatusEnabled: "ICEBREAKER_CONTENT_STATUS_ENABLED",
+  /** Recap share poster + forward pathway (2026-10-20, spec
+   *  docs/deliberations/2026-10-20-recap-share-and-quip-chips-spec.md 规格一):
+   *  gates the recap 「存下这张高光卡」/「直接存卡」 canvas-poster CTAs and the
+   *  page-level useShareAppMessage registration on the social-icebreaker
+   *  session page. Pure client render — zero server route/DTO/schema change;
+   *  save/share telemetry rides the existing moment-card-event whitelist
+   *  ('save'/'share' actions, previously zero-caller). Flag OFF = the recap
+   *  moment panel keeps the single 「看完了」 button, no CardFlip 直接存卡,
+   *  and no onShareAppMessage registration (··· menu unchanged).
+   *  Env fallback: RECAP_SHARE_POSTER_ENABLED (default: false). */
+  recapSharePosterEnabled: "RECAP_SHARE_POSTER_ENABLED",
+  /** Quip 灵感 chips (2026-10-20, spec
+   *  docs/deliberations/2026-10-20-recap-share-and-quip-chips-spec.md 规格二):
+   *  gates the quip_battle answer-phase 灵感起手 chips — a deterministic
+   *  3-chip static-curation sentence-starter row under each prompt input
+   *  (triple seed sessionId∥promptId∥userId; zero LLM, zero requests, zero
+   *  AIGC label — curated, not generated). Pure client render — zero server
+   *  route/DTO/schema change; the quip_chip_shown/tap/adopted funnel rides
+   *  the existing social-icebreaker analytics whitelist. Flag OFF = the
+   *  answer phase is byte-identical legacy (zero render, zero events).
+   *  Env fallback: QUIP_INSPIRATION_CHIPS_ENABLED (default: false). */
+  quipInspirationChipsEnabled: "QUIP_INSPIRATION_CHIPS_ENABLED",
 };
 
 /**
@@ -650,6 +672,14 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  explicit false so the admin toggle UI and listFeatureFlags() show a
    *  stable default. Flag-off = byte-identical pre-Wave-3 snapshots. */
   icebreakerContentStatusEnabled: false,
+  /** Recap share poster ships dark (2026-10-20 spec 规格一); explicit false
+   *  so the admin toggle UI and listFeatureFlags() show a stable default.
+   *  Flag-off = zero share surface on the recap (byte-identical legacy). */
+  recapSharePosterEnabled: false,
+  /** Quip 灵感 chips ship dark (2026-10-20 spec 规格二); explicit false so
+   *  the admin toggle UI and listFeatureFlags() show a stable default.
+   *  Flag-off = byte-identical legacy answer phase (zero chips). */
+  quipInspirationChipsEnabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

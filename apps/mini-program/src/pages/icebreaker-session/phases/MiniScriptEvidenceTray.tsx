@@ -118,7 +118,9 @@ export function MiniScriptEvidenceTray({
 
   const handleConfirmPresent = async () => {
     if (!pendingEvidence || targetSlot === null || isPresenting) return
-    haptics('medium')
+    // Confirm + reveal haptics are action-owned: performSocialAction lands the
+    // confirm, and the sensory detector's mini_script presenter turn (Wave 3)
+    // carries the "your floor, read it aloud" beat when the flag is on.
     const reactionText = await onPresent(pendingEvidence.id, targetSlot)
     if (reactionText) {
       setActiveReaction({
@@ -128,7 +130,6 @@ export function MiniScriptEvidenceTray({
       })
       setPendingEvidence(null)
       setTargetSlot(null)
-      haptics('success')
     }
     // Failure toasts are owned by the action hook (mapped per error code);
     // keep the picker open so the player can retry or pick another target.
@@ -280,7 +281,6 @@ export function MiniScriptEvidenceTray({
             <Button
               variant='primary'
               onClick={() => {
-                haptics('light')
                 // Early release: the confirm-read POST lands readConfirmedAt
                 // server-side, so every other member's next poll carries the
                 // reaction without waiting out the server-side 8s gate.

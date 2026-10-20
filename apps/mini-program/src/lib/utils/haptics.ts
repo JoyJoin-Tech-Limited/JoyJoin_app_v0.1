@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { getDeviceInfoCompat } from './systemInfo'
 
 export type HapticType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'slotTick' | 'slotLand' | 'cardReveal'
 
@@ -94,6 +95,19 @@ export type SocialHapticStep =
  *  through fabric (squad-unboxing heartbeat precedent: ≥80ms). */
 export const SOCIAL_HAPTIC_MIN_GAP_MS = 80
 
+/** Wave 3 haptic pack (Android 双脉冲适配): most Android devices map the
+ *  vibrateShort intensity steps fuzzily, and the iOS-tuned 90ms separation
+ *  smears into ONE buzz there — socialYourTurn became indistinguishable from
+ *  a single-tap socialNudge. On Android every inter-pulse gap is therefore
+ *  raised to ≥120ms so dual/triple-pulse signatures survive; iOS and every
+ *  other platform keep the canonical 90ms waveform. Config-level per the
+ *  §10 ruling-3 philosophy (the grammar map itself is never forked). */
+export const SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS = 120
+
+/** Runtime platform for grammar playback. Only 'android' alters the plan;
+ *  'other' covers iOS/devtools/unknown and keeps the canonical waveform. */
+export type SocialHapticPlatform = 'android' | 'other'
+
 export const SOCIAL_HAPTIC_GRAMMAR: Record<SocialHapticPattern, readonly SocialHapticStep[]> = {
   // Something new — glance when ready. Single mid-weight tap.
   socialNudge: [{ kind: 'short', type: 'medium' }],
@@ -155,13 +169,18 @@ export const SOCIAL_HAPTIC_PRIORITY: Record<SocialHapticPattern, number> = {
 export const SOCIAL_HAPTIC_LONG_PULSE_MS = 400
 export const SOCIAL_HAPTIC_SHORT_PULSE_MS = 30
 
-/** Flatten a grammar pattern into timed pulses (pure — unit-testable without timers). */
-export function planSocialHapticPattern(pattern: SocialHapticPattern): SocialHapticPulse[] {
+/** Flatten a grammar pattern into timed pulses (pure — unit-testable without timers).
+ *  `platform` applies the Android gap floor (SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS);
+ *  the default keeps the canonical iOS-tuned waveform. */
+export function planSocialHapticPattern(
+  pattern: SocialHapticPattern,
+  platform: SocialHapticPlatform = 'other',
+): SocialHapticPulse[] {
   const pulses: SocialHapticPulse[] = []
   let atMs = 0
   for (const step of SOCIAL_HAPTIC_GRAMMAR[pattern]) {
     if (step.kind === 'gap') {
-      atMs += step.ms
+      atMs += platform === 'android' ? Math.max(step.ms, SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS) : step.ms
     } else {
       pulses.push({ atMs, step })
     }
@@ -170,15 +189,29 @@ export function planSocialHapticPattern(pattern: SocialHapticPattern): SocialHap
 }
 
 /** Total physical occupancy of a pattern (ms): schedule span PLUS the
- *  physical buzz length of the trailing pulse(s). */
-export function socialHapticPatternDurationMs(pattern: SocialHapticPattern): number {
-  const pulses = planSocialHapticPattern(pattern)
+ *  physical buzz length of the trailing pulse(s). Platform-aware so the busy
+ *  window covers the actual Android-stretched playback. */
+export function socialHapticPatternDurationMs(
+  pattern: SocialHapticPattern,
+  platform: SocialHapticPlatform = 'other',
+): number {
+  const pulses = planSocialHapticPattern(pattern, platform)
   let duration = 0
   for (const pulse of pulses) {
     const pulseEnd = pulse.atMs + (pulse.step.kind === 'long' ? SOCIAL_HAPTIC_LONG_PULSE_MS : SOCIAL_HAPTIC_SHORT_PULSE_MS)
     if (pulseEnd > duration) duration = pulseEnd
   }
   return duration
+}
+
+/** Resolve the runtime platform for grammar playback. Never throws — haptics
+ *  are decorative and must never block an interaction. */
+function resolveSocialHapticPlatform(): SocialHapticPlatform {
+  try {
+    return getDeviceInfoCompat().platform === 'android' ? 'android' : 'other'
+  } catch {
+    return 'other'
+  }
 }
 
 // Overlapping sequences merge into an undecodable buzz, so pattern requests
@@ -231,10 +264,11 @@ export function socialHaptics(pattern: SocialHapticPattern): boolean {
     }
     socialHapticsPendingTimers = []
 
-    const pulses = planSocialHapticPattern(pattern)
+    const platform = resolveSocialHapticPlatform()
+    const pulses = planSocialHapticPattern(pattern, platform)
     if (pulses.length === 0) return false
 
-    socialHapticsBusyUntil = now + socialHapticPatternDurationMs(pattern) + SOCIAL_HAPTIC_MIN_GAP_MS
+    socialHapticsBusyUntil = now + socialHapticPatternDurationMs(pattern, platform) + SOCIAL_HAPTIC_MIN_GAP_MS
     socialHapticsPlayingPriority = SOCIAL_HAPTIC_PRIORITY[pattern]
 
     for (const pulse of pulses) {

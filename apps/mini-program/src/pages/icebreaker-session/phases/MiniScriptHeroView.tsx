@@ -488,14 +488,12 @@ export function MiniScriptHeroView({
         cancelText: '再等等',
         success: (res) => {
           if (res.confirm) {
-            haptics('medium')
             onRevealAct(1)
           }
         },
       })
       return
     }
-    haptics('medium')
     onRevealAct(1)
   }
 
@@ -507,7 +505,6 @@ export function MiniScriptHeroView({
       cancelText: '再想想',
       success: (res) => {
         if (res.confirm) {
-          haptics('heavy')
           onRevealSolution()
         }
       },
@@ -523,7 +520,7 @@ export function MiniScriptHeroView({
       handleRevealSolutionConfirm()
       return
     }
-    haptics('light')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     onRevealSolution((error) => {
       const message = error instanceof Error ? error.message : ''
       if (message.includes('WAITING_FOR_VOTES')) {
@@ -540,7 +537,7 @@ export function MiniScriptHeroView({
 
   const handleSubmitVote = useCallback(() => {
     if (suspectSlot === null) return
-    haptics('success')
+    // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
     const vote: MiniScriptVoteInput = { suspectRoleSlot: suspectSlot }
     if (voteOptions) {
       if (voteWhat) vote.what = voteWhat
@@ -554,7 +551,6 @@ export function MiniScriptHeroView({
 
   const handleSubmitMotiveVote = useCallback(() => {
     if (motiveChoice === null) return
-    haptics('success')
     motiveSigRef.current = String(motiveChoice)
     onVote({ voteRound: 2, motiveChoice })
   }, [motiveChoice, onVote])
@@ -612,7 +608,7 @@ export function MiniScriptHeroView({
           <Button
             variant='primary'
             onClick={() => {
-              haptics('cardReveal')
+              // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
               onAssignRoles()
             }}
             disabled={isAssigningRoles}
@@ -628,7 +624,6 @@ export function MiniScriptHeroView({
               <Button
                 variant={isReady ? 'secondary' : 'primary'}
                 onClick={() => {
-                  haptics('light')
                   onReady(!isReady)
                 }}
                 disabled={isSettingReady}
@@ -660,7 +655,6 @@ export function MiniScriptHeroView({
             <Button
               variant='primary'
               onClick={() => {
-                haptics('medium')
                 onRevealAct(currentAct + 1)
               }}
               disabled={isRevealingAct}
@@ -691,7 +685,6 @@ export function MiniScriptHeroView({
               <Button
                 variant='primary'
                 onClick={() => {
-                  haptics('medium')
                   onOpenMotiveVote()
                 }}
                 disabled={isOpeningMotiveVote}
@@ -1641,7 +1634,7 @@ export function MiniScriptHeroView({
                 aria-disabled={isAdvancingCeremony}
                 onClick={() => {
                   if (isAdvancingCeremony) return
-                  haptics('medium')
+                  // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
                   onAdvanceCeremony()
                 }}
               >

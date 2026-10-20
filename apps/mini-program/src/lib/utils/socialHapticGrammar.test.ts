@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS,
   SOCIAL_HAPTIC_GRAMMAR,
   SOCIAL_HAPTIC_LONG_PULSE_MS,
   SOCIAL_HAPTIC_MIN_GAP_MS,
@@ -219,5 +220,95 @@ describe('social haptic grammar (S1)', () => {
       Date.now() + socialHapticPatternDurationMs('socialCelebration') + SOCIAL_HAPTIC_MIN_GAP_MS + 1000,
     )
     expect(canFireSocialHaptic('socialNudge')).toBe(true)
+  })
+
+  describe('Wave 3 Android dual-pulse adaptation', () => {
+    it('raises every sub-120ms inter-pulse gap to the Android floor, keeping iOS canonical', () => {
+      // Canonical (iOS/devtools/unknown): the 90ms separations stay.
+      expect(planSocialHapticPattern('socialYourTurn')).toEqual([
+        { atMs: 0, step: { kind: 'short', type: 'heavy' } },
+        { atMs: 90, step: { kind: 'short', type: 'light' } },
+      ])
+      // Android: 90 → 120 so the dual pulse never smears into one buzz that
+      // reads identical to socialNudge.
+      expect(planSocialHapticPattern('socialYourTurn', 'android')).toEqual([
+        { atMs: 0, step: { kind: 'short', type: 'heavy' } },
+        { atMs: SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS, step: { kind: 'short', type: 'light' } },
+      ])
+      expect(planSocialHapticPattern('socialHostNudge', 'android')).toEqual([
+        { atMs: 0, step: { kind: 'short', type: 'light' } },
+        { atMs: SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS, step: { kind: 'short', type: 'light' } },
+      ])
+      // Celebration: 90 → 120 while an already-120 gap stays (max, not overwrite).
+      expect(planSocialHapticPattern('socialCelebration', 'android')).toEqual([
+        { atMs: 0, step: { kind: 'short', type: 'heavy' } },
+        { atMs: 120, step: { kind: 'short', type: 'medium' } },
+        { atMs: 240, step: { kind: 'short', type: 'heavy' } },
+      ])
+      // Single-pulse patterns are platform-invariant.
+      expect(planSocialHapticPattern('socialConfirm', 'android')).toEqual(planSocialHapticPattern('socialConfirm'))
+      expect(planSocialHapticPattern('socialReveal', 'android')).toEqual(planSocialHapticPattern('socialReveal'))
+      expect(planSocialHapticPattern('socialNudge', 'android')).toEqual(planSocialHapticPattern('socialNudge'))
+    })
+
+    it('keeps the Android plans pairwise distinguishable and above the Android floor', () => {
+      const signatures = ALL_PATTERNS.map((pattern) =>
+        JSON.stringify(
+          planSocialHapticPattern(pattern, 'android').map((pulse) => [
+            pulse.atMs,
+            pulse.step.kind,
+            pulse.step.kind === 'short' ? pulse.step.type : null,
+          ]),
+        ),
+      )
+      expect(new Set(signatures).size).toBe(ALL_PATTERNS.length)
+      for (const pattern of ALL_PATTERNS) {
+        const pulses = planSocialHapticPattern(pattern, 'android')
+        for (let i = 1; i < pulses.length; i++) {
+          expect(pulses[i].atMs - pulses[i - 1].atMs).toBeGreaterThanOrEqual(SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS)
+        }
+      }
+    })
+
+    it('scales the busy-window math with the Android plan', () => {
+      expect(socialHapticPatternDurationMs('socialYourTurn', 'android')).toBe(
+        SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS + SOCIAL_HAPTIC_SHORT_PULSE_MS,
+      )
+      expect(socialHapticPatternDurationMs('socialYourTurn')).toBe(90 + SOCIAL_HAPTIC_SHORT_PULSE_MS)
+      expect(socialHapticPatternDurationMs('socialCelebration', 'android')).toBe(240 + SOCIAL_HAPTIC_SHORT_PULSE_MS)
+    })
+
+    it('schedules the Your-turn echo at the Android gap on an Android runtime', () => {
+      const runtime = taroRuntime as unknown as Record<string, unknown>
+      runtime.getSystemInfoSync = vi.fn(() => ({ platform: 'android' }))
+      try {
+        socialHaptics('socialYourTurn')
+        expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(1)
+        expect(taroRuntime.vibrateShort).toHaveBeenLastCalledWith({ type: 'heavy' })
+
+        vi.advanceTimersByTime(SOCIAL_HAPTIC_ANDROID_MIN_GAP_MS - 1)
+        expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(1)
+
+        vi.advanceTimersByTime(1)
+        expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(2)
+        expect(taroRuntime.vibrateShort).toHaveBeenLastCalledWith({ type: 'light' })
+      } finally {
+        delete runtime.getSystemInfoSync
+      }
+    })
+
+    it('keeps the canonical 90ms echo on non-Android runtimes (legacy system info)', () => {
+      const runtime = taroRuntime as unknown as Record<string, unknown>
+      runtime.getSystemInfoSync = vi.fn(() => ({ platform: 'ios' }))
+      try {
+        socialHaptics('socialYourTurn')
+        expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(1)
+        vi.advanceTimersByTime(90)
+        expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(2)
+        expect(taroRuntime.vibrateShort).toHaveBeenLastCalledWith({ type: 'light' })
+      } finally {
+        delete runtime.getSystemInfoSync
+      }
+    })
   })
 })

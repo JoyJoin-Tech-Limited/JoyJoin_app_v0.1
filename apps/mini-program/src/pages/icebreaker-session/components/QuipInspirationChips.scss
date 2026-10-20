@@ -1,0 +1,40 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// 灵感起手 chips 行（2026-10-20 P2 #6）— 静态策展，非 AI 生成（零 AIGC 角标）。
+// Accent alphas stay on the icebreaker-visuals whitelist (0.08 fill / 0.32
+// border); quiet system-ui chrome, one rung below the input itself.
+.quip-inspiration-chips {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin-top: $spacing-xs;
+
+  &__label {
+    @include type-micro;
+    color: $color-text-secondary-warm;
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+  }
+
+  // 触控铁律：≥88rpx 触控面 + hoverClass 按压反馈（hoverStartTime=0 在 TSX）。
+  &__chip-wrap {
+    display: inline-flex;
+    min-height: 88rpx;
+    align-items: center;
+    border-radius: 999rpx;
+  }
+
+  &__chip-wrap--pressed {
+    background: rgba($color-primary, 0.08);
+  }
+
+  // The wrapped Chip stays visual-only (the wrap owns the tap); L3 安静级.
+  &__chip {
+    pointer-events: none;
+  }
+}

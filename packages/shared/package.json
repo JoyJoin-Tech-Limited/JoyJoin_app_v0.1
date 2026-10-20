@@ -77,6 +77,7 @@
     "./copy/auctionV2": "./src/copy/auctionV2.ts",
     "./copy/sessionGlow": "./src/copy/sessionGlow.ts",
     "./copy/icebreakerSession": "./src/copy/icebreakerSession.ts",
+    "./copy/quipInspirationChips": "./src/copy/quipInspirationChips.ts",
     "./copy/profileTaglineRuleTemplates": "./src/copy/profileTaglineRuleTemplates.ts",
     "./wechatContactId": "./src/wechatContactId.ts"
   },
