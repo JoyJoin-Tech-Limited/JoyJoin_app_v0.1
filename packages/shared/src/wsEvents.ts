@@ -199,6 +199,24 @@ export interface SocialGroupBeatData {
   nonce: string;
   /** Server epoch ms when the beat was emitted (skew measurement). */
   sentAt: number;
+  /**
+   * Host nudge-incomplete context — present ONLY on targeted nudge beats
+   * (POST /api/social-icebreaker/:id/nudge-incomplete), never on the ambient
+   * choke-point beats above. Still ruling-6 state-free: a rendering hint for
+   * the client toast/haptic ("还差 N 人 · 当前环节"), never state truth — the
+   * 3s poll remains the sole authority. Clients that predate this field
+   * ignore it (payload parse only reads pattern/nonce/sentAt/sessionId).
+   */
+  nudge?: {
+    /** Machine phase id (e.g. 'lie_detective'); typed as string to keep
+     *  wsEvents free of a socialIcebreaker import. */
+    phase: string;
+    /** 缺员数 — how many roster members had not completed the phase's
+     *  primary submission when the host tapped. */
+    missingCount: number;
+    /** 当前环节名 — phase display copy from the shared phase registry. */
+    segmentName: string;
+  };
 }
 
 // ============ 集结房间 (Gathering Room) 事件数据 ============

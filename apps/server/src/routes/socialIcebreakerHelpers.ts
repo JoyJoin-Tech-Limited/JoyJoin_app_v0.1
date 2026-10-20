@@ -701,6 +701,91 @@ export function markPhaseParticipationComplete(
   markPhaseParticipationUserIdsComplete(state, phase, [userId]);
 }
 
+// ---------------------------------------------------------------------------
+// Host nudge-incomplete (「还差 N 人」) — target-set computation
+//
+// A phase is nudge-applicable only when it has a PRIMARY SUBMISSION concept
+// the host can be waiting on. The mapping deliberately reads the EARLIEST
+// blocking stage per phase, which is NOT always the phase's persisted
+// completion array (PHASE_PRIMARY_COMPLETION_FIELD tracks the later stage):
+//
+//   warmup          → not ready            (warmupReadyUserIds)
+//   lie_detective   → statements not sent  (lieDetectivePlayers)
+//   undercover_word → describe-stage gap   (current round's descriptions)
+//   group_mirror    → not voted            (groupMirrorSubmittedUserIds)
+//   quip_battle     → answer-map gap       (quipBattleSubmittedUserIds)
+//   personality_dice→ difficulty not chosen(diceSelectedOption keys vs
+//                                          personalityDiceChallengeGroups)
+//
+// Every other phase (phase_selection / micro_challenge / speed_friending /
+// auction / mini_script / recap / legacy 'waiting' / 'ended') has no such
+// concept here → not applicable. All-complete → applicable but empty set.
+//
+// The universe is guard-consistent: the phase required roster (snapshot −
+// departed, see getPhaseRequiredRosterIds) when a snapshot exists, else the
+// live roster minus departed. Opted-out / silent-auto-completed members are
+// never nudged — the system already excused them, and the advance guard is
+// not waiting on them, so "还差 N 人" matches what the host's guard sees.
+// ---------------------------------------------------------------------------
+
+export interface NudgeIncompleteComputation {
+  /** false → the current phase has no primary-submission concept. */
+  applicable: boolean;
+  /** Roster members who have not completed the primary submission. */
+  missingUserIds: string[];
+}
+
+export function computeNudgeIncompleteUserIds(
+  state: SocialSessionState,
+  rosterUserIds: readonly string[],
+): NudgeIncompleteComputation {
+  const phase = state.currentPhase;
+  const departed = new Set(getPhaseDepartedUserIds(state));
+
+  // personality_dice has no roster-wide completion array: only challenge-group
+  // members can pick a difficulty (Choose-Your-Prompt mode). No groups → the
+  // concept is inactive (legacy non-choose mode or content not generated).
+  if (phase === 'personality_dice') {
+    const groups = state.personalityDiceChallengeGroups ?? [];
+    if (groups.length === 0) return { applicable: false, missingUserIds: [] };
+    const selected = state.diceSelectedOption ?? {};
+    const missing = groups
+      .map((group) => group.userId)
+      .filter((userId) => !departed.has(userId) && selected[userId] === undefined);
+    return { applicable: true, missingUserIds: [...new Set(missing)] };
+  }
+
+  const completedUserIds = ((): string[] | undefined => {
+    switch (phase) {
+      case 'warmup':
+        return state.warmupReadyUserIds ?? [];
+      case 'lie_detective':
+        return (state.lieDetectivePlayers ?? []).map((player) => player.userId);
+      case 'undercover_word': {
+        const roundIndex = state.undercoverWordCurrentRound ?? 0;
+        const round = (state.undercoverWordRounds ?? [])[roundIndex];
+        return (round?.descriptions ?? []).map((description) => description.userId);
+      }
+      case 'group_mirror':
+        return state.groupMirrorSubmittedUserIds ?? [];
+      case 'quip_battle':
+        return state.quipBattleSubmittedUserIds ?? [];
+      default:
+        return undefined;
+    }
+  })();
+
+  if (!completedUserIds) return { applicable: false, missingUserIds: [] };
+
+  const required = getPhaseRequiredRosterIds(state);
+  const universe =
+    required.length > 0
+      ? required
+      : [...new Set(rosterUserIds.filter((userId) => !departed.has(userId)))];
+  const done = new Set(completedUserIds);
+  return { applicable: true, missingUserIds: universe.filter((userId) => !done.has(userId)) };
+}
+
 /**
  * Whether the current phase still has the minimum required participants to run
  * its interactive reveal. Legacy sessions without a snapshot keep the

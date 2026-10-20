@@ -41,9 +41,10 @@ import {
   persistPhaseContentReady,
   markPhaseContentFailed,
   logContentStatusTransition,
+  computeNudgeIncompleteUserIds,
 } from './socialIcebreakerHelpers';
 import { getPhaseModule } from '@shared/phaseRegistry';
-import { emitSocialGroupBeat, emitAuctionOutbidBeatRateLimited } from '../lib/socialGroupBeats';
+import { emitSocialGroupBeat, emitAuctionOutbidBeatRateLimited, claimNudgeIncompleteSlot, emitSocialNudgeBeat } from '../lib/socialGroupBeats';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
   getSessionWithExpiry,
@@ -672,6 +673,95 @@ router.post('/:socialSessionId/transfer-host', async (req: any, res) => {
     transferred: !alreadyHost,
     alreadyHost,
     state: await buildClientState(transfer.state, userId),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/nudge-incomplete
+// Host 「还差 N 人」 one-tap nudge: emits a STATE-FREE SOCIAL_GROUP_BEAT to
+// ONLY the roster members who have not completed the current phase's primary
+// submission (see computeNudgeIncompleteUserIds for the per-phase mapping).
+// Zero state writes, zero storage — the 3s poll stays the sole state truth;
+// the beat is a sensory hint the client slice renders as toast + haptic.
+// Rate-limited to one nudge per host per session per 30s (in-process).
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/nudge-incomplete', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({
+      error: 'Only the host can nudge incomplete players',
+      code: 'HOST_ONLY',
+    });
+  }
+
+  // The host must still be a roster participant — a stale hostUserId alone is
+  // not enough to target the room's members.
+  const hostParticipant = await getParticipant(socialSessionId, userId);
+  if (!hostParticipant) {
+    return res.status(403).json({
+      error: 'Not a participant in this session',
+      code: 'NOT_A_PARTICIPANT',
+    });
+  }
+
+  // The live roster is only needed when the phase has no roster snapshot
+  // (legacy sessions) — snapshot-scoped sessions compute from state alone.
+  const needsRoster =
+    state.currentPhase !== 'personality_dice' && getPhaseRequiredRosterIds(state).length === 0;
+  const rosterUserIds = needsRoster
+    ? (await listParticipants(socialSessionId)).map((participant) => participant.userId)
+    : [];
+
+  const { applicable, missingUserIds } = computeNudgeIncompleteUserIds(state, rosterUserIds);
+  if (!applicable || missingUserIds.length === 0) {
+    return res.status(400).json({
+      error: 'Nothing to nudge for the current phase',
+      code: 'NUDGE_NOT_APPLICABLE',
+      phase: state.currentPhase,
+    });
+  }
+
+  // Claim BEFORE emission so two in-flight host taps cannot both fire.
+  const retryAfterMs = claimNudgeIncompleteSlot(socialSessionId, userId);
+  if (retryAfterMs > 0) {
+    return res.status(429).json({
+      error: 'Nudge sent recently; wait before nudging again',
+      code: 'NUDGE_RATE_LIMITED',
+      retryAfterMs,
+    });
+  }
+
+  const segmentName = getPhaseModule(state.currentPhase).name;
+  const beatEmitted = await emitSocialNudgeBeat(state.icebreakerSessionId, missingUserIds, {
+    phase: state.currentPhase,
+    segmentName,
+    missingCount: missingUserIds.length,
+  });
+
+  logger.info('[SocialIcebreaker] host nudged incomplete players', {
+    request_id: req.requestId,
+    socialSessionId,
+    actorUserId: userId,
+    phase: state.currentPhase,
+    missingCount: missingUserIds.length,
+    beatEmitted,
+  });
+
+  return res.json({
+    ok: true,
+    phase: state.currentPhase,
+    segmentName,
+    missingCount: missingUserIds.length,
+    beatEmitted,
   });
 });
 

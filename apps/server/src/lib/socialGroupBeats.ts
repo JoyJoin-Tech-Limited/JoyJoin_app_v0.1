@@ -117,3 +117,113 @@ export async function emitAuctionOutbidBeatRateLimited(
 export function __resetAuctionBeatRateLimitForTests(): void {
   auctionOutbidBeatLastEmitAt.clear();
 }
+
+// ─── Host nudge-incomplete (targeted, state-free) ───────────────────────────
+//
+// Companion to the ambient choke-point beats above: the host taps 「还差 N 人」
+// and the server nudges ONLY the roster members who have not completed the
+// current phase's primary submission. Same SOCIAL_GROUP_BEAT envelope, same
+// `icebreakerGroupBeatsEnabled` dark-ship gate, same fire-and-forget contract
+// (the 3s poll stays the sole state truth; a missed beat is never lost data).
+// The gate matters here beyond dark-ship discipline: the shipped client beat
+// model fires a haptic for ANY well-formed beat, so an ungated nudge would
+// buzz phones before the client toast/haptic slice for this feature lands.
+
+export interface SocialNudgeBeatContext {
+  /** Machine phase id, e.g. 'lie_detective'. */
+  phase: string;
+  /** 当前环节名 — display copy from the shared phase registry. */
+  segmentName: string;
+  /** 缺员数 at tap time. */
+  missingCount: number;
+}
+
+/** Build the targeted nudge beat (pure — unit-testable). */
+export function buildSocialNudgeBeatMessage(
+  icebreakerSessionId: string,
+  context: SocialNudgeBeatContext,
+  now = Date.now(),
+): WSMessage {
+  beatCounter += 1;
+  const data: SocialGroupBeatData = {
+    sessionId: icebreakerSessionId,
+    pattern: "nudge",
+    nonce: `${icebreakerSessionId}:${now}:${beatCounter}`,
+    sentAt: now,
+    nudge: {
+      phase: context.phase,
+      missingCount: context.missingCount,
+      segmentName: context.segmentName,
+    },
+  };
+  return {
+    type: "SOCIAL_GROUP_BEAT",
+    eventId: icebreakerSessionId,
+    data,
+    timestamp: new Date(now).toISOString(),
+  };
+}
+
+/**
+ * Emit a nudge beat to the given users only (never room-wide — completed
+ * players stay silent). Flag-gated like emitSocialGroupBeat and
+ * fire-and-forget: returns true when a broadcast actually happened, never
+ * throws into the route.
+ */
+export async function emitSocialNudgeBeat(
+  icebreakerSessionId: string,
+  targetUserIds: readonly string[],
+  context: SocialNudgeBeatContext,
+): Promise<boolean> {
+  try {
+    if (targetUserIds.length === 0) return false;
+    const enabled = await getFeatureFlag("icebreakerGroupBeatsEnabled", false);
+    if (!enabled) return false;
+    wsService.broadcastToUsers(
+      [...targetUserIds],
+      buildSocialNudgeBeatMessage(icebreakerSessionId, context),
+    );
+    return true;
+  } catch (err) {
+    logger.warn("[SocialGroupBeats] nudge emission failed", {
+      icebreakerSessionId,
+      phase: context.phase,
+      targetCount: targetUserIds.length,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return false;
+  }
+}
+
+/** Host nudge-incomplete rate limit: one nudge per host per session per 30s. */
+export const NUDGE_INCOMPLETE_MIN_INTERVAL_MS = 30_000;
+
+const nudgeIncompleteLastNudgeAt = new Map<string, number>();
+
+/**
+ * Claim the host's nudge slot. Returns 0 when the slot was free (and records
+ * the claim synchronously so two in-flight requests cannot both pass), or the
+ * remaining cooldown ms when rate-limited. In-process Map: the budget is
+ * PER INSTANCE — with N replicas behind a load balancer a host could fire up
+ * to N nudges per window (whichever instance each request lands on). That is
+ * acceptable for a sensory nudge with no state writes; if it ever becomes
+ * abuse-sensitive, promote the ledger to Redis/DB like the payment claims.
+ */
+export function claimNudgeIncompleteSlot(
+  socialSessionId: string,
+  hostUserId: string,
+  now = Date.now(),
+): number {
+  const key = `${socialSessionId}:${hostUserId}`;
+  const last = nudgeIncompleteLastNudgeAt.get(key);
+  if (last !== undefined && now - last < NUDGE_INCOMPLETE_MIN_INTERVAL_MS) {
+    return NUDGE_INCOMPLETE_MIN_INTERVAL_MS - (now - last);
+  }
+  nudgeIncompleteLastNudgeAt.set(key, now);
+  return 0;
+}
+
+/** Test hook: clear nudge rate-limit bookkeeping so cases are independent. */
+export function __resetNudgeIncompleteRateLimitForTests(): void {
+  nudgeIncompleteLastNudgeAt.clear();
+}
