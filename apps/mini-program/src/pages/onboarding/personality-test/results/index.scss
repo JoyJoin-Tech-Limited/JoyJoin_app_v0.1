@@ -3,6 +3,11 @@
 // PR-8: XiaoyueInlineError renders on this page (FinalStage login-failure
 // row) — co-compile its rules into this page's WXSS.
 @use '../../../../components/mascot/XiaoyueInlineError.scss' as *;
+// P1c (2026-10-20): GuestEventPreviewCard/Section render on this page
+// (FinalStage, guests only) — co-compile their rules into this subpackage
+// page's WXSS (verify-subpackage-styles.mjs; the components carry no
+// TSX-side SCSS import).
+@use '../../../../components/onboarding/GuestEventPreviewCard.scss' as *;
 
 // ─── Local semantic colors (extracted from hard-coded values) ────
 $color-holo-gold: #bf953f;

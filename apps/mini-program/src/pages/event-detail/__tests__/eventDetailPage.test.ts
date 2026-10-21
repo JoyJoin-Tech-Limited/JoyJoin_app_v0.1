@@ -135,3 +135,46 @@ describe('event-detail done CTA survives the platform disabled styling', () => {
     expect(tsx).toMatch(/event-detail__cta--done[\s\S]{0,300}?\sdisabled\b/)
   })
 })
+
+// 2026-10-21 T46 audit CONCERN C2 source-lock (merge gate): the P0c flow strip
+// and P0e FAQ accordion are pool-event-only trust layers with a frozen
+// insertion order — info card → flow strip → FAQ accordion → 活动介绍 →
+// support card. A blind-box/legacy detail must render neither (fail-closed =
+// hide), and the FAQ must stay downstream of the strip (it answers questions
+// the strip raises).
+describe('event-detail trust layer insertion order (2026-10-21 lock)', () => {
+  it('renders EventFlowStrip between the info card and 活动介绍', () => {
+    const flowIdx = tsx.indexOf('<EventFlowStrip />')
+    const faqIdx = tsx.indexOf('<EventFaqAccordion ')
+    const descIdx = tsx.indexOf('event-detail__description-title')
+    expect(flowIdx).toBeGreaterThan(-1)
+    expect(faqIdx).toBeGreaterThan(flowIdx)
+    expect(descIdx).toBeGreaterThan(faqIdx)
+  })
+
+  it('gates both trust layers behind isPoolEvent (blind-box detail renders neither)', () => {
+    // Each layer is wrapped in its own `{isPoolEvent ? (...) : null}` block.
+    const flowIdx = tsx.indexOf('<EventFlowStrip />')
+    const faqIdx = tsx.indexOf('<EventFaqAccordion ')
+    const gateBefore = (idx: number) => {
+      const slice = tsx.slice(Math.max(0, idx - 400), idx)
+      return slice.includes('{isPoolEvent ? (')
+    }
+    expect(gateBefore(flowIdx)).toBe(true)
+    expect(gateBefore(faqIdx)).toBe(true)
+    // The pool-source discriminator stays the `event?.source === 'event_pool'` check.
+    expect(tsx).toContain("const isPoolEvent = event?.source === 'event_pool'")
+  })
+
+  it('passes the fail-closed refund flag into the accordion, never a raw user read', () => {
+    expect(tsx).toContain('preRevealRefundEnabled={preRevealRefundEnabled}')
+    expect(tsx).toContain("user?.features?.preRevealRefundEnabled === true")
+    expect(tsx).not.toContain('<EventFaqAccordion preRevealRefundEnabled={user?.features')
+  })
+
+  it('@use\'s both component SCSSs into the page SCSS (no TSX side-effect import)', () => {
+    expect(scss).toContain('EventFlowStrip')
+    expect(scss).toContain('EventFaqAccordion')
+    expect(tsx).not.toMatch(/^import\s+['"]\.\.\/\.\.\/\.\.\/components\/event-detail\/.*\.scss['"]/m)
+  })
+})

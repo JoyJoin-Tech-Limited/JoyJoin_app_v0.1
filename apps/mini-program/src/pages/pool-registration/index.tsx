@@ -201,6 +201,9 @@ export default function PoolRegistrationPage() {
   const personaSnapshotEnabled = user?.features?.personaSnapshotEnabled ?? true
   const poolTeaserEnabled = user?.features?.poolTeaserEnabled === true
   const duoRegistrationEnabled = user?.features?.duoRegistrationEnabled ?? true
+  // AC-03 (T46): same flag source as the checkout's refund-guarantee caption.
+  // Strict `=== true` — absent/undefined reads false (fail-closed).
+  const preRevealRefundEnabled = user?.features?.preRevealRefundEnabled === true
   const [personaSnapshotError, setPersonaSnapshotError] = useState(false)
   const {
     data: personaSnapshot,
@@ -1259,6 +1262,7 @@ export default function PoolRegistrationPage() {
         highlights={confirmHighlights}
         price={pool?.price ?? null}
         hasWelcomeGift={hasWelcomeGift}
+        preRevealRefundEnabled={preRevealRefundEnabled}
         isRegistering={isRegistering}
         reduceMotion={reduceMotion}
         onConfirm={handleConfirmModalConfirm}

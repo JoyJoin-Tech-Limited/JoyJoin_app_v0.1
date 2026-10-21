@@ -19,6 +19,7 @@ describe('RegistrationConfirmModal', () => {
     highlights: ['150-200', '交朋友'],
     isRegistering: false,
     reduceMotion: false,
+    preRevealRefundEnabled: true,
     onConfirm: vi.fn(),
     onCancel: vi.fn(),
   }
@@ -152,5 +153,23 @@ describe('RegistrationConfirmModal', () => {
   it('omits the cost block entirely when neither price nor gift is present', () => {
     render(<RegistrationConfirmModal {...baseProps} />)
     expect(document.querySelector('.reg-confirm__cost')).toBeNull()
+  })
+
+  it('omits the refund-assurance row when preRevealRefundEnabled is off or absent (AC-03, fail-closed)', () => {
+    const { rerender } = render(<RegistrationConfirmModal {...baseProps} preRevealRefundEnabled={false} />)
+
+    // The cancel/refund line is gone from the tree; the venue assurance row stays.
+    expect(screen.queryByText('排桌完成前可免费取消 · 全额退款')).not.toBeInTheDocument()
+    expect(screen.getByText('排桌完成后 24 小时内公布精确地点')).toBeInTheDocument()
+
+    // Absent (undefined) reads false too — never a visually-hidden copy.
+    rerender(<RegistrationConfirmModal {...baseProps} preRevealRefundEnabled={undefined} />)
+    expect(screen.queryByText('排桌完成前可免费取消 · 全额退款')).not.toBeInTheDocument()
+    expect(screen.getByText('排桌完成后 24 小时内公布精确地点')).toBeInTheDocument()
+  })
+
+  it('renders the refund-assurance row when preRevealRefundEnabled is on (AC-03)', () => {
+    render(<RegistrationConfirmModal {...baseProps} preRevealRefundEnabled />)
+    expect(screen.getByText('排桌完成前可免费取消 · 全额退款')).toBeInTheDocument()
   })
 })

@@ -1,6 +1,11 @@
 import Taro from '@tarojs/taro'
 import { apiRequest } from '../api/api'
 import { logWarn } from '../utils/logger'
+import {
+  beginGuestAttempt,
+  consumeGuestAttemptId,
+  getGuestAttemptId,
+} from './guestAttemptId'
 
 export type DiscoverAnalyticsEventType =
   | 'pool_card_tap'
@@ -53,6 +58,13 @@ export type DiscoverAnalyticsEventType =
   | 'event_ticket_payment_success_cta_tap'
   | 'refund_policy_viewed'
   | 'ticket_terms_row_impression'
+  // T46 P0d guardrail (2026-10-21): refund-guarantee line exposure on the
+  // event-ticket checkout — once per page visit, only when the line renders
+  // (preRevealRefundEnabled on). Both 灰度 arms meter; metadata is enum-only
+  // (`refundNarrativeBucket: 0|1`) + poolId, zero PII. Deliberately separate
+  // from event_ticket_payment_view (that view fires before ritual-context
+  // settles, so the bucket cannot ride it without moving the funnel metric).
+  | 'ticket_refund_guarantee_impression'
   | 'ticket_inclusion_sheet_open'
   | 'ticket_inclusion_sheet_close'
   | 'ticket_tail_image_impression'
@@ -125,12 +137,63 @@ export type DiscoverAnalyticsEventType =
   | 'equipment_draw_confirmed'
   | 'equipment_post_draw_card_read'
   | 'equipment_guidance_dismiss'
+  // T46 conversion funnel (2026-10-20) — guest preview card (P1c / S7.3) and
+  // checkout duo entry link (P1a / S6.1). Emission points land with those
+  // components; this union entry registers the types so the funnel SQL can
+  // count them once the components ship. Guest events carry a client-generated
+  // `guestAttemptId` in metadata (never user_id/session_id — the discover
+  // channel persists both as null, see gap audit §5.2) so SQL can join
+  // login_tap → login_success. All metadata enum-only, zero PII.
+  | 'guest_preview_card_impression'
+  | 'guest_preview_card_tap'
+  | 'guest_preview_login_tap'
+  | 'guest_preview_login_success'
+  | 'duo_entry_link_impression'
+  | 'duo_entry_link_tap'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType
   poolId?: string
   metadata?: Record<string, unknown>
   timestamp: number
+}
+
+// ─── T46 conversion-funnel metadata types (enum-only, zero PII) ──────────
+// These describe the component-facing input each emit function accepts. The
+// emitted metadata additionally carries the client-generated `guestAttemptId`
+// for the guest series (see lib/analytics/guestAttemptId.ts) — the component
+// never fabricates it.
+
+/**
+ * Visual variant of the rendered guest preview card. Final values are owned by
+ * S7.3 (`GuestEventPreviewCard`); `vignette` = CDN event-type art loaded,
+ * `fallback` = cream degradation render. Enum-only so no free text / PII.
+ */
+export type GuestPreviewCardVariant = 'vignette' | 'fallback'
+
+/** Where a guest preview card tap routes the user. */
+export type GuestPreviewCardDestination = 'assessment' | 'login' | 'event'
+
+export interface GuestPreviewCardImpressionMetadata {
+  variant: GuestPreviewCardVariant
+  /** Number of preview events rendered (S7.3 renders `min(3, 供给)`). */
+  supplyCount: number
+}
+
+export interface GuestPreviewCardTapMetadata {
+  destination: GuestPreviewCardDestination
+}
+
+export interface GuestPreviewLoginTapMetadata {
+  surface: 'guest_preview_card'
+}
+
+export interface DuoEntryLinkImpressionMetadata {
+  poolId: string
+}
+
+export interface DuoEntryLinkTapMetadata {
+  poolId: string
 }
 
 const DISCOVER_ANALYTICS_SESSION_START_KEY = 'joyjoin_discover_session_start'
@@ -272,6 +335,52 @@ class DiscoverAnalytics {
    */
   trackPresenceStripImpression(poolId?: string, metadata?: Record<string, unknown>): void {
     this.presenceStripTracker.track(poolId, metadata)
+  }
+
+  // ─── T46 conversion-funnel emitters (type-safe, zero-PII metadata) ──────
+  // Emission points land with S7.3 (guest) and S6.1 (duo); these methods are
+  // the downstream contract. Guest events self-manage `guestAttemptId` so
+  // components never mint or pass the correlation id themselves.
+
+  /** Guest preview card rendered (S7.3 mount, once-per-mount ref dedup). */
+  trackGuestPreviewCardImpression(metadata: GuestPreviewCardImpressionMetadata): void {
+    this.track('guest_preview_card_impression', undefined, {
+      ...metadata,
+      guestAttemptId: beginGuestAttempt(),
+    })
+  }
+
+  /** Guest preview card tapped (S7.3 card tap handler). */
+  trackGuestPreviewCardTap(metadata: GuestPreviewCardTapMetadata): void {
+    this.track('guest_preview_card_tap', undefined, {
+      ...metadata,
+      guestAttemptId: getGuestAttemptId(),
+    })
+  }
+
+  /** Guest preview card login CTA tapped (S7.3 login CTA). */
+  trackGuestPreviewLoginTap(metadata: GuestPreviewLoginTapMetadata): void {
+    this.track('guest_preview_login_tap', undefined, {
+      ...metadata,
+      guestAttemptId: getGuestAttemptId(),
+    })
+  }
+
+  /** Guest login succeeded (S7.4 login-success callback) — consumes the id. */
+  trackGuestPreviewLoginSuccess(): void {
+    this.track('guest_preview_login_success', undefined, {
+      guestAttemptId: consumeGuestAttemptId(),
+    })
+  }
+
+  /** Checkout duo entry link rendered (S6.1 render, once-per-mount). */
+  trackDuoEntryLinkImpression(metadata: DuoEntryLinkImpressionMetadata): void {
+    this.track('duo_entry_link_impression', undefined, { poolId: metadata.poolId })
+  }
+
+  /** Checkout duo entry link tapped (S6.1 tap handler). */
+  trackDuoEntryLinkTap(metadata: DuoEntryLinkTapMetadata): void {
+    this.track('duo_entry_link_tap', undefined, { poolId: metadata.poolId })
   }
 }
 

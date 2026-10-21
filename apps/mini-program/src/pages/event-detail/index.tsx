@@ -14,6 +14,8 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
+import EventFlowStrip from '../../components/event-detail/EventFlowStrip'
+import EventFaqAccordion from '../../components/event-detail/EventFaqAccordion'
 import { loadEventDetail } from './eventDetailData'
 import { formatEventDateTime, getEventPoolStatusLabel } from '../../lib/utils/eventDisplay'
 import { isWithinPoolIcebreakerWindow } from '../../lib/utils/eventLiveWindow'
@@ -22,7 +24,7 @@ import './index.scss'
 export default function EventDetailPage() {
   const router = useRouter()
   const eventId = router.params.id ?? ''
-  const { isLoading: authLoading } = useAuthGuard()
+  const { isLoading: authLoading, user } = useAuthGuard()
   const { isExiting, navigateBack } = useJoyJoinNavigation()
   const pageClass = `event-detail ${isExiting ? 'event-detail--exiting' : ''}`
 
@@ -35,6 +37,12 @@ export default function EventDetailPage() {
   const isPoolEvent = event?.source === 'event_pool'
   const isActiveEvent =
     event?.status === 'started' || event?.status === 'active' || event?.status === 'ongoing'
+
+  // P0e FAQ refund-entry gate (承诺-行为顺序锁, 2026-10-20): the `cancel_refund`
+  // Q&A states the PRD §1.5 pre-reveal full-refund promise, so the item renders
+  // only once the server behavior is actually live — same fail-closed read the
+  // checkout's RefundGuaranteeLine consumes. Absent/undefined reads as false.
+  const preRevealRefundEnabled = user?.features?.preRevealRefundEnabled === true
 
   // Pool 进入破冰 window (2026-10-16 fix): the status gate above is unreachable
   // for pools — the server writes active/matching/matched/completed (never
@@ -226,6 +234,29 @@ export default function EventDetailPage() {
           </View>
         ) : null}
       </View>
+
+      {/* P0c trust layer (2026-10-20): 怎么参加 4 拍流程条 — answers「然后呢?」
+          right after the info card. Pool events only: 订座/排桌/集结房间 are
+          pool mechanics; a blind-box detail has no such journey, and a trust
+          surface must never show steps that don't exist for the event being
+          read (fail-closed = hide). No flag — full launch. */}
+      {isPoolEvent ? (
+        <View className='event-detail__card event-detail__flow-card'>
+          <EventFlowStrip />
+        </View>
+      ) : null}
+
+      {/* P0e trust layer (2026-10-20): 常见问题手风琴 — right after the flow
+          strip, before 活动介绍, same ScrollView flow. Same isPoolEvent gate:
+          the FAQ answers cover pool mechanics (排桌/集结/退款/同行), and a
+          blind-box detail must not claim a journey its event doesn't have
+          (fail-closed = hide). Full launch, no flag — the only gate is the
+          promise-locked refund item inside the component. */}
+      {isPoolEvent ? (
+        <View className='event-detail__card event-detail__faq-card'>
+          <EventFaqAccordion preRevealRefundEnabled={preRevealRefundEnabled} />
+        </View>
+      ) : null}
 
       {event.description ? (
         <View className='event-detail__card'>

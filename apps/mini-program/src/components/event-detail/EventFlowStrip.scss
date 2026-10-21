@@ -1,0 +1,144 @@
+@use '../../styles/variables' as *;
+
+// ─── EventFlowStrip — 详情页「怎么参加」4 拍流程条 (T46 P0c, 2026-10-20) ──
+// Trust-surface expectation display: title + 4 equal-width nodes (48rpx icon
+// slot on top, ≤2-line centered label below) joined by 1rpx connector
+// hairlines. Motion spec locked (design doc §5.3.1): nodes fade +
+// translateY(8rpx→0) 250ms; connectors scaleX(0→1) 300ms starting 80ms after
+// the icons land — one-shot total 630ms ≤ 700ms, transform/opacity only, no
+// loops. Reduced-motion: fully static (--rm modifier + media query).
+// No min()/max()/clamp() — rpx + media queries only (WeChat WXSS).
+
+.event-flow-strip {
+  display: flex;
+  flex-direction: column;
+
+  &--rm {
+    .event-flow-strip__node,
+    .event-flow-strip__connector {
+      animation: none;
+    }
+  }
+
+  &__title {
+    display: block;
+    margin-bottom: $spacing-md;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+  }
+
+  // flex-start: connectors must NOT stretch to the track height — their
+  // 1rpx background would fill the whole row.
+  &__track {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  // Equal-width column: icon slot on top, label centered below (L2-safe —
+  // vertical flex, never baseline alignment with the sibling glyph).
+  &__node {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: event-flow-strip-node-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  // First beat (订座) marked as the entry step: light primary outline only —
+  // solid $color-primary, no gradient (brand CTAs/strokes discipline).
+  &__node--first {
+    .event-flow-strip__node-icon {
+      background: rgba($color-primary, 0.08);
+      border: 2rpx solid rgba($color-primary, 0.35);
+    }
+
+    .event-flow-strip__node-label {
+      color: $color-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  &__node-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: $icon-slot-md;
+    height: $icon-slot-md;
+    border-radius: $radius-circle;
+    box-sizing: border-box;
+    background: rgba($color-text-secondary, 0.06);
+  }
+
+  &__node-glyph {
+    display: block;
+    width: 32rpx;
+    height: 32rpx;
+  }
+
+  // Failed-glyph fallback: quiet brand dot keeps the node rhythm.
+  &__node-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.6);
+  }
+
+  // CJK breaking stays default (overflow-wrap: normal) — never `anywhere`,
+  // which orphans single glyphs. 2-line cap mirrors the spec's label budget.
+  &__node-label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    line-height: $line-height-snug;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  // 1rpx hairline between nodes, vertically centered on the 48rpx icon row
+  // (24rpx top offset). The scaleX draw starts 80ms after the node icons
+  // land (250ms) — delay 0.33s; transform-origin left = "path draws from the
+  // previous beat toward the next".
+  &__connector {
+    flex: none;
+    width: 24rpx;
+    height: 1rpx;
+    margin-top: 24rpx;
+    background: rgba($color-primary, 0.28);
+    transform-origin: left center;
+    animation: event-flow-strip-connector-draw 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.33s both;
+  }
+}
+
+// Belt-and-braces on top of the JS-detected --rm modifier.
+@media (prefers-reduced-motion: reduce) {
+  .event-flow-strip__node,
+  .event-flow-strip__connector {
+    animation: none;
+  }
+}
+
+@keyframes event-flow-strip-node-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8rpx, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes event-flow-strip-connector-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

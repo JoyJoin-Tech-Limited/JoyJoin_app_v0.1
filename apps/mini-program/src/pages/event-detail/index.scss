@@ -1,5 +1,9 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
+// Component SCSS @use'd (no TSX side-effect import) so EventFlowStrip rules
+// compile into this page's WXSS — subpackage style-splitting guard (AGENTS §7).
+@use '../../components/event-detail/EventFlowStrip.scss' as *;
+@use '../../components/event-detail/EventFaqAccordion.scss' as *;
 
 .event-detail {
   // Zero-scroll shell (2026-10-16 action-bar redesign): the page root is a flex
@@ -107,6 +111,23 @@
     @include card;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
+  }
+
+  // P0c flow strip card variant (2026-10-20): same radius/background via
+  // `&__card`; padding re-asserted here so the variant stays pinned to the
+  // card token even if `__card` diverges for other sections. The strip's
+  // internal layout lives in EventFlowStrip.scss (@use'd at the top).
+  &__flow-card {
+    padding: $spacing-lg;
+  }
+
+  // P0e FAQ accordion card variant (2026-10-20): same radius/background via
+  // `&__card`; vertical padding tightened so the Q rows (≥88rpx touch
+  // targets) and the answer's internal 16/24rpx padding keep the card rhythm
+  // without stacking padding. The accordion's internal layout lives in
+  // EventFaqAccordion.scss (@use'd at the top).
+  &__faq-card {
+    padding: $spacing-md $spacing-lg;
   }
 
   &__support-card {

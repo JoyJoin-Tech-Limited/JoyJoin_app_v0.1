@@ -350,6 +350,20 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   &--with-guarantee {
     height: 248rpx;
   }
+
+  // T46 P0d (2026-10-21): the bucket-1 stack adds the narrative row — grow
+  // the spacer by exactly the footer's real growth so the taller fixed
+  // footer never occludes the abandon link. Pixel derivation (CSS-reserved,
+  // 禁 JS 测量后补 — both bucket heights are deterministic before render):
+  //   line box      = $font-size-xs (22rpx) × line-height 1.5 = 33rpx
+  //   stack block   = 12rpx margin-top + 33 + 4rpx row gap + 33 = 82rpx
+  //   spacer        = 200rpx baseline + 82rpx = 282rpx (exact)
+  // (The single-line bucket keeps the D3 248rpx baseline untouched — its
+  // 45rpx content sits 3rpx inside the legacy reservation, which predates
+  // this task and ships byte-identical.)
+  &--with-guarantee-stack {
+    height: 282rpx;
+  }
 }
 
 // ── Sticky Footer CTA ──
@@ -1108,13 +1122,59 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   }
 }
 
-// D3 refund-guarantee caption (flag preRevealRefundEnabled, 2026-10-11):
-// quiet System-UI register directly under the payment CTA — same muted
-// caption styling as the trust row's 「微信支付 · 安全加密」 line. 8rpx
-// rhythm; renders nothing at all when the flag is off.
+// ── Duo Entry Link ──
+// T46 P1a (2026-10-21, AC-07): quiet text-link register, same family as
+// .ticket-refund-link above (text + › + pressed tint). Trust-cluster rhythm:
+// 16rpx below the trust row; the refund link's own 12rpx margin-top follows
+// unchanged. The 88rpx min-height is the P1a design spec's touch target — the
+// one deliberate deviation from the refund link's caption-tight row height.
+// The pressed tint rides inside a 16rpx radius so the hoverClass read stays a
+// whisper, never a band. Zero animation — the checkout choreography budget is
+// zero (T46 §5.3.2 register shared with P0d).
+.ticket-duo-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin: 16rpx 32rpx 0;
+  min-height: 88rpx;
+  padding: 0 16rpx;
+  border-radius: 16rpx;
+
+  &__text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-primary;
+  }
+
+  // The reward hook hangs quietly at the row — muted so it never reads as
+  // urgency; amount and rules live only on the invite landing page.
+  &__hint {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $ticket-text-muted;
+  }
+
+  &__arrow {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+
+  &--pressed {
+    background-color: rgba($color-primary, 0.06);
+  }
+}
+
+// D3 refund-guarantee caption (flag preRevealRefundEnabled, 2026-10-11);
+// T46 P0d two-line caption stack (2026-10-21): quiet System-UI register
+// directly under the payment CTA — same muted caption family as the trust
+// row's 「微信支付 · 安全加密」 line. Renders nothing at all when the flag
+// is off (null tree).
 .ticket-refund-guarantee {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   margin-top: 12rpx;
 
   &__text {
@@ -1122,6 +1182,20 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     font-size: $font-size-xs;
     color: $ticket-text-muted;
     line-height: 1.5;
+  }
+
+  // P0d treatment row (bucket 1): the narrative line sits ABOVE the permanent
+  // fact row — half a grey-step deeper than the muted fact row, same family
+  // as the trust row's 主句 (ticket-trust-row__line register). 阅读次序 =
+  // 先情绪后承诺; the fact row below is the promise layer and never changes.
+  &__text--narrative {
+    color: $color-text-secondary;
+  }
+
+  // 4rpx hairline gap between the two caption rows (design spec §P0d 行间距
+  // 4rpx — documented 8rpx-rhythm micro-exception, hairline 级微调).
+  &__text + &__text {
+    margin-top: 4rpx;
   }
 }
 

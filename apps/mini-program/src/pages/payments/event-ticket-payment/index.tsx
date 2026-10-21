@@ -33,6 +33,7 @@ import ReservationTicket from '../../../components/reservation/ReservationTicket
 import RegistrationSuccessCeremony from '../../../components/reservation/RegistrationSuccessCeremony'
 import TicketPlanSelection, { type SelectedPlan } from './components/TicketPlanSelection'
 import RefundGuaranteeLine from './components/RefundGuaranteeLine'
+import DuoEntryLink from './components/DuoEntryLink'
 import IcebreakerInclusionSheet from '../../../components/event-ticket-payment/IcebreakerInclusionSheet'
 import TicketOrderSkeleton, { getTicketCtaLabel } from '../../../components/payments/TicketOrderSkeleton'
 import {
@@ -53,6 +54,7 @@ import {
   isWelcomeCouponAutoApplyEligible,
   isWelcomeCouponCode,
   resolvePaymentCheckoutFlags,
+  resolveRefundNarrativeBucket,
   resolveSubscriptionConflictMessage,
   resolveVipMonthlyOffer,
   SUBSCRIPTION_STATUS_QUERY_KEY,
@@ -137,6 +139,7 @@ export default function EventTicketPaymentPage() {
   const hasTrackedViewRef = useRef(false)
   const hasTrackedPlanSelectorImpressionRef = useRef(false)
   const hasTrackedTermsRowImpressionRef = useRef(false)
+  const hasTrackedRefundGuaranteeImpressionRef = useRef(false)
 
   // Keep ref in sync with state for pollVerification closure safety
   useEffect(() => {
@@ -200,6 +203,13 @@ export default function EventTicketPaymentPage() {
   // absent/undefined reads as false (see resolvePaymentCheckoutFlags).
   const { checkoutSubscriptionUpsellEnabled, preRevealRefundEnabled } = resolvePaymentCheckoutFlags(user)
 
+  // T46 P1a (AC-07): duo entry gate. Same fail-open default as the invite
+  // page (server flag default true); when the flag is off the entry stays
+  // hidden so the row's same-table promise can never point at a disabled
+  // duo lane.
+  const duoRegistrationEnabled =
+    (user?.features as { duoRegistrationEnabled?: boolean } | undefined)?.duoRegistrationEnabled ?? true
+
   // HIGH-1 subscription-status read (GET /api/subscription/status), fetched
   // only when the upsell flag is on. Suppression is fail-CLOSED on an
   // affirmative active signal and fail-OPEN on loading/error: the card keeps
@@ -214,6 +224,14 @@ export default function EventTicketPaymentPage() {
       staleTime: 60 * 1000,
     })
   const subscriptionActive = isSubscriptionActive(subscriptionStatus)
+
+  // T46 P0d (AC-06): 50/50 refund-narrative bucket from the same
+  // ritual-context response. Read fresh every render (never memoized across
+  // responses — 桶不缓存，每次以响应为准): bucket 1 renders the two-line
+  // caption stack, bucket 0 / absent / anomaly renders the legacy single
+  // line. The flag stays the outer gate — an absent flag never reaches here.
+  const refundNarrativeBucket = resolveRefundNarrativeBucket(ritualContext)
+  const showRefundNarrativeStack = preRevealRefundEnabled && refundNarrativeBucket === 1
 
   // D2 悦聚月卡 upsell offer — fail-closed: the monthly card renders only
   // when the flag is ON, ritual-context actually carries a monthly
@@ -380,6 +398,27 @@ export default function EventTicketPaymentPage() {
       hasIcebreakerChip: true,
     })
   }, [isPageReady, poolId, poolLoading, pool])
+
+  // T46 P0d guardrail (AC-06): refund-guarantee line exposure for the
+  // `checkout_cancel_rate` 灰度护栏 — fired once per page visit (ref-dedup,
+  // feedbackEntryTrackedRef pattern), ONLY when the line actually renders
+  // (flag on). Deliberately NOT riding `event_ticket_payment_view`: that view
+  // fires at isPageReady, before ritual-context (the bucket source) settles —
+  // delaying it would move an established funnel metric. Both arms meter
+  // (bucket 0 AND 1) so the guardrail SQL has per-arm exposure counts;
+  // metadata is enum-only (`refundNarrativeBucket: 0|1`) + poolId, zero PII.
+  // A settled-with-error read (isFetched flips on error too) meters bucket 0,
+  // matching the render fallback. No user → flag is off → line invisible →
+  // nothing to meter.
+  useEffect(() => {
+    if (!isPageReady || !poolId || !preRevealRefundEnabled || hasTrackedRefundGuaranteeImpressionRef.current) return
+    if (!user?.id || !ritualContextFetched) return
+    hasTrackedRefundGuaranteeImpressionRef.current = true
+    discoverAnalytics.track('ticket_refund_guarantee_impression', undefined, {
+      poolId,
+      refundNarrativeBucket: refundNarrativeBucket ?? 0,
+    })
+  }, [isPageReady, poolId, preRevealRefundEnabled, user?.id, ritualContextFetched, refundNarrativeBucket])
 
   // Success surface (Phase 4 「订座」): nav title + view tracking are page-level
   // effects keyed on the payment status, not owned by the shared ceremony
@@ -1367,6 +1406,15 @@ export default function EventTicketPaymentPage() {
             <Text className='ticket-trust-row__text'>微信支付 · 安全加密</Text>
           </View>
         </View>
+        {/* T46 P1a (AC-07): duo entry — trust-cluster text link between the
+            trust row and the refund policy link. Fail-closed: renders
+            nothing while the duo-status read is in flight, on error, or
+            when a duo lane already exists for this pool. Scroll-flow row —
+            the fixed footer (and its spacer derivation) is untouched. */}
+        <DuoEntryLink
+          poolId={poolId}
+          enabled={Boolean(user?.id) && Boolean(poolId) && duoRegistrationEnabled}
+        />
         <View
           className='ticket-refund-link'
           hoverClass='ticket-refund-link--pressed'
@@ -1386,8 +1434,18 @@ export default function EventTicketPaymentPage() {
         </View>
 
         {/* Spacer for sticky CTA — grows when the D3 refund-guarantee caption
-            adds a line to the fixed footer (flag preRevealRefundEnabled). */}
-        <View className={`ticket-bottom-spacer ${preRevealRefundEnabled ? 'ticket-bottom-spacer--with-guarantee' : ''}`} />
+            adds a line to the fixed footer (flag preRevealRefundEnabled); grows
+            again, pixel-exact, when the T46 P0d two-line stack (bucket 1) adds
+            the narrative row (CSS-reserved — 禁 JS 测量后补). */}
+        <View
+          className={`ticket-bottom-spacer ${
+            preRevealRefundEnabled
+              ? showRefundNarrativeStack
+                ? 'ticket-bottom-spacer--with-guarantee-stack'
+                : 'ticket-bottom-spacer--with-guarantee'
+              : ''
+          }`}
+        />
       </ScrollView>
 
       {/* ── Sticky CTA ── */}
@@ -1424,8 +1482,10 @@ export default function EventTicketPaymentPage() {
 
         {/* D3 refund-guarantee caption (flag preRevealRefundEnabled): one
             quiet System-UI line directly under the CTA; renders nothing when
-            the flag is off. The 退款政策 link above stays untouched. */}
-        <RefundGuaranteeLine visible={preRevealRefundEnabled} />
+            the flag is off. T46 P0d: bucket 1 upgrades it to the two-line
+            caption stack (叙事行在上、事实行在下且永不删). The 退款政策 link
+            above stays untouched. Zero animation — 收银台编排预算为零. */}
+        <RefundGuaranteeLine visible={preRevealRefundEnabled} narrative={showRefundNarrativeStack} />
 
         {payment.error && (
           <View className='ticket-footer__error' role='alert'>

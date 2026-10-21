@@ -23,6 +23,7 @@ import { ONBOARDING_MASCOT_SIZE } from '../../../../lib/onboarding/onboardingRou
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 import { normalizeMatchScore, type TypicalityLabel } from './resultHelpers'
 import SignalRetestPrompt from './SignalRetestPrompt'
+import GuestEventPreviewSection from '../../../../components/onboarding/GuestEventPreviewSection'
 
 /** Warm cream gradient midpoint — shared between dynamic card backgrounds.
  *  Extracted from hardcoded hex literals for brand token discipline. */
@@ -755,6 +756,18 @@ export default function FinalStage({
             onDismiss={signalRetestPrompt.onDismiss}
           />
         ) : null}
+
+        {/* P1c (2026-10-20): guest preview cards — server fail-closed
+            (flag + supply ≥3 gates return 200+[]), guests only. The section
+            self-suppresses for authenticated users / empty / errored fetch;
+            its wow choreography is the one allowed orchestration beat on
+            this page and starts ≥400ms after this stage mounts (the slot
+            celebration is long settled by the 'result' stage). */}
+        <GuestEventPreviewSection
+          isAuthenticated={Boolean(isAuthenticated)}
+          authIsLoading={authIsLoading}
+          onLoginRequest={() => void onContinue()}
+        />
 
         <View className='personality-results__stack-actions personality-results__stack-actions--spacious personality-results__stagger--6'>
           {/* Slice 6 (2026-07-19): next-horizon return hook — plants the pending thread.

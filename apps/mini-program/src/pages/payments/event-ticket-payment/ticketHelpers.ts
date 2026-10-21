@@ -31,6 +31,30 @@ export type SelectedPlan = 'single' | 'pack_3' | 'pack_6' | 'vip_monthly'
 export interface RitualContextPayload {
   plans?: PricingPlan[]
   subscriptionPlans?: Array<Record<string, unknown>>
+  /**
+   * T46 P0d (S5.1, 2026-10-21): 50/50 deterministic refund-narrative bucket
+   * riding the checkout first-screen payload. Emitted ONLY when the
+   * `preRevealRefundEnabled` flag is ON — the field is entirely absent when
+   * the flag is off (server-side fail-closed). `0` = control (legacy single
+   * fact line), `1` = treatment (two-line caption stack). Additive: old
+   * servers never carry it, which reads as control. Never cached client-side
+   * beyond the query response — every render keys off the latest payload.
+   */
+  refundNarrativeBucket?: 0 | 1
+}
+
+/**
+ * Fail-closed bucket resolver (AC-06): only the exact literals `0` and `1`
+ * resolve; `undefined`, out-of-range numbers, strings, or any other anomaly
+ * collapse to `null` (= control bucket → legacy single line). The render
+ * chain treats `null` and `0` identically, so a malformed payload can never
+ * silently promote a user into the treatment variant.
+ */
+export function resolveRefundNarrativeBucket(
+  ritualContext: RitualContextPayload | null | undefined,
+): 0 | 1 | null {
+  const bucket = ritualContext?.refundNarrativeBucket
+  return bucket === 0 || bucket === 1 ? bucket : null
 }
 
 /**

@@ -1,0 +1,135 @@
+@use '../../styles/variables' as *;
+
+// ─── EventFaqAccordion — 详情页常见问题手风琴 (T46 P0e, 2026-10-20) ──
+// Trust-surface Q&A list. Frozen motion spec (design doc §5.3.3 + §5.2):
+//   - one item open at a time; switching = old answer exits (opacity→0,
+//     150ms) THEN the new answer mounts and enters (opacity 0→1 +
+//     translateY(8rpx→0), 250ms) — sequential, never double-mounted, so no
+//     layout thrash; full sequence 400ms.
+//   - chevron = CSS border glyph, transform-only 200ms
+//     cubic-bezier(0.22,1,0.36,1); no height animation, no springs, no
+//     colored answer blocks.
+//   - Q row = touch target ≥88rpx; hoverClass tint rgba($color-primary,0.06)
+//     120ms (spec §5.2.4); haptics live in the TSX.
+// Reduced-motion: --rm modifier (JS-detected) + media query both kill all
+// animation — content is complete without motion.
+// No min()/max()/clamp() — rpx + media queries only (WeChat WXSS).
+
+.event-faq-accordion {
+  display: flex;
+  flex-direction: column;
+
+  &--rm {
+    .event-faq-accordion__answer,
+    .event-faq-accordion__chevron {
+      animation: none;
+      transition: none;
+    }
+  }
+
+  &__item {
+    // 1rpx hairline between Q rows (spec §5.2.6); the row below the open
+    // answer carries it, keeping the divider out of the expanded block.
+    & + & {
+      .event-faq-accordion__row {
+        border-top: 1rpx solid $color-divider;
+      }
+    }
+  }
+
+  // Touch target ≥88rpx. align-items: center (L2-safe — never baseline
+  // alignment between the CJK question and the chevron glyph).
+  &__row {
+    display: flex;
+    align-items: center;
+    min-height: 88rpx;
+    padding: $spacing-xs 0;
+    border-radius: 12rpx;
+    transition: background 0.12s ease;
+  }
+
+  // hoverClass press tint — quiet, brand-anchored (spec §5.2.4). No scale:
+  // §5.3.3 keeps this trust surface to tint + haptics only.
+  &__row--pressed {
+    background: rgba($color-primary, 0.06);
+  }
+
+  // CJK breaking stays default (overflow-wrap: normal) — never `anywhere`.
+  &__question {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: $line-height-normal;
+  }
+
+  // CSS border glyph pointing down at rest; rotate(45→225deg) flips it up.
+  // transform-only transition = the single allowed chevron motion.
+  &__chevron {
+    flex-shrink: 0;
+    width: 16rpx;
+    height: 16rpx;
+    margin-left: $spacing-sm;
+    border-right: 3rpx solid $color-text-tertiary;
+    border-bottom: 3rpx solid $color-text-tertiary;
+    transform: rotate(45deg);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__item--open {
+    .event-faq-accordion__chevron {
+      transform: rotate(225deg);
+    }
+  }
+
+  // Conditional-rendered answer block: `both` fill-mode holds the landed
+  // state; the --exit modifier replays opacity→0 over 150ms before unmount.
+  &__answer {
+    animation: event-faq-answer-enter 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--exit {
+      animation: event-faq-answer-exit 0.15s ease-out both;
+    }
+  }
+
+  // Answer copy: padding 16rpx 0 24rpx + $font-size-sm +
+  // $color-text-secondary + line-height 1.6 (spec §P0e / empty-state
+  // typography standard).
+  &__answer-text {
+    display: block;
+    padding: 16rpx 0 24rpx;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+}
+
+// Belt-and-braces on top of the JS-detected --rm modifier.
+@media (prefers-reduced-motion: reduce) {
+  .event-faq-accordion__answer,
+  .event-faq-accordion__chevron {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes event-faq-answer-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8rpx, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes event-faq-answer-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

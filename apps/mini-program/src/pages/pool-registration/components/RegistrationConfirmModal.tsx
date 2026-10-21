@@ -23,6 +23,14 @@ interface RegistrationConfirmModalProps {
    * is decided on the payment page (audit F4) — never promise 自动使用 here.
    */
   hasWelcomeGift?: boolean
+  /**
+   * AC-03 (T46): gates the 「排桌完成前可免费取消 · 全额退款」 assurance row.
+   * Same source as the checkout's RefundGuaranteeLine — the parent resolves
+   * `user.features.preRevealRefundEnabled` (strict `=== true`). Off/absent
+   * omits the row entirely (null tree), never a visually-hidden copy. Copy
+   * text is frozen; only the row's presence is gated.
+   */
+  preRevealRefundEnabled?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -43,6 +51,7 @@ export default function RegistrationConfirmModal({
   reduceMotion,
   price = null,
   hasWelcomeGift = false,
+  preRevealRefundEnabled = false,
   onConfirm,
   onCancel,
 }: RegistrationConfirmModalProps) {
@@ -101,7 +110,11 @@ export default function RegistrationConfirmModal({
   // reveal; assurance rows take slots 1–2.
   const rows: Array<{ key: string; main: string }> = [
     { key: 'venue', main: '排桌完成后 24 小时内公布精确地点' },
-    { key: 'cancel', main: '排桌完成前可免费取消 · 全额退款' },
+    // AC-03: flag-gated refund-assurance row. When preRevealRefundEnabled is
+    // off/absent the row is omitted from the tree (never a hidden copy).
+    ...(preRevealRefundEnabled
+      ? [{ key: 'cancel', main: '排桌完成前可免费取消 · 全额退款' }]
+      : []),
   ]
 
   const rootClass = reduceMotion ? 'reg-confirm reg-confirm--static' : 'reg-confirm'
