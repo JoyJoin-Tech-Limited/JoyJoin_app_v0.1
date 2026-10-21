@@ -191,6 +191,23 @@ const REQUIREMENTS = [
       // must reach this subpackage page WXSS.
       'registration-ceremony__seal{',
       'registration-ceremony__stub{',
+      // T46 P0d (2026-10-21): the bucket-1 refund-guarantee two-line stack
+      // adds the narrative-row modifier; the rules live in this page's own
+      // index.scss today, but if they ever move into the component (TSX
+      // side-effect import) the subpackage style-splitting trap would blank
+      // the treatment row on device — anchor both the block and the modifier
+      // in the page WXSS.
+      'ticket-refund-guarantee{',
+      'ticket-refund-guarantee__text--narrative{',
+      // T46 P1a (2026-10-21): the duo entry link rules live in this page's own
+      // index.scss (same precedent as ticket-refund-guarantee above) — anchored
+      // here so a future move into a component TSX side-effect import cannot
+      // blank the trust-cluster row on device via the subpackage
+      // style-splitting trap.
+      'ticket-duo-link{',
+      'ticket-duo-link__text{',
+      'ticket-duo-link__hint{',
+      'ticket-duo-link__arrow{',
     ],
   },
   {
@@ -314,6 +331,18 @@ const REQUIREMENTS = [
       // carries no SCSS import of its own; the shimmer overlay styles live in
       // the page SCSS and must reach this subpackage page WXSS.
       'archetype-spritesheet__shimmer{',
+      // P1c guest preview cards (2026-10-20, contract AC-09): the card +
+      // section SCSS is @use'd by the page SCSS and must reach this
+      // subpackage page WXSS — same style-splitting guard as the families
+      // above. The components carry no TSX-side SCSS import.
+      'guest-event-preview{',
+      'guest-event-preview__cards{',
+      'guest-event-preview__hook--entered{',
+      'guest-event-card{',
+      'guest-event-card__hero{',
+      'guest-event-card__hero-scrim{',
+      'guest-event-card__title{',
+      'guest-event-card__facts{',
     ],
   },
   {
