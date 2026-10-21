@@ -1169,8 +1169,12 @@ export default function EventTicketPaymentPage() {
 
   // Coupon stub + tail vignette/barcode render inside the ticket chrome via
   // the ReservationTicket footer slot (Phase 3 「订座」, 2026-08-17).
-  const ticketFooter = useMemo(
-    () => (
+  // NOTE (2026-10-21): plain const, NOT useMemo — a hook below the early
+  // returns crashes cold renders (React #310: loading render has M hooks,
+  // main render M+1). Keep this hook-free; hoist above `if (isPageLoading)`
+  // first if memoization is ever needed again. Locked by
+  // __tests__/pageStructure.source-lock.test.ts.
+  const ticketFooter = (
       <>
         {/* Coupon stub */}
         {bestCoupon && discountAmount > 0 && (
@@ -1269,20 +1273,6 @@ export default function EventTicketPaymentPage() {
           </View>
         )}
       </>
-    ),
-    [
-      bestCoupon,
-      discountAmount,
-      showCouponDetail,
-      couponStampAnimated,
-      showCouponStamp,
-      deviceTier.isDegradation,
-      tailImageError,
-      tailImageLoaded,
-      tailLoadTimedOut,
-      eventType,
-      poolId,
-    ],
   )
 
   return (

@@ -11,8 +11,9 @@
 //       parity with 线上现状 through the REAL kill switch, not a duo-status
 //       state hack. The other four captures keep the duo flag at its default
 //       (true) and drive the row's visibility through the duo-status gate.
-//   checkout-conversion-bucket0-single-line-375x667 flag ON, refundNarrativeBucket=0
-//       (control arm — legacy single fact line under the CTA), duo hidden.
+//   checkout-conversion-bucket0-stack-375x667       flag ON, refundNarrativeBucket=0
+//       (全量拍板 2026-10-21: bucket 只作 cohort 标签不门控展示 — 此捕获锁定
+//       「cohort 0 同样两行 stack」回归), duo hidden.
 //   checkout-conversion-bucket1-stack-375x667       flag ON, bucket=1 (two-line
 //       caption stack 叙事上/事实下), duo hidden.
 //   checkout-conversion-bucket1-duo-375x667         flag ON, bucket=1 + duo-status=none
@@ -106,13 +107,19 @@ export function registerCheckoutConversionGenerators(ctx) {
       })
     }
 
+    // Canonical route carries the payments/ subpackage prefix
+    // (onboardingRoutes.ts: eventTicketPayment='pages/payments/event-ticket-payment/index').
+    // Without it the H5 router mounts nothing and captures time out on a blank page.
     await page.goto(
-      H5_BASE_URL + '/#/pages/event-ticket-payment/index?poolId=' + POOL_ID + '&motion=reduce',
+      H5_BASE_URL + '/#/pages/payments/event-ticket-payment/index?poolId=' + POOL_ID + '&motion=reduce',
       { waitUntil: 'domcontentloaded', timeout: 60000 }
     )
     await clearAndSeedStorage(page, { payment_return_context: buildReturnContext() })
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
-    await waitForContent(page, '.ticket-card')
+    // `.ticket-card` was retired when the page adopted the shared
+    // ReservationTicket shell (Phase 3 「订座」, 2026-08-17) — the ticket root
+    // class is now `.reservation-ticket`.
+    await waitForContent(page, '.reservation-ticket')
   }
 
   /**
@@ -186,11 +193,15 @@ export function registerCheckoutConversionGenerators(ctx) {
     { flagOn: false, bucket: null, duoState: 'none', duoFlagOn: false },
     { expectRows: 0, expectDuo: false }
   )
+  // 2026-10-21 用户拍板「别灰度直接全量」：flag ON 即两行 stack，bucket
+  // 只作曝光埋点 cohort 标签。bucket0 变体因此不再是「单行」——它锁定的是
+  // 「cohort 0 同样渲染两行 stack」这条全量回归（防止有人把 bucket 门控
+  // 接回展示路径）。
   capture(
-    'checkout-conversion-bucket0-single-line-375x667',
+    'checkout-conversion-bucket0-stack-375x667',
     VIEWPORT_375,
     { flagOn: true, bucket: 0, duoState: 'waiting' },
-    { expectRows: 1, expectDuo: false }
+    { expectRows: 2, expectDuo: false }
   )
   capture(
     'checkout-conversion-bucket1-stack-375x667',

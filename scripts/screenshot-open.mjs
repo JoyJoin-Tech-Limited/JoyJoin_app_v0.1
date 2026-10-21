@@ -92,14 +92,14 @@ const PAGES = {
   'personality-results-detail-partners': { url: 'http://localhost:9000/personality-results-detail-partners.png', altPort: 9003 },
   'personality-results-signal-retest': { url: 'http://localhost:9000/personality-results-signal-retest.png', altPort: 9003 },
   // 转化 S5.3 checkout merge-gate captures (2026-10-21 audit car): P0d refund
-  // narrative 50/50 (flag off baseline / bucket 0 / bucket 1 stack) + P1a duo
+  // narrative 全量拍板版 (flag off baseline / bucket 0 cohort / bucket 1 stack — 两行全量) + P1a duo
   // entry overlay, incl. the 320x568 short-phone viewport.
   'checkout-conversion-baseline-flag-off': {
     url: 'http://localhost:9000/checkout-conversion-baseline-flag-off-375x667.png',
     altPort: 9003,
   },
-  'checkout-conversion-bucket0-single-line': {
-    url: 'http://localhost:9000/checkout-conversion-bucket0-single-line-375x667.png',
+  'checkout-conversion-bucket0-stack': {
+    url: 'http://localhost:9000/checkout-conversion-bucket0-stack-375x667.png',
     altPort: 9003,
   },
   'checkout-conversion-bucket1-stack': {
