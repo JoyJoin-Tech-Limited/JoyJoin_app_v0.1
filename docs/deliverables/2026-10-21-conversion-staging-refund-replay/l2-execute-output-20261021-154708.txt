@@ -1,0 +1,96 @@
+
+================ L2.0 前置复核：flag 在位（preRevealRefundEnabled=true；noRefundAfterReveal 应无行） ================
+-[ RECORD 1 ]-----------------
+key   | preRevealRefundEnabled
+value | true
+
+
+================ L2.1 种子：QA 用户 + 非 test 池 + pre-match 报名 + completed 假单 + 会话（全部 QA_T46 标识） ================
+QA_USER_ID=2eb131ff-926a-41de-9125-42efcc582b20
+INSERT 0 1
+POOL_ID=f6e728f0-7219-4308-bc24-532b8925e2e8
+INSERT 0 1
+ERROR:  insert or update on table "event_pool_registrations" violates foreign key constraint "event_pool_registrations_pool_id_event_pools_id_fk"
+DETAIL:  Key (pool_id)=(f6e728f0-7219-4308-bc24-532b8925e2e8
+INSERT 0 1) is not present in table "event_pools".
+REG_ID=
+ERROR:  insert or update on table "payments" violates foreign key constraint "payments_user_id_users_id_fk"
+DETAIL:  Key (user_id)=(2eb131ff-926a-41de-9125-42efcc582b20
+INSERT 0 1) is not present in table "users".
+PAY_ID=
+INSERT 0 1
+SESSION_INSERTED t46s2x4-1792568829
+
+================ L2.2 AC-9 预判证据：cancelPolicy 应为 refundable ================
+[]
+(cancelPolicy 字段未出现——异常信号！)
+
+================ L2.3 第一次取消（Level B 主证据：期望 502 + REFUND_FAILED_RETRYABLE，报名保留） ================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot DELETE /api/pool-registrations/</pre>
+</body>
+</html>
+
+HTTP_STATUS:404
+
+================ L2.4 日志证据（分支命中 + 真实微信 API 404 + Amendment 1 保留报名） ================
+
+================ L2.5 DB 证据：failed attempt 行 + claim 已释放回 completed + 报名仍在 ================
+(0 rows)
+
+(0 rows)
+
+(0 rows)
+
+
+================ L2.6 幂等重试证据（Amendment 1：再次 DELETE 仍 502，不产生双退，第二条 failed attempt） ================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot DELETE /api/pool-registrations/</pre>
+</body>
+</html>
+
+HTTP_STATUS:404
+0 refund_attempts rows
+
+================ L2.7 Level C 边界对照：改 match_status='matched' 再取消 → 期望 policy=legacy 且无退款（边界=registration.matchStatus） ================
+UPDATE 0
+match_status flipped to matched
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot DELETE /api/pool-registrations/</pre>
+</body>
+</html>
+
+HTTP_STATUS:404
+0 registration rows (expect 0 — legacy delete consumed)
+0 refund_attempts total (expect 2 — no new refund from legacy branch)
+
+================ L2.8 自清理：全部 QA_T46 种子 + 会话删除，并复核归零 ================
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 1
+0 pools left (expect 0)
+0 payments left (expect 0)
+0 sessions left (expect 0)
+0 orphan QA_T46 payments anywhere (expect 0)
+
+完成。请将完整输出贴回 QA 子会话（已写入 l2-execute-output-1792568829.txt）。

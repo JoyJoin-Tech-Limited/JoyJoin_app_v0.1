@@ -230,8 +230,10 @@ export default function EventTicketPaymentPage() {
   // responses — 桶不缓存，每次以响应为准): bucket 1 renders the two-line
   // caption stack, bucket 0 / absent / anomaly renders the legacy single
   // line. The flag stays the outer gate — an absent flag never reaches here.
+  // 2026-10-21 用户拍板：别灰度直接全量 —— flag ON 即两行 stack，bucket
+  // 不再门控展示，仅作为曝光埋点的 cohort 标签保留（后验对照用）。
   const refundNarrativeBucket = resolveRefundNarrativeBucket(ritualContext)
-  const showRefundNarrativeStack = preRevealRefundEnabled && refundNarrativeBucket === 1
+  const showRefundNarrativeStack = preRevealRefundEnabled
 
   // D2 悦聚月卡 upsell offer — fail-closed: the monthly card renders only
   // when the flag is ON, ritual-context actually carries a monthly

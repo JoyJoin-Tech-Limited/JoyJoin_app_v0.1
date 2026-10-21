@@ -390,9 +390,10 @@ describe('event-ticket-payment page wiring contract (D2/D3)', () => {
     expect(pageSource).toContain('<RefundGuaranteeLine visible={preRevealRefundEnabled}')
   })
 
-  it('转化 P0d: wires the bucket through the fail-closed resolver and gates the stack on bucket 1', () => {
+  it('转化 P0d: bucket 经 fail-closed resolver 透传；全量决策后 flag ON 即两行（2026-10-21 用户拍板砍灰度）', () => {
     expect(pageSource).toContain('resolveRefundNarrativeBucket(ritualContext)')
-    expect(pageSource).toContain('showRefundNarrativeStack = preRevealRefundEnabled && refundNarrativeBucket === 1')
+    expect(pageSource).toContain('showRefundNarrativeStack = preRevealRefundEnabled')
+    expect(pageSource).not.toContain('showRefundNarrativeStack = preRevealRefundEnabled &&')
     expect(pageSource).toContain('narrative={showRefundNarrativeStack}')
   })
 
