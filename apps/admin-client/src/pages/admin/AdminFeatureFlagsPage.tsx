@@ -14,6 +14,12 @@ import {
 import { useToast } from "@/hooks/ui/use-toast";
 import { Loader2, Save, RefreshCw, AlertCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  FEATURE_FLAG_LABELS as flagLabels,
+  FEATURE_FLAG_DESCRIPTIONS as flagDescriptions,
+  FEATURE_FLAG_SECTIONS,
+  FEATURE_FLAG_SECTION_BY_KEY,
+} from "@joyjoin/shared";
 
 interface FeatureFlagItem {
   key: string;
@@ -64,6 +70,32 @@ export default function AdminFeatureFlagsPage() {
   });
 
   const flags = data?.flags ?? [];
+
+  // 按分区归类（分区定义见 packages/shared/src/copy/featureFlags.ts；
+  // 服务端新增但未归类的 key 兜底进「未分类」，提醒补映射）
+  const groupedSections = (() => {
+    const buckets = new Map<string, FeatureFlagItem[]>();
+    for (const flag of flags) {
+      const sectionId = FEATURE_FLAG_SECTION_BY_KEY[flag.key] ?? "uncategorized";
+      const bucket = buckets.get(sectionId) ?? [];
+      bucket.push(flag);
+      buckets.set(sectionId, bucket);
+    }
+    const ordered = FEATURE_FLAG_SECTIONS.map((section) => ({
+      ...section,
+      flags: buckets.get(section.id) ?? [],
+    })).filter((section) => section.flags.length > 0);
+    const uncategorized = buckets.get("uncategorized");
+    if (uncategorized && uncategorized.length > 0) {
+      ordered.push({
+        id: "uncategorized",
+        label: "未分类",
+        description: "服务端新增但尚未归类的开关，请补充分区映射",
+        flags: uncategorized,
+      });
+    }
+    return ordered;
+  })();
 
   const displayValue = (flag: FeatureFlagItem) =>
     localOverrides[flag.key] !== undefined ? localOverrides[flag.key] : flag.value;
@@ -126,36 +158,6 @@ export default function AdminFeatureFlagsPage() {
     }
   };
 
-  const flagLabels: Record<string, string> = {
-    flashAnyLocationArrivalTestEnabled: "街头盲盒：任意地点到达测试",
-    flashTaskRetryTestEnabled: "街头盲盒：允许同任务反复测试",
-    restartOnboarding: "允许用户重启 onboarding",
-    smartProfession: "智能职业理解 (SMART_PROFESSION_V1)",
-    onboardingForceSkip: "Onboarding 强制跳过（测试专用）",
-    matchingLiveReveal: "匹配结果实时揭晓",
-    socialIcebreakerClientForceEnd: "破冰会话客户端强制结束",
-    flashShenzhenLocationGateEnabled: "闪现深圳定位限制",
-    personalitySlotProfileFast: "命格揭晓：快节奏动画",
-    personalitySlotProfileDramatic: "命格揭晓：戏剧化动画",
-    personalitySlotCurvatureEnabled: "命格揭晓：3D 鼓面曲率",
-    shareAnimatedClipEnabled: "命格揭晓：动态分享短片",
-  };
-
-  const flagDescriptions: Record<string, string> = {
-    flashAnyLocationArrivalTestEnabled: "仅非生产环境生效。开启后，测试用户可在任意有效位置完成 NPC 到达、任务到达与当前相遇交付，完整体验街头盲盒链路；生产环境始终强制关闭。",
-    flashTaskRetryTestEnabled: "仅非生产环境生效。开启后，测试用户可在任务进行页或反馈页直接从头复测同一任务，不必先走到最终交付。",
-    restartOnboarding: "开启后，已完成 onboarding 的用户可在设置中重置进度",
-    smartProfession: "开启后，用户使用自由文本输入职业时会触发 AI 分类",
-    onboardingForceSkip: "⚠️ 危险：开启后所有用户都会在 onboarding 页面看到「跳过」按钮",
-    matchingLiveReveal: "开启后，用户在匹配状态页可实时看到桌友揭晓动画",
-    socialIcebreakerClientForceEnd: "⚠️ 危险：开启后主持人可在客户端强制结束破冰会话",
-    flashShenzhenLocationGateEnabled: "开启时仅允许深圳 GPS；关闭后非生产环境可在深圳外测试。生产环境始终锁定。",
-    personalitySlotProfileFast: "揭晓动画使用快节奏时序（快速转动、快速揭晓）。与戏剧化冲突时戏剧化优先。",
-    personalitySlotProfileDramatic: "揭晓动画使用戏剧化时序（更长悬停、更慢收尾、更强仪式感）。优先级高于快节奏。",
-    personalitySlotCurvatureEnabled: "开启后，命格揭晓转盘使用伪 3D 鼓面曲率（rotateX + perspective）。关闭时远程回退为 2.5D 平面效果（仅缩放+透明度衰减），无需发版。编译期常量仍是总开关（两者同时开启才生效 3D）。",
-    shareAnimatedClipEnabled: "开启后，结果页可生成 2 秒动态分享短片（服务端 canvas + ffmpeg 合成，静音 MP4）。关闭时分享物料保持静态海报。",
-  };
-
   const pendingFlag = pendingToggle ? flags.find((f) => f.key === pendingToggle) : null;
   const pendingDisablesLocationGate = pendingToggle === "flashShenzhenLocationGateEnabled";
 
@@ -195,8 +197,20 @@ export default function AdminFeatureFlagsPage() {
           <p className="text-xs mt-1">请检查服务端配置是否正确加载</p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {flags.map((flag) => {
+        <div className="space-y-8">
+          {groupedSections.map((section) => (
+            <section key={section.id}>
+              <div className="mb-3">
+                <h2 className="text-lg font-semibold tracking-tight">
+                  {section.label}
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    {section.flags.length} 项
+                  </span>
+                </h2>
+                <p className="text-sm text-muted-foreground">{section.description}</p>
+              </div>
+              <div className="grid gap-4">
+                {section.flags.map((flag) => {
             const current = displayValue(flag);
             const changed = localOverrides[flag.key] !== undefined;
             const isSaving = savingKeys.has(flag.key);
@@ -252,8 +266,11 @@ export default function AdminFeatureFlagsPage() {
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
+                );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

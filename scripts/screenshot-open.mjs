@@ -74,7 +74,12 @@ const PAGES = {
   'flash-teaser-page': { url: 'http://localhost:9000/flash-teaser-page.png', altPort: 9003 },
   'landing-legal-hint': { url: 'http://localhost:9000/landing-legal-hint.png', altPort: 9003 },
   'event-feedback': { url: 'http://localhost:9000/event-feedback-wechat-step.png', altPort: 9003 },
-  'gathering-room': { url: 'http://localhost:9000/gathering-room.png', altPort: 9003 },
+  'event-detail-flow-strip': { url: 'http://localhost:9000/event-detail-flow-strip-375x667.png', altPort: 9003 },
+  'event-detail-faq-collapsed': { url: 'http://localhost:9000/event-detail-faq-collapsed-375x667.png', altPort: 9003 },
+  'event-detail-faq-open': { url: 'http://localhost:9000/event-detail-faq-open-375x667.png', altPort: 9003 },
+  'event-detail-flow-strip-320': { url: 'http://localhost:9000/event-detail-flow-strip-320x568.png', altPort: 9003 },
+  'event-detail-faq-collapsed-320': { url: 'http://localhost:9000/event-detail-faq-collapsed-320x568.png', altPort: 9003 },
+  'event-detail-faq-open-320': { url: 'http://localhost:9000/event-detail-faq-open-320x568.png', altPort: 9003 },  'gathering-room': { url: 'http://localhost:9000/gathering-room.png', altPort: 9003 },
   'personality-test-slider': { url: 'http://localhost:9000/personality-test-slider-neutral.png', altPort: 9003 },
   'personality-test-slider-drag': { url: 'http://localhost:9000/personality-test-slider-drag.png', altPort: 9003 },
   'personality-test-slider-settled': { url: 'http://localhost:9000/personality-test-slider-settled.png', altPort: 9003 },
@@ -86,6 +91,29 @@ const PAGES = {
   'personality-results-detail': { url: 'http://localhost:9000/personality-results-detail.png', altPort: 9003 },
   'personality-results-detail-partners': { url: 'http://localhost:9000/personality-results-detail-partners.png', altPort: 9003 },
   'personality-results-signal-retest': { url: 'http://localhost:9000/personality-results-signal-retest.png', altPort: 9003 },
+  // T46 S5.3 checkout merge-gate captures (2026-10-21 audit car): P0d refund
+  // narrative 50/50 (flag off baseline / bucket 0 / bucket 1 stack) + P1a duo
+  // entry overlay, incl. the 320x568 short-phone viewport.
+  'checkout-t46-baseline-flag-off': {
+    url: 'http://localhost:9000/checkout-t46-baseline-flag-off-375x667.png',
+    altPort: 9003,
+  },
+  'checkout-t46-bucket0-single-line': {
+    url: 'http://localhost:9000/checkout-t46-bucket0-single-line-375x667.png',
+    altPort: 9003,
+  },
+  'checkout-t46-bucket1-stack': {
+    url: 'http://localhost:9000/checkout-t46-bucket1-stack-375x667.png',
+    altPort: 9003,
+  },
+  'checkout-t46-bucket1-duo': {
+    url: 'http://localhost:9000/checkout-t46-bucket1-duo-375x667.png',
+    altPort: 9003,
+  },
+  'checkout-t46-bucket1-duo-320': {
+    url: 'http://localhost:9000/checkout-t46-bucket1-duo-320x568.png',
+    altPort: 9003,
+  },
 }
 
 const page = process.argv[2] || 'events'

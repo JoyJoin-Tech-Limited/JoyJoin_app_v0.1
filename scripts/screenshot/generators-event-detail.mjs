@@ -44,8 +44,11 @@ export function registerEventDetailGenerators(ctx) {
    * @param {number} options.startOffsetMs  dateTime relative to now
    * @param {string} options.feedbackState  GET /feedback-state → state
    * @param {boolean} options.withGroup     serve /api/events/joined with a groupId
+   * @param {object} [options.authOverrides] merged into the /api/auth/user mock
+   *   (e.g. `{ features: { preRevealRefundEnabled: true } }`); registered AFTER
+   *   the base override so Playwright's last-registered-wins routing keeps it.
    */
-  async function openEventDetail(page, { status, startOffsetMs, feedbackState, withGroup }) {
+  async function openEventDetail(page, { status, startOffsetMs, feedbackState, withGroup, authOverrides }) {
     const poolBase = await loadPoolBase()
     const dateTime = new Date(Date.now() + startOffsetMs).toISOString()
 
@@ -95,6 +98,10 @@ export function registerEventDetailGenerators(ctx) {
         contentType: 'application/json',
         body: JSON.stringify({ ok: true }),
       }))
+
+    if (authOverrides) {
+      await interceptAuthUserOverrides(page, authOverrides)
+    }
 
     await page.goto(`${H5_BASE_URL}/#/pages/event-detail/index?id=${POOL_ID}&motion=reduce`, {
       waitUntil: 'domcontentloaded',
@@ -196,4 +203,180 @@ export function registerEventDetailGenerators(ctx) {
       if (hasBar) throw new Error('pre-match state must not render the action bar')
       return page.screenshot({ fullPage: false })
     }))
+
+  // ─── T46 trust-layer captures (2026-10-21, audit G9 unblock) ──────────
+  // Six states across the two short-phone reference viewports:
+  //   flow   — EventFlowStrip in view + FAQ collapsed + action bar visible in
+  //            the same viewport (CTA first-screen composition check)
+  //   faq    — FAQ card in view, all answers closed
+  //   faqopen— exactly one FAQ answer expanded (tap the first Q row)
+  // 375×667 = iPhone SE 2/3 class; 320×568 = iPhone SE 1 class / 320px floor.
+  // The 320px captures additionally MEASURE the 集结房间等开席 node label for
+  // orphan glyphs (last wrapped line narrower than one CJK glyph) and hard-fail
+  // the generator if one appears — a silent screenshot would hide the defect.
+
+  const VIEWPORT_375 = { viewport: { width: 375, height: 667 }, deviceScaleFactor: 2 }
+  const VIEWPORT_320 = { viewport: { width: 320, height: 568 }, deviceScaleFactor: 2 }
+
+  async function openTrustLayerDetail(page) {
+    // preRevealRefundEnabled=true serves the full 8-item FAQ (incl. the
+    // promise-locked cancel_refund entry); matched + 48h keeps the action bar
+    // mounted (去评价) for the CTA-visibility composition check.
+    await openEventDetail(page, {
+      status: 'matched',
+      startOffsetMs: 48 * HOUR_MS,
+      feedbackState: 'locked',
+      withGroup: false,
+      authOverrides: { features: { preRevealRefundEnabled: true } },
+    })
+    await page.waitForSelector('.event-flow-strip', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('.event-faq-accordion', { state: 'visible', timeout: 10000 })
+    // 8 items = 7 unconditional + cancel_refund with the flag forced on.
+    await page.waitForFunction(
+      () => document.querySelectorAll('.event-faq-accordion__item').length === 8,
+      undefined,
+      { timeout: 10000 },
+    )
+    // No answer mounted = the accordion starts fully collapsed.
+    await page.waitForFunction(
+      () => document.querySelectorAll('.event-faq-accordion__answer').length === 0,
+      undefined,
+      { timeout: 5000 },
+    )
+  }
+
+  /** Per-line rect widths of each strip label via Range.getClientRects. */
+  async function measureStripLabels(page) {
+    return page.evaluate(() => {
+      const labels = Array.from(
+        document.querySelectorAll('.event-flow-strip__node-label'),
+      )
+      return labels.map((el) => {
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        const rects = Array.from(range.getClientRects()).map((r) =>
+          Math.round(r.width * 10) / 10,
+        )
+        const fontSize = parseFloat(getComputedStyle(el).fontSize)
+        const box = el.getBoundingClientRect()
+        return {
+          text: (el.textContent || '').trim(),
+          lineWidths: rects,
+          fontSize: Math.round(fontSize * 10) / 10,
+          lineCount: Math.round(box.height / (fontSize * 1.4)),
+          clientHeight: el.clientHeight,
+          scrollHeight: el.scrollHeight,
+        }
+      })
+    })
+  }
+
+  /** Orphan = wrapped label whose final line is narrower than one CJK glyph. */
+  function orphanFindings(measurements) {
+    return measurements
+      .map((m) => {
+        if (m.lineWidths.length <= 1) return null
+        const lastWidth = m.lineWidths[m.lineWidths.length - 1]
+        return lastWidth < m.fontSize * 1.2 ? { ...m, lastWidth } : null
+      })
+      .filter(Boolean)
+  }
+
+  async function captureFlowStrip(page, viewportLabel) {
+    await openTrustLayerDetail(page)
+    // Land the strip mid-viewport; scroll the inner ScrollView (page-level
+    // scrollTo does not reach inside Taro ScrollView).
+    await page.evaluate(() => {
+      document
+        .querySelector('.event-detail__flow-card')
+        ?.scrollIntoView({ behavior: 'instant', block: 'center' })
+    })
+    await page.waitForTimeout(400)
+    const [barVisible, collapsed, measurements] = await Promise.all([
+      page.evaluate(() => {
+        const bar = document.querySelector('.event-detail__action-bar')
+        if (!bar) return false
+        const rect = bar.getBoundingClientRect()
+        return rect.bottom <= window.innerHeight && rect.height > 0
+      }),
+      page.evaluate(
+        () => document.querySelectorAll('.event-faq-accordion__answer').length === 0,
+      ),
+      measureStripLabels(page),
+    ])
+    if (!barVisible) throw new Error(`${viewportLabel}: action bar not visible with flow strip in view`)
+    if (!collapsed) throw new Error(`${viewportLabel}: FAQ must start collapsed in the flow capture`)
+    const orphans = orphanFindings(measurements)
+    if (orphans.length > 0) {
+      throw new Error(
+        `${viewportLabel}: orphan glyph in flow-strip label(s): ${JSON.stringify(orphans)}`,
+      )
+    }
+    const clipped = measurements.filter((m) => m.scrollHeight > m.clientHeight + 1)
+    if (clipped.length > 0) {
+      throw new Error(
+        `${viewportLabel}: flow-strip label clipped by line-clamp: ${JSON.stringify(clipped)}`,
+      )
+    }
+    console.log(`[event-detail] flow-strip ${viewportLabel} label lines:`, JSON.stringify(measurements))
+    return page.screenshot({ fullPage: false })
+  }
+
+  async function captureFaq(page, viewportLabel, { openFirst }) {
+    await openTrustLayerDetail(page)
+    await page.evaluate(() => {
+      document
+        .querySelector('.event-detail__faq-card')
+        ?.scrollIntoView({ behavior: 'instant', block: 'start' })
+    })
+    if (openFirst) {
+      await page.click('.event-faq-accordion__row')
+      // Enter animation is 250ms; with reduced motion the swap is instant.
+      await page.waitForFunction(
+        () => document.querySelectorAll('.event-faq-accordion__answer').length === 1,
+        undefined,
+        { timeout: 5000 },
+      )
+      await page.waitForTimeout(400)
+      await page.waitForFunction(
+        () => {
+          const answer = document.querySelector('.event-faq-accordion__answer')
+          if (!answer) return false
+          const box = answer.getBoundingClientRect()
+          return box.height > 10
+        },
+        undefined,
+        { timeout: 5000 },
+      )
+      const openCount = await page.evaluate(
+        () => document.querySelectorAll('.event-faq-accordion__item--open').length,
+      )
+      if (openCount !== 1) throw new Error(`${viewportLabel}: exactly one FAQ item must be open`)
+    } else {
+      const answerCount = await page.evaluate(
+        () => document.querySelectorAll('.event-faq-accordion__answer').length,
+      )
+      if (answerCount !== 0) throw new Error(`${viewportLabel}: FAQ collapsed capture has mounted answers`)
+    }
+    await page.waitForTimeout(300)
+    return page.screenshot({ fullPage: false })
+  }
+
+  register('event-detail-flow-strip-375x667', () =>
+    withBrowserPage(VIEWPORT_375, (page) => captureFlowStrip(page, '375x667')))
+
+  register('event-detail-faq-collapsed-375x667', () =>
+    withBrowserPage(VIEWPORT_375, (page) => captureFaq(page, '375x667', { openFirst: false })))
+
+  register('event-detail-faq-open-375x667', () =>
+    withBrowserPage(VIEWPORT_375, (page) => captureFaq(page, '375x667', { openFirst: true })))
+
+  register('event-detail-flow-strip-320x568', () =>
+    withBrowserPage(VIEWPORT_320, (page) => captureFlowStrip(page, '320x568')))
+
+  register('event-detail-faq-collapsed-320x568', () =>
+    withBrowserPage(VIEWPORT_320, (page) => captureFaq(page, '320x568', { openFirst: false })))
+
+  register('event-detail-faq-open-320x568', () =>
+    withBrowserPage(VIEWPORT_320, (page) => captureFaq(page, '320x568', { openFirst: true })))
 }
