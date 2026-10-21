@@ -191,7 +191,7 @@ const REQUIREMENTS = [
       // must reach this subpackage page WXSS.
       'registration-ceremony__seal{',
       'registration-ceremony__stub{',
-      // T46 P0d (2026-10-21): the bucket-1 refund-guarantee two-line stack
+      // 转化 P0d (2026-10-21): the bucket-1 refund-guarantee two-line stack
       // adds the narrative-row modifier; the rules live in this page's own
       // index.scss today, but if they ever move into the component (TSX
       // side-effect import) the subpackage style-splitting trap would blank
@@ -199,7 +199,7 @@ const REQUIREMENTS = [
       // in the page WXSS.
       'ticket-refund-guarantee{',
       'ticket-refund-guarantee__text--narrative{',
-      // T46 P1a (2026-10-21): the duo entry link rules live in this page's own
+      // 转化 P1a (2026-10-21): the duo entry link rules live in this page's own
       // index.scss (same precedent as ticket-refund-guarantee above) — anchored
       // here so a future move into a component TSX side-effect import cannot
       // blank the trust-cluster row on device via the subpackage

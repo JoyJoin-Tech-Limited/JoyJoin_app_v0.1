@@ -1,7 +1,7 @@
-# T46 转化埋点 Gap 审计（S1.1 / AC-01）
+# 转化 转化埋点 Gap 审计（S1.1 / AC-01）
 
 > 2026-10-20 · 纯审计产出，不改任何业务文件，不 commit 不 push。
-> 输入：`2026-10-20-t46-implementation-plan.md` §4 S1（7 目标事件定义）。
+> 输入：`2026-10-20-conversion-implementation-plan.md` §4 S1（7 目标事件定义）。
 > 结论先行：7 目标中 **3 个纯 SQL 派生**（`checkout_cancel_rate` / `first_order_30d_renewal` / `duo_invite_to_register_conv`），**1 个 SQL 派生但语义待澄清**（北极星 `detail_to_checkout_conv`），**3 个需新增 raw 事件**（`guest_view_to_assessment_rate` / `guest_to_login_conv` / `duo_entry_ctr`，合计 **6 个新事件**）。
 
 ---
@@ -116,7 +116,7 @@ S6.1 `DuoEntryLink`（收银台 trust row 下）。CTR = tap/impression，两段
 
 1. client union：`apps/mini-program/src/lib/analytics/discoverAnalytics.ts`（`DiscoverAnalyticsEventType` 增补）。
 2. server 白名单：`apps/server/src/routes/domains/analytics.ts` `DISCOVER_EVENT_TYPES`（~L119-303）。
-3. （funnel SQL：`apps/server/scripts/t46-conversion-funnel-metrics.sql`，S1.3 产出）。
+3. （funnel SQL：`apps/server/scripts/conversion-funnel-metrics.sql`，S1.3 产出）。
 
 | 新事件 | 发射点（建议 file:line） | metadata（enum-only） | 归属目标 |
 |---|---|---|---|
@@ -134,7 +134,7 @@ S6.1 `DuoEntryLink`（收银台 trust row 下）。CTR = tap/impression，两段
 
 ## 4. funnel SQL 草案大纲（S1.3 产出文件骨架）
 
-文件：`apps/server/scripts/t46-conversion-funnel-metrics.sql`。全部 `SELECT` over `discover_analytics_events` + `payments` + `invitations`/`invitation_uses`，只读，无新表无路由，`psql "$DATABASE_URL" -f ...` 直跑（对齐 `icebreaker-wave3-funnel-metrics.sql` 先例）。口径 caveat：与 icebreaker 先例一致，funnel 是 **client-side per acting client**，同一 poolId/session 跨设备重装可能重发，比率按 row 计数 + 附 distinct 口径。
+文件：`apps/server/scripts/conversion-funnel-metrics.sql`。全部 `SELECT` over `discover_analytics_events` + `payments` + `invitations`/`invitation_uses`，只读，无新表无路由，`psql "$DATABASE_URL" -f ...` 直跑（对齐 `icebreaker-wave3-funnel-metrics.sql` 先例）。口径 caveat：与 icebreaker 先例一致，funnel 是 **client-side per acting client**，同一 poolId/session 跨设备重装可能重发，比率按 row 计数 + 附 distinct 口径。
 
 ### 4.1 北极星 `detail_to_checkout_conv`
 
@@ -239,7 +239,7 @@ app.post("/api/analytics/discover", discoverAnalyticsLimiter, async (req: Reques
 
 **后果（既有数据质量问题，非本任务引入）**：
 1. `discover_analytics_events.user_id` / `session_id` 全表恒空 → **任何依赖 userId 的 analytics 归因都不可用**。
-2. 现有 funnel SQL 早已绕开此列——`icebreaker-wave3-funnel-metrics.sql` 全程用 `metadata->>'socialSessionId'`（client 生成）而非 `user_id`。**T46 新 funnel 必须沿用同一模式**：跨事件相关性走 `metadata` 里的 client 生成 ID（guest 用 `guestAttemptId`；checkout/detail 按 `poolId` 关联）。
+2. 现有 funnel SQL 早已绕开此列——`icebreaker-wave3-funnel-metrics.sql` 全程用 `metadata->>'socialSessionId'`（client 生成）而非 `user_id`。**对标平台 新 funnel 必须沿用同一模式**：跨事件相关性走 `metadata` 里的 client 生成 ID（guest 用 `guestAttemptId`；checkout/detail 按 `poolId` 关联）。
 3. **对 7 目标的影响矩阵**：
    - 纯 DB 派生（`first_order_30d_renewal` / `duo_invite_to_register_conv`）——**不受影响**（用 `payments.userId` / `invitation_uses.inviteeId`，不经过 analytics）。
    - 计数型比率（`checkout_cancel_rate` / `detail_to_checkout_conv` / `duo_entry_ctr`）——**不受影响**（分子分母都是 event 计数，无需 userId）。

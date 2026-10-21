@@ -336,7 +336,7 @@ describe('buildPlansShown (D2 dynamic plan_selector_impression metadata)', () =>
 
 // ─── D2/D3 page wiring contract (source scan, mirrors usePaymentCoupon) ────
 
-describe('resolveRefundNarrativeBucket (T46 P0d, fail-closed)', () => {
+describe('resolveRefundNarrativeBucket (转化 P0d, fail-closed)', () => {
   it('resolves the exact literals 0 and 1', () => {
     expect(resolveRefundNarrativeBucket({ refundNarrativeBucket: 0 })).toBe(0)
     expect(resolveRefundNarrativeBucket({ refundNarrativeBucket: 1 })).toBe(1)
@@ -390,18 +390,18 @@ describe('event-ticket-payment page wiring contract (D2/D3)', () => {
     expect(pageSource).toContain('<RefundGuaranteeLine visible={preRevealRefundEnabled}')
   })
 
-  it('T46 P0d: wires the bucket through the fail-closed resolver and gates the stack on bucket 1', () => {
+  it('转化 P0d: wires the bucket through the fail-closed resolver and gates the stack on bucket 1', () => {
     expect(pageSource).toContain('resolveRefundNarrativeBucket(ritualContext)')
     expect(pageSource).toContain('showRefundNarrativeStack = preRevealRefundEnabled && refundNarrativeBucket === 1')
     expect(pageSource).toContain('narrative={showRefundNarrativeStack}')
   })
 
-  it('T46 P0d: spacer grows pixel-exact for the two-line stack (CSS-reserved, no JS measurement)', () => {
+  it('转化 P0d: spacer grows pixel-exact for the two-line stack (CSS-reserved, no JS measurement)', () => {
     expect(pageSource).toContain('ticket-bottom-spacer--with-guarantee-stack')
     expect(pageSource).not.toContain('getBoundingClientRect')
   })
 
-  it('T46 P0d: guardrail exposure meters once per page visit with enum-only bucket metadata', () => {
+  it('转化 P0d: guardrail exposure meters once per page visit with enum-only bucket metadata', () => {
     expect(pageSource).toContain('ticket_refund_guarantee_impression')
     expect(pageSource).toContain('refundNarrativeBucket: refundNarrativeBucket ?? 0')
     expect(pageSource).toContain('hasTrackedRefundGuaranteeImpressionRef')

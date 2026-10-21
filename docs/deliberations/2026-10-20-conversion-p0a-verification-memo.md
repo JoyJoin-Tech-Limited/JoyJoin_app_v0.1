@@ -1,7 +1,7 @@
-# P0a 退款止血验证备忘录（T46 竞对反打）
+# P0a 退款止血验证备忘录（对标平台 竞对反打）
 
 - **日期**：2026-10-20
-- **Sprint**：`sprint_20261020_t46_full_implementation`（合同 `.git/.orchestration/sprints/sprint-contract.t46-full-implementation.md`）
+- **Sprint**：`sprint_20261020_benchmark_full_implementation`（合同 `.git/.orchestration/sprints/sprint-contract.benchmark-full-implementation.md`）
 - **验收锚点**：AC-03（P0a 验证备忘录）
 - **性质**：验证 + 证据产出。**未改任何业务文件，未 commit / push。**
 - **决策背景**：用户已拍板 D4——法务/运营证据齐即经 `/admin/feature-flags` 直接开 `preRevealRefundEnabled`（止血优先）。

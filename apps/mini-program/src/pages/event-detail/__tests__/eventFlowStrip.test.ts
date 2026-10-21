@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// 2026-10-21 T46 audit CONCERN C2 source-lock: the EventFlowStrip is a
+// 2026-10-21 对标平台 audit CONCERN C2 source-lock: the EventFlowStrip is a
 // trust-surface expectation display whose four labels are FROZEN canonical
 // copy (一字不改), whose connector draw is contractually one-shot
 // (scaleX 0→1, ≤700ms total, never a loop), and whose reduced-motion tier
@@ -16,7 +16,7 @@ const compRoot = resolve(here, '..', '..', '..', 'components', 'event-detail')
 const tsx = readFileSync(resolve(compRoot, 'EventFlowStrip.tsx'), 'utf-8')
 const scss = readFileSync(resolve(compRoot, 'EventFlowStrip.scss'), 'utf-8')
 
-describe('EventFlowStrip canonical beat order (T46 P0c, 2026-10-21 lock)', () => {
+describe('EventFlowStrip canonical beat order (转化 P0c, 2026-10-21 lock)', () => {
   it('ships the four frozen canonical labels in order', () => {
     for (const label of ['订座', '悦仔排桌', '集结房间等开席', '现场入座']) {
       expect(tsx).toContain(`label: '${label}'`)

@@ -2,7 +2,7 @@ import { View, Text } from '@tarojs/components'
 
 /**
  * D3 refund-guarantee caption (flag `preRevealRefundEnabled`, 2026-10-11);
- * T46 P0d two-line caption stack (2026-10-21).
+ * 转化 P0d two-line caption stack (2026-10-21).
  *
  * Quiet System-UI register rendered directly under the payment CTA on the
  * event-ticket-payment page — same muted caption family as the trust row's
@@ -17,7 +17,7 @@ import { View, Text } from '@tarojs/components'
  * - `visible=true` + `narrative=false` (bucket 0 / field absent / any
  *   anomaly) → legacy single fact line, byte-level status quo.
  *
- * Zero animation by design (T46 §5.3.2: 收银台编排预算为零 — 信任面的装饰
+ * Zero animation by design (对标平台 §5.3.2: 收银台编排预算为零 — 信任面的装饰
  * 即减信；排版精度本身是全部高级感).
  */
 export default function RefundGuaranteeLine({ visible, narrative = false }: { visible: boolean; narrative?: boolean }) {

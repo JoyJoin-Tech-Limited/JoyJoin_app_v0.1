@@ -1,6 +1,6 @@
-# T46 S8.1 — P1b 供给节律代码侧审计
+# 转化 S8.1 — P1b 供给节律代码侧审计
 
-> Sprint: `t46-full-implementation` · 任务 S8.1 · 合同 AC-11 · 执行人: backend-engineer
+> Sprint: `benchmark-full-implementation` · 任务 S8.1 · 合同 AC-11 · 执行人: backend-engineer
 > 日期: 2026-10-20 · 性质: **纯 grep 审计，零文件修改，不 commit / 不 push**（本备忘是唯一产出）
 
 ---
@@ -22,7 +22,7 @@ P1b 是**运营动作**（深圳周三/周六排期，内部承诺）。代码�
 Harness session guard（Phase 0）:
 
 ```
-node scripts/harness/harness-auto-trigger.mjs --prompt="..." --proposed-files=docs/deliberations/2026-10-20-t46-p1b-code-audit.md
+node scripts/harness/harness-auto-trigger.mjs --prompt="..." --proposed-files=docs/deliberations/2026-10-20-conversion-p1b-code-audit.md
 → tier: 1 · contractRequired: false · action: PROCEED
 ```
 
@@ -40,7 +40,7 @@ node scripts/harness/harness-auto-trigger.mjs --prompt="..." --proposed-files=do
 - 城市编排**不含周期承诺**：`深圳` 的硬编码只出现在三类合法位置（Flash 城市域常量 `FLASH_CITY`、场地地址目录、场地匹配城市白名单），没有一处与星期/周期绑定。
 - 2 条**提示项**（非阻断，见 §5）：`HeroPromoBanner` 变体 A 的周度措辞与 `LocationFilterDrawer` 的周窗口模板，均为**组件内硬编码字符串**；两者都不是排期承诺，但若本轮统一「每周都有局」软表述，应一并迁入 copy 模块。
 
-P1b 的「用户可见节律承诺延后、文案软表述」策略（见 `2026-10-20-t46-final-strategy.md` §1/§7）在代码侧**已被自然满足**：因为没有一行代码提前写死了节律。
+P1b 的「用户可见节律承诺延后、文案软表述」策略（见 `2026-10-20-conversion-final-strategy.md` §1/§7）在代码侧**已被自然满足**：因为没有一行代码提前写死了节律。
 
 ---
 
@@ -158,7 +158,7 @@ rg -n -e '本周|这周|下周|周末' apps/mini-program/src packages/shared/src
   2. `paymentRitualCopy.ts:81` — `本周${weeklyEvents}场局，…`（`weeklyEvents > 0`）
   3. `LocationFilterDrawer` — `本周 ${weekTotal} 场`（真实计数）
 - 最接近的既有**承诺式**措辞是 `HeroPromoBanner` 变体 A 的 `每周精选`（§5.1），仍未构成场次承诺。
-- **若 P1b 软表述要落地，落点建议**：`packages/shared/src/copy/eventFaqCopy.ts`（T46 AC-05 已建，当前 8 条 FAQ，**尚无节律类条目**）。新增一条 `question: '多久会有一次局？'` + 答案用软表述（「每周都有局，具体场次以发现页为准」类），即可满足「走 copy 模块 + 不硬编码城市/星期」两条要求，且天然落在信任敏感面（`toneMode: 'system-ui'`，禁闺蜜腔）。
+- **若 P1b 软表述要落地，落点建议**：`packages/shared/src/copy/eventFaqCopy.ts`（对标平台 AC-05 已建，当前 8 条 FAQ，**尚无节律类条目**）。新增一条 `question: '多久会有一次局？'` + 答案用软表述（「每周都有局，具体场次以发现页为准」类），即可满足「走 copy 模块 + 不硬编码城市/星期」两条要求，且天然落在信任敏感面（`toneMode: 'system-ui'`，禁闺蜜腔）。
 
 ---
 
@@ -166,9 +166,9 @@ rg -n -e '本周|这周|下周|周末' apps/mini-program/src packages/shared/src
 
 | 位置 | 内容 | 是否受 P1b 代码约束 |
 |---|---|---|
-| `docs/deliberations/2026-10-20-t46-commercialization-memo.md:93,105` | 「文案限定『每周三/六晚固定开局（深圳）』」 | **否** — 决策记录，非渲染文案。且 `2026-10-20-t46-final-strategy.md:12,32` 已把该口径**降级**为内部运营承诺 + 软表述。 |
-| `docs/deliberations/2026-10-20-t46-pm-analysis.md:97,134` | 「固定『每周三/周六晚局』，零代码」+「FAQ 措辞用『每周都有局』软表述」 | **否** — 文档；其第 134 行正是本次审计的判定依据来源。 |
-| `docs/deliberations/2026-10-20-t46-implementation-plan.md:125-126` | S8.1 / S8.2 任务定义 | **否** — 任务说明 |
+| `docs/deliberations/2026-10-20-conversion-commercialization-memo.md:93,105` | 「文案限定『每周三/六晚固定开局（深圳）』」 | **否** — 决策记录，非渲染文案。且 `2026-10-20-conversion-final-strategy.md:12,32` 已把该口径**降级**为内部运营承诺 + 软表述。 |
+| `docs/deliberations/2026-10-20-conversion-pm-analysis.md:97,134` | 「固定『每周三/周六晚局』，零代码」+「FAQ 措辞用『每周都有局』软表述」 | **否** — 文档；其第 134 行正是本次审计的判定依据来源。 |
+| `docs/deliberations/2026-10-20-conversion-implementation-plan.md:125-126` | S8.1 / S8.2 任务定义 | **否** — 任务说明 |
 | `apps/server/migrations/seed_venue_partners_*` | 场地运营备注中的「仅周三、周四、周日晚间可保证留位」 | **数据层，不在代码文案约束内**；且已核验不进入 C 端载荷（§3.1） |
 | `apps/admin-client/src/pages/admin/AdminEventTemplatesPage.tsx:63-69,476,500,651` | 后台星期下拉/表单占位符 | **否** — 运营后台工具面，非 C 端承诺 |
 | 测试文件 / fixtures / LLM few-shot / 剧本剧情 | 各种「周五晚」字样 | **否** — 非渲染路径或无承诺语义 |
@@ -188,8 +188,8 @@ rg -n -e '本周|这周|下周|周末' apps/mini-program/src packages/shared/src
 
 ## 9. 关联文档
 
-- `docs/deliberations/2026-10-20-t46-final-strategy.md` §1（Q-E 裁决：内部承诺生效 / 用户可见文案用软表述 / 连续 4 周供给达标后才写死节律）、§7（P1b 定义）
-- `docs/deliberations/2026-10-20-t46-pm-analysis.md:134`（软表述 + venue 白名单 blocker 依据）
-- `docs/deliberations/2026-10-20-t46-implementation-plan.md:125-126`（S8.1 / S8.2 分工）
+- `docs/deliberations/2026-10-20-conversion-final-strategy.md` §1（Q-E 裁决：内部承诺生效 / 用户可见文案用软表述 / 连续 4 周供给达标后才写死节律）、§7（P1b 定义）
+- `docs/deliberations/2026-10-20-conversion-pm-analysis.md:134`（软表述 + venue 白名单 blocker 依据）
+- `docs/deliberations/2026-10-20-conversion-implementation-plan.md:125-126`（S8.1 / S8.2 分工）
 - `packages/shared/src/copy/eventFaqCopy.ts`（软表述推荐落点，当前 8 条 FAQ 无节律条目）
 - `docs/copy/brand-copy-strategy.md`（copy 模块治理与 🔴 Hard Rules）

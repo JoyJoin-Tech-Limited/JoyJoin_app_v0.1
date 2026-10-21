@@ -1,7 +1,7 @@
 # Discover PoolCard Redesign — Deliberation Final Output
 
 > **Session:** delib_20260513_discover_poolcard
-> **Trigger:** Competitive audit of JoyJoin Discover vs T46
+> **Trigger:** Competitive audit of JoyJoin Discover vs 转化
 > **Consensus:** Unanimous ACK (Alpha, Beta, Gamma)
 > **Date:** 2026-05-13
 
@@ -224,13 +224,13 @@ The 3 most important decision factors — **Event Type, Date, Location** — wer
 
 ## 8. Moat Verification
 
-T46 would need to build to copy this card:
+对标平台 would need to build to copy this card:
 1. Personality assessment infrastructure (6-9 months)
 2. 12-archetype system with chemistry matrix (3-6 months)
 3. Per-user archetype aggregation on list endpoint (2-3 months)
 4. Archetype-aware visual design system (2-3 months)
 
-Even if T46 copies the visual style (glass cards, gradient accents), they cannot copy the **data layer** that makes each card personalized. The moat compounds with every new user who completes onboarding.
+Even if 转化 copies the visual style (glass cards, gradient accents), they cannot copy the **data layer** that makes each card personalized. The moat compounds with every new user who completes onboarding.
 
 ---
 

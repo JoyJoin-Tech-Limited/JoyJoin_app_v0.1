@@ -4,7 +4,7 @@ import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { localAsset } from '../../lib/utils/cdnAssets'
 
 /**
- * EventFlowStrip — 详情页「怎么参加」4 拍流程条 (T46 P0c, 2026-10-20).
+ * EventFlowStrip — 详情页「怎么参加」4 拍流程条 (转化 P0c, 2026-10-20).
  *
  * Trust-surface "expectation display", NOT a progress stepper: the four
  * frozen canonical beats (订座 → 悦仔排桌 → 集结房间等开席 → 现场入座) answer

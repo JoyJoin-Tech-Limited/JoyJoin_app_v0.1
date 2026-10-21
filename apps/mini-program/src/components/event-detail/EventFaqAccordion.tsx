@@ -5,7 +5,7 @@ import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { haptics } from '../../lib/utils/haptics'
 
 /**
- * EventFaqAccordion — 详情页常见问题手风琴 (T46 P0e, 2026-10-20).
+ * EventFaqAccordion — 详情页常见问题手风琴 (对标平台 P0e, 2026-10-20).
  *
  * Trust-surface Q&A list under the EventFlowStrip. Frozen behavior (design
  * spec §5.3.3):

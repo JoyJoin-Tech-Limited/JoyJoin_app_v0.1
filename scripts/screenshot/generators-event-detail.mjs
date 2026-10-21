@@ -204,7 +204,7 @@ export function registerEventDetailGenerators(ctx) {
       return page.screenshot({ fullPage: false })
     }))
 
-  // ─── T46 trust-layer captures (2026-10-21, audit G9 unblock) ──────────
+  // ─── 转化 trust-layer captures (2026-10-21, audit G9 unblock) ──────────
   // Six states across the two short-phone reference viewports:
   //   flow   — EventFlowStrip in view + FAQ collapsed + action bar visible in
   //            the same viewport (CTA first-screen composition check)

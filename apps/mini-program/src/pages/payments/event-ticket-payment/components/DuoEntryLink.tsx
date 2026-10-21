@@ -11,7 +11,7 @@ import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes
 interface DuoEntryLinkProps {
   poolId: string
   /**
-   * Page-level gate (T46 P1a, AC-07): logged-in + pool checkout scenario +
+   * Page-level gate (转化 P1a, AC-07): logged-in + pool checkout scenario +
    * duo flag on. When false the duo-status read never fires and the row
    * renders nothing.
    */
@@ -19,7 +19,7 @@ interface DuoEntryLinkProps {
 }
 
 /**
- * T46 P1a (AC-07) checkout duo entry — a quiet text-link row in the trust
+ * 转化 P1a (AC-07) checkout duo entry — a quiet text-link row in the trust
  * cluster (trust row → duo entry → refund policy link), same register as
  * `ticket-refund-link`: one line of text + › + hoverClass tint. Not a card,
  * not a button, not a badge — the single solid primary CTA keeps the only
@@ -55,7 +55,12 @@ export default function DuoEntryLink({ poolId, enabled }: DuoEntryLinkProps) {
   const handleTap = () => {
     haptics('light')
     discoverAnalytics.trackDuoEntryLinkTap({ poolId })
-    Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.invite })
+    // Carry the checkout pool id so the invite page scopes the duo lane to
+    // THIS pool — at checkout time the inviter may hold no registration row
+    // for it yet (对标平台 B1, audit report §3.1).
+    Taro.navigateTo({
+      url: `${MINI_PROGRAM_ROUTES.invite}?poolId=${encodeURIComponent(poolId)}`,
+    })
   }
 
   if (!visible) return null

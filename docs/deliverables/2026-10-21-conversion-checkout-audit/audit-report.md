@@ -1,6 +1,6 @@
-# T46 验收审计报告 — AC-06 (P0d 收银台退款叙事) + AC-07 (P1a 收银台同行入口)
+# 转化 验收审计报告 — AC-06 (P0d 收银台退款叙事) + AC-07 (P1a 收银台同行入口)
 
-> 审计方：QA Agent（T46 收银台合并审计车 S5.3 + P1a）· 日期：2026-10-21
+> 审计方：QA Agent（对标平台 收银台合并审计车 S5.3 + P1a）· 日期：2026-10-21
 > 范围：`apps/mini-program/src/pages/payments/event-ticket-payment/`（payments 子包）
 > - P0d：`components/RefundGuaranteeLine.tsx` 两行 stack + `lib/experimentBucket.ts`（server）+ ritual-context 挂载 + 曝光埋点
 > - P1a：`components/DuoEntryLink.tsx` + duo-status 门控 + impression/tap 埋点
@@ -65,7 +65,7 @@
 | 零金额零 urgency | ✅ PASS | source-lock 测试 `DuoEntryLink.render.test.tsx:179-199`：源码零 `¥`/`立得`/`现金`/`提现` + 🔴 词表（匹配/社交/灵魂/AI/算法/智能）零命中；hint「同行有奖励」SCSS 用 `$ticket-text-muted`（`index.scss:1150-1156` 注释「muted so it never reads as urgency」） |
 | fail-closed 门控 | ✅ PASS | 页级门 `index.tsx:210-211,1416`：`enabled = Boolean(user?.id) && Boolean(poolId) && duoRegistrationEnabled`（`poolId` 为空串时 query 不发射）；组件级 `:36-44`：`enabled && Boolean(poolId)`、`retry:false`、`visible = isSuccess && data?.state==='none'`。测试矩阵 :79-137：enabled=false 不渲染不请求 / loading 静默 null / error null / `waiting` null / `bound` null / 仅 `none` 渲染。门控失败永不阻塞首屏（行在 scroll 流内，footer 不受影响，`index.tsx:1409-1413` 注释明示）。服务端 kill switch 真实存在：`featureFlags.ts:93,538`（`DUO_REGISTRATION_ENABLED`，default true，admin 可关）、`buildAuthUserResponse.ts:214`、`duo.ts:58` |
 | haptics | ✅ PASS | `DuoEntryLink.tsx:56` `haptics('light')`；测试 :141-153 断言 |
-| 埋点发射 | ✅ PASS | 客户端 union `discoverAnalytics.ts:151-152` + 发射函数 :377-383；服务端 allowlist `analytics.ts:318-319`；**双向 parity 契约锁** `discoverAnalyticsAllowlistContract.test.ts:27-34`（T46_CONVERSION_EVENTS 含 duo_entry_link_impression/tap，client⊆server 与 server⊆client 双向）。曝光 per-visit 去重 `DuoEntryLink.tsx:45-53` + 测试 :155-176（rerender 不重复计量）；tap 计量 :57 |
+| 埋点发射 | ✅ PASS | 客户端 union `discoverAnalytics.ts:151-152` + 发射函数 :377-383；服务端 allowlist `analytics.ts:318-319`；**双向 parity 契约锁** `discoverAnalyticsAllowlistContract.test.ts:27-34`（对标平台_CONVERSION_EVENTS 含 duo_entry_link_impression/tap，client⊆server 与 server⊆client 双向）。曝光 per-visit 去重 `DuoEntryLink.tsx:45-53` + 测试 :155-176（rerender 不重复计量）；tap 计量 :57 |
 | 一屏一主 CTA | ✅ PASS | duo 行无实心填充（SCSS 基态零 background，仅 pressed tint `rgba($color-primary,0.06)` :1164-1166）；全页唯一 solid primary 仍是 `.ticket-cta`（`index.tsx:1465-1481`）；行内零动画（SCSS 块无 transition/animation；§5.3.4「入场随 trust row 同帧、不 stagger」预算内取零） |
 | **跳转目标语义（设计 §P1a：跳转 = Duo 邀请链路）** | ❌ **FAIL → BLOCKING-1** | 见 §3.1。**行内渲染全部合规，但 tap 落地页在收银台生命周期内无法兑现「排进同一桌」** |
 
@@ -95,13 +95,13 @@
 
 ### 4.2 已交付的截图工具链（本次唯一工作树改动，全部盘上复核）
 
-- **新增** `scripts/screenshot/generators-checkout-t46.mjs`：五个 capture，沿用 `generators-event-detail.mjs` 的 state-extension 先例（auth/user override + ritual-context 注入 + duo-status 门控）。**每张 capture 内建 `assertVariantAndMeasureCta`**：先断言 DOM 状态精确匹配（行数 0/1/2 + narrative modifier + duo 行有无），再测量 footer/CTA/duoRow 的 bounding box 并验证 CTA 首屏可见，**不符即让该张捕获直接失败**（带测量 JSON），杜绝静默产出错误状态截图。
+- **新增** `scripts/screenshot/generators-checkout-conversion.mjs`：五个 capture，沿用 `generators-event-detail.mjs` 的 state-extension 先例（auth/user override + ritual-context 注入 + duo-status 门控）。**每张 capture 内建 `assertVariantAndMeasureCta`**：先断言 DOM 状态精确匹配（行数 0/1/2 + narrative modifier + duo 行有无），再测量 footer/CTA/duoRow 的 bounding box 并验证 CTA 首屏可见，**不符即让该张捕获直接失败**（带测量 JSON），杜绝静默产出错误状态截图。
 - **登记** `scripts/screenshot-server.mjs:10,169`（import + register，diff 已复核）与 `scripts/screenshot-open.mjs:94-116`（五个 PAGES 入口）。
 - 状态矩阵：①flag off 基线（**duoRegistrationEnabled=false 走真实 kill switch**，非 duo-status hack，逐像素对齐线上现状）②bucket 0 单行 ③bucket 1 两行 ④bucket 1 + duo 可见（375×667，合并关键帧）⑤=④ 的 320×568。
 
 ### 4.3 复跑命令
 
-见 `screenshots/README.md`（含一键 curl 落盘到本目录 + 关停命令）。复跑后需把五张 PNG 的 CTA 测量日志（`[checkout-t46] ... {"ctaFirstScreenVisible":true,...}`）贴回 PR。
+见 `screenshots/README.md`（含一键 curl 落盘到本目录 + 关停命令）。复跑后需把五张 PNG 的 CTA 测量日志（`[checkout-bench] ... {"ctaFirstScreenVisible":true,...}`）贴回 PR。
 
 ---
 

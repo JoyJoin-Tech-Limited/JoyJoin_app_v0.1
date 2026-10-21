@@ -1,4 +1,4 @@
-# T46 P1c 游客预告卡 — 用户视角情绪 rubric 报告
+# 转化 P1c 游客预告卡 — 用户视角情绪 rubric 报告
 
 > 2026-10-20 · user-satisfaction-audit（Persona walk + 六维情绪 rubric + 编排裁决）
 > 审计对象：`components/onboarding/GuestEventPreviewCard.tsx` / `GuestEventPreviewSection.tsx` / `GuestEventPreviewCard.scss`，插入点 `pages/onboarding/personality-test/results/FinalStage.tsx:766-770`，登录发射 `results/hooks/useResultsLoginHandoff.ts:160-167`
@@ -86,7 +86,7 @@
 
 ### 门槛判定（有规格歧义，需 orchestrator 裁决）
 
-- **设计规格 §4 既定门槛**：P1c ≥ **14/24**（`docs/deliberations/2026-10-20-t46-design-strategy-confirmation.md` §4 情绪价值 rubric 行，明确标注 /0-24）。编排版 **15/24 ✅ 通过**；静态版 12/24 ❌（若设备走静态路径，情绪面跌破门槛——这正是「编排必须赢」规则的量化体现）。
+- **设计规格 §4 既定门槛**：P1c ≥ **14/24**（`docs/deliberations/2026-10-20-conversion-design-strategy-confirmation.md` §4 情绪价值 rubric 行，明确标注 /0-24）。编排版 **15/24 ✅ 通过**；静态版 12/24 ❌（若设备走静态路径，情绪面跌破门槛——这正是「编排必须赢」规则的量化体现）。
 - **本任务书门槛**：「情绪 rubric（0–20），≥14」。按 0–20 归一（15/24×20 = **12.5**）则不通过。⚠ **两个口径冲突**（12.5 < 14 vs 15 ≥ 14），倾向解释为任务书笔误（设计冻结稿写的是 /0-24 ≥14），请 orchestrator 确认口径。**无论用哪个口径，方向性结论不变**：静态版必须被击败、编排版保住了这个差值；且 §5 的六维用户分（17/24，愿意回来带）不受此口径影响。
 
 ---

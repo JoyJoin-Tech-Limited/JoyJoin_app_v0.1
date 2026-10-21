@@ -8,7 +8,7 @@ import {
 } from '../../../lib/analytics/guestPreviewLoginPending'
 
 /**
- * GuestEventPreview contract test (T46 P1c, sprint-contract AC-09 — 参照
+ * GuestEventPreview contract test (转化 P1c, sprint-contract AC-09 — 参照
  * guidanceQueueContract.test.ts 模式). Behavioral assertions live in the
  * sibling render test; this file locks the wiring that cannot run under
  * jsdom: structural (source) assertions on insertion order, subpackage

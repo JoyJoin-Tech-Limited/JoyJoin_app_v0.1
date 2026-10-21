@@ -1,4 +1,4 @@
-# T46 P1c 游客预告卡 — 性能审计报告（S7.6 / AC-10 performance-audit）
+# 转化 P1c 游客预告卡 — 性能审计报告（S7.6 / AC-10 performance-audit）
 
 - **审计日期**：2026-10-20
 - **审计对象**：`GuestEventPreviewCard.tsx` / `GuestEventPreviewSection.tsx` / `GuestEventPreviewCard.scss` + `FinalStage.tsx:766-770` 挂载 + `useResultsLoginHandoff.ts:160-167` 埋点

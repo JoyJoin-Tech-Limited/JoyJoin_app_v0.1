@@ -1,6 +1,6 @@
 @use '../../styles/variables' as *;
 
-// ─── EventFaqAccordion — 详情页常见问题手风琴 (T46 P0e, 2026-10-20) ──
+// ─── EventFaqAccordion — 详情页常见问题手风琴 (对标平台 P0e, 2026-10-20) ──
 // Trust-surface Q&A list. Frozen motion spec (design doc §5.3.3 + §5.2):
 //   - one item open at a time; switching = old answer exits (opacity→0,
 //     150ms) THEN the new answer mounts and enters (opacity 0→1 +

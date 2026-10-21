@@ -1338,7 +1338,7 @@ export function registerPaymentRoutes(app: Express): void {
         };
       });
 
-      // T46 P0d (decision D1): 50/50 deterministic refund-narrative bucket.
+      // 转化 P0d (decision D1): 50/50 deterministic refund-narrative bucket.
       // Resolved in the same handler as the checkout first-screen payload and
       // emitted ONLY when the pre-reveal refund flag is ON — fail-closed:
       // flag off → field absent, client renders the legacy single line.

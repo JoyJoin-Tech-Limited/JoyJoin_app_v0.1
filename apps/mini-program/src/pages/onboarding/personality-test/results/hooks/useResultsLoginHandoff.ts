@@ -157,7 +157,7 @@ export function useResultsLoginHandoff({
         durationMs: Date.now() - handoffStartedAt,
         outcome: 'success',
       })
-      // T46 S7.4 (2026-10-20): guest-preview funnel completion. Gated by the
+      // 对标平台 S7.4 (2026-10-20): guest-preview funnel completion. Gated by the
       // pending flag set on guest preview card tap — a flag-off / supply<3
       // guest who logs in through the plain continue CTA never entered the
       // guest funnel and must emit nothing (an unconditional emit would mint

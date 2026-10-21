@@ -1,5 +1,5 @@
 /**
- * P1c 游客预告卡 (T46 contract AC-08) — buildGuestEventPreview unit tests.
+ * P1c 游客预告卡 (对标平台 contract AC-08) — buildGuestEventPreview unit tests.
  *
  * Covers the server-side triple gate and the zero-PII projection without a
  * live DB: flag OFF → [], qualified supply < 3 → [], full pools (spotsLeft = 0,
@@ -8,7 +8,7 @@
  * wrong-city exclusion, live seats math (detail-page口径), and fail-closed
  * degradation on DB errors.
  *
- * Contract: .git/.orchestration/sprints/sprint-contract.t46-full-implementation.md
+ * Contract: .git/.orchestration/sprints/sprint-contract.benchmark-full-implementation.md
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

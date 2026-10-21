@@ -1,24 +1,24 @@
 #!/usr/bin/env node
-// T46 S5.3 checkout merge-gate captures (2026-10-21 audit car) — P0d refund
+// 转化 S5.3 checkout merge-gate captures (2026-10-21 audit car) — P0d refund
 // narrative 50/50 + P1a duo entry, on pages/payments/event-ticket-payment.
 //
 // State matrix (each capture gates its own DOM assertion + a CTA first-screen
 // measurement BEFORE returning the PNG, so a broken state fails the capture
 // loudly instead of silently screenshotting the wrong variant):
 //
-//   checkout-t46-baseline-flag-off-375x667   flag OFF + duo row hidden
+//   checkout-conversion-baseline-flag-off-375x667   flag OFF + duo row hidden
 //       (duoRegistrationEnabled=false via auth/user override) — true pixel
 //       parity with 线上现状 through the REAL kill switch, not a duo-status
 //       state hack. The other four captures keep the duo flag at its default
 //       (true) and drive the row's visibility through the duo-status gate.
-//   checkout-t46-bucket0-single-line-375x667 flag ON, refundNarrativeBucket=0
+//   checkout-conversion-bucket0-single-line-375x667 flag ON, refundNarrativeBucket=0
 //       (control arm — legacy single fact line under the CTA), duo hidden.
-//   checkout-t46-bucket1-stack-375x667       flag ON, bucket=1 (two-line
+//   checkout-conversion-bucket1-stack-375x667       flag ON, bucket=1 (two-line
 //       caption stack 叙事上/事实下), duo hidden.
-//   checkout-t46-bucket1-duo-375x667         flag ON, bucket=1 + duo-status=none
+//   checkout-conversion-bucket1-duo-375x667         flag ON, bucket=1 + duo-status=none
 //       (DuoEntryLink visible in the trust cluster) — the merge-critical
 //       overlay state for short-phone CTA visibility.
-//   checkout-t46-bucket1-duo-320x568         same overlay state at 320x568
+//   checkout-conversion-bucket1-duo-320x568         same overlay state at 320x568
 //       (duo row 492rpx content single-line verification viewport).
 //
 // Mocks ride the shared scripts/mock-h5-server.mjs fixtures; per-capture
@@ -31,7 +31,7 @@ const POOL_ID = 'pool-screenshot-001'
 const VIEWPORT_375 = { viewport: { width: 375, height: 667 }, deviceScaleFactor: 2 }
 const VIEWPORT_320 = { viewport: { width: 320, height: 568 }, deviceScaleFactor: 2 }
 
-export function registerCheckoutT46Generators(ctx) {
+export function registerCheckoutConversionGenerators(ctx) {
   const {
     register,
     withBrowserPage,
@@ -99,7 +99,7 @@ export function registerCheckoutT46Generators(ctx) {
         features: { preRevealRefundEnabled: true, duoRegistrationEnabled: duoFlagOn },
       })
     } else if (!duoFlagOn) {
-      // Baseline (pre-T46 线上现状): refund flag stays off AND the duo entry
+      // Baseline (pre-对标平台 线上现状): refund flag stays off AND the duo entry
       // hides via its own kill switch — true pixel parity, no duo-status hack.
       await interceptAuthUserOverrides(page, {
         features: { duoRegistrationEnabled: false },
@@ -170,7 +170,7 @@ export function registerCheckoutT46Generators(ctx) {
         if (!measurement.ctaFirstScreenVisible) {
           throw new Error(name + ': CTA not first-screen visible — ' + JSON.stringify(measurement))
         }
-        console.log('[checkout-t46] ' + name, JSON.stringify(measurement))
+        console.log('[checkout-conversion] ' + name, JSON.stringify(measurement))
         await page.waitForTimeout(300)
         // Viewport shot: the merge gate is CTA first-screen visibility; the
         // scroll-flow rows (duo entry, refund link, abandon) are annotated from
@@ -181,31 +181,31 @@ export function registerCheckoutT46Generators(ctx) {
   }
 
   capture(
-    'checkout-t46-baseline-flag-off-375x667',
+    'checkout-conversion-baseline-flag-off-375x667',
     VIEWPORT_375,
     { flagOn: false, bucket: null, duoState: 'none', duoFlagOn: false },
     { expectRows: 0, expectDuo: false }
   )
   capture(
-    'checkout-t46-bucket0-single-line-375x667',
+    'checkout-conversion-bucket0-single-line-375x667',
     VIEWPORT_375,
     { flagOn: true, bucket: 0, duoState: 'waiting' },
     { expectRows: 1, expectDuo: false }
   )
   capture(
-    'checkout-t46-bucket1-stack-375x667',
+    'checkout-conversion-bucket1-stack-375x667',
     VIEWPORT_375,
     { flagOn: true, bucket: 1, duoState: 'waiting' },
     { expectRows: 2, expectDuo: false }
   )
   capture(
-    'checkout-t46-bucket1-duo-375x667',
+    'checkout-conversion-bucket1-duo-375x667',
     VIEWPORT_375,
     { flagOn: true, bucket: 1, duoState: 'none' },
     { expectRows: 2, expectDuo: true }
   )
   capture(
-    'checkout-t46-bucket1-duo-320x568',
+    'checkout-conversion-bucket1-duo-320x568',
     VIEWPORT_320,
     { flagOn: true, bucket: 1, duoState: 'none' },
     { expectRows: 2, expectDuo: true }

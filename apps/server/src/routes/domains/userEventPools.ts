@@ -392,7 +392,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
     }
   });
 
-  // P1c 游客预告卡 (T46 AC-08): guest-safe event preview. NO requireAuth —
+  // P1c 游客预告卡 (对标平台 AC-08): guest-safe event preview. NO requireAuth —
   // landing-page guests must reach it. Registered BEFORE /api/event-pools/:id
   // so the param route can never swallow this path. Fail-closed inside
   // lib/guestEventPreview.ts (flag OFF, qualified supply < 3, or the full-pool

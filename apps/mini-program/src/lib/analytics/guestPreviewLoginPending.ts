@@ -1,9 +1,9 @@
 /**
- * Guest-preview login-pending guard (T46 P1c / S7.4, 2026-10-20).
+ * Guest-preview login-pending guard (转化 P1c / S7.4, 2026-10-20).
  *
  * `guest_preview_login_success` must only fire when this login completes a
  * guest attempt that actually STARTED at the preview card. The funnel SQL
- * (`t46-conversion-funnel-metrics.sql` Q4b) counts DISTINCT guestAttemptIds
+ * (`benchmark-conversion-funnel-metrics.sql` Q4b) counts DISTINCT guestAttemptIds
  * for login_tap and login_success independently, so an unconditional emit on
  * every results-page login would mint a phantom id via
  * `consumeGuestAttemptId()` (get-or-create semantics) and inflate

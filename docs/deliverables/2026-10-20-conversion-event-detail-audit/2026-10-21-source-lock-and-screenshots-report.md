@@ -1,4 +1,4 @@
-# T46 合并前固化批 — Source-Lock 契约测试 + EventDetail 截图状态扩展
+# 转化 合并前固化批 — Source-Lock 契约测试 + EventDetail 截图状态扩展
 
 > 执行：taro-engineer 子任务 · 2026-10-21 · 合并门禁项（审计报告 CONCERN C2 + G9 截图阻断）
 > 纪律：未 commit · 未 push · 未触碰 `pages/icebreaker-session/**` · 未改任何组件业务/样式代码（孤字结论 = 无需修复，见 §4）
@@ -14,7 +14,7 @@
 | `apps/mini-program/src/pages/event-detail/__tests__/eventDetailPage.test.ts` | 追加 1 个 describe（4 test，surgical edit） |
 | `scripts/screenshot/generators-event-detail.mjs` | 扩展：6 个新截图状态 + `authOverrides` 参数（修复 Playwright last-registered-wins 会顶掉 features override 的路由顺序陷阱） |
 | `scripts/screenshot-open.mjs` | 扩展：6 个新 PAGES 条目（手动复跑入口） |
-| `docs/deliverables/2026-10-20-t46-event-detail-audit/screenshots/*.png` | 新增 6 张截图（见 §3） |
+| `docs/deliverables/2026-10-20-conversion-event-detail-audit/screenshots/*.png` | 新增 6 张截图（见 §3） |
 
 **组件 SCSS/TSX、页面代码：零改动。** 因此 `build:weapp && verify:subpackage-styles` 门禁按任务定义不适用（「若动了组件 SCSS」的前置不满足）。
 
@@ -58,7 +58,7 @@
 
 ## 3. 截图清单
 
-产出目录：`docs/deliverables/2026-10-20-t46-event-detail-audit/screenshots/`
+产出目录：`docs/deliverables/2026-10-20-conversion-event-detail-audit/screenshots/`
 
 | 文件 | 视口 | 状态 | 验证点 |
 |---|---|---|---|

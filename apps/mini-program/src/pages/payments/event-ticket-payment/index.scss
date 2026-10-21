@@ -351,7 +351,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     height: 248rpx;
   }
 
-  // T46 P0d (2026-10-21): the bucket-1 stack adds the narrative row — grow
+  // 转化 P0d (2026-10-21): the bucket-1 stack adds the narrative row — grow
   // the spacer by exactly the footer's real growth so the taller fixed
   // footer never occludes the abandon link. Pixel derivation (CSS-reserved,
   // 禁 JS 测量后补 — both bucket heights are deterministic before render):
@@ -1123,14 +1123,14 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 }
 
 // ── Duo Entry Link ──
-// T46 P1a (2026-10-21, AC-07): quiet text-link register, same family as
+// 转化 P1a (2026-10-21, AC-07): quiet text-link register, same family as
 // .ticket-refund-link above (text + › + pressed tint). Trust-cluster rhythm:
 // 16rpx below the trust row; the refund link's own 12rpx margin-top follows
 // unchanged. The 88rpx min-height is the P1a design spec's touch target — the
 // one deliberate deviation from the refund link's caption-tight row height.
 // The pressed tint rides inside a 16rpx radius so the hoverClass read stays a
 // whisper, never a band. Zero animation — the checkout choreography budget is
-// zero (T46 §5.3.2 register shared with P0d).
+// zero (对标平台 §5.3.2 register shared with P0d).
 .ticket-duo-link {
   display: flex;
   align-items: center;
@@ -1167,7 +1167,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 }
 
 // D3 refund-guarantee caption (flag preRevealRefundEnabled, 2026-10-11);
-// T46 P0d two-line caption stack (2026-10-21): quiet System-UI register
+// 转化 P0d two-line caption stack (2026-10-21): quiet System-UI register
 // directly under the payment CTA — same muted caption family as the trust
 // row's 「微信支付 · 安全加密」 line. Renders nothing at all when the flag
 // is off (null tree).

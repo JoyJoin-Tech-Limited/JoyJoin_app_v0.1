@@ -91,27 +91,27 @@ const PAGES = {
   'personality-results-detail': { url: 'http://localhost:9000/personality-results-detail.png', altPort: 9003 },
   'personality-results-detail-partners': { url: 'http://localhost:9000/personality-results-detail-partners.png', altPort: 9003 },
   'personality-results-signal-retest': { url: 'http://localhost:9000/personality-results-signal-retest.png', altPort: 9003 },
-  // T46 S5.3 checkout merge-gate captures (2026-10-21 audit car): P0d refund
+  // 转化 S5.3 checkout merge-gate captures (2026-10-21 audit car): P0d refund
   // narrative 50/50 (flag off baseline / bucket 0 / bucket 1 stack) + P1a duo
   // entry overlay, incl. the 320x568 short-phone viewport.
-  'checkout-t46-baseline-flag-off': {
-    url: 'http://localhost:9000/checkout-t46-baseline-flag-off-375x667.png',
+  'checkout-conversion-baseline-flag-off': {
+    url: 'http://localhost:9000/checkout-conversion-baseline-flag-off-375x667.png',
     altPort: 9003,
   },
-  'checkout-t46-bucket0-single-line': {
-    url: 'http://localhost:9000/checkout-t46-bucket0-single-line-375x667.png',
+  'checkout-conversion-bucket0-single-line': {
+    url: 'http://localhost:9000/checkout-conversion-bucket0-single-line-375x667.png',
     altPort: 9003,
   },
-  'checkout-t46-bucket1-stack': {
-    url: 'http://localhost:9000/checkout-t46-bucket1-stack-375x667.png',
+  'checkout-conversion-bucket1-stack': {
+    url: 'http://localhost:9000/checkout-conversion-bucket1-stack-375x667.png',
     altPort: 9003,
   },
-  'checkout-t46-bucket1-duo': {
-    url: 'http://localhost:9000/checkout-t46-bucket1-duo-375x667.png',
+  'checkout-conversion-bucket1-duo': {
+    url: 'http://localhost:9000/checkout-conversion-bucket1-duo-375x667.png',
     altPort: 9003,
   },
-  'checkout-t46-bucket1-duo-320': {
-    url: 'http://localhost:9000/checkout-t46-bucket1-duo-320x568.png',
+  'checkout-conversion-bucket1-duo-320': {
+    url: 'http://localhost:9000/checkout-conversion-bucket1-duo-320x568.png',
     altPort: 9003,
   },
 }

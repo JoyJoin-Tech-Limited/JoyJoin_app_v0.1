@@ -1,6 +1,6 @@
-# T46 终局策略 — 设计策略与框架确认
+# 转化 终局策略 — 设计策略与框架确认
 
-> 2026-10-20 · 资深 UIUX 设计专家确认稿。输入：`2026-10-20-t46-final-strategy.md`（冻结版行动清单）。
+> 2026-10-20 · 资深 UIUX 设计专家确认稿。输入：`2026-10-20-conversion-final-strategy.md`（冻结版行动清单）。
 > 纪律：不推翻产品策略；发现问题标 ⚠ 并给设计侧解法。所有规格落到真实文件/组件路径。
 
 ---
@@ -9,7 +9,7 @@
 
 **裁决：✅ 方向确认——「信任资产陈列」与 JoyJoin 设计语言同构，可全部用现有组件语汇落地，无需新设计语言。**
 
-理由：T46 的五件 UI 交付物本质都是「把已存在的事实（退款承诺、排桌流程、支付闭环、Duo 链路、真实场次）用页面内常驻、安静、事实性的语言摆出来」——这正是 JoyJoin 既有的「安静事实层」register（参照 `ticket-trust-row`「微信支付 · 安全加密」、`RefundGuaranteeLine`、`event-detail__support-card` 客服卡）。策略没有要求任何 blocking overlay、弹窗、倒计时、 urgency 色，与 PM 底线 #4（零新增 blocking overlay）和品牌「warm, minimal, breathable, no corporate/flashy」完全对齐。唯一需要设计侧看守的是：五件交付物全部落在「信任敏感面」（收银台/详情页/登录墙），文案 register 必须锁 System UI（暖中性、零语气词），不能让悦仔闺蜜腔渗进钱和承诺的语境。
+理由：对标平台 的五件 UI 交付物本质都是「把已存在的事实（退款承诺、排桌流程、支付闭环、Duo 链路、真实场次）用页面内常驻、安静、事实性的语言摆出来」——这正是 JoyJoin 既有的「安静事实层」register（参照 `ticket-trust-row`「微信支付 · 安全加密」、`RefundGuaranteeLine`、`event-detail__support-card` 客服卡）。策略没有要求任何 blocking overlay、弹窗、倒计时、 urgency 色，与 PM 底线 #4（零新增 blocking overlay）和品牌「warm, minimal, breathable, no corporate/flashy」完全对齐。唯一需要设计侧看守的是：五件交付物全部落在「信任敏感面」（收银台/详情页/登录墙），文案 register 必须锁 System UI（暖中性、零语气词），不能让悦仔闺蜜腔渗进钱和承诺的语境。
 
 **范围外确认：** Discover arrival coachmark 维持现状不扩容（策略冲突 #3 已裁决）——`components/guidance/GuidanceTipCard.tsx` + `lib/guidance/registry.ts` 体系不动，本清单不向其追加任何内容。
 

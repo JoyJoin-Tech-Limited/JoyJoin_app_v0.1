@@ -18,13 +18,13 @@ const CLIENT_SOURCE = resolve(
 const SERVER_SOURCE = resolve(__dirname, "../routes/domains/analytics.ts");
 
 /**
- * T46 conversion-funnel events (2026-10-20 gap audit §3). These six must exist
+ * 对标平台 conversion-funnel events (2026-10-20 gap audit §3). These six must exist
  * in BOTH the client union and the server DISCOVER_EVENT_TYPES allowlist. The
  * forward test below (client ⊆ server) catches "added to client only"; the
  * bidirectional test catches "added to server only" — so registering an event
  * on one side without the other fails the suite.
  */
-const T46_CONVERSION_EVENTS = [
+const 对标平台_CONVERSION_EVENTS = [
   "guest_preview_card_impression",
   "guest_preview_card_tap",
   "guest_preview_login_tap",
@@ -84,15 +84,15 @@ describe("discover analytics allowlist contract", () => {
     expect(missing).toEqual([]);
   });
 
-  it("locks the 6 T46 conversion-funnel events on both sides (bidirectional parity)", () => {
+  it("locks the 6 对标平台 conversion-funnel events on both sides (bidirectional parity)", () => {
     const clientSource = readFileSync(CLIENT_SOURCE, "utf-8");
     const serverSource = readFileSync(SERVER_SOURCE, "utf-8");
 
     const clientEventTypes = extractClientEventTypes(clientSource);
     const serverEventTypes = extractServerEventTypes(serverSource);
 
-    const missingFromServer = T46_CONVERSION_EVENTS.filter((e) => !serverEventTypes.has(e));
-    const missingFromClient = T46_CONVERSION_EVENTS.filter((e) => !clientEventTypes.has(e));
+    const missingFromServer = 对标平台_CONVERSION_EVENTS.filter((e) => !serverEventTypes.has(e));
+    const missingFromClient = 对标平台_CONVERSION_EVENTS.filter((e) => !clientEventTypes.has(e));
 
     expect(missingFromServer).toEqual([]);
     expect(missingFromClient).toEqual([]);

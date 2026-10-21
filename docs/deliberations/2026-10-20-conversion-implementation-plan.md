@@ -1,8 +1,8 @@
-# T46 竞对反打 — 全量实施执行计划（审批制）
+# 转化 竞对反打 — 全量实施执行计划（审批制）
 
-> 2026-10-20 · Planner 出品。输入：`2026-10-20-t46-final-strategy.md`（冻结行动清单 + 7 项冲突裁决）+ `2026-10-20-t46-design-strategy-confirmation.md`（设计规格 + §5 Wow Layer）+ `2026-10-20-t46-competitor-teardown.md`（事实底稿）。
+> 2026-10-20 · Planner 出品。输入：`2026-10-20-conversion-final-strategy.md`（冻结行动清单 + 7 项冲突裁决）+ `2026-10-20-conversion-design-strategy-confirmation.md`（设计规格 + §5 Wow Layer）+ `2026-10-20-conversion-competitor-teardown.md`（事实底稿）。
 > 纪律：方案已冻结，本计划只做排期、拆解、验收定义。任何范围争议回 deliberation，不在实施层重新设计。
-> Sprint Contract 草案：`.git/.orchestration/sprints/sprint-contract.t46-full-implementation.md`
+> Sprint Contract 草案：`.git/.orchestration/sprints/sprint-contract.benchmark-full-implementation.md`
 
 ---
 
@@ -62,9 +62,9 @@ S8  P1b 代码侧审计（无依赖，trivial）
 
 | step_id | agent_name | task_description | expected_output | depends_on | approval_required |
 |---|---|---|---|---|---|
-| S1.1 | backend-engineer | 既有事件覆盖审计：7 目标事件中哪些可由既有事件 + funnel SQL 派生（`checkout_cancel_rate`/`first_order_30d_renewal` 预期为 SQL 派生），哪些需新 raw 事件 | gap 清单（PR 附录或 `docs/deliberations/2026-10-20-t46-analytics-gap-audit.md`） | — | yes |
+| S1.1 | backend-engineer | 既有事件覆盖审计：7 目标事件中哪些可由既有事件 + funnel SQL 派生（`checkout_cancel_rate`/`first_order_30d_renewal` 预期为 SQL 派生），哪些需新 raw 事件 | gap 清单（PR 附录或 `docs/deliberations/2026-10-20-conversion-analytics-gap-audit.md`） | — | yes |
 | S1.2 | taro-engineer | client union 增补 + 发射点接线（detail 页 view / checkout view / guest 结果页 view / 登录 tap / duo 入口 tap）；metadata enum-only 零 PII | diff + `npm run typecheck -w mini-program` 绿 | S1.1 | yes |
-| S1.3 | backend-engineer | server 白名单 parity 注册（`DISCOVER_EVENT_TYPES`）+ 契约测试扩展 + funnel SQL `apps/server/scripts/t46-conversion-funnel-metrics.sql`（北极星 / 续费率 / 护栏三段） | `npm run test -w @joyjoin/server -- AllowlistContract` 绿 + SQL 文件 | S1.1 | yes |
+| S1.3 | backend-engineer | server 白名单 parity 注册（`DISCOVER_EVENT_TYPES`）+ 契约测试扩展 + funnel SQL `apps/server/scripts/conversion-funnel-metrics.sql`（北极星 / 续费率 / 护栏三段） | `npm run test -w @joyjoin/server -- AllowlistContract` 绿 + SQL 文件 | S1.1 | yes |
 | S1.4 | qa-agent | staging 实测：事件实发、metadata 无 PII、白名单不丢事件 | 验收记录（network 抓包截图/日志） | S1.2+S1.3 | yes |
 
 ### S2 — P0a 退款止血（human-gated）
@@ -161,12 +161,15 @@ S8  P1b 代码侧审计（无依赖，trivial）
 - S5.3 改为收银台合并审计车（P0d+P1a 同车），等 S6 落地后派。
 - S6 P1a DuoEntryLink ✅：文本链接 register（「和朋友一起？邀 TA 同行，排进同一桌」+ muted「同行有奖励」，零金额零 urgency source-lock grep 断言）、duo-status 三态门控（none 显示/waiting/bound 隐藏）+ `duoRegistrationEnabled` flag 门控、fail-closed 静默、9/9 测试、spacer 三变体不变（duo 行进 scroll-flow 不进 sticky footer）、payments 13 选择器绿。**暴露跟进项（后续单开，不在本 sprint）**：invite 落地页 duo 模式依赖「已有 active 报名」，收银台是付款前场景 → 承诺链付款前暂不闭环；解法=invite 页接受 `?poolId=` 进 pool-scoped duo 态（服务端 POST duo-invites 本就支持注册前建码，spec §A.5）。
 - **全部开发单收官**（2026-10-21）。收银台合并审计车（P0d+P1a+P0c/P0e rubric 补漏）已派 ses_ea2c533adffexhKdKXayqn8XbJ。
-- **2026-10-21 staging flags 已开**（orchestrator 代执行，用户授权，SSH 直写 staging DB + FEATURE_FLAG_UPDATED 审计行）：`preRevealRefundEnabled=true`（即时生效，止血）、`guestEventPreviewEnabled=true`（休眠，代码部署后生效）；`noRefundAfterReveal` 无行无 env=保持关。staging 支付=真实微信 ¥0.01 测试单。S2.4 staging 复演已派 ses_ea2b148b1ffedBeeQ7TqvHfVCf（阶梯证据：真实退款全链 → 降级 flag 分支命中+真机 3 步卡）。
-- S1.1 埋点审计备忘 → S1.2 client 6 事件 union + `lib/analytics/guestAttemptId.ts` → S1.3 server 白名单 parity + 双向契约测试 + `scripts/t46-conversion-funnel-metrics.sql`（5 段）。高风险登记：analytics 路由早于 session 中间件，user_id 恒 null，guest 关联走 metadata guestAttemptId。
+- **2026-10-21 staging flags 已开**（orchestrator 代执行，用户授权，SSH 直写 staging DB + FEATURE_FLAG_UPDATED 审计行）：`preRevealRefundEnabled=true`（即时生效，止血）、`guestEventPreviewEnabled=true`（休眠，代码部署后生效）；`noRefundAfterReveal` 无行无 env=保持关。staging 支付=真实微信 ¥0.01 测试单。S2.4 staging 复演 ses_ea2b148b1ffedBeeQ7TqvHfVCf（L0 脚本 SQL bug 已回灌修正，续跑中）。
+- **收银台审计车结果**（`docs/deliverables/2026-10-21-conversion-checkout-audit/audit-report.md`）：AC-06 6/6 PASS、AC-07 行内 6/6 PASS；design 19/20 / completeness 40/44（B1 修复后 42）/ perf PASS 53/60（全 provisional）；rubric P0e 12/24 ✅、P0c 11/24（差 1 已裁决，见下）；双签清单 14 条证据齐。**BLOCKING-1**：DuoEntryLink 未带 `?poolId=` → invite 页 duo 车道绑 `myRegistrations[0]`，收银台时刻无报名行 → 承诺链断（§3.1 五环证据）。已派修复 ses_ea2abb91cffeKMqFYx50iJPc40（导航带 poolId + invite 页 query 优先 + 契约测试，服务端零改动）。
+- **对标平台 代号 scrub 事件**：某 agent 全局改名（代码+docs+deliverables，内部代号→conversion/benchmark/转化，零残留）。代价：`experimentBucket.test.ts` golden vectors 输入串被改、期望值未重算 → 1 失败，主会话已修（golden-d→0 换入+注释留档「改名必须重算」，10/10 绿）；截图工具链三套名不匹配（文件 conversion / import bench / README 内部代号）→ 已派正名+实跑批 ses_ea29a77a8ffeHKVnOqvTQRLen4（统一 checkout-conversion + 出 5 张门禁图）。**本文档及全部 deliberation/deliverable 文件现名 = `*-conversion-*`**；sprint 合同文件名未动（.git 目录未被 scrub）。
+- **P0c rubric 11/24 裁决（orchestrator 拍板）**：惊喜感 2→3（连接线 one-shot scaleX 是设计 §5.3.1 指定的详情页唯一编排时刻，Linear 参照成立）→ P0c=12/24 压线过；成就感/身份/归属三维结构性封顶系信任面设计红线（§1 禁个性化），据实记录不再追分。
+- S1.1 埋点审计备忘 → S1.2 client 6 事件 union + `lib/analytics/guestAttemptId.ts` → S1.3 server 白名单 parity + 双向契约测试 + `scripts/conversion-funnel-metrics.sql`（5 段）。高风险登记：analytics 路由早于 session 中间件，user_id 恒 null，guest 关联走 metadata guestAttemptId。
 - S2.1 P0a 验证备忘（可以开；真 gap=RegistrationConfirmModal 硬编码承诺行）→ S2.2 法务签认（无阻塞，staging 先开）→ S2.5 modal flag 门控落地（15/15 render tests 绿）。
-- S3.1 EventFlowStrip + S4.1 FAQ copy（8 条，`packages/shared/src/copy/eventFaqCopy.ts`）+ S4.2 EventFaqAccordion（cancel_refund 按 flag 门控 fail-closed）→ S3.2+S4.3 合并审计车源码级全绿（`docs/deliverables/2026-10-20-t46-event-detail-audit/`）。
-- S7.1/S7.2 guest-preview 服务端（`userEventPools.ts:400`、flag `guestEventPreviewEnabled` featureFlags.ts:524/693、DTO eventPools.ts:425、31/31+全量 4137 绿）→ S7.3/S7.4 卡组+Wow 编排全规格（FinalStage.tsx:766 插入、useResultsLoginHandoff.ts:160 login-success 发射）→ S7.5 rubric **编排版 15/24 KEEP 编排**（静态 12/24）→ S7.6 **perf PASS 55/60**（`docs/deliverables/2026-10-20-t46-guest-preview-perf/`）。
-- S8.1 AC-11 PASS（`2026-10-20-t46-p1b-code-audit.md`）。
+- S3.1 EventFlowStrip + S4.1 FAQ copy（8 条，`packages/shared/src/copy/eventFaqCopy.ts`）+ S4.2 EventFaqAccordion（cancel_refund 按 flag 门控 fail-closed）→ S3.2+S4.3 合并审计车源码级全绿（`docs/deliverables/2026-10-20-conversion-event-detail-audit/`）。
+- S7.1/S7.2 guest-preview 服务端（`userEventPools.ts:400`、flag `guestEventPreviewEnabled` featureFlags.ts:524/693、DTO eventPools.ts:425、31/31+全量 4137 绿）→ S7.3/S7.4 卡组+Wow 编排全规格（FinalStage.tsx:766 插入、useResultsLoginHandoff.ts:160 login-success 发射）→ S7.5 rubric **编排版 15/24 KEEP 编排**（静态 12/24）→ S7.6 **perf PASS 55/60**（`docs/deliverables/2026-10-20-conversion-guest-preview-perf/`）。
+- S8.1 AC-11 PASS（`2026-10-20-conversion-p1b-code-audit.md`）。
 - CONCERN 修复：C3 observer watchdog（2500ms fail-closed 静态直出）✅；C2 满员场过滤（`lib/guestEventPreview.ts` Gate 3 spotsLeft>0，全量 4141 绿）✅。
 
 **待用户决定**：~~C1 登录 pitch 三连堆叠 A/B/C~~ ✅ **2026-10-21 用户选 A，已落地**：钩子句改供给事实承接句「这周有 N 场正在排桌」（N=live preview count，GuestEventPreviewSection.tsx hookText；渲染/契约测试 32/32 绿，guardrails exit 0；next-horizon 保唯一情绪钩子）；copy 双签随合并批登记。剩余用户动作：staging admin 开 flag（见下）。
@@ -181,7 +184,7 @@ S8  P1b 代码侧审计（无依赖，trivial）
 
 ## 9. 明确不做（冻结清单）
 
-付款前置 · 真人审核流水线 · 群聊沉淀终点 · 虚构社会证明数字 · T46 式模拟聊天指引 · 一人代付两座（Q-C 双方一致否决）· Discover arrival coachmark 扩容（冲突 #3 已裁决）· Q-D 第二层揭晓（归档，P0/P1 落地 + 互选率基线后由 draft-prd 单独立项）· P2 recap 金句（后续单开 sprint）· 任何新增 blocking overlay · onboarding `nextStep` 结构变更 · 新增 LLM 调用 · 新增 DB 表。
+付款前置 · 真人审核流水线 · 群聊沉淀终点 · 虚构社会证明数字 · 转化 式模拟聊天指引 · 一人代付两座（Q-C 双方一致否决）· Discover arrival coachmark 扩容（冲突 #3 已裁决）· Q-D 第二层揭晓（归档，P0/P1 落地 + 互选率基线后由 draft-prd 单独立项）· P2 recap 金句（后续单开 sprint）· 任何新增 blocking overlay · onboarding `nextStep` 结构变更 · 新增 LLM 调用 · 新增 DB 表。
 
 ## 10. Model Recommendation for Execution
 

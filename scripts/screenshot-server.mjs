@@ -7,7 +7,7 @@ import { registerDiscoverAreaGenerators } from './screenshot/generators-discover
 import { registerFlashTeaserGenerators } from './screenshot/generators-flash-teaser.mjs'
 import { registerEventFeedbackGenerators } from './screenshot/generators-event-feedback.mjs'
 import { registerEventDetailGenerators } from './screenshot/generators-event-detail.mjs'
-import { registerCheckoutT46Generators } from './screenshot/generators-checkout-t46.mjs'
+import { registerCheckoutConversionGenerators } from './screenshot/generators-checkout-conversion.mjs'
 
 const app = express()
 const PORT = process.env.SCREENSHOT_PORT || 9000
@@ -166,7 +166,7 @@ registerDiscoverAreaGenerators(generatorCtx)
 registerFlashTeaserGenerators(generatorCtx)
 registerEventFeedbackGenerators(generatorCtx)
 registerEventDetailGenerators(generatorCtx)
-registerCheckoutT46Generators(generatorCtx)
+registerCheckoutConversionGenerators(generatorCtx)
 
 // ─── Generators ──────────────────────────────────────────────────
 

@@ -6,7 +6,7 @@ import type { GuestEventPreviewItem } from '@shared/api'
 import type { GuestPreviewCardVariant } from '../../lib/analytics/discoverAnalytics'
 
 /**
- * GuestEventPreviewCard — T46 P1c (2026-10-20).
+ * GuestEventPreviewCard — 转化 P1c (2026-10-20).
  *
  * Read-only guest-facing event card extracted from OracleCard's L1 hero /
  * L3 decision-facts / L4 title shell. Deliberately NOT OracleCard itself:

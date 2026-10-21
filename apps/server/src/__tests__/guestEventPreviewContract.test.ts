@@ -1,5 +1,5 @@
 /**
- * P1c 游客预告卡 (T46 contract AC-08) — client-server contract tests.
+ * P1c 游客预告卡 (对标平台 contract AC-08) — client-server contract tests.
  *
  * Three contracts locked without booting the heavy userEventPools route file:
  *   1. Flag registration: guestEventPreviewEnabled in FLAG_ENV_MAP (env
@@ -13,7 +13,7 @@
  *      the schema is strict (extra PII keys fail parse), and no PII tokens
  *      appear in the projection.
  *
- * Contract: .git/.orchestration/sprints/sprint-contract.t46-full-implementation.md
+ * Contract: .git/.orchestration/sprints/sprint-contract.benchmark-full-implementation.md
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

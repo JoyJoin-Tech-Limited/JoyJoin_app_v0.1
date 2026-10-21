@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// 2026-10-21 T46 audit CONCERN C2 source-lock: EventFaqAccordion carries the
+// 2026-10-21 对标平台 audit CONCERN C2 source-lock: EventFaqAccordion carries the
 // promise-behavior order lock (cancel_refund renders ONLY when
 // preRevealRefundEnabled === true — the same fail-closed read as the checkout
 // RefundGuaranteeLine) and the frozen motion contract (no height animation,

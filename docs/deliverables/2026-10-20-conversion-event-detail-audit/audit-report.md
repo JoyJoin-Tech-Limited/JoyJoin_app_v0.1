@@ -1,4 +1,4 @@
-# T46 验收审计报告 — AC-04 (P0c EventFlowStrip) + AC-05 (P0e EventFaqAccordion)
+# 转化 验收审计报告 — AC-04 (P0c EventFlowStrip) + AC-05 (P0e EventFaqAccordion)
 
 > 审计方：QA Agent（DeepSeek V4 Pro）· 日期：2026-10-20
 > 范围：`apps/mini-program/src/pages/event-detail/`（主包，非子包）

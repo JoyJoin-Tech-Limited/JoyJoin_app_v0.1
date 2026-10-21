@@ -30,7 +30,7 @@ describe('RefundGuaranteeLine (D3, flag preRevealRefundEnabled)', () => {
   })
 })
 
-describe('RefundGuaranteeLine (T46 P0d two-line caption stack, AC-06)', () => {
+describe('RefundGuaranteeLine (转化 P0d two-line caption stack, AC-06)', () => {
   it('flag on + bucket 1 (narrative) renders the two-line stack, narrative row FIRST, fact row below', () => {
     const { container } = render(<RefundGuaranteeLine visible narrative />)
 

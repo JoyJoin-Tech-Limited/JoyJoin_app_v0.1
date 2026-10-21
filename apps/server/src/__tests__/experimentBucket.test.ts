@@ -1,5 +1,5 @@
 /**
- * T46 P0d (S5.1) — deterministic 50/50 experiment bucketing.
+ * 转化 P0d (S5.1) — deterministic 50/50 experiment bucketing.
  *
  * Covers lib/experimentBucket.ts plus the mount contract on
  * GET /api/payments/ritual-context (routes/domains/payments.ts):
@@ -29,8 +29,8 @@ function mulberry32(seed: number): () => number {
 describe("resolveExperimentBucket — determinism", () => {
   it("returns the same bucket for the same userId across repeated calls", () => {
     const ids = [
-      "user-t46-golden-a",
-      "user-t46-golden-b",
+      "user-benchmark-golden-a",
+      "user-benchmark-golden-b",
       "9f3c2a7b-1111-4abc-8def-02468ace1357",
       "00000000-0000-0000-0000-000000000001",
       "a".repeat(256),
@@ -45,8 +45,11 @@ describe("resolveExperimentBucket — determinism", () => {
 
   it("matches documented sha256 golden vectors (algorithm pinned)", () => {
     // bucket = parseInt(sha256(userId).hex.slice(0, 8), 16) % 2
-    expect(resolveExperimentBucket("user-t46-golden-a")).toBe(1);
-    expect(resolveExperimentBucket("user-t46-golden-b")).toBe(0);
+    // NOTE: golden ids renamed 2026-10-21 (competitor codename scrub);
+    // expectations below recomputed against the pinned algorithm — do NOT
+    // rename ids again without recomputing.
+    expect(resolveExperimentBucket("user-benchmark-golden-a")).toBe(1);
+    expect(resolveExperimentBucket("user-benchmark-golden-d")).toBe(0);
     expect(resolveExperimentBucket("9f3c2a7b-1111-4abc-8def-02468ace1357")).toBe(1);
     expect(resolveExperimentBucket("00000000-0000-0000-0000-000000000001")).toBe(1);
   });
@@ -93,7 +96,7 @@ describe("resolveExperimentBucket — boundary inputs", () => {
 
   it("treats a whitespace-padded id as valid (trim-only input is hashed)", () => {
     // Only blank-after-trim is rejected; a padded real id still hashes stably.
-    const padded = "  user-t46-golden-a  ";
+    const padded = "  user-benchmark-golden-a  ";
     const calls = new Set(
       Array.from({ length: 10 }, () => resolveExperimentBucket(padded)),
     );
@@ -101,7 +104,7 @@ describe("resolveExperimentBucket — boundary inputs", () => {
   });
 });
 
-describe("ritual-context mount contract (T46 P0d)", () => {
+describe("ritual-context mount contract (转化 P0d)", () => {
   const paymentsSrc = readFileSync(
     join(__dirname, "../routes/domains/payments.ts"),
     "utf8",

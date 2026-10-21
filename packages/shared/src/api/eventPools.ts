@@ -417,7 +417,7 @@ export function getPoolPersonaSnapshot(
 }
 
 /**
- * P1c 游客预告卡 (T46 AC-08): guest-safe event preview DTO served by
+ * P1c 游客预告卡 (对标平台 AC-08): guest-safe event preview DTO served by
  * GET /api/event-pools/guest-preview (no auth). Minimal field set, zero PII —
  * `.strict()` turns the schema into a client-server contract guard: any extra
  * key (e.g. a future regression leaking user fields) fails parse loudly.

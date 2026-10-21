@@ -203,7 +203,7 @@ export default function EventTicketPaymentPage() {
   // absent/undefined reads as false (see resolvePaymentCheckoutFlags).
   const { checkoutSubscriptionUpsellEnabled, preRevealRefundEnabled } = resolvePaymentCheckoutFlags(user)
 
-  // T46 P1a (AC-07): duo entry gate. Same fail-open default as the invite
+  // 转化 P1a (AC-07): duo entry gate. Same fail-open default as the invite
   // page (server flag default true); when the flag is off the entry stays
   // hidden so the row's same-table promise can never point at a disabled
   // duo lane.
@@ -225,7 +225,7 @@ export default function EventTicketPaymentPage() {
     })
   const subscriptionActive = isSubscriptionActive(subscriptionStatus)
 
-  // T46 P0d (AC-06): 50/50 refund-narrative bucket from the same
+  // 转化 P0d (AC-06): 50/50 refund-narrative bucket from the same
   // ritual-context response. Read fresh every render (never memoized across
   // responses — 桶不缓存，每次以响应为准): bucket 1 renders the two-line
   // caption stack, bucket 0 / absent / anomaly renders the legacy single
@@ -399,7 +399,7 @@ export default function EventTicketPaymentPage() {
     })
   }, [isPageReady, poolId, poolLoading, pool])
 
-  // T46 P0d guardrail (AC-06): refund-guarantee line exposure for the
+  // 转化 P0d guardrail (AC-06): refund-guarantee line exposure for the
   // `checkout_cancel_rate` 灰度护栏 — fired once per page visit (ref-dedup,
   // feedbackEntryTrackedRef pattern), ONLY when the line actually renders
   // (flag on). Deliberately NOT riding `event_ticket_payment_view`: that view
@@ -1406,7 +1406,7 @@ export default function EventTicketPaymentPage() {
             <Text className='ticket-trust-row__text'>微信支付 · 安全加密</Text>
           </View>
         </View>
-        {/* T46 P1a (AC-07): duo entry — trust-cluster text link between the
+        {/* 转化 P1a (AC-07): duo entry — trust-cluster text link between the
             trust row and the refund policy link. Fail-closed: renders
             nothing while the duo-status read is in flight, on error, or
             when a duo lane already exists for this pool. Scroll-flow row —
@@ -1435,7 +1435,7 @@ export default function EventTicketPaymentPage() {
 
         {/* Spacer for sticky CTA — grows when the D3 refund-guarantee caption
             adds a line to the fixed footer (flag preRevealRefundEnabled); grows
-            again, pixel-exact, when the T46 P0d two-line stack (bucket 1) adds
+            again, pixel-exact, when the 转化 P0d two-line stack (bucket 1) adds
             the narrative row (CSS-reserved — 禁 JS 测量后补). */}
         <View
           className={`ticket-bottom-spacer ${
@@ -1482,7 +1482,7 @@ export default function EventTicketPaymentPage() {
 
         {/* D3 refund-guarantee caption (flag preRevealRefundEnabled): one
             quiet System-UI line directly under the CTA; renders nothing when
-            the flag is off. T46 P0d: bucket 1 upgrades it to the two-line
+            the flag is off. 转化 P0d: bucket 1 upgrades it to the two-line
             caption stack (叙事行在上、事实行在下且永不删). The 退款政策 link
             above stays untouched. Zero animation — 收银台编排预算为零. */}
         <RefundGuaranteeLine visible={preRevealRefundEnabled} narrative={showRefundNarrativeStack} />

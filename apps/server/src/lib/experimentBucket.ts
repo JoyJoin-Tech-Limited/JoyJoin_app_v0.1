@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 /**
- * T46 P0d (2026-10-21) — deterministic 50/50 experiment bucketing.
+ * 转化 P0d (2026-10-21) — deterministic 50/50 experiment bucketing.
  *
  * Used by the checkout refund-narrative 50/50灰度 (decision D1): the bucket
  * rides the event-ticket checkout first-screen payload

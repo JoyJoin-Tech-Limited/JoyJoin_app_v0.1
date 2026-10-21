@@ -9,7 +9,7 @@ import {
 } from '../../../lib/analytics/guestPreviewLoginPending'
 
 /**
- * GuestEventPreviewSection render contract (T46 P1c, contract AC-09).
+ * GuestEventPreviewSection render contract (转化 P1c, contract AC-09).
  * Pattern: guidanceQueueContract.test.ts + WelcomeGiftCard.render.test.tsx.
  * Covers: guest+supply → render (min(3, supply)); authenticated → null;
  * auth-loading → null; empty supply → null; fetch error → null (fail-closed);

@@ -32,7 +32,7 @@ export interface RitualContextPayload {
   plans?: PricingPlan[]
   subscriptionPlans?: Array<Record<string, unknown>>
   /**
-   * T46 P0d (S5.1, 2026-10-21): 50/50 deterministic refund-narrative bucket
+   * 转化 P0d (S5.1, 2026-10-21): 50/50 deterministic refund-narrative bucket
    * riding the checkout first-screen payload. Emitted ONLY when the
    * `preRevealRefundEnabled` flag is ON — the field is entirely absent when
    * the flag is off (server-side fail-closed). `0` = control (legacy single

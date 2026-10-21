@@ -14,7 +14,7 @@ import GuestEventPreviewCard, {
 } from './GuestEventPreviewCard'
 
 /**
- * GuestEventPreviewSection — T46 P1c (2026-10-20).
+ * GuestEventPreviewSection — 转化 P1c (2026-10-20).
  *
  * Owns data fetch, wow orchestration, and guest-funnel analytics for the
  * 2–3 read-only guest event cards on the personality-results page.

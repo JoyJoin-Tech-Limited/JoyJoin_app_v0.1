@@ -1,0 +1,372 @@
+
+================ L1.1 feature_flags 精确行（确认 preRevealRefundEnabled=true / noRefundAfterReveal 无行） ================
+-[ RECORD 1 ]-----------------------------
+key        | preRevealRefundEnabled
+value      | true
+updated_by | opencode-orchestrator
+updated_at | 2026-10-21 07:12:34.901833+00
+-[ RECORD 2 ]-----------------------------
+key        | guestEventPreviewEnabled
+value      | true
+updated_by | opencode-orchestrator
+updated_at | 2026-10-21 07:12:34.901833+00
+
+
+================ L1.2 payments 状态词表 + 近 15 行（wechat_order_id 形态与 status 取值） ================
+-[ RECORD 1 ]+----------
+status       | completed
+payment_type | event
+count        | 7
+-[ RECORD 2 ]+----------
+status       | pending
+payment_type | event
+count        | 3
+
+-[ RECORD 1 ]-+-------------------------------------
+id            | 285459fd-ba7d-46c4-9c92-85654e3d1056
+user_id       | 1939c595-5fbf-4176-ae8b-848035cd2733
+payment_type  | event
+related_id    | c11f5cd4-5a58-47a4-9423-58ccff4c2127
+status        | completed
+final_amount  | 1
+order_id_head | JJ1785671167204f7a4ewmpf
+created_at    | 2026-08-02 11:46:07.20449
+-[ RECORD 2 ]-+-------------------------------------
+id            | b6a68373-c33c-4fb8-ba80-db2c2524348d
+user_id       | 085a8395-4b5c-4a93-a675-d332497aa7ab
+payment_type  | event
+related_id    | f170ee0e-358d-42e2-9deb-54662e4e6551
+status        | pending
+final_amount  | 1
+order_id_head | JJ1783276015997mc3lpdigt
+created_at    | 2026-07-05 18:26:55.99807
+-[ RECORD 3 ]-+-------------------------------------
+id            | aaf82174-5af5-417f-8d33-4425d7c5035b
+user_id       | 085a8395-4b5c-4a93-a675-d332497aa7ab
+payment_type  | event
+related_id    | f170ee0e-358d-42e2-9deb-54662e4e6551
+status        | pending
+final_amount  | 1
+order_id_head | JJ1783276007340x7jxupgbu
+created_at    | 2026-07-05 18:26:47.341067
+-[ RECORD 4 ]-+-------------------------------------
+id            | 86b23be0-8886-4f88-adfc-bceb386d5497
+user_id       | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+payment_type  | event
+related_id    | f170ee0e-358d-42e2-9deb-54662e4e6551
+status        | completed
+final_amount  | 1
+order_id_head | JJ17830778938808yuj0awny
+created_at    | 2026-07-03 11:24:53.88067
+-[ RECORD 5 ]-+-------------------------------------
+id            | 62afbd84-4720-42e0-b878-d66c3a50bf4a
+user_id       | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+payment_type  | event
+related_id    | 63ba5cb4-9126-4f83-8438-a375d113f610
+status        | completed
+final_amount  | 1
+order_id_head | JJ1782917816559jwvgyjd2x
+created_at    | 2026-07-01 14:56:56.559344
+-[ RECORD 6 ]-+-------------------------------------
+id            | 0af2be6d-8ba6-4b03-95fc-a4e75d43249a
+user_id       | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+payment_type  | event
+related_id    | 63ba5cb4-9126-4f83-8438-a375d113f610
+status        | completed
+final_amount  | 1
+order_id_head | JJ1782917721825qadga7sur
+created_at    | 2026-07-01 14:55:21.826099
+-[ RECORD 7 ]-+-------------------------------------
+id            | 4ed9e4d7-21a7-4ec6-b46e-1f98aec18fe7
+user_id       | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+payment_type  | event
+related_id    | 5757e677-0442-42a1-921e-9b8afa3f5176
+status        | pending
+final_amount  | 1
+order_id_head | JJ1782916159723tipkmu7ab
+created_at    | 2026-07-01 14:29:19.72395
+-[ RECORD 8 ]-+-------------------------------------
+id            | 65388648-0157-4966-b255-29f969d9d5f1
+user_id       | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+payment_type  | event
+related_id    | 63ba5cb4-9126-4f83-8438-a375d113f610
+status        | completed
+final_amount  | 1
+order_id_head | JJ1782898349674gtojpvgee
+created_at    | 2026-07-01 09:32:29.675088
+-[ RECORD 9 ]-+-------------------------------------
+id            | f420bd9d-9919-427a-aeb9-25ec221e520e
+user_id       | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+payment_type  | event
+related_id    | a4932077-574e-497a-94c5-1b1ef98d0200
+status        | completed
+final_amount  | 1
+order_id_head | JJ1782897867296ule7k86g0
+created_at    | 2026-07-01 09:24:27.29714
+-[ RECORD 10 ]+-------------------------------------
+id            | 11492209-3165-44af-8bcd-55b39ea0be0b
+user_id       | d0874f17-6089-458c-9a71-1fecc7fcccab
+payment_type  | event
+related_id    | 63ba5cb4-9126-4f83-8438-a375d113f610
+status        | completed
+final_amount  | 1
+order_id_head | JJ1782844136282fdts85xnx
+created_at    | 2026-06-30 18:28:56.282906
+
+
+================ L1.3 历史真实 ¥0.01 已支付单 + 关联报名状态（Level A 夹具探测；排除 MOCK_ 前缀） ================
+-[ RECORD 1 ]---+-------------------------------------
+payment_id      | 285459fd-ba7d-46c4-9c92-85654e3d1056
+user_id         | 1939c595-5fbf-4176-ae8b-848035cd2733
+pool_id         | c11f5cd4-5a58-47a4-9423-58ccff4c2127
+order_id_head   | JJ1785671167204f7a4ewmpf
+status          | completed
+final_amount    | 1
+created_at      | 2026-08-02 11:46:07.20449
+registration_id | 
+match_status    | 
+is_test_pool    | 
+title           | 
+pool_date       | 
+-[ RECORD 2 ]---+-------------------------------------
+payment_id      | 86b23be0-8886-4f88-adfc-bceb386d5497
+user_id         | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+pool_id         | f170ee0e-358d-42e2-9deb-54662e4e6551
+order_id_head   | JJ17830778938808yuj0awny
+status          | completed
+final_amount    | 1
+created_at      | 2026-07-03 11:24:53.88067
+registration_id | 
+match_status    | 
+is_test_pool    | 
+title           | 
+pool_date       | 
+-[ RECORD 3 ]---+-------------------------------------
+payment_id      | 62afbd84-4720-42e0-b878-d66c3a50bf4a
+user_id         | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+pool_id         | 63ba5cb4-9126-4f83-8438-a375d113f610
+order_id_head   | JJ1782917816559jwvgyjd2x
+status          | completed
+final_amount    | 1
+created_at      | 2026-07-01 14:56:56.559344
+registration_id | 
+match_status    | 
+is_test_pool    | 
+title           | 
+pool_date       | 
+-[ RECORD 4 ]---+-------------------------------------
+payment_id      | 0af2be6d-8ba6-4b03-95fc-a4e75d43249a
+user_id         | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+pool_id         | 63ba5cb4-9126-4f83-8438-a375d113f610
+order_id_head   | JJ1782917721825qadga7sur
+status          | completed
+final_amount    | 1
+created_at      | 2026-07-01 14:55:21.826099
+registration_id | 
+match_status    | 
+is_test_pool    | 
+title           | 
+pool_date       | 
+-[ RECORD 5 ]---+-------------------------------------
+payment_id      | 65388648-0157-4966-b255-29f969d9d5f1
+user_id         | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+pool_id         | 63ba5cb4-9126-4f83-8438-a375d113f610
+order_id_head   | JJ1782898349674gtojpvgee
+status          | completed
+final_amount    | 1
+created_at      | 2026-07-01 09:32:29.675088
+registration_id | 
+match_status    | 
+is_test_pool    | 
+title           | 
+pool_date       | 
+-[ RECORD 6 ]---+-------------------------------------
+payment_id      | f420bd9d-9919-427a-aeb9-25ec221e520e
+user_id         | 0565e206-5934-4d2f-a45a-8f8c81a6c919
+pool_id         | a4932077-574e-497a-94c5-1b1ef98d0200
+order_id_head   | JJ1782897867296ule7k86g0
+status          | completed
+final_amount    | 1
+created_at      | 2026-07-01 09:24:27.29714
+registration_id | 
+match_status    | 
+is_test_pool    | 
+title           | 
+pool_date       | 
+-[ RECORD 7 ]---+-------------------------------------
+payment_id      | 11492209-3165-44af-8bcd-55b39ea0be0b
+user_id         | d0874f17-6089-458c-9a71-1fecc7fcccab
+pool_id         | 63ba5cb4-9126-4f83-8438-a375d113f610
+order_id_head   | JJ1782844136282fdts85xnx
+status          | completed
+final_amount    | 1
+created_at      | 2026-06-30 18:28:56.282906
+registration_id | 
+match_status    | 
+is_test_pool    | 
+title           | 
+pool_date       | 
+
+
+================ L1.4 历史已退款单（微信退款链曾真实跑通的旁证） ================
+ERROR:  column "updated_at" does not exist
+LINE 2:        left(wechat_order_id,28) AS order_id_head, updated_at
+                                                          ^
+HINT:  Perhaps you meant to reference the column "payments.created_at".
+
+================ L1.5 未来 6h+ 可报名的池（cancel 复演要求 is_test_pool=false） ================
+(0 rows)
+
+
+================ L1.6 表结构核对（列名清单；\d 输出过滤列定义行） ================
+ id                         | character varying           |           | not null | gen_random_uuid()
+ user_id                    | character varying           |           |          | 
+ payment_type               | character varying           |           | not null | 
+ related_id                 | character varying           |           |          | 
+ original_amount            | integer                     |           | not null | 
+ discount_amount            | integer                     |           |          | 0
+ final_amount               | integer                     |           | not null | 
+ coupon_id                  | character varying           |           |          | 
+ event_registration_payload | jsonb                       |           |          | 
+ wechat_transaction_id      | character varying           |           |          | 
+ wechat_order_id            | character varying           |           |          | 
+ wechat_prepay_id           | character varying           |           |          | 
+ status                     | character varying           |           | not null | 'pending'::character varying
+ paid_at                    | timestamp without time zone |           |          | 
+ created_at                 | timestamp without time zone |           |          | now()
+ id               | character varying           |           | not null | gen_random_uuid()
+ payment_id       | character varying           |           | not null | 
+ status           | character varying           |           | not null | 'pending'::character varying
+ reason           | text                        |           |          | 
+ wechat_refund_id | character varying           |           |          | 
+ amount           | integer                     |           | not null | 
+ initiated_by     | character varying           |           |          | 
+ initiated_at     | timestamp without time zone |           |          | now()
+ resolved_at      | timestamp without time zone |           |          | 
+ failure_reason   | text                        |           |          | 
+ id                            | character varying           |           | not null | gen_random_uuid()
+ pool_id                       | character varying           |           | not null | 
+ user_id                       | character varying           |           | not null | 
+ budget_range                  | text[]                      |           |          | 
+ preferred_languages           | text[]                      |           |          | 
+ event_intent                  | text[]                      |           |          | 
+ cuisine_preferences           | text[]                      |           |          | 
+ dietary_restrictions          | text[]                      |           |          | 
+ taste_intensity               | text[]                      |           |          | 
+ decor_style_preferences       | text[]                      |           |          | 
+ bar_themes                    | text[]                      |           |          | 
+ alcohol_comfort               | text[]                      |           |          | 
+ bar_budget_range              | text[]                      |           |          | 
+ preference_strictness         | integer                     |           |          | 50
+ preferred_districts           | text[]                      |           |          | 
+ gender_composition_preference | character varying(20)       |           |          | 
+ accept_pairs                  | boolean                     |           |          | 
+ kol_comfort_level             | character varying(20)       |           |          | 
+ match_status                  | character varying           |           |          | 'pending'::character varying
+ assigned_group_id             | character varying           |           |          | 
+ match_score                   | integer                     |           |          | 
+ registered_at                 | timestamp without time zone |           |          | now()
+ updated_at                    | timestamp without time zone |           |          | now()
+ id                                 | character varying           |           | not null | gen_random_uuid()
+ title                              | character varying           |           | not null | 
+ description                        | text                        |           |          | 
+ event_type                         | character varying           |           | not null | 
+ city                               | character varying           |           | not null | 
+ district                           | character varying           |           |          | 
+ date_time                          | timestamp without time zone |           | not null | 
+ registration_deadline              | timestamp without time zone |           | not null | 
+ gender_restriction                 | character varying           |           |          | 
+ industry_restrictions              | text[]                      |           |          | 
+ seniority_restrictions             | text[]                      |           |          | 
+ education_level_restrictions       | text[]                      |           |          | 
+ age_range_min                      | integer                     |           |          | 
+ age_range_max                      | integer                     |           |          | 
+ budget_restrictions                | text[]                      |           |          | 
+ bar_budget_restrictions            | text[]                      |           |          | 
+ gender_balance_mode                | character varying           |           |          | 'soft'::character varying
+ gender_balance_bonus_points        | integer                     |           |          | 15
+ min_female_count                   | integer                     |           |          | 0
+ min_male_count                     | integer                     |           |          | 0
+ min_group_size                     | integer                     |           |          | 4
+ max_group_size                     | integer                     |           |          | 6
+ target_groups                      | integer                     |           |          | 1
+ status                             | character varying           |           |          | 'active'::character varying
+ total_registrations                | integer                     |           |          | 0
+ successful_matches                 | integer                     |           |          | 0
+ predictive_rerank_enabled_override | boolean                     |           |          | 
+ price                              | integer                     |           |          | 
+ created_by                         | character varying           |           | not null | 
+ created_at                         | timestamp without time zone |           |          | now()
+ updated_at                         | timestamp without time zone |           |          | now()
+ matched_at                         | timestamp without time zone |           |          | 
+ preference_lock_at                 | timestamp without time zone |           |          | 
+ is_test_pool                       | boolean                     |           |          | false
+ operator_review_status             | character varying           |           |          | 'none'::character varying
+ operator_review_reason             | text                        |           |          | 
+ operator_reviewed_by               | character varying           |           |          | 
+ operator_reviewed_at               | timestamp without time zone |           |          | 
+
+================ L1.7 近期 staging 用户（Level A 用历史夹具时取对应 user_id 铸 session） ================
+-[ RECORD 1 ]+-------------------------------------
+id           | b17d45a3-337f-4d71-a185-fae0d69898d4
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-10-14 04:27:55.562065
+-[ RECORD 2 ]+-------------------------------------
+id           | 6d2afb60-241d-4293-af5e-f04d2982c43c
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-09-05 13:38:23.95655
+-[ RECORD 3 ]+-------------------------------------
+id           | a0ca8f62-269b-43ab-b9c3-901694b27b37
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-09-05 13:38:07.88173
+-[ RECORD 4 ]+-------------------------------------
+id           | 2eb329b3-2b39-4526-a844-f117f753b372
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-08-31 13:05:08.741597
+-[ RECORD 5 ]+-------------------------------------
+id           | 3e5d02e1-ddd4-4f8c-8368-c94ca62f8a07
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-08-31 13:05:08.552888
+-[ RECORD 6 ]+-------------------------------------
+id           | 4bb86664-d8de-4138-ac26-f32ad7116385
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-08-31 12:48:22.60892
+-[ RECORD 7 ]+-------------------------------------
+id           | 0e691e81-8a2c-405d-88d7-fad0ca6c0b15
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-08-31 12:48:21.370069
+-[ RECORD 8 ]+-------------------------------------
+id           | 67f7f4a4-9fc1-4bbb-bbb0-679963c0e13e
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-08-31 12:48:20.843669
+-[ RECORD 9 ]+-------------------------------------
+id           | 05fb6484-1f3d-40ea-88e4-2a2242ba23ea
+phone_number | 
+first_name   | 
+last_name    | 
+created_at   | 2026-08-13 05:23:03.438047
+-[ RECORD 10 ]-------------------------------------
+id           | edaf7bd3-de81-4503-99e7-546015e5ec0f
+phone_number | +8613999990011
+first_name   | 
+last_name    | 
+created_at   | 2026-08-06 07:02:33.167106
+
+
+完成。请将完整输出贴回 QA 子会话（已写入 l1-recon-output-20261021-154156.txt）。

@@ -78,6 +78,15 @@ export default function InvitePage() {
   })
   const activeSharePoolId = myRegistrations?.[0]?.poolId
 
+  // Duo lane pool scoping (对标平台 B1, checkout duo entry): an explicit ?poolId=
+  // wins over the first active registration — at checkout time the inviter
+  // often holds no registration row for this pool yet. The duo invite
+  // endpoint only requires an open pool (spec §A.5), not an inviter-side
+  // registration. When the query is absent, behavior is unchanged.
+  const queryPoolId =
+    (Taro.getCurrentInstance().router?.params?.poolId as string | undefined) || undefined
+  const duoSharePoolId = queryPoolId || activeSharePoolId
+
   usePageTTI({ pageName: 'invite', ready: !authLoading && !isLoading })
 
   useDidShow(() => {
@@ -121,9 +130,9 @@ export default function InvitePage() {
   // safe here. Falls back to the referral code path on any failure.
   const duoEnabled = (user?.features as { duoRegistrationEnabled?: boolean } | undefined)?.duoRegistrationEnabled ?? true
   const duoShareQuery = useQuery({
-    queryKey: ['mini-program', 'duo-invite-share', activeSharePoolId],
-    queryFn: () => createDuoInvite(apiRequest, activeSharePoolId!),
-    enabled: !authLoading && duoEnabled && Boolean(activeSharePoolId),
+    queryKey: ['mini-program', 'duo-invite-share', duoSharePoolId],
+    queryFn: () => createDuoInvite(apiRequest, duoSharePoolId!),
+    enabled: !authLoading && duoEnabled && Boolean(duoSharePoolId),
     staleTime: Infinity,
     retry: 1,
   })

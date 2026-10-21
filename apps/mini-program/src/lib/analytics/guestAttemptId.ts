@@ -1,11 +1,11 @@
 import Taro from '@tarojs/taro'
 
 /**
- * Guest-attempt correlation ID (T46 conversion funnel, 2026-10-20).
+ * Guest-attempt correlation ID (对标平台 conversion funnel, 2026-10-20).
  *
  * The `discover` analytics channel never resolves `user_id`/`session_id`
  * (route registration order runs the handler before express-session — see
- * `docs/deliberations/2026-10-20-t46-analytics-gap-audit.md` §5.2). A guest's
+ * `docs/deliberations/2026-10-20-benchmark-analytics-gap-audit.md` §5.2). A guest's
  * `login_tap` → `login_success` pair therefore cannot be bridged by userId and
  * must be correlated by a client-generated ID carried in metadata, the same
  * way the icebreaker funnel uses `socialSessionId`.

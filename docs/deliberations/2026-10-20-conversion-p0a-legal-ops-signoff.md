@@ -1,10 +1,10 @@
-# P0a 开旗前法务 + 运营复核签认（T46 竞对反打）
+# P0a 开旗前法务 + 运营复核签认（对标平台 竞对反打）
 
 - **日期**：2026-10-20
-- **Sprint**：`sprint_20261020_t46_full_implementation`（合同 `.git/.orchestration/sprints/sprint-contract.t46-full-implementation.md`）
+- **Sprint**：`sprint_20261020_benchmark_full_implementation`（合同 `.git/.orchestration/sprints/sprint-contract.benchmark-full-implementation.md`）
 - **验收锚点**：AC-03（P0a 法务/运营复核签认）——AC-03 门禁要求「flag ON 由人类经 `/admin/feature-flags` 执行且 admin audit log 证据入档；staging 复演 matched 前取消真实退款证据」。
 - **性质**：法务/运营复核 + 签认产出。**未改任何业务文件，未 commit / push。**
-- **上游输入**：`docs/deliberations/2026-10-20-t46-p0a-verification-memo.md`（S2.1 已产出：flag-off fail-closed、smoke 全绿、裁决「可以开」）。
+- **上游输入**：`docs/deliberations/2026-10-20-conversion-p0a-verification-memo.md`（S2.1 已产出：flag-off fail-closed、smoke 全绿、裁决「可以开」）。
 
 ---
 

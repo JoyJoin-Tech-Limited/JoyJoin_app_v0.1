@@ -6,7 +6,7 @@ import { getFeatureFlag } from "./featureFlags";
 import { logger } from "./logger";
 
 /**
- * P1c 游客预告卡 (T46 contract AC-08) — guest-safe event preview.
+ * P1c 游客预告卡 (对标平台 contract AC-08) — guest-safe event preview.
  *
  * Served by GET /api/event-pools/guest-preview (no auth). The route stays a
  * thin shell; every gate lives here so the endpoint can never surface an

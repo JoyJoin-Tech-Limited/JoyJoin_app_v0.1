@@ -58,7 +58,7 @@ export type DiscoverAnalyticsEventType =
   | 'event_ticket_payment_success_cta_tap'
   | 'refund_policy_viewed'
   | 'ticket_terms_row_impression'
-  // T46 P0d guardrail (2026-10-21): refund-guarantee line exposure on the
+  // 转化 P0d guardrail (2026-10-21): refund-guarantee line exposure on the
   // event-ticket checkout — once per page visit, only when the line renders
   // (preRevealRefundEnabled on). Both 灰度 arms meter; metadata is enum-only
   // (`refundNarrativeBucket: 0|1`) + poolId, zero PII. Deliberately separate
@@ -137,7 +137,7 @@ export type DiscoverAnalyticsEventType =
   | 'equipment_draw_confirmed'
   | 'equipment_post_draw_card_read'
   | 'equipment_guidance_dismiss'
-  // T46 conversion funnel (2026-10-20) — guest preview card (P1c / S7.3) and
+  // 对标平台 conversion funnel (2026-10-20) — guest preview card (P1c / S7.3) and
   // checkout duo entry link (P1a / S6.1). Emission points land with those
   // components; this union entry registers the types so the funnel SQL can
   // count them once the components ship. Guest events carry a client-generated
@@ -158,7 +158,7 @@ export interface DiscoverAnalyticsEvent {
   timestamp: number
 }
 
-// ─── T46 conversion-funnel metadata types (enum-only, zero PII) ──────────
+// ─── 对标平台 conversion-funnel metadata types (enum-only, zero PII) ──────────
 // These describe the component-facing input each emit function accepts. The
 // emitted metadata additionally carries the client-generated `guestAttemptId`
 // for the guest series (see lib/analytics/guestAttemptId.ts) — the component
@@ -337,7 +337,7 @@ class DiscoverAnalytics {
     this.presenceStripTracker.track(poolId, metadata)
   }
 
-  // ─── T46 conversion-funnel emitters (type-safe, zero-PII metadata) ──────
+  // ─── 对标平台 conversion-funnel emitters (type-safe, zero-PII metadata) ──────
   // Emission points land with S7.3 (guest) and S6.1 (duo); these methods are
   // the downstream contract. Guest events self-manage `guestAttemptId` so
   // components never mint or pass the correlation id themselves.

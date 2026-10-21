@@ -1,10 +1,10 @@
 -- ============================================================================
--- T46 Conversion Funnel Metrics (2026-10-20 gap audit, AC-01 后半)
+-- 转化 Conversion Funnel Metrics (2026-10-20 gap audit, AC-01 后半)
 -- ============================================================================
 --
 -- Read-only aggregation over discover_analytics_events + payments + invitations.
 -- No dashboards, no tables, no routes — run directly:
---   psql "$DATABASE_URL" -f apps/server/scripts/t46-conversion-funnel-metrics.sql
+--   psql "$DATABASE_URL" -f apps/server/scripts/conversion-funnel-metrics.sql
 --
 -- Five funnel segments (audit §2 七目标裁决 → §4 SQL 草案):
 --   Q1 北极星 `detail_to_checkout_conv`  — event_ticket_payment_view / registration_start

@@ -2,12 +2,12 @@
 
 > 日期：2026-08-07
 > 状态：产品方向已定稿，UI 规格实现就绪；FALLBACK 槽位文案待 owner 二选一（见 B 节）
-> 输入：PM 竞品对照评估（T46）+ UX 审计（agent 报告）；本文档为最终实现规格，可直接交付实现 agent
+> 输入：PM 竞品对照评估+ UX 审计（agent 报告）；本文档为最终实现规格，可直接交付实现 agent
 
 ## 0. 锁定产品决策（PM 定稿）
 
-1. **入口**：pool-registration Step 0（STEP_BRIEF letter-card 步）放一张双人成行卡，内含紧凑分段控件「1人 | 2人」（借鉴 T46 底栏开关，但放 in-flow，不进底部 action bar——我们的底栏是步进 CTA 固定模式）。
-2. **说明弹层**：T46 式三段结构（为什么做 / 注意事项 / 怎么玩），文案按 `docs/copy/brand-copy-strategy.md` 重写（悦仔 voice；禁出现 算法/权重/加分；CTA ≤12 字；描述 ≤25 字；无内联 emoji，用 JoyJoinIcon）。
+1. **入口**：pool-registration Step 0（STEP_BRIEF letter-card 步）放一张双人成行卡，内含紧凑分段控件「1人 | 2人」（借鉴 转化 底栏开关，但放 in-flow，不进底部 action bar——我们的底栏是步进 CTA 固定模式）。
+2. **说明弹层**：对标平台 式三段结构（为什么做 / 注意事项 / 怎么玩），文案按 `docs/copy/brand-copy-strategy.md` 重写（悦仔 voice；禁出现 算法/权重/加分；CTA ≤12 字；描述 ≤25 字；无内联 emoji，用 JoyJoinIcon）。
 3. **机制（文案必须如实反映）**：选 2人 → 生成 pool-scoped duo 邀请链接（微信分享卡）；朋友打开 → 承接页 → 微信一键登录 → duo 语境内嵌**完整 V4 性格测试** → 自动报名进**同一 pool** → 绑定成立。双方各自持有权益（悦聚卡/局票）；**不做代付、不做双人价**。
 4. **匹配承诺**：duo 在匹配时为硬原子单元，**每桌最多 1 个双人组**（6 人桌）。Fallback 语义（整组顺延 vs 拆散+补偿券）待 owner 拍板，UI 已按"硬承诺 + 例外披露"预留槽位。
 5. **被邀请方**：上下文横幅贯穿报名各步；成功页反映 duo 状态。

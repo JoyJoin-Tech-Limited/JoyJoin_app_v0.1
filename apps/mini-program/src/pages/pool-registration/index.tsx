@@ -201,7 +201,7 @@ export default function PoolRegistrationPage() {
   const personaSnapshotEnabled = user?.features?.personaSnapshotEnabled ?? true
   const poolTeaserEnabled = user?.features?.poolTeaserEnabled === true
   const duoRegistrationEnabled = user?.features?.duoRegistrationEnabled ?? true
-  // AC-03 (T46): same flag source as the checkout's refund-guarantee caption.
+  // AC-03 (对标平台): same flag source as the checkout's refund-guarantee caption.
   // Strict `=== true` — absent/undefined reads false (fail-closed).
   const preRevealRefundEnabled = user?.features?.preRevealRefundEnabled === true
   const [personaSnapshotError, setPersonaSnapshotError] = useState(false)

@@ -1,0 +1,43 @@
+
+================ L0.0 环境确认：staging 容器在位 ================
+joyjoin-admin-staging	Up 19 hours (healthy)
+joyjoin-api-staging	Up 19 hours (healthy)
+postgres-staging	Up 4 weeks (healthy)
+joyjoin-granite-embedding-staging	Up 2 months
+
+================ L0.1 staging API 存活 ================
+GET https://staging.joyjoinapp.com/api/readyz -> 200
+
+================ L0.2 feature_flags（期望：preRevealRefundEnabled=t；noRefundAfterReveal 无行） ================
+ERROR:  column "enabled" does not exist
+LINE 1: SELECT key, enabled, updated_at FROM feature_flags WHERE key...
+                    ^
+
+================ L0.3 历史真实 ¥0.01 已支付单 + 关联报名状态（Level A 夹具探测） ================
+ERROR:  column "event" does not exist
+LINE 1: ...ep ON ep.id = p.related_id WHERE p.payment_type = event AND ...
+                                                             ^
+
+================ L0.4 未来可报名的池（评估新造夹具可行性；is_test_pool 必须为 false 才可复演 cancel） ================
+ERROR:  syntax error at or near "6"
+LINE 1: ...OM event_pools WHERE date_time > now() + interval 6 hours OR...
+                                                             ^
+
+================ L0.5 sessions 表结构确认（为 Level A/B 的 session 铸造做格式核对） ================
+                        Table "public.sessions"
+ Column |            Type             | Collation | Nullable | Default 
+--------+-----------------------------+-----------+----------+---------
+ sid    | character varying           |           | not null | 
+ sess   | jsonb                       |           | not null | 
+ expire | timestamp without time zone |           | not null | 
+Indexes:
+    "sessions_pkey" PRIMARY KEY, btree (sid)
+    "IDX_session_expire" btree (expire)
+
+
+================ L0.6 refund_attempts 近 10 行（历史退款痕迹与行格式） ================
+ERROR:  column "created_at" does not exist
+LINE 1: ...payment_id, status, reason, amount, initiated_by, created_at...
+                                                             ^
+
+完成。请将终端完整输出（已同步写入 l0-recon-output-20261021-152828.txt）贴回给 QA 子会话。

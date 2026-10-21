@@ -48,7 +48,7 @@
 
 | # | Dimension | Score | Evidence |
 |---|-----------|-------|----------|
-| 1 | **Brand Fidelity & Anti-Patterns** | 3/4 | Notch matches T46 competitor pattern. Purple gradient button is on-brand. But the `__border` accent line (`rgba(139,92,246,0.12)`) is invisible against the notch background — wasted visual element. |
+| 1 | **Brand Fidelity & Anti-Patterns** | 3/4 | Notch matches 对标平台 competitor pattern. Purple gradient button is on-brand. But the `__border` accent line (`rgba(139,92,246,0.12)`) is invisible against the notch background — wasted visual element. |
 | 2 | **State Completeness** | 2/4 | **Missing pressed/active state** on tab items. No visual feedback during tap (no `scale`, `opacity`, or `background` change). `hover-class` not used on `cover-view` items. **Missing loading state** for center button when `action.navigation` is `navigateTo` — user taps, nothing happens for 200ms+. **Missing disabled state** when network is offline. |
 | 3 | **Theming & Token Discipline** | 2/4 | Colors hard-coded in `index.js` (icons) and `index.wxss` (badge `#FF6B9D`, label `#9CA3AF`). No token variables in native tab bar. `COLOR_TAB_INACTIVE`/`COLOR_PRIMARY` from `uiConstants.ts` are NOT consumed here — drift risk. |
 | 4 | **Responsive & Platform Safety** | 3/4 | `env(safe-area-inset-bottom)` handled. `calc(128rpx + env(...))` for container height. But `__surface` is `left:24rpx; right:24rpx` which is fine for 375px but may feel narrow on iPad mini. Notch PNG is fixed 1404px wide and stretched via `scaleToFill` — acceptable but not perfect. |
@@ -106,7 +106,7 @@ The center button is **context-aware** via `centerTabRouting.ts`:
 
 **Problem:** The label changes dynamically, but users learn tab positions spatially. A center button that sometimes acts like a tab (switchTab) and sometimes like a push (navigateTo) breaks the mental model. Users may tap "back" expecting to return to the previous tab, but `navigateTo` pushes a new page on the stack.
 
-**T46 comparison:** T46's center button is a fixed "赴约" action that always `switchTab`s to a consistent page. Ours is dynamic — more powerful but cognitively heavier.
+**对标平台 comparison:** 对标平台's center button is a fixed "赴约" action that always `switchTab`s to a consistent page. Ours is dynamic — more powerful but cognitively heavier.
 
 #### D. Missing Tab Switch Analytics
 No events tracked for:
@@ -133,7 +133,7 @@ Taro supports `Taro.vibrateShort()` for tactile feedback. Tab taps feel "flat" w
 ## 4. PM REVIEW BRIEF
 
 ### What Works ✅
-1. Notch visually matches T46 competitor design
+1. Notch visually matches 对标平台 competitor design
 2. Center button routing is smart (context-aware)
 3. Badge system is comprehensive (discover/activities/chat)
 4. Safe area handling is correct
@@ -142,7 +142,7 @@ Taro supports `Taro.vibrateShort()` for tactile feedback. Tab taps feel "flat" w
 ### What Needs PM Decision 🔶
 
 #### Decision 1: Center Button Behavior
-**Question:** Should the center button always `switchTab` (like T46) or remain context-aware with mixed `navigateTo`/`switchTab`?
+**Question:** Should the center button always `switchTab` (like 对标平台) or remain context-aware with mixed `navigateTo`/`switchTab`?
 
 | Option | Pros | Cons |
 |--------|------|------|

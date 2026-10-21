@@ -24,7 +24,7 @@ interface RegistrationConfirmModalProps {
    */
   hasWelcomeGift?: boolean
   /**
-   * AC-03 (T46): gates the 「排桌完成前可免费取消 · 全额退款」 assurance row.
+   * AC-03 (对标平台): gates the 「排桌完成前可免费取消 · 全额退款」 assurance row.
    * Same source as the checkout's RefundGuaranteeLine — the parent resolves
    * `user.features.preRevealRefundEnabled` (strict `=== true`). Off/absent
    * omits the row entirely (null tree), never a visually-hidden copy. Copy

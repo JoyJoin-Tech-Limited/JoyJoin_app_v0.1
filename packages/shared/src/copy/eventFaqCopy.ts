@@ -1,11 +1,11 @@
 /**
- * Event Detail FAQ copy — 详情页常见问题手风琴文案（P0e · T46 竞对反打 sprint）
+ * Event Detail FAQ copy — 详情页常见问题手风琴文案（P0e · 对标平台 竞对反打 sprint）
  *
  * surface: 'event-detail'（信任敏感面）
  * toneMode: 'system-ui' — 暖中性、零语气词（信任面红线：不让悦仔闺蜜腔
  *   渗进钱与承诺的语境；答案零 `~` / `啦` / `哦`）。
  *
- * Sprint t46-full-implementation（AC-05 · copy 半区）。Owner：PM + eng lead
+ * Sprint benchmark-full-implementation（AC-05 · copy 半区）。Owner：PM + eng lead
  * 双签（PM 侧已签认，eng lead 侧待 PR 复核）。
  *
  * 模块独立：本文件不进 copy/ barrel（index.ts 不动）。消费方直接
@@ -20,7 +20,7 @@
  *
  * 🟡 长度 waiver 登记：FAQ 答案按「解释性内容」处理，豁免「描述 ≤25 字」
  *   指引（brand-copy-strategy §2 🟡），目标 ≤60 字/条。随设计规格
- *   docs/deliberations/2026-10-20-t46-design-strategy-confirmation.md P0e 节
+ *   docs/deliberations/2026-10-20-benchmark-design-strategy-confirmation.md P0e 节
  *   登记，有效期至 copy/ 双签完成。
  *
  * 依赖提示（非本模块职责）：第 5 条「排桌完成前取消，全额退款」为

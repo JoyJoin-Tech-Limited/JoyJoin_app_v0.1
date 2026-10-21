@@ -230,7 +230,7 @@ export const duoInviteLookupLimiter = createRateLimiter({
 
 /**
  * Public guest event-preview limiter (GET /api/event-pools/guest-preview,
- * T46 AC-08). Unauthenticated landing-page surface — always budget by client
+ * 对标平台 AC-08). Unauthenticated landing-page surface — always budget by client
  * IP, never by a session that may not exist for guests.
  */
 export const guestEventPreviewLimiter = createRateLimiter({

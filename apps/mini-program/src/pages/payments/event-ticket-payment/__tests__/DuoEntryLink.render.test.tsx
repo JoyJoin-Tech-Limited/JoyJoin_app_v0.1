@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import DuoEntryLink from '../components/DuoEntryLink'
 
 /**
- * DuoEntryLink render contract (T46 P1a, contract AC-07).
+ * DuoEntryLink render contract (转化 P1a, contract AC-07).
  * Pattern: RefundGuaranteeLine.render.test.tsx + GuestEventPreviewSection
  * (QueryClientProvider over a mocked duo-status read).
  *
@@ -149,7 +149,11 @@ describe('DuoEntryLink — interaction + metering (AC-07)', () => {
     expect(mockDiscoverAnalytics.trackDuoEntryLinkTap).toHaveBeenCalledTimes(1)
     expect(mockDiscoverAnalytics.trackDuoEntryLinkTap).toHaveBeenCalledWith({ poolId: POOL_ID })
     expect(mockNavigateTo).toHaveBeenCalledTimes(1)
-    expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/profile-linked/invite/index' })
+    // 对标平台 B1: the navigation must carry the checkout pool id so the invite
+    // page can scope the duo lane to this pool (audit report §3.1).
+    expect(mockNavigateTo).toHaveBeenCalledWith({
+      url: `/pages/profile-linked/invite/index?poolId=${POOL_ID}`,
+    })
   })
 
   it('row impression fires exactly once per page visit even across rerenders', async () => {
@@ -177,6 +181,14 @@ describe('DuoEntryLink — interaction + metering (AC-07)', () => {
 })
 
 describe('DuoEntryLink — copy red-line source lock (AC-07)', () => {
+  it('navigation URL always carries the checkout poolId (对标平台 B1 source lock)', () => {
+    const sourcePath = join(__dirname, '..', 'components', 'DuoEntryLink.tsx')
+    const source = readFileSync(sourcePath, 'utf8')
+
+    expect(source).toContain('?poolId=')
+    expect(source).not.toContain('Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.invite })')
+  })
+
   it('component source contains zero amount/urgency words and zero red-line vocabulary', () => {
     const sourcePath = join(__dirname, '..', 'components', 'DuoEntryLink.tsx')
     const source = readFileSync(sourcePath, 'utf8')
@@ -188,7 +200,7 @@ describe('DuoEntryLink — copy red-line source lock (AC-07)', () => {
     expect(source).not.toContain('现金')
     expect(source).not.toContain('提现')
 
-    // 🔴 red-line vocabulary — zero hits anywhere in the component source
+    // Red-line vocabulary — zero hits anywhere in the component source
     // (copy AND comments).
     expect(source).not.toContain('匹配')
     expect(source).not.toContain('社交')

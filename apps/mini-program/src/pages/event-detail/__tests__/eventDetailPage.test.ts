@@ -136,7 +136,7 @@ describe('event-detail done CTA survives the platform disabled styling', () => {
   })
 })
 
-// 2026-10-21 T46 audit CONCERN C2 source-lock (merge gate): the P0c flow strip
+// 2026-10-21 对标平台 audit CONCERN C2 source-lock (merge gate): the P0c flow strip
 // and P0e FAQ accordion are pool-event-only trust layers with a frozen
 // insertion order — info card → flow strip → FAQ accordion → 活动介绍 →
 // support card. A blind-box/legacy detail must render neither (fail-closed =
