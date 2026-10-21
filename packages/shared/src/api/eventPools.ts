@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type { ApiTransport, ApiTransportRequest } from './core.js'
 import type { GroupAnalysisResponse } from '../types/groupAnalysis.js'
 
@@ -413,4 +414,36 @@ export function getPoolPersonaSnapshot(
   return api<PoolPersonaSnapshotResponse>({
     path: `/api/event-pools/${encodeURIComponent(poolId)}/persona-snapshot`,
   })
+}
+
+/**
+ * P1c 游客预告卡 (T46 AC-08): guest-safe event preview DTO served by
+ * GET /api/event-pools/guest-preview (no auth). Minimal field set, zero PII —
+ * `.strict()` turns the schema into a client-server contract guard: any extra
+ * key (e.g. a future regression leaking user fields) fails parse loudly.
+ */
+export const guestEventPreviewItemSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    dateTime: z.string(),
+    district: z.string().nullable(),
+    eventType: z.string(),
+    spotsLeft: z.number().int().min(0),
+  })
+  .strict()
+
+export type GuestEventPreviewItem = z.infer<typeof guestEventPreviewItemSchema>
+
+export const guestEventPreviewResponseSchema = z.array(guestEventPreviewItemSchema)
+
+export function getGuestEventPreview(
+  api: ApiTransport,
+  city?: string
+): Promise<GuestEventPreviewItem[]> {
+  const path =
+    typeof city === 'string' && city.trim() !== ''
+      ? `/api/event-pools/guest-preview?city=${encodeURIComponent(city.trim())}`
+      : '/api/event-pools/guest-preview'
+  return api<GuestEventPreviewItem[]>({ path })
 }

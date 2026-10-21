@@ -516,6 +516,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  answer phase is byte-identical legacy (zero render, zero events).
    *  Env fallback: QUIP_INSPIRATION_CHIPS_ENABLED (default: false). */
   quipInspirationChipsEnabled: "QUIP_INSPIRATION_CHIPS_ENABLED",
+  /** P1c 游客预告卡 (2026-10-20, T46 contract AC-08): master gate for the
+   *  guest-safe event preview GET /api/event-pools/guest-preview. Server-side
+   *  dual gate — flag ON AND qualified supply ≥ 3 — resolves fail-closed to
+   *  200 + [] so guests never see an error page. Ships dark (default false).
+   *  Env fallback: GUEST_EVENT_PREVIEW_ENABLED (default: false). */
+  guestEventPreviewEnabled: "GUEST_EVENT_PREVIEW_ENABLED",
 };
 
 /**
@@ -680,6 +686,11 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  the admin toggle UI and listFeatureFlags() show a stable default.
    *  Flag-off = byte-identical legacy answer phase (zero chips). */
   quipInspirationChipsEnabled: false,
+  /** P1c 游客预告卡 ships dark (2026-10-20, T46 contract AC-08); explicit
+   *  false so the admin toggle UI and listFeatureFlags() show a stable
+   *  default. Flag-off = guest-preview endpoint answers 200 + [] (fail-closed,
+   *  zero guest surface). */
+  guestEventPreviewEnabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

@@ -227,3 +227,16 @@ export const duoInviteLookupLimiter = createRateLimiter({
   keyResolver: (req) => req.ip || req.socket.remoteAddress || 'anonymous',
   errorCode: 'DUO_LOOKUP_RATE_LIMITED',
 });
+
+/**
+ * Public guest event-preview limiter (GET /api/event-pools/guest-preview,
+ * T46 AC-08). Unauthenticated landing-page surface — always budget by client
+ * IP, never by a session that may not exist for guests.
+ */
+export const guestEventPreviewLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 30,
+  keyPrefix: 'guest-preview',
+  keyResolver: (req) => req.ip || req.socket.remoteAddress || 'anonymous',
+  errorCode: 'GUEST_EVENT_PREVIEW_RATE_LIMITED',
+});

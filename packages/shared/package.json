@@ -79,6 +79,7 @@
     "./copy/icebreakerSession": "./src/copy/icebreakerSession.ts",
     "./copy/quipInspirationChips": "./src/copy/quipInspirationChips.ts",
     "./copy/profileTaglineRuleTemplates": "./src/copy/profileTaglineRuleTemplates.ts",
+    "./copy/featureFlags": "./src/copy/featureFlags.ts",
     "./wechatContactId": "./src/wechatContactId.ts"
   },
   "dependencies": {

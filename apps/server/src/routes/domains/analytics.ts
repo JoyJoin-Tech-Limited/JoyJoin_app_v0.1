@@ -217,6 +217,11 @@ const DISCOVER_EVENT_TYPES = [
   "event_ticket_payment_success_cta_tap",
   "refund_policy_viewed",
   "ticket_terms_row_impression",
+  // T46 P0d guardrail (2026-10-21): refund-guarantee line exposure on the
+  // event-ticket checkout — once per page visit, only when the line renders
+  // (preRevealRefundEnabled on). Both 灰度 arms meter; metadata is enum-only
+  // (`refundNarrativeBucket: 0|1`) + poolId, zero PII.
+  "ticket_refund_guarantee_impression",
   "ticket_tail_image_impression",
   "ticket_tail_image_load_error",
   "ticket_inclusion_sheet_open",
@@ -300,6 +305,18 @@ const DISCOVER_EVENT_TYPES = [
   "equipment_draw_confirmed",
   "equipment_post_draw_card_read",
   "equipment_guidance_dismiss",
+  // T46 conversion funnel (2026-10-20 gap audit §3): guest preview card
+  // (P1c / S7.3) and checkout duo entry link (P1a / S6.1). Guest events carry
+  // a client-generated `guestAttemptId` in metadata (user_id/session_id are
+  // both null on the discover channel — see audit §5.2) so the funnel SQL
+  // joins login_tap → login_success on metadata->>'guestAttemptId'. Duo entry
+  // events carry `poolId` in metadata. Enum-only metadata, zero PII.
+  "guest_preview_card_impression",
+  "guest_preview_card_tap",
+  "guest_preview_login_tap",
+  "guest_preview_login_success",
+  "duo_entry_link_impression",
+  "duo_entry_link_tap",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];

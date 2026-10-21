@@ -40,12 +40,13 @@ import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { getFeatureFlag } from "../../lib/featureFlags";
+import { buildGuestEventPreview } from "../../lib/guestEventPreview";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
 import { resolveBudgetOptions } from "../../lib/budgetOptionsResolver";
 import { broadcastAttendanceStatusUpdated, broadcastUserConfirmed } from "../../eventBroadcast";
 import { wsService } from "../../wsService";
-import { aiEndpointLimiter } from "../../rateLimiter";
+import { aiEndpointLimiter, guestEventPreviewLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { paymentService, CouponFullDiscountError } from "../../paymentService";
@@ -389,6 +390,20 @@ export function registerUserEventPoolRoutes(app: Express): void {
       logger.error(`Error fetching event pools for user ${req.session?.userId}: ${error}`);
       return res.status(500).json({ message: "Failed to fetch event pools" });
     }
+  });
+
+  // P1c 游客预告卡 (T46 AC-08): guest-safe event preview. NO requireAuth —
+  // landing-page guests must reach it. Registered BEFORE /api/event-pools/:id
+  // so the param route can never swallow this path. Fail-closed inside
+  // lib/guestEventPreview.ts (flag OFF, qualified supply < 3, or the full-pool
+  // eligibility cut drops supply below 3 → 200 + []), so this handler never
+  // emits an error page. Rate-limited by client IP.
+  app.get("/api/event-pools/guest-preview", guestEventPreviewLimiter, async (req: any, res) => {
+    const rawCity = req.query?.city;
+    const city =
+      typeof rawCity === "string" && rawCity.trim() !== "" ? rawCity.trim() : undefined;
+    const items = await buildGuestEventPreview(city);
+    res.json(items);
   });
 
   // Get single event pool details

@@ -24,6 +24,7 @@ import { getActingAdminId } from "../../lib/getActingAdminId";
 import { getFeatureFlag } from "../../lib/featureFlags";
 import { getTestPriceCents } from "../../lib/paymentTestPrice";
 import { normalizeBudgetRangeForWrite, resolveBudgetEventType } from "../../lib/budgetTierWrite";
+import { resolveExperimentBucket } from "../../lib/experimentBucket";
 
 const getRequestClientIp = (req: Request): string => {
   const forwardedFor = req.headers["x-forwarded-for"];
@@ -1337,6 +1338,17 @@ export function registerPaymentRoutes(app: Express): void {
         };
       });
 
+      // T46 P0d (decision D1): 50/50 deterministic refund-narrative bucket.
+      // Resolved in the same handler as the checkout first-screen payload and
+      // emitted ONLY when the pre-reveal refund flag is ON — fail-closed:
+      // flag off → field absent, client renders the legacy single line.
+      // The bucket itself is a pure hash(userId) mod 2 (lib/experimentBucket.ts)
+      // with zero storage, so it is identical across restarts and devices.
+      const preRevealRefundEnabled = await getFeatureFlag("preRevealRefundEnabled", false);
+      const refundNarrativeBucket = preRevealRefundEnabled
+        ? resolveExperimentBucket(userId)
+        : null;
+
       // Build response
       const response = {
         user: {
@@ -1376,6 +1388,9 @@ export function registerPaymentRoutes(app: Express): void {
           recentlyActiveCount,
           userCity,
         },
+        // Additive + fail-closed: absent entirely when preRevealRefundEnabled
+        // is off; present as 0|1 when on (S5.2 client keys off this field).
+        ...(refundNarrativeBucket !== null ? { refundNarrativeBucket } : {}),
       };
 
       reqLogger.info("Ritual context served", {
@@ -1384,6 +1399,8 @@ export function registerPaymentRoutes(app: Express): void {
         totalMembers,
         weeklyNewMembers,
         monthlyEvents,
+        preRevealRefundEnabled,
+        ...(refundNarrativeBucket !== null ? { refundNarrativeBucket } : {}),
       });
 
       res.json(response);

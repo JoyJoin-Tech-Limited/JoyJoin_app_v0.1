@@ -43,6 +43,15 @@ export {
   getEmptyStateAction,
 } from './emptyStates.js';
 
+// 🟡 Feature flag admin copy (契约: featureFlagCopyContract.test.ts 强制覆盖 FLAG_ENV_MAP + 分区)
+export {
+  FEATURE_FLAG_LABELS,
+  FEATURE_FLAG_DESCRIPTIONS,
+  FEATURE_FLAG_SECTIONS,
+  FEATURE_FLAG_SECTION_BY_KEY,
+} from './featureFlags.js';
+export type { FeatureFlagSection } from './featureFlags.js';
+
 // 🟢 Mascot Voice
 export {
   MASCOT_PATTERNS,
