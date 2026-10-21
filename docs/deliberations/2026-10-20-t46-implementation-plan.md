@@ -75,6 +75,7 @@ S8  P1b 代码侧审计（无依赖，trivial）
 | S2.2 | product-manager | 法务/条款对齐复核（条款 v2026-08-27 已对齐 PRD:1241）+ 运营 runbook 更新 | 签认记录 | S2.1 | yes |
 | S2.3 | （人类操作，非 agent） | super_admin 在 `/admin/feature-flags` 开启 `preRevealRefundEnabled`（DB-backed，mutation 自动审计） | admin audit log 证据 | S2.2 | **用户本人** |
 | S2.4 | qa-agent | staging 复演：matched 前取消 → 真实退款 / credits 回补 → 证据归档 | 复演报告 | S2.3 | yes |
+| S2.5 | taro-engineer | （2026-10-20 追加，S2.1 发现）`RegistrationConfirmModal.tsx:104` 硬编码承诺行「排桌完成前可免费取消 · 全额退款」无 flag 门控——改为与收银台同源读取 `preRevealRefundEnabled`，flag 关时隐藏该行，永久对齐可见性与服务端行为 | diff + render test | S2.1 | yes |
 
 ### S3 — P0c 详情页 4 拍流程条（全量不灰度）
 
@@ -144,12 +145,39 @@ S8  P1b 代码侧审计（无依赖，trivial）
 | P1a | `duo_entry_ctr` 读数 + 审核反馈 | revert PR（小组件隔离） | 「同行有奖励」诱导审核线：入口零金额已冻结，不得加码 |
 | P0c / P0e | 静态全量，无灰度 | revert PR | 320px 孤字/换行事故 → DevTools 截图门禁拦截 |
 
-## 8. 决策点（需用户拍板）
+## 8. 决策点（✅ 2026-10-20 已全部拍板）
 
-- **D1 P0d 50/50 分桶机制**：建议服务端确定性 `hash(userId) mod 2`，随收银台页面数据下发，不建新表不建实验框架。备选：给 `featureFlags` 加百分比 rollout 能力（工程量放大，本次不推荐）。
-- **D2 P1c flag 命名**：建议 `guestEventPreviewEnabled`（env `GUEST_EVENT_PREVIEW_ENABLED`，默认 false，DB-backed，admin 可切）。
-- **D3 guest-preview city 默认**：建议接受可选 `city` query，缺省按 launch 城市深圳（与 P1b 排期承诺同域）；供给门槛 ≥3 为冻结值不动。
-- **D4 P0a flag ON 时间点**：建议法务/运营确认即开（止血优先），P0d 就绪后补叙事层；备选是等 P0d 同车开（承诺 gap 多裸奔几天，不推荐）。
+- **D1 P0d 50/50 分桶机制**：✅ **服务端确定性 `hash(userId) mod 2`**，随收银台页面数据下发，不建新表不建实验框架。
+- **D2 P1c flag 命名**：✅ **`guestEventPreviewEnabled`**（env `GUEST_EVENT_PREVIEW_ENABLED`，默认 false，DB-backed，admin 可切）。
+- **D3 guest-preview city 默认**：✅ **可选 `city` query，缺省深圳**；供给门槛 ≥3 为冻结值不动。
+- **D4 P0a flag ON 时间点**：✅ **法务/运营证据齐即直接开**（止血优先，用户原话「直接开」），P0d 就绪后补叙事层。
+
+## 8.5 进度日志（2026-10-21 主会话 consolidate）
+
+**已落地（全部门禁绿，未 commit）**：
+- C1=A ✅：guest-preview 钩子句=「这周有 N 场正在排桌」（N=live count，server ≥3 门槛保证真实），32/32+guardrails 绿（copy 双签随合并批）。flag 口径：staging 开 `preRevealRefundEnabled`+`guestEventPreviewEnabled`；`noRefundAfterReveal` 保持关；生产等 S2.4 证据/合并后灰度。
+- S5.1 P0d 分桶服务端 ✅：`lib/experimentBucket.ts`（sha256(userId) 前 8 hex mod 2，纯函数 fail-closed 控制桶）+ 挂载 `GET /api/payments/ritual-context`（payments.ts:1341，flag off 字段整体缺席）+ 10 单测（黄金向量钉死算法），全量 4151 绿。
+- S5.2 P0d 客户端 ✅：RefundGuaranteeLine `narrative` prop 两行 stack（叙事上/事实下永不删）、`resolveRefundNarrativeBucket` fail-closed resolver（非 0/1 坍缩 null=控制组）、spacer 282rpx 逐像素推导（行盒 33rpx+4rpx 行距，零 JS 测量）、曝光 `ticket_refund_guarantee_impression`（双臂打点 bucket 维度入白名单 parity）、四态矩阵+DOM 顺序锁 5 tests、payments 子包门禁绿。零动画（收银台编排预算为零）。
+- S5.3 改为收银台合并审计车（P0d+P1a 同车），等 S6 落地后派。
+- S6 P1a DuoEntryLink ✅：文本链接 register（「和朋友一起？邀 TA 同行，排进同一桌」+ muted「同行有奖励」，零金额零 urgency source-lock grep 断言）、duo-status 三态门控（none 显示/waiting/bound 隐藏）+ `duoRegistrationEnabled` flag 门控、fail-closed 静默、9/9 测试、spacer 三变体不变（duo 行进 scroll-flow 不进 sticky footer）、payments 13 选择器绿。**暴露跟进项（后续单开，不在本 sprint）**：invite 落地页 duo 模式依赖「已有 active 报名」，收银台是付款前场景 → 承诺链付款前暂不闭环；解法=invite 页接受 `?poolId=` 进 pool-scoped duo 态（服务端 POST duo-invites 本就支持注册前建码，spec §A.5）。
+- **全部开发单收官**（2026-10-21）。收银台合并审计车（P0d+P1a+P0c/P0e rubric 补漏）已派 ses_ea2c533adffexhKdKXayqn8XbJ。
+- **2026-10-21 staging flags 已开**（orchestrator 代执行，用户授权，SSH 直写 staging DB + FEATURE_FLAG_UPDATED 审计行）：`preRevealRefundEnabled=true`（即时生效，止血）、`guestEventPreviewEnabled=true`（休眠，代码部署后生效）；`noRefundAfterReveal` 无行无 env=保持关。staging 支付=真实微信 ¥0.01 测试单。S2.4 staging 复演已派 ses_ea2b148b1ffedBeeQ7TqvHfVCf（阶梯证据：真实退款全链 → 降级 flag 分支命中+真机 3 步卡）。
+- S1.1 埋点审计备忘 → S1.2 client 6 事件 union + `lib/analytics/guestAttemptId.ts` → S1.3 server 白名单 parity + 双向契约测试 + `scripts/t46-conversion-funnel-metrics.sql`（5 段）。高风险登记：analytics 路由早于 session 中间件，user_id 恒 null，guest 关联走 metadata guestAttemptId。
+- S2.1 P0a 验证备忘（可以开；真 gap=RegistrationConfirmModal 硬编码承诺行）→ S2.2 法务签认（无阻塞，staging 先开）→ S2.5 modal flag 门控落地（15/15 render tests 绿）。
+- S3.1 EventFlowStrip + S4.1 FAQ copy（8 条，`packages/shared/src/copy/eventFaqCopy.ts`）+ S4.2 EventFaqAccordion（cancel_refund 按 flag 门控 fail-closed）→ S3.2+S4.3 合并审计车源码级全绿（`docs/deliverables/2026-10-20-t46-event-detail-audit/`）。
+- S7.1/S7.2 guest-preview 服务端（`userEventPools.ts:400`、flag `guestEventPreviewEnabled` featureFlags.ts:524/693、DTO eventPools.ts:425、31/31+全量 4137 绿）→ S7.3/S7.4 卡组+Wow 编排全规格（FinalStage.tsx:766 插入、useResultsLoginHandoff.ts:160 login-success 发射）→ S7.5 rubric **编排版 15/24 KEEP 编排**（静态 12/24）→ S7.6 **perf PASS 55/60**（`docs/deliverables/2026-10-20-t46-guest-preview-perf/`）。
+- S8.1 AC-11 PASS（`2026-10-20-t46-p1b-code-audit.md`）。
+- CONCERN 修复：C3 observer watchdog（2500ms fail-closed 静态直出）✅；C2 满员场过滤（`lib/guestEventPreview.ts` Gate 3 spotsLeft>0，全量 4141 绿）✅。
+
+**待用户决定**：~~C1 登录 pitch 三连堆叠 A/B/C~~ ✅ **2026-10-21 用户选 A，已落地**：钩子句改供给事实承接句「这周有 N 场正在排桌」（N=live preview count，GuestEventPreviewSection.tsx hookText；渲染/契约测试 32/32 绿，guardrails exit 0；next-horizon 保唯一情绪钩子）；copy 双签随合并批登记。剩余用户动作：staging admin 开 flag（见下）。
+
+**Flag 裁决（2026-10-21 用户「keep all enabled」→ 主会话裁量）**：staging 开 `preRevealRefundEnabled` + `guestEventPreviewEnabled`（staging 验证需要）；**`noRefundAfterReveal` 保持关**（法务签认只覆盖 pre-reveal，post-reveal 不退款属另一承诺级别，待单独 sign-off）；生产 `preRevealRefundEnabled` 等 S2.4 复演证据后开；生产 `guestEventPreviewEnabled` 合并后灰度。
+
+**进行中**：S5.1 P0d 服务端分桶（ses_ea2ed4bf8ffe6esnyzGMLMVulC，kimi-k2.6：hash(userId) mod 2 确定性分桶随收银台数据下发，零新表）。S5.2 客户端（RefundGuaranteeLine 两行 stack）等 S5.1 落地后派。
+
+**待派（解锁即走）**：S2.4 staging 复演、S5 P0d（hash 分桶 50/50）、S6 P1a DuoEntryLink —— 全挂 staging flag ON 证据。S1.4 staging 抓包需合并+staging 部署后执行。
+
+**合并前批次**：source-lock 契约测试 + 375×667/320×568 截图（进行中）→ 中端机 6 机位录屏（清单在 perf 报告）→ 主会话验收 → commit。
 
 ## 9. 明确不做（冻结清单）
 
