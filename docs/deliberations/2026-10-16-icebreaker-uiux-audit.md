@@ -238,7 +238,7 @@
 - CONCERN：`index.tsx` `iAmAway = serverAway ?? localAway` 顺序在 flag on 且他人在离开态时会被 3s 轮询短暂压回跳（窄 cosmetic）；改 `localAway ?? serverAway` 需同步 leaveEntryContract 测试
 - CONCERN：`hooks/useMiniScriptGeneration.ts` 800ms 进度 interval 仅 POST finally 清理，页面 unload 时存活至 settle（≤35s，纯浪费请求；既有问题非三波引入）
 - NIT（存量）：recap→ended 转场弹 toast「新阶段开始啦」（`phaseToastText.tsx` 无 ended 条目）；`index.tsx` glanceStack mode 死分支；`check-icebreaker-visuals.mjs` scrim 词法匹配可绕（8 位 hex / 现代写法）；`index.config.ts` 导航色硬编码 #FDFCFA；`markPhaseContentGenerating` 起点不落日志
-- P1（用户满意度 16/24 封顶解封杠杆）：recap 峰值屏零分享通路——MomentCardView 孤儿代码、无 onShareAppMessage、「生成高光」面板只有「看完了」；侦探 compose 标题错位 + AI 帮写 3-9s 空窗无「写稿中」态
+- P1（用户满意度 16/24 封顶解封杠杆）：recap 峰值屏零分享通路——**✅ 已落地**（2026-10-20，`45d45ebd6` 车道③：insightPoster canvas 海报三入口 + 页面级 `onShareAppMessage` 转发桥 + 隐私 spy 硬契约，flag `recapSharePosterEnabled` dark，待微信发布后开启；MomentCardView 保持孤儿并登记退役债）；侦探 compose——**◐ 部分缓解**：composing 分支标题已是动作导向「我的三句话 / 最后一步：哪句是谎言？」、帮写按钮有 `loading` +「悦仔写稿中…」文案（`LieDetectiveHeroView.tsx:294-320`）；**未做**：未提交且未 composing 时标题仍是「等待所有玩家提交陈述…」（应改为「先写你的三句话」）、edit 步生成期仍无骨架屏
 - P2：环节地图 7 项 20rpx 截尾需像素验证；warmup 失败终态 ~17s 偏长且 recovering 期无手动重试出口；「大家都被悦仔骗了」按 mode 分文案（V1 归功玩家）；骰子「已就绪（N/6）」按钮语义与取消动作分离
 - 流程债：UI 类 AC 验收需强制附渲染截图证据（AC-13 死 props 漏检即纯代码审查盲区实证）；harness 生成器六屏零覆盖
 - 真机欠账（三波累积，flag 2026-10-19 已开后首批回归重点）：直播文案 4s 翻段 ×3s 轮询观感、胜利脉冲帧率、leave/rejoin 后台 reconcile、host 180s 失联提示时机、弱网 backoff、矮屏骰子/拍卖 CTA
