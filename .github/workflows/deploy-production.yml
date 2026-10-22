@@ -162,7 +162,7 @@ jobs:
               echo "Low CVM headroom before production workspace sync; pruning unused images and builder cache while preserving containers and volumes."
               if command -v docker >/dev/null 2>&1; then
                 timeout 180s docker builder prune -af || true
-                timeout 120s docker image prune -af || true
+                timeout 120s docker image prune -af --filter "until=24h" || true
               fi
               available_bytes="$(df -PB1 "$HOME" | awk 'NR == 2 { print $4 }')"
               available_inodes="$(df -Pi "$HOME" | awk 'NR == 2 { print $4 }')"

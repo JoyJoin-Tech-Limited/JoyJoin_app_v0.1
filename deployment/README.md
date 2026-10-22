@@ -349,6 +349,6 @@ CVM 上的部署/运维互斥是**双层**的：GitHub Actions 的 `concurrency`
 | staging | `joyjoin-cvm-staging` | `/var/lock/joyjoin-cvm-staging.lock`（可用 `JOYJOIN_STAGING_LOCK_FILE` 覆盖） | `deploy-staging.yml` 及 6 个 `staging-*` / `repair-staging-*` workflow |
 | 小程序上传 | `joyjoin-weapp-upload` | 无（上传只走 `miniprogram-ci`，不碰 Docker） | `taro-weapp-build.yml` |
 
-拆分的前提是 **prune 必须带年龄过滤**：staging 与 production 现在会并行运行在同一台 Docker 引擎上，覆盖全部 `docker image prune -af`（无过滤）会删掉「刚 pull 完、容器还没起来」的对方镜像。两个部署脚本因此都改为 `docker image prune -af --filter "until=24h"`。若新增部署脚本，沿用此过滤，不要无条件 `-af`。
+拆分的前提是 **prune 必须带年龄过滤**：staging 与 production 现在会并行运行在同一台 Docker 引擎上，覆盖全部 `docker image prune -af`（无过滤）会删掉「刚 pull 完、容器还没起来」的对方镜像。两个部署脚本因此都改为 `docker image prune -af --filter "until=24h"`。若新增部署脚本，沿用此过滤，不要无条件 `-af`；`npm run guardrails` 里的 `scripts/check/check-docker-prune-safety.mjs` 会对 `deployment/scripts/**` 与 `.github/workflows/**` 中的无过滤 `image|system prune -a` 直接报错（`builder prune` 不受限，它只清构建缓存）。
 
 `deploy-staging.yml` 另有两个并发相关约定：`quality-gates` job 用 `joyjoin-staging-gates-<ref>` + `cancel-in-progress: true`（新 push 可放弃旧门禁），`deploy-staging` job 保持 `cancel-in-progress: false`（已开始的切换必须跑完）。陈旧 commit 由前置 job `deploy-preflight` 在 ~10s 内拒绝，不再浪费门禁与构建时间。

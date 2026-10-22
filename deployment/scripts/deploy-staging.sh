@@ -562,7 +562,7 @@ else
     if (( storage_use_percent >= 70 || available_bytes < required_bytes || available_inodes < 10000 )); then
         echo "  Disk is at least 70% used or below deployment headroom; pruning unused images and build cache (never containers or volumes)."
         timeout 180s docker builder prune -af || true
-        timeout 120s docker image prune -af || true
+        timeout 120s docker image prune -af --filter "until=24h" || true
         available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
         available_inodes="$(df -Pi "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
     fi
@@ -997,7 +997,7 @@ NGINX_CONFIG_BACKUP=""
 # unused-image cleanup that recovered the host; it never removes containers,
 # networks, volumes, or images referenced by a container.
 timeout 180s docker builder prune -af || true
-timeout 120s docker image prune -af || true
+timeout 120s docker image prune -af --filter "until=24h" || true
 
 echo ""
 echo "✅ Staging deployment completed"

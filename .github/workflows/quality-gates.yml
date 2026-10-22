@@ -6,9 +6,13 @@ on:
       DEEPSEEK_API_KEY:
         required: true
 
-concurrency:
-  group: quality-gates-${{ github.ref }}
-  cancel-in-progress: false
+# No workflow-level concurrency here on purpose (2026-10-22). A reusable
+# workflow's own group cannot be cancelled by the caller, so it silently
+# overrode the `jobs.<job_id>.concurrency` cancellation that deploy-staging.yml
+# now applies to this call (two pushes on the same ref queued instead of the
+# old gate run being dropped). Cancellation is a caller policy anyway: staging
+# wants cancel-in-progress, production does not. Gate jobs are read-only, so
+# two callers overlapping on the same ref is harmless.
 
 jobs:
   # Deliberately a separate job, not part of `npm run guardrails`: a full-graph
