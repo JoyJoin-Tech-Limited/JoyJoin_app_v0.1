@@ -29,6 +29,9 @@ COPY apps/server ./apps/server
 WORKDIR /app/apps/server
 RUN npm run build
 RUN npm prune --omit=dev
+# Guarantee the workspace-local node_modules path exists so the runner stage can
+# copy it unconditionally (see the COPY below for why it is needed).
+RUN mkdir -p /app/apps/server/node_modules /app/packages/shared/node_modules
 
 # Production image
 FROM node:20-alpine AS runner
@@ -51,6 +54,15 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy built server files
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
+
+# Workspace-local dependencies. npm only hoists a package to /app/node_modules
+# when a single version satisfies every importer; the drizzle-orm bump
+# (2026-10-22) moved it into apps/server/node_modules and packages/shared/
+# node_modules instead, so copying the root node_modules alone produced an
+# image that crashed on boot with ERR_MODULE_NOT_FOUND ('drizzle-orm').
+# Node resolves from /app/apps/server/dist, so the workspace directory must be
+# present in the image. (packages/shared is copied wholesale below.)
+COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
 
 # Copy runtime data (occupation vector index) — needed by occupation
 # correction-candidate resolution; the bundle reads it from apps/server/data.
