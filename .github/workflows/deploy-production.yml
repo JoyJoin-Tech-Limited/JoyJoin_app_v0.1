@@ -128,7 +128,10 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: production
-    timeout-minutes: 45
+    # 2026-10-22: deploys were being killed at 45m mid-switch (GHCR pull is the
+    # long pole; a killed switch left a half-applied release). 90m covers the
+    # worst-case pull budget with headroom instead of aborting a healthy deploy.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
