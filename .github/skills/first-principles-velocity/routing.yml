@@ -2,10 +2,15 @@ skill: first-principles-velocity
 category: internal
 
 primary_ownership: >
-  First-principles framing, critical-path prioritization, and pairing model cost tiers
-  to task depth—aligned with MODEL_CATALOG and Supervisor routing.
+  First-principles framing, the five-step requirement algorithm (question requirements →
+  delete → simplify → accelerate → automate), critical-path prioritization, and pairing model
+  cost tiers to task depth—aligned with MODEL_CATALOG and Supervisor routing.
 
 use_when:
+  - interrogating whether a requirement should exist at all (named source, evidence, deletion loss)
+  - deciding whether to delete, simplify, accelerate, or automate a flow, and in what order
+  - checking whether an automation proposal is premature (steps 1-3 not done)
+  - challenging a process, flag, script, or metric that nobody can justify
   - planning or reframing ambiguous work with explicit mission and bottleneck
   - choosing model tier or cost vs complexity for a step
   - routing specialists so one narrow handoff removes the critical path
@@ -25,6 +30,21 @@ do_not_use_when:
 
 strong_triggers:
   - first principles
+  - 质疑需求
+  - 这个需求该不该做
+  - 需求站不站得住
+  - 需求来源
+  - 先删再优化
+  - 砍流程
+  - 简化流程
+  - 五步算法
+  - 过早自动化
+  - 先删后自动化
+  - delete before automate
+  - premature automation
+  - should this flow exist
+  - should this requirement exist
+  - requirement algorithm
   - critical path
   - bottleneck
   - mission in one sentence
@@ -47,6 +67,7 @@ strong_triggers:
   - escalate with evidence
 
 owned_files:
+  - .github/skills/first-principles-velocity/references/requirement-algorithm.md
   - .github/agents/MODEL_CATALOG.md
   - .github/agents/supervisor.agent.md
   - .github/agents/planner.agent.md

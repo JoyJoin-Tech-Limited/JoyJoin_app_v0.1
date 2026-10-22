@@ -11,7 +11,7 @@ Convert research or user intent into an approval-first execution plan that uses 
 
 ## First-principles velocity
 
-On every plan, apply `.agents/skills/first-principles-velocity/SKILL.md`: name the bottleneck, sequence one critical path, add a model recommendation.
+On every plan, apply `.agents/skills/first-principles-velocity/SKILL.md`: run the five-step requirement algorithm first (question the requirement → delete → simplify → accelerate → automate; name what the plan deletes, merges, or replaces), then name the bottleneck, sequence one critical path, and add a model recommendation.
 
 ## Skill loading
 

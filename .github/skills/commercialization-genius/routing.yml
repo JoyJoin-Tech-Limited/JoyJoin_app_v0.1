@@ -4,8 +4,8 @@ category: internal
 primary_ownership: >
   JoyJoin commercial decisions — pricing, entitlement design, monetization
   paths, acquisition/Growth, feature tradeoffs, and go-to-market — delivered
-  as 7-section CEO decision memos grounded in repo canon and China tier-1
-  city (北上广深) market insight.
+  as 7-section CEO decision memos (with a mandatory five-step requirement audit
+  prepended) grounded in repo canon and China tier-1 city (北上广深) market insight.
 
 use_when:
   - user asks how to monetize a feature, raise or set a price, or design entitlement tiers
@@ -24,6 +24,7 @@ do_not_use_when:
 
 strong_triggers:
   - 商业化
+  - 五步审计
   - 变现
   - 定价
   - 涨价
@@ -56,6 +57,8 @@ owned_symbols:
   - event_pack
 
 related_skills:
+  - skill: first-principles-velocity
+    when: the memo's five-step audit needs the full step definitions, hard-forbidden deletion list, or anti-patterns behind the inline summary
   - skill: payment-entitlement-authority
     when: the memo's pricing/entitlement decision moves into payment implementation, refunds, or entitlement gating
   - skill: draft-prd

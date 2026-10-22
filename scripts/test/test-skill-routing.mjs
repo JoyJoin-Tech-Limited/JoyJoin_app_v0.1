@@ -802,6 +802,29 @@ test('model tier vs complexity → first-principles-velocity', () => {
   assertEqual(r.primary_skill, 'first-principles-velocity');
 });
 
+// ---- Requirement algorithm (five steps) ----
+console.log('\nRequirement algorithm scenarios:');
+
+test('质疑需求 → first-principles-velocity', () => {
+  const r = routeSkill({ ask: '这个需求该不该做？先帮我质疑需求本身，再谈方案' });
+  assertEqual(r.primary_skill, 'first-principles-velocity');
+});
+
+test('先删再优化 → first-principles-velocity', () => {
+  const r = routeSkill({ ask: '先删再优化：这个报名流程能不能砍掉一半步骤' });
+  assertEqual(r.primary_skill, 'first-principles-velocity');
+});
+
+test('premature automation → first-principles-velocity', () => {
+  const r = routeSkill({ ask: '这是不是过早自动化？提醒脚本服务的那条流程还没证明该存在' });
+  assertEqual(r.primary_skill, 'first-principles-velocity');
+});
+
+test('五步审计 on a pricing decision → commercialization-genius', () => {
+  const r = routeSkill({ ask: '用五步审计看一下这个涨价方案值不值得做' });
+  assertEqual(r.primary_skill, 'commercialization-genius');
+});
+
 // ---- E2E testing ----
 console.log('\nE2E scenarios:');
 

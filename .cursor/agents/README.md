@@ -39,7 +39,7 @@ If that still fails: **Cursor → Settings** → search `subagent`, ensure the w
 ### Kickoff lane (`Researcher` → `Planner`)
 
 - **`/researcher`** → `.cursor/agents/researcher.md` → **`.github/agents/researcher.agent.md`**. Enriched stub: first-principles habits + **executive briefing** skeleton for visible notes + research brief spine.
-- **`/planner`** → `.cursor/agents/planner.md` → **`.github/agents/planner.agent.md`**. Enriched stub: five themes / constraints + **`## Model Recommendation for Execution`** + executive briefing skeleton.
+- **`/planner`** → `.cursor/agents/planner.md` → **`.github/agents/planner.agent.md`**. Enriched stub: five-step requirement algorithm + three execution themes / constraints + **`## Model Recommendation for Execution`** + executive briefing skeleton.
 
 For **broad / unclear** work you may run **`/researcher`** then **`/planner`**, or **`/supervisor` first** (it can sequence the same when kickoff applies — see `.github/AI_WORKFLOW_POLICY.md`).
 

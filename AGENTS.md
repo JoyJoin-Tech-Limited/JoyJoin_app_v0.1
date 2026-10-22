@@ -31,6 +31,7 @@ Use the `skill` tool to load the skill that owns the boundary you're touching. T
 | Database schema changes, migrations | `database-migration-safety` |
 | Personality engine, archetypes, assessment, matcher | `personality-system` |
 | New feature flag, kill switch, rollout config | `feature-flags-launch-config` |
+| Requirement/flow justification (should this exist; delete → simplify → accelerate → automate order) | `first-principles-velocity` |
 
 > **Windows developers:** The `.agents/skills/` directory mirrors `.github/skills/` as real files (not symlinks). Git on Windows may check out the mirror entries as plain text files, which prevents OpenCode from discovering skills. If a skill reports "not found", run `npm run setup:agent-skills` to recreate the mirror as copies of the canonical definitions under `.github/skills/`.
 

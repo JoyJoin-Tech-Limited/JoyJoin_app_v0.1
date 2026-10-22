@@ -43,6 +43,8 @@ owned_paths: []
 owned_symbols: []
 
 related_skills:
+  - skill: first-principles-velocity
+    when: the requirement itself is unproven, or the scope needs a delete/simplify decision before a PRD is worth writing
   - skill: docs-sync
     when: the work is updating canonical docs after implementation rather than drafting new product requirements
   - skill: platform-coordination-protocol

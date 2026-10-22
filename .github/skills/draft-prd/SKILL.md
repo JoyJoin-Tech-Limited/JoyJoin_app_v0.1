@@ -26,29 +26,37 @@ product canon. For planning and requirements writing, not post-implementation do
 
 ## Core rules
 
-1. **Start from current canon.** Use `PRODUCT_REQUIREMENTS.md`,
+1. **Falsify the requirement before scoping it.** Every PRD names who asked (person, file path, or ticket), the observable evidence, and what breaks if the need is dropped. Any of the three missing → label **待证伪** and keep it out of the main scope. A perfect answer to the wrong question is the most expensive PRD failure.
+2. **Decide what gets deleted, merged, or replaced.** A PRD that only adds is incomplete. Hard-forbidden deletions: payment/refund/reconciliation paths, audit logs, compliance or WeChat-review copy (including fail-closed AIGC labels), auth/session/privacy boundaries, data-retention records — reduce those instead, and flag the governance path.
+3. **Start from current canon.** Use `PRODUCT_REQUIREMENTS.md`,
    `DEVELOPER_QUICK_REFERENCE.md`, and `docs/README.md` for active terminology.
-2. **Separate current state from proposal.** Make it explicit what exists today,
+4. **Separate current state from proposal.** Make it explicit what exists today,
    what is proposed, and what remains open.
-3. **Scope the problem before the solution.** Explain the user problem, target
+5. **Scope the problem before the solution.** Explain the user problem, target
    user, constraints, and success measures before implementation detail.
-4. **Keep backlog-ready details explicit.** Include acceptance criteria and
+6. **Keep backlog-ready details explicit.** Include acceptance criteria and
    dependencies when the artifact becomes tracked work.
-5. **Keep engineering assumptions testable.** Note routes, schema, AI, or
+7. **Keep engineering assumptions testable.** Note routes, schema, AI, or
    cross-platform behavior as hypotheses unless confirmed by the active codebase.
-6. **Write measurable success metrics.** Avoid vague wins like "better engagement"
-   without an observable signal, unit, and threshold.
+8. **Write measurable success metrics.** Avoid vague wins like "better engagement"
+   without an observable signal, unit, and threshold. Anything claimed as faster needs a
+   number (CI minutes, days to proof); with no baseline, write 待验证 instead of an adjective.
+
+Steps 1–2 come from the five-step requirement algorithm in
+[`first-principles-velocity/references/requirement-algorithm.md`](../first-principles-velocity/references/requirement-algorithm.md);
+the remaining steps (simplify → accelerate → automate) land in rules 5–7. Automation
+proposals are locked until the requirement and the deletion decision are both settled.
 
 ## Recommended structure
 
 Use a compact planning shape:
 
-1. Problem statement
+1. Problem statement — **with the requirement source and evidence, or 待证伪**
 2. Target users and scenario
-3. Goals and non-goals
-4. User stories or primary flows
-5. Acceptance criteria
-6. Constraints, risks, dependencies, and open questions
+3. Goals and non-goals — **plus what this deletes, merges, or replaces**
+4. User stories or primary flows — **smallest shape: fewest surfaces, states, flags**
+5. Acceptance criteria — **sequenced by smallest verifiable output**
+6. Constraints, risks, dependencies, and open questions — name automations only when steps 1–3 justified them
 7. Success metrics
 
 For the full template with acceptance-criteria examples, scope-boundary samples,
@@ -68,6 +76,10 @@ and success-metric formulas, see [`references/prd-template.md`](./references/prd
 | Issue | Fix |
 |-------|-----|
 | Mixes shipped and proposal ideas | Split into current state, proposed change, open questions |
+| Nobody can say who asked for this | Return to step 1 of the requirement algorithm; label 待证伪 or attach a source + evidence |
+| PRD only adds scope, deletes nothing | Name the behavior this retires, merges, or replaces — or state why nothing can be removed |
+| Deletion touches payment/audit/compliance/auth/retention | Restore it, reduce instead of remove, and flag the governance path |
+| Automates a manual step nobody justified | Drop it or mark it locked until the requirement and deletion decision are settled |
 | PRD is an implementation plan | Move file paths and sequencing to engineering docs |
 | Acceptance criteria are vague | Rewrite as specific observable outcomes |
 | Success metrics are too vague | Add unit, threshold, and comparison window |
@@ -75,6 +87,12 @@ and success-metric formulas, see [`references/prd-template.md`](./references/prd
 
 ## Review checklist
 
+- [ ] Requirement source and evidence present, or explicitly labeled 待证伪
+- [ ] Non-goals plus an explicit delete/merge/replace answer
+- [ ] Deletions avoid the five hard-forbidden categories, or the governance path is flagged
+- [ ] Solution shape is the smallest one that delivers the same user outcome
+- [ ] Acceptance criteria are sequenced by smallest verifiable output
+- [ ] Automations justified by steps 1–3, with frequency and owner
 - [ ] Uses active JoyJoin terminology and current product canon
 - [ ] Current state and proposed state are clearly separated
 - [ ] Goals and non-goals are explicit
@@ -90,3 +108,4 @@ and success-metric formulas, see [`references/prd-template.md`](./references/prd
 - `docs/README.md`
 - `docs/proposals/`
 - [`references/prd-template.md`](./references/prd-template.md)
+- [`first-principles-velocity/references/requirement-algorithm.md`](../first-principles-velocity/references/requirement-algorithm.md)

@@ -14,7 +14,7 @@ The machine-readable orchestration contract is `.github/orchestration.yaml`. The
 
 ## Execution discipline
 
-Planning, kickoff, and routing should stay aligned with [`.github/skills/first-principles-velocity/SKILL.md`](./skills/first-principles-velocity/SKILL.md): mission and critical path, model-tier fit against [`.github/agents/MODEL_CATALOG.md`](./agents/MODEL_CATALOG.md), and the **five execution themes** (constraint-first design, end-to-end slice ownership, smallest validating proof, ruthless deletion or quarantine, direct escalation when blocked with evidence). That skill pairs with [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md) for structured turns and with [`.github/AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) for delivery lanes and the planning check.
+Planning, kickoff, and routing should stay aligned with [`.github/skills/first-principles-velocity/SKILL.md`](./skills/first-principles-velocity/SKILL.md): the **five-step requirement algorithm** (question → delete → simplify → accelerate → automate, never reordered) ahead of mission and critical path, model-tier fit against [`.github/agents/MODEL_CATALOG.md`](./agents/MODEL_CATALOG.md), and the **three execution themes** (constraint-first design, end-to-end slice ownership, direct escalation when blocked with evidence). That skill pairs with [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md) for structured turns and with [`.github/AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) for delivery lanes and the planning check.
 
 ## Scope
 
