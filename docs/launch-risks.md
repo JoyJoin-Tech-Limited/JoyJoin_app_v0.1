@@ -129,7 +129,8 @@ production container does not set them (`/api/readyz` is the runtime check).
 | Env/secret/legacy/import guardrails | ✅ | `guardrails` job, every PR |
 | Dependency audit (runtime-reachable) | ✅ | `Dependency Audit` job, added 2026-10-21 |
 | Dependabot version + security PRs | ✅ config only | `.github/dependabot.yml`, added 2026-10-21. Opens PRs; **does not** block merges. |
-| CodeQL / any SAST | ❌ | No code-scanning workflow exists |
+| CodeQL **security** code scanning | ❌ | `code-scanning/default-setup` is `not-configured`; no code-scanning alerts exist |
+| CodeQL **code quality** scanning | ✅ dynamic | GitHub runs `CodeQL - Code Quality` on pushes to `main` (dynamic workflow, not a repo file). Quality only — it does not produce security alerts. |
 | Secret scanning in CI (gitleaks/trufflehog) | ❌ | Relies on GitHub's own secret scanning if enabled on the repo |
 | `dependency-review-action` on PRs | ❌ | Would block new vulnerable deps at PR time; not configured |
 | Container image scanning | ❌ | `deploy-staging` builds images without a scanner |
