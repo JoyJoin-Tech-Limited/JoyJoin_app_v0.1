@@ -143,7 +143,8 @@ Config: `.github/dependabot.yml` (weekly, Monday 09:00 Asia/Shanghai, max 5 open
 | **Grouped security PR** | Treat as urgent. Read the advisory, confirm the fix version is the one we want, run `npm run check:deps` after merge. |
 | **Grouped routine patch/minor** | Glance at the diff; let CI decide. Merge if green. |
 | **Individual `drizzle-orm` / `drizzle-kit` PR** | Not routine. These are 0.x, "minor" bumps are breaking in practice. Read the release notes, run `npm run test -w @joyjoin/server`, and check `db:verify` against staging before merging. **Do not bump `drizzle-zod` past 0.7.x** while the repo is on zod 3 classic — 0.8.x types are declared against zod v4's `ZodType` (`{out, in}`) and every `createSelectSchema` in `packages/shared/src/schema/` fails with `_zod missing` (measured 2026-10-22). Bump zod to 4 first, as its own task. |
-| **`@tarojs/*`, `react`, `react-dom`, `three` major** | Ignored by config on purpose. Handled by the W3 sprint (Taro) or a dedicated upgrade. |
+| **`@tarojs/*` (any update type)** | Ignored entirely. The package set is pinned in lockstep to one exact version; a partial bot bump makes every `npm install` fail with ERESOLVE (PR #642, closed 2026-10-22). Handled by the W3 sprint. |
+| **`react`, `react-dom`, `three` major** | Ignored by config on purpose. Handled by a dedicated upgrade. |
 
 If a Dependabot PR fails because the lockfile it produces conflicts with
 in-flight work, close it and re-open after the other branch lands — never
