@@ -1055,6 +1055,89 @@
     }
   }
 
+  // P1-1 (2026-10-22, UIUX memo §11): tap bounce. Squash&stretch lives on
+  // this WRAPPER around &__partner-breath so the breathing loop keeps its
+  // own transform layer (composition rule). One 360ms bounce per tap,
+  // ref-locked in TSX; RM = haptic only (page RM block strips these).
+  &__partner-touch {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-origin: bottom center;
+  }
+
+  &__partner-halo {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 300rpx;
+    height: 300rpx;
+    margin-left: -150rpx;
+    margin-top: -150rpx;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba($color-brand-gold, 0.28) 0%, rgba($color-brand-gold, 0) 68%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__partner-visual--tapped &__partner-touch {
+    animation: profile-avatar-bounce 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__partner-visual--tapped &__partner-halo {
+    animation: profile-avatar-halo 0.36s ease-out;
+  }
+
+  &__partner-visual--tapped &__partner-platform {
+    // Contact shadow compresses once with the squash; the breathing pulse
+    // stays as the first layer (the tap layer wins only while it runs).
+    animation: profile-avatar-platform-pulse 5.6s ease-in-out infinite,
+      profile-avatar-shadow 0.36s ease-out;
+  }
+
+  @keyframes profile-avatar-bounce {
+    0% {
+      transform: scaleY(1);
+    }
+    30% {
+      transform: scaleY(0.93);
+    }
+    65% {
+      transform: scaleY(1.04);
+    }
+    100% {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes profile-avatar-halo {
+    0% {
+      opacity: 0;
+      transform: scale(0.82);
+    }
+    35% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.12);
+    }
+  }
+
+  // Every keyframe preserves the platform's base translateX(-50%).
+  @keyframes profile-avatar-shadow {
+    0%, 100% {
+      transform: translateX(-50%) scale(1);
+    }
+    30% {
+      transform: translateX(-50%) scaleX(1.08) scaleY(0.88);
+    }
+    65% {
+      transform: translateX(-50%) scaleX(0.97) scaleY(1.04);
+    }
+  }
+
   @keyframes profile-avatar-breath {
     0%, 100% {
       transform: translateY(0) scale(1);
@@ -1926,6 +2009,14 @@
 
   .profile-page__story-action-ring {
     display: none;
+    animation: none;
+  }
+
+  // P1-1: RM = haptic only. The --tapped rules out-specify the platform's own
+  // nested RM rule, so the tap-layer animations must be stripped here.
+  .profile-page__partner-visual--tapped .profile-page__partner-touch,
+  .profile-page__partner-visual--tapped .profile-page__partner-halo,
+  .profile-page__partner-visual--tapped .profile-page__partner-platform {
     animation: none;
   }
 }

@@ -3,6 +3,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
+import { haptics } from '../../lib/utils/haptics'
 import { getDailyGreeting } from './profileConstants'
 import ProfilePage from './index'
 
@@ -490,6 +491,18 @@ describe('Profile approved V4 layout', () => {
       'profile_personality_action_tap',
       { source: 'v17_card' },
     )
+  })
+
+  it('P1-1: tapping the partner avatar fires one ref-locked bounce haptic', () => {
+    const { getByTestId } = render(<ProfilePage />)
+    ;(haptics as unknown as ReturnType<typeof vi.fn>).mockClear()
+
+    const touch = getByTestId('profile-partner-touch')
+    fireEvent.click(touch)
+    expect(haptics).toHaveBeenCalledWith('medium')
+    // Ref lock: a second tap inside the bounce window does not re-fire.
+    fireEvent.click(touch)
+    expect(haptics).toHaveBeenCalledTimes(1)
   })
 
   it('shows the daily greeting as the bio fallback (P0-3 precedence: bio > greeting > tagline) and prompts to review the report', () => {

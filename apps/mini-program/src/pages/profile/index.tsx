@@ -268,11 +268,28 @@ export default function ProfilePage() {
   // P0-9 playState gating: looping CSS animations (story drift, pulse ring)
   // pause while the tab page is hidden so background pages burn zero frames.
   const [pageVisible, setPageVisible] = useState(true)
+  // P1-1 avatar tap bounce: ref-locked (one bounce per tap, no queue). Reset
+  // in useDidShow — a swipe-away within the 420ms window must not leave the
+  // tap class stuck on the hidden page (page-stack lifecycle rule).
+  const [avatarBouncing, setAvatarBouncing] = useState(false)
+  const avatarBounceLockRef = useRef(false)
+  const handlePartnerTap = useCallback(() => {
+    if (avatarBounceLockRef.current) return
+    avatarBounceLockRef.current = true
+    haptics('medium')
+    setAvatarBouncing(true)
+    setTimeout(() => {
+      setAvatarBouncing(false)
+      avatarBounceLockRef.current = false
+    }, 420) // 360ms animation + settle margin
+  }, [])
   useDidHide(() => {
     setPageVisible(false)
   })
   useDidShow(() => {
     setPageVisible(true)
+    setAvatarBouncing(false)
+    avatarBounceLockRef.current = false
     if (!hasDidShowRef.current) {
       hasDidShowRef.current = true
       return
@@ -870,14 +887,23 @@ export default function ProfilePage() {
               </View>
               </View>
 
-              {/* Avatar anchored on the plaza with a warm platform shadow */}
+              {/* Avatar anchored on the plaza with a warm platform shadow.
+                  P1-1: tap it — squash&stretch bounce + halo + one haptic. */}
               <View
-                className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}`}
+                className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}${avatarBouncing ? ' profile-page__partner-visual--tapped' : ''}`}
               >
                 <View
                   className={`profile-page__partner-platform${deviceTier.isDegradation ? ' profile-page__partner-platform--no-pulse' : ''}`}
                   aria-hidden='true'
                 />
+              <View
+                className='profile-page__partner-touch'
+                onClick={handlePartnerTap}
+                role='button'
+                aria-label='和搭子打个招呼'
+                data-testid='profile-partner-touch'
+              >
+                <View className='profile-page__partner-halo' aria-hidden='true' />
               <View
                 className={`profile-page__partner-breath${deviceTier.isDegradation ? ' profile-page__partner-breath--no-breath' : ''}`}
                 data-testid='profile-partner-breath'
@@ -896,6 +922,7 @@ export default function ProfilePage() {
                     void equipmentQuery.refetch()
                   }}
                 />
+              </View>
               </View>
               </View>
 
