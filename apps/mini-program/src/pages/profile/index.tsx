@@ -1314,126 +1314,171 @@ export default function ProfilePage() {
           </View>
         )}
 
-        {/* P0-6: stat tiles carry their own keyframe entrance (backwards fill)
-            — no --entered gate here so pressed transforms stay live. */}
-        <View className='profile-page__stats'>
-          <Card
-            className='profile-page__stat profile-page__stat--tint-cream'
-            hoverClass='profile-page__stat--pressed'
+        {/* P2-1 (UIUX memo §2): the three tinted stat cards demote to ONE
+            compact data band — Act 2 我有什么: entitlement strip → band →
+            badge wall. Numbers still count up (memo §9); taps unchanged. */}
+        <View className='profile-page__data-band' data-testid='profile-data-band'>
+          <View
+            className='profile-page__data-band-cell'
+            hoverClass='profile-page__data-band-cell--pressed'
             onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
             role='button'
             aria-label={`已参加 ${joinedEventsCount} 场活动，去浏览足迹`}
           >
-            <JoyJoinIcon emoji='👣' tier='ui' size={40} className='profile-page__stat-icon' />
             {isLoadingStats ? (
-              <Text className='profile-page__stat-value'>—</Text>
+              <Text className='profile-page__data-band-value'>—</Text>
             ) : (
               <CountUpText
-                className='profile-page__stat-value'
+                className='profile-page__data-band-value'
                 value={joinedEventsCount}
                 {...PROFILE_COUNT_UP_OPTS}
               />
             )}
-            <Text className='profile-page__stat-label'>已参加活动</Text>
-          </Card>
-
-          <Card
-            className='profile-page__stat profile-page__stat--tint-pink'
-            hoverClass='profile-page__stat--pressed'
+            <Text className='profile-page__data-band-label'>已参加活动</Text>
+          </View>
+          <View className='profile-page__data-band-divider' aria-hidden='true' />
+          <View
+            className='profile-page__data-band-cell'
+            hoverClass='profile-page__data-band-cell--pressed'
             onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.connections }) }}
             role='button'
             aria-label={connectionsCount == null ? '连接数正在加载' : `已有 ${connectionsCount} 个连接，去查看`}
           >
-            <JoyJoinIcon emoji='👥' tier='ui' size={40} className='profile-page__stat-icon' />
             {profileShellQuery.isLoading || connectionsCount == null ? (
-              <Text className='profile-page__stat-value'>—</Text>
+              <Text className='profile-page__data-band-value'>—</Text>
             ) : (
               <CountUpText
-                className='profile-page__stat-value'
+                className='profile-page__data-band-value'
                 value={connectionsCount}
                 {...PROFILE_COUNT_UP_OPTS}
               />
             )}
-            <Text className='profile-page__stat-label'>我的连接</Text>
-          </Card>
-
-          <Card
-            className='profile-page__stat profile-page__stat--tint-purple'
-            hoverClass='profile-page__stat--pressed'
+            <Text className='profile-page__data-band-label'>我的连接</Text>
+          </View>
+          <View className='profile-page__data-band-divider' aria-hidden='true' />
+          <View
+            className='profile-page__data-band-cell'
+            hoverClass='profile-page__data-band-cell--pressed'
             onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
             role='button'
             aria-label={`资料完成度 ${profileCompletion}%，${profileCompletion >= 100 ? '查看资料' : '去完善资料'}`}
           >
-            <JoyJoinIcon emoji='📄' tier='ui' size={40} className='profile-page__stat-icon' />
-            {/* P1-3: the % glyph lives outside the animated span so the
-                min-width reservation stays numeric (memo §9 anti-jitter). */}
-            <View className='profile-page__stat-value-row'>
+            <View className='profile-page__data-band-value-row'>
               <CountUpText
-                className='profile-page__stat-value'
+                className='profile-page__data-band-value'
                 value={profileCompletion}
                 {...PROFILE_COUNT_UP_OPTS}
               />
-              <Text className='profile-page__stat-suffix'>%</Text>
+              <Text className='profile-page__data-band-suffix'>%</Text>
             </View>
-            <Text className='profile-page__stat-label'>资料完成度</Text>
-            <View className='profile-page__stat-progress'>
+            <Text className='profile-page__data-band-label'>资料完成度</Text>
+            <View className='profile-page__data-band-mini-progress' aria-hidden='true'>
               <View
-                className='profile-page__stat-progress-bar'
+                className='profile-page__data-band-mini-progress-bar'
                 style={{ transform: `scaleX(${profileCompletion / 100})` }}
               />
             </View>
-          </Card>
+          </View>
         </View>
 
-        {/* P1-5 quest line (PM memo §2): 4 steps until first 成行; hidden
-            forever once any registration is matched/completed. No dismiss. */}
-        {quest && (
-          <View className='profile-page__quest' data-testid='profile-quest'>
-            <View className='profile-page__quest-header'>
-              <Text className='profile-page__quest-title'>启程任务</Text>
-              <Text className='profile-page__quest-subtitle'>走完 4 步，迎来你的第一场局</Text>
+        {profileV17Enabled && !isLoadingStats && joinedEventsCount >= 1 && (
+          <View className='profile-page__milestones'>
+            {/* P6b density redesign: badge grid collapsed to a single entry
+                row (icon + title + unlock summary + chevron). No dedicated
+                milestones route exists in the app, so the row expands the
+                unlocked badge cards inline as an accordion. */}
+            <View
+              className='profile-page__milestones-entry'
+              hoverClass='profile-page__milestones-entry--pressed'
+              onClick={() => {
+                haptics('light')
+                const nextOpen = !milestonesOpen
+                profileAnalytics.track('profile_milestone_tap', {
+                  action: nextOpen ? 'expand' : 'collapse',
+                })
+                setMilestonesOpen(nextOpen)
+              }}
+              role='button'
+              aria-expanded={milestonesOpen}
+              aria-label={`成就徽章，已点亮 ${unlockedMilestones.length} 枚，共 ${MILESTONES.length} 枚`}
+              data-testid='profile-milestones-entry'
+            >
+              <Image
+                className='profile-page__milestones-entry-icon'
+                src={MILESTONE_BADGES.firstEvent}
+                mode='aspectFit'
+                lazyLoad
+                aria-hidden='true'
+              />
+              <View className='profile-page__milestones-entry-text'>
+                <Text className='profile-page__milestones-entry-title'>成就徽章</Text>
+                <Text className='profile-page__milestones-entry-summary'>
+                  {`已点亮 ${unlockedMilestones.length}/${MILESTONES.length} 枚`}
+                </Text>
+              </View>
+              <View
+                className={`profile-page__milestones-entry-chevron${milestonesOpen ? ' profile-page__milestones-entry-chevron--open' : ''}`}
+                aria-hidden='true'
+              />
             </View>
-            {quest.steps.map((step) => {
-              const isMatchedStep = step.key === 'matched'
-              const showMatchedCta = isMatchedStep && quest.registerDone
-              const showCta = (!isMatchedStep && !step.done) || showMatchedCta
-              return (
-                <View
-                  key={step.key}
-                  className='profile-page__quest-step'
-                  data-testid={`profile-quest-step-${step.key}`}
-                >
-                  <View
-                    className={`profile-page__quest-check${step.done ? ' profile-page__quest-check--done' : ''}`}
-                    aria-hidden='true'
-                  >
-                    {step.done && <JoyJoinIcon emoji='✅' tier='ui' size={20} />}
-                  </View>
-                  <View className='profile-page__quest-step-text'>
-                    <Text className={`profile-page__quest-step-title${step.done ? ' profile-page__quest-step-title--done' : ''}`}>
-                      {step.title}
-                    </Text>
-                    {isMatchedStep && quest.registerDone && (
-                      <Text className='profile-page__quest-step-sub'>排桌完成后，这里自动打勾</Text>
-                    )}
-                  </View>
-                  {showCta && (
+            {milestonesOpen && (
+              <View className='profile-page__milestones-row profile-page__milestones-row--five-up'>
+                {MILESTONES.map((milestone) => {
+                  const unlocked = joinedEventsCount >= milestone.threshold
+                  const justUnlocked = justUnlockedKeys.includes(milestone.key)
+                  const remaining = milestone.threshold - joinedEventsCount
+                  return (
                     <View
-                      className='profile-page__quest-cta'
-                      hoverClass='profile-page__quest-cta--pressed'
-                      onClick={() => handleQuestStepTap(step.key)}
-                      role='button'
-                      aria-label={isMatchedStep ? '查看进度' : step.cta}
-                      data-testid={`profile-quest-cta-${step.key}`}
+                      key={milestone.key}
+                      className={[
+                        'profile-page__milestone',
+                        unlocked ? '' : 'profile-page__milestone--locked',
+                        justUnlocked ? 'profile-page__milestone--just-unlocked' : '',
+                      ].filter(Boolean).join(' ')}
+                      hoverClass={unlocked ? 'profile-page__milestone--pressed' : undefined}
+                      onClick={unlocked ? () => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) } : undefined}
+                      role={unlocked ? 'button' : undefined}
+                      aria-label={unlocked
+                        ? `${milestone.label}，已点亮，去浏览足迹`
+                        : `${milestone.label}，未点亮，还差 ${remaining} 场`}
+                      data-testid={`profile-milestone-${milestone.key}`}
                     >
-                      <Text className='profile-page__quest-cta-text'>
-                        {isMatchedStep ? '查看进度' : step.cta}
-                      </Text>
+                      <View className='profile-page__milestone-badge-wrap'>
+                        {milestone.badge ? (
+                          <Image
+                            className={`profile-page__milestone-img${unlocked ? '' : ' profile-page__milestone-img--locked'}`}
+                            mode='aspectFit'
+                            src={milestone.badge}
+                            lazyLoad
+                          />
+                        ) : (
+                          // Batch-D2 art pending → CSS medallion (locked:
+                          // dashed + lock glyph; unlocked: solid gold fill).
+                          <View
+                            className={`profile-page__milestone-medallion${unlocked ? ' profile-page__milestone-medallion--unlocked' : ''}`}
+                            aria-hidden='true'
+                          >
+                            {!unlocked && <JoyJoinIcon emoji='🔒' tier='ui' size={20} />}
+                          </View>
+                        )}
+                        {!unlocked && milestone.badge && (
+                          <View className='profile-page__milestone-lock' aria-hidden='true'>
+                            <JoyJoinIcon emoji='🔒' tier='ui' size={16} />
+                          </View>
+                        )}
+                        {justUnlocked && (
+                          <View className='profile-page__milestone-unlock-ring' aria-hidden='true' />
+                        )}
+                      </View>
+                      <Text className='profile-page__milestone-label'>{milestone.label}</Text>
+                      {!unlocked && (
+                        <Text className='profile-page__milestone-hint'>还差 {remaining} 场</Text>
+                      )}
                     </View>
-                  )}
-                </View>
-              )
-            })}
+                  )
+                })}
+              </View>
+            )}
           </View>
         )}
 
@@ -1563,104 +1608,55 @@ export default function ProfilePage() {
           </View>
         )}
 
-        {profileV17Enabled && !isLoadingStats && joinedEventsCount >= 1 && (
-          <View className='profile-page__milestones'>
-            {/* P6b density redesign: badge grid collapsed to a single entry
-                row (icon + title + unlock summary + chevron). No dedicated
-                milestones route exists in the app, so the row expands the
-                unlocked badge cards inline as an accordion. */}
-            <View
-              className='profile-page__milestones-entry'
-              hoverClass='profile-page__milestones-entry--pressed'
-              onClick={() => {
-                haptics('light')
-                const nextOpen = !milestonesOpen
-                profileAnalytics.track('profile_milestone_tap', {
-                  action: nextOpen ? 'expand' : 'collapse',
-                })
-                setMilestonesOpen(nextOpen)
-              }}
-              role='button'
-              aria-expanded={milestonesOpen}
-              aria-label={`成就徽章，已点亮 ${unlockedMilestones.length} 枚，共 ${MILESTONES.length} 枚`}
-              data-testid='profile-milestones-entry'
-            >
-              <Image
-                className='profile-page__milestones-entry-icon'
-                src={MILESTONE_BADGES.firstEvent}
-                mode='aspectFit'
-                lazyLoad
-                aria-hidden='true'
-              />
-              <View className='profile-page__milestones-entry-text'>
-                <Text className='profile-page__milestones-entry-title'>成就徽章</Text>
-                <Text className='profile-page__milestones-entry-summary'>
-                  {`已点亮 ${unlockedMilestones.length}/${MILESTONES.length} 枚`}
-                </Text>
-              </View>
-              <View
-                className={`profile-page__milestones-entry-chevron${milestonesOpen ? ' profile-page__milestones-entry-chevron--open' : ''}`}
-                aria-hidden='true'
-              />
+        {/* P1-5 quest line (PM memo §2): 4 steps until first 成行; hidden
+            forever once any registration is matched/completed. No dismiss. */}
+        {quest && (
+          <View className='profile-page__quest' data-testid='profile-quest'>
+            <View className='profile-page__quest-header'>
+              <Text className='profile-page__quest-title'>启程任务</Text>
+              <Text className='profile-page__quest-subtitle'>走完 4 步，迎来你的第一场局</Text>
             </View>
-            {milestonesOpen && (
-              <View className='profile-page__milestones-row profile-page__milestones-row--five-up'>
-                {MILESTONES.map((milestone) => {
-                  const unlocked = joinedEventsCount >= milestone.threshold
-                  const justUnlocked = justUnlockedKeys.includes(milestone.key)
-                  const remaining = milestone.threshold - joinedEventsCount
-                  return (
+            {quest.steps.map((step) => {
+              const isMatchedStep = step.key === 'matched'
+              const showMatchedCta = isMatchedStep && quest.registerDone
+              const showCta = (!isMatchedStep && !step.done) || showMatchedCta
+              return (
+                <View
+                  key={step.key}
+                  className='profile-page__quest-step'
+                  data-testid={`profile-quest-step-${step.key}`}
+                >
+                  <View
+                    className={`profile-page__quest-check${step.done ? ' profile-page__quest-check--done' : ''}`}
+                    aria-hidden='true'
+                  >
+                    {step.done && <JoyJoinIcon emoji='✅' tier='ui' size={20} />}
+                  </View>
+                  <View className='profile-page__quest-step-text'>
+                    <Text className={`profile-page__quest-step-title${step.done ? ' profile-page__quest-step-title--done' : ''}`}>
+                      {step.title}
+                    </Text>
+                    {isMatchedStep && quest.registerDone && (
+                      <Text className='profile-page__quest-step-sub'>排桌完成后，这里自动打勾</Text>
+                    )}
+                  </View>
+                  {showCta && (
                     <View
-                      key={milestone.key}
-                      className={[
-                        'profile-page__milestone',
-                        unlocked ? '' : 'profile-page__milestone--locked',
-                        justUnlocked ? 'profile-page__milestone--just-unlocked' : '',
-                      ].filter(Boolean).join(' ')}
-                      hoverClass={unlocked ? 'profile-page__milestone--pressed' : undefined}
-                      onClick={unlocked ? () => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) } : undefined}
-                      role={unlocked ? 'button' : undefined}
-                      aria-label={unlocked
-                        ? `${milestone.label}，已点亮，去浏览足迹`
-                        : `${milestone.label}，未点亮，还差 ${remaining} 场`}
-                      data-testid={`profile-milestone-${milestone.key}`}
+                      className='profile-page__quest-cta'
+                      hoverClass='profile-page__quest-cta--pressed'
+                      onClick={() => handleQuestStepTap(step.key)}
+                      role='button'
+                      aria-label={isMatchedStep ? '查看进度' : step.cta}
+                      data-testid={`profile-quest-cta-${step.key}`}
                     >
-                      <View className='profile-page__milestone-badge-wrap'>
-                        {milestone.badge ? (
-                          <Image
-                            className={`profile-page__milestone-img${unlocked ? '' : ' profile-page__milestone-img--locked'}`}
-                            mode='aspectFit'
-                            src={milestone.badge}
-                            lazyLoad
-                          />
-                        ) : (
-                          // Batch-D2 art pending → CSS medallion (locked:
-                          // dashed + lock glyph; unlocked: solid gold fill).
-                          <View
-                            className={`profile-page__milestone-medallion${unlocked ? ' profile-page__milestone-medallion--unlocked' : ''}`}
-                            aria-hidden='true'
-                          >
-                            {!unlocked && <JoyJoinIcon emoji='🔒' tier='ui' size={20} />}
-                          </View>
-                        )}
-                        {!unlocked && milestone.badge && (
-                          <View className='profile-page__milestone-lock' aria-hidden='true'>
-                            <JoyJoinIcon emoji='🔒' tier='ui' size={16} />
-                          </View>
-                        )}
-                        {justUnlocked && (
-                          <View className='profile-page__milestone-unlock-ring' aria-hidden='true' />
-                        )}
-                      </View>
-                      <Text className='profile-page__milestone-label'>{milestone.label}</Text>
-                      {!unlocked && (
-                        <Text className='profile-page__milestone-hint'>还差 {remaining} 场</Text>
-                      )}
+                      <Text className='profile-page__quest-cta-text'>
+                        {isMatchedStep ? '查看进度' : step.cta}
+                      </Text>
                     </View>
-                  )
-                })}
-              </View>
-            )}
+                  )}
+                </View>
+              )
+            })}
           </View>
         )}
 

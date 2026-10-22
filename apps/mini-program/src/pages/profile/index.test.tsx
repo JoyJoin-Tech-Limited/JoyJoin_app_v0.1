@@ -604,6 +604,29 @@ describe('Profile approved V4 layout', () => {
     expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.discover })
   })
 
+  it('P2-1: modules render in the three-act order (我是谁 → 我有什么 → 我能干嘛)', () => {
+    state.queryStates.set('mini-program/shell/profile', {
+      data: { stats: { eventsJoined: 4, connectionsCount: 2 } },
+    })
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+
+    const { getByTestId } = render(<ProfilePage />)
+    const stage = getByTestId('profile-v4')
+    const band = getByTestId('profile-data-band')
+    const badges = getByTestId('profile-milestones-entry')
+    const story = getByTestId('profile-growth-archive')
+    const quest = getByTestId('profile-quest')
+    const settings = getByTestId('profile-settings-entry')
+
+    const follows = (a: HTMLElement, b: HTMLElement) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+    expect(follows(stage, band)).toBe(true)
+    expect(follows(band, badges)).toBe(true)
+    expect(follows(badges, story)).toBe(true)
+    expect(follows(story, quest)).toBe(true)
+    expect(follows(quest, settings)).toBe(true)
+  })
+
   it('P2-3: 存下这张卡 entry renders under the story card when an archetype exists', () => {
     const { getByTestId, getByText } = render(<ProfilePage />)
     expect(getByTestId('profile-poster-entry')).toBeTruthy()

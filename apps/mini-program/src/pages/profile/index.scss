@@ -203,9 +203,7 @@
     border-radius: $card-radius-sm;
     box-shadow: $shadow-card;
     transition: transform 0.12s ease, background 0.12s ease;
-    // P0-6 choreography: services row closes the entrance timeline
-    // (340ms, 0.26s — last element settles at 600ms).
-    animation: profile-row-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.34s backwards;
+    // P2-1 (UIUX memo §2): settings is chrome — NO entrance motion.
 
     &--pressed {
       transform: scale(0.985);
@@ -269,8 +267,9 @@
     align-items: center;
     gap: $spacing-md;
     min-height: 224rpx;
-    // P6 density pass: bottom gap normalized to $spacing-md (24rpx).
-    margin: $spacing-md $container-padding $spacing-md;
+    // P2-1: 40rpx act gap below the stage (Act 1 我是谁 → Act 2 我有什么);
+    // 24rpx remains the intra-act rhythm everywhere else.
+    margin: $spacing-md $container-padding $spacing-lg;
     padding: $spacing-lg;
     padding-right: $spacing-lg;
     background: var(--profile-surface);
@@ -370,7 +369,7 @@
     padding: 0 $container-padding;
     margin-bottom: $spacing-md;
     // Stagger slot B (P2-1 map): enters right after the stage begins.
-    animation: profile-card-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards;
+    animation: profile-card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards;
   }
 
   &__entitlement-pill {
@@ -444,12 +443,100 @@
     text-overflow: ellipsis;
   }
 
-  &__stats {
+  // P2-1 compact data band (2026-10-22, UIUX memo §2): the three tinted
+  // stat cards demote to one quiet one-liner band (96rpx) — Act 2 我有什么
+  // middle module. Equal cells, hairline dividers, completion carries a mini
+  // progress bar. Count-up numbers ride CountUpText (memo §9 unchanged).
+  &__data-band {
     display: flex;
-    gap: $spacing-sm;
-    padding: 0 $container-padding;
-    // P6 density pass: section gap normalized to $spacing-md (24rpx).
-    margin-bottom: $spacing-md;
+    align-items: center;
+    margin: 0 $container-padding $spacing-md;
+    padding: 0 $spacing-sm;
+    min-height: 96rpx;
+    box-sizing: border-box;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    // Stagger slot C (120ms, 0.35s — UIUX §2 timing table).
+    animation: profile-card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.12s backwards;
+  }
+
+  &__data-band-cell {
+    flex: 1;
+    min-width: 0;
+    min-height: 96rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rpx;
+    padding: $spacing-xs 4rpx;
+    box-sizing: border-box;
+    border-radius: $radius-md;
+    transition: background 0.12s ease, transform 0.12s ease;
+
+    &--pressed {
+      background: var(--profile-primary-04);
+      transform: scale(0.98);
+    }
+  }
+
+  &__data-band-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+  }
+
+  &__data-band-value {
+    font-family: $font-en-brand;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+    line-height: 1.2;
+    // P1-3 anti-jitter: reserve 2-3 digits' width for the count-up ticks.
+    min-width: 64rpx;
+    text-align: center;
+  }
+
+  &__data-band-suffix {
+    font-family: $font-en-brand;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+    line-height: 1.2;
+  }
+
+  &__data-band-label {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+  }
+
+  &__data-band-divider {
+    width: 1rpx;
+    height: 40rpx;
+    background: var(--profile-divider);
+    flex-shrink: 0;
+  }
+
+  &__data-band-mini-progress {
+    margin-top: 4rpx;
+    width: 72rpx;
+    height: 6rpx;
+    border-radius: 3rpx;
+    background: var(--profile-primary-08);
+    overflow: hidden;
+  }
+
+  &__data-band-mini-progress-bar {
+    width: 100%;
+    height: 100%;
+    border-radius: 3rpx;
+    background: $color-primary;
+    transform-origin: left center;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   // P0-6 entrance keyframes: backwards fill ONLY — a forwards fill would
@@ -602,10 +689,11 @@
   // below it (accordion) since no dedicated milestones route exists.
   &__milestones {
     padding: 0 $container-padding;
-    // P6 density pass: section gap normalized to $spacing-md (24rpx).
-    margin-bottom: $spacing-md;
-    // P0-6 choreography: collections row enters after the stat tiles.
-    animation: profile-row-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+    // P2-1: 40rpx act gap below the badge wall (Act 2 → Act 3).
+    margin-bottom: $spacing-lg;
+    // P2-1: badge wall closes Act 2 — stagger slot D (180ms, 0.35s), and
+    // the 40rpx act gap below it (Act 2 → Act 3).
+    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
   }
 
   // Single entry row — same chrome family as the settings entry below so the
@@ -886,8 +974,9 @@
     // made the two cards overlap in render (text-on-text, 2026-08-01 audit).
     height: 728rpx;
     min-height: 728rpx;
-    // P6 density pass: bottom gap normalized to $spacing-md (24rpx).
-    margin: $spacing-md $container-padding $spacing-md;
+    // P2-1: 40rpx act gap below the stage (Act 1 我是谁 → Act 2 我有什么);
+    // 24rpx remains the intra-act rhythm everywhere else.
+    margin: $spacing-md $container-padding $spacing-lg;
     border-radius: $card-radius;
     overflow: hidden;
     box-sizing: border-box;
@@ -2023,7 +2112,7 @@
     border: 1rpx solid var(--profile-divider);
     border-radius: $card-radius-sm;
     box-shadow: $shadow-card;
-    animation: profile-row-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.24s backwards;
+    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
   }
 
   &__quest-header {
@@ -2137,7 +2226,7 @@
     box-sizing: border-box;
     border-radius: $card-radius;
     @include profile-stage-glass;
-    animation: profile-duo-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.22s backwards;
+    animation: profile-duo-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.24s backwards;
     transition: opacity 0.16s ease, transform 0.16s ease;
 
     &--dismissing {
@@ -2261,8 +2350,8 @@
     // P0-6 choreography: story card follows the stat tiles (240ms, 0.3s).
     opacity: 0;
     transform: translateY(12rpx);
-    transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.24s,
-      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.24s;
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.24s,
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.24s;
 
     &--entered {
       opacity: 1;
@@ -2545,7 +2634,7 @@
     display: flex;
     justify-content: center;
     margin: 0 $container-padding $spacing-md;
-    animation: profile-row-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.26s backwards;
+    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.32s backwards;
   }
 
   &__poster-pill {
@@ -2597,7 +2686,7 @@
     transition: none;
   }
 
-  .profile-page__stat,
+  .profile-page__data-band,
   .profile-page__fallback-personality,
   .profile-page__nav-settings,
   .profile-page__partner-entry,
@@ -2713,6 +2802,17 @@
   .profile-page__milestones-row--five-up .profile-page__milestone-medallion {
     width: 64rpx;
     height: 64rpx;
+  }
+
+  // P2-1 (UIUX memo §2 risk c): data-band values drop to 24rpx on ≤340px —
+  // labels keep the 20rpx floor.
+  .profile-page__data-band-value,
+  .profile-page__data-band-suffix {
+    font-size: 24rpx;
+  }
+
+  .profile-page__data-band-value {
+    min-width: 48rpx;
   }
 
   .profile-page__partner-visual {
