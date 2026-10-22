@@ -2261,6 +2261,39 @@
     font-weight: $font-weight-bold;
     line-height: $line-height-normal;
     color: $color-text-primary;
+    // P2-2: title now carries the chapter's real title — cap at one line.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // P2-2 serialization badge (PM memo §6): quiet pill for 连载中, warm-gold
+  // for pending experiences. Sits above the title inside story-content.
+  &__story-badge {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    min-height: 36rpx;
+    padding: 2rpx 14rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.6);
+    margin-bottom: $spacing-xs;
+    box-sizing: border-box;
+
+    &--pending {
+      background: rgba($color-landed-gold, 0.92);
+    }
+  }
+
+  &__story-badge-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-tertiary);
+  }
+
+  &__story-badge--pending &__story-badge-text {
+    color: $color-text-primary;
   }
 
   &__story-summary {

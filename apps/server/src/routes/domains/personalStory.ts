@@ -93,7 +93,17 @@ export function registerPersonalStoryRoutes(app: Express): void {
           message: "我的故事暂未开放",
         });
       }
-      const { story, updateJob } = await loadPersonalStoryContext(userId);
+      const { novel, story, updateJob } = await loadPersonalStoryContext(userId);
+      // P2-2 (2026-10-22, PM memo §6): pending-experience badge count for the
+      // profile story card. Fail-open — a counter failure must never 500 the
+      // story payload; the field is simply omitted.
+      let pendingExperienceCount: number | undefined;
+      try {
+        const missing = await listMissingPersonalStoryExperiences(userId, novel.id);
+        pendingExperienceCount = missing.length;
+      } catch {
+        pendingExperienceCount = undefined;
+      }
       const response: PersonalStoryResponse = {
         story,
         updateJob: availability.canUpdate
@@ -103,6 +113,7 @@ export function registerPersonalStoryRoutes(app: Express): void {
           : disabledUpdateJob(),
         aiEnabled: availability.aiEnabled,
         canUpdate: availability.canUpdate,
+        pendingExperienceCount,
       };
       return res.status(200).json(response);
     } catch (error) {

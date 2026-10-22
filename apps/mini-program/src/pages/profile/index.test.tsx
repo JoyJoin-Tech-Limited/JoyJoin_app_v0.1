@@ -554,6 +554,28 @@ describe('Profile approved V4 layout', () => {
     expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.discover })
   })
 
+  it('P2-2: story card carries the latest chapter title and the pending-experience badge', () => {
+    state.queryStates.set('mini-program/personal-story/profile-teaser', {
+      data: {
+        story: {
+          chapters: [
+            { id: 'c1', title: '第一次破冰', body: '', activityType: 'blind_box', occurredAt: '2026-10-10T12:00:00Z' },
+            { id: 'c2', title: '深夜食堂局', body: '', activityType: 'blind_box', occurredAt: '2026-10-18T12:00:00Z' },
+          ],
+        },
+        pendingExperienceCount: 2,
+        aiEnabled: false,
+        canUpdate: false,
+        updateJob: null,
+      },
+    })
+
+    const { getByText, getByTestId } = render(<ProfilePage />)
+    // Chapters ascend by chapterNumber → display number = count, latest = last.
+    expect(getByText('第 2 章 · 深夜食堂局')).toBeTruthy()
+    expect(getByTestId('profile-story-badge').textContent).toContain('2 段新经历待写成')
+  })
+
   it('P2-5: large title shows 我的 + date sub-line (greeting joins only when a bio exists)', () => {
     const { getByTestId } = render(<ProfilePage />)
     expect(getByTestId('profile-large-title')).toBeTruthy()

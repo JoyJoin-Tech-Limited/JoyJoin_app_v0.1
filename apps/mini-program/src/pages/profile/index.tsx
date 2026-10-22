@@ -537,7 +537,13 @@ export default function ProfilePage() {
     ? '赴约并完成反馈，即可抽一件'
     : '报名一场局，结束后可抽一件'
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
-  const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
+  // P2-2 (PM memo §6): serialized story entry — title carries the latest
+  // chapter's real title (chapters are ascending by chapterNumber, repo
+  // verified), plus a badge for pending unwritten experiences.
+  const storyChapters = personalStoryTeaserQuery.data?.story?.chapters ?? []
+  const storyChapterCount = storyChapters.length
+  const latestStoryChapterTitle = storyChapterCount > 0 ? storyChapters[storyChapterCount - 1]?.title ?? null : null
+  const pendingStoryCount = personalStoryTeaserQuery.data?.pendingExperienceCount ?? 0
 
   // P0-5: 我的 tab dot = live pending-equipment-draw count. Passed live to
   // the tab-bar sync AND persisted so sibling tabs render the dot before
@@ -1391,8 +1397,22 @@ export default function ProfilePage() {
             >
               <ProfileStoryArtwork paused={!pageVisible} noDrift={deviceTier.isDegradation} />
               <View className='profile-page__story-content'>
+                {/* P2-2: serialization badge — pending experiences (gold) or
+                    连载中 (quiet); hidden at 0 chapters with 0 pending. */}
+                {(pendingStoryCount > 0 || storyChapterCount > 0) && (
+                  <View
+                    className={`profile-page__story-badge${pendingStoryCount > 0 ? ' profile-page__story-badge--pending' : ''}`}
+                    data-testid='profile-story-badge'
+                  >
+                    <Text className='profile-page__story-badge-text'>
+                      {pendingStoryCount > 0 ? `${pendingStoryCount} 段新经历待写成` : '连载中'}
+                    </Text>
+                  </View>
+                )}
                 <Text className='profile-page__story-title'>
-                  {storyChapterCount > 0 ? `第 ${storyChapterCount} 章 · 继续书写` : '开始你的第一章'}
+                  {storyChapterCount > 0 && latestStoryChapterTitle
+                    ? `第 ${storyChapterCount} 章 · ${latestStoryChapterTitle}`
+                    : '开始你的第一章'}
                 </Text>
                 <Text className='profile-page__story-summary'>
                   只根据你真实参加过的相遇，一章一章继续写下去。
