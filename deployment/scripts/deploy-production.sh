@@ -511,11 +511,23 @@ else
   retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --no-deps joyjoin-api joyjoin-admin
 fi
 
-echo "🐳 Starting granite-embedding (built locally from deploy/granite-embedding, non-blocking)..."
-if docker compose -f docker-compose.nginx.yml up -d --build --no-deps granite-embedding; then
-  echo "   ✅ granite-embedding started"
+# granite-embedding only changes when deploy/granite-embedding/** changes, but rebuilding it on
+# every release downloads a ~196 MB torch wheel from download.pytorch.org inside this same SSH
+# session. On 2026-10-22 that download overran the workflow's command_timeout after API/Admin had
+# already been switched and verified healthy — the release reported failure for a trailing,
+# non-critical step. Build it only when the image is missing, or when explicitly forced.
+GRANITE_REBUILD="${GRANITE_EMBEDDING_REBUILD:-0}"
+GRANITE_IMAGE="$(docker compose -f docker-compose.nginx.yml config --images granite-embedding 2>/dev/null | head -n 1 || true)"
+if [ "$GRANITE_REBUILD" != "1" ] && [ -n "$GRANITE_IMAGE" ] && docker image inspect "$GRANITE_IMAGE" > /dev/null 2>&1; then
+  echo "🐳 granite-embedding image already present ($GRANITE_IMAGE) — skipping rebuild (set GRANITE_EMBEDDING_REBUILD=1 to force)"
+  docker compose -f docker-compose.nginx.yml up -d --no-deps granite-embedding > /dev/null 2>&1 || true
 else
-  echo "   ⚠️ granite-embedding failed to build/start — semantic matching stays at 6D until next deploy"
+  echo "🐳 Building granite-embedding (image missing or GRANITE_EMBEDDING_REBUILD=1, non-blocking)..."
+  if timeout --signal=TERM --kill-after=30s 15m docker compose -f docker-compose.nginx.yml up -d --build --no-deps granite-embedding; then
+    echo "   ✅ granite-embedding started"
+  else
+    echo "   ⚠️ granite-embedding failed to build/start — semantic matching stays at 6D until next deploy"
+  fi
 fi
 
 # --- 5) Health checks ---
