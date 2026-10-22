@@ -1294,12 +1294,21 @@
   // RPG level plate: gold-trimmed pill carrying `Lv.X 名称`. Hidden on
   // gamification error (error copy renders as the plain `&__growth-level`
   // line above — never on the plate).
+  // P0-4 (2026-10-22, UIUX memo §8): level plate + streak capsule share one
+  // foot row (space-between). The row owns the top margin now — the plate's
+  // own margin-top/align-self were removed when the row was introduced.
+  &__growth-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
   &__level-plate {
     display: inline-flex;
     align-items: center;
-    align-self: flex-start;
     gap: 8rpx;
-    margin-top: $spacing-xs;
     padding: 4rpx $spacing-sm;
     min-height: 40rpx;
     box-sizing: border-box;
@@ -1324,6 +1333,50 @@
     font-weight: $font-weight-semibold;
     line-height: $line-height-normal;
     color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
+  // P0-4 streak capsule — equipment-wait-chip gold family (rgba brand-gold
+  // 0.12). Single line commonly (48rpx vs the plate's 40rpx → +8rpx, inside
+  // the card's ~29rpx slack); --near-milestone adds the hint line (+28rpx →
+  // fits by ~1rpx; ≤340px hides the hint — locked degradation, memo §8).
+  &__streak-capsule {
+    min-height: 48rpx;
+    padding: 4rpx 16rpx;
+    box-sizing: border-box;
+    border-radius: $radius-pill;
+    background: rgba($color-brand-gold, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2rpx;
+  }
+
+  &__streak-main {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  &__streak-icon {
+    flex-shrink: 0;
+  }
+
+  &__streak-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+    color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
+  &__streak-hint {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    line-height: $line-height-normal;
+    color: var(--profile-text-tertiary);
     white-space: nowrap;
   }
 
@@ -1866,6 +1919,18 @@
   .profile-page__identity-name,
   .profile-page__identity-bio {
     max-width: 160rpx;
+  }
+
+  // P0-3: the daily greeting keeps its full-width 2-line clamp even here —
+  // squeezing a sentence into 160rpx would cut it off mid-thought.
+  .profile-page__identity-bio--daily {
+    max-width: none;
+  }
+
+  // P0-4 locked degradation (UIUX memo §8): the near-milestone hint line is
+  // the first thing to go on ≤340px — capsule stays a single line.
+  .profile-page__streak-hint {
+    display: none;
   }
 
   .profile-page__partner-visual {

@@ -54,6 +54,7 @@ import {
   isProfileV17Enabled,
   ARCHETYPE_FAMILY_NAME,
   getDailyGreeting,
+  getStreakMilestoneTeaser,
   MILESTONES,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
@@ -379,6 +380,11 @@ export default function ProfilePage() {
     ? `Lv.${gamificationQuery.data.currentLevel} ${gamificationQuery.data.levelConfig?.nameCn ?? ''}`.trim()
     : '成长进度'
   const visibleGrowthProgress = gamificationQuery.data ? growth.progress : 0
+  // P0-4 streak flame (UIUX memo §8): capsule joins the level-plate foot
+  // row; hidden at streak 0 (no shaming). Teaser only when streak+1 hits a
+  // real ladder rung (3/6/12 weeks → +200/+500/+1000, server-authoritative).
+  const activityStreak = gamificationQuery.data?.activityStreak ?? 0
+  const streakTeaser = useMemo(() => getStreakMilestoneTeaser(activityStreak), [activityStreak])
   const equipmentInventory = equipmentQuery.data?.inventory ?? []
   const equipmentItemsById = new Map(equipmentInventory.map((entry) => [entry.item.id, entry.item]))
   const outfit = equipmentQuery.data?.outfit
@@ -815,9 +821,25 @@ export default function ProfilePage() {
                   {gamificationQuery.isError ? (
                     <Text className='profile-page__growth-level'>成长记录稍后会自动刷新</Text>
                   ) : (
-                    <View className='profile-page__level-plate'>
-                      <View className='profile-page__level-plate-spark' aria-hidden='true' />
-                      <Text className='profile-page__level-plate-text'>{growthLevelLabel}</Text>
+                    <View className='profile-page__growth-foot'>
+                      <View className='profile-page__level-plate'>
+                        <View className='profile-page__level-plate-spark' aria-hidden='true' />
+                        <Text className='profile-page__level-plate-text'>{growthLevelLabel}</Text>
+                      </View>
+                      {activityStreak > 0 && (
+                        <View
+                          className={`profile-page__streak-capsule${streakTeaser ? ' profile-page__streak-capsule--near-milestone' : ''}`}
+                          data-testid='profile-streak-capsule'
+                        >
+                          <View className='profile-page__streak-main'>
+                            <JoyJoinIcon emoji='🔥' tier='chemistry' size={28} className='profile-page__streak-icon' />
+                            <Text className='profile-page__streak-text'>连续 {activityStreak} 周</Text>
+                          </View>
+                          {streakTeaser && (
+                            <Text className='profile-page__streak-hint'>再坚持 1 周领 +{streakTeaser.xp}</Text>
+                          )}
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>

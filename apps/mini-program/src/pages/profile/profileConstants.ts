@@ -160,6 +160,28 @@ export function getDailyGreeting(
   return pool[dayOfYear % pool.length] ?? null
 }
 
+/**
+ * P0-4 streak capsule ladder — mirrors the server awards in
+ * apps/server/src/gamificationService.ts (3/6/12 weeks → +200/+500/+1000 XP).
+ * If the server ladder changes, update this AND the contract test below.
+ */
+export const STREAK_MILESTONE_LADDER: ReadonlyArray<{ weeks: number; xp: number }> = [
+  { weeks: 3, xp: 200 },
+  { weeks: 6, xp: 500 },
+  { weeks: 12, xp: 1000 },
+]
+
+/**
+ * P0-4: near-milestone teaser for the streak capsule. Returns the rung only
+ * when the user is exactly ONE week away (streak + 1 hits a ladder rung);
+ * null otherwise. The naive `3 - (N % 3) === 1` check misfires at N=8 (9 is
+ * not a rung) — the ladder lookup is the correct gate.
+ */
+export function getStreakMilestoneTeaser(streak: number): { weeks: number; xp: number } | null {
+  if (!Number.isFinite(streak) || streak < 0) return null
+  return STREAK_MILESTONE_LADDER.find((rung) => rung.weeks === streak + 1) ?? null
+}
+
 export function getProfileCompletion(user?: AuthUser | null): number {
   if (!user) return 0
   const essential = user.profileEssentialComplete ? 40 : 0

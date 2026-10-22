@@ -12,6 +12,7 @@ import {
   ARCHETYPE_FAMILY_NAME,
   ARCHETYPE_GREETINGS,
   getDailyGreeting,
+  getStreakMilestoneTeaser,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
 import type { AuthUser } from '../../hooks/useAuth'
@@ -268,5 +269,23 @@ describe('getDailyGreeting (P0-3, 2026-10-22)', () => {
     for (const key of Object.keys(ARCHETYPE_FAMILY_NAME)) {
       expect(ARCHETYPE_GREETINGS[key]?.length).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('getStreakMilestoneTeaser (P0-4, 2026-10-22)', () => {
+  it('fires exactly one week before each ladder rung (3/6/12 → +200/+500/+1000)', () => {
+    expect(getStreakMilestoneTeaser(2)).toEqual({ weeks: 3, xp: 200 })
+    expect(getStreakMilestoneTeaser(5)).toEqual({ weeks: 6, xp: 500 })
+    expect(getStreakMilestoneTeaser(11)).toEqual({ weeks: 12, xp: 1000 })
+  })
+
+  it('stays quiet off-rung — including N=8, where the naive 3-(N%3)===1 check misfires', () => {
+    expect(getStreakMilestoneTeaser(0)).toBeNull()
+    expect(getStreakMilestoneTeaser(1)).toBeNull()
+    expect(getStreakMilestoneTeaser(3)).toBeNull()
+    expect(getStreakMilestoneTeaser(7)).toBeNull()
+    expect(getStreakMilestoneTeaser(8)).toBeNull()
+    expect(getStreakMilestoneTeaser(12)).toBeNull()
+    expect(getStreakMilestoneTeaser(-1)).toBeNull()
   })
 })
