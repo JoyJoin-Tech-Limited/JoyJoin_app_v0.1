@@ -12,7 +12,7 @@ import { getGuidanceTipCopy } from '@shared/copy/guidanceCopy'
 import type { PersonalStoryResponse } from '@joyjoin/shared/schema'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
@@ -52,6 +52,7 @@ import {
   MILESTONES,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
+import { useProfileScroll } from './useProfileScroll'
 
 const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {
   topItemId: null,
@@ -215,11 +216,11 @@ function ProfilePartnerVisual({
   )
 }
 
-function ProfileStoryArtwork() {
+function ProfileStoryArtwork({ paused, noDrift }: { paused: boolean; noDrift: boolean }) {
   return (
     <>
       <Image
-        className='profile-page__story-image'
+        className={`profile-page__story-image${paused ? ' profile-page__story-image--paused' : ''}${noDrift ? ' profile-page__story-image--no-drift' : ''}`}
         src={PROFILE_STORY_ARTWORK_PATH}
         mode='aspectFill'
         aria-hidden='true'
@@ -240,6 +241,7 @@ export default function ProfilePage() {
   const pixelAvatarEnabled = profileV17Enabled
     && authUser?.features?.profilePixelAvatarEnabled === true
   const deviceTier = useDeviceTier()
+  const { navCondensed, handleScroll } = useProfileScroll()
 
   useCustomTabBarSync({
     enabled: !authLoading,
@@ -253,7 +255,14 @@ export default function ProfilePage() {
   }, [])
 
   const hasDidShowRef = useRef(false)
+  // P0-9 playState gating: looping CSS animations (story drift, pulse ring)
+  // pause while the tab page is hidden so background pages burn zero frames.
+  const [pageVisible, setPageVisible] = useState(true)
+  useDidHide(() => {
+    setPageVisible(false)
+  })
   useDidShow(() => {
+    setPageVisible(true)
     if (!hasDidShowRef.current) {
       hasDidShowRef.current = true
       return
@@ -562,10 +571,19 @@ export default function ProfilePage() {
 
   return renderGate(
     <View className={`profile-page ${tabEntranceClass}`}>
-      <View className='profile-page__nav' data-testid='profile-top-navigation'>
+      <View
+        className={`profile-page__nav${navCondensed ? ' profile-page__nav--scrolled' : ''}`}
+        data-testid='profile-top-navigation'
+      >
         <Text className='profile-page__nav-title'>我的</Text>
       </View>
-      <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
+      <ScrollView
+        className='profile-page__scroll'
+        scrollY
+        enhanced
+        showScrollbar={false}
+        onScroll={handleScroll}
+      >
         {profileV17Enabled ? (
           <View
             className={`profile-page__identity-stage${hasEntered ? ' profile-page__identity-stage--entered' : ''}`}
@@ -882,7 +900,9 @@ export default function ProfilePage() {
           </View>
         )}
 
-        <View className={`profile-page__stats${hasEntered ? ' profile-page__stats--entered' : ''}`}>
+        {/* P0-6: stat tiles carry their own keyframe entrance (backwards fill)
+            — no --entered gate here so pressed transforms stay live. */}
+        <View className='profile-page__stats'>
           <Card
             className='profile-page__stat profile-page__stat--tint-cream'
             hoverClass='profile-page__stat--pressed'
@@ -956,7 +976,7 @@ export default function ProfilePage() {
               data-testid='profile-story-entry'
               aria-label='进入我的连续故事'
             >
-              <ProfileStoryArtwork />
+              <ProfileStoryArtwork paused={!pageVisible} noDrift={deviceTier.isDegradation} />
               <View className='profile-page__story-content'>
                 <Text className='profile-page__story-title'>
                   {storyChapterCount > 0 ? `第 ${storyChapterCount} 章 · 继续书写` : '开始你的第一章'}
@@ -969,6 +989,10 @@ export default function ProfilePage() {
                 </Text>
                 <Text className='profile-page__story-cta'>进入我的故事</Text>
                 <View className='profile-page__story-action'>
+                  <View
+                    className={`profile-page__story-action-ring${!pageVisible || deviceTier.isDegradation ? ' profile-page__story-action-ring--paused' : ''}`}
+                    aria-hidden='true'
+                  />
                   <View className='profile-page__story-action-chevron' />
                 </View>
               </View>
