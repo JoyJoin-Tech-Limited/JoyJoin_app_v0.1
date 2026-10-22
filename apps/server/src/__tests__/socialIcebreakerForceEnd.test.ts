@@ -10,7 +10,7 @@ import express from 'express';
 import { createWithServer } from '../test-utils/withServer';
 import session from 'express-session';
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 
 const { recordRecapDwellMetricMock, getFeatureFlagMock } = vi.hoisted(() => ({
@@ -175,11 +175,24 @@ function seedSession(state: SocialSessionState): void {
 }
 
 describe('POST /:socialSessionId/force-end recap dwell (Wave 5 T-2)', () => {
+  const ORIGINAL_APP_MODE = process.env.APP_MODE;
   beforeEach(() => {
+    // 2026-10-22: the route hard-gates on APP_MODE !== 'production' BEFORE it
+    // consults the flag (759435f7d). CI leaves APP_MODE unset, which the route
+    // treats as production, so the flag-path tests must run as non-production.
+    process.env.APP_MODE = 'staging';
     recordRecapDwellMetricMock.mockReset();
     recordRecapDwellMetricMock.mockResolvedValue(undefined);
     getFeatureFlagMock.mockReset();
     getFeatureFlagMock.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_APP_MODE === undefined) {
+      delete process.env.APP_MODE;
+    } else {
+      process.env.APP_MODE = ORIGINAL_APP_MODE;
+    }
   });
 
   it('writes a recap dwell row when the session is force-ended from recap', async () => {
@@ -234,6 +247,26 @@ describe('POST /:socialSessionId/force-end recap dwell (Wave 5 T-2)', () => {
       });
       expect(res.status).toBe(503);
       expect(recordRecapDwellMetricMock).not.toHaveBeenCalled();
+    });
+  });
+
+  it('rejects in production even when the flag is on (503 FORCE_END_DISABLED)', async () => {
+    const id = 'social_fe-prodgate';
+    seedSession(baseSession({ socialSessionId: id, currentPhase: 'recap' }));
+    // Flag ON but APP_MODE=production: a mis-flip must never expose force-end.
+    process.env.APP_MODE = 'production';
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'host-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/force-end`, {
+        method: 'POST',
+        headers: { cookie },
+      });
+      expect(res.status).toBe(503);
+      const body = (await res.json()) as { code?: string };
+      expect(body.code).toBe('FORCE_END_DISABLED');
+      expect(recordRecapDwellMetricMock).not.toHaveBeenCalled();
+      expect(storeCtx.sessions.get(id)?.currentPhase).toBe('recap');
     });
   });
 });
