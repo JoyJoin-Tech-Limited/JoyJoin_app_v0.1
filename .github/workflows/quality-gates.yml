@@ -26,6 +26,9 @@ jobs:
         with:
           node-version: 20
 
+      - name: Test the reachability walker
+        run: node --test scripts/check/check-dependency-vulns.test.mjs
+
       - name: Audit runtime-reachable critical/high advisories
         run: npm run check:deps -- --strict
 
