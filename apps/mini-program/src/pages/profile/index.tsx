@@ -44,6 +44,8 @@ import { writeProfileTabDotCount } from '../../lib/profile/profileTabDot'
 import { readSeenBadges, writeSeenBadges } from '../../lib/profile/badgeSeenState'
 import { useProfileCardShare } from '../../lib/profile/useProfileCardShare'
 import { PROFILE_CARD_CANVAS_ID } from '../../lib/profile/profileCardPoster'
+import { isDuoCardSnoozed, snoozeDuoCard } from '../../lib/profile/duoCardSnooze'
+import { getDuoStatus } from '../../lib/api/duo'
 import { haptics } from '../../lib/utils/haptics'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { localAsset } from '../../lib/utils/cdnAssets'
@@ -296,6 +298,7 @@ export default function ProfilePage() {
     setAvatarBouncing(false)
     avatarBounceLockRef.current = false
     setJustUnlockedKeys([])
+    setDuoDismissing(false)
     const isFirstShow = !hasDidShowRef.current
     if (isFirstShow) {
       hasDidShowRef.current = true
@@ -538,6 +541,51 @@ export default function ProfilePage() {
   const equipmentTeaserCopy = equipmentTeaserStage >= 1
     ? '赴约并完成反馈，即可抽一件'
     : '报名一场局，结束后可抽一件'
+
+  // P2-4 Duo 同桌卡 (PM memo §7 / UIUX memo §4): show only when the duo flag
+  // is on AND the user holds a pending registration AND that pool is not
+  // already duo-bound. Status fetch is lazy (earliest pending pool only);
+  // dismissal = 72h per-pool storage snooze. Never mint codes here — the CTA
+  // navigates to the invite page's duo lane (resolveInviteShareMode).
+  const duoEnabled = authUser?.features?.duoRegistrationEnabled === true
+  const duoPendingRegistration = useMemo(() => {
+    if (!duoEnabled || !registrationsQuery.data) return null
+    return registrationsQuery.data.find((r) => r.matchStatus === 'pending') ?? null
+  }, [duoEnabled, registrationsQuery.data])
+  const duoCardPoolId = duoPendingRegistration?.poolId ?? null
+  const [duoDismissNonce, setDuoDismissNonce] = useState(0)
+  const duoCardSnoozed = useMemo(
+    () => (duoCardPoolId ? isDuoCardSnoozed(duoCardPoolId) : false),
+    // duoDismissNonce re-reads storage right after a dismiss writes it.
+    [duoCardPoolId, duoDismissNonce],
+  )
+  const duoStatusQuery = useQuery({
+    queryKey: ['mini-program', 'duo-status', duoCardPoolId],
+    queryFn: () => getDuoStatus(apiRequest, duoCardPoolId!),
+    enabled: !!duoCardPoolId && !duoCardSnoozed && !authLoading && !!authUser,
+    staleTime: 60_000,
+    retry: 1,
+  })
+  const duoBound = duoStatusQuery.data?.state === 'bound'
+  const [duoDismissing, setDuoDismissing] = useState(false)
+  const showDuoCard = !!duoCardPoolId && !duoCardSnoozed && !duoBound
+
+  const handleDuoInvite = useCallback(() => {
+    haptics('medium')
+    if (duoCardPoolId) {
+      void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.invite}?poolId=${encodeURIComponent(duoCardPoolId)}` })
+    }
+  }, [duoCardPoolId])
+
+  const handleDuoDismiss = useCallback(() => {
+    haptics('light')
+    setDuoDismissing(true)
+    setTimeout(() => {
+      if (duoCardPoolId) snoozeDuoCard(duoCardPoolId)
+      setDuoDismissing(false)
+      setDuoDismissNonce((nonce) => nonce + 1)
+    }, 160) // exit fade duration
+  }, [duoCardPoolId])
 
   // P2-3 形象名片 (PM memo §8): rebuilt on the compliant canvas pipeline —
   // pixel-avatar composite (archetype art fallback) + displayName + 家族名 +
@@ -1386,6 +1434,46 @@ export default function ProfilePage() {
                 </View>
               )
             })}
+          </View>
+        )}
+
+        {/* P2-4 Duo 同桌卡 (PM memo §7 copy, UIUX memo §4 Act-3 top):
+            stage-glass material family, contextual — renders only while a
+            pending registration exists and the pool is not duo-bound. */}
+        {showDuoCard && (
+          <View
+            className={`profile-page__duo-card${duoDismissing ? ' profile-page__duo-card--dismissing' : ''}`}
+            data-testid='profile-duo-card'
+          >
+            <View className='profile-page__duo-card-icon' aria-hidden='true'>
+              <JoyJoinIcon emoji='👥' tier='ui' size={40} />
+            </View>
+            <View className='profile-page__duo-card-text'>
+              <Text className='profile-page__duo-card-headline'>你报名的那场局，还差一位同桌</Text>
+              <Text className='profile-page__duo-card-sub'>邀个朋友一起报名，就能排进同一桌</Text>
+            </View>
+            <View
+              className='profile-page__duo-card-cta'
+              hoverClass='profile-page__duo-card-cta--pressed'
+              onClick={handleDuoInvite}
+              role='button'
+              aria-label='邀请同桌'
+              data-testid='profile-duo-card-cta'
+            >
+              <Text className='profile-page__duo-card-cta-text'>邀请同桌</Text>
+            </View>
+            <View
+              className='profile-page__duo-card-dismiss'
+              onClick={(event) => {
+                event.stopPropagation()
+                handleDuoDismiss()
+              }}
+              role='button'
+              aria-label='暂时收起'
+              data-testid='profile-duo-card-dismiss'
+            >
+              <View className='profile-page__duo-card-dismiss-icon' aria-hidden='true' />
+            </View>
           </View>
         )}
 

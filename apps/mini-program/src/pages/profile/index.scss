@@ -2122,6 +2122,139 @@
     white-space: nowrap;
   }
 
+  // P2-4 Duo 同桌卡 (2026-10-22, PM memo §7 / UIUX memo §4): stage-glass
+  // material family (shared mixin — no lighting drift; motion is reserved
+  // for permanent on-stage surfaces). Contextual card: entrance on the
+  // Act-E slot (220ms), user-initiated dismiss fades then unmounts.
+  &__duo-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin: 0 $container-padding $spacing-md;
+    padding: $spacing-md;
+    min-height: 128rpx;
+    box-sizing: border-box;
+    border-radius: $card-radius;
+    @include profile-stage-glass;
+    animation: profile-duo-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.22s backwards;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+
+    &--dismissing {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+
+  @keyframes profile-duo-in {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  &__duo-card-icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    background: $color-primary-light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__duo-card-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__duo-card-headline {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-primary);
+    line-height: $line-height-normal;
+  }
+
+  &__duo-card-sub {
+    margin-top: 4rpx;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-normal;
+  }
+
+  &__duo-card-cta {
+    flex-shrink: 0;
+    height: 64rpx;
+    padding: 0 24rpx;
+    margin-right: 64rpx; // clears the 88rpx dismiss hit box at the top-right
+    border-radius: $radius-pill;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.97);
+    }
+  }
+
+  &__duo-card-cta-text {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+    white-space: nowrap;
+  }
+
+  // 88rpx × 88rpx hit area (= 44pt at 750rpx/375pt); the glyph is a 20rpx
+  // CSS-drawn × (same two-bar technique as the bio-nudge dismiss).
+  &__duo-card-dismiss {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 88rpx;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__duo-card-dismiss-icon {
+    position: relative;
+    width: 20rpx;
+    height: 20rpx;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 20rpx;
+      height: 2rpx;
+      border-radius: 2rpx;
+      background: var(--profile-text-tertiary);
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+  }
+
   &__archive {
     // P6 density pass: section gap normalized to $spacing-md (24rpx).
     margin: 0 $container-padding $spacing-md;
@@ -2475,6 +2608,7 @@
   .profile-page__entitlement-strip,
   .profile-page__quest,
   .profile-page__poster-entry,
+  .profile-page__duo-card,
   .profile-page__milestone {
     opacity: 1;
     transform: none;

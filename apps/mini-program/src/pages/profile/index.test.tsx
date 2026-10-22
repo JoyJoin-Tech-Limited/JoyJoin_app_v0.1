@@ -529,6 +529,53 @@ describe('Profile approved V4 layout', () => {
     expect(getByTestId('profile-equipment-pity-chip').textContent).toContain('下一抽必得新装备')
   })
 
+  it('P2-4: Duo card shows for a pending registration and navigates to the invite duo lane', () => {
+    const duoFeatures = { ...makeUser(true).features, duoRegistrationEnabled: true }
+    state.user = { ...makeUser(true), features: duoFeatures }
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', poolId: 'pool-9', matchStatus: 'pending' }],
+    })
+    state.queryStates.set('mini-program/duo-status/pool-9', { data: { state: 'none' } })
+    state.navigateTo.mockClear()
+
+    const { getByTestId, getByText } = render(<ProfilePage />)
+    expect(getByTestId('profile-duo-card')).toBeTruthy()
+    expect(getByText('你报名的那场局，还差一位同桌')).toBeTruthy()
+
+    fireEvent.click(getByTestId('profile-duo-card-cta'))
+    expect(state.navigateTo).toHaveBeenCalledWith({
+      url: `${MINI_PROGRAM_ROUTES.invite}?poolId=pool-9`,
+    })
+  })
+
+  it('P2-4: Duo card hides when the pool is already duo-bound', () => {
+    const duoFeatures = { ...makeUser(true).features, duoRegistrationEnabled: true }
+    state.user = { ...makeUser(true), features: duoFeatures }
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', poolId: 'pool-9', matchStatus: 'pending' }],
+    })
+    state.queryStates.set('mini-program/duo-status/pool-9', { data: { state: 'bound' } })
+
+    const { queryByTestId } = render(<ProfilePage />)
+    expect(queryByTestId('profile-duo-card')).toBeNull()
+  })
+
+  it('P2-4: dismiss writes a 72h per-pool snooze and hides the card', async () => {
+    const duoFeatures = { ...makeUser(true).features, duoRegistrationEnabled: true }
+    state.user = { ...makeUser(true), features: duoFeatures }
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', poolId: 'pool-9', matchStatus: 'pending' }],
+    })
+    state.queryStates.set('mini-program/duo-status/pool-9', { data: { state: 'none' } })
+
+    const { getByTestId, queryByTestId } = render(<ProfilePage />)
+    expect(getByTestId('profile-duo-card')).toBeTruthy()
+
+    fireEvent.click(getByTestId('profile-duo-card-dismiss'))
+    await waitFor(() => expect(queryByTestId('profile-duo-card')).toBeNull(), { timeout: 1000 })
+    expect(typeof state.storage.get('jj_profile_duo_card_dismissed:pool-9')).toBe('number')
+  })
+
   it('P1-5: shows the quest line for a pre-成行 user and hides it forever once matched', () => {
     state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
     const { getByTestId, getByText, queryByTestId, rerender } = render(<ProfilePage />)
