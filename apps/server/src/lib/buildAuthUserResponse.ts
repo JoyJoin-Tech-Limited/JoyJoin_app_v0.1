@@ -167,9 +167,13 @@ const [
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
-    getFeatureFlag('onboardingForceSkip', false),
+    (process.env.APP_MODE ?? "production") !== "production"
+      ? getFeatureFlag('onboardingForceSkip', false)
+      : false,
     getFeatureFlag('matchingLiveReveal', true),
-    getFeatureFlag('socialIcebreakerClientForceEnd', false),
+    (process.env.APP_MODE ?? "production") !== "production"
+      ? getFeatureFlag('socialIcebreakerClientForceEnd', false)
+      : false,
     getFeatureFlag('runPlanTemplatesEnabled', true),
     getFeatureFlag('promoBannerEnabled', true),
     getFeatureFlag('personalitySlotAnimationEnabled', true),
@@ -197,7 +201,7 @@ const [
     getFeatureFlag('oracleCardCornerStatEnabled', true),
     getFeatureFlag('personaSnapshotEnabled', true),
     getFeatureFlag('matchingPuzzlePreludeEnabled', false),
-    getFeatureFlag('aigcLabelsEnabled', false),
+    getFeatureFlag('aigcLabelsEnabled', true),
     getFeatureFlag('matchingOperatorReviewEnabled', false),
     getFeatureFlag('alangEnabled', false),
     getFeatureFlag('flashTeaserHeroEnabled', false),

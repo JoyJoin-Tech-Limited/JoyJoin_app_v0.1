@@ -1611,7 +1611,11 @@ router.post('/:socialSessionId/force-end', async (req: any, res) => {
     return res.status(403).json({ error: 'Only the host can force-end a session' });
   }
 
-  const flagEnabled = await getFeatureFlag('socialIcebreakerClientForceEnd', false);
+  // Production hard gate (mirrors the Flash QA switches): a mis-flipped flag must
+  // never let a host force-end a real session in production.
+  const flagEnabled =
+    (process.env.APP_MODE ?? "production") !== "production" &&
+    (await getFeatureFlag('socialIcebreakerClientForceEnd', false));
   if (!flagEnabled) {
     return res.status(503).json({ error: 'Force-end is not enabled', code: 'FORCE_END_DISABLED' });
   }

@@ -258,7 +258,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   // Trait vectors are preloaded when EITHER the item5 gates or the W2 floor is
   // active — W2's energizer prefers the item5 spark definition when vectors
   // exist and falls back to ARCHETYPE_ENERGY otherwise.
-  const tableViabilityFloorEnabled = await getFeatureFlag("tableViabilityFloorEnabled", false);
+  const tableViabilityFloorEnabled = await getFeatureFlag("tableViabilityFloorEnabled", true);
 
   // W6-F (gm-debrief follow-up): bounded X-variance dispersion nudge. Env kill
   // switch, default ON (mirrors the MATCH_COMPASS_STRICTNESS_ENABLED pattern) —

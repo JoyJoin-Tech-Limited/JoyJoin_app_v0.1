@@ -526,12 +526,25 @@ export const FLAG_ENV_MAP: Record<string, string> = {
 
 /**
  * Default values for flags when neither the DB row nor the env var is set.
- * Any flag not listed here defaults to false. Prefer this map for stable,
- * code-defined defaults rather than relying on every caller to pass the
- * same fallback value.
+ *
+ * INVARIANT (enforced by `__tests__/featureFlagDefaultsContract.test.ts`):
+ *   1. Every key in FLAG_ENV_MAP MUST have an entry here.
+ *   2. The value MUST equal the fallback the call sites pass to
+ *      `getFeatureFlag(key, fallback)`.
+ *
+ * Why it matters: `getFeatureFlag()` resolves
+ * `DEFAULT_FLAG_VALUES[key] ?? fallback`, but `listFeatureFlags()` — which
+ * powers the admin portal — resolves `DEFAULT_FLAG_VALUES[key] ?? false`.
+ * A missing entry therefore makes the portal report 关闭 / 来源:默认值 for a
+ * flag that is actually running with a call-site fallback of `true`. That
+ * mismatch silently mislabelled 18 live features (智能职业识别 among them).
  */
 export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
-  matchingOperatorReviewEnabled: true,
+  /** 匹配结果人工复核 — 2026-10-22 明确关闭（冷启动姿态）。
+   *  开着它，每次排桌都会停在 operatorReviewStatus='pending'，派生链路
+   *  （通知 / 场地分配 / 邀请奖励）全部不执行，用户看到的是「排桌中」卡死。
+   *  冷启动阶段没有值班运营，必须显式关；要做人工复核时连同 SOP + 告警一起开。 */
+  matchingOperatorReviewEnabled: false,
   /** Auto-refund pipeline (2026-08-05) — default ON; ops kill switch. */
   autoRefundEnabled: true,
   /** 双人成行 — default ON; ships enabled. */
@@ -691,6 +704,81 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  default. Flag-off = guest-preview endpoint answers 200 + [] (fail-closed,
    *  zero guest surface). */
   guestEventPreviewEnabled: false,
+
+  // ── Completeness backfill (2026-10-22) ────────────────────────────────
+  // 30 keys that were in FLAG_ENV_MAP but missing here. Every value below
+  // mirrors the existing call-site fallback EXACTLY, so this backfill changes
+  // zero runtime behavior — it only stops the admin portal from reporting
+  // 「关闭 / 来源:默认值」 for features that are actually running. See the
+  // invariant note above DEFAULT_FLAG_VALUES.
+
+  // 已上线能力：调用点 fallback = true，缺省值必须与之一致。
+  /** 智能职业识别（AI 职业分类 overlay）— 调用点 true；生产已启用。 */
+  smartProfession: true,
+  /** 匹配结果实时揭晓 — 调用点 true；生产已启用。 */
+  matchingLiveReveal: true,
+  /** 冰局流程模板编译器 — 调用点 true（buildAuthUserResponse + runPlanService）。 */
+  runPlanTemplatesEnabled: true,
+  /** 人格结果分享海报 — 调用点 true；好友转化主入口。 */
+  personalityShareEnabled: true,
+  /** 命格转盘揭晓动画 — 调用点 true。 */
+  personalitySlotAnimationEnabled: true,
+  /** 转盘三维鼓面曲率 — 调用点 true（2.5D 回退由客户端常量控制）。 */
+  personalitySlotCurvatureEnabled: true,
+  /** 转盘快节奏时序 — 调用点 true（与 dramatic 互斥，dramatic 优先）。 */
+  personalitySlotProfileFast: true,
+  /** 发现页活动横幅 — 调用点 true。 */
+  promoBannerEnabled: true,
+  /** 答题回声动画 — 调用点 true。 */
+  personalityTestEchoEnabled: true,
+  /** 拖拽揭晓桌友 — 调用点 true。 */
+  squadUnboxingDragRevealEnabled: true,
+  /** 揭晓前预告文案池 V2 — 调用点 true。 */
+  squadUnboxingTeaseV2Enabled: true,
+  /** 桌友卡收起（pocket deck）— 调用点 true。 */
+  squadUnboxingPocketDeckEnabled: true,
+  /** 活动报名总开关 — 调用点 true（userEventPools 两处）；关闭即停报名。 */
+  registrationEnabled: true,
+  /** 自定义冰局模式（自由局）— 调用点 true（5 处）。 */
+  socialIcebreakerCustomModeEnabled: true,
+  /** 活动卡报名人数角标 — 调用点 true。 */
+  oracleCardCornerStatEnabled: true,
+  /** 场地自动分配 — 调用点 true（matchingPostMatchEffects）；关闭需手工派场。 */
+  venueAssignmentEnabled: true,
+  /** 报名页人格拼图预览 — 调用点 true。 */
+  personaSnapshotEnabled: true,
+  /** 报名后盲盒生命周期动效 — 调用点 true。 */
+  flowLifecycleEnabled: true,
+
+  // 显式关闭的能力：调用点 fallback = false。此前只是「隐式缺省」，
+  // 现在显式登记，使后台「来源:默认值」与运行时完全一致。
+  /** 引导重置（设置内自助重走引导，终身 5 次）— 调用点 false。 */
+  restartOnboarding: false,
+  /** 引导强制跳过按钮（内部测试工具）— 调用点 false。 */
+  onboardingForceSkip: false,
+  /** 冰局主持人强制结束（内部测试工具）— 调用点 false。 */
+  socialIcebreakerClientForceEnd: false,
+  /** 转盘戏剧化时序 — 调用点 false（优先级高于快节奏）。 */
+  personalitySlotProfileDramatic: false,
+  /** 动态分享短片（服务端 ffmpeg 合成）— 调用点 false。 */
+  shareAnimatedClipEnabled: false,
+  /** 支付系统总闸 — 调用点 false；必须由 env PAYMENTS_ENABLED 显式开启。 */
+  paymentsEnabled: false,
+  /** 组合主视觉（squad composed hero）— 调用点 false。 */
+  socialSquadComposedHeroEnabled: false,
+  /** 匹配状态页拼图悬念前奏 — 调用点 false。 */
+  matchingPuzzlePreludeEnabled: false,
+  /** AIGC 生成内容角标 — 调用点 false（合规开关，见 feature-flags.md 待办）。 */
+  /** AI 生成内容角标 — 2026-10-22 改为默认开启（合规姿态）。
+   *  「AI 生成」标识是微信对 AIGC 的强制要求，关闭等于裸奔。渲染仍是
+   *  fail-closed：只有内容确实由模型生成时才出角标，纯模板/兜底内容不打标。 */
+  aigcLabelsEnabled: true,
+  /** 街头盲盒总开关 — 调用点 false；生产另有深圳定位硬门。 */
+  alangEnabled: false,
+  /** 街头盲盒上线预热横幅 — 调用点 false（alangEnabled 开启后自动失效）。 */
+  flashTeaserHeroEnabled: false,
+  /** 活动池预告条（W4 消费方尚未接线）— 调用点 false。 */
+  poolTeaserEnabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

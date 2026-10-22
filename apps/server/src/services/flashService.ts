@@ -231,7 +231,7 @@ async function buildFlashStoryV2View(
   const content = storyState.episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> } | null;
   if (content?.v !== 2) return null;
   if (!isFlashV2PilotUnitId(storyState.episode.code)) return null;
-  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", true);
   if (!v2Enabled) return null;
   const run = storyState.universeRun;
   const state = replay?.enabled
@@ -280,7 +280,7 @@ async function applyFlashStoryActionFallbackIfNeeded(input: {
   if (isFlashLocalTemplateExperienceUnitId(storyState.episode.code)) return false;
   const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
   if (content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) return false;
-  if (!await getFeatureFlag("flashStoryV2Enabled", false)) return false;
+  if (!await getFeatureFlag("flashStoryV2Enabled", true)) return false;
   if (await getFeatureFlag("flashStoryActionsEnabled", false)) return false;
   const run = storyState.universeRun;
   const entered = enterV2StoryEpisode(content, scopeV2TraversalToEpisode({
@@ -1198,7 +1198,7 @@ export async function answerFlashEncounter(input: {
       if (
         replayContent?.v === 2
         && isFlashV2PilotUnitId(storyState.episode.code)
-        && await getFeatureFlag("flashStoryV2Enabled", false)
+        && await getFeatureFlag("flashStoryV2Enabled", true)
       ) {
         const entered = enterV2StoryEpisode(
           replayContent,
@@ -1271,7 +1271,7 @@ export async function answerFlashEncounter(input: {
     if (
       content?.v === 2
       && isFlashV2PilotUnitId(storyState.episode.code)
-      && await getFeatureFlag("flashStoryV2Enabled", false)
+      && await getFeatureFlag("flashStoryV2Enabled", true)
     ) {
       const advance = await advanceFlashV2Run({
         encounterId: input.encounterId,
@@ -1457,7 +1457,7 @@ export async function advanceFlashV2Story(input: {
     throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
   }
   const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
-  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", true);
   if (!v2Enabled || content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) {
     throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事不需要继续推进");
   }
@@ -1545,7 +1545,7 @@ export async function submitFlashStoryInteraction(input: {
     throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
   }
   const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
-  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", true);
   if (!v2Enabled || content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) {
     throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事不需要继续推进");
   }

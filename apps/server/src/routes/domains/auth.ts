@@ -437,7 +437,12 @@ export function registerAuthRoutes(app: Express): void {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      if (!(await getFeatureFlag('onboardingForceSkip', false))) {
+      // Production hard gate (mirrors the Flash QA switches): the flag alone is not
+      // enough — a mis-flip in production must never expose the skip button.
+      const forceSkipEnabled =
+        (process.env.APP_MODE ?? "production") !== "production" &&
+        (await getFeatureFlag('onboardingForceSkip', false));
+      if (!forceSkipEnabled) {
         return res.status(403).json({ code: 'FORCE_SKIP_DISABLED', message: "Force skip is not enabled" });
       }
 

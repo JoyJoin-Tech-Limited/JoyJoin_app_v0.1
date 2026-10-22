@@ -393,7 +393,7 @@ standardizedOccupationId: string | null;
 | **更后** | 多信号抽取（隐私裁决先行）；行业相邻度图；embedding 作为 Tier 2.5 进分类级联 | ❌ |
 | **已砍** | 分享海报、互补雷达、结果闭环调权、admin 审核队列 | ❌ |
 
-**发布（评审 P5）**：**不新增 feature flag**。阶梯改造沿用既有 `smartProfession`（DB-backed，env `SMART_PROFESSION_ENABLED`）门控——关闭时走 legacy 关键词路径，天然有回滚面。无需额外 kill switch。
+**发布（评审 P5）**：**不新增 feature flag**。阶梯改造沿用既有 `smartProfession`（DB-backed，env `SMART_PROFESSION_V1_ENABLED`）门控——关闭时走 legacy 关键词路径，天然有回滚面。无需额外 kill switch。
 
 ---
 

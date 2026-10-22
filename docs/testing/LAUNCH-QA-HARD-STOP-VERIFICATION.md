@@ -91,14 +91,16 @@
 
 - **Severity:** LAUNCH-BLOCKING
 - **Trigger：** 暗发布清单任一 flag 在 production 的**有效值**为 true（`feature_flags` DB 行 true，或无 DB 行时 env 回退 true）。
-- **暗发布清单（checklist §10；16 项，全部必须 false）：**
-  `alangEnabled`、`flashStoryActionsEnabled`、`gatheringRoomEnabled`、`preRevealRefundEnabled`、`noRefundAfterReveal`、`budgetAdjacencyEnabled`、`icebreakerGroupBeatsEnabled`、`miniscriptEvidenceVoteV2Enabled`、`auctionV2Enabled`、`matchNeverMeetSentinel`、`matchChemistryCalibrationEnabled`、`matchingPuzzlePreludeEnabled`、`socialSquadComposedHeroEnabled`、`profilePixelAvatarEnabled`、`equipmentRewardsEnabled`、`personalStoryEnabled`
+- **暗发布清单（2026-10-13 快照；判定真相源 = 生产 `feature_flags` 表 + release-train §6-a 已批准 LIVE 集合）：**
+  原始 16 项：`alangEnabled`、`flashStoryActionsEnabled`、`gatheringRoomEnabled`、`preRevealRefundEnabled`、`noRefundAfterReveal`、`budgetAdjacencyEnabled`、`icebreakerGroupBeatsEnabled`、`miniscriptEvidenceVoteV2Enabled`、`auctionV2Enabled`、`matchNeverMeetSentinel`、`matchChemistryCalibrationEnabled`、`matchingPuzzlePreludeEnabled`、`socialSquadComposedHeroEnabled`、`profilePixelAvatarEnabled`、`equipmentRewardsEnabled`、`personalStoryEnabled`
   > 注 1：`personalityDiceChooseModeEnabled` 缺省 true 且是 LIVE 功能（release-train §2-b），**不在暗清单**，勿误判。
   > 注 2：release-train §1 的前置姿态（`LIE_DETECTIVE_MODE` unset/v1、`SOCIAL_ICEBREAKER_ENABLE_AUCTION`、`PERSONALITY_DICE_CHOOSE_MODE_ENABLED`）属于开灯前置，见 release-train §2。2026-09-22 已批准的 LIVE 集合以 release-train §6-a 记录为准。
+  > 注 3（2026-10-22）：上列 16 项中已有 10 项于 2026-10-12 由 owner 批准为**有意 LIVE**（`auctionV2Enabled`、`gatheringRoomEnabled`、`miniscriptEvidenceVoteV2Enabled` 及另 7 项，逐项记录见本文 §结果登记 HS-04）。对账时以「已批准 LIVE 集合」为准，不再要求整份清单为 false。
+  > 注 4（2026-10-22）：清单自 2026-10-13 起未再更新，而 2026-10-16..10-20 新增了 5 个暗发布开关（`wechatIdCollectionEnabled`、`icebreakerContentStatusEnabled`、`recapSharePosterEnabled`、`quipInspirationChipsEnabled`、`guestEventPreviewEnabled`，均 default `false`），尚未登记 —— 本条检查目前会漏检它们。下次执行前重建清单：`DEFAULT_FLAG_VALUES` 中值为 false 的集合（2026-10-22 为 52 项）**减去** release-train §6-a 已批准 LIVE 的 10 项（`auctionV2Enabled`、`gatheringRoomEnabled`、`highlightsInjectorEnabled`、`icebreakerGlanceStackEnabled`、`icebreakerHapticGrammarEnabled`、`icebreakerMoodFieldEnabled`、`lieDetectiveV2Enabled`、`miniscriptEvidenceVoteV2Enabled`、`personalityDiceChooseModeEnabled`、`sessionGlowEnabled`）。**注意：代码默认值不等于生产暗状态** —— 上面这 10 项正是靠生产 `feature_flags` 表里的行而非默认值生效的，只按默认值判断会把已 LIVE 的能力误判为暗发布。
 - **Environment:** production（DB 为真相源；admin API 为可执行通道）
 - **Procedure:**
-  1. （production UI，super_admin）打开 `https://admin.joyjoinapp.com/admin/feature-flags`，逐行核对 16 个暗 flag — 期望全 OFF。
-  2. （production API）浏览器登录 admin → 复制 session cookie → `curl -s -b <EV>/prod-admin-cookie.txt https://admin.joyjoinapp.com/api/admin/feature-flags | tee <EV>/HS-04-flags-api.json | jq -r '.flags[] | select(.value==true) | .key' | tee <EV>/HS-04-production-true-flags.txt` — 期望输出集合 ⊆ 已批准 LIVE 清单，16 暗 flag 不出现（响应形状为 `{ flags: [...] }`，2026-10-06 核实；无 jq 时人工读 JSON）。
+  1. （production UI，super_admin）打开 `https://admin.joyjoinapp.com/admin/feature-flags`，逐行核对暗清单 — 期望：已获批 LIVE 的 10 项为 ON，其余为 OFF。
+  2. （production API）浏览器登录 admin → 复制 session cookie → `curl -s -b <EV>/prod-admin-cookie.txt https://admin.joyjoinapp.com/api/admin/feature-flags | tee <EV>/HS-04-flags-api.json | jq -r '.flags[] | select(.value==true) | .key' | tee <EV>/HS-04-production-true-flags.txt` — 期望输出集合 ⊆ 已批准 LIVE 清单，未获批 LIVE 的暗 flag 不出现（响应形状为 `{ flags: [...] }`，2026-10-06 核实；无 jq 时人工读 JSON）。
   3. （production DB 行）`docker exec postgres psql -U joyjoin -d joyjoin -c "SELECT key, value, updated_by, updated_at FROM feature_flags WHERE value='true' ORDER BY key;" | tee <EV>/HS-04-flags-db.log`；再跑定向查询 — **期望空**：
      ```sql
      SELECT key FROM feature_flags WHERE value='true' AND key IN

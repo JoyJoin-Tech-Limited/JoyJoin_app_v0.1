@@ -30,12 +30,31 @@ interface FeatureFlagItem {
   updatedBy: string | null
 }
 
+/** Confirmed before ENABLING — turning these on changes safety or policy posture. */
 const DANGEROUS_FLAGS = [
   'onboardingForceSkip',
   'socialIcebreakerClientForceEnd',
   'flashShenzhenLocationGateEnabled',
   'flashTaskRetryTestEnabled',
   'flashAnyLocationArrivalTestEnabled',
+  'noRefundAfterReveal',
+  'matchNeverMeetSentinel',
+]
+
+/**
+ * Confirmed before DISABLING — these are live kill switches. Turning one off
+ * stops money movement, registration, or content moderation, so a mis-click
+ * costs far more in this direction than in the other.
+ */
+const KILL_SWITCH_FLAGS = [
+  'registrationEnabled',
+  'venueAssignmentEnabled',
+  'autoRefundEnabled',
+  'paymentsEnabled',
+  'poolCompletionSweepEnabled',
+  'subscribeRemindersEnabled',
+  'contentModerationMsgSecCheckEnabled',
+  'contentModerationSevereFailClosedEnabled',
 ]
 
 export default function AdminFeatureFlagsPage() {
@@ -127,11 +146,12 @@ export default function AdminFeatureFlagsPage() {
 
     const nextValue = !displayValue(flag)
 
-    // The Flash location restriction is dangerous when disabling; other dangerous flags confirm on enable.
+    // Two distinct risks: enabling a policy/safety-changing flag, and disabling
+    // a live kill switch. Each direction gets its own confirmation.
     const needsConfirmation =
-      key === 'flashShenzhenLocationGateEnabled'
-        ? nextValue === false
-        : DANGEROUS_FLAGS.includes(key) && nextValue === true
+      (nextValue === false &&
+        (key === 'flashShenzhenLocationGateEnabled' || KILL_SWITCH_FLAGS.includes(key))) ||
+      (nextValue === true && DANGEROUS_FLAGS.includes(key))
     if (needsConfirmation) {
       setPendingToggle(key)
       return
@@ -179,7 +199,8 @@ export default function AdminFeatureFlagsPage() {
   }
 
   const pendingFlag = pendingToggle ? flags.find((f) => f.key === pendingToggle) : null
-  const pendingDisablesLocationGate = pendingToggle === 'flashShenzhenLocationGateEnabled'
+  const pendingIsDisable = pendingFlag ? !displayValue(pendingFlag) : false
+  const pendingAction = pendingIsDisable ? '关闭' : '开启'
 
   return (
     <div className="space-y-6">
@@ -280,8 +301,14 @@ export default function AdminFeatureFlagsPage() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span>
-                            来源: {flag.source === 'db' ? '数据库' : flag.source === 'env' ? '环境变量' : '默认值'}
+                          <span
+                            title={
+                              flag.source === 'fallback'
+                                ? '数据库中无该开关记录且未设置环境变量，当前值取自服务端内置默认值 — 内置默认值不等于「已关闭」'
+                                : undefined
+                            }
+                          >
+                            来源: {flag.source === 'db' ? '数据库' : flag.source === 'env' ? '环境变量' : '内置默认'}
                           </span>
                           <span>键名: {flag.key}</span>
                           {flag.updatedAt && <span>更新时间: {new Date(flag.updatedAt).toLocaleString('zh-CN')}</span>}
@@ -300,11 +327,11 @@ export default function AdminFeatureFlagsPage() {
       <Dialog open={!!pendingToggle} onOpenChange={(open) => !open && setPendingToggle(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{pendingDisablesLocationGate ? '确认关闭定位限制' : '确认开启危险开关'}</DialogTitle>
+            <DialogTitle>{pendingIsDisable ? '确认关闭开关' : '确认开启危险开关'}</DialogTitle>
             <DialogDescription>
               {pendingFlag
-                ? `你即将${pendingDisablesLocationGate ? '关闭' : '开启'}「${flagLabels[pendingFlag.key] ?? pendingFlag.key}」。${flagDescriptions[pendingFlag.key] ?? ''}`
-                : `确认要${pendingDisablesLocationGate ? '关闭' : '开启'}此功能开关吗？`}
+                ? `你即将${pendingAction}「${flagLabels[pendingFlag.key] ?? pendingFlag.key}」。${flagDescriptions[pendingFlag.key] ?? ''}`
+                : `确认要${pendingAction}此功能开关吗？`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -312,7 +339,7 @@ export default function AdminFeatureFlagsPage() {
               取消
             </Button>
             <Button variant="destructive" onClick={confirmDangerousToggle}>
-              {pendingDisablesLocationGate ? '确认关闭限制' : '确认开启'}
+              确认{pendingAction}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -132,7 +132,7 @@ export async function validateContentSafeAsync(
     return { safe: true };
   }
 
-  const tier1Enabled = await getFeatureFlag("contentModerationMsgSecCheckEnabled", false);
+  const tier1Enabled = await getFeatureFlag("contentModerationMsgSecCheckEnabled", true);
   if (!tier1Enabled) {
     return { safe: true };
   }
