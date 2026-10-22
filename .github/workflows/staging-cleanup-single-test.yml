@@ -7,7 +7,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: joyjoin-cvm-remote
+  # 2026-10-22: this job mutates the STAGING database/container, so it must
+  # serialize with staging deploys — not with production. It used to hold the
+  # shared `joyjoin-cvm-remote` lock, which both blocked production work and,
+  # after the lock split, would have failed to exclude staging itself.
+  group: joyjoin-cvm-staging
   cancel-in-progress: false
 
 jobs:
@@ -27,7 +31,7 @@ jobs:
             set -euo pipefail
             cd ~/JoyJoin
 
-            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            exec 9>/var/lock/joyjoin-cvm-staging.lock
             flock -n 9
 
             test -f deployment/.env.staging

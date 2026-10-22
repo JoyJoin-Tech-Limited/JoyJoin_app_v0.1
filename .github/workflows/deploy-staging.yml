@@ -16,11 +16,14 @@ on:
       - '.opencode/**'
   workflow_dispatch:
 
-# Keep the in-flight staging release, but let GitHub collapse multiple waiting
-# pushes to the newest commit before they can consume build or CVM resources.
-concurrency:
-  group: joyjoin-staging-${{ github.ref }}
-  cancel-in-progress: false
+# 2026-10-22 (staging latency, Phase 1): the workflow-level
+# `joyjoin-staging-${{ github.ref }}` group with cancel-in-progress:false made
+# every push wait for the ENTIRE previous run (gate wave + image build + deploy
+# queue) before its own gates could even start — four pushes cost ~20 minutes of
+# pure queueing, and a run that reached the deploy job 30 minutes late was then
+# rejected by the freshness guard anyway. Cancellation now lives on the gate
+# wave (see the quality-gates job below), which is cheap to abandon, while the
+# deploy job keeps its own non-cancellable lock.
 
 permissions:
   contents: read
@@ -28,23 +31,48 @@ permissions:
   packages: write
 
 jobs:
+  # Lock-free freshness probe. This job takes no CVM lock and needs nothing, so
+  # a superseded commit is rejected in ~10 s instead of burning a 6-minute gate
+  # wave plus a 2-minute image build before the deploy job's own freshness step
+  # finally refuses it (observed 2026-10-22: 38m30s spent, zero delivered).
+  deploy-preflight:
+    name: Preflight freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject stale staging candidate before gates
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
+
   quality-gates:
+    needs: [deploy-preflight]
+    # Abandonable: a newer push supersedes this commit, and the deploy job would
+    # refuse it as stale regardless. Cancelling here is what stops four fast
+    # pushes from queueing four full 15-job gate waves back to back.
+    concurrency:
+      group: joyjoin-staging-gates-${{ github.ref }}
+      cancel-in-progress: true
     uses: ./.github/workflows/quality-gates.yml
     secrets: inherit
 
   build-images:
     name: Build Staging Images
-    needs: [quality-gates]
+    needs: [deploy-preflight, quality-gates]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
-      # Pushes queue on the joyjoin-staging concurrency group, so by the time a
-      # queued run starts, main may have already moved past it. Reject stale
-      # candidates BEFORE consuming ~7 minutes of Docker build time — the old
-      # pipeline only checked freshness in the deploy job, after images were
-      # built and pushed.
+      # Defence in depth: `deploy-preflight` already refused stale commits, but
+      # the gate wave can take minutes and main may move in the meantime. Reject
+      # again BEFORE consuming ~2 minutes of Docker build time and pushing
+      # images for a commit nobody will deploy.
       - name: Reject stale staging candidate before build
         run: |
           set -euo pipefail
@@ -171,21 +199,34 @@ jobs:
 
   deploy-staging:
     name: Staging Deployment
-    needs: [build-images]
-    # Only the job that actually touches the CVM holds the shared FIFO lock.
+    needs: [build-images, deploy-preflight]
+    # 2026-10-22 (Phase 1 lock split): staging no longer shares the
+    # `joyjoin-cvm-remote` FIFO group with production and the one-off ops jobs
+    # (init-cvm-postgres, setup-cdn-server, db-backup, flash migrations...).
+    # Those regularly held the lock for 40+ minutes and starved staging
+    # completely. Staging deploys still serialize against each other here, and
+    # against a manual deploy through the staging-specific host flock in
+    # deployment/scripts/deploy-staging.sh.
     concurrency:
-      group: joyjoin-cvm-remote
+      group: joyjoin-cvm-staging
       queue: max
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    # Covers bounded parallel chunk retries plus the remote deploy and
-    # post-switch health verification. Existing services stay live throughout
-    # the upload phase.
-    timeout-minutes: 140
+    # GHCR delivery is pull + container switch (minutes). The bundle fallback is
+    # the long tail (~26-60 min measured) and the remote script is itself capped
+    # at 35 min. 75 minutes covers the bundle path plus health verification and
+    # still fails loudly well before the old 140-minute ceiling.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # Timing marks feed the job summary at the end of this job. Queue time
+      # before the job starts cannot be measured in-job; it is visible in the
+      # Actions job list and is what `deploy-preflight` exists to minimize.
+      - name: Mark deploy job start
+        run: echo "DEPLOY_JOB_STARTED_EPOCH=$(date -u +%s)" >> "$GITHUB_ENV"
 
       - name: Reject stale staging candidate before transfer
         run: |
@@ -1041,6 +1082,10 @@ jobs:
             mv ~/JoyJoin/deployment/.staging-deployed-sha.tmp \
               ~/JoyJoin/deployment/.staging-deployed-sha
 
+      - name: Mark deploy switch complete
+        if: success()
+        run: echo "DEPLOY_SWITCH_ENDED_EPOCH=$(date -u +%s)" >> "$GITHUB_ENV"
+
       - name: Verify staging health after deploy
         run: |
           set -euo pipefail
@@ -1058,6 +1103,30 @@ jobs:
           curl "${CURL_OPTIONS[@]}" https://staging.joyjoinapp.com/api/readyz
           curl "${CURL_OPTIONS[@]}" https://staging.admin.joyjoinapp.com/
           echo "✅ Staging API readiness and Admin content are reachable"
+
+      # 2026-10-22 (L8): the deploy job used to be a black box — a 30-minute
+      # queue wait, a 27-second stale rejection and a genuinely slow deploy all
+      # looked the same. These marks make the in-job segments legible in the run
+      # summary. Queue time itself is only visible in the Actions job list.
+      - name: Deployment timing summary
+        if: always()
+        run: |
+          set -euo pipefail
+          now="$(date -u +%s)"
+          started="${DEPLOY_JOB_STARTED_EPOCH:-$now}"
+          switch_end="${DEPLOY_SWITCH_ENDED_EPOCH:-$now}"
+          {
+            echo "### Staging deploy timing"
+            echo ""
+            echo "| Segment | Duration |"
+            echo "| --- | --- |"
+            echo "| Transfer + remote switch | $(( switch_end - started ))s |"
+            echo "| Post-switch verify + notify | $(( now - switch_end ))s |"
+            echo "| Deploy job total | $(( now - started ))s |"
+            echo ""
+            echo "Queue wait before this job started is visible in the Actions job list."
+            echo "Freshness: \`deploy-preflight\` (before gates) plus the first step of this job (before transfer)."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify staging deployment failure
         if: failure()

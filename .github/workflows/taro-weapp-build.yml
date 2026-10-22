@@ -293,7 +293,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
-      group: joyjoin-cvm-remote
+      # 2026-10-22 (staging latency, Phase 1): the WeChat upload never touches the
+      # Docker engine or the deployment workspace, so it no longer queues behind
+      # `joyjoin-cvm-remote` production/ops deploys (it used to wait 40+ minutes
+      # for a lock it did not need). Uploads still serialize against each other
+      # on their own group to avoid racing the same appid/version.
+      group: joyjoin-weapp-upload
       queue: max
       cancel-in-progress: false
     steps:
@@ -512,7 +517,13 @@ jobs:
 
           # SSH + upload. Retry once on transient SSH disconnect (exit 255) only,
           # because a dropped return channel may leave an incomplete upload.
-          # The lock + remote cleanup trap ensure safety across retries.
+          # The remote cleanup trap keeps retries safe.
+          #
+          # 2026-10-22: this used to hold /var/lock/joyjoin-cvm-remote.lock, which
+          # made every WeChat upload wait behind production deploys. The upload
+          # only writes its own run-qualified directory under /tmp and talks to
+          # WeChat; it never touches Docker or the deployment workspace, so it no
+          # longer takes that lock.
           #
           # --use-cos=false forces synchronous HTTP upload. This prevents the
           # silent-success case where miniprogram-ci returns 0 after an async
@@ -525,9 +536,6 @@ jobs:
             timeout --signal=TERM --kill-after=30s 16m ssh "${SSH_OPTIONS[@]}" "$CVM" \
               "set -o pipefail && \
                cd '$REMOTE_DIR' && \
-               command -v flock >/dev/null && \
-               exec 9>/var/lock/joyjoin-cvm-remote.lock && \
-               flock -n 9 && \
                umask 077 && \
                trap 'rm -f -- private.key' EXIT && \
                trap 'exit 143' HUP INT TERM && \

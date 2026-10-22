@@ -10,7 +10,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: joyjoin-cvm-remote
+  # 2026-10-22: staging-only migration — serialize with staging deploys
+  # (deploy-staging.yml lock split), never with production.
+  group: joyjoin-cvm-staging
   cancel-in-progress: false
 
 jobs:
@@ -66,7 +68,7 @@ jobs:
             : "${MIGRATION_SQL_B64:?MIGRATION_SQL_B64 is required}"
             [[ "$MIGRATION_SHA256" =~ ^[0-9a-f]{64}$ ]]
 
-            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            exec 9>/var/lock/joyjoin-cvm-staging.lock
             flock -n 9
 
             migration_file="$(mktemp)"

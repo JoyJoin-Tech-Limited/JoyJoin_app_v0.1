@@ -32,12 +32,22 @@ fi
 cd "$REPO_ROOT"
 
 if ! command -v flock >/dev/null 2>&1; then
-    echo "❌ flock is required to serialize operations on the shared CVM."
+    echo "❌ flock is required to serialize staging deploys on the shared CVM."
     exit 1
 fi
-exec 9>/var/lock/joyjoin-cvm-remote.lock
+# 2026-10-22 (staging latency, Phase 1): staging owns its own host lock.
+# It used to share /var/lock/joyjoin-cvm-remote.lock with production and every
+# one-off ops job, so a 40-minute production deploy starved staging completely
+# (the GitHub job sat in the queue, then the freshness guard rejected the now
+# stale commit). Production keeps joyjoin-cvm-remote.lock. The two compose
+# projects, image tags and .env files are disjoint; the only shared resource is
+# the Docker engine, which handles concurrent pulls/starts safely. Image
+# pruning below is age-filtered so it can never delete the other side's
+# freshly pulled, not-yet-started images.
+STAGING_LOCK_FILE="${JOYJOIN_STAGING_LOCK_FILE:-/var/lock/joyjoin-cvm-staging.lock}"
+exec 9>"$STAGING_LOCK_FILE"
 if ! flock -n 9; then
-    echo "❌ Another JoyJoin deployment or maintenance operation is already running."
+    echo "❌ Another staging deployment is already running."
     exit 75
 fi
 
@@ -437,7 +447,10 @@ if [[ "$USE_REGISTRY_PULL" == "true" ]]; then
     if (( storage_use_percent >= 70 || available_bytes < 4294967296 || available_inodes < 10000 )); then
         echo "  Disk is at least 70% used or below deployment headroom; pruning unused images and build cache (never containers or volumes)."
         timeout 180s docker builder prune -af || true
-        timeout 120s docker image prune -af || true
+        # Age-filtered: production runs its own deploy in parallel since the
+        # 2026-10-22 lock split. An unconditional `-af` could delete a freshly
+        # pulled production image that has no container yet.
+        timeout 120s docker image prune -af --filter "until=24h" || true
     fi
 
     EARLY_IMAGE_TAG_ROLLBACK=true

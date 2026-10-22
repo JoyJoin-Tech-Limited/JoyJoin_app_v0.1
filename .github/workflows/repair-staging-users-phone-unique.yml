@@ -7,7 +7,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: joyjoin-cvm-remote
+  # 2026-10-22: staging DB repair — serialize with staging deploys, not
+  # production (see deploy-staging.yml lock split).
+  group: joyjoin-cvm-staging
   cancel-in-progress: false
 
 jobs:
@@ -27,7 +29,7 @@ jobs:
             set -euo pipefail
             cd ~/JoyJoin
 
-            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            exec 9>/var/lock/joyjoin-cvm-staging.lock
             flock -n 9
 
             test -f deployment/.env.staging

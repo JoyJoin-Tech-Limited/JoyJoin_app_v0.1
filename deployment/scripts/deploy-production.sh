@@ -25,12 +25,15 @@ fi
 
 reclaim_unused_docker_data() {
   echo "🧹 Reclaiming unused Docker images and builder cache (containers/volumes preserved)..."
+  # 2026-10-22: staging no longer takes this host lock, so it can be pulling its
+  # images while this runs. Age-filter the image prune so a freshly pulled image
+  # that has no container yet is never deleted underneath the staging deploy.
   if command -v timeout >/dev/null 2>&1; then
     timeout 180s docker builder prune -af || true
-    timeout 120s docker image prune -af || true
+    timeout 120s docker image prune -af --filter "until=24h" || true
   else
     docker builder prune -af || true
-    docker image prune -af || true
+    docker image prune -af --filter "until=24h" || true
   fi
 }
 

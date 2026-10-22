@@ -334,3 +334,21 @@ https://staging.admin.joyjoinapp.com
 - API/Admin 等无状态容器在发布重建后会启用 `json-file` 轮转。Postgres 的轮转参数虽已写入 Compose，但现有数据库容器必须在完成可恢复备份、核对 volume 挂载并安排维护窗口后受控重建才会生效；普通应用发布使用 `--no-deps`，不会暗中重启数据库。
 - 生产数据库备份脚本采用临时文件、gzip 校验、原子改名，并在写新 dump 前先安全清理过期文件（始终保留最新一份）；随后按 `max(数据库大小, 最近备份×2) + 2 GiB` 和 10000 个空闲 inode 做 fail-closed 预检，成功后再执行 7 天保留。备份任务与发布共享主机锁，`pg_dump` 在数据库容器内以低 CPU 优先级运行。
 - 当前备份仍位于同一台主机的 `$HOME/backups`，不是异地灾备；仓库也尚未提供 PostgreSQL 高可用、独立数据盘或云端磁盘告警。上线后仍需补 COS/独立盘备份与 75%/85%/90% 容量告警。
+
+---
+
+## 并发锁模型（2026-10-22 Phase 1 拆分）
+
+CVM 上的部署/运维互斥是**双层**的：GitHub Actions 的 `concurrency` group + 远端 `flock` 文件。历史做法是所有 workflow 共用一个 `joyjoin-cvm-remote` / `/var/lock/joyjoin-cvm-remote.lock`，导致生产发布或任一运维任务会把 staging 部署饿死（实测一次生产部署持锁 40m+，staging run 排队 30m 后因 stale 被拒、零交付）。
+
+现状：
+
+| 锁 | GitHub group | 远端 flock | 持有者 |
+|---|---|---|---|
+| 生产/host 级 | `joyjoin-cvm-remote` | `/var/lock/joyjoin-cvm-remote.lock` | `deploy-production.yml`、`init-cvm-postgres.yml`、`setup-db-backup.yml`、`setup-cdn-server.yml`、`upload-cdn-assets.yml` |
+| staging | `joyjoin-cvm-staging` | `/var/lock/joyjoin-cvm-staging.lock`（可用 `JOYJOIN_STAGING_LOCK_FILE` 覆盖） | `deploy-staging.yml` 及 6 个 `staging-*` / `repair-staging-*` workflow |
+| 小程序上传 | `joyjoin-weapp-upload` | 无（上传只走 `miniprogram-ci`，不碰 Docker） | `taro-weapp-build.yml` |
+
+拆分的前提是 **prune 必须带年龄过滤**：staging 与 production 现在会并行运行在同一台 Docker 引擎上，覆盖全部 `docker image prune -af`（无过滤）会删掉「刚 pull 完、容器还没起来」的对方镜像。两个部署脚本因此都改为 `docker image prune -af --filter "until=24h"`。若新增部署脚本，沿用此过滤，不要无条件 `-af`。
+
+`deploy-staging.yml` 另有两个并发相关约定：`quality-gates` job 用 `joyjoin-staging-gates-<ref>` + `cancel-in-progress: true`（新 push 可放弃旧门禁），`deploy-staging` job 保持 `cancel-in-progress: false`（已开始的切换必须跑完）。陈旧 commit 由前置 job `deploy-preflight` 在 ~10s 内拒绝，不再浪费门禁与构建时间。
