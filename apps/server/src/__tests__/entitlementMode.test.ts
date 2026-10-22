@@ -141,11 +141,20 @@ describe("resolveEntitlementMode helper (registration gate 403-value semantics)"
   });
 
   it("forces availableEventCredits to 0 for the subscription branch without reading credits", async () => {
-    mockGetUserSubscription.mockResolvedValue({ id: "sub-1", status: "active" });
+    mockGetUserSubscription.mockResolvedValue({
+      id: "sub-1",
+      status: "active",
+      planType: "quarterly",
+      endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+    });
 
     const result = await resolveEntitlementMode("user-1");
 
-    expect(result).toEqual({ mode: "subscription", availableEventCredits: 0 });
+    // P0-1 (2026-10-22): the subscription branch now also carries the strip
+    // detail (planType + daysRemaining) for the profile entitlement pills.
+    expect(result.mode).toBe("subscription");
+    expect(result.availableEventCredits).toBe(0);
+    expect(result.subscription).toEqual({ planType: "quarterly", daysRemaining: 10 });
     expect(mockGetAvailableCreditCount).not.toHaveBeenCalled();
   });
 
@@ -154,13 +163,13 @@ describe("resolveEntitlementMode helper (registration gate 403-value semantics)"
 
     const result = await resolveEntitlementMode("user-1");
 
-    expect(result).toEqual({ mode: "event_pack", availableEventCredits: 3 });
+    expect(result).toEqual({ mode: "event_pack", availableEventCredits: 3, subscription: null });
   });
 
   it("returns null mode with a zero credit count when neither entitlement exists", async () => {
     const result = await resolveEntitlementMode("user-1");
 
-    expect(result).toEqual({ mode: null, availableEventCredits: 0 });
+    expect(result).toEqual({ mode: null, availableEventCredits: 0, subscription: null });
   });
 
   it("returns test mode with forced zero credits in APP_MODE=test, skipping both reads", async () => {
@@ -168,7 +177,7 @@ describe("resolveEntitlementMode helper (registration gate 403-value semantics)"
 
     const result = await resolveEntitlementMode("user-1");
 
-    expect(result).toEqual({ mode: "test", availableEventCredits: 0 });
+    expect(result).toEqual({ mode: "test", availableEventCredits: 0, subscription: null });
     expect(mockGetUserSubscription).not.toHaveBeenCalled();
     expect(mockGetAvailableCreditCount).not.toHaveBeenCalled();
   });

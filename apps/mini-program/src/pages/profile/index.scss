@@ -278,6 +278,89 @@
   }
 
   // Stats row
+  // P0-1 entitlement strip (2026-10-22, PM memo §1 / UIUX memo §6): factual
+  // readout pills — settings-entry chrome family (quiet list-row), fixed row
+  // of ≤3 equal pills. Renders only when ≥1 pill has a real datum.
+  &__entitlement-strip {
+    display: flex;
+    gap: $spacing-xs;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-md;
+    // Stagger slot B (P2-1 map): enters right after the stage begins.
+    animation: profile-card-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards;
+  }
+
+  &__entitlement-pill {
+    flex: 1;
+    min-width: 0;
+    height: $cta-min-tap;
+    padding: 0 $spacing-sm;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.97);
+      background: var(--profile-primary-04);
+    }
+  }
+
+  &__entitlement-pill-icon {
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--coin {
+      // 悦币 has no ui-tier icon (💰 exists only at reaction tier — wrong
+      // size class; PM memo §1b) — a 16rpx gold dot carries the readout.
+      color: $color-brand-gold;
+    }
+  }
+
+  &__entitlement-pill-coin-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-brand-gold;
+    box-shadow: 0 0 0 4rpx rgba($color-brand-gold, 0.18);
+  }
+
+  &__entitlement-pill-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+  }
+
+  &__entitlement-pill-label {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__entitlement-pill-value {
+    font-family: $font-en-brand;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   &__stats {
     display: flex;
     gap: $spacing-sm;
@@ -1664,6 +1747,7 @@
   .profile-page__growth-progress-bar,
   .profile-page__milestones,
   .profile-page__settings-entry,
+  .profile-page__entitlement-strip,
   .profile-page__milestone {
     opacity: 1;
     transform: none;

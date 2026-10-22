@@ -232,6 +232,9 @@ export const UI_ICON_MAP: Record<string, IconMapping> = {
   '📄': { assetKey: 'icon-status', tier: 'ui', size: 48, fallbackEmoji: '📄', tint: '#8B5CF6' },
   '👥': { assetKey: 'icon-people', tier: 'ui', size: 48, fallbackEmoji: '👥', tint: '#8B5CF6' },
   '🎫': { assetKey: 'icon-ticket', tier: 'ui', size: 48, fallbackEmoji: '🎫', tint: '#8B5CF6' },
+  // P0-1 entitlement strip (2026-10-22): coupon pill gets its own glyph —
+  // reusing 🎫 for both pass and coupon reads broken on one strip.
+  '🎟️': { assetKey: 'icon-coupon', tier: 'ui', size: 48, fallbackEmoji: '🎟️', tint: '#8B5CF6' },
   '🏆': { assetKey: 'icon-trophy', tier: 'ui', size: 48, fallbackEmoji: '🏆', tint: '#8B5CF6' },
   '✅': { assetKey: 'icon-check', tier: 'ui', size: 48, fallbackEmoji: '✅', tint: '#8B5CF6' },
   '📝': { assetKey: 'icon-memo', tier: 'ui', size: 48, fallbackEmoji: '📝', tint: '#8B5CF6' },

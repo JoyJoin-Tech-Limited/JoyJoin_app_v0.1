@@ -13,7 +13,7 @@ import type { PersonalStoryResponse } from '@joyjoin/shared/schema'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
@@ -37,6 +37,7 @@ import { EQUIPMENT_ME_QUERY_KEY } from '../../lib/profile/equipmentQueryKeys'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { getPixelEquipmentThumbnailUrl } from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
+import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { localAsset } from '../../lib/utils/cdnAssets'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
@@ -388,6 +389,46 @@ export default function ProfilePage() {
     : '可领取'
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
+
+  // P0-1 entitlement strip (PM memo 2026-10-22 §1): factual readout pills —
+  // pass (subscription days / 局票 credits) → coupons → 悦币. All three data
+  // sources are already on-device (shell entitlement/coupons + gamification
+  // joyCoins). Zero-asset state (null mode + 0券 + 0币) hides the whole
+  // strip — no empty-wallet CTA pill (deleted alternative, memo §1c).
+  const shellEntitlement = profileShellQuery.data?.entitlement ?? null
+  const availableCouponCount = profileShellQuery.data?.coupons?.availableCount ?? 0
+  const joyCoinCount = gamificationQuery.data?.joyCoins ?? 0
+  const entitlementPills = useMemo(() => {
+    const pills: Array<{ key: 'pass' | 'coupon' | 'coins'; label: string; value: string }> = []
+    const mode = shellEntitlement?.mode ?? null
+    if (mode === 'subscription' && shellEntitlement?.subscription) {
+      const sub = shellEntitlement.subscription
+      pills.push({
+        key: 'pass',
+        label: sub.planType === 'quarterly' ? '悦聚季卡' : '悦聚月卡',
+        value: sub.daysRemaining === 0 ? '今天到期' : `剩 ${sub.daysRemaining} 天`,
+      })
+    } else if (mode === 'event_pack' && (shellEntitlement?.eventCredits ?? 0) > 0) {
+      pills.push({ key: 'pass', label: '局票', value: `剩 ${shellEntitlement!.eventCredits} 张` })
+    }
+    if (availableCouponCount > 0) {
+      pills.push({ key: 'coupon', label: '优惠券', value: `${availableCouponCount} 张可用` })
+    }
+    if (joyCoinCount > 0) {
+      pills.push({ key: 'coins', label: '悦币', value: `${joyCoinCount}` })
+    }
+    return pills
+  }, [shellEntitlement, availableCouponCount, joyCoinCount])
+
+  const handleEntitlementPillTap = useCallback((pill: 'pass' | 'coupon' | 'coins') => {
+    haptics('light')
+    profileAnalytics.track('profile_entitlement_pill_tap', { pill })
+    if (pill === 'pass') {
+      void openMiniProgramPaymentPage({ currentUserId: authUser?.id })
+      return
+    }
+    void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.rewards })
+  }, [authUser?.id])
 
   // P6b milestones collapse (2026-09-14): the badge grid folds into a single
   // entry row; no dedicated milestones route exists in the app, so the row
@@ -897,6 +938,41 @@ export default function ProfilePage() {
                 <View className='profile-page__fallback-personality-chevron' aria-hidden='true' />
               </View>
             </View>
+          </View>
+        )}
+
+        {/* P0-1 entitlement strip: factual readout pills; hidden when the
+            user holds zero assets (no empty-wallet CTA — PM memo §1c). */}
+        {entitlementPills.length > 0 && (
+          <View className='profile-page__entitlement-strip' data-testid='profile-entitlement-strip'>
+            {entitlementPills.map((pill) => (
+              <View
+                key={pill.key}
+                className='profile-page__entitlement-pill'
+                hoverClass='profile-page__entitlement-pill--pressed'
+                onClick={() => handleEntitlementPillTap(pill.key)}
+                role='button'
+                aria-label={`${pill.label} ${pill.value}`}
+                data-testid={`profile-entitlement-pill-${pill.key}`}
+              >
+                {pill.key === 'coins' ? (
+                  <View className='profile-page__entitlement-pill-icon profile-page__entitlement-pill-icon--coin' aria-hidden='true'>
+                    <View className='profile-page__entitlement-pill-coin-dot' />
+                  </View>
+                ) : (
+                  <JoyJoinIcon
+                    emoji={pill.key === 'pass' ? '🎫' : '🎟️'}
+                    tier='ui'
+                    size={36}
+                    className='profile-page__entitlement-pill-icon'
+                  />
+                )}
+                <View className='profile-page__entitlement-pill-text'>
+                  <Text className='profile-page__entitlement-pill-label'>{pill.label}</Text>
+                  <Text className='profile-page__entitlement-pill-value'>{pill.value}</Text>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
