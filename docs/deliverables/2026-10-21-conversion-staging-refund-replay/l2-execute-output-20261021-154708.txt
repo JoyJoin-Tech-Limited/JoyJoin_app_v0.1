@@ -5,7 +5,7 @@ key   | preRevealRefundEnabled
 value | true
 
 
-================ L2.1 种子：QA 用户 + 非 test 池 + pre-match 报名 + completed 假单 + 会话（全部 QA_T46 标识） ================
+================ L2.1 种子：QA 用户 + 非 test 池 + pre-match 报名 + completed 假单 + 会话（全部 QA_CNV 标识） ================
 QA_USER_ID=2eb131ff-926a-41de-9125-42efcc582b20
 INSERT 0 1
 POOL_ID=f6e728f0-7219-4308-bc24-532b8925e2e8
@@ -19,7 +19,7 @@ DETAIL:  Key (user_id)=(2eb131ff-926a-41de-9125-42efcc582b20
 INSERT 0 1) is not present in table "users".
 PAY_ID=
 INSERT 0 1
-SESSION_INSERTED t46s2x4-1792568829
+SESSION_INSERTED cnv-s2x4-1792568829
 
 ================ L2.2 AC-9 预判证据：cancelPolicy 应为 refundable ================
 []
@@ -82,7 +82,7 @@ HTTP_STATUS:404
 0 registration rows (expect 0 — legacy delete consumed)
 0 refund_attempts total (expect 2 — no new refund from legacy branch)
 
-================ L2.8 自清理：全部 QA_T46 种子 + 会话删除，并复核归零 ================
+================ L2.8 自清理：全部 QA_CNV 种子 + 会话删除，并复核归零 ================
 DELETE 0
 DELETE 0
 DELETE 0
@@ -91,6 +91,6 @@ DELETE 1
 0 pools left (expect 0)
 0 payments left (expect 0)
 0 sessions left (expect 0)
-0 orphan QA_T46 payments anywhere (expect 0)
+0 orphan QA_CNV payments anywhere (expect 0)
 
 完成。请将完整输出贴回 QA 子会话（已写入 l2-execute-output-1792568829.txt）。

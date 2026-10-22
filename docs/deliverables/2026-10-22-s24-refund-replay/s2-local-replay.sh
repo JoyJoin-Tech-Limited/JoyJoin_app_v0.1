@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# T46 S2.4 — 本地 flag-on HTTP 复演（2026-10-22）
+# CNV S2.4 — 本地 flag-on HTTP 复演（2026-10-22）
 # 命题：PRE_REVEAL_REFUND_ENABLED=true 时，HTTP 取消路由（DELETE
 #       /api/pool-registrations/:id）对「未 matched + 非 test 池 + MOCK 已支付单」
 #       走 pre_reveal_refund 分支 = 全额退款成功落账语义。
@@ -18,12 +18,12 @@
 #   * NODE_ENV=development 仅作用于复演进程（dev-login 硬要求；node --env-file 不覆盖
 #     已存在的 process.env，命令前缀赋值生效）。
 #
-# 互锁：CONFIRM_LOCAL_REPLAY=T46-S24 bash s2-local-replay.sh
+# 互锁：CONFIRM_LOCAL_REPLAY=CNV-S24 bash s2-local-replay.sh
 # =============================================================================
 set -o pipefail
 
-if [ "$CONFIRM_LOCAL_REPLAY" != "T46-S24" ]; then
-  echo "安全互锁：请显式执行 CONFIRM_LOCAL_REPLAY=T46-S24 bash s2-local-replay.sh"
+if [ "$CONFIRM_LOCAL_REPLAY" != "CNV-S24" ]; then
+  echo "安全互锁：请显式执行 CONFIRM_LOCAL_REPLAY=CNV-S24 bash s2-local-replay.sh"
   exit 1
 fi
 
@@ -129,7 +129,7 @@ if [ -n "$USER_ID" ]; then pass "dev-login userId=$USER_ID"; else fail "dev-logi
 note "5) 种子（QA_S24 标识；is_test_pool=false 硬要求）"
 POOL_ID="$(psql "$DATABASE_URL" -t -A -q -v ON_ERROR_STOP=1 <<SQL
 INSERT INTO event_pools (title, description, event_type, city, date_time, registration_deadline, created_by, is_test_pool, total_registrations)
-VALUES ('QA_S24本地复演池-$TS 勿报名', 'T46 S2.4 本地 HTTP 复演种子，演完即删', '饭局', '深圳', now() + interval '2 days', now() + interval '1 day', '$USER_ID', false, 1)
+VALUES ('QA_S24本地复演池-$TS 勿报名', 'CNV S2.4 本地 HTTP 复演种子，演完即删', '饭局', '深圳', now() + interval '2 days', now() + interval '1 day', '$USER_ID', false, 1)
 RETURNING id;
 SQL
 )"

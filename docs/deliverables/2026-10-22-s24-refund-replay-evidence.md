@@ -1,17 +1,19 @@
-# S2.4 — P0a staging 开关证据 + 本地 flag-on HTTP 复演（T46 / AC-03 闭环）
+# S2.4 — P0a staging 开关证据 + 本地 flag-on HTTP 复演（CNV / AC-03 闭环）
 
 - 日期：2026-10-22
-- Sprint：T46（对标平台全量实施），验收锚点 AC-03
+- Sprint：CNV（对标平台全量实施），验收锚点 AC-03
 - 上游：S2.1 验证备忘（docs/deliberations/2026-10-20-conversion-p0a-verification-memo.md）＋ S2.2 法务/运营签认（同目录 …-p0a-legal-ops-signoff.md）＋ 2026-10-21 staging 复演（docs/deliverables/2026-10-21-conversion-staging-refund-replay/report.md，Level B PASS）
 - 性质：验证取证。未改业务代码、未 commit / push、未触碰任何他 sprint 工作树文件。
+
+> **脱敏说明（2026-10-22）**：本文档已移除竞对名称与内部项目代号。文档层统一以中性代号 `CNV` 指代对标项目；staging 数据库与审计系统内的历史实值仍为原始代号，文中引用的 DB 输出行已同步替换（如 `audit-cnv-…`、`ticket: "CNV sprint …"`、互锁串 `CNV-S24`），因此与库内真值不再逐字一致。复核时请用**时间戳 `2026-10-21T07:12:34Z` 或审计 ID 前段**定位真实行，不要按代号字面值 grep。代码与运行时行为未受影响。
 
 ## 执行模式声明（重要）
 
 本 QA 子会话 runtime **无 shell/SSH/进程执行工具**（工具面只有 filesystem/browser/github/fetch；已实测：localhost:5000 被无关进程占用返回 403 空包，本机无可复用 dev server）。因此本报告采取与 2026-10-21 复演**完全相同且已留痕**的分工模式：子会话完成代码级判定 + 产出可直接执行的取证脚本，主会话（有 shell）代跑并回填输出。
 
 配套脚本（同目录 docs/deliverables/2026-10-22-s24-refund-replay/）：
-- s1-staging-flag-evidence.sh —— staging 开关证据，**纯 SELECT 只读**，互锁 CONFIRM_STAGING_READONLY=T46-S24
-- s2-local-replay.sh —— 本地 flag-on HTTP 复演，互锁 CONFIRM_LOCAL_REPLAY=T46-S24，自带 .env 备份恢复 / flag 行捕获恢复 / 种子自清理 / 端口占用保护
+- s1-staging-flag-evidence.sh —— staging 开关证据，**纯 SELECT 只读**，互锁 CONFIRM_STAGING_READONLY=CNV-S24
+- s2-local-replay.sh —— 本地 flag-on HTTP 复演，互锁 CONFIRM_LOCAL_REPLAY=CNV-S24，自带 .env 备份恢复 / flag 行捕获恢复 / 种子自清理 / 端口占用保护
 
 ## 0. 裁决速览
 
@@ -19,7 +21,7 @@
 |---|---|---|
 | staging：preRevealRefundEnabled=true 在位 | ✅ PASS（S1.1，输出 145752） | value='true'，updated_at=2026-10-21 07:12:34+00，updated_by='opencode-orchestrator' |
 | staging：noRefundAfterReveal 关 | ✅ PASS（S1.1） | 无行 = 关（env 默认 false） |
-| staging：FEATURE_FLAG_UPDATED 审计行 | ✅ PASS（S1.2，出处差异裁决见 §5.3） | audit-t46-20261021-prereveal，delegated 通道，含请求人+法务签认交叉引用 |
+| staging：FEATURE_FLAG_UPDATED 审计行 | ✅ PASS（S1.2，出处差异裁决见 §5.3） | audit-cnv-20261021-prereveal，delegated 通道，含请求人+法务签认交叉引用 |
 | ① 取消响应/详情含 cancelPolicy 且指向全额退款 | ✅ PASS（S2 步骤 6/7，输出 145816） | DTO cancelPolicy:'refundable'；DELETE 200 policy:'pre_reveal_refund' |
 | ② payments 状态流转 + refund_attempts 有行 | ✅ PASS（S2 步骤 7b/7c） | payments completed→refunded；refund_attempts success（揭示前取消，全额退款 / MOCK_RF_ / user-cancel）；报名删行、池计数归零；日志 branch=pre_reveal_refund + refundedMoney:true |
 | ③ credits 逆转 | N/A（本复演走 MOCK 现金） | 已由 smoke:auto-refund（S2.1 ALL PASS）＋ poolRegistrationCancelFlow.test.ts 覆盖 |
@@ -84,14 +86,14 @@ PASS 判据：
 - 服务端来源：buildAuthUserResponse.ts:231 getFeatureFlag(preRevealRefundEnabled, false) → L367 写入 features.preRevealRefundEnabled；flag 注册与默认 false：featureFlags.ts:333 + L616。
 - 收银台同 flag 联动：event-ticket-payment/index.tsx:204 resolvePaymentCheckoutFlags(user) → L1480 RefundGuaranteeLine visible={preRevealRefundEnabled}；resolvePaymentCheckoutFlags 严格 === true（ticketHelpers，ticketHelpers.test.ts:192-220 fail-closed 锁定）。
 - 测试锁定：RegistrationConfirmModal.test.tsx:158-172（off/absent 省略该行；on 渲染该行）；RefundGuaranteeLine.render.test.tsx。
-- **正向发现**：S2.1 memo §3（2026-10-20）记录该 modal 的承诺行是**无条件硬编码**（当时 L102-105，无 flag prop）；当前代码已是 flag 门控 + 测试锁定——即 memo §3 的残留 gap **已被修复**（应为 T46 本轮工作）。门控链与本次复演路径完全一致：同一 flag（server 解析 → auth features → modal prop → 行渲染）对应同一行为权威（poolRegistrationCancel.ts 分支）。flag ON 时承诺与行为一致；flag OFF 时承诺行不出现（回滚安全）。
+- **正向发现**：S2.1 memo §3（2026-10-20）记录该 modal 的承诺行是**无条件硬编码**（当时 L102-105，无 flag prop）；当前代码已是 flag 门控 + 测试锁定——即 memo §3 的残留 gap **已被修复**（应为 CNV 本轮工作）。门控链与本次复演路径完全一致：同一 flag（server 解析 → auth features → modal prop → 行渲染）对应同一行为权威（poolRegistrationCancel.ts 分支）。flag ON 时承诺与行为一致；flag OFF 时承诺行不出现（回滚安全）。
 
 ## 4. 运行方法（主会话代跑，两条命令）
 
 1) staging 开关证据（只读）：
-   CONFIRM_STAGING_READONLY=T46-S24 bash docs/deliverables/2026-10-22-s24-refund-replay/s1-staging-flag-evidence.sh
+   CONFIRM_STAGING_READONLY=CNV-S24 bash docs/deliverables/2026-10-22-s24-refund-replay/s1-staging-flag-evidence.sh
 2) 本地 HTTP 复演（自恢复/自清理）：
-   CONFIRM_LOCAL_REPLAY=T46-S24 bash docs/deliverables/2026-10-22-s24-refund-replay/s2-local-replay.sh
+   CONFIRM_LOCAL_REPLAY=CNV-S24 bash docs/deliverables/2026-10-22-s24-refund-replay/s2-local-replay.sh
 
 跑完把 s1-*/s2-* 输出文件路径回传 QA 判定；本报告 §0 的 AWAITING 行按输出逐项翻 PASS/FAIL。
 
@@ -107,7 +109,7 @@ PASS 判据：
 |---|---|---|
 | P1 preRevealRefundEnabled=true 在位 | ✅ | value=true，updated_at=2026-10-21 07:12:34.901833+00，updated_by=opencode-orchestrator |
 | P2 noRefundAfterReveal 关 | ✅ | feature_flags 无行（env 未设 → 默认 false） |
-| P3 FEATURE_FLAG_UPDATED 审计行 | ✅（实质满足，出处差异见 §5.3） | audit-t46-20261021-prereveal；timestamp 与 flag 行 updated_at 微秒级一致 |
+| P3 FEATURE_FLAG_UPDATED 审计行 | ✅（实质满足，出处差异见 §5.3） | audit-cnv-20261021-prereveal；timestamp 与 flag 行 updated_at 微秒级一致 |
 | P4 与昨日基线一致 | ✅ | 昨日 L1/L2（report.md E1）15:41 本地所见即为同一行——flag 在昨日 Level B 复演前约 28 分钟已就位 |
 
 ### 5.2 S2 逐项判定（本地 flag-on HTTP 复演，输出 145816）
@@ -123,7 +125,7 @@ PASS 判据：
 ### 5.3 P3 出处差异：透明记录与裁决
 
 **任务书叙述**：flag 由用户本人于 2026-10-22 在 staging admin UI 手动开启。
-**证据实态**：enablement 实际发生于 2026-10-21 07:12:34 UTC，写入通道为 orchestrator 代写（admin_id=opencode-orchestrator，admin_role=delegated），context 自带 {"requestedBy":"vincentlai via OpenCode session","legalSignoff":"2026-10-20-t46-p0a-legal-ops-signoff.md","ticket":"T46 sprint S2.3","note":"noRefundAfterReveal stays OFF"}；今日 admin UI 侧无新审计行（与「flag 10-21 已是 true，UI 呈现已开状态、未再发 PUT」自洽——PUT 路由 admin.ts:206-246 每次调用必写审计，无新行即无新写）。
+**证据实态**：enablement 实际发生于 2026-10-21 07:12:34 UTC，写入通道为 orchestrator 代写（admin_id=opencode-orchestrator，admin_role=delegated），context 自带 {"requestedBy":"vincentlai via OpenCode session","legalSignoff":"2026-10-20-conversion-p0a-legal-ops-signoff.md","ticket":"CNV sprint S2.3","note":"noRefundAfterReveal stays OFF"}；今日 admin UI 侧无新审计行（与「flag 10-21 已是 true，UI 呈现已开状态、未再发 PUT」自洽——PUT 路由 admin.ts:206-246 每次调用必写审计，无新行即无新写）。
 
 **裁决：P3 实质满足，记为 PASS-with-provenance-note**。理由：
 1. 审计行存在、不可变、action/target 正确，且与 feature_flags 行 updated_at 微秒级一致（两表互证）；

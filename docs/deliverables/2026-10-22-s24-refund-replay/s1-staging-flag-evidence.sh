@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# T46 S2.4 — staging 开关证据（2026-10-22）【纯只读：只有 SELECT，零写入】
+# CNV S2.4 — staging 开关证据（2026-10-22）【纯只读：只有 SELECT，零写入】
 # 目标：补 AC-03 闭环的 staging 侧证据 —
 #   S1.1  feature_flags 当前值（preRevealRefundEnabled 应 ='true'；
 #         noRefundAfterReveal 应无行或 ='false'）
@@ -10,12 +10,12 @@
 # 纪律：仅 postgres-staging / joyjoin-api-staging；生产容器零接触；不重启任何服务。
 # 注意：logAdminAudit 的 DB 持久化是 fire-and-forget（adminAuditLogger.ts:234-253），
 #       toggle 后几秒钟内行才可见；本脚本只做查询。
-# 互锁：CONFIRM_STAGING_READONLY=T46-S24 bash s1-staging-flag-evidence.sh
+# 互锁：CONFIRM_STAGING_READONLY=CNV-S24 bash s1-staging-flag-evidence.sh
 # =============================================================================
 set -uo pipefail
 
-if [ "${CONFIRM_STAGING_READONLY:-}" != "T46-S24" ]; then
-  echo "安全互锁：请显式执行 CONFIRM_STAGING_READONLY=T46-S24 bash s1-staging-flag-evidence.sh"
+if [ "${CONFIRM_STAGING_READONLY:-}" != "CNV-S24" ]; then
+  echo "安全互锁：请显式执行 CONFIRM_STAGING_READONLY=CNV-S24 bash s1-staging-flag-evidence.sh"
   exit 1
 fi
 

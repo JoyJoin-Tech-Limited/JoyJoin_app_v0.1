@@ -5,6 +5,8 @@
 - 范围：staging only（CVM 1.12.243.104，容器 joyjoin-api-staging / postgres-staging，库 joyjoin_staging）。**生产容器与生产库全程零接触**（所有命令可审计：docker 目标均 *-staging 后缀，psql 均 -d joyjoin_staging）。
 - 纪律：不改代码、不 commit、不重启容器；staging 写入最小化且全部自清理（L2.8 归零断言全过）。
 
+> **脱敏说明（2026-10-22）**：本文档已移除竞对名称与内部项目代号。文档层统一以中性代号 `CNV` 指代对标项目；staging 内的历史种子/互锁串实值仍为原始代号，文中引用已同步替换（如 `QA_CNV_…`、`CONFIRM_STAGING_REPLAY=CNV-S2.4`），因此与当时真实命令不再逐字一致。复核时请用**日期目录名与输出文件时间戳**定位原始证据，不要按代号字面值 grep。代码与运行时行为未受影响。
+
 ---
 
 ## 0. 结论：✅ PASS（Level B 全证）＋ 1 项真机待补
@@ -25,7 +27,7 @@
 输出文件（同目录）：
 - `l1-recon-output-20261021-154156.txt`（侦察，下称 **L1**）
 - `l2-execute-output-20261021-154857.txt`（复演终跑，下称 **L2**；前两次跑为主会话修脚本 bug 的中间跑，已废弃）
-- 脚本：`l0-recon.sh` / `l1-recon.sh` / `l2-execute.sh`（安全互锁 CONFIRM_STAGING_REPLAY=T46-S2.4）
+- 脚本：`l0-recon.sh` / `l1-recon.sh` / `l2-execute.sh`（安全互锁 CONFIRM_STAGING_REPLAY=CNV-S2.4）
 
 | # | 证据 | 出处 | 结果 |
 |---|---|---|---|
@@ -49,7 +51,7 @@
 
 ## 2. 复演设计要点（为什么 502 是通过信号）
 
-- 种子（全部 `QA_T46_` 标识）：非 test 池 + QA 用户 + pending 报名 + completed 假单（wechat_order_id='QA_T46_<ts>'）+ 铸造 session（`X-Session-Token` 头，staging cookie 名 `connect.sid_stg`）。
+- 种子（全部 `QA_CNV_` 标识）：非 test 池 + QA 用户 + pending 报名 + completed 假单（wechat_order_id='QA_CNV_<ts>'）+ 铸造 session（`X-Session-Token` 头，staging cookie 名 `connect.sid_stg`）。
 - `is_test_pool=false` 是硬要求：**test pool 走 legacy 分支跳过整个 Phase 0**（poolRegistrationCancel.ts L179-180）——任务背景里「test pool 豁免 POOL_FULL」仅适用于报名容量闸，不适用于取消。
 - 假单号必然触发微信 404，恰好形成完美证据：`createRefund` 只有在**微信 API 真实受理后**才写 refund_attempts（paymentService.ts L814-838），因此 E7+E9 共同证明「真实退款请求已送达微信并被执行级处理」；Amendment 1 要求此时**不得删除报名**（E8/E11），与旧逻辑「钱没退成先把报名删了」形成行为对照。
 - E13 顺带在种子上验证了 flag 矩阵的另一格：matched × noRefundAfterReveal=off → legacy（无退款、无报错、报名正常删除），坐实「揭示边界挂在报名的 matchStatus 上，而非 pool.matchedAt」。
@@ -60,7 +62,7 @@
 
 | 证据 | 环境 | 覆盖命题 | 状态 |
 |---|---|---|---|
-| T46 验证备忘（`docs/deliberations/2026-10-20-conversion-p0a-verification-memo.md`） | 本地/CI | flag on/off 分支矩阵、单元+集成层语义 | ✅ |
+| CNV 验证备忘（`docs/deliberations/2026-10-20-conversion-p0a-verification-memo.md`） | 本地/CI | flag on/off 分支矩阵、单元+集成层语义 | ✅ |
 | `npm run smoke:auto-refund -w @joyjoin/server` | dev DB（真实 repo 层） | Trigger A/B 自动退款、credits 回补、幂等、MOCK 单 finalize | ✅ ALL PASS |
 | **本复演（Level B）** | **staging 生产形态部署** | **真实 flag 行驱动分支命中、真实微信 v3 退款 API 接线、降级/幂等/边界行为、AC-9 DTO** | ✅ 本报告 |
 
@@ -102,5 +104,5 @@
 
 ### 6.3 复跑方法
 ```bash
-CONFIRM_STAGING_REPLAY=T46-S2.4 bash docs/deliverables/2026-10-21-conversion-staging-refund-replay/l2-execute.sh
+CONFIRM_STAGING_REPLAY=CNV-S2.4 bash docs/deliverables/2026-10-21-conversion-staging-refund-replay/l2-execute.sh
 ```

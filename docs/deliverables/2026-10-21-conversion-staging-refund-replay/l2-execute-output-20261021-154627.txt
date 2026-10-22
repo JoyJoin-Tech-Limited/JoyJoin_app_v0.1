@@ -3,7 +3,7 @@
 Warning: Identity file "/Users/vincentlai/Desktop/Business not accessible: No such file or directory.
 hostname contains invalid characters
 
-================ L2.1 种子：QA 用户 + 非 test 池 + pre-match 报名 + completed 假单 + 会话（全部 QA_T46 标识） ================
+================ L2.1 种子：QA 用户 + 非 test 池 + pre-match 报名 + completed 假单 + 会话（全部 QA_CNV 标识） ================
 Warning: Identity file "/Users/vincentlai/Desktop/Business not accessible: No such file or directory.
 hostname contains invalid characters
 QA_USER_ID=
@@ -79,7 +79,7 @@ HTTP_STATUS:404
 Warning: Identity file "/Users/vincentlai/Desktop/Business not accessible: No such file or directory.
 hostname contains invalid characters
 
-================ L2.8 自清理：全部 QA_T46 种子 + 会话删除，并复核归零 ================
+================ L2.8 自清理：全部 QA_CNV 种子 + 会话删除，并复核归零 ================
 Warning: Identity file "/Users/vincentlai/Desktop/Business not accessible: No such file or directory.
 hostname contains invalid characters
 Warning: Identity file "/Users/vincentlai/Desktop/Business not accessible: No such file or directory.

@@ -5,15 +5,15 @@ key   | preRevealRefundEnabled
 value | true
 
 
-================ L2.1 种子：QA 用户 + 非 test 池 + pre-match 报名 + completed 假单 + 会话（全部 QA_T46 标识） ================
+================ L2.1 种子：QA 用户 + 非 test 池 + pre-match 报名 + completed 假单 + 会话（全部 QA_CNV 标识） ================
 QA_USER_ID=3c276ba5-0c7e-435a-a6a6-aa64f9056e72
 POOL_ID=b1824e7b-df30-41bb-b84b-309b6f09ed6a
 REG_ID=a99093e5-2f75-4118-89ed-66f55d89d6fd
 PAY_ID=c81a6c89-5917-498e-9a4d-9c069b2a4175
-SESSION_INSERTED t46s2x4-1792568937
+SESSION_INSERTED cnv-s2x4-1792568937
 
 ================ L2.2 AC-9 预判证据：cancelPolicy 应为 refundable ================
-[{"id":"a99093e5-2f75-4118-89ed-66f55d89d6fd","poolId":"b1824e7b-df30-41bb-b84b-309b6f09ed6a","budgetRange":null,"preferredLanguages":null,"eventIntent":null,"matchStatus":"pending","assignedGroupId":null,"matchScore":null,"registeredAt":"2026-10-21T07:48:59.567Z","poolTitle":"QA_T46复演池-1792568937 勿报名","poolEventType":"饭局","poolCity":"深圳","poolDistrict":null,"poolDateTime":"2026-10-23T07:48:59.261Z","poolStatus":"active","poolOperatorReviewStatus":"none","theme":null,"subtitle":null,"vibe":null,"themeEmoji":null,"highlights":[],"venueName":null,"venueAddress":null,"finalDateTime":null,"groupOperatorReviewStatus":null,"invitationRole":null,"relatedUserName":null,"cancelPolicy":"refundable"}]
+[{"id":"a99093e5-2f75-4118-89ed-66f55d89d6fd","poolId":"b1824e7b-df30-41bb-b84b-309b6f09ed6a","budgetRange":null,"preferredLanguages":null,"eventIntent":null,"matchStatus":"pending","assignedGroupId":null,"matchScore":null,"registeredAt":"2026-10-21T07:48:59.567Z","poolTitle":"QA_CNV复演池-1792568937 勿报名","poolEventType":"饭局","poolCity":"深圳","poolDistrict":null,"poolDateTime":"2026-10-23T07:48:59.261Z","poolStatus":"active","poolOperatorReviewStatus":"none","theme":null,"subtitle":null,"vibe":null,"themeEmoji":null,"highlights":[],"venueName":null,"venueAddress":null,"finalDateTime":null,"groupOperatorReviewStatus":null,"invitationRole":null,"relatedUserName":null,"cancelPolicy":"refundable"}]
 "cancelPolicy":"refundable"
 
 ================ L2.3 第一次取消（Level B 主证据：期望 502 + REFUND_FAILED_RETRYABLE，报名保留） ================
@@ -60,7 +60,7 @@ HTTP_STATUS:200
 completed payment status after legacy cancel (expect completed, untouched)
 2 refund_attempts total (expect 2 — no new refund from legacy branch)
 
-================ L2.8 自清理：全部 QA_T46 种子 + 会话删除，并复核归零 ================
+================ L2.8 自清理：全部 QA_CNV 种子 + 会话删除，并复核归零 ================
 DELETE 2
 DELETE 1
 DELETE 1
@@ -69,6 +69,6 @@ DELETE 1
 0 pools left (expect 0)
 0 payments left (expect 0)
 0 sessions left (expect 0)
-0 orphan QA_T46 payments anywhere (expect 0)
+0 orphan QA_CNV payments anywhere (expect 0)
 
 完成。请将完整输出贴回 QA 子会话（已写入 l2-execute-output-1792568937.txt）。

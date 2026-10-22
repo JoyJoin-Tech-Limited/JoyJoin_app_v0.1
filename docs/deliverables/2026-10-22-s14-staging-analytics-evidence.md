@@ -1,7 +1,9 @@
-# S1.4 — P0b Staging 埋点实证（T46 · AC-01/AC-02 staging 段）
+# S1.4 — P0b Staging 埋点实证（CNV · AC-01/AC-02 staging 段）
 
 日期：2026-10-22 · 执行：QA subagent (S1.4) · 目标环境：`https://staging.joyjoinapp.com`
 部署版本：`0fb4789b9`（run 39579304717 success，背景已核实）
+
+> **脱敏说明（2026-10-22）**：本文档已移除竞对名称与内部项目代号。文档层统一以中性代号 `CNV` 指代对标项目；staging 数据库与审计系统内的历史实值仍为原始代号，本文引用的 DB 输出已同步替换为 `CNV` 形式，因此与库内真值不再逐字一致。复核时请用**时间戳或 `guestAttemptId` 探针 ID** 定位真实行，不要按代号字面值 grep。代码与运行时行为未受影响。
 
 ---
 

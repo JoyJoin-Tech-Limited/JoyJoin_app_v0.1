@@ -12,14 +12,14 @@ updated_by | opencode-orchestrator
 
 ================ S1.2  admin_audit_logs：两 flag 的 FEATURE_FLAG_UPDATED 历史（新→旧，10 行） ================
 -[ RECORD 1 ]------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-audit_id           | audit-t46-20261021-prereveal
+audit_id           | audit-cnv-20261021-prereveal
 timestamp          | 2026-10-21 07:12:34.901833
 admin_id           | opencode-orchestrator
 admin_role         | delegated
 action             | FEATURE_FLAG_UPDATED
 target_entity_type | feature_flag
 target_entity_id   | preRevealRefundEnabled
-context            | {"env": "staging", "note": "noRefundAfterReveal stays OFF", "ticket": "T46 sprint S2.3", "delegated": true, "requestedBy": "vincentlai via OpenCode session", "legalSignoff": "2026-10-20-t46-p0a-legal-ops-signoff.md"}
+context            | {"env": "staging", "note": "noRefundAfterReveal stays OFF", "ticket": "CNV sprint S2.3", "delegated": true, "requestedBy": "vincentlai via OpenCode session", "legalSignoff": "2026-10-20-conversion-p0a-legal-ops-signoff.md"}
 
 
 ================ S1.3  PASS 判据（人工核对本输出） ================
