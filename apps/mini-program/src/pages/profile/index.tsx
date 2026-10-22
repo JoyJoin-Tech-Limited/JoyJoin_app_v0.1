@@ -423,9 +423,19 @@ export default function ProfilePage() {
   // resolved archetype; constants lived unused in profileConstants).
   const archetypeFamilyName = archetype ? (ARCHETYPE_FAMILY_NAME[archetype] ?? null) : null
   const dailyGreeting = useMemo(() => getDailyGreeting(archetype), [archetype])
+
   const lifeStage = authUser?.lifeStage
   const bio = typeof authUser?.bio === 'string' ? authUser.bio.trim() : null
   const genderLabel = getGenderLabel(authUser?.gender)
+  // P2-5: large-title sub-line — date + weekday; the daily greeting joins
+  // ONLY when a real user bio occupies the identity card's bio slot (the
+  // greeting never renders twice — UIUX memo §3).
+  const largeTitleSub = useMemo(() => {
+    const now = new Date()
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    const dateLine = `${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`
+    return bio && dailyGreeting ? `${dateLine} · ${dailyGreeting}` : dateLine
+  }, [bio, dailyGreeting])
   const profileCompletion = getProfileCompletion(authUser)
   const growth = getProfileGrowthSummary(
     gamificationQuery.data ?? {
@@ -769,9 +779,9 @@ export default function ProfilePage() {
   }, [equipmentGuidanceEligible, pendingEntitlementCount])
 
   return renderGate(
-    <View className={`profile-page ${tabEntranceClass}`}>
+    <View className={`profile-page ${tabEntranceClass}${navCondensed ? ' profile-page--scrolled' : ''}`}>
       <View
-        className={`profile-page__nav${navCondensed ? ' profile-page__nav--scrolled' : ''}`}
+        className='profile-page__nav'
         data-testid='profile-top-navigation'
       >
         <Text className='profile-page__nav-title'>我的</Text>
@@ -806,6 +816,14 @@ export default function ProfilePage() {
         showScrollbar={false}
         onScroll={handleScroll}
       >
+        {/* P2-5 iOS large title: scrolls away under the condensing nav; the
+            sub-line is date + weekday, plus the daily greeting ONLY when a
+            real bio occupies the identity card (greeting never renders twice
+            — UIUX memo §3 dedupe rule). */}
+        <View className='profile-page__large-title' data-testid='profile-large-title'>
+          <Text className='profile-page__large-title-text'>我的</Text>
+          <Text className='profile-page__large-title-sub'>{largeTitleSub}</Text>
+        </View>
         {profileV17Enabled ? (
           <View
             className={`profile-page__identity-stage${hasEntered ? ' profile-page__identity-stage--entered' : ''}`}

@@ -554,6 +554,15 @@ describe('Profile approved V4 layout', () => {
     expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.discover })
   })
 
+  it('P2-5: large title shows 我的 + date sub-line (greeting joins only when a bio exists)', () => {
+    const { getByTestId } = render(<ProfilePage />)
+    expect(getByTestId('profile-large-title')).toBeTruthy()
+    // Mock user has no bio → sub-line is date + weekday only (greeting
+    // stays in the identity card; never rendered twice — memo §3).
+    const sub = document.querySelector('.profile-page__large-title-sub')?.textContent ?? ''
+    expect(sub).toMatch(/^\d+月\d+日 周[一二三四五六日]$/)
+  })
+
   it('P1-1: tapping the partner avatar fires one ref-locked bounce haptic', () => {
     const { getByTestId } = render(<ProfilePage />)
     ;(haptics as unknown as ReturnType<typeof vi.fn>).mockClear()

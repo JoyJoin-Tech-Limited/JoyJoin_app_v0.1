@@ -85,16 +85,54 @@
     justify-content: center;
     background: rgba($color-bg, 0.94);
     z-index: 20;
-    // P0-8: condensation cross-fade — background lift + hairline divider +
-    // soft shadow once the feed scrolls under the nav (hysteresis band in
-    // useProfileScroll prevents flicker at the boundary).
+    // P0-8/P2-5: the scrolled state lives on the PAGE ROOT (one shared state
+    // machine — useProfileScroll's 96/64rpx hysteresis band). Nav condenses,
+    // large title folds, nav title fades in, all in the same 180-200ms window.
     transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
 
-    &--scrolled {
-      background: rgba($color-bg, 0.98);
-      box-shadow: 0 1rpx 0 var(--profile-divider),
-        0 8rpx 24rpx rgba($color-text-primary, 0.06);
-    }
+  &--scrolled &__nav {
+    background: rgba($color-bg, 0.98);
+    box-shadow: 0 1rpx 0 var(--profile-divider),
+      0 8rpx 24rpx rgba($color-text-primary, 0.06);
+  }
+
+  &--scrolled &__large-title {
+    opacity: 0;
+    transform: translateY(-8rpx);
+    pointer-events: none;
+  }
+
+  &--scrolled &__nav-title {
+    opacity: 1;
+  }
+
+  // P2-5 iOS large title (UIUX memo §3): first ScrollView child — scrolls
+  // away under the condensing nav.
+  &__large-title {
+    padding: 16rpx $container-padding 8rpx;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  &__large-title-text {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    line-height: 1.18;
+    color: var(--profile-text-primary);
+  }
+
+  &__large-title-sub {
+    display: block;
+    margin-top: 4rpx;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    line-height: 1.4;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__nav-title {
@@ -103,6 +141,9 @@
     line-height: 1.4;
     font-weight: $font-weight-bold;
     color: var(--profile-text-primary);
+    // P2-5: hidden until the large title scrolls away (iOS crossfade).
+    opacity: 0;
+    transition: opacity 0.18s ease;
   }
 
   // P0-2 notification bell (2026-10-22): mirrors discover-auth__bell anatomy
@@ -2414,6 +2455,13 @@
   // border stays); the pop-in is killed via the .profile-page__milestone rule.
   .profile-page__milestone-unlock-ring {
     animation: none;
+  }
+
+  // P2-5: the large-title/nav-title crossfade is a state change, not a
+  // decoration — under RM it happens instantly.
+  .profile-page__large-title,
+  .profile-page__nav-title {
+    transition: none;
   }
 }
 
