@@ -211,6 +211,8 @@ cp deployment/.env.production.example deployment/.env.production
 > 2026-07-20：`/api/health` 只表示进程存活，发布验收必须使用 `/api/readyz`（数据库 + 关键配置）并单独检查 Admin 根页面。部署脚本不再运行 migration、DDL 或 seed；这些操作必须按仓库迁移纪律预先人工执行。
 >
 > 2026-08-13：CVM→GHCR 跨太平洋拉取不稳定（多次 3×5 分钟超时）后，拉取改为并行 + 8 分钟/次，并实现了同地域 TCR 交付模式（见下节）。
+>
+> **2026-10-22 交付模式排查（load-bearing）**：`STAGING_API_IMAGE`/`STAGING_ADMIN_IMAGE` **不是**需要手工维护的 secret——它们由 Build job 的 `delivery-mode` step 每次动态输出。真正决定模式的是两个 **Variables**：`STAGING_TCR_ENABLED` 与 `STAGING_GHCR_ENABLED`。二者任一缺失或为 `false` 时判定链静默掉进 `bundle`（~48min 分块 rsync），即使 `GHCR_TOKEN` secret 存在也没用——这正是 8-13 到 10-22 之间 staging 一直慢且被 stale 守卫反复中止的根因（TCR 预备期把 `STAGING_GHCR_ENABLED` 翻成 false，而 TCR secrets 从未 provisioning）。排查第一步：看 Build job 日志的 `Registry delivery mode:` 行。修复：`gh variable set STAGING_GHCR_ENABLED --body true`。GHCR pull 失败（token 失效）时 `deploy-staging.sh` 会 `restore_previous_release` 安全回滚旧镜像，无停机。
 
 #### TCR 同地域镜像仓库（推荐启用）
 
