@@ -27,6 +27,7 @@ import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { NOTIFICATION_COUNTS_KEY } from '../../hooks/useNotificationCounts'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { CountUpText } from '../../components/ui/CountUpText'
 import { useGuidanceQueue } from '../../hooks/useGuidanceQueue'
 import { useSyncDeadline } from '../../hooks/useSyncDeadline'
 import { apiRequest } from '../../lib/api/api'
@@ -61,8 +62,11 @@ import {
 } from './profileConstants'
 import { useProfileScroll } from './useProfileScroll'
 
-const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {
-  topItemId: null,
+// P1-3 (UIUX memo §9): the four profile numbers count 0→N once on first
+// data arrival — 600ms, brand bezier, 33ms cadence floor. Shared options.
+const PROFILE_COUNT_UP_OPTS = { duration: 600, easing: 'brandBezier', cadenceFloorMs: 33 } as const
+
+const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {  topItemId: null,
   bottomItemId: null,
   shoesItemId: null,
   accessoryItemId: null,
@@ -813,9 +817,15 @@ export default function ProfilePage() {
                 >
                   <View className='profile-page__growth-heading'>
                     <Text className='profile-page__growth-label'>潮流值</Text>
-                    <Text className='profile-page__growth-value'>
-                      {gamificationQuery.isLoading ? '—' : growth.current}
-                    </Text>
+                    {gamificationQuery.isLoading ? (
+                      <Text className='profile-page__growth-value'>—</Text>
+                    ) : (
+                      <CountUpText
+                        className='profile-page__growth-value'
+                        value={growth.current}
+                        {...PROFILE_COUNT_UP_OPTS}
+                      />
+                    )}
                     {!gamificationQuery.isLoading && growth.nextTarget !== null && (
                       <Text className='profile-page__growth-target'>/{growth.nextTarget}</Text>
                     )}
@@ -1075,9 +1085,15 @@ export default function ProfilePage() {
             aria-label={`已参加 ${joinedEventsCount} 场活动，去浏览足迹`}
           >
             <JoyJoinIcon emoji='👣' tier='ui' size={40} className='profile-page__stat-icon' />
-            <Text className='profile-page__stat-value'>
-              {isLoadingStats ? '—' : joinedEventsCount}
-            </Text>
+            {isLoadingStats ? (
+              <Text className='profile-page__stat-value'>—</Text>
+            ) : (
+              <CountUpText
+                className='profile-page__stat-value'
+                value={joinedEventsCount}
+                {...PROFILE_COUNT_UP_OPTS}
+              />
+            )}
             <Text className='profile-page__stat-label'>已参加活动</Text>
           </Card>
 
@@ -1089,9 +1105,15 @@ export default function ProfilePage() {
             aria-label={connectionsCount == null ? '连接数正在加载' : `已有 ${connectionsCount} 个连接，去查看`}
           >
             <JoyJoinIcon emoji='👥' tier='ui' size={40} className='profile-page__stat-icon' />
-            <Text className='profile-page__stat-value'>
-              {profileShellQuery.isLoading || connectionsCount == null ? '—' : connectionsCount}
-            </Text>
+            {profileShellQuery.isLoading || connectionsCount == null ? (
+              <Text className='profile-page__stat-value'>—</Text>
+            ) : (
+              <CountUpText
+                className='profile-page__stat-value'
+                value={connectionsCount}
+                {...PROFILE_COUNT_UP_OPTS}
+              />
+            )}
             <Text className='profile-page__stat-label'>我的连接</Text>
           </Card>
 
@@ -1103,7 +1125,16 @@ export default function ProfilePage() {
             aria-label={`资料完成度 ${profileCompletion}%，${profileCompletion >= 100 ? '查看资料' : '去完善资料'}`}
           >
             <JoyJoinIcon emoji='📄' tier='ui' size={40} className='profile-page__stat-icon' />
-            <Text className='profile-page__stat-value'>{profileCompletion}%</Text>
+            {/* P1-3: the % glyph lives outside the animated span so the
+                min-width reservation stays numeric (memo §9 anti-jitter). */}
+            <View className='profile-page__stat-value-row'>
+              <CountUpText
+                className='profile-page__stat-value'
+                value={profileCompletion}
+                {...PROFILE_COUNT_UP_OPTS}
+              />
+              <Text className='profile-page__stat-suffix'>%</Text>
+            </View>
             <Text className='profile-page__stat-label'>资料完成度</Text>
             <View className='profile-page__stat-progress'>
               <View

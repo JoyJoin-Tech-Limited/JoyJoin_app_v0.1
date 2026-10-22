@@ -519,6 +519,27 @@
     font-weight: $font-weight-bold;
     color: $color-primary-dark;
     line-height: $line-height-normal;
+    // P1-3 anti-jitter: reserve 3 glyphs' width so count-up ticks never
+    // shift the label below (Quicksand is tabular; pre-font-load fallback
+    // numerals are absorbed by the reservation — memo §9).
+    min-width: 104rpx;
+    text-align: center;
+  }
+
+  // P1-3: completion value + its % suffix — the suffix lives outside the
+  // animated span so the reservation stays numeric.
+  &__stat-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+  }
+
+  &__stat-suffix {
+    font-size: $font-size-xl;
+    font-family: $font-en-brand;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+    line-height: $line-height-normal;
   }
 
   // Taro H5 drops dynamic inline rpx — bound the 40rpx stat icons everywhere.
@@ -1226,6 +1247,8 @@
     font-weight: $font-weight-bold;
     line-height: 1;
     color: $color-primary-dark;
+    // P1-3 anti-jitter: reserve 4 digits' width for the count-up.
+    min-width: 160rpx;
   }
 
   &__growth-target {
