@@ -150,6 +150,51 @@ jobs:
       - name: Type check
         run: npm run typecheck --workspace=mini-program
 
+  # A real WeChat build on every shipping commit. Before this job existed the
+  # only build was in taro-weapp-build.yml, whose `build-weapp` step runs on
+  # `workflow_run` (i.e. only after Deploy Staging succeeds) — so a broken
+  # bundled asset could reach main and sit there until the next staging
+  # deploy. That is exactly what happened on 2026-10-21: the anonymization
+  # commit re-encoded a profile-pixel WebP, breaking both its content hash and
+  # its VP8L pixel stream, and nothing failed until someone ran build:weapp by
+  # hand. `build:weapp` chains every asset gate, the Taro build, package-size
+  # enforcement, and upload classification, so one job covers the whole class.
+  build-mini-program:
+    needs: [guardrails]
+    name: Build Mini-Program
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        timeout-minutes: 9
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            echo "Dependency install attempt $attempt/2"
+            if timeout --signal=TERM --kill-after=30s 4m npm ci --prefer-offline --no-audit --no-fund; then
+              exit 0
+            fi
+            echo "::warning::Dependency install attempt $attempt timed out or failed"
+          done
+          echo "::error::Dependency install failed after 2 bounded attempts"
+          exit 1
+      - name: Build shared workspace
+        run: npm run build -w @joyjoin/shared
+      - name: Build WeChat bundle
+        run: npm run build:weapp -w mini-program
+        env:
+          TARO_APP_CDN_BASE_URL: ${{ vars.TARO_APP_CDN_BASE_URL || 'https://joyjoinapp.com/static' }}
+          TARO_APP_API_BASE_URL: https://staging.joyjoinapp.com
+          TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS: ${{ vars.TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS }}
+      - name: Verify subpackage styles
+        run: npm run verify:subpackage-styles -w mini-program
+
   test-server:
     needs: [guardrails]
     name: Server Tests

@@ -143,8 +143,8 @@ Config: `.github/dependabot.yml` (weekly, Monday 09:00 Asia/Shanghai, max 5 open
 | **Grouped security PR** | Treat as urgent. Read the advisory, confirm the fix version is the one we want, run `npm run check:deps` after merge. |
 | **Grouped routine patch/minor** | Glance at the diff; let CI decide. Merge if green. |
 | **Individual `drizzle-orm` / `drizzle-kit` PR** | Not routine. These are 0.x, "minor" bumps are breaking in practice. Read the release notes, run `npm run test -w @joyjoin/server`, and check `db:verify` against staging before merging. **Do not bump `drizzle-zod` past 0.7.x** while the repo is on zod 3 classic — 0.8.x types are declared against zod v4's `ZodType` (`{out, in}`) and every `createSelectSchema` in `packages/shared/src/schema/` fails with `_zod missing` (measured 2026-10-22). Bump zod to 4 first, as its own task. |
-| **`@tarojs/*` (any update type)** | Ignored entirely. The package set is pinned in lockstep to one exact version; a partial bot bump makes every `npm install` fail with ERESOLVE (PR #642, closed 2026-10-22). Handled by the W3 sprint. |
-| **`react`, `react-dom`, `three` major** | Ignored by config on purpose. Handled by a dedicated upgrade. |
+| **`@tarojs/*` (any update type)** | Ignored entirely. The package set is pinned in lockstep to one exact version; a partial bot bump makes every `npm install` fail with ERESOLVE (PR #642, closed 2026-10-22). A coordinated bump is maintenance-only — it clears **no** advisory (see §5). |
+| **`three`, `lucide-react`, `vitest`, `@types/cookie` major** | Ignored by config on purpose. `three` is pinned for the avatar3d renderer; `lucide-react` 1.x renames icons across 135 files; `vitest` 5 is a runner major; `@types/cookie` 1.x would describe cookie@1 while the tree still resolves 0.7.2. Each is a planned migration, and PRs #639/#640/#641/#643 were closed with that reason on 2026-10-22. |
 
 If a Dependabot PR fails because the lockfile it produces conflicts with
 in-flight work, close it and re-open after the other branch lands — never
@@ -159,4 +159,4 @@ resolve a lockfile conflict by hand-merging `package-lock.json`.
 | 2026-10-21 (W0) | 3 (`@babel/traverse`, `@tarojs/components`, `swiper` — all Taro chain) | 8 | Baseline landed; `drizzle-orm` is the only true server-side item |
 | 2026-10-21 (after W1) | 2 (`@tarojs/components`, `swiper`) | 6 | `npm audit fix` swept `@babel/traverse`, `browserslist`, `json5`; root graph 185 → 137 nodes |
 | 2026-10-22 (after W2) | 3 (`@tarojs/components`, `swiper`, `@tarojs/taro`) | 6 | `drizzle-orm` 0.39.1 → 0.45.4 and `sharp` 0.34.5 → 0.35.5 landed. Two new upstream advisories arrived mid-batch (`lodash` high + its `@tarojs/taro` critical propagation), so the gated count is 9, not 7. `swiper` override attempted and reverted — see W2 note in `docs/launch-risks.md`. Root graph 137 → 134 nodes. |
-| target after W3 | 0 | 0 | Requires the Taro major upgrade (separate sprint) |
+| target after W3 | 0 | 0 | **Struck 2026-10-22: a Taro upgrade clears nothing.** `@tarojs/components@4.3.0` (the newest 4.x) still pins `swiper` to `11.1.15`, and `@tarojs/helper@4.3.0` still depends on `lodash@^4.17.21`, whose advisories have no released fix (`fixAvailable: false`). The remaining entries disappear when upstream ships, not when we upgrade. W3 is now maintenance-only — do not schedule it for security numbers. |

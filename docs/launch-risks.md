@@ -127,14 +127,17 @@ production container does not set them (`/api/readyz` is the runtime check).
 | Check | Today | Notes |
 |---|---|---|
 | Env/secret/legacy/import guardrails | ✅ | `guardrails` job, every PR |
-| Dependency audit (runtime-reachable) | ✅ | `Dependency Audit` job, added 2026-10-21 |
-| Dependabot version + security PRs | ✅ config only | `.github/dependabot.yml`, added 2026-10-21. Opens PRs; **does not** block merges. |
-| CodeQL **security** code scanning | ❌ | `code-scanning/default-setup` is `not-configured`; no code-scanning alerts exist |
+| Dependency audit (runtime-reachable) | ✅ | `Dependency Audit` job, added 2026-10-21. Its walker has unit tests in CI. |
+| Dependabot version + security PRs | ✅ | `.github/dependabot.yml`. **Dependabot security updates** were switched on at the repo level on 2026-10-22 (they had been `disabled`). Still opens PRs only; it does not block merges. |
+| CodeQL **security** code scanning | ✅ | Default setup enabled 2026-10-22 (`code-scanning/default-setup` = `configured`). Free on this public repo; first analysis run triggered on enable. |
 | CodeQL **code quality** scanning | ✅ dynamic | GitHub runs `CodeQL - Code Quality` on pushes to `main` (dynamic workflow, not a repo file). Quality only — it does not produce security alerts. |
-| Secret scanning in CI (gitleaks/trufflehog) | ❌ | Relies on GitHub's own secret scanning if enabled on the repo |
-| `dependency-review-action` on PRs | ❌ | Would block new vulnerable deps at PR time; not configured |
+| GitHub **secret scanning** + push protection | ✅ | Both enabled 2026-10-22 (free for public repos). Non-provider patterns and validity checks remain `disabled` (org-level). |
+| Secret scanning in CI (gitleaks/trufflehog) | ❌ | No repo-owned scanner; we rely on GitHub's secret scanning above. `check-guardrails.mjs` still blocks committed `.env` files. |
+| `dependency-review-action` on PRs | — | Available (the repo is **public**, so no GHAS needed), deliberately not enabled: work lands as direct pushes to `main`, so a PR-only gate would never fire. Revisit if a PR-based flow becomes the norm. |
+| Mini-program build (`build:weapp`) on every shipping commit | ✅ | `Build Mini-Program` job in `quality-gates`, added 2026-10-22. Runs every asset gate, the Taro build, package-size enforcement and upload classification before `main` can deploy. |
 | Container image scanning | ❌ | `deploy-staging` builds images without a scanner |
 | DAST / external pen test | ❌ | Not scheduled |
+
 
 **Reading this table:** a green PR does not mean "no vulnerabilities". It means
 the guardrails, type checks, tests and the runtime-reachable dependency gate
@@ -147,3 +150,4 @@ passed. The ❌ rows are open gaps, not implicit passes.
 | Date | Change |
 |---|---|
 | 2026-10-21 | Created. Added the dependency gate + Dependabot config; recorded the 11-node accepted-risk baseline and the rejected `npm audit fix --force` path. |
+| 2026-10-22 | W1+W2 landed (185 → 134 root nodes; runtime gate 11 → 9 findings after two new upstream advisories arrived). Repaired a profile-pixel WebP that the anonymization commit had left with a broken hash **and** a broken VP8L stream. Added `Build Mini-Program` to `quality-gates` so a broken bundle can no longer reach `main`. Enabled CodeQL default setup, GitHub secret scanning, push protection, and Dependabot security updates. |

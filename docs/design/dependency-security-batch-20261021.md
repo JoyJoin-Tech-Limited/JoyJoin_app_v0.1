@@ -104,6 +104,7 @@
 - **`drizzle-zod` 必须留在 0.7.x**：试过 0.8.3（其 peer 写 `zod ^3.25 || ^4`），`tsc` 直接崩掉 —— 0.8.3 的类型按 zod v4 的 `ZodType` 形状（`{out, in}`）声明，与仓库的 zod 3.25 classic 命名空间不兼容，`_definitions_extended.ts` 里 200+ 行 `createSelectSchema` 全部报 `_zod missing`。回退 0.7.1 后 server typecheck 立刻全绿。结论：**zod 4 迁移之前不要动 drizzle-zod**。
 - **W2.2 `sharp` 0.34.5 → 0.35.5 落地**（mini-program devDependency，资产构建脚本）。冒烟：`sharp({create:8x8}).webp()` → vips 8.18.7 正常出图。engines 要求 node ≥20.9，本地 24.12 / CI node 20 均满足。
 - **W2.3 `swiper` overrides 已尝试并回滚**：`@tarojs/components@4.2.0` 把 `swiper` **精确钉在 `11.1.15`（无 caret）**，加根 `overrides: {"swiper": "^12.1.2"}` 后 npm 不报错但也不生效；手动清 lock 条目再装，会得到「父包仍声明 swiper、lockfile 里没有任何 swiper 节点」的半坏状态（`npm ci` 会挂）。一个看起来在缓解、实际没生效的 override 比一条诚实的基线更危险，因此删掉 override，`swiper` 继续留在基线里等 W3。
+  **2026-10-22 二次复核**：嵌套形式（`{"@tarojs/components": {"swiper": "^12.1.2"}}`）在 npm 11.6.2 上同样不生效 —— `npm install --package-lock-only` 返回 `up to date in 2s`，lockfile 里 swiper 仍是 11.1.15。npm 不会为了 override 重解析一个已经被精确钉死的传递依赖。结论：**不要再试 override**，这条路在本仓库无效。
 - **W2.4 `vite`**：未动。`@tarojs/vite-runner` 仍锁 vite 4.x，升级会与 Taro 内部 runner 冲突 → 明确记录为已接受风险，留给 W3。
 - **新 advisory 中途到达**：W1→W2 之间上游发布了 `lodash` 三条（代码注入 / 原型污染，`<=4.17.23` 全中且**无修复版本**），npm audit 把 critical 严重度传播到 `@tarojs/taro`。因此门禁项从 8 变 9（+2 新、−1 drizzle）。两条都写实 reason 后入基线，`@tarojs/taro` 的 reason 明确写了「不是独立 advisory，是 @tarojs/components + @tarojs/helper 的传播」。
 - **验证**：`check:server` / `check:clients` 全绿；`npm run check:deps` → 9 gated / 9 baselined / 55 build-tool，0 新增；根图 137 → 134 节点。
@@ -122,11 +123,18 @@
 
 ### W3 — Taro 链路大版本升级（3–5 天，独立 sprint，PR #3）
 
-这是唯一能清空 `@tarojs/taro`、`@tarojs/components`、`@tarojs/plugin-platform-h5`、`@tarojs/helper`、`@tarojs/runner-utils`、`scss-bundle`、`glob`、`chokidar`、`micromatch`、`@typescript-eslint/*` 与整个 babel‑6 子树的动作。
+**2026-10-22 复核：W3 已不产生任何安全收益，降级为「纯维护」，不再是本批次的安全动作。**
+
+复核证据（注册表实测）：`@tarojs/components` 最新的 4.x 是 **4.3.0**，它依旧把 `swiper` 精确钉在 **11.1.15**（与 4.2.0 完全相同）；`@tarojs/helper@4.3.0` 依旧依赖 `lodash: ^4.17.21`，而 lodash 的三条 advisory 覆盖 `<=4.17.23` 且上游 **没有发布修复版本**（`fixAvailable: false`）。也就是说 4.2.0 → 4.3.0 这一跳清不掉基线里的任何一条：`critical:swiper`、`critical:@tarojs/components`、`critical:@tarojs/taro`、`high:lodash` 全部原地不动，`@tarojs/helper` 也仍在。
+
+原计划里 W3 声称能清空 Taro 链路 + babel-6 + glob 家族 — 那部分在 W1 里已经通过 `miniprogram-ci` 2.1.31 → 2.1.48 达成（`@babel/traverse` / `browserslist` / `json5` 自动缩表）。剩余项只能在**上游先修**之后才会消失。
+
+因此：W3 只在有真实维护动机（如 Taro 修了具体 bug）时排期；不要为了安全数字去升它。
 
 - 前置：W0 的棘轮已上线（否则升级期间的临时回退会被门禁挡住）。
 - 验证矩阵（缺一不可）：`npm run build:weapp -w mini-program` → `verify:subpackage-styles`（不得产生非空 `sub-common.wxss`）→ `check-compiled-package-source-size`（主包 <1856 KiB）→ WeChat 真机冒烟（首页/排桌/支付/破冰）→ 开发版上传失败即回滚。
 - 明确不包含：`three`（WebGL 已隔离）、`react` 18→19。
+
 
 ### W4 — 收口（0.5 天，PR #3 附带）
 

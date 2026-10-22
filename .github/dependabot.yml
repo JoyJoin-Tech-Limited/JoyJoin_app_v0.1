@@ -66,6 +66,25 @@ updates:
       - dependency-name: react-dom
         update-types:
           - version-update:semver-major
+      # three is pinned exactly at 0.152.2 and used by the avatar3d session
+      # renderer (apps/mini-program/src/lib/profile/avatar3d). Dependabot treats
+      # a 0.x minor bump as a normal minor update, so 0.152 -> 0.186 arrived as
+      # a routine PR (#643) even though r152 -> r186 crosses many breaking
+      # renderer changes. Ignore the package outright until that surface gets a
+      # planned migration; it carries no known advisory.
       - dependency-name: three
+      # 0.453 -> 1.x renamed and reshaped icons across a surface used by 135
+      # files. A deliberate migration, not a bot PR.
+      - dependency-name: lucide-react
+        update-types:
+          - version-update:semver-major
+      # vitest 4 -> 5 changes the test runner major; schedule it with the other
+      # toolchain work.
+      - dependency-name: vitest
+        update-types:
+          - version-update:semver-major
+      # @types/cookie 1.x describes cookie@1, while the tree still resolves
+      # cookie@0.7.2 through express. Upgrading only the types makes them lie.
+      - dependency-name: '@types/cookie'
         update-types:
           - version-update:semver-major
