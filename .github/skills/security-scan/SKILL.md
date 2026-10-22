@@ -32,7 +32,7 @@ Use this skill when you are:
    If CI does not run a dedicated CodeQL or dependency scan, call that gap out instead of implying a pass.
 
 2. Start from current enforcement files.
-   `apps/server/src/auth/policy.ts`, `scripts/check-guardrails.mjs`, `docs/launch-risks.md`,
+   `apps/server/src/auth/policy.ts`, `scripts/check/check-guardrails.mjs`, `docs/launch-risks.md`,
    `.github/workflows/quality-gates.yml`, `.github/workflows/deploy-staging.yml`,
    and `.github/workflows/deploy-production.yml` are better sources of truth than stale summary docs.
 
@@ -49,15 +49,16 @@ Use this skill when you are:
 ## Current repo anchors
 
 - `apps/server/src/auth/policy.ts` is the auth-debug policy source of truth.
-- `scripts/check-guardrails.mjs` enforces env, secret, and legacy guardrails in CI.
+- `scripts/check/check-guardrails.mjs` enforces env, secret, and legacy guardrails in CI.
 - `.github/workflows/quality-gates.yml` runs guardrails, type checks, tests, harness gate, and simulation; `deploy-staging.yml` and `deploy-production.yml` run it on `main` and `release` respectively.
-- `docs/launch-risks.md` and `docs/CLI_TOOLS.md` describe the current known-risk posture and debug-tool constraints.
+- `docs/launch-risks.md` is the honest known-risk register (dependency posture, auth-debug surfaces, CI coverage gaps). `docs/CLI_TOOLS.md` covers debug-tool constraints.
+- `scripts/check/check-dependency-vulns.mjs` (`npm run check:deps`) is the dependency ratchet: it gates critical/high advisories reachable from workspace *runtime* dependencies and baselines the rest in `scripts/check/dependency-vuln-baseline.json`. CI runs it as its own job because a full `npm audit` takes minutes.
 
 ## Quick examples
 
 - **Check auth-debug exposure**: verify that production override surfaces require explicit flags and do not default open.
 - **Review a launch branch for security gaps**: compare current CI checks to the risks called out in `docs/launch-risks.md`.
-- **Run a dependency-focused audit**: combine package inspection with honest reporting about what CI does and does not already cover.
+- **Run a dependency-focused audit**: run `npm run check:deps` for the gated (runtime-reachable) view, then `npm audit` for the full graph — and say which is which. Most findings are build-tool only; never present the raw alert count as the risk.
 
 ## Troubleshooting
 
@@ -86,7 +87,7 @@ List the concrete checks performed, the files reviewed, and any missing automati
 
 - `apps/server/src/auth/policy.ts`
 - `apps/server/src/cli/bypassLogin.ts`
-- `scripts/check-guardrails.mjs`
+- `scripts/check/check-guardrails.mjs`
 - `.github/workflows/quality-gates.yml`
 - `.github/workflows/deploy-staging.yml`
 - `.github/workflows/deploy-production.yml`

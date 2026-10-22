@@ -11,6 +11,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Deliberately a separate job, not part of `npm run guardrails`: a full-graph
+  # `npm audit` takes minutes, and guardrails runs on every local pre-push.
+  # Like the other jobs it installs nothing — `npm audit` reads the lockfile.
+  # Gate semantics: scripts/check/check-dependency-vulns.mjs
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Audit runtime-reachable critical/high advisories
+        run: npm run check:deps -- --strict
+
   guardrails:
     name: Guardrails
     runs-on: ubuntu-latest

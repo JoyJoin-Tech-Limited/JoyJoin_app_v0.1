@@ -1,0 +1,63 @@
+# Dependabot configuration — JoyJoin monorepo (npm workspaces)
+#
+# Why this file exists: before 2026-10-21 the repo had no Dependabot config and
+# every CI job installs with `npm ci --no-audit`, so dependency advisories were
+# only ever visible on the GitHub security tab. Background:
+# docs/design/dependency-security-batch-20261021.md
+#
+# Design notes:
+#   - One npm entry at the repo root: npm workspaces share a single lockfile, so
+#     per-directory entries would duplicate every alert.
+#   - Security updates are grouped separately from routine updates so a CVE fix
+#     is never buried inside a 40-package routine PR.
+#   - Major upgrades for @tarojs/*, react, react-dom and three are ignored: they
+#     are handled deliberately (see W3 in the plan), not by bot PR.
+#   - drizzle-orm / drizzle-kit are excluded from the routine group so their
+#     (breaking-in-practice) 0.x bumps arrive as individual reviewable PRs.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels:
+      - dependencies
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+      routine-patch-minor:
+        applies-to: version-updates
+        update-types:
+          - patch
+          - minor
+        patterns:
+          - '*'
+        exclude-patterns:
+          - '@tarojs/*'
+          - react
+          - react-dom
+          - three
+          - drizzle-orm
+          - drizzle-kit
+    ignore:
+      - dependency-name: '@tarojs/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: react
+        update-types:
+          - version-update:semver-major
+      - dependency-name: react-dom
+        update-types:
+          - version-update:semver-major
+      - dependency-name: three
+        update-types:
+          - version-update:semver-major

@@ -1,0 +1,77 @@
+{
+  "$comment": "Ratchet baseline for scripts/check/check-dependency-vulns.mjs. Keys are `<severity>:<package>` for findings reachable from a workspace runtime dependency set. Entries must be burned down, never added without a reason + reviewBy.",
+  "generatedAt": "2026-10-22",
+  "packages": {
+    "critical:@tarojs/components": {
+      "package": "@tarojs/components",
+      "severity": "critical",
+      "reason": "Advisory propagates from the swiper H5 implementation inside the Taro component package. WeChat builds compile to native <Swiper>, so this code path does not ship.",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": []
+    },
+    "high:@tarojs/helper": {
+      "package": "@tarojs/helper",
+      "severity": "high",
+      "reason": "Same Taro build chain as above (helper is CLI-side only).",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": []
+    },
+    "critical:@tarojs/taro": {
+      "package": "@tarojs/taro",
+      "severity": "critical",
+      "reason": "Not an advisory of its own: npm audit marks @tarojs/taro critical because it depends on @tarojs/components (swiper H5 path) and @tarojs/helper (lodash). The only \"fix\" npm offers is downgrading Taro to 3.6.22, which breaks the mini-program build — permanently forbidden here. Separately from W2.3: swiper is now pinned back to 11.1.15 because @tarojs/components pins it exactly and the forced override did not resolve cleanly; real resolution lands with the Taro upgrade (W3).",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": []
+    },
+    "high:braces": {
+      "package": "braces",
+      "severity": "high",
+      "reason": "Reached through Taro CLI globbing (chokidar/micromatch). Build-time only, no request path.",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": [
+        "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+      ]
+    },
+    "high:chokidar": {
+      "package": "chokidar",
+      "severity": "high",
+      "reason": "Taro CLI dev watcher; not present in the uploaded package.",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": []
+    },
+    "high:find-yarn-workspace-root": {
+      "package": "find-yarn-workspace-root",
+      "severity": "high",
+      "reason": "Taro CLI workspace detection utility; build-time only.",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": []
+    },
+    "high:lodash": {
+      "package": "lodash",
+      "severity": "high",
+      "reason": "No patched release exists (affected range is <=4.17.23, and 4.17.21 is current). Reachable only through build-time @tarojs/helper, which sits in the Taro runtime dependency list by framework convention; no app code imports lodash, and the three advisories only fire on _.template key names / _.unset / _.omit with attacker-controlled paths. Revisit when lodash ships a fix or with the Taro upgrade (W3).",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": [
+        "https://github.com/advisories/GHSA-r5fr-rjxr-66jc",
+        "https://github.com/advisories/GHSA-f23m-r3pf-42rh",
+        "https://github.com/advisories/GHSA-xxjr-mmjv-4gpg"
+      ]
+    },
+    "high:micromatch": {
+      "package": "micromatch",
+      "severity": "high",
+      "reason": "Taro CLI glob matching; build-time only.",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": []
+    },
+    "critical:swiper": {
+      "package": "swiper",
+      "severity": "critical",
+      "reason": "Prototype pollution in swiper <12.1.2, reachable only through @tarojs/components H5 output. apps/mini-program/src has zero swiper imports and WeChat uses the native <Swiper>. npm audit fix would downgrade @tarojs/* to 3.2.16, which breaks the build.",
+      "reviewBy": "2027-01-31",
+      "advisoryUrls": [
+        "https://github.com/advisories/GHSA-hmx5-qpq5-p643"
+      ]
+    }
+  }
+}

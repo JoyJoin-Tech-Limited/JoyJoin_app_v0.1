@@ -65,6 +65,12 @@ private.wx5a038ee6dee12032.key
 test-results/
 tmp/
 
+# Dependency-graph noise: nested scratch manifests make GitHub's alert count
+# disagree with `npm audit` at the root. Root package-lock.json is the only
+# manifest CI reads (see docs/design/dependency-security-batch-20261021.md).
+prototypes/webgl-reveal/package-lock.json
+tmp/mini_runtime/package-lock.json
+
 # Reproducible profile paper-doll derivatives (source atlases + scripts are canonical)
 /assets-source/profile-pixel-v2/generated-starter-layers/
 /agent_tmp/
