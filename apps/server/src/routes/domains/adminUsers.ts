@@ -11,6 +11,7 @@ import { storage } from "../../storage";
 import { revokeUserSessions } from "../../lib/revokeUserSessions";
 import { clearUserBanCache } from "../../middleware/auth";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
+import { getUnderfilledPoolsClosingSoon } from "../../lib/adminMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { notifyAdminAction } from "../../lib/wecomNotifications";
 import { cascadeDeleteByIds } from "../../lib/fkCascadeDelete";
@@ -253,56 +254,138 @@ export function registerAdminUserRoutes(app: Express): void {
   // Dashboard Statistics
   app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     try {
-      const allUsers = await storage.getAllUsers();
-      const allUserInterests = await db
-        .select({
-          userId: userInterests.userId,
-          totalSelections: userInterests.totalSelections,
-          selections: userInterests.selections,
-          topPriorities: userInterests.topPriorities,
-        })
-        .from(userInterests) as Array<AdminUserInterestSummary>;
-      const interestsByUser = new Map(allUserInterests.map((row) => [row.userId, row]));
+      // D1 (2026-10-22): this endpoint used to load EVERY user into Node memory
+      // (`storage.getAllUsers()`) and compute every distribution with
+      // Array.reduce. At 100k users that is a multi-hundred-MB spike on a 2g
+      // container for a dashboard nobody has opened yet. Each distribution is
+      // now a SQL GROUP BY; only profile completeness still needs the per-user
+      // scoring function, so it runs over a bounded sample and reports
+      // `isSampled` instead of silently truncating.
+      const COMPLETENESS_SAMPLE_CAP = 20_000;
 
-      const totalUsers = allUsers.length;
-      const [subscribedUsersResult, newUsersThisWeekResult, monthlyRevenueResult] = await Promise.all([
+      const [
+        totalUsersResult,
+        subscribedUsersResult,
+        newUsersThisWeekResult,
+        newUsersPrevWeekResult,
+        monthlyRevenueResult,
+        eventsThisMonthResult,
+        personalityRows,
+        archetypeRows,
+        cityRows,
+        levelRows,
+        gamificationResult,
+        completenessSample,
+        completenessTotalResult,
+      ] = await Promise.all([
+        db.execute(sql`SELECT COUNT(*)::int as count FROM ${users}`),
         db.execute(sql`SELECT COUNT(*)::int as count FROM ${subscriptions} WHERE status = 'active'`),
         db.execute(sql`SELECT COUNT(*)::int as count FROM ${users} WHERE created_at >= NOW() - INTERVAL '7 days'`),
+        db.execute(sql`SELECT COUNT(*)::int as count FROM ${users} WHERE created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days'`),
         db.execute(sql`SELECT COALESCE(SUM(final_amount), 0)::int as total FROM ${payments} WHERE status = 'completed' AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW()) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())`),
+        db.execute(sql`SELECT COUNT(*)::int as count FROM blind_box_events WHERE created_at >= date_trunc('month', NOW())`),
+        db
+          .select({ key: users.primaryArchetype, count: sql<number>`COUNT(*)::int` })
+          .from(users)
+          .where(sql`${users.primaryArchetype} IS NOT NULL`)
+          .groupBy(users.primaryArchetype),
+        db
+          .select({ key: users.archetype, count: sql<number>`COUNT(*)::int` })
+          .from(users)
+          .where(sql`${users.archetype} IS NOT NULL`)
+          .groupBy(users.archetype),
+        db
+          .select({ key: users.currentCity, count: sql<number>`COUNT(*)::int` })
+          .from(users)
+          .where(sql`${users.currentCity} IS NOT NULL`)
+          .groupBy(users.currentCity),
+        db
+          .select({ key: users.currentLevel, count: sql<number>`COUNT(*)::int` })
+          .from(users)
+          .groupBy(users.currentLevel),
+        db.execute(sql`
+          SELECT
+            COALESCE(SUM(experience_points), 0)::bigint as total_xp,
+            COALESCE(SUM(joy_coins), 0)::bigint as total_coins,
+            COUNT(*) FILTER (WHERE activity_streak > 0)::int as active_streak,
+            COALESCE(AVG(COALESCE(current_level, 1)), 1)::float as avg_level
+          FROM ${users}
+        `),
+        db.select().from(users).limit(COMPLETENESS_SAMPLE_CAP),
+        db.execute(sql`SELECT COUNT(*)::int as count FROM ${users}`),
       ]);
+
+      const totalUsers = Number((totalUsersResult.rows[0] as any).count) || 0;
       const subscribedUsers = Number((subscribedUsersResult.rows[0] as any).count) || 0;
       const newUsersThisWeek = Number((newUsersThisWeekResult.rows[0] as any).count) || 0;
+      const newUsersPrevWeek = Number((newUsersPrevWeekResult.rows[0] as any).count) || 0;
       const monthlyRevenue = Number((monthlyRevenueResult.rows[0] as any).total) || 0;
-      const userGrowth = totalUsers > 0 ? Math.round((newUsersThisWeek / totalUsers) * 100) : 0;
-      
-      // Count events (for now using blindBoxEvents)
-      const allBlindBoxEvents = await storage.getAllBlindBoxEvents();
-      const thisMonth = new Date();
-      thisMonth.setDate(1);
-      const eventsThisMonth = allBlindBoxEvents.filter((event: any) => {
-        const eventDate = new Date(event.createdAt || '');
-        return eventDate >= thisMonth;
-      }).length;
-      
+      const eventsThisMonth = Number((eventsThisMonthResult.rows[0] as any).count) || 0;
+
+      // D2 (2026-10-22): this used to be `newUsersThisWeek / totalUsers`, i.e.
+      // the new-user SHARE of the base, while the dashboard labelled it
+      // 「用户增长 · 相比上周」. It is now a true week-over-week change. When the
+      // previous week is empty the rate is undefined — return null and let the
+      // UI say 「基线不足」 rather than inventing 0% or +100%.
+      const userGrowth =
+        newUsersPrevWeek > 0
+          ? Math.round(((newUsersThisWeek - newUsersPrevWeek) / newUsersPrevWeek) * 1000) / 10
+          : null;
+      const userGrowthBaseline = {
+        thisWeek: newUsersThisWeek,
+        previousWeek: newUsersPrevWeek,
+        insufficient: newUsersPrevWeek === 0,
+      };
+
+      const toDistribution = (rows: Array<{ key: string | null; count: number }>) =>
+        rows.reduce((acc: Record<string, number>, row) => {
+          if (row.key) acc[row.key] = Number(row.count) || 0;
+          return acc;
+        }, {});
+
       // Personality distribution (archetypes)
-      const personalityDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
-        if (user.primaryArchetype) {
-          acc[user.primaryArchetype] = (acc[user.primaryArchetype] || 0) + 1;
-        }
-        return acc;
-      }, {});
-      
+      const personalityDistribution = toDistribution(personalityRows);
+
       // Archetype distribution (12-archetype system)
-      const archetypeDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
-        if (user.archetype) {
-          acc[user.archetype] = (acc[user.archetype] || 0) + 1;
-        }
-        return acc;
-      }, {});
-      
-      // Profile completeness distribution
-      const completenessStats = { star1: 0, star2: 0, star3: 0, star4: 0, star5: 0, weakUsers: [] as any[] };
-      for (const user of allUsers) {
+      const archetypeDistribution = toDistribution(archetypeRows);
+
+      // City distribution
+      const cityDistribution = toDistribution(cityRows);
+
+      // Profile completeness — the only metric that still needs the per-user
+      // scoring function, so it runs over the bounded sample. The counts are
+      // scaled by nothing: when the sample is capped the response says so, and
+      // the UI must render it as a sample rather than a census.
+      const completenessTotal = Number((completenessTotalResult.rows[0] as any).count) || 0;
+      const completenessIsSampled = completenessTotal > COMPLETENESS_SAMPLE_CAP;
+      const completenessSampleIds = completenessSample.map((u: any) => u.id);
+      const sampleInterests = (
+        completenessSampleIds.length > 0
+          ? await db
+              .select({
+                userId: userInterests.userId,
+                totalSelections: userInterests.totalSelections,
+                selections: userInterests.selections,
+                topPriorities: userInterests.topPriorities,
+              })
+              .from(userInterests)
+              .where(inArray(userInterests.userId, completenessSampleIds))
+          : []
+      ) as Array<AdminUserInterestSummary>;
+      const interestsByUser = new Map(sampleInterests.map((row) => [row.userId, row]));
+
+      const completenessStats = {
+        star1: 0,
+        star2: 0,
+        star3: 0,
+        star4: 0,
+        star5: 0,
+        weakUsers: [] as any[],
+        isSampled: completenessIsSampled,
+        sampleSize: completenessSample.length,
+        totalUsers: completenessTotal,
+      };
+      for (const user of completenessSample) {
         const completeness = calculateAdminProfileCompleteness({
           user,
           interests: interestsByUser.get(user.id),
@@ -324,34 +407,26 @@ export function registerAdminUserRoutes(app: Express): void {
           });
         }
       }
-      
-      // City distribution
-      const cityDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
-        if (user.currentCity) {
-          acc[user.currentCity] = (acc[user.currentCity] || 0) + 1;
-        }
+
+      // Gamification aggregates — computed in SQL so the vanity metrics stop
+      // costing a full table scan in Node.
+      const levelDistribution = levelRows.reduce((acc: Record<string, number>, row: { key: number | null; count: number }) => {
+        const level = row.key || 1;
+        acc[`Lv.${level}`] = (acc[`Lv.${level}`] || 0) + (Number(row.count) || 0);
         return acc;
       }, {});
 
-      // Calculate gamification stats
-      const levelDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
-        const level = user.currentLevel || 1;
-        acc[`Lv.${level}`] = (acc[`Lv.${level}`] || 0) + 1;
-        return acc;
-      }, {});
-      
-      const totalXP = allUsers.reduce((sum: number, user: any) => sum + (user.experiencePoints || 0), 0);
-      const totalJoyCoins = allUsers.reduce((sum: number, user: any) => sum + (user.joyCoins || 0), 0);
-      const activeStreakUsers = allUsers.filter((user: any) => (user.activityStreak || 0) > 0).length;
-      
+      const gamificationRow = gamificationResult.rows[0] as any;
+      const totalXP = Number(gamificationRow?.total_xp) || 0;
+      const totalJoyCoins = Number(gamificationRow?.total_coins) || 0;
+      const activeStreakUsers = Number(gamificationRow?.active_streak) || 0;
+
       const gamificationStats = {
         levelDistribution,
         totalXP,
         totalJoyCoins,
         activeStreakUsers,
-        avgLevel: allUsers.length > 0 
-          ? Math.round((allUsers.reduce((sum: number, u: any) => sum + (u.currentLevel || 1), 0) / allUsers.length) * 10) / 10
-          : 1,
+        avgLevel: Math.round((Number(gamificationRow?.avg_level) || 1) * 10) / 10,
       };
 
       // Calculate weekly matching satisfaction and low-scoring matches
@@ -394,6 +469,7 @@ export function registerAdminUserRoutes(app: Express): void {
         monthlyRevenue,
         newUsersThisWeek,
         userGrowth,
+        userGrowthBaseline,
         personalityDistribution,
         archetypeDistribution,
         completenessStats,
@@ -462,12 +538,12 @@ export function registerAdminUserRoutes(app: Express): void {
       `);
       const pendingReports = Number((pendingReportsResult.rows[0] as any).count) || 0;
 
-      const underfilledPoolsResult = await db.execute(sql`
-        SELECT COUNT(*) as count FROM event_pools
-        WHERE registration_deadline > NOW()
-          AND registration_deadline <= NOW() + INTERVAL '24 hours'
-      `);
-      const underfilledPoolsClosingSoon = Number((underfilledPoolsResult.rows[0] as any).count) || 0;
+      // D3 (2026-10-22): this counted EVERY pool closing in 24h with no fill
+      // condition at all, while the tile read 「即将截止 · 报名不足」. The fill
+      // test now lives in lib/adminMetrics.ts (single source) and compares
+      // against min_group_size * target_groups so multi-group pools are not
+      // under-counted.
+      const underfilledPoolsClosingSoon = (await getUnderfilledPoolsClosingSoon(24)).length;
 
       const refundsPendingResult = await db.execute(sql`
         SELECT COUNT(*) as count FROM payments WHERE status = 'refund_pending'

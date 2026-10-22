@@ -131,6 +131,109 @@ async function buildMatchGroupsForApproval(poolId: string): Promise<{ groups: Ma
   return { groups: result, groupIds: groups.map((g) => g.id) };
 }
 
+/**
+ * Approve one pool's pending groups.
+ *
+ * Extracted so the single-pool route and the batch route share ONE commit
+ * implementation. Two copies would drift, and approval is the step that
+ * releases the matched state to users (registrations flip to `matched`, then
+ * post-match side effects fire) — drift here is user-visible.
+ */
+type ApproveOutcome =
+  | { poolId: string; result: "approved"; approvedGroups: number }
+  | { poolId: string; result: "already_approved" }
+  | { poolId: string; result: "not_pending" }
+  | { poolId: string; result: "not_found" }
+  | { poolId: string; result: "error"; message: string };
+
+async function approvePoolForReview(
+  poolId: string,
+  adminId: string,
+  adminRole: string,
+  batchContext?: { batchSize: number },
+): Promise<ApproveOutcome> {
+  const [pool] = await db
+    .select()
+    .from(eventPools)
+    .where(eq(eventPools.id, poolId))
+    .limit(1);
+
+  if (!pool) return { poolId, result: "not_found" };
+  if (pool.operatorReviewStatus === "approved") return { poolId, result: "already_approved" };
+  if (pool.operatorReviewStatus !== "pending") return { poolId, result: "not_pending" };
+
+  try {
+    await db.transaction(async (tx: typeof db) => {
+      await tx
+        .update(eventPoolGroups)
+        .set({
+          operatorReviewStatus: "approved",
+          operatorReviewedBy: adminId,
+          operatorReviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(eventPoolGroups.poolId, poolId),
+          eq(eventPoolGroups.operatorReviewStatus, "pending")
+        ));
+
+      const [updatedPool] = await tx
+        .update(eventPools)
+        .set({
+          operatorReviewStatus: "approved",
+          operatorReviewedBy: adminId,
+          operatorReviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(eventPools.id, poolId),
+          eq(eventPools.operatorReviewStatus, "pending")
+        ))
+        .returning();
+
+      if (!updatedPool) {
+        // Another request already approved or rejected the pool; abort the transaction
+        throw new Error("POOL_NOT_PENDING");
+      }
+
+      // Reveal the matched state to users now that the operator has approved
+      await tx
+        .update(eventPoolRegistrations)
+        .set({
+          matchStatus: "matched",
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(eventPoolRegistrations.poolId, poolId),
+          eq(eventPoolRegistrations.matchStatus, "pending"),
+          sql`${eventPoolRegistrations.assignedGroupId} is not null`
+        ));
+    });
+  } catch (error: any) {
+    if (error?.message === "POOL_NOT_PENDING") return { poolId, result: "already_approved" };
+    logger.error("[AdminMatchingReview] Failed to approve review", { error: String(error), poolId });
+    return { poolId, result: "error", message: String(error?.message ?? error) };
+  }
+
+  logAdminAudit({
+    action: "MATCHING_REVIEW_APPROVED",
+    adminId,
+    adminRole,
+    targetEntityType: "event_pool",
+    targetEntityId: poolId,
+    context: {
+      groupCount: await db.$count(eventPoolGroups, eq(eventPoolGroups.poolId, poolId)),
+      ...(batchContext ? { batch: true, batchSize: batchContext.batchSize } : {}),
+    },
+  });
+
+  // Run side effects after successful commit
+  const { groups, groupIds } = await buildMatchGroupsForApproval(poolId);
+  await executePostMatchCommitSideEffects(poolId, groups, groupIds, pool);
+
+  return { poolId, result: "approved", approvedGroups: groups.length };
+}
+
 export function registerAdminMatchingReviewRoutes(app: Express): void {
   // List pools awaiting operator review (or filtered by status)
   app.get("/api/admin/matching-reviews/pools", requireAdmin, async (req, res) => {
@@ -262,99 +365,73 @@ export function registerAdminMatchingReviewRoutes(app: Express): void {
 
   // Approve a pool's pending groups
   app.post("/api/admin/matching-reviews/pools/:id/approve", requireAdmin, requireOperatorOrAbove, async (req, res) => {
-    try {
-      const poolId = req.params.id;
-      const adminAccount = (req as any).adminAccount;
-      const adminId = adminAccount?.id ?? (req.session as any)?.userId ?? "unknown";
-      const adminRole = adminAccount?.role ?? "admin";
+    const poolId = req.params.id;
+    const adminAccount = (req as any).adminAccount;
+    const adminId = adminAccount?.id ?? (req.session as any)?.userId ?? "unknown";
+    const adminRole = adminAccount?.role ?? "admin";
 
-      const [pool] = await db
-        .select()
-        .from(eventPools)
-        .where(eq(eventPools.id, poolId))
-        .limit(1);
+    const outcome = await approvePoolForReview(poolId, adminId, adminRole);
 
-      if (!pool) {
-        return res.status(404).json({ message: "Pool not found" });
-      }
-
-      if (pool.operatorReviewStatus === "approved") {
+    switch (outcome.result) {
+      case "approved":
+        return res.json({ success: true, poolId, approvedGroups: outcome.approvedGroups });
+      case "already_approved":
         return res.json({ success: true, message: "Already approved", poolId });
-      }
-
-      if (pool.operatorReviewStatus !== "pending") {
+      case "not_pending":
         return res.status(400).json({ message: "Pool is not pending review" });
-      }
-
-      await db.transaction(async (tx: typeof db) => {
-        await tx
-          .update(eventPoolGroups)
-          .set({
-            operatorReviewStatus: "approved",
-            operatorReviewedBy: adminId,
-            operatorReviewedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(and(
-            eq(eventPoolGroups.poolId, poolId),
-            eq(eventPoolGroups.operatorReviewStatus, "pending")
-          ));
-
-      const [updatedPool] = await tx
-        .update(eventPools)
-        .set({
-          operatorReviewStatus: "approved",
-          operatorReviewedBy: adminId,
-          operatorReviewedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(eventPools.id, poolId),
-          eq(eventPools.operatorReviewStatus, "pending")
-        ))
-        .returning();
-
-      if (!updatedPool) {
-        // Another request already approved or rejected the pool; abort the transaction
-        throw new Error("POOL_NOT_PENDING");
-      }
-
-
-        // Reveal the matched state to users now that the operator has approved
-        await tx
-          .update(eventPoolRegistrations)
-          .set({
-            matchStatus: "matched",
-            updatedAt: new Date(),
-          })
-          .where(and(
-            eq(eventPoolRegistrations.poolId, poolId),
-            eq(eventPoolRegistrations.matchStatus, "pending"),
-            sql`${eventPoolRegistrations.assignedGroupId} is not null`
-          ));
-      });
-
-      logAdminAudit({
-        action: "MATCHING_REVIEW_APPROVED",
-        adminId,
-        adminRole,
-        targetEntityType: "event_pool",
-        targetEntityId: poolId,
-        context: { groupCount: await db.$count(eventPoolGroups, eq(eventPoolGroups.poolId, poolId)) },
-      });
-
-      // Run side effects after successful commit
-      const { groups, groupIds } = await buildMatchGroupsForApproval(poolId);
-      await executePostMatchCommitSideEffects(poolId, groups, groupIds, pool);
-
-      res.json({ success: true, poolId, approvedGroups: groups.length });
-    } catch (error: any) {
-      if (error?.message === "POOL_NOT_PENDING") {
-        return res.json({ success: true, message: "Already approved", poolId: req.params.id });
-      }
-      logger.error("[AdminMatchingReview] Failed to approve review", { error: String(error), poolId: req.params.id });
-      res.status(500).json({ message: "Failed to approve review" });
+      case "not_found":
+        return res.status(404).json({ message: "Pool not found" });
+      default:
+        return res.status(500).json({ message: "Failed to approve review" });
     }
+  });
+
+  /**
+   * Approve several pools in one call.
+   *
+   * Cap is 20 (PRD Q4): batch approval is the only way the approval-latency SLA
+   * becomes reachable, but an unbounded batch makes one misclick a
+   * user-visible mass reveal. Pools are processed sequentially, each in its own
+   * transaction with its own audit line, so a failure at pool N does not roll
+   * back the pools already approved.
+   */
+  const approveBatchSchema = z.object({
+    poolIds: z.array(z.string().min(1)).min(1).max(20),
+  });
+
+  app.post("/api/admin/matching-reviews/approve-batch", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = approveBatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        code: "INVALID_BATCH",
+        message: "单次最多审批 20 个场次",
+      });
+    }
+
+    const adminAccount = (req as any).adminAccount;
+    const adminId = adminAccount?.id ?? (req.session as any)?.userId ?? "unknown";
+    const adminRole = adminAccount?.role ?? "admin";
+
+    // De-duplicate so a double-submitted id cannot be approved twice.
+    const poolIds = Array.from(new Set(parsed.data.poolIds));
+    const batchContext = { batchSize: poolIds.length };
+
+    const outcomes: ApproveOutcome[] = [];
+    for (const poolId of poolIds) {
+      outcomes.push(await approvePoolForReview(poolId, adminId, adminRole, batchContext));
+    }
+
+    const approved = outcomes.filter((o) => o.result === "approved");
+    const already = outcomes.filter((o) => o.result === "already_approved");
+    const failed = outcomes.filter((o) => o.result === "error" || o.result === "not_found" || o.result === "not_pending");
+
+    res.json({
+      success: failed.length === 0,
+      approvedCount: approved.length,
+      alreadyApprovedCount: already.length,
+      failedCount: failed.length,
+      outcomes,
+    });
   });
 
   // Reject a pool's pending groups

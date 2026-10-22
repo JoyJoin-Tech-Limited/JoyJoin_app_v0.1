@@ -26,6 +26,7 @@ import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { logAdminAudit } from "../lib/adminAuditLogger";
+import { getFormationRate, resolveAdminRange } from "../lib/adminMetrics";
 
 /**
  * @deprecated Compatibility facade — do not add new query logic here.
@@ -626,9 +627,14 @@ export class LegacyStorageRepo implements LegacyStorage {
       WHERE status IN ('matched', 'completed')
     `);
     
-    const matchingSuccessRate = (totalEvents.rows[0] as any).count > 0
-      ? ((matchedEvents.rows[0] as any).count / (totalEvents.rows[0] as any).count) * 100
-      : 0;
+    // D4 (2026-10-22): the denominator used to be COUNT(blind_box_events), but
+    // those rows are CREATED at match persistence — so the ratio was
+    // structurally ~100% and could never tell an operator anything. Formation
+    // rate now uses DUE pools as the denominator, sharing one definition with
+    // the console KPIs (lib/adminMetrics.ts).
+    const formationWindow = resolveAdminRange({ days: 30 });
+    const formation = await getFormationRate(formationWindow);
+    const matchingSuccessRate = formation.rate ?? 0;
     
     // Average match time (in hours)
     const avgMatchTimeResult = await db.execute(sql`

@@ -96,7 +96,30 @@ describe("GET /api/admin/ops-dashboard", () => {
         ],
       },
       { rows: [{ count: "1" }] }, // pendingReports
-      { rows: [{ count: "2" }] }, // underfilledPoolsClosingSoon
+      {
+        // underfilledPoolsClosingSoon — the D3 fix made this "number of pools
+        // closing within 24h that are below min_group_size * target_groups",
+        // so the mock must return one row per underfilled pool. It previously
+        // returned a bare { count: "2" } from the old count-only query.
+        rows: [
+          {
+            id: "pool-low-1",
+            title: "周五晚餐局",
+            city: "深圳",
+            registration_deadline: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
+            registration_count: 2,
+            required_count: 6,
+          },
+          {
+            id: "pool-low-2",
+            title: "周六咖啡局",
+            city: "深圳",
+            registration_deadline: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(),
+            registration_count: 3,
+            required_count: 6,
+          },
+        ],
+      },
       { rows: [{ count: "3" }] }, // refundsPending
       { rows: [{ count: "4" }] }, // usersStuckInOnboarding
     );
