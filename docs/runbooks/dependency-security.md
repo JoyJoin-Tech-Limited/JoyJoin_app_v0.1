@@ -69,6 +69,24 @@ Keys are `<severity>:<package>`, and each entry carries `reason`, `reviewBy`
 and the advisory URLs. The gate fails **only** on a finding that is not in the
 baseline, so the baseline must shrink, never grow by accident.
 
+### How "runtime reachable" is computed
+
+The gate never gates the whole `npm audit` graph. It walks `package-lock.json`
+from the **declared, non-dev `dependencies`** of `apps/server`,
+`packages/shared`, `apps/admin-client` and `apps/mini-program`, and compares
+each advisory's concrete affected **node paths** against that surface. A
+dev-only nested copy of a package whose name also exists in the runtime tree
+(e.g. `miniprogram-ci/node_modules/lodash`) is reported as `build-tool`, not
+gated — otherwise the baseline becomes a list of findings no upgrade can clear.
+
+Resolution follows Node semantics: a workspace (`apps/server`) owns its own
+`node_modules`, so a copy npm nested there (a second `drizzle-orm`, a
+workspace-local `form-data`) is shipping surface. This was broken until
+2026-10-22 — `dirOf()` returned the repo root for workspace entries, so nested
+copies were invisible and the AC3 negative test (inject a known-critical runtime
+dependency) did **not** fail. `scripts/check/check-dependency-vulns.test.mjs`
+locks the resolution now; if you touch the walker, run it.
+
 ### Adding an entry (accepted risk)
 
 1. Confirm the package is genuinely unreachable on a request path, or that the

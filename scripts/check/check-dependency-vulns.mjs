@@ -93,7 +93,16 @@ function resolveDep(packages, fromDir, name) {
 
 function dirOf(lockPath) {
   const idx = lockPath.lastIndexOf('/node_modules/')
-  return idx >= 0 ? lockPath.slice(0, idx) : ''
+  if (idx >= 0) return lockPath.slice(0, idx)
+  // A top-level `node_modules/<name>` entry lives at the repo root.
+  if (lockPath.startsWith('node_modules/')) return ''
+  // A workspace/link entry (`apps/server`) owns its own `node_modules`, so it is
+  // its own lookup base. Returning '' here resolved every workspace dependency
+  // from the repo root and hid the copies npm nested inside a workspace — e.g. a
+  // second `drizzle-orm` copy under `apps/server/node_modules`, which made the
+  // gate blind to a vulnerable nested runtime package (found by the AC3
+  // negative test on 2026-10-22).
+  return lockPath
 }
 
 /**
@@ -163,9 +172,10 @@ function auditWithTolerance() {
 }
 
 function advisoryUrls(node) {
-  return (node.via ?? [])
+  const urls = (node.via ?? [])
     .filter((via) => typeof via === 'object' && via.url)
     .map((via) => via.url)
+  return [...new Set(urls)]
 }
 
 function loadBaseline() {
@@ -290,9 +300,16 @@ function main() {
   process.exitCode = 1
 }
 
-try {
-  main()
-} catch (error) {
-  console.error('dependency-vulns: guard failed to run:', error)
-  process.exitCode = 1
+const invokedDirectly =
+  Boolean(process.argv[1]) && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (invokedDirectly) {
+  try {
+    main()
+  } catch (error) {
+    console.error('dependency-vulns: guard failed to run:', error)
+    process.exitCode = 1
+  }
 }
+
+export { ancestors, resolveDep, dirOf, collectRuntimeSurface }
