@@ -12,10 +12,13 @@
 #     is never buried inside a 40-package routine PR.
 #   - Major upgrades for react, react-dom and three are ignored: they are
 #     handled deliberately (see W3 in the plan), not by bot PR.
-#   - @tarojs/* is ignored entirely (any update type) because the package set is
-#     pinned in lockstep; see the ignore comment below.
-#   - drizzle-orm / drizzle-kit are excluded from the routine group so their
-#     (breaking-in-practice) 0.x bumps arrive as individual reviewable PRs.
+#   - @tarojs/* and its lockstep siblings (babel-preset-taro,
+#     eslint-config-taro) are ignored entirely (any update type) because the
+#     package set is pinned in lockstep; see the ignore comment below.
+#   - drizzle-orm / drizzle-kit / drizzle-zod are excluded from the routine
+#     group so their (breaking-in-practice) 0.x bumps arrive as individual
+#     reviewable PRs. drizzle-zod is additionally ignored outright until the
+#     zod v4 migration.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -45,11 +48,14 @@ updates:
           - '*'
         exclude-patterns:
           - '@tarojs/*'
+          - babel-preset-taro
+          - eslint-config-taro
           - react
           - react-dom
           - three
           - drizzle-orm
           - drizzle-kit
+          - drizzle-zod
     ignore:
       # @tarojs/* is pinned in lockstep: every package in apps/mini-program sits
       # on the exact same version, and Taro's plugins declare peer requirements
@@ -60,6 +66,19 @@ updates:
       # Security fixes still surface through npm run check:deps, which gates
       # runtime-reachable advisories on @tarojs/* independently of Dependabot.
       - dependency-name: '@tarojs/*'
+      # babel-preset-taro / eslint-config-taro are not under the @tarojs scope but
+      # ship on the identical lockstep version: babel-preset-taro@4.3.0 declares
+      # `@tarojs/helper: 4.3.0`, so bumping only these installs a second, nested
+      # Taro helper and reintroduces the ERESOLVE failure. PR #638 tried exactly
+      # that while every @tarojs/* package sat on 4.2.0.
+      - dependency-name: babel-preset-taro
+      - dependency-name: eslint-config-taro
+      # drizzle-zod 0.8.x declares its types against zod v4 shapes while this
+      # repo runs zod 3.25 (classic namespace). Adopting it produced 200+ type
+      # errors in _definitions_extended.ts on 2026-10-22 and had to be reverted.
+      # 0.7.x is a hard ceiling until the zod v4 migration happens; that is a
+      # minor-range bump, so semver-major ignoring would not catch it.
+      - dependency-name: drizzle-zod
       - dependency-name: react
         update-types:
           - version-update:semver-major
