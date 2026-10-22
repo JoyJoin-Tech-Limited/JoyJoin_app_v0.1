@@ -481,6 +481,28 @@ export default function ProfilePage() {
   const equipmentClaimChipCopy = pendingEntitlementCount <= 3
     ? `${pendingEntitlementCount} 份装备待领`
     : '可领取'
+
+  // P1-6 (PM memo §4 / UIUX memo §5): honest next-draw teasers inside the
+  // frozen 112rpx bar — mode swaps, never new lines. Teaser = zero-inventory
+  // users only (empty slots swap for the stepper); pity chip = collectors
+  // with a partial guarantee. No rarity-progress, no weight leaks.
+  const pityMisses = equipmentQuery.data?.wallet?.pityMisses ?? 0
+  const showEquipmentTeaser = equipmentState === 'ready'
+    && equipmentGuidanceEligible
+    && !equipmentClaimPending
+    && equipmentInventory.length === 0
+  const showPityChip = equipmentState === 'ready'
+    && equipmentGuidanceEligible
+    && !equipmentClaimPending
+    && equipmentInventory.length > 0
+    && pityMisses > 0
+  // Stepper stage: 1 = has an active registration (from the shared cache).
+  // 赴约/反馈 segments need per-event dateTime + feedback state the client
+  // does not reliably carry today → stage-1-only (memo §5 risk b fallback).
+  const equipmentTeaserStage = (registrationsQuery.data?.length ?? 0) > 0 ? 1 : 0
+  const equipmentTeaserCopy = equipmentTeaserStage >= 1
+    ? '赴约并完成反馈，即可抽一件'
+    : '报名一场局，结束后可抽一件'
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
 
@@ -977,7 +999,7 @@ export default function ProfilePage() {
 
               {pixelAvatarEnabled && (
                 <View
-                  className='profile-page__partner-entry'
+                  className={`profile-page__partner-entry${equipmentClaimPending ? ' profile-page__partner-entry--claimable' : ''}`}
                   hoverClass='profile-page__partner-entry--pressed'
                   onClick={() => {
                     haptics('light')
@@ -1033,14 +1055,37 @@ export default function ProfilePage() {
                         </Text>
                       </View>
                     ) : equipmentState === 'ready' && (
-                      <Text className='profile-page__partner-entry-count'>
-                        {`${equipmentInventory.length} 件`}
-                      </Text>
+                      <>
+                        <Text className='profile-page__partner-entry-count'>
+                          {`${equipmentInventory.length} 件`}
+                        </Text>
+                        {showPityChip && (
+                          <Text
+                            className={`profile-page__equipment-pity-chip${pityMisses >= 3 ? ' profile-page__equipment-pity-chip--guaranteed' : ''}`}
+                            data-testid='profile-equipment-pity-chip'
+                          >
+                            {pityMisses >= 3 ? '下一抽必得新装备' : `新装备保底 ${pityMisses}/3`}
+                          </Text>
+                        )}
+                      </>
                     )}
                     {equipmentState === 'ready' && equipmentQuery.isError && (
                       <Text className='profile-page__equipment-cache-badge'>上次同步</Text>
                     )}
                     {equipmentState === 'ready' ? (
+                      showEquipmentTeaser ? (
+                        <View className='profile-page__equipment-teaser' data-testid='profile-equipment-teaser'>
+                          <Text className='profile-page__equipment-teaser-copy'>{equipmentTeaserCopy}</Text>
+                          <View className='profile-page__equipment-teaser-track' aria-hidden='true'>
+                            {[0, 1, 2].map((segment) => (
+                              <View
+                                key={segment}
+                                className={`profile-page__equipment-teaser-segment${segment < equipmentTeaserStage ? ' profile-page__equipment-teaser-segment--lit' : ''}`}
+                              />
+                            ))}
+                          </View>
+                        </View>
+                      ) : (
                       <View className='profile-page__equipment-slots'>
                         {(['top', 'bottom', 'shoes', 'accessory'] as const).map((slot) => {
                           const itemId = outfit?.[`${slot}ItemId`]
@@ -1051,7 +1096,7 @@ export default function ProfilePage() {
                             return (
                             <View
                               key={slot}
-                              className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}`}
+                              className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}${item?.rarity === 'rare' ? ` profile-page__equipment-slot--rare${deviceTier.isDegradation ? ' profile-page__equipment-slot--rare-static' : ''}` : ''}`}
                               aria-label={item ? item.name : `空${slot}装备槽`}
                             >
                                 {item
@@ -1066,6 +1111,7 @@ export default function ProfilePage() {
                           )
                         })}
                       </View>
+                      )
                     ) : (
                       <Text className={`profile-page__equipment-state-copy profile-page__equipment-state-copy--${equipmentState}`}>
                         {equipmentState === 'error' ? '待重试' : '同步中…'}

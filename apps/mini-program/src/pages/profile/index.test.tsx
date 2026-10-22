@@ -493,6 +493,39 @@ describe('Profile approved V4 layout', () => {
     )
   })
 
+  it('P1-6: zero-inventory users get the first-draw stepper teaser instead of empty slots', () => {
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    const equipment = state.queryStates.get('mini-program/equipment/me')
+    state.queryStates.set('mini-program/equipment/me', {
+      data: {
+        ...(equipment?.data as Record<string, unknown>),
+        outfit: { topItemId: null, bottomItemId: null, shoesItemId: null, accessoryItemId: null, version: 1 },
+        inventory: [],
+      },
+    })
+
+    const { getByTestId, getByText } = render(<ProfilePage />)
+    expect(getByTestId('profile-equipment-teaser')).toBeTruthy()
+    expect(getByText('报名一场局，结束后可抽一件')).toBeTruthy()
+  })
+
+  it('P1-6: pity chip shows 保底 n/3 for partial guarantees and 必得 at 3', () => {
+    const equipment = state.queryStates.get('mini-program/equipment/me')
+    const base = equipment?.data as Record<string, unknown>
+    state.queryStates.set('mini-program/equipment/me', {
+      data: { ...base, wallet: { fragmentBalance: 0, pityMisses: 2, pityTarget: 4 } },
+    })
+
+    const { getByTestId, rerender } = render(<ProfilePage />)
+    expect(getByTestId('profile-equipment-pity-chip').textContent).toContain('新装备保底 2/3')
+
+    state.queryStates.set('mini-program/equipment/me', {
+      data: { ...base, wallet: { fragmentBalance: 0, pityMisses: 3, pityTarget: 4 } },
+    })
+    rerender(<ProfilePage />)
+    expect(getByTestId('profile-equipment-pity-chip').textContent).toContain('下一抽必得新装备')
+  })
+
   it('P1-5: shows the quest line for a pre-成行 user and hides it forever once matched', () => {
     state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
     const { getByTestId, getByText, queryByTestId, rerender } = render(<ProfilePage />)

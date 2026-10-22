@@ -1566,6 +1566,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    position: relative;
     background: rgba($color-primary, 0.045);
     border: 1rpx solid rgba($color-primary, 0.12);
 
@@ -1573,6 +1574,133 @@
       border-color: rgba($color-secondary, 0.72);
       background: linear-gradient(145deg, rgba($color-primary, 0.16), rgba($color-secondary, 0.15));
       box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.1);
+    }
+
+    // P1-6 (UIUX memo §5): rare items carry a static gold rim + a slow
+    // opacity-only ::after pulse (2.4s). RM strips the pulse; degradation
+    // tier uses --rare-static (rim only). Rarity weights never surface.
+    &--rare {
+      border: 2rpx solid rgba($color-landed-gold, 0.72);
+      box-shadow: 0 0 12rpx rgba($color-landed-gold, 0.25);
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 2rpx;
+        left: 2rpx;
+        right: 2rpx;
+        bottom: 2rpx;
+        border-radius: $radius-md;
+        border: 2rpx solid rgba($color-landed-gold, 0.5);
+        opacity: 0.5;
+        animation: profile-equipment-rare-flow 2.4s ease-in-out infinite;
+        pointer-events: none;
+      }
+    }
+
+    &--rare-static::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  @keyframes profile-equipment-rare-flow {
+    0%, 100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  // P1-6 pity chip (PM memo §4b): rides beside the inventory count when a
+  // partial guarantee exists. 3/3 → gold guaranteed variant 「下一抽必得新
+  // 装备」. Never exposes draw weights or 「稀有」 probability framing.
+  &__equipment-pity-chip {
+    flex-shrink: 0;
+    margin-left: $spacing-xs;
+    padding: 4rpx 12rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-brand-gold, 0.12);
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+
+    &--guaranteed {
+      background: rgba($color-landed-gold, 0.22);
+      border: 1rpx solid rgba($color-landed-gold, 0.55);
+      box-sizing: border-box;
+    }
+  }
+
+  // P1-6 first-draw teaser (UIUX memo §5): mode swap of the empty 4-slot
+  // cluster for zero-inventory users — honest 3-segment stepper
+  // (报名→赴约→反馈), lit only from real registration state. Segments 2/3
+  // stay dark until the client carries per-event feedback state (memo risk
+  // b: fail-open, no invented progress).
+  &__equipment-teaser {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8rpx;
+  }
+
+  &__equipment-teaser-copy {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__equipment-teaser-track {
+    display: flex;
+    gap: 8rpx;
+  }
+
+  &__equipment-teaser-segment {
+    width: 56rpx;
+    height: 8rpx;
+    border-radius: 4rpx;
+    background: var(--profile-primary-08);
+
+    &--lit {
+      background: $color-primary;
+    }
+  }
+
+  // P1-6 claimable whole-strip signal (UIUX memo §5): static gold border +
+  // 1.5s opacity-breathe edge ring (same calm rate as the wait-dot). RM =
+  // static gold edge only (the page RM block strips the ::after).
+  &__partner-entry--claimable {
+    border-color: rgba($color-landed-gold, 0.72);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: -2rpx;
+      left: -2rpx;
+      right: -2rpx;
+      bottom: -2rpx;
+      border-radius: $card-radius-sm;
+      border: 2rpx solid rgba($color-landed-gold, 0.45);
+      opacity: 0.4;
+      animation: profile-equipment-claim-breathe 1.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+  }
+
+  @keyframes profile-equipment-claim-breathe {
+    0%, 100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 0.7;
     }
   }
 
@@ -2129,6 +2257,14 @@
   .profile-page__partner-visual--tapped .profile-page__partner-halo,
   .profile-page__partner-visual--tapped .profile-page__partner-platform {
     animation: none;
+  }
+
+  // P1-6: rare rim and claimable edge keep their STATIC gold border under
+  // RM — only the opacity pulses are removed.
+  .profile-page__equipment-slot--rare::after,
+  .profile-page__partner-entry--claimable::after {
+    animation: none;
+    opacity: 0;
   }
 }
 
