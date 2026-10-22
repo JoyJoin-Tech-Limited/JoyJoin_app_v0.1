@@ -493,6 +493,34 @@ describe('Profile approved V4 layout', () => {
     )
   })
 
+  it('P1-5: shows the quest line for a pre-成行 user and hides it forever once matched', () => {
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    const { getByTestId, getByText, queryByTestId, rerender } = render(<ProfilePage />)
+
+    // Fresh user: quest visible; step 1 (测评) auto-checked for corgi,
+    // steps 2/3 carry CTAs, step 4 waits without a CTA.
+    expect(getByTestId('profile-quest')).toBeTruthy()
+    expect(getByText('启程任务')).toBeTruthy()
+    expect(getByTestId('profile-quest-cta-register')).toBeTruthy()
+    expect(document.querySelector('[data-testid="profile-quest-cta-matched"]')).toBeNull()
+
+    // Once a registration is matched/completed the quest never renders again.
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', matchStatus: 'matched' }],
+    })
+    rerender(<ProfilePage />)
+    expect(queryByTestId('profile-quest')).toBeNull()
+  })
+
+  it('P1-5: register CTA switchTabs to discover', () => {
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    state.switchTab.mockClear()
+    const { getByTestId } = render(<ProfilePage />)
+
+    fireEvent.click(getByTestId('profile-quest-cta-register'))
+    expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.discover })
+  })
+
   it('P1-1: tapping the partner avatar fires one ref-locked bounce haptic', () => {
     const { getByTestId } = render(<ProfilePage />)
     ;(haptics as unknown as ReturnType<typeof vi.fn>).mockClear()

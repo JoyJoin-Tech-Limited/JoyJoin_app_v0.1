@@ -1,5 +1,6 @@
 import {
   getJoinedEvents,
+  getMyPoolRegistrations,
   getProfileShell,
   getUserGamificationInfo,
   type NotificationCountsResponse,
@@ -61,6 +62,7 @@ import {
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
 import { useProfileScroll } from './useProfileScroll'
+import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 
 // P1-3 (UIUX memo §9): the four profile numbers count 0→N once on first
 // data arrival — 600ms, brand bezier, 33ms cadence floor. Shared options.
@@ -327,6 +329,17 @@ export default function ProfilePage() {
   })
   const notificationUnread = notificationCountsQuery.data?.total ?? 0
 
+  // P1-5 quest line (PM memo §2): registrations come from the SAME cache key
+  // the tab-bar sync already fetches app-wide — one shared fetch, no new
+  // endpoint. Hide until loaded (fail-closed → no flash-then-hide for users
+  // whose quest is already complete).
+  const registrationsQuery = useQuery({
+    queryKey: REGISTRATIONS_QUERY_KEY,
+    queryFn: () => getMyPoolRegistrations(apiRequest),
+    enabled: !authLoading && !!authUser,
+    staleTime: 30_000,
+  })
+
   const shellEventsJoined = profileShellQuery.data?.stats?.eventsJoined
   const shellSettled = profileShellQuery.isSuccess || profileShellQuery.isError
   const { data: joinedEvents = [], isLoading: isLoadingEvents } = useQuery({
@@ -406,6 +419,42 @@ export default function ProfilePage() {
   // real ladder rung (3/6/12 weeks → +200/+500/+1000, server-authoritative).
   const activityStreak = gamificationQuery.data?.activityStreak ?? 0
   const streakTeaser = useMemo(() => getStreakMilestoneTeaser(activityStreak), [activityStreak])
+
+  // P1-5 quest line (PM memo §2): 4 steps live until the first 成行
+  // (matched/completed registration), then hide forever — no dismiss button,
+  // no storage. Signals: archetype set / bio non-empty / any registration /
+  // matched-or-completed registration. Fail-closed while registrations load.
+  const quest = useMemo(() => {
+    if (!profileV17Enabled || !registrationsQuery.data) return null
+    const registrations = registrationsQuery.data
+    const registerDone = registrations.length > 0
+    const matchedDone = registrations.some(
+      (r) => r.matchStatus === 'matched' || r.matchStatus === 'completed',
+    )
+    if (matchedDone) return null
+    return {
+      registerDone,
+      steps: [
+        { key: 'assessment' as const, title: '完成人格测评', done: archetype != null, cta: '去测评' },
+        { key: 'bio' as const, title: '写一句聚会签名', done: !!bio && bio.trim().length > 0, cta: '去写一句' },
+        { key: 'register' as const, title: '报名第一场局', done: registerDone, cta: '去挑一场' },
+        { key: 'matched' as const, title: '首场成行', done: false, cta: null },
+      ],
+    }
+  }, [profileV17Enabled, registrationsQuery.data, archetype, bio])
+
+  const handleQuestStepTap = useCallback((key: 'assessment' | 'bio' | 'register' | 'matched') => {
+    haptics('light')
+    if (key === 'assessment') {
+      void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalityTest })
+    } else if (key === 'bio') {
+      void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile })
+    } else if (key === 'register') {
+      void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
+    } else {
+      void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })
+    }
+  }, [])
   const equipmentInventory = equipmentQuery.data?.inventory ?? []
   const equipmentItemsById = new Map(equipmentInventory.map((entry) => [entry.item.id, entry.item]))
   const outfit = equipmentQuery.data?.outfit
@@ -1171,6 +1220,58 @@ export default function ProfilePage() {
             </View>
           </Card>
         </View>
+
+        {/* P1-5 quest line (PM memo §2): 4 steps until first 成行; hidden
+            forever once any registration is matched/completed. No dismiss. */}
+        {quest && (
+          <View className='profile-page__quest' data-testid='profile-quest'>
+            <View className='profile-page__quest-header'>
+              <Text className='profile-page__quest-title'>启程任务</Text>
+              <Text className='profile-page__quest-subtitle'>走完 4 步，迎来你的第一场局</Text>
+            </View>
+            {quest.steps.map((step) => {
+              const isMatchedStep = step.key === 'matched'
+              const showMatchedCta = isMatchedStep && quest.registerDone
+              const showCta = (!isMatchedStep && !step.done) || showMatchedCta
+              return (
+                <View
+                  key={step.key}
+                  className='profile-page__quest-step'
+                  data-testid={`profile-quest-step-${step.key}`}
+                >
+                  <View
+                    className={`profile-page__quest-check${step.done ? ' profile-page__quest-check--done' : ''}`}
+                    aria-hidden='true'
+                  >
+                    {step.done && <JoyJoinIcon emoji='✅' tier='ui' size={20} />}
+                  </View>
+                  <View className='profile-page__quest-step-text'>
+                    <Text className={`profile-page__quest-step-title${step.done ? ' profile-page__quest-step-title--done' : ''}`}>
+                      {step.title}
+                    </Text>
+                    {isMatchedStep && quest.registerDone && (
+                      <Text className='profile-page__quest-step-sub'>排桌完成后，这里自动打勾</Text>
+                    )}
+                  </View>
+                  {showCta && (
+                    <View
+                      className='profile-page__quest-cta'
+                      hoverClass='profile-page__quest-cta--pressed'
+                      onClick={() => handleQuestStepTap(step.key)}
+                      role='button'
+                      aria-label={isMatchedStep ? '查看进度' : step.cta}
+                      data-testid={`profile-quest-cta-${step.key}`}
+                    >
+                      <Text className='profile-page__quest-cta-text'>
+                        {isMatchedStep ? '查看进度' : step.cta}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )
+            })}
+          </View>
+        )}
 
         {profileV17DataPolicy.personalStoryEnabled && (
           <View

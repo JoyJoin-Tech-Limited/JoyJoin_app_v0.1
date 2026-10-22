@@ -1700,6 +1700,116 @@
     color: $color-primary;
   }
 
+  // P1-5 quest line (2026-10-22, PM memo §2): quiet checklist card in the
+  // list-row chrome family (settings-entry surface). Enters with the story
+  // card's stagger slot (240ms).
+  &__quest {
+    margin: 0 $container-padding $spacing-md;
+    padding: $spacing-md;
+    box-sizing: border-box;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    animation: profile-row-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.24s backwards;
+  }
+
+  &__quest-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__quest-title {
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: var(--profile-text-primary);
+  }
+
+  &__quest-subtitle {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+  }
+
+  &__quest-step {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 72rpx;
+    box-sizing: border-box;
+
+    & + & {
+      border-top: 1rpx solid var(--profile-divider);
+    }
+  }
+
+  &__quest-check {
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    border: 2rpx solid rgba($color-text-primary, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+
+    &--done {
+      background: rgba($color-landed-gold, 0.16);
+      border-color: rgba($color-landed-gold, 0.6);
+    }
+  }
+
+  &__quest-step-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+  }
+
+  &__quest-step-title {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: var(--profile-text-primary);
+
+    &--done {
+      color: var(--profile-text-tertiary);
+    }
+  }
+
+  &__quest-step-sub {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+  }
+
+  &__quest-cta {
+    flex-shrink: 0;
+    padding: 8rpx $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.08);
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.96);
+      background: rgba($color-primary, 0.14);
+    }
+  }
+
+  &__quest-cta-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
   &__archive {
     // P6 density pass: section gap normalized to $spacing-md (24rpx).
     margin: 0 $container-padding $spacing-md;
@@ -1970,6 +2080,7 @@
   .profile-page__milestones,
   .profile-page__settings-entry,
   .profile-page__entitlement-strip,
+  .profile-page__quest,
   .profile-page__milestone {
     opacity: 1;
     transform: none;
