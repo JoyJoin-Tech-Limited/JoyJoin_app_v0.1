@@ -13,6 +13,7 @@ import WaitingBeat from '../components/WaitingBeat'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { resolveReadyParticipantIds } from '../viewModels/phaseOptOutModel'
 import { useIcebreakerDraft } from '../hooks/useIcebreakerDraft'
+import { useUgcReport } from '../hooks/useUgcReport'
 import { buildIcebreakerDraftKey } from '../viewModels/draftPersistence'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
@@ -102,6 +103,13 @@ export function LieDetectiveHeroView({
   const isOwnTurn = currentPlayer?.userId === currentUserId
   const hasVoted = myVoteIndex !== null
   const isRevealed = !!reveal
+  // E9 (contract AC-07): long-press report entry on the current player's
+  // statement cards. `shouldSkipLieTap` swallows the WeChat echo tap that
+  // follows a longpress so reporting never casts a vote. The contentRef
+  // carries only the statement index — isLie stays server-secret (SEC-02).
+  const { presentReport: presentUgcReport, shouldSkipClick: shouldSkipLieTap } = useUgcReport({
+    socialSessionId,
+  })
 
   // ── Signature wow: statement flip-to-reveal on vote completion ────────────
   const prevRevealedRef = useRef(false)
@@ -590,10 +598,20 @@ export function LieDetectiveHeroView({
                 className={'lie-detective-hero__statement' + cardModifier}
                 style={flipIn ? { animationDelay: `${stmtPosition * 90}ms` } : undefined}
                 onClick={() => {
+                  // WeChat echo tap after longpress — never cast a vote while
+                  // the report sheet is open.
+                  if (shouldSkipLieTap()) return
                   if (!isOwnTurn && !isVoting && !isRevealed) {
                     // Confirm haptic is action-owned (performSocialAction) — no raw tap buzz.
                     onVote(stmt.index)
                   }
+                }}
+                onLongPress={() => {
+                  void presentUgcReport({
+                    phase: 'lie_detective',
+                    targetUserId: currentPlayer.userId,
+                    contentRef: { kind: 'lieStatement', index: stmt.index },
+                  })
                 }}
               >
                 <View className='lie-detective-hero__statement-header'>

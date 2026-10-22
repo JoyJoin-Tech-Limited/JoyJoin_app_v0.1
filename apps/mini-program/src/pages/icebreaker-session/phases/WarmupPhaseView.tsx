@@ -19,6 +19,7 @@ import { GlancePeek } from '../components/GlancePeek'
 import { isHandshakeRitualGateOpen } from '../viewModels/glanceStackModel'
 import type { SessionParticipant } from '../phaseUtils'
 import type { WarmupReadiness } from '../hooks/useWarmupReadiness'
+import { useUgcReport } from '../hooks/useUgcReport'
 import {
   buildWelcomeSegments,
   buildWarmupCaption,
@@ -103,6 +104,20 @@ export function WarmupPhaseView({
   // Readiness cluster (card state + optimistic self-ready) is owned by the
   // page-level hook so the CTA dock can render as a ScrollView sibling.
   const { cardState, selfReadyOptimistic, optimisticReadyCount } = readiness
+
+  // E9 (contract AC-07): roster-strip long-press → report a participant's
+  // nickname (kind displayName; the server snapshots it from participants).
+  const { presentReport: presentUgcReport } = useUgcReport({ socialSessionId })
+  const handleParticipantLongPress = useCallback(
+    (participant: SessionParticipant) => {
+      void presentUgcReport({
+        phase: 'warmup',
+        targetUserId: participant.userId,
+        contentRef: { kind: 'displayName' },
+      })
+    },
+    [presentUgcReport],
+  )
 
   const reduceMotion = useMemo(() => getSystemReducedMotion(), [])
 
@@ -404,6 +419,7 @@ export function WarmupPhaseView({
             currentUserId={currentUserId}
             readyCount={readyUserIds.length}
             totalCount={participants.length}
+            onLongPressParticipant={handleParticipantLongPress}
           />
         </GlancePeek>
       ) : (
@@ -414,6 +430,7 @@ export function WarmupPhaseView({
           currentUserId={currentUserId}
           readyCount={readyUserIds.length}
           totalCount={participants.length}
+          onLongPressParticipant={handleParticipantLongPress}
         />
       )}
         </>

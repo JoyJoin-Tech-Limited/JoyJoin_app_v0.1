@@ -5,6 +5,15 @@
  * All three live on the social icebreaker router: severe → 400
  * CONTENT_VIOLATION + recordViolation exactly once + state NOT mutated;
  * benign → 2xx + persisted.
+ *
+ * E9 extension (sprint e9-ugc-report, contract AC-05/AC-06) — named locks for
+ * the four surfaces that gained filtering earlier but had no test lock, plus
+ * the newly-gated avoidTopics input:
+ *  - quip answer        socialIcebreakerGameplayCore.ts:1106 (optimistic) / :1143 (direct)
+ *  - group-mirror reason socialIcebreakerGameplayExtra.ts:805 / :845
+ *  - miniscript vote why domains/miniscript.ts:1126 (miniscript router)
+ *  - V1 custom statements socialIcebreakerExtended.ts:908 (route :844)
+ *  - avoidTopics (G3)   routes/socialIcebreaker.ts topics route — sync gate
  */
 import express from 'express';
 import { createWithServer } from '../test-utils/withServer';
@@ -20,6 +29,7 @@ const mockGetFeatureFlag = vi.fn();
 const mockGetFeatureFlagSync = vi.fn();
 const mockValidateLieDetectiveV2Tags = vi.fn();
 const mockRunBotSimulationSafely = vi.fn();
+const mockGenerateWarmupTopics = vi.fn();
 
 vi.mock('../lib/featureFlags', () => ({
   getFeatureFlag: mockGetFeatureFlag,
@@ -123,6 +133,8 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     setLieTruths: async () => {},
     getLieTruths: async () => null,
     loadSessionLieTruths: async () => new Map(),
+    setMiniScriptSecrets: async () => {},
+    getMiniScriptSecrets: async () => null,
     getPreGenerationResult: vi.fn().mockResolvedValue(null),
     getInFlightJobForPhase: vi.fn().mockResolvedValue(null),
     invalidatePreGenerationForSession: vi.fn().mockResolvedValue(undefined),
@@ -132,7 +144,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
 });
 
 vi.mock('../socialIcebreakerAIService', () => ({
-  generateWarmupTopics: vi.fn(),
+  generateWarmupTopics: mockGenerateWarmupTopics,
   generateMicroChallenges: vi.fn(),
   generateLieDetectiveStatements: vi.fn(),
   generateXiaoYueComment: vi.fn().mockResolvedValue({ data: '', meta: {} }),
@@ -152,6 +164,8 @@ vi.mock('../socialIcebreakerAIService', () => ({
 vi.mock('../services/socialIcebreakerBotService', () => ({
   runBotSimulationSafely: mockRunBotSimulationSafely,
   seedSingleTestBotsWarmupReady: vi.fn(),
+  getBots: vi.fn().mockReturnValue([]),
+  simulateBotsForSession: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../jobs/preGenerationQueue', () => ({
@@ -175,9 +189,16 @@ vi.mock('../lib/socialIcebreakerAccess', () => ({
 vi.mock('../rateLimiter', () => ({
   aiEndpointLimiter: (_req: any, _res: any, next: any) => next(),
   momentCardLimiter: (_req: any, _res: any, next: any) => next(),
+  // Pass-through factory — the 429 contract is locked in
+  // socialIcebreakerUgcReport.test.ts with the REAL limiter; this file only
+  // exercises content gates.
+  createRateLimiter: () => (_req: any, _res: any, next: any) => next(),
 }));
 
 const { default: socialIcebreakerRouter } = await import('../routes/socialIcebreaker');
+// E9 AC-06: the miniscript vote surface lives on the top-level miniscript
+// router (`/api/miniscript/vote`), so it is mounted here too.
+const { default: miniscriptRouter } = await import('../routes/domains/miniscript');
 
 function createApp() {
   const app = express();
@@ -194,6 +215,7 @@ function createApp() {
     req.session.save(() => res.json({ ok: true }));
   });
   app.use('/api/social-icebreaker', socialIcebreakerRouter);
+  app.use('/api/miniscript', miniscriptRouter);
   return app;
 }
 const withServer = createWithServer(createApp);
@@ -404,6 +426,329 @@ describe('social icebreaker surface content moderation (S5/S6/S8)', () => {
       expect(response.status).toBe(200);
       const state = storeCtx.sessions.get('social_ld-s1')!;
       expect(state.lieDetectiveV2Tags?.['tester-1']).toEqual(['爱旅行', '喜欢咖啡']);
+      expect(mockRecordViolation).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E9 (sprint e9-ugc-report, contract AC-05/AC-06) — named regression locks for
+// the four previously-unlocked filtered surfaces + the newly gated avoidTopics.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('E9 icebreaker content-safety surface locks (AC-05/AC-06)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    logRows.length = 0;
+    storeCtx.sessions.clear();
+    storeCtx.participants.clear();
+    mockGetFeatureFlag.mockResolvedValue(true);
+    mockGetFeatureFlagSync.mockReturnValue(true);
+    mockCheckTextWithMsgSecCheck.mockResolvedValue({ risky: false });
+    mockRunBotSimulationSafely.mockResolvedValue(undefined);
+    mockValidateLieDetectiveV2Tags.mockReturnValue({ valid: true, tags: ['爱旅行', '喜欢咖啡'] });
+    mockGenerateWarmupTopics.mockResolvedValue({
+      data: [{ id: 't1', text: '安全话题', category: 'life' }],
+      meta: { promptVersion: 'test', fallbackUsed: false },
+    });
+  });
+
+  // ─── quip answer (socialIcebreakerGameplayCore.ts:1106/:1143) ─────────────
+
+  it('quip severe answer → 400 CONTENT_VIOLATION + recordViolation once + answer NOT persisted', async () => {
+    storeCtx.sessions.set('social_qp-s1', baseSession({
+      socialSessionId: 'social_qp-s1',
+      icebreakerSessionId: 'qp-s1',
+      currentPhase: 'quip_battle',
+      quipBattlePrompts: [{ id: 'p1', promptText: '最野的一次经历', category: 'story' }],
+      quipBattleAnswers: [],
+    }));
+    storeCtx.participants.set('social_qp-s1', new Map([['tester-1', { userId: 'tester-1', displayName: 'Tester' }]]));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_qp-s1/quip-battle/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ answers: [{ promptId: 'p1', answerText: '这个东西像毒品一样让人上瘾' }] }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(400);
+      expect(body.code).toBe('CONTENT_VIOLATION');
+      expect(mockRecordViolation).toHaveBeenCalledTimes(1);
+      expect(logRows).toHaveLength(1);
+      expect(storeCtx.sessions.get('social_qp-s1')!.quipBattleAnswers ?? []).toHaveLength(0);
+    });
+  });
+
+  it('quip benign answer → 200 + answer persisted', async () => {
+    storeCtx.sessions.set('social_qp-s2', baseSession({
+      socialSessionId: 'social_qp-s2',
+      icebreakerSessionId: 'qp-s2',
+      currentPhase: 'quip_battle',
+      quipBattlePrompts: [{ id: 'p1', promptText: '最野的一次经历', category: 'story' }],
+      quipBattleAnswers: [],
+    }));
+    storeCtx.participants.set('social_qp-s2', new Map([['tester-1', { userId: 'tester-1', displayName: 'Tester' }]]));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_qp-s2/quip-battle/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ answers: [{ promptId: 'p1', answerText: '在海边看日出的那个清晨' }] }),
+      });
+
+      expect(response.status).toBe(200);
+      const state = storeCtx.sessions.get('social_qp-s2')!;
+      expect(state.quipBattleAnswers?.[0]?.answerText).toBe('在海边看日出的那个清晨');
+      expect(mockRecordViolation).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── group-mirror reason (socialIcebreakerGameplayExtra.ts:805/:845) ──────
+
+  it('group-mirror severe reasonText → 400 CONTENT_VIOLATION + recordViolation once + answer NOT persisted', async () => {
+    storeCtx.sessions.set('social_gm-s1', baseSession({
+      socialSessionId: 'social_gm-s1',
+      icebreakerSessionId: 'gm-s1',
+      currentPhase: 'group_mirror',
+      groupMirrorQuestions: [{ id: 'q1', questionText: '谁最会暖场', category: 'appreciation' }],
+      groupMirrorAnswers: [],
+      groupMirrorSubmittedUserIds: [],
+    }));
+    storeCtx.participants.set('social_gm-s1', new Map([
+      ['tester-1', { userId: 'tester-1', displayName: 'Tester' }],
+      ['target-1', { userId: 'target-1', displayName: 'Target' }],
+    ]));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_gm-s1/group-mirror/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({
+          answers: [{ questionId: 'q1', targetUserId: 'target-1', reasonText: '他是杀人不眨眼的恶魔' }],
+        }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(400);
+      expect(body.code).toBe('CONTENT_VIOLATION');
+      expect(mockRecordViolation).toHaveBeenCalledTimes(1);
+      expect(logRows).toHaveLength(1);
+      expect(storeCtx.sessions.get('social_gm-s1')!.groupMirrorAnswers ?? []).toHaveLength(0);
+    });
+  });
+
+  it('group-mirror benign reasonText → 200 + answer persisted', async () => {
+    storeCtx.sessions.set('social_gm-s2', baseSession({
+      socialSessionId: 'social_gm-s2',
+      icebreakerSessionId: 'gm-s2',
+      currentPhase: 'group_mirror',
+      groupMirrorQuestions: [{ id: 'q1', questionText: '谁最会暖场', category: 'appreciation' }],
+      groupMirrorAnswers: [],
+      groupMirrorSubmittedUserIds: [],
+    }));
+    storeCtx.participants.set('social_gm-s2', new Map([
+      ['tester-1', { userId: 'tester-1', displayName: 'Tester' }],
+      ['target-1', { userId: 'target-1', displayName: 'Target' }],
+    ]));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_gm-s2/group-mirror/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({
+          answers: [{ questionId: 'q1', targetUserId: 'target-1', reasonText: '他总是第一个破冰' }],
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const state = storeCtx.sessions.get('social_gm-s2')!;
+      expect(state.groupMirrorAnswers?.[0]?.reasonText).toBe('他总是第一个破冰');
+      expect(mockRecordViolation).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── miniscript vote why (domains/miniscript.ts:1126) ─────────────────────
+
+  it('miniscript-vote severe why → 400 CONTENT_VIOLATION + recordViolation once + vote NOT persisted', async () => {
+    storeCtx.sessions.set('social_mv-s1', baseSession({
+      socialSessionId: 'social_mv-s1',
+      icebreakerSessionId: 'mv-s1',
+      currentPhase: 'mini_script',
+      miniScriptRoleAssignments: { 'tester-1': 0 },
+      miniScriptFramework: {
+        characters: [
+          { slotIndex: 0, roleLabel: '设计师', sinHook: '嘴硬', alibi: '在工位' },
+          { slotIndex: 1, roleLabel: '实习生', sinHook: '心软', alibi: '在培训' },
+        ],
+      } as any,
+      miniScriptVotes: [],
+    }));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/miniscript/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({
+          socialSessionId: 'social_mv-s1',
+          vote: { suspectRoleSlot: 1, why: '宣传恐怖袭击内容' },
+        }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(400);
+      expect(body.code).toBe('CONTENT_VIOLATION');
+      expect(mockRecordViolation).toHaveBeenCalledTimes(1);
+      expect(logRows).toHaveLength(1);
+      expect(storeCtx.sessions.get('social_mv-s1')!.miniScriptVotes ?? []).toHaveLength(0);
+    });
+  });
+
+  it('miniscript-vote benign why → 200 + vote persisted with why', async () => {
+    storeCtx.sessions.set('social_mv-s2', baseSession({
+      socialSessionId: 'social_mv-s2',
+      icebreakerSessionId: 'mv-s2',
+      currentPhase: 'mini_script',
+      miniScriptRoleAssignments: { 'tester-1': 0 },
+      miniScriptFramework: {
+        characters: [
+          { slotIndex: 0, roleLabel: '设计师', sinHook: '嘴硬', alibi: '在工位' },
+          { slotIndex: 1, roleLabel: '实习生', sinHook: '心软', alibi: '在培训' },
+        ],
+      } as any,
+      miniScriptVotes: [],
+    }));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/miniscript/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({
+          socialSessionId: 'social_mv-s2',
+          vote: { suspectRoleSlot: 1, why: '他的不在场证明太完美了' },
+        }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(body.ok).toBe(true);
+      const state = storeCtx.sessions.get('social_mv-s2')!;
+      expect(state.miniScriptVotes?.[0]?.why).toBe('他的不在场证明太完美了');
+      expect(mockRecordViolation).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── lie-detective V1 custom statements (socialIcebreakerExtended.ts:908) ──
+
+  it('V1 severe custom statement → 400 CONTENT_VIOLATION + recordViolation once + statements NOT persisted', async () => {
+    storeCtx.sessions.set('social_v1-s1', baseSession({
+      socialSessionId: 'social_v1-s1',
+      icebreakerSessionId: 'v1-s1',
+      currentPhase: 'lie_detective',
+      lieDetectiveMode: 'v1',
+    }));
+    storeCtx.participants.set('social_v1-s1', new Map([['tester-1', { userId: 'tester-1', displayName: 'Tester' }]]));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_v1-s1/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({
+          displayName: 'Tester',
+          statements: ['我去过三次南极', '宣传恐怖袭击内容', '我其实很怕黑'],
+          lieIndex: 3,
+        }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(400);
+      expect(body.code).toBe('CONTENT_VIOLATION');
+      expect(mockRecordViolation).toHaveBeenCalledTimes(1);
+      expect(logRows).toHaveLength(1);
+      expect(storeCtx.sessions.get('social_v1-s1')!.lieDetectivePlayers ?? []).toHaveLength(0);
+    });
+  });
+
+  it('V1 benign custom statements → 200 + statements persisted WITHOUT isLie in public state', async () => {
+    storeCtx.sessions.set('social_v1-s2', baseSession({
+      socialSessionId: 'social_v1-s2',
+      icebreakerSessionId: 'v1-s2',
+      currentPhase: 'lie_detective',
+      lieDetectiveMode: 'v1',
+    }));
+    storeCtx.participants.set('social_v1-s2', new Map([['tester-1', { userId: 'tester-1', displayName: 'Tester' }]]));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'tester-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_v1-s2/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({
+          displayName: 'Tester',
+          statements: ['我去过三次南极', '我会开滑翔伞', '我其实很怕黑'],
+          lieIndex: 2,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const state = storeCtx.sessions.get('social_v1-s2')!;
+      const player = state.lieDetectivePlayers?.find((p) => p.userId === 'tester-1');
+      expect(player?.statements).toHaveLength(3);
+      for (const statement of player?.statements ?? []) {
+        expect(statement).not.toHaveProperty('isLie');
+      }
+      expect(mockRecordViolation).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── avoidTopics sync gate (AC-05, G3 — socialIcebreaker.ts topics route) ──
+
+  it('avoidTopics severe entry → 400 CONTENT_VIOLATION + recordViolation exactly once (sync gate)', async () => {
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'host-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_tp-s1/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ mood: 'relaxed', avoidTopics: ['前任', '毒品交易细节'] }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(400);
+      expect(body.code).toBe('CONTENT_VIOLATION');
+      // Exactly once — not more (one violation recorded), not less (not swallowed).
+      expect(mockRecordViolation).toHaveBeenCalledTimes(1);
+      expect(logRows).toHaveLength(1);
+      // The gate fires BEFORE resolveSession — no session state was touched.
+      expect(storeCtx.sessions.has('social_tp-s1')).toBe(false);
+    });
+  });
+
+  it('avoidTopics benign entries → 200 + topics generated', async () => {
+    storeCtx.sessions.set('social_tp-s2', baseSession({
+      socialSessionId: 'social_tp-s2',
+      icebreakerSessionId: 'tp-s2',
+      currentPhase: 'warmup',
+    }));
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'host-1');
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/social_tp-s2/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ mood: 'relaxed', avoidTopics: ['前任', '收入'] }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(body.topics).toHaveLength(1);
       expect(mockRecordViolation).not.toHaveBeenCalled();
     });
   });

@@ -85,7 +85,7 @@ import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
-import { validateContentSafeAsync, contentViolationResponse } from '../lib/contentSafety';
+import { validateContentSafe, validateContentSafeAsync, contentViolationResponse } from '../lib/contentSafety';
 import { recordViolation } from '../abuseDetection';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
@@ -112,6 +112,7 @@ import {
   resolveSessionGlowSnapshot,
 } from './socialIcebreakerHelpers';
 import { registerExtendedRoutes } from './socialIcebreakerExtended';
+import { registerUgcReportRoutes } from './socialIcebreakerUgcReport';
 import { enqueueRunPlanPreGeneration, shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import { resetSocialIcebreakerTier } from '../services/socialIcebreakerTierReset';
@@ -848,6 +849,22 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     return res.status(400).json({ error: 'mood is required' });
   }
 
+  // G3 (sprint e9-ugc-report, contract AC-05): avoidTopics is the last
+  // unfiltered free-text surface in the session (host-only, feeds the LLM
+  // prompt). A sync Tier-0 gate is sufficient here — host-only input, not
+  // worth a WeChat Tier-1 round-trip. Gated BEFORE resolveSession so a
+  // rejected request never triggers the auto-advance state write.
+  if (Array.isArray(avoidTopics)) {
+    for (const topic of avoidTopics) {
+      if (typeof topic !== 'string') continue;
+      const topicSafety = validateContentSafe(topic, 'avoidTopics');
+      if (!topicSafety.safe && topicSafety.violation) {
+        await recordViolation(userId, topicSafety.violation.type, topicSafety.violation.severity);
+        return res.status(400).json(contentViolationResponse(topicSafety.violation).body);
+      }
+    }
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
@@ -1180,5 +1197,7 @@ router.post('/:socialSessionId/moment-card-event', async (req: any, res) => {
 });
 
 registerExtendedRoutes(router);
+// E9 UGC 举报闭环 (sprint e9-ugc-report): in-session user-content report route.
+registerUgcReportRoutes(router);
 
 export default router;

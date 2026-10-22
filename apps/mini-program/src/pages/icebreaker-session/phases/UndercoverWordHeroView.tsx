@@ -14,6 +14,7 @@ import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SocialContentStatus } from '@shared/socialIcebreaker'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
+import { useUgcReport } from '../hooks/useUgcReport'
 import { formatAwayWaitSuffix } from '../viewModels/rejoinCatchUpModel'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
@@ -146,6 +147,12 @@ export function UndercoverWordHeroView({
   const isUndercover = userId === undercoverUserId
   const myWord = isUndercover ? pair?.undercoverWord : pair?.civilianWord
   const currentRoundData = rounds[currentRound]
+  // E9 (contract AC-07): long-press report entry on the table's description
+  // list. contentRef.round rides the domain roundNumber (1-based, matching
+  // the server's `undercoverWordRounds[].roundNumber`).
+  const { presentReport: presentUgcReport } = useUgcReport({
+    socialSessionId: socialSessionId || undefined,
+  })
   const hasSubmittedDesc = currentRoundData?.descriptions.some((d) => d.userId === userId)
   const hasVoted = userId ? votedUserIds.includes(userId) : false
   // W3: opted-out / silent players count toward the describe gate (they will
@@ -487,7 +494,17 @@ export function UndercoverWordHeroView({
         {currentRoundData && currentRoundData.descriptions.length > 0 && (
           <View className='undercover-hero__desc-list'>
             {currentRoundData.descriptions.map((d, i) => (
-              <View key={i} className='undercover-hero__desc-item'>
+              <View
+                key={i}
+                className='undercover-hero__desc-item'
+                onLongPress={() => {
+                  void presentUgcReport({
+                    phase: 'undercover_word',
+                    targetUserId: d.userId,
+                    contentRef: { kind: 'undercoverDescription', round: currentRoundData.roundNumber },
+                  })
+                }}
+              >
                 <Text className='undercover-hero__desc-name'>{d.displayName}</Text>
                 <Text className='undercover-hero__desc-text'>“{d.text}”</Text>
               </View>

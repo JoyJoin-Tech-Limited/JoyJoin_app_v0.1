@@ -82,6 +82,10 @@ type EventType =
   | 'quip_chip_shown'
   | 'quip_chip_tap'
   | 'quip_chip_adopted'
+  // E9 UGC 举报闭环 (sprint e9-ugc-report, contract AC-08/OBS-01) — long-press
+  // report flow completion. Metadata carries {phase, kind} ONLY — the reported
+  // content text never rides analytics (server snapshots it into reports).
+  | 'ugc_report_submitted'
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker. The server gates

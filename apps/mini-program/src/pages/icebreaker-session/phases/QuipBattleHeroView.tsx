@@ -27,6 +27,7 @@ import {
 import { findAdoptedQuipChip, resolveQuipChipTapAction } from '../viewModels/quipChipModel'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
 import { useIcebreakerDraft } from '../hooks/useIcebreakerDraft'
+import { useUgcReport } from '../hooks/useUgcReport'
 import { buildIcebreakerDraftKey } from '../viewModels/draftPersistence'
 import { formatAwayWaitSuffix } from '../viewModels/rejoinCatchUpModel'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
@@ -131,6 +132,8 @@ export function buildQuipBattleVotes(voteMap: Record<string, string>) {
 export interface QuipVotePreviewItem {
   /** voteMap key: `${answerUserId}::${promptId}`. */
   key: string
+  /** E9 (AC-07): the answer author's userId — long-press report target. */
+  answerUserId: string
   promptId: string
   promptText: string
   displayName: string
@@ -151,6 +154,7 @@ export function buildQuipVotePreview(
     const key = `${answer.userId}::${prompt.id}`
     return {
       key,
+      answerUserId: answer.userId,
       promptId: prompt.id,
       promptText: prompt.promptText,
       displayName: answer.displayName,
@@ -218,6 +222,12 @@ export function QuipBattleHeroView({
   })
   const [voteMap, setVoteMap] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
+  // E9 (contract AC-07): long-press report entry on the vote-preview and
+  // reveal answer rows. `shouldSkipQuipTap` swallows the WeChat echo tap
+  // that follows a longpress so reporting never flips a vote.
+  const { presentReport: presentUgcReport, shouldSkipClick: shouldSkipQuipTap } = useUgcReport({
+    socialSessionId: socialSessionId || undefined,
+  })
   const [showChampion, setShowChampion] = useState(false)
   const [stackIndex, setStackIndex] = useState(0)
   const [burstTrigger, setBurstTrigger] = useState(false)
@@ -641,7 +651,19 @@ export function QuipBattleHeroView({
                       className={`quip-battle-hero__vote-preview-item${item.voted ? ' quip-battle-hero__vote-preview-item--voted' : ''}`}
                       hoverClass='quip-battle-hero__vote-preview-item--pressed'
                       hoverStartTime={0}
-                      onClick={() => handlePreviewItemTap(item.key, item.promptId)}
+                      onClick={() => {
+                        // WeChat echo tap after longpress — never flip a vote
+                        // while the report sheet is open.
+                        if (shouldSkipQuipTap()) return
+                        handlePreviewItemTap(item.key, item.promptId)
+                      }}
+                      onLongPress={() => {
+                        void presentUgcReport({
+                          phase: 'quip_battle',
+                          targetUserId: item.answerUserId,
+                          contentRef: { kind: 'quipAnswer', promptId: item.promptId },
+                        })
+                      }}
                       role='button'
                       aria-pressed={item.voted}
                       aria-label={`${item.displayName} 的回答，${item.voted ? '已投，点按取消' : '未投，点按投票'}`}
@@ -744,6 +766,13 @@ export function QuipBattleHeroView({
                     <View
                       key={answer.userId}
                       className={`quip-battle-hero__answer${isWinner ? ' quip-battle-hero__answer--winner' : ''}`}
+                      onLongPress={() => {
+                        void presentUgcReport({
+                          phase: 'quip_battle',
+                          targetUserId: answer.userId,
+                          contentRef: { kind: 'quipAnswer', promptId: result.promptId },
+                        })
+                      }}
                     >
                       {isWinner && <View className='quip-battle-hero__answer-ring' aria-hidden='true' />}
                       <Text className='quip-battle-hero__answer-author'>

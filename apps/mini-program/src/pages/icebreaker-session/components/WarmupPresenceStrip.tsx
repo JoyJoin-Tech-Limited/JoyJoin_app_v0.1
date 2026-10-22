@@ -14,6 +14,9 @@ interface WarmupPresenceStripProps {
   currentUserId: string
   readyCount: number
   totalCount: number
+  /** E9 (contract AC-07): long-press report entry on a roster name. Optional —
+   *  absent → no long-press handler attached (standalone renders unchanged). */
+  onLongPressParticipant?: (participant: SessionParticipant) => void
 }
 
 export function WarmupPresenceStrip({
@@ -23,6 +26,7 @@ export function WarmupPresenceStrip({
   currentUserId,
   readyCount,
   totalCount,
+  onLongPressParticipant,
 }: WarmupPresenceStripProps) {
   return (
     <View className='warmup-presence'>
@@ -43,6 +47,9 @@ export function WarmupPresenceStrip({
                 className={`warmup-presence__item ${
                   isReady ? 'warmup-presence__item--ready' : ''
                 }`}
+                onLongPress={
+                  onLongPressParticipant ? () => onLongPressParticipant(p) : undefined
+                }
               >
                 <View className='warmup-presence__avatar-wrap'>
                   <View className='warmup-presence__avatar'>

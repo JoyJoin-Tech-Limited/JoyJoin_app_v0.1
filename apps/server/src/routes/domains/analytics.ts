@@ -511,6 +511,10 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   "quip_chip_shown",
   "quip_chip_tap",
   "quip_chip_adopted",
+  // E9 UGC 举报闭环 (sprint e9-ugc-report, contract AC-08 / OBS-01) — fired
+  // once per successful report-content submission with {phase, kind} metadata
+  // only (never the reported text). Whitelist parity only.
+  "ugc_report_submitted",
 ] as const;
 
 type SocialIcebreakerEventType = (typeof SOCIAL_ICEBREAKER_EVENT_TYPES)[number];

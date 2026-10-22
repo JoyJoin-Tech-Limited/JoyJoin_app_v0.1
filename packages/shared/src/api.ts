@@ -18,6 +18,7 @@ export * from './api/occupation.js'
 export * from './api/alang.js'
 export * from './api/social.js'
 export * from './api/guidance.js'
+export * from './api/ugcReport.js'
 
 // Re-exports from topical schema modules
 export {
