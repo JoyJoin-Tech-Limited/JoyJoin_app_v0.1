@@ -2,6 +2,7 @@ import {
   getJoinedEvents,
   getProfileShell,
   getUserGamificationInfo,
+  type NotificationCountsResponse,
 } from '@shared/api'
 import {
   ARCHETYPE_BY_ID,
@@ -23,6 +24,7 @@ import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { NOTIFICATION_COUNTS_KEY } from '../../hooks/useNotificationCounts'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { useGuidanceQueue } from '../../hooks/useGuidanceQueue'
@@ -276,6 +278,7 @@ export default function ProfilePage() {
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'auth-user'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] })
+    void queryClient.invalidateQueries({ queryKey: NOTIFICATION_COUNTS_KEY })
     if (profileV17DataPolicy.gamificationEnabled) {
       void queryClient.invalidateQueries({ queryKey: ['mini-program', 'gamification'] })
     }
@@ -290,6 +293,15 @@ export default function ProfilePage() {
     enabled: !authLoading && !!authUser,
     staleTime: 30_000,
   })
+  // P0-2: cache-mirror of notification counts — Discover's active observer
+  // is the single fetch loop (this reader never polls, enabled: false).
+  // Fail-open: no cache yet → no badge. Profile useDidShow invalidates the
+  // key; the refetch flows through Discover's live observer.
+  const notificationCountsQuery = useQuery<NotificationCountsResponse>({
+    queryKey: NOTIFICATION_COUNTS_KEY,
+    enabled: false,
+  })
+  const notificationUnread = notificationCountsQuery.data?.total ?? 0
 
   const shellEventsJoined = profileShellQuery.data?.stats?.eventsJoined
   const shellSettled = profileShellQuery.isSuccess || profileShellQuery.isError
@@ -617,6 +629,29 @@ export default function ProfilePage() {
         data-testid='profile-top-navigation'
       >
         <Text className='profile-page__nav-title'>我的</Text>
+        {/* P0-2 notification bell — mirrors Discover's anatomy (72rpx circle,
+            primary badge pill, 99+ cap); absolute so the centered title is
+            untouched. Badge hidden at 0 unread. */}
+        <View
+          className='profile-page__nav-bell'
+          hoverClass='profile-page__nav-bell--active'
+          onClick={() => {
+            haptics('light')
+            Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.notifications }).catch(() => {})
+          }}
+          role='button'
+          aria-label={notificationUnread > 0 ? `通知，${notificationUnread} 条未读` : '通知'}
+          data-testid='profile-notification-bell'
+        >
+          <JoyJoinIcon emoji='🔔' tier='semantic' size={22} />
+          {notificationUnread > 0 ? (
+            <View className='profile-page__nav-bell-badge' aria-hidden='true'>
+              <Text className='profile-page__nav-bell-badge-text'>
+                {notificationUnread > 99 ? '99+' : notificationUnread}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
       <ScrollView
         className='profile-page__scroll'

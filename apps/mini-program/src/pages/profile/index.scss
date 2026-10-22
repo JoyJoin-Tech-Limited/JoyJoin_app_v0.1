@@ -105,6 +105,48 @@
     color: var(--profile-text-primary);
   }
 
+  // P0-2 notification bell (2026-10-22): mirrors discover-auth__bell anatomy
+  // (72rpx circle, primary badge pill, 99+ cap). Absolutely positioned so the
+  // centered title layout is untouched; sits in the 88rpx band below the
+  // safe-area inset.
+  &__nav-bell {
+    position: absolute;
+    right: $container-padding;
+    top: calc(env(safe-area-inset-top) + 8rpx);
+    width: 72rpx;
+    height: 72rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.08);
+    }
+  }
+
+  &__nav-bell-badge {
+    position: absolute;
+    top: -4rpx;
+    right: -8rpx;
+    min-width: 32rpx;
+    height: 32rpx;
+    padding: 0 6rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  &__nav-bell-badge-text {
+    font-size: 20rpx;
+    line-height: 1;
+    color: $color-text-white;
+  }
+
   &__settings-entry {
     min-height: $cta-min-tap;
     // P6 density pass (2026-09-11): inter-section rhythm normalized from
