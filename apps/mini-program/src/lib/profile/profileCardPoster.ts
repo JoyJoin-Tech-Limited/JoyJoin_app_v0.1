@@ -43,6 +43,9 @@ export interface ProfileCardPosterInput {
   familyName?: string | null
   /** 潮流值 (gamification XP). */
   growthValue?: number | null
+  /** Static archetype tagline (curated registry copy, NOT AI) — fills the
+   *  mid-card quiet line. Null/undefined renders nothing. */
+  tagline?: string | null
   /** Pixel-avatar composite inputs; when the archetype is not pixel-supported
    *  (or no pixel id is passed) the archetype full-body art is used. */
   pixelArchetypeId?: string | null
@@ -70,7 +73,10 @@ const PORTRAIT_SIZE = 320
 const NAME_Y = 560
 const FAMILY_Y = 640
 const GROWTH_Y = 730
-const QR_BAND_Y = 1330
+// P2-3 audit C4: tagline fills the mid-card; QR band moved up 150px so the
+// bottom third reads anchored, not empty.
+const TAGLINE_Y = 850
+const QR_BAND_Y = 1180
 const QR_SIZE = 160
 const FOOTER_Y = 1500
 
@@ -146,6 +152,16 @@ export function drawProfileCardPosterContent(
     ctx.setFontSize(36)
     ctx.setTextAlign('center')
     ctx.fillText(`潮流值 ${input.growthValue}`, CENTER_X, GROWTH_Y)
+    ctx.restore()
+  }
+
+  // ── Quiet tagline line (mid-card) ──
+  if (input.tagline) {
+    ctx.save()
+    ctx.setFillStyle(PALETTE.textMuted)
+    ctx.setFontSize(30)
+    ctx.setTextAlign('center')
+    ctx.fillText(input.tagline, CENTER_X, TAGLINE_Y)
     ctx.restore()
   }
 

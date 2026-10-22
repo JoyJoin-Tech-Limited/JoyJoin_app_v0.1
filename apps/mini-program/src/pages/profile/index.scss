@@ -1001,6 +1001,41 @@
   // card — rendered text-on-text overlap (2026-08-01 audit). As flex
   // children they can never intersect; worst case (extreme content) the
   // growth card simply flows past the rail's bottom edge, never under text.
+  // P1-2 foil sweep (2026-10-22, UIUX memo §11): one -45° band at 20% width
+  // in the archetype hue (gradient inline from TSX) crosses the stage once
+  // per page instance — animation iteration 1, opacity edges hold it
+  // invisible at rest/end. translateX(-150% → 350%) per the memo; the
+  // opacity envelope makes the rest position irrelevant. z-8: above the
+  // equipment strip (z-7), pointer-events none so it never eats taps.
+  &__identity-foil-sweep {
+    position: absolute;
+    top: -10%;
+    bottom: -10%;
+    left: 0;
+    width: 20%;
+    z-index: 8;
+    pointer-events: none;
+    opacity: 0;
+    animation: profile-foil-sweep 1.6s ease-in-out 0.5s 1;
+  }
+
+  @keyframes profile-foil-sweep {
+    0% {
+      transform: translateX(-150%);
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    88% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(350%);
+      opacity: 0;
+    }
+  }
+
   &__identity-rail {
     position: absolute;
     z-index: 4;
@@ -2112,7 +2147,7 @@
     border: 1rpx solid var(--profile-divider);
     border-radius: $card-radius-sm;
     box-shadow: $shadow-card;
-    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
   }
 
   &__quest-header {
@@ -2634,7 +2669,7 @@
     display: flex;
     justify-content: center;
     margin: 0 $container-padding $spacing-md;
-    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.32s backwards;
+    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
   }
 
   &__poster-pill {
@@ -2767,6 +2802,13 @@
   .profile-page__large-title,
   .profile-page__nav-title {
     transition: none;
+  }
+
+  // P1-2: the foil sweep is pure decoration — removed entirely under RM
+  // (base opacity is 0; display:none is belt-and-suspenders).
+  .profile-page__identity-foil-sweep {
+    display: none;
+    animation: none;
   }
 }
 

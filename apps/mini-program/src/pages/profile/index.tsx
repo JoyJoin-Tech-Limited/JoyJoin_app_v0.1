@@ -473,7 +473,7 @@ export default function ProfilePage() {
     return {
       registerDone,
       steps: [
-        { key: 'assessment' as const, title: '完成人格测评', done: archetype != null, cta: '去测评' },
+        { key: 'assessment' as const, title: '完成氛围测试', done: archetype != null, cta: '去测试' },
         { key: 'bio' as const, title: '写一句聚会签名', done: !!bio && bio.trim().length > 0, cta: '去写一句' },
         { key: 'register' as const, title: '报名第一场局', done: registerDone, cta: '去挑一场' },
         { key: 'matched' as const, title: '首场成行', done: false, cta: null },
@@ -598,6 +598,7 @@ export default function ProfilePage() {
       archetypeName,
       familyName: archetypeFamilyName,
       growthValue: gamificationQuery.data?.experiencePoints ?? null,
+      tagline: archetypeTagline,
       pixelArchetypeId: pixelAvatarEnabled ? archetype : null,
       outfit,
       itemsById: equipmentItemsById,
@@ -704,6 +705,19 @@ export default function ProfilePage() {
     return {
       borderColor: formatHSLAsRGBA(hsl, 0.55),
       boxShadow: `0 16rpx 38rpx ${formatHSLAsRGBA(hsl, 0.24)}, inset 0 0 0 1rpx ${formatHSLAsRGBA(hsl, 0.14)}`,
+    }
+  }, [archetype])
+
+  // P1-2 foil sweep (UIUX memo §11): one -45° band in the archetype hue
+  // sweeps the identity stage once per page instance — the CSS animation
+  // plays on mount and tab pages never remount on tab switch, so no replay.
+  // Gradient is inline (hue is runtime); opacity edges hold it invisible at
+  // rest/end. RM + degradation tier remove it entirely.
+  const identityStageSweepStyle = useMemo(() => {
+    if (!archetype) return undefined
+    const hsl = getArchetypeHSL(archetype)
+    return {
+      background: `linear-gradient(-45deg, rgba(255, 255, 255, 0) 0%, ${formatHSLAsRGBA(hsl, 0.5)} 50%, rgba(255, 255, 255, 0) 100%)`,
     }
   }, [archetype])
 
@@ -874,10 +888,12 @@ export default function ProfilePage() {
           data-testid='profile-notification-bell'
         >
           <JoyJoinIcon emoji='🔔' tier='semantic' size={22} />
+          {/* UIUX memo §7: cap is deliberately 「9+」 (>9), NOT Discover's
+              99+ — pre-flagged divergence, do not "fix" back. */}
           {notificationUnread > 0 ? (
             <View className='profile-page__nav-bell-badge' aria-hidden='true'>
               <Text className='profile-page__nav-bell-badge-text'>
-                {notificationUnread > 99 ? '99+' : notificationUnread}
+                {notificationUnread > 9 ? '9+' : notificationUnread}
               </Text>
             </View>
           ) : null}
@@ -919,7 +935,7 @@ export default function ProfilePage() {
                 hoverClass='profile-page__identity-copy-card--pressed'
                 onClick={() => { void handleOpenPersonalityType('v17_card') }}
                 role='button'
-                aria-label={archetypeName ? `回看 ${archetypeName} 的人格测评报告` : '测测你的社交原型'}
+                aria-label={archetypeName ? `回看 ${archetypeName} 的人格测评报告` : '测测你的氛围原型'}
                 data-testid='profile-identity-copy-card'
               >
                 <View className='profile-page__identity-copy'>
@@ -963,7 +979,7 @@ export default function ProfilePage() {
                     {!showBioPrompt && (
                       <View className='profile-page__identity-affordance' aria-hidden='true'>
                         <Text className='profile-page__identity-affordance-text'>
-                          {archetypeName ? '回看报告' : '测测你的社交原型'}
+                          {archetypeName ? '回看报告' : '测测你的氛围原型'}
                         </Text>
                         <View className='profile-page__identity-affordance-chevron' />
                       </View>
@@ -1243,6 +1259,19 @@ export default function ProfilePage() {
                 </View>
               )}
             </IdentityStageScene>
+
+            {/* P1-2 foil sweep (UIUX memo §11): one -45° band in the
+                archetype hue crosses the stage once per page instance
+                (mount-only; no tab-switch replay). Overlay sibling above all
+                stage content (z-8), pointer-events none, RM/degradation off. */}
+            {archetype && !deviceTier.isDegradation && (
+              <View
+                className='profile-page__identity-foil-sweep'
+                style={identityStageSweepStyle}
+                aria-hidden='true'
+                data-testid='profile-foil-sweep'
+              />
+            )}
           </View>
         ) : (
           <View
@@ -1260,7 +1289,7 @@ export default function ProfilePage() {
             <View className='profile-page__fallback-copy'>
               <Text className='profile-page__fallback-name'>{displayName}</Text>
               <Text className='profile-page__fallback-subtitle'>
-                {archetypeName ?? '社交原型等待解锁'}
+                {archetypeName ?? '氛围原型等待解锁'}
               </Text>
               {bio && <Text className='profile-page__fallback-bio'>{bio}</Text>}
               <View

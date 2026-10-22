@@ -604,6 +604,14 @@ describe('Profile approved V4 layout', () => {
     expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.discover })
   })
 
+  it('P1-2: the foil sweep band renders on the identity stage with the archetype hue gradient', () => {
+    const { getByTestId } = render(<ProfilePage />)
+    const sweep = getByTestId('profile-foil-sweep')
+    expect(sweep.style.background).toContain('linear-gradient(-45deg')
+    // Hue comes from the archetype foil family (corgi) — rgba, never hsla.
+    expect(sweep.style.background).toContain('rgba(')
+  })
+
   it('P2-1: modules render in the three-act order (我是谁 → 我有什么 → 我能干嘛)', () => {
     state.queryStates.set('mini-program/shell/profile', {
       data: { stats: { eventsJoined: 4, connectionsCount: 2 } },
@@ -697,7 +705,7 @@ describe('Profile approved V4 layout', () => {
     ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
 
     const { getByText, getByTestId } = render(<ProfilePage />)
-    expect(getByText('测测你的社交原型')).toBeTruthy()
+    expect(getByText('测测你的氛围原型')).toBeTruthy()
 
     fireEvent.click(getByTestId('profile-identity-copy-card'))
     expect(state.navigateTo).toHaveBeenCalledWith({

@@ -224,3 +224,11 @@ V1.7 surface only (legacy `profile-page__fallback-hero` untouched, `index.tsx:85
 - Icons: `apps/mini-program/src/components/ui/JoyJoinIcon.tsx`, `packages/shared/src/iconSystem/emojiToIconMap.ts`
 - Routes: `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts:6-50`
 - Copy law: `docs/copy/brand-copy-strategy.md` §2/§3/§3.1; canon: `PRODUCT_REQUIREMENTS.md:563-567`
+
+---
+
+## Addendum — implementation-time rulings (2026-10-22, recorded by the sprint owner)
+
+- **P0-5 我的 tab dot clear semantics:** implemented as **clear-on-claim** (the dot persists until pending equipment draws are claimed; the count is re-derived from the equipment query and storage on every profile load). The plan's original "clears after profile visit" acceptance was superseded: a dot that clears on view while the claimable draws still exist is a dishonest signal. No advisor section covered P0-5; this addendum is the sign-off trail requested by the verifier.
+- **P0-1 paid-pill copy:** PM days-remaining copy (悦聚月卡 · 剩 d 天) won over UIUX memo §6's gold-rim/「生效中」 value style. Copy authority = PM; recorded here so the deviation is not re-litigated.
+- **P1-5 quest step 1 copy** aligned to the canonical page title: 完成氛围测试 / 去测试 (was 完成人格测评 / 去测评 in §2a). Same sweep as the 社交原型 → 氛围原型 copy-law fix.
