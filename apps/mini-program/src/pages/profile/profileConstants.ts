@@ -11,7 +11,10 @@ export interface MilestoneConfig {
   key: string
   label: string
   threshold: number
-  badge: string
+  /** Badge artwork URL — null while the Batch-D2 Lovart assets (5/10/20场)
+   *  are pending; locked cells then render the CSS lock medallion, unlocked
+   *  cells a gold medallion. Wire the CDN path here when the art lands. */
+  badge: string | null
   ariaLabel: string
 }
 
@@ -107,6 +110,31 @@ export const MILESTONES: MilestoneConfig[] = [
     threshold: 3,
     badge: STREAK_3_BADGE,
     ariaLabel: '三场连击徽章',
+  },
+  // P1-4 (2026-10-22, PM memo §3): the wall grows to the 5-tier ladder
+  // 1/3/5/10/20 场. Badge art for the three new tiers lands with Lovart
+  // Batch-D2 (brief: docs/design/lovart-brief-milestone-batch-d2-20261022.md)
+  // — until then badge:null renders the CSS medallion states.
+  {
+    key: 'regular5',
+    label: '渐入佳境',
+    threshold: 5,
+    badge: null,
+    ariaLabel: '渐入佳境徽章',
+  },
+  {
+    key: 'veteran10',
+    label: '悦聚常客',
+    threshold: 10,
+    badge: null,
+    ariaLabel: '悦聚常客徽章',
+  },
+  {
+    key: 'legend20',
+    label: '城市传说',
+    threshold: 20,
+    badge: null,
+    ariaLabel: '城市传说徽章',
   },
 ]
 

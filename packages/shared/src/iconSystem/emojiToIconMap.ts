@@ -239,6 +239,8 @@ export const UI_ICON_MAP: Record<string, IconMapping> = {
   '✅': { assetKey: 'icon-check', tier: 'ui', size: 48, fallbackEmoji: '✅', tint: '#8B5CF6' },
   '📝': { assetKey: 'icon-memo', tier: 'ui', size: 48, fallbackEmoji: '📝', tint: '#8B5CF6' },
   '🔍': { assetKey: 'icon-search', tier: 'ui', size: 48, fallbackEmoji: '🔍', tint: '#8B5CF6' },
+  // P1-4 badge wall (2026-10-22): lock corner on locked badge cells.
+  '🔒': { assetKey: 'icon-lock', tier: 'ui', size: 24, fallbackEmoji: '🔒', tint: '#8B5CF6' },
 }
 
 // ═══════════════════════════════════════════════════════════════════

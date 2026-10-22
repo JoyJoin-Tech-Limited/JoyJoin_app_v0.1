@@ -643,7 +643,7 @@ describe('Profile approved V4 layout', () => {
     expect(getByText('回看报告')).toBeTruthy()
   })
 
-  it('collapses milestones into a single entry row that expands the unlocked badges inline', () => {
+  it('collapses milestones into a single entry row that expands the 5-tier badge wall inline (P1-4)', () => {
     state.queryStates.set('mini-program/shell/profile', {
       data: { stats: { eventsJoined: 4, connectionsCount: 0 } },
     })
@@ -653,14 +653,20 @@ describe('Profile approved V4 layout', () => {
     const { getByTestId, getByText, queryByText } = render(<ProfilePage />)
 
     expect(getByText('成就徽章')).toBeTruthy()
-    expect(getByText('已解锁 2/2 枚')).toBeTruthy()
-    // Badge cards stay collapsed until the entry row is tapped.
+    expect(getByText('已点亮 2/5 枚')).toBeTruthy()
+    // Badge cells stay collapsed until the entry row is tapped.
     expect(queryByText('初次见面')).toBeNull()
 
     fireEvent.click(getByTestId('profile-milestones-entry'))
 
+    // P1-4: all five tiers render — 2 unlocked, 3 locked with 还差 N 场.
     expect(getByText('初次见面')).toBeTruthy()
     expect(getByText('三场连击')).toBeTruthy()
+    expect(getByText('渐入佳境')).toBeTruthy()
+    expect(getByText('悦聚常客')).toBeTruthy()
+    expect(getByText('城市传说')).toBeTruthy()
+    expect(getByText('还差 1 场')).toBeTruthy()
+    expect(getByText('还差 16 场')).toBeTruthy()
     expect(profileAnalytics.track).toHaveBeenCalledWith(
       'profile_milestone_tap',
       { action: 'expand' },

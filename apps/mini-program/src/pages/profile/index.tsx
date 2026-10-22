@@ -41,6 +41,7 @@ import { EQUIPMENT_ME_QUERY_KEY } from '../../lib/profile/equipmentQueryKeys'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { getPixelEquipmentThumbnailUrl } from '../../lib/profile/pixelAvatarAssets'
 import { writeProfileTabDotCount } from '../../lib/profile/profileTabDot'
+import { readSeenBadges, writeSeenBadges } from '../../lib/profile/badgeSeenState'
 import { haptics } from '../../lib/utils/haptics'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { localAsset } from '../../lib/utils/cdnAssets'
@@ -292,8 +293,30 @@ export default function ProfilePage() {
     setPageVisible(true)
     setAvatarBouncing(false)
     avatarBounceLockRef.current = false
-    if (!hasDidShowRef.current) {
+    setJustUnlockedKeys([])
+    const isFirstShow = !hasDidShowRef.current
+    if (isFirstShow) {
       hasDidShowRef.current = true
+    }
+    // P1-4 badge ledger: baseline on the first ready read (never ring for
+    // unlocks that predate the ledger); ring fresh unlocks on later shows.
+    // Reads cache only — runs even inside the refresh-staleness window.
+    if (authUser?.id && !isLoadingStats) {
+      const unlockedKeys = unlockedMilestones.map((milestone) => milestone.key)
+      const seen = readSeenBadges(authUser.id)
+      if (seen === null) {
+        writeSeenBadges(authUser.id, unlockedKeys)
+      } else {
+        const fresh = unlockedKeys.filter((key) => !seen.includes(key))
+        if (fresh.length > 0) {
+          haptics('success')
+          setJustUnlockedKeys(fresh)
+          writeSeenBadges(authUser.id, [...seen, ...fresh])
+          setTimeout(() => setJustUnlockedKeys([]), 1000)
+        }
+      }
+    }
+    if (isFirstShow) {
       return
     }
     if (authLoading || !authUser) return
@@ -564,6 +587,9 @@ export default function ProfilePage() {
   // entry row; no dedicated milestones route exists in the app, so the row
   // expands the unlocked badges inline (accordion) instead of navigating.
   const [milestonesOpen, setMilestonesOpen] = useState(false)
+  // P1-4: keys that unlocked since the ledger's last write — they get a
+  // one-shot ring overlay in the expanded wall (cleared after 950ms).
+  const [justUnlockedKeys, setJustUnlockedKeys] = useState<string[]>([])
   const unlockedMilestones = useMemo(
     () => MILESTONES.filter((milestone) => joinedEventsCount >= milestone.threshold),
     [joinedEventsCount],
@@ -1388,7 +1414,7 @@ export default function ProfilePage() {
               }}
               role='button'
               aria-expanded={milestonesOpen}
-              aria-label={`成就徽章，已解锁 ${unlockedMilestones.length} 枚，共 ${MILESTONES.length} 枚`}
+              aria-label={`成就徽章，已点亮 ${unlockedMilestones.length} 枚，共 ${MILESTONES.length} 枚`}
               data-testid='profile-milestones-entry'
             >
               <Image
@@ -1401,7 +1427,7 @@ export default function ProfilePage() {
               <View className='profile-page__milestones-entry-text'>
                 <Text className='profile-page__milestones-entry-title'>成就徽章</Text>
                 <Text className='profile-page__milestones-entry-summary'>
-                  {`已解锁 ${unlockedMilestones.length}/${MILESTONES.length} 枚`}
+                  {`已点亮 ${unlockedMilestones.length}/${MILESTONES.length} 枚`}
                 </Text>
               </View>
               <View
@@ -1410,25 +1436,61 @@ export default function ProfilePage() {
               />
             </View>
             {milestonesOpen && (
-              <View className='profile-page__milestones-row'>
-                {unlockedMilestones.map((milestone) => (
-                  <View
-                    key={milestone.key}
-                    className='profile-page__milestone'
-                    hoverClass='profile-page__milestone--pressed'
-                    onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
-                    role='button'
-                    aria-label={`已参加 ${milestone.threshold} 场活动`}
-                  >
-                    <Image
-                      className='profile-page__milestone-img'
-                      mode='aspectFit'
-                      src={milestone.badge}
-                      lazyLoad
-                    />
-                    <Text className='profile-page__milestone-label'>{milestone.label}</Text>
-                  </View>
-                ))}
+              <View className='profile-page__milestones-row profile-page__milestones-row--five-up'>
+                {MILESTONES.map((milestone) => {
+                  const unlocked = joinedEventsCount >= milestone.threshold
+                  const justUnlocked = justUnlockedKeys.includes(milestone.key)
+                  const remaining = milestone.threshold - joinedEventsCount
+                  return (
+                    <View
+                      key={milestone.key}
+                      className={[
+                        'profile-page__milestone',
+                        unlocked ? '' : 'profile-page__milestone--locked',
+                        justUnlocked ? 'profile-page__milestone--just-unlocked' : '',
+                      ].filter(Boolean).join(' ')}
+                      hoverClass={unlocked ? 'profile-page__milestone--pressed' : undefined}
+                      onClick={unlocked ? () => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) } : undefined}
+                      role={unlocked ? 'button' : undefined}
+                      aria-label={unlocked
+                        ? `${milestone.label}，已点亮，去浏览足迹`
+                        : `${milestone.label}，未点亮，还差 ${remaining} 场`}
+                      data-testid={`profile-milestone-${milestone.key}`}
+                    >
+                      <View className='profile-page__milestone-badge-wrap'>
+                        {milestone.badge ? (
+                          <Image
+                            className={`profile-page__milestone-img${unlocked ? '' : ' profile-page__milestone-img--locked'}`}
+                            mode='aspectFit'
+                            src={milestone.badge}
+                            lazyLoad
+                          />
+                        ) : (
+                          // Batch-D2 art pending → CSS medallion (locked:
+                          // dashed + lock glyph; unlocked: solid gold fill).
+                          <View
+                            className={`profile-page__milestone-medallion${unlocked ? ' profile-page__milestone-medallion--unlocked' : ''}`}
+                            aria-hidden='true'
+                          >
+                            {!unlocked && <JoyJoinIcon emoji='🔒' tier='ui' size={20} />}
+                          </View>
+                        )}
+                        {!unlocked && milestone.badge && (
+                          <View className='profile-page__milestone-lock' aria-hidden='true'>
+                            <JoyJoinIcon emoji='🔒' tier='ui' size={16} />
+                          </View>
+                        )}
+                        {justUnlocked && (
+                          <View className='profile-page__milestone-unlock-ring' aria-hidden='true' />
+                        )}
+                      </View>
+                      <Text className='profile-page__milestone-label'>{milestone.label}</Text>
+                      {!unlocked && (
+                        <Text className='profile-page__milestone-hint'>还差 {remaining} 场</Text>
+                      )}
+                    </View>
+                  )
+                })}
               </View>
             )}
           </View>

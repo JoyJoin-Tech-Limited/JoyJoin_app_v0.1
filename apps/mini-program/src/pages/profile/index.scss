@@ -643,6 +643,149 @@
     animation: profile-milestones-in 180ms ease-out both;
   }
 
+  // P1-4 five-up badge wall (2026-10-22, UIUX memo §1 / PM memo §3): the
+  // accordion renders ALL FIVE tiers — unlocked full art, locked silhouette
+  // (0.38 opacity, NOT filter: grayscale — WeChat unreliable) + lock corner
+  // + 还差 N 场. Cells pre-sized → the 60ms-staggered pop-in never shifts
+  // layout. Tiers without Batch-D2 art (5/10/20) render the CSS medallion.
+  &__milestones-row--five-up {
+    gap: $spacing-xs;
+
+    .profile-page__milestone {
+      position: relative;
+      padding: $spacing-sm $spacing-xs;
+      gap: 4rpx;
+      animation: profile-badge-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+      &:nth-child(2) {
+        animation-delay: 60ms;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 120ms;
+      }
+
+      &:nth-child(4) {
+        animation-delay: 180ms;
+      }
+
+      &:nth-child(5) {
+        animation-delay: 240ms;
+      }
+    }
+
+    .profile-page__milestone-img {
+      width: 72rpx;
+      height: 72rpx;
+    }
+
+    .profile-page__milestone-label {
+      font-size: $font-size-2xs;
+      white-space: nowrap;
+    }
+  }
+
+  @keyframes profile-badge-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  &__milestone--locked {
+    background: rgba($color-surface, 0.6);
+    box-shadow: none;
+  }
+
+  // The unlock ring child carries the one-shot animation; while it lives
+  // (~950ms) the freshly unlocked cell itself keeps a quiet gold tint.
+  &__milestone--just-unlocked {
+    background: rgba($color-landed-gold, 0.08);
+  }
+
+  &__milestone-img--locked {
+    opacity: 0.38;
+  }
+
+  // CSS medallion for tiers whose Batch-D2 art has not landed yet.
+  &__milestone-medallion {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    color: var(--profile-text-tertiary);
+    background: radial-gradient(circle, rgba($color-landed-gold, 0.1) 0%, rgba($color-landed-gold, 0.04) 70%);
+    border: 1rpx dashed rgba($color-landed-gold, 0.45);
+
+    &--unlocked {
+      background: radial-gradient(circle, rgba($color-landed-gold, 0.28) 0%, rgba($color-brand-gold, 0.12) 72%);
+      border: 1rpx solid rgba($color-landed-gold, 0.6);
+    }
+  }
+
+  &__milestone-badge-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__milestone-lock {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28rpx;
+    height: 28rpx;
+    border-radius: 50%;
+    background: rgba($color-text-primary, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__milestone-hint {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+  }
+
+  // One-shot ring on freshly unlocked cells (ledger diff on tab return).
+  &__milestone-unlock-ring {
+    position: absolute;
+    top: -6rpx;
+    left: -6rpx;
+    right: -6rpx;
+    bottom: -6rpx;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid rgba($color-landed-gold, 0.8);
+    opacity: 0.8;
+    animation: profile-badge-unlock-ring 0.9s ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes profile-badge-unlock-ring {
+    from {
+      opacity: 0.8;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.15);
+    }
+  }
+
   @keyframes profile-milestones-in {
     from {
       opacity: 0;
@@ -2266,6 +2409,12 @@
     animation: none;
     opacity: 0;
   }
+
+  // P1-4: the unlock ring keeps its static gold rim under RM (animation off,
+  // border stays); the pop-in is killed via the .profile-page__milestone rule.
+  .profile-page__milestone-unlock-ring {
+    animation: none;
+  }
 }
 
 // Narrow-device guard: the identity rail + partner visual are both absolutely
@@ -2292,6 +2441,14 @@
   // the first thing to go on ≤340px — capsule stays a single line.
   .profile-page__streak-hint {
     display: none;
+  }
+
+  // P1-4 (UIUX memo §1 risk a): 5-up cells shrink to ≈105rpx on ≤340px —
+  // badge art and the CSS medallion drop to 64rpx.
+  .profile-page__milestones-row--five-up .profile-page__milestone-img,
+  .profile-page__milestones-row--five-up .profile-page__milestone-medallion {
+    width: 64rpx;
+    height: 64rpx;
   }
 
   .profile-page__partner-visual {
