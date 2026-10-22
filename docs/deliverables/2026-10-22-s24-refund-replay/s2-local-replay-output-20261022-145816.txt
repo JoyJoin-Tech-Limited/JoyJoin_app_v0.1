@@ -1,0 +1,79 @@
+
+---- 0) 前置检查（psql/curl/端口空闲/.env 存在）
+目标端口: 5002（取自 .env PORT，默认 5001）
+
+---- 1) .env 四件套归一（PRE_REVEAL_REFUND_ENABLED/MOCK_PAYMENTS/APP_MODE/TEST_PAYMENT_PRICE_IN_CENTS）
+PRE_REVEAL_REFUND_ENABLED=true
+MOCK_PAYMENTS=true
+APP_MODE=staging
+TEST_PAYMENT_PRICE_IN_CENTS=1
+（NO_REFUND_AFTER_REVEAL_ENABLED 保持原值——pre-reveal 分支不读它）
+
+---- 2) 本地 feature_flags 覆盖行检查（DB 行优先于 env；须无行 env=true 才生效）
+无覆盖行 → env fallback 生效（PRE_REVEAL_REFUND_ENABLED=true）
+
+---- 3) 启动 dev server（NODE_ENV=development override，端口 5002）
+server pid=96068
+PASS: dev server 就绪
+
+---- 4) POST /api/auth/dev-login
+{"message":"Dev login successful","userId":"8ff39198-09e8-4abd-9b17-9a5b23388a2e"}
+PASS: dev-login userId=8ff39198-09e8-4abd-9b17-9a5b23388a2e
+
+---- 5) 种子（QA_S24 标识；is_test_pool=false 硬要求）
+POOL_ID=42ef8210-0402-4203-816a-bd209f01851b
+REG_ID=5a737ca4-cc46-4a52-b52c-979989af7b9d
+PAY_ID=ccbb3828-bf65-4cd2-ab75-59e51b35d436  (wechat_order_id=MOCK_S24_1792652296)
+PASS: 种子就位
+
+---- 6) 检查① GET /api/my-pool-registrations（期望该报名 cancelPolicy='refundable'）
+[{"id":"5a737ca4-cc46-4a52-b52c-979989af7b9d","poolId":"42ef8210-0402-4203-816a-bd209f01851b","budgetRange":null,"preferredLanguages":null,"eventIntent":null,"matchStatus":"pending","assignedGroupId":null,"matchScore":null,"registeredAt":"2026-10-22T14:58:29.136Z","poolTitle":"QA_S24本地复演池-1792652296 勿报名","poolEventType":"饭局","poolCity":"深圳","poolDistrict":null,"poolDateTime":"2026-10-24T14:58:28.983Z","poolStatus":"active","poolOperatorReviewStatus":"none","theme":null,"subtitle":null,"vibe":null,"themeEmoji":null,"highlights":[],"venueName":null,"venueAddress":null,"finalDateTime":null,"groupOperatorReviewStatus":null,"invitationRole":null,"relatedUserName":null,"cancelPolicy":"refundable"}]
+PASS: ①cancelPolicy=refundable 在 DTO 上（AC-9；computeRegistrationCancelPolicy L110-121）
+
+---- 7) 检查② DELETE /api/pool-registrations/5a737ca4-cc46-4a52-b52c-979989af7b9d（期望 200 + policy=pre_reveal_refund）
+{"ok":true,"cancelledRegistrationIds":["5a737ca4-cc46-4a52-b52c-979989af7b9d"],"policy":"pre_reveal_refund"}
+HTTP_STATUS:200
+PASS: ②取消响应 policy=pre_reveal_refund（userEventPools.ts L1498-1502）
+
+---- 7b) DB 复核：payments / refund_attempts / registration / pool 计数
+-[ RECORD 1 ]---+-------------------------------------
+id              | ccbb3828-bf65-4cd2-ab75-59e51b35d436
+status          | refunded
+final_amount    | 1
+wechat_order_id | MOCK_S24_1792652296
+
+-[ RECORD 1 ]----+---------------------------------------------
+status           | success
+reason           | 揭示前取消，全额退款
+wechat_refund_id | MOCK_RF_ccbb3828-bf65-4cd2-ab75-59e51b35d436
+amount           | 1
+initiated_by     | user-cancel
+
+-[ RECORD 1 ]--------------+--
+registration_rows_expect_0 | 0
+
+-[ RECORD 1 ]-------+--
+pool_count_expect_0 | 0
+
+PASS: ②payments.status=refunded（finalizeRefundedPayment L555-561）
+PASS: ②refund_attempts 成功行（MOCK_RF_ / user-cancel）
+PASS: ②报名行已删除（先退款成功后删行，Amendment 1 顺序）
+
+---- 7c) 服务端日志证据（policy branch resolved → pre_reveal_refund；refundedMoney:true）
+{"timestamp":"2026-10-22T06:58:29.464Z","level":"info","service":"joyjoin-server","message":"[MyPoolRegistrationsCancel] policy branch resolved","userId":"8ff39198-09e8-4abd-9b17-9a5b23388a2e","registrationId":"5a737ca4-cc46-4a52-b52c-979989af7b9d","poolId":"42ef8210-0402-4203-816a-bd209f01851b","matchStatus":"pending","isTestPool":false,"preRevealRefundEnabled":true,"noRefundAfterReveal":true,"branch":"pre_reveal_refund"}
+{"timestamp":"2026-10-22T06:58:29.505Z","level":"info","service":"joyjoin-server","message":"[MyPoolRegistrationsCancel] pre-reveal cancel with refund complete","userId":"8ff39198-09e8-4abd-9b17-9a5b23388a2e","registrationId":"5a737ca4-cc46-4a52-b52c-979989af7b9d","poolId":"42ef8210-0402-4203-816a-bd209f01851b","refundedMoney":true,"alreadyRefunded":false,"reversedCredit":false}
+PASS: 日志分支命中 pre_reveal_refund
+
+---- 8) 检查③ credits：本复演走 MOCK 现金路径未用 credits → N/A（credits 逆转由 smoke:auto-refund 与 poolRegistrationCancelFlow.test.ts 覆盖）
+
+---- 8b) 检查④ admin_audit_logs：pre-reveal 用户自取消【按设计不写】admin 审计
+admin_audit_logs 中本报名条目数: 0
+PASS: ④与设计一致=0（审计词表取消类仅 POST_REVEAL_CANCEL_NO_REFUND L64 / POOL_REGISTRATION_CANCELLED_BY_ADMIN L81；pre-reveal 资金证据在 refund_attempts；staging 开关审计由 S1 的 FEATURE_FLAG_UPDATED 行承担）
+
+================ 汇总 ================
+S2 LOCAL REPLAY: ALL PASS
+完整输出: /Users/vincentlai/GitHub/JoyJoin_app_v0.1/docs/deliverables/2026-10-22-s24-refund-replay/s2-local-replay-output-20261022-145816.txt
+
+---- CLEANUP（kill server / 删种子 / 恢复 flag 行 / 恢复 .env）
+.env 已恢复
+残留复核: 0 笔 MOCK_S24 支付残留（期望 0）

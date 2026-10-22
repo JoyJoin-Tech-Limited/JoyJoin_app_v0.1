@@ -1,0 +1,33 @@
+
+================ S1.0  sanity：staging API 存活（公开端点，无鉴权） ================
+{"status":"ok","tencentMapConfigured":true,"tencentMapFingerprint":"f85cb60f7c65"}
+
+================ S1.1  feature_flags 当前值（期望 preRevealRefundEnabled='true'；noRefundAfterReveal 无行或 'false'） ================
+-[ RECORD 1 ]-----------------------------
+key        | preRevealRefundEnabled
+value      | true
+updated_at | 2026-10-21 07:12:34.901833+00
+updated_by | opencode-orchestrator
+
+
+================ S1.2  admin_audit_logs：两 flag 的 FEATURE_FLAG_UPDATED 历史（新→旧，10 行） ================
+-[ RECORD 1 ]------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+audit_id           | audit-t46-20261021-prereveal
+timestamp          | 2026-10-21 07:12:34.901833
+admin_id           | opencode-orchestrator
+admin_role         | delegated
+action             | FEATURE_FLAG_UPDATED
+target_entity_type | feature_flag
+target_entity_id   | preRevealRefundEnabled
+context            | {"env": "staging", "note": "noRefundAfterReveal stays OFF", "ticket": "T46 sprint S2.3", "delegated": true, "requestedBy": "vincentlai via OpenCode session", "legalSignoff": "2026-10-20-t46-p0a-legal-ops-signoff.md"}
+
+
+================ S1.3  PASS 判据（人工核对本输出） ================
+P1  S1.1 必须含 preRevealRefundEnabled 行且 value='true'。
+P2  S1.1 中 noRefundAfterReveal 不存在 或 value='false'。
+P3  S1.2 最新一条 preRevealRefundEnabled 审计行 context->>value='true'，
+    timestamp 落在 2026-10-22（用户本人今日手动 toggle）；admin_role='super_admin'。
+P4  对照基线：2026-10-21 L1/L2 输出已见 value='true'（report.md E1）。
+    若 S1.2 显示 10-21→10-22 间存在 false→true 翻转，说明期间曾被关、今日重开——同样满足 P3。
+
+完成。输出已写入 docs/deliverables/2026-10-22-s24-refund-replay/s1-staging-flag-evidence-output-20261022-145752.txt —— 请贴回 QA 子会话判定。
