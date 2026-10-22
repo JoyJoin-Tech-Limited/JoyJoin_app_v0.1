@@ -839,6 +839,14 @@
       color: $color-primary-dark;
       background: rgba($color-primary, 0.12);
     }
+
+    // P0-3: tribe family pill — landed-gold tint (level-plate family), kept
+    // quieter than the --primary archetype pill so hierarchy stays name-first.
+    &--family {
+      color: $color-primary-dark;
+      background: rgba($color-landed-gold, 0.14);
+      border-color: rgba($color-landed-gold, 0.4);
+    }
   }
 
   &__identity-bio {
@@ -851,6 +859,19 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // P0-3: the daily greeting is a full sentence (13-18 chars) — it gets a
+    // 2-line clamp instead of nowrap-ellipsis so the line actually reads.
+    // User-authored bios keep the single-line ellipsis above. Height impact:
+    // ≤ +1 line (26rpx), absorbed by the rail's reservation gap.
+    &--daily {
+      max-width: none;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+    }
   }
 
   &__identity-affordance {

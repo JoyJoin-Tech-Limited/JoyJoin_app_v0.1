@@ -52,6 +52,8 @@ import {
   getProfilePersonalityActionLabel,
   getProfileV17DataPolicy,
   isProfileV17Enabled,
+  ARCHETYPE_FAMILY_NAME,
+  getDailyGreeting,
   MILESTONES,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
@@ -359,6 +361,10 @@ export default function ProfilePage() {
   const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
   const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
   const archetypeName = archetype ? (ARCHETYPE_BY_ID[archetype]?.nameCn || archetype) : null
+  // P0-3: tribe family name + daily-rotating greeting (both keyed off the
+  // resolved archetype; constants lived unused in profileConstants).
+  const archetypeFamilyName = archetype ? (ARCHETYPE_FAMILY_NAME[archetype] ?? null) : null
+  const dailyGreeting = useMemo(() => getDailyGreeting(archetype), [archetype])
   const lifeStage = authUser?.lifeStage
   const bio = typeof authUser?.bio === 'string' ? authUser.bio.trim() : null
   const genderLabel = getGenderLabel(authUser?.gender)
@@ -455,7 +461,9 @@ export default function ProfilePage() {
     if (!archetype || !(archetype in archetypeRegistry)) return null
     return archetypeRegistry[archetype as keyof typeof archetypeRegistry]?.narrative.tagline ?? null
   }, [archetype])
-  const displayBio = bio || archetypeTagline || null
+  // P0-3: user's own bio always wins; the daily greeting beats the static
+  // tagline so the card says something fresh each day.
+  const displayBio = bio || dailyGreeting || archetypeTagline || null
 
   // Entrance stagger: the `--entered` modifiers are driven by mounted state so
   // the CSS transitions actually play. Delays live in SCSS (stage 0ms → stats
@@ -705,6 +713,11 @@ export default function ProfilePage() {
                           {archetypeName}
                         </Text>
                       )}
+                      {archetypeFamilyName && (
+                        <Text className='profile-page__identity-tag profile-page__identity-tag--family'>
+                          {archetypeFamilyName}
+                        </Text>
+                      )}
                       {lifeStage && (
                         <Text className='profile-page__identity-tag'>{lifeStage}</Text>
                       )}
@@ -712,7 +725,11 @@ export default function ProfilePage() {
                         <Text className='profile-page__identity-tag'>{genderLabel}</Text>
                       )}
                     </View>
-                    {displayBio && <Text className='profile-page__identity-bio'>{displayBio}</Text>}
+                    {displayBio && (
+                      <Text className={`profile-page__identity-bio${!bio && dailyGreeting ? ' profile-page__identity-bio--daily' : ''}`}>
+                        {displayBio}
+                      </Text>
+                    )}
                     {!showBioPrompt && (
                       <View className='profile-page__identity-affordance' aria-hidden='true'>
                         <Text className='profile-page__identity-affordance-text'>

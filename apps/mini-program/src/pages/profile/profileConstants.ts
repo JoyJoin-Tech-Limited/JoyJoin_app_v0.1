@@ -130,8 +130,8 @@ export const ARCHETYPE_FAMILY_NAME: Record<string, string> = {
 export const ARCHETYPE_GREETINGS: Record<string, string[]> = {
   corgi: ['气氛组就位，今天准备带哪场节奏？', '有你在的局，场子不会冷', '下一场热闹，缺你不行'],
   rooster: ['小太阳模式开启，今天想照亮谁？', '你的能量场，正在吸引同频的人', '去活动页，把你的光洒出去'],
-  hamster_praise: ['夸夸雷达启动，今天也想给人打气', '你的每一句“好棒”都是社交货币', '去遇见值得被夸奖的人'],
-  fox: ['狐狸雷达启动，今天又想嗅到什么新鲜事？', '探险家，下一张社交地图等你解锁', '去活动页，继续你的发现之旅'],
+  hamster_praise: ['夸夸雷达启动，今天也想给人打气', '你的每一句“好棒”都会被人记住', '去遇见值得被夸奖的人'],
+  fox: ['狐狸雷达启动，今天又想嗅到什么新鲜事？', '探险家，下一张城市地图等你解锁', '去活动页，继续你的发现之旅'],
   dolphin_calm: ['灵感接收器已打开，今天会有什么新连接？', '读空气的你，适合去个舒服的小局', '慢慢来，对的人正在靠近'],
   spider: ['织网时间到，今天想遇见哪位同路人？', '你的细腻观察，正在编织真正的连接', '去活动页，扩展你的人脉网'],
   koala: ['树洞已暖好，慢慢来也挺好', '今天想安静充电，还是去个温柔的小局？', '你的倾听，会让某个人感到被接住'],
@@ -140,6 +140,24 @@ export const ARCHETYPE_GREETINGS: Record<string, string[]> = {
   elephant: ['定海神针在线，今天想稳住哪个局？', '可靠如你，是大家想靠近的底气', '去活动页，继续成为那个让人安心的人'],
   turtle: ['慢热星球运行稳定，今天想先观察还是加入？', '不着急，真正合适的连接会等你', '去活动页，按自己的节奏认识人'],
   cat: ['静音模式运行良好，今天想被世界怎样轻轻打扰？', '你的存在本身，就是一种舒适的信号', '去活动页，找到尊重你边界的人'],
+}
+
+/**
+ * P0-3 (2026-10-22): daily-rotating greeting for the identity card's bio
+ * line. Deterministic per calendar day (day-of-year % pool size) so the line
+ * is stable within a day but fresh across days. Returns null for unknown
+ * archetypes — callers then fall back to the static archetype tagline.
+ */
+export function getDailyGreeting(
+  archetype: string | null | undefined,
+  date: Date = new Date(),
+): string | null {
+  if (!archetype) return null
+  const pool = ARCHETYPE_GREETINGS[archetype]
+  if (!pool || pool.length === 0) return null
+  const startOfYear = new Date(date.getFullYear(), 0, 1)
+  const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / 86_400_000)
+  return pool[dayOfYear % pool.length] ?? null
 }
 
 export function getProfileCompletion(user?: AuthUser | null): number {

@@ -10,6 +10,8 @@ import {
   isProfileV17Enabled,
   MILESTONES,
   ARCHETYPE_FAMILY_NAME,
+  ARCHETYPE_GREETINGS,
+  getDailyGreeting,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
 import type { AuthUser } from '../../hooks/useAuth'
@@ -237,5 +239,34 @@ describe('profileConstants', () => {
         expect(ARCHETYPE_FAMILY_NAME[id]).toBeTruthy()
       })
     })
+  })
+})
+
+describe('getDailyGreeting (P0-3, 2026-10-22)', () => {
+  it('returns a greeting from the archetype pool', () => {
+    const greeting = getDailyGreeting('corgi', new Date('2026-10-22T08:00:00'))
+    expect(greeting).not.toBeNull()
+    expect(ARCHETYPE_GREETINGS.corgi).toContain(greeting)
+  })
+
+  it('is deterministic within a day and rotates across days', () => {
+    const morning = new Date('2026-10-22T08:00:00')
+    const evening = new Date('2026-10-22T20:00:00')
+    expect(getDailyGreeting('fox', morning)).toBe(getDailyGreeting('fox', evening))
+    // +1 day always shifts dayOfYear % 3 by one → a different pool entry.
+    const nextDay = new Date('2026-10-23T08:00:00')
+    expect(getDailyGreeting('fox', nextDay)).not.toBe(getDailyGreeting('fox', morning))
+  })
+
+  it('returns null for unknown or missing archetypes', () => {
+    expect(getDailyGreeting('nope')).toBeNull()
+    expect(getDailyGreeting(null)).toBeNull()
+    expect(getDailyGreeting(undefined)).toBeNull()
+  })
+
+  it('every family-named archetype also has a greeting pool', () => {
+    for (const key of Object.keys(ARCHETYPE_FAMILY_NAME)) {
+      expect(ARCHETYPE_GREETINGS[key]?.length).toBeGreaterThan(0)
+    }
   })
 })
