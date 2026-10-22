@@ -523,16 +523,22 @@ export class LegacyStorageRepo implements LegacyStorage {
       SELECT COALESCE(SUM(final_amount), 0)::int as total FROM payments WHERE status = 'completed'
     `);
     
-    // Subscription revenue
+    // Subscription revenue.
+    // 2026-10-22: subscriptions are persisted with payment_type='event_bundle'
+    // (routes/domains/payments.ts writes them via the bundle path), so filtering
+    // on 'subscription' alone made this figure structurally ¥0 — and it feeds
+    // AdminFinancePage + AdminSubscriptionsPage.
     const subscriptionRevenue = await db.execute(sql`
       SELECT COALESCE(SUM(final_amount), 0)::int as total FROM payments 
-      WHERE payment_type = 'subscription' AND status = 'completed'
+      WHERE payment_type IN ('subscription', 'event_bundle') AND status = 'completed'
     `);
     
-    // Event revenue
+    // Event revenue — includes 三连局包/六连局包 (payment_type='event_pack'),
+    // which the old 'event'-only filter dropped entirely, leaving pack revenue
+    // visible only inside totalRevenue.
     const eventRevenue = await db.execute(sql`
       SELECT COALESCE(SUM(final_amount), 0)::int as total FROM payments 
-      WHERE payment_type = 'event' AND status = 'completed'
+      WHERE payment_type IN ('event', 'event_pack') AND status = 'completed'
     `);
     
     // Total payments count

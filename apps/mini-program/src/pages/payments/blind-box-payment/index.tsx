@@ -200,7 +200,10 @@ function buildRitualContext(
       },
       socialProof: {
         recentChoosers: 0,
-        isRecommended: key === 'vip_quarterly',
+        // 2026-10-22: 不再标榜任何档位「最受欢迎」。recentChoosers 恒为 0
+        // （真实选择数从未采集），任何排序文案都是编造的社交证明，违反
+        // docs/copy/brand-copy-strategy.md §2。字段保留仅为埋点签名兼容。
+        isRecommended: false,
       },
       badge: getMiniProgramPaymentPlanMeta(key).badge,
       supportCopy: getMiniProgramPaymentPlanMeta(key).supportCopy,
@@ -317,7 +320,9 @@ export default function BlindBoxPaymentPage() {
   const theme = useArchetypeTheme(userArchetype)
 
   // ─── Legacy State (preserved) ───
-  const [selectedPlan, setSelectedPlan] = useState<MiniProgramPaymentPlanKey>('vip_quarterly')
+  // 2026-10-22: 默认预选从季卡改为月卡。季卡对月卡零折扣（¥294/90 天 与
+  // ¥98/30 天同为 ¥16.3/场），预选季卡等于要求用户多付 3 倍预付款换 0% 优惠。
+  const [selectedPlan, setSelectedPlan] = useState<MiniProgramPaymentPlanKey>('vip_monthly')
   const [plans, setPlans] = useState<Record<MiniProgramPaymentPlanKey, PricingPlan>>(
     DEFAULT_MINI_PROGRAM_PAYMENT_PLANS,
   )

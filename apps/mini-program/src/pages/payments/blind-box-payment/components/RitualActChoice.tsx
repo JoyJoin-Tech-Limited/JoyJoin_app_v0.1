@@ -2,7 +2,7 @@ import { View, Text } from '@tarojs/components'
 import { memo, useCallback, useMemo } from 'react'
 import Card from '../../../../components/ui/Card'
 import type { ArchetypeTheme, RitualPlan } from '../lib/paymentRitualState'
-import { getActIIICopy, getSocialProofCopy, getStepAchievementCopy } from '../lib/paymentRitualCopy'
+import { getActIIICopy, getStepAchievementCopy } from '../lib/paymentRitualCopy'
 import { trackPlanSelect } from '../lib/paymentRitualAnalytics'
 import { formatMiniProgramPaymentPrice } from '../../../../lib/payment/paymentPageModel'
 
@@ -108,11 +108,6 @@ function PlanPathCard({
   totalMembers,
   onSelect,
 }: PlanCardProps) {
-  const socialProofText = getSocialProofCopy(
-    plan.socialProof.recentChoosers,
-    null,
-    plan.socialProof.isRecommended,
-  )
   const description = copy.planDescriptions[plan.id] || plan.description
   const reason = copy.planReasons[plan.id]
 
@@ -136,14 +131,6 @@ function PlanPathCard({
 
         {/* Badge & Title Row */}
         <View className='plan-path-card__topline'>
-          {plan.socialProof.isRecommended && (
-            <View
-              className='plan-path-card__badge plan-path-card__badge--recommended'
-              style={{ backgroundColor: theme.accentSoft }}
-            >
-              <Text style={{ color: theme.accentText }}>大家最爱选</Text>
-            </View>
-          )}
           <Text className='plan-path-card__title'>{plan.displayName}</Text>
         </View>
 
@@ -190,9 +177,6 @@ function PlanPathCard({
             </View>
           )}
         </View>
-
-        {/* Social Proof (Belonging) */}
-        <Text className='plan-path-card__social-proof'>{socialProofText}</Text>
 
         {/* Position indicator (Achievement + Belonging) */}
         {isSelected && (
