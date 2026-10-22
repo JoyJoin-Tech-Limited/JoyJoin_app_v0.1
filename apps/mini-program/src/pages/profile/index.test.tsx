@@ -53,6 +53,9 @@ vi.mock('@tarojs/components', () => ({
   Text: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => <span {...props}>{children}</span>,
   Image: ({ lazyLoad: _lazyLoad, mode: _mode, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { lazyLoad?: boolean; mode?: string }) => <img {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, enhanced: _enhanced, showScrollbar: _showScrollbar, ...props }: React.HTMLAttributes<HTMLDivElement> & { scrollY?: boolean; enhanced?: boolean; showScrollbar?: boolean }) => <div {...props}>{children}</div>,
+  // P2-3: the poster canvas is an offscreen bitmap target — a plain canvas
+  // element suffices for jsdom (no 2D context calls happen in page tests).
+  Canvas: ({ canvasId, style }: { canvasId?: string; style?: React.CSSProperties }) => <canvas id={canvasId} style={style} />,
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -552,6 +555,12 @@ describe('Profile approved V4 layout', () => {
 
     fireEvent.click(getByTestId('profile-quest-cta-register'))
     expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.discover })
+  })
+
+  it('P2-3: 存下这张卡 entry renders under the story card when an archetype exists', () => {
+    const { getByTestId, getByText } = render(<ProfilePage />)
+    expect(getByTestId('profile-poster-entry')).toBeTruthy()
+    expect(getByText('存下这张卡')).toBeTruthy()
   })
 
   it('P2-2: story card carries the latest chapter title and the pending-experience badge', () => {

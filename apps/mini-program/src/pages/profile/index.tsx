@@ -13,7 +13,7 @@ import { formatHSLAsRGBA, getArchetypeHSL, getContrastSafeArchetypeColor } from 
 import { getGuidanceTipCopy } from '@shared/copy/guidanceCopy'
 import type { PersonalStoryResponse } from '@joyjoin/shared/schema'
 import { useQuery } from '@tanstack/react-query'
-import { Image, ScrollView, Text, View } from '@tarojs/components'
+import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
@@ -42,6 +42,8 @@ import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { getPixelEquipmentThumbnailUrl } from '../../lib/profile/pixelAvatarAssets'
 import { writeProfileTabDotCount } from '../../lib/profile/profileTabDot'
 import { readSeenBadges, writeSeenBadges } from '../../lib/profile/badgeSeenState'
+import { useProfileCardShare } from '../../lib/profile/useProfileCardShare'
+import { PROFILE_CARD_CANVAS_ID } from '../../lib/profile/profileCardPoster'
 import { haptics } from '../../lib/utils/haptics'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { localAsset } from '../../lib/utils/cdnAssets'
@@ -536,6 +538,24 @@ export default function ProfilePage() {
   const equipmentTeaserCopy = equipmentTeaserStage >= 1
     ? '赴约并完成反馈，即可抽一件'
     : '报名一场局，结束后可抽一件'
+
+  // P2-3 形象名片 (PM memo §8): rebuilt on the compliant canvas pipeline —
+  // pixel-avatar composite (archetype art fallback) + displayName + 家族名 +
+  // 潮流值 + QR. City/age/interests/bio/referral are structurally excluded
+  // from ProfileCardPosterInput; no incentive wording (诱导分享 ban).
+  const profileCardShare = useProfileCardShare({
+    enabled: !!archetype,
+    card: {
+      displayName,
+      archetypeName,
+      familyName: archetypeFamilyName,
+      growthValue: gamificationQuery.data?.experiencePoints ?? null,
+      pixelArchetypeId: pixelAvatarEnabled ? archetype : null,
+      outfit,
+      itemsById: equipmentItemsById,
+      archetypeAsset: archetype ? (ARCHETYPE_ASSET_MAP[archetype]?.webp ?? null) : null,
+    },
+  })
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   // P2-2 (PM memo §6): serialized story entry — title carries the latest
   // chapter's real title (chapters are ascending by chapterNumber, repo
@@ -1433,6 +1453,28 @@ export default function ProfilePage() {
           </View>
         )}
 
+        {/* P2-3 形象名片 entry — quiet text-pill directly under the story
+            card (PM memo §8). Visible when an archetype exists. */}
+        {profileV17DataPolicy.personalStoryEnabled && archetype && (
+          <View className='profile-page__poster-entry'>
+            <View
+              className={`profile-page__poster-pill${profileCardShare.isGenerating ? ' profile-page__poster-pill--busy' : ''}`}
+              hoverClass={profileCardShare.isGenerating ? undefined : 'profile-page__poster-pill--pressed'}
+              onClick={() => {
+                if (!profileCardShare.isGenerating) void profileCardShare.handleShare()
+              }}
+              role='button'
+              aria-disabled={profileCardShare.isGenerating}
+              aria-label={profileCardShare.isGenerating ? '正在生成卡片' : '存下这张卡'}
+              data-testid='profile-poster-entry'
+            >
+              <Text className='profile-page__poster-pill-text'>
+                {profileCardShare.isGenerating ? '正在生成…' : '存下这张卡'}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {profileV17Enabled && !isLoadingStats && joinedEventsCount >= 1 && (
           <View className='profile-page__milestones'>
             {/* P6b density redesign: badge grid collapsed to a single entry
@@ -1551,6 +1593,16 @@ export default function ProfilePage() {
 
         <View className='profile-page__spacer' />
       </ScrollView>
+
+      {/* P2-3: offscreen canvas for the profile card poster. Off-screen but
+          full internal bitmap size — canvasToTempFilePath exports blank when
+          the bitmap dimensions don't match (results-page convention). */}
+      <Canvas
+        canvasId={PROFILE_CARD_CANVAS_ID}
+        className='profile-page__poster-canvas'
+        style={{ width: '1080px', height: '1560px' }}
+        aria-hidden='true'
+      />
 
       {/* P6 first-visit guidance tip (C4 queue): docked overlay above the
           tab bar — fixed-positioned so it never pushes page content down.

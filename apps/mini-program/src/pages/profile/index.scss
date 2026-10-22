@@ -2405,6 +2405,54 @@
     @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-md + $spacing-xs);
     height: 0;
   }
+
+  // P2-3 形象名片 entry (PM memo §8): quiet text-pill centered under the
+  // story card. Enters right after the story card's stagger slot.
+  &__poster-entry {
+    display: flex;
+    justify-content: center;
+    margin: 0 $container-padding $spacing-md;
+    animation: profile-row-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.26s backwards;
+  }
+
+  &__poster-pill {
+    min-height: 56rpx;
+    padding: 6rpx $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.9);
+    border: 1rpx solid var(--profile-divider);
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.96);
+      background: var(--profile-primary-06);
+    }
+
+    &--busy {
+      opacity: 0.6;
+    }
+  }
+
+  &__poster-pill-text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: var(--profile-text-secondary);
+    white-space: nowrap;
+  }
+
+  &__poster-canvas {
+    // Off-screen but full internal bitmap size — canvasToTempFilePath
+    // exports blank when the bitmap dimensions don't match (results-page
+    // convention; bitmap dimensions supplied inline in px on the Canvas).
+    position: fixed;
+    left: -9999rpx;
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2426,6 +2474,7 @@
   .profile-page__settings-entry,
   .profile-page__entitlement-strip,
   .profile-page__quest,
+  .profile-page__poster-entry,
   .profile-page__milestone {
     opacity: 1;
     transform: none;
