@@ -1,14 +1,16 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminWorkspaceTabs } from "@/components/admin/AdminWorkspaceTabs";
 import { AdminGuard } from "@/components/admin/AdminGuard";
 import { Redirect, Route, Switch, useLocation, Link } from "wouter";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { usePageTitle, getPageTitle } from "@/hooks/admin/usePageTitle";
+import { findWorkspaceForPath } from "@/lib/adminNavConfig";
 import { Button } from "@/components/ui/button";
 import { Compass } from "lucide-react";
 
-const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboardSwitch"));
 const AdminWarRoomPage = lazy(() => import("@/pages/admin/AdminWarRoomPage"));
 const AdminUsersPage = lazy(() => import("@/pages/admin/AdminUsersPage"));
 const AdminSubscriptionsPage = lazy(() => import("@/pages/admin/AdminSubscriptionsPage"));
@@ -20,6 +22,7 @@ const AdminEventPoolsPage = lazy(() => import("@/pages/admin/AdminEventPoolsPage
 const AdminFinancePage = lazy(() => import("@/pages/admin/AdminFinancePage"));
 const AdminDataInsightsPage = lazy(() => import("@/pages/admin/AdminDataInsightsPage"));
 const AdminOutcomeAnalyticsPage = lazy(() => import("@/pages/admin/AdminOutcomeAnalyticsPage"));
+const AdminFunnelPage = lazy(() => import("@/pages/admin/AdminFunnelPage"));
 const AdminIcebreakerAiFeedbackPage = lazy(() => import("@/pages/admin/AdminIcebreakerAiFeedbackPage"));
 const AdminContentPage = lazy(() => import("@/pages/admin/AdminContentPage"));
 const AdminModerationPage = lazy(() => import("@/pages/admin/AdminModerationPage"));
@@ -64,6 +67,9 @@ export default function AdminLayout() {
   usePageTitle(location);
 
   const pageTitle = getPageTitle(location).split(" · ")[0];
+  // 面包屑：侧边栏已把 32 个入口收成 16 个，标题单独出现时看不出自己
+  // 在哪个工作区里。这里补一层「工作区 / 页面」，让深链接落地页也有方位感。
+  const activeWorkspace = useMemo(() => findWorkspaceForPath(location), [location]);
   const sidebarStyle = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
@@ -78,7 +84,17 @@ export default function AdminLayout() {
           <header className="flex min-w-0 items-center justify-between gap-3 border-b px-4 py-3 md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="text-lg font-medium">{pageTitle}</h1>
+              <div className="flex min-w-0 items-center gap-2">
+                {activeWorkspace && (
+                  <>
+                    <span className="truncate text-sm text-muted-foreground">
+                      {activeWorkspace.workspace.label}
+                    </span>
+                    <span className="text-sm text-muted-foreground/60">/</span>
+                  </>
+                )}
+                <h1 className="truncate text-lg font-medium">{pageTitle}</h1>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="max-w-32 truncate text-sm text-muted-foreground">
@@ -87,6 +103,7 @@ export default function AdminLayout() {
             </div>
           </header>
           <main className="min-w-0 flex-1 overflow-auto bg-muted/30">
+            <AdminWorkspaceTabs />
             <Suspense fallback={<div className="flex h-full items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
               <Switch>
                 <Route path="/admin"><Redirect to="/admin/dashboard" /></Route>
@@ -107,6 +124,7 @@ export default function AdminLayout() {
                 <Route path="/admin/duo-invites" component={AdminDuoInvitesPage} />
                 <Route path="/admin/banners" component={AdminBannersPage} />
                 <Route path="/admin/insights" component={AdminDataInsightsPage} />
+                <Route path="/admin/funnel" component={AdminFunnelPage} />
                 <Route path="/admin/outcome-analytics" component={AdminOutcomeAnalyticsPage} />
                 <Route path="/admin/icebreaker-ai-feedback" component={AdminIcebreakerAiFeedbackPage} />
                 <Route path="/admin/feedback" component={AdminFeedbackPage} />

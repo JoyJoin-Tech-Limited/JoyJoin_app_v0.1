@@ -30,12 +30,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/ui/use-toast";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, X, Users, Eye } from "lucide-react";
+import { Loader2, Check, X, Users, Eye, Info } from "lucide-react";
 import { safeFormat } from "@/lib/dateUtils";
 
 type ReviewStatus = "pending" | "approved" | "rejected" | "all";
@@ -96,6 +98,7 @@ const statusBadge: Record<string, { label: string; variant: "default" | "seconda
 
 export default function AdminMatchingReviewsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<ReviewStatus>("pending");
   const [viewPoolId, setViewPoolId] = useState<string | null>(null);
@@ -103,6 +106,12 @@ export default function AdminMatchingReviewsPage() {
   const [approvePoolId, setApprovePoolId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [announcement, setAnnouncement] = useState("");
+  // Batch approval: selection lives in an array (not a Set) so React state
+  // updates stay predictable. Capped at 20 server-side and mirrored here.
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+
+  const BATCH_LIMIT = 20;
 
   const { data, isLoading, error, refetch } = useQuery<ReviewPoolListResponse | null>({
     queryKey: [`/api/admin/matching-reviews/pools?status=${status}&limit=50&offset=0`],
@@ -131,6 +140,47 @@ export default function AdminMatchingReviewsPage() {
       setAnnouncement(`通过失败：${err.message}`);
     },
   });
+
+  const batchApproveMutation = useMutation({
+    mutationFn: async (poolIds: string[]) => {
+      return await apiRequest("POST", "/api/admin/matching-reviews/approve-batch", {
+        poolIds,
+      }).then((response) => response.json());
+    },
+    onSuccess: (result: {
+      approvedCount: number;
+      alreadyApprovedCount: number;
+      failedCount: number;
+    }) => {
+      const parts = [`已通过 ${result.approvedCount} 个场次`];
+      if (result.alreadyApprovedCount > 0) parts.push(`${result.alreadyApprovedCount} 个此前已通过`);
+      if (result.failedCount > 0) parts.push(`${result.failedCount} 个失败`);
+      const description = parts.join("，");
+      toast({
+        title: result.failedCount > 0 ? "批量通过部分完成" : "批量通过完成",
+        description,
+        variant: result.failedCount > 0 ? "destructive" : undefined,
+      });
+      setAnnouncement(`批量通过：${description}`);
+      setSelectedIds([]);
+      setBatchConfirmOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-reviews/pools"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "批量通过失败", description: err.message, variant: "destructive" });
+      setAnnouncement(`批量通过失败：${err.message}`);
+    },
+  });
+
+  const toggleSelected = (poolId: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(poolId)
+        ? prev.filter((id) => id !== poolId)
+        : prev.length >= BATCH_LIMIT
+          ? prev
+          : [...prev, poolId],
+    );
+  };
 
   const rejectMutation = useMutation({
     mutationFn: async ({ poolId, reason }: { poolId: string; reason: string }) => {
@@ -175,6 +225,22 @@ export default function AdminMatchingReviewsPage() {
 
   return (
     <div className="space-y-6 p-6">
+      {user?.matchingOperatorReviewEnabled === false && (
+        <div
+          className="flex items-start gap-2 rounded-lg border border-muted-foreground/20 bg-muted/40 px-4 py-3 text-sm"
+          data-testid="matching-reviews-auto-approve-notice"
+        >
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="space-y-1">
+            <p className="font-medium">自动复核当前关闭，排桌结果已直接生效</p>
+            <p className="text-muted-foreground">
+              此页仍可用于人工抽查与事后调整：已通过的分组不会再进入待审核列表，
+              如需返工请在该场次详情内重新发起排桌。若要让每次排桌都先停在待审核，
+              可在「功能开关」中开启「匹配结果人工复核」。
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">匹配审核</h1>
@@ -195,6 +261,43 @@ export default function AdminMatchingReviewsPage() {
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
       </div>
+
+      {selectedIds.length > 0 && (
+        <div
+          className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-4 py-3"
+          data-testid="matching-reviews-batch-bar"
+        >
+          <div className="text-sm">
+            已选 <span className="font-semibold">{selectedIds.length}</span> 个场次
+            {selectedIds.length >= BATCH_LIMIT && (
+              <span className="text-muted-foreground ml-2">（单次最多 {BATCH_LIMIT} 个）</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+              data-testid="matching-reviews-batch-clear"
+            >
+              取消选择
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setBatchConfirmOpen(true)}
+              disabled={batchApproveMutation.isPending}
+              data-testid="matching-reviews-batch-approve"
+            >
+              {batchApproveMutation.isPending ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-1 h-4 w-4" />
+              )}
+              批量通过
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card data-testid="matching-reviews-card">
         <CardHeader>
@@ -222,6 +325,9 @@ export default function AdminMatchingReviewsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <span className="sr-only">选择</span>
+                  </TableHead>
                   <TableHead>活动池</TableHead>
                   <TableHead>类型</TableHead>
                   <TableHead>城市</TableHead>
@@ -240,6 +346,16 @@ export default function AdminMatchingReviewsPage() {
                   };
                   return (
                     <TableRow key={pool.id} data-testid={`matching-review-row-${pool.id}`}>
+                      <TableCell>
+                        {pool.operatorReviewStatus === "pending" ? (
+                          <Checkbox
+                            checked={selectedIds.includes(pool.id)}
+                            onCheckedChange={() => toggleSelected(pool.id)}
+                            aria-label={`选择 ${pool.title}`}
+                            data-testid={`matching-review-select-${pool.id}`}
+                          />
+                        ) : null}
+                      </TableCell>
                       <TableCell className="font-medium">{pool.title}</TableCell>
                       <TableCell>{pool.eventType}</TableCell>
                       <TableCell>
@@ -407,6 +523,27 @@ export default function AdminMatchingReviewsPage() {
       </Dialog>
 
       {/* Approve Confirmation Dialog */}
+      <AlertDialog open={batchConfirmOpen} onOpenChange={setBatchConfirmOpen}>
+        <AlertDialogContent data-testid="matching-reviews-batch-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>批量通过 {selectedIds.length} 个场次？</AlertDialogTitle>
+            <AlertDialogDescription>
+              通过后这些场次的用户会同时看到匹配状态，并触发通知、场地分配与邀请奖励。
+              该操作会为每个场次单独记录审计日志。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="matching-reviews-batch-cancel">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => batchApproveMutation.mutate(selectedIds)}
+              data-testid="matching-reviews-batch-confirm"
+            >
+              确认通过
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog
         open={Boolean(approvePoolId)}
         onOpenChange={(open) => !open && setApprovePoolId(null)}

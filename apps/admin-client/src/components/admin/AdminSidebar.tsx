@@ -1,124 +1,169 @@
-import { useState, useEffect, useCallback, useId } from "react";
 import { ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
+
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
 } from "@/components/ui/sidebar";
-import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import {
-  ADMIN_NAV_GROUPS,
+  ADMIN_NAV_WORKSPACES,
   DAILY_OPS_ITEMS,
   filterNavByRole,
+  filterWorkspacesByRole,
+  findWorkspaceForPath,
   type AdminNavItem,
-  type AdminNavGroup,
+  type AdminNavWorkspace,
 } from "@/lib/adminNavConfig";
 
-type NavItem = AdminNavItem;
-type NavGroup = AdminNavGroup;
-
 const STORAGE_KEY = "jj-admin-nav-expanded";
+const BADGES_QUERY_KEY = ["/api/admin/nav-badges"];
 
-/* ───────────────────────────────────────────────────────────
-   DailyOpsDock — pinned primary section above the fold
-   ─────────────────────────────────────────────────────────── */
+type BadgeMap = Record<string, number>;
+
+/**
+ * Counts for the sidebar. The endpoint derives these from the same functions
+ * that power each destination list, so a badge can never disagree with the
+ * number the operator sees after clicking it. Failure is silent — a missing
+ * badge must never block navigation.
+ */
+function useNavBadges(enabled: boolean): BadgeMap {
+  const { data } = useQuery({
+    queryKey: BADGES_QUERY_KEY,
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/nav-badges");
+      return (await res.json()) as { badges: BadgeMap };
+    },
+    enabled,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
+  return data?.badges ?? {};
+}
+
+function NavBadge({ count }: { count?: number }) {
+  if (!count || count <= 0) return null;
+  return (
+    <span
+      className="ml-auto min-w-[1.25rem] rounded-full bg-primary/15 px-1.5 py-0.5 text-center text-[11px] font-semibold leading-none text-primary"
+      aria-label={`${count} 项待处理`}
+      data-testid="nav-badge"
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 function DailyOpsDock({
   items,
   location,
+  badges,
 }: {
-  items: NavItem[];
+  items: AdminNavItem[];
   location: string;
+  badges: BadgeMap;
 }) {
   if (items.length === 0) return null;
 
   return (
     <div className="mx-3 mt-3 rounded-lg bg-muted/60 p-2">
-      <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+      <div className="px-2 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
         日常运营
       </div>
       <SidebarMenu>
-        {items.map((item) => (
-          <SidebarMenuItem key={item.url}>
-            <SidebarMenuButton
-              asChild
-              isActive={location === item.url}
-              data-testid={`nav-${item.title}`}
-              tooltip={item.title}
-            >
-              <Link href={item.url}>
-                <item.icon className="h-4 w-4" />
-                <span>{item.title}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
+        {items.map((item) => {
+          const active = location === item.url;
+          return (
+            <SidebarMenuItem key={item.url}>
+              <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+                <Link href={item.url} data-testid={`nav-${item.title}`}>
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                  <NavBadge count={item.badgeKey ? badges[item.badgeKey] : undefined} />
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          );
+        })}
       </SidebarMenu>
     </div>
   );
 }
 
-/* ───────────────────────────────────────────────────────────
-   CollapsibleNavGroup — accordion section with persisted state
-   ─────────────────────────────────────────────────────────── */
-function CollapsibleNavGroup({
-  group,
+function WorkspaceGroup({
+  workspace,
   expanded,
+  active,
   onToggle,
   location,
+  badges,
 }: {
-  group: NavGroup;
+  workspace: AdminNavWorkspace;
   expanded: boolean;
-  onToggle: (label: string) => void;
+  active: boolean;
+  onToggle: () => void;
   location: string;
+  badges: BadgeMap;
 }) {
   const contentId = useId();
+  const workspaceBadge = workspace.items.reduce(
+    (sum, item) => sum + (item.badgeKey ? badges[item.badgeKey] ?? 0 : 0),
+    0
+  );
 
   return (
-    <SidebarGroup className="px-3 py-2">
+    <SidebarGroup className="px-3 py-1">
       <button
         type="button"
-        onClick={() => onToggle(group.label)}
-        className={cn(
-          "flex w-full items-center justify-between rounded-sm px-2 py-1.5",
-          "text-xs font-bold text-muted-foreground uppercase tracking-wider",
-          "transition-colors hover:bg-accent hover:text-accent-foreground",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-        )}
+        onClick={onToggle}
         aria-expanded={expanded}
         aria-controls={contentId}
-        data-testid={`nav-group-${group.label}`}
+        data-testid={`nav-group-${workspace.label}`}
+        className={cn(
+          "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
+          active ? "text-foreground" : "text-muted-foreground"
+        )}
       >
-        <span>{group.label}</span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
-            expanded && "rotate-180"
-          )}
-          aria-hidden="true"
-        />
+        <span className="flex items-center gap-1.5">
+          {workspace.label}
+          {active && <span className="h-1 w-1 rounded-full bg-primary" aria-hidden />}
+        </span>
+        <span className="flex items-center gap-1">
+          <NavBadge count={workspaceBadge} />
+          <ChevronDown
+            className={cn(
+              "h-3.5 w-3.5 transition-transform motion-reduce:transition-none",
+              expanded && "rotate-180"
+            )}
+          />
+        </span>
       </button>
-
       {expanded && (
         <SidebarGroupContent id={contentId} className="mt-1">
           <SidebarMenu>
-            {group.items.map((item) => (
+            {workspace.items.map((item) => (
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   asChild
                   isActive={location === item.url}
-                  data-testid={`nav-${item.title}`}
                   tooltip={item.title}
                 >
-                  <Link href={item.url}>
+                  <Link href={item.url} data-testid={`nav-${item.title}`}>
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
+                    <NavBadge count={item.badgeKey ? badges[item.badgeKey] : undefined} />
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -130,44 +175,46 @@ function CollapsibleNavGroup({
   );
 }
 
-/* ───────────────────────────────────────────────────────────
-   AdminSidebar — tiered navigation with role-aware filtering
-   ─────────────────────────────────────────────────────────── */
 export function AdminSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const role = user?.adminRole || "viewer";
 
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
-    () => {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) return JSON.parse(saved);
-      } catch {
-        // localStorage unavailable or corrupt — fall back to defaults
-      }
-      return Object.fromEntries(ADMIN_NAV_GROUPS.map((g) => [g.label, false]));
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // Ignore corrupt storage and fall back to the default state.
     }
-  );
+    return Object.fromEntries(ADMIN_NAV_WORKSPACES.map((w) => [w.key, false]));
+  });
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(expandedGroups));
     } catch {
-      // localStorage unavailable — silent fail
+      // Storage may be unavailable (private mode); collapsing state is not critical.
     }
   }, [expandedGroups]);
 
-  const toggleGroup = useCallback((label: string) => {
-    setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  // The workspace owning the current route is always visible. Without this an
+  // operator following a deep link lands on a page whose tab bar is hidden.
+  const activeWorkspace = useMemo(() => findWorkspaceForPath(location), [location]);
+
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    const key = activeWorkspace.workspace.key;
+    setExpandedGroups((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+  }, [activeWorkspace]);
+
+  const toggleGroup = useCallback((key: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
+  const badges = useNavBadges(Boolean(user?.isAdmin));
   const filteredDailyOps = filterNavByRole(DAILY_OPS_ITEMS, role);
-
-  const groups: NavGroup[] = ADMIN_NAV_GROUPS.map((group) => ({
-    ...group,
-    items: filterNavByRole(group.items, role),
-  })).filter((g) => g.items.length > 0);
+  const workspaces = filterWorkspacesByRole(ADMIN_NAV_WORKSPACES, role);
 
   return (
     <Sidebar>
@@ -182,17 +229,17 @@ export function AdminSidebar() {
           </div>
         </div>
       </SidebarHeader>
-
-      <SidebarContent className="gap-0">
-        <DailyOpsDock items={filteredDailyOps} location={location} />
-
-        {groups.map((group) => (
-          <CollapsibleNavGroup
-            key={group.label}
-            group={group}
-            expanded={!!expandedGroups[group.label]}
-            onToggle={toggleGroup}
+      <SidebarContent>
+        <DailyOpsDock items={filteredDailyOps} location={location} badges={badges} />
+        {workspaces.map((workspace) => (
+          <WorkspaceGroup
+            key={workspace.key}
+            workspace={workspace}
+            expanded={Boolean(expandedGroups[workspace.key])}
+            active={activeWorkspace?.workspace.key === workspace.key}
+            onToggle={() => toggleGroup(workspace.key)}
             location={location}
+            badges={badges}
           />
         ))}
       </SidebarContent>

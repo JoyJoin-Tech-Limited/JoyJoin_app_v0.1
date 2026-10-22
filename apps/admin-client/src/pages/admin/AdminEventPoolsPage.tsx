@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
@@ -127,6 +128,15 @@ interface TriggerMatchResponse {
 }
 
 export default function AdminEventPoolsPage() {
+  // 深链接：待办队列会带 ?lowFill=1 或 ?focus=<poolId> 跳进来。
+  // 这两个参数必须真的生效，否则队列的「跳转」列就是假动作 —— 之前这条链路
+  // 指向并不存在的 /admin/pools/:id，会落到 AdminNotFound。
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const lowFillOnly = useMemo(() => new URLSearchParams(search).get("lowFill") === "1", [search]);
+  const focusPoolId = useMemo(() => new URLSearchParams(search).get("focus"), [search]);
+  const focusOpenedRef = useRef(false);
+
   // ====== 过滤状态 ======
   const [cityFilter, setCityFilter] = useState<CityFilter>("all");
   const [waitingFilter, setWaitingFilter] = useState<WaitingFilter>("all");
@@ -490,6 +500,18 @@ export default function AdminEventPoolsPage() {
         if (waitingFilter === "noWaiting" && pool._hasWaiting) return false;
         if (eventsFilter === "hasEvents" && !pool._hasEvents) return false;
         if (eventsFilter === "noEvents" && pool._hasEvents) return false;
+        // 与 lib/adminMetrics.ts 的 getUnderfilledPoolsClosingSoon 同一判据：
+        // 进行中、非测试池、24h 内截止、且报名数不足 minGroupSize × targetGroups。
+        // 客户端与服务端不一致，就会让「即将截止」这一行点进来看到 0 条。
+        if (lowFillOnly) {
+          if (pool.status !== "active" || pool.isTestPool) return false;
+          const deadline = new Date(pool.registrationDeadline).getTime();
+          if (!Number.isFinite(deadline)) return false;
+          const now = Date.now();
+          if (deadline <= now || deadline > now + 24 * 60 * 60 * 1000) return false;
+          const registered = pool.registrationCount ?? pool.totalRegistrations ?? 0;
+          if (registered >= pool.minGroupSize * pool.targetGroups) return false;
+        }
         return true;
       })
       .sort((a, b) => {
@@ -520,7 +542,18 @@ export default function AdminEventPoolsPage() {
       poolsWithEvents: augmented.filter((p) => p._hasEvents).length,
       filteredPools: filtered,
     };
-  }, [pools, cityFilter, waitingFilter, eventsFilter, sortBy]);
+  }, [pools, cityFilter, waitingFilter, eventsFilter, sortBy, lowFillOnly]);
+
+  // ?focus=<poolId>：从待办队列点某一桌进来时直接打开它的详情抽屉。
+  // 用 ref 保证只自动打开一次，否则每次轮询刷新都会把用户刚关掉的抽屉重新弹开。
+  useEffect(() => {
+    if (!focusPoolId || focusOpenedRef.current || pools.length === 0) return;
+    const target = pools.find((pool) => pool.id === focusPoolId);
+    if (!target) return;
+    focusOpenedRef.current = true;
+    setSelectedPool(target);
+    setShowDetailsDialog(true);
+  }, [focusPoolId, pools]);
 
   const handleCopyPool = (pool: AdminEventPool) => {
     // 快速复制：将池子信息填充到表单
@@ -643,6 +676,25 @@ export default function AdminEventPoolsPage() {
       />
 
       {/* 活动池列表 */}
+      {lowFillOnly && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-sm"
+          data-testid="event-pools-lowfill-banner"
+        >
+          <span className="text-amber-700 dark:text-amber-400">
+            正在查看「24 小时内截止且报名不足」的场次，共 {filteredPools.length} 个。
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setLocation("/admin/event-pools")}
+            data-testid="event-pools-lowfill-clear"
+          >
+            查看全部场次
+          </Button>
+        </div>
+      )}
       {isPoolsError ? (
         <AdminQueryError
           title="活动池列表加载失败"
