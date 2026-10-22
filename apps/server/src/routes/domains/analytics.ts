@@ -535,8 +535,6 @@ const PROFILE_EVENT_TYPES = [
   "profile_milestone_impression",
   "profile_milestone_tap",
   "profile_pull_refresh",
-  "profile_share_card_generated",
-  "profile_share_card_error",
   "profile_view",
   "profile_personality_action_tap",
   // P0-1 entitlement strip pill taps (2026-10-22): pill = pass|coupon|coins.

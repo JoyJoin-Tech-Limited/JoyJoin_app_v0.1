@@ -73,8 +73,6 @@ describe('profileAnalytics', () => {
       'profile_milestone_impression',
       'profile_milestone_tap',
       'profile_pull_refresh',
-      'profile_share_card_generated',
-      'profile_share_card_error',
       'profile_view',
       'profile_edit_tap',
       'profile_edit_save',
