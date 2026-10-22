@@ -205,7 +205,7 @@ describe('profileConstants', () => {
   describe('getXiaoyueGreeting', () => {
     it('prompts personality test when archetype is missing', () => {
       expect(getXiaoyueGreeting('User', null, 0, false)).toBe(
-        '先测测你是哪种社交原型？',
+        '先测测你是哪种氛围原型？',
       )
     })
 

@@ -587,24 +587,6 @@ export default function ProfilePage() {
     }, 160) // exit fade duration
   }, [duoCardPoolId])
 
-  // P2-3 形象名片 (PM memo §8): rebuilt on the compliant canvas pipeline —
-  // pixel-avatar composite (archetype art fallback) + displayName + 家族名 +
-  // 潮流值 + QR. City/age/interests/bio/referral are structurally excluded
-  // from ProfileCardPosterInput; no incentive wording (诱导分享 ban).
-  const profileCardShare = useProfileCardShare({
-    enabled: !!archetype,
-    card: {
-      displayName,
-      archetypeName,
-      familyName: archetypeFamilyName,
-      growthValue: gamificationQuery.data?.experiencePoints ?? null,
-      tagline: archetypeTagline,
-      pixelArchetypeId: pixelAvatarEnabled ? archetype : null,
-      outfit,
-      itemsById: equipmentItemsById,
-      archetypeAsset: archetype ? (ARCHETYPE_ASSET_MAP[archetype]?.webp ?? null) : null,
-    },
-  })
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   // P2-2 (PM memo §6): serialized story entry — title carries the latest
   // chapter's real title (chapters are ascending by chapterNumber, repo
@@ -687,6 +669,25 @@ export default function ProfilePage() {
   // P0-3: user's own bio always wins; the daily greeting beats the static
   // tagline so the card says something fresh each day.
   const displayBio = bio || dailyGreeting || archetypeTagline || null
+
+  // P2-3 形象名片 (PM memo §8): rebuilt on the compliant canvas pipeline —
+  // pixel-avatar composite (archetype art fallback) + displayName + 家族名 +
+  // 潮流值 + QR. City/age/interests/bio/referral are structurally excluded
+  // from ProfileCardPosterInput; no incentive wording (诱导分享 ban).
+  const profileCardShare = useProfileCardShare({
+    enabled: !!archetype,
+    card: {
+      displayName,
+      archetypeName,
+      familyName: archetypeFamilyName,
+      growthValue: gamificationQuery.data?.experiencePoints ?? null,
+      tagline: archetypeTagline,
+      pixelArchetypeId: pixelAvatarEnabled ? archetype : null,
+      outfit,
+      itemsById: equipmentItemsById,
+      archetypeAsset: archetype ? (ARCHETYPE_ASSET_MAP[archetype]?.webp ?? null) : null,
+    },
+  })
 
   // Entrance stagger: the `--entered` modifiers are driven by mounted state so
   // the CSS transitions actually play. Delays live in SCSS (stage 0ms → stats
