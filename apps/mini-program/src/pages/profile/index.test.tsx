@@ -3,6 +3,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
+import { getDailyGreeting } from './profileConstants'
 import ProfilePage from './index'
 
 const state = vi.hoisted(() => ({
@@ -491,10 +492,14 @@ describe('Profile approved V4 layout', () => {
     )
   })
 
-  it('shows the archetype tagline as a bio fallback and prompts to review the report', () => {
+  it('shows the daily greeting as the bio fallback (P0-3 precedence: bio > greeting > tagline) and prompts to review the report', () => {
     const { getByText } = render(<ProfilePage />)
 
-    expect(getByText('瞬间破冰的气氛点火手')).toBeTruthy()
+    // The default mock user (corgi, no bio) renders the daily-rotating
+    // greeting instead of the static archetype tagline.
+    const greeting = getDailyGreeting('corgi')
+    expect(greeting).not.toBeNull()
+    expect(getByText(greeting!)).toBeTruthy()
     expect(getByText('回看报告')).toBeTruthy()
   })
 

@@ -38,6 +38,7 @@ import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../.
 import { EQUIPMENT_ME_QUERY_KEY } from '../../lib/profile/equipmentQueryKeys'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { getPixelEquipmentThumbnailUrl } from '../../lib/profile/pixelAvatarAssets'
+import { writeProfileTabDotCount } from '../../lib/profile/profileTabDot'
 import { haptics } from '../../lib/utils/haptics'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { localAsset } from '../../lib/utils/cdnAssets'
@@ -249,9 +250,8 @@ export default function ProfilePage() {
   const deviceTier = useDeviceTier()
   const { navCondensed, handleScroll } = useProfileScroll()
 
-  useCustomTabBarSync({
-    enabled: !authLoading,
-  })
+  // (P0-5: useCustomTabBarSync moved below the equipment derivations — it
+  // now consumes pendingEntitlementCount, which doesn't exist yet here.)
 
   // Warm own first-viewport assets + adjacent tabs' assets during idle so
   // the next tab switch paints instantly.
@@ -413,6 +413,20 @@ export default function ProfilePage() {
     : '可领取'
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
+
+  // P0-5: 我的 tab dot = live pending-equipment-draw count. Passed live to
+  // the tab-bar sync AND persisted so sibling tabs render the dot before
+  // this page ever mounts (storage fallback, no extra fetches elsewhere).
+  // The count drops to 0 when the draws are claimed (equipment query
+  // invalidates on claim) — the dot clears itself.
+  useCustomTabBarSync({
+    enabled: !authLoading,
+    profileBadgeCount: pendingEntitlementCount,
+  })
+
+  useEffect(() => {
+    writeProfileTabDotCount(pendingEntitlementCount)
+  }, [pendingEntitlementCount])
 
   // P0-1 entitlement strip (PM memo 2026-10-22 §1): factual readout pills —
   // pass (subscription days / 局票 credits) → coupons → 悦币. All three data
