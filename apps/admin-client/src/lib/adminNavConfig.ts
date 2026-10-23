@@ -53,7 +53,16 @@ export interface AdminNavItem {
    * disagree with the page it links to.
    */
   badgeKey?: AdminBadgeKey;
+  /**
+   * When set, the sidebar hides this entry while the flag resolves to an
+   * explicit `false`. The route stays in `ALL_NAV_ITEMS` (so RBAC and page
+   * titles are unchanged) — only the navigation stops advertising work that
+   * the server will never generate.
+   */
+  featureFlag?: AdminItemFlag;
 }
+
+export type AdminItemFlag = "matchingOperatorReviewEnabled";
 
 export type AdminBadgeKey =
   | "/admin/safety-center"
@@ -100,6 +109,10 @@ export const DAILY_OPS_ITEMS: AdminNavItem[] = [
     icon: ClipboardCheck,
     roles: SUPER_OPERATOR,
     badgeKey: "/admin/matching-reviews",
+    // Only surfaced while 人工复核 is on. With the flag off, match runs commit
+    // immediately and this queue is empty by construction — keeping it pinned
+    // would advertise daily work that does not exist.
+    featureFlag: "matchingOperatorReviewEnabled",
   },
   {
     title: "活动池管理",

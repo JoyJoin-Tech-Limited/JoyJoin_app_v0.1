@@ -4,13 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, LogIn } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useToast } from "@/hooks/ui/use-toast";
 import { canAccessAdminPath } from "@/lib/adminNavConfig";
+import AdminForbidden from "@/components/admin/AdminForbidden";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -27,16 +26,13 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   // Route-level role guard — derived from the shared nav config so the
   // sidebar and this guard can never drift apart.
-  useEffect(() => {
-    if (!isLoading && user && user.isAdmin && !canAccessAdminPath(location, user.adminRole)) {
-      toast({
-        title: "无权访问该页面",
-        description: "你的角色无法访问该页面，已返回数据看板。",
-        variant: "destructive",
-      });
-      setLocation("/admin/dashboard");
-    }
-  }, [isLoading, user, location, setLocation, toast]);
+  //
+  // 2026-10-23: this used to toast 「无权访问」 and bounce to the dashboard.
+  // That read as a transient glitch (and on a deep link, as data loss),
+  // when the real state is stable: this role simply has no access here.
+  // Render an explicit 403 surface instead of moving the user.
+  const accessDenied =
+    !isLoading && Boolean(user?.isAdmin) && !canAccessAdminPath(location, user?.adminRole);
 
   if (isLoading) {
     return (
@@ -82,6 +78,10 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         </Card>
       </div>
     );
+  }
+
+  if (accessDenied) {
+    return <AdminForbidden role={user?.adminRole} path={location} />;
   }
 
   return <>{children}</>;
