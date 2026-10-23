@@ -124,6 +124,13 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
 
   const duoPairsAll: Array<{ inviterId: string; inviteeId: string }> = [];
   const legacyInvitationPairsAll: Array<{ inviterId: string; inviteeId: string }> = [];
+  // S1 (one-partner-per-pool): this chain may still surface OVERLAPPING pairs
+  // (a user in 2+ pairs) from legacy rows or a concurrent double-consume race.
+  // They are passed through verbatim — overlap resolution lives in the greedy
+  // core (`matching/duoPairResolution.ts`, consumed in poolFormation.ts) so the
+  // rule is deterministic, unit-testable via runGreedyPoolMatchingCore
+  // injection, and emits the structured `duo_conflict` warn exactly once per
+  // run. Do NOT silently dedupe/overwrite here.
   for (const inviteUse of allInviteUses) {
     if (!(inviteUse as any).invitationId) continue;
     const invitation = allInvitationById.get((inviteUse as any).invitationId);

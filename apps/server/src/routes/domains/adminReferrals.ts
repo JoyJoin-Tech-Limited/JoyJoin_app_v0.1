@@ -16,6 +16,12 @@ import { getReferralStats, listDuoInvites } from "../../repositories/adminReferr
 const duoInviteListQuerySchema = z.object({
   poolId: z.string().min(1).optional(),
   status: z.enum(["pending", "bound", "expired"]).optional(),
+  // S1: conflict marker filter — "true" shows only overlapped bindings,
+  // "false" only clean ones; omitted shows all (marker still present per item).
+  conflict: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value === "true")),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });

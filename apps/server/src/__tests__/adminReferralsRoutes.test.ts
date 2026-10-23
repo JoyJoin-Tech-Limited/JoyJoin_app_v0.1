@@ -115,6 +115,31 @@ describe("GET /api/admin/duo-invites", () => {
     });
   });
 
+  // S1 (AC-5): the conflict marker filter threads through as a boolean;
+  // omitted = no filter (the default-pagination test above locks that shape).
+  it.each([
+    { query: "conflict=true", expected: true },
+    { query: "conflict=false", expected: false },
+  ])("threads $query through to the repo as conflict=$expected", async ({ query, expected }) => {
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/admin/duo-invites?${query}`);
+      expect(res.status).toBe(200);
+      expect(mockListDuoInvites).toHaveBeenCalledWith({
+        conflict: expected,
+        page: 1,
+        pageSize: 20,
+      });
+    });
+  });
+
+  it("rejects an invalid conflict value with 400", async () => {
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/admin/duo-invites?conflict=bogus`);
+      expect(res.status).toBe(400);
+      expect(mockListDuoInvites).not.toHaveBeenCalled();
+    });
+  });
+
   it("rejects an invalid status with 400", async () => {
     await withServer(buildTestApp(), async (base) => {
       const res = await fetch(`${base}/api/admin/duo-invites?status=bogus`);
