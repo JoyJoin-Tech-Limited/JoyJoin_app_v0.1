@@ -332,9 +332,16 @@ export default function AdminUsersPage() {
         return;
       }
 
-      exportAdminUsersCsv(exportRows);
-
+      // The filename carries the same scope sentence as the toast. A file called
+      // `users-2026-10-23.csv` cannot tell the operator, a week later and out of
+      // toast context, whether it holds everyone or the first 5000 of 9000.
       const truncated = exportTotal > exportRows.length;
+      exportAdminUsersCsv(exportRows, {
+        filenameHint: truncated
+          ? `前${exportRows.length}人-共${exportTotal}人`
+          : `全部${exportRows.length}人`,
+      });
+
       toast({
         title: truncated ? "已导出部分用户" : "已导出全部用户",
         description: truncated

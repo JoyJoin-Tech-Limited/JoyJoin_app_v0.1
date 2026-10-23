@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { invalidateNavBadges } from "@/lib/navBadges";
-import UserReportsTab from "./moderation/UserReportsTab";
+import UserReportsTab, { type UserReportsFilter } from "./moderation/UserReportsTab";
 import ChatReportsTab from "./moderation/ChatReportsTab";
 import AiContentReportsTab from "./moderation/AiContentReportsTab";
 
@@ -25,6 +25,12 @@ export default function AdminModerationPage({
   const search = useSearch();
   const [location, navigate] = useLocation();
   const urlTab = parseTabParam(new URLSearchParams(search).get("tab"));
+  // `?status=pending` is the console action queue's way of saying "the count you
+  // clicked is `reports WHERE status='pending'`, so open that slice". The tab
+  // owns the filter as local state, so the page has to hand it down; without
+  // this the operator lands on 全部 and reads a different population than the
+  // number that brought them here.
+  const urlReportStatus = new URLSearchParams(search).get("status") === "pending" ? "pending" : "all";
   const [tab, setTab] = useState<ModerationTab>(
     () => parseTabParam(initialTab) ?? urlTab ?? "users",
   );
@@ -46,11 +52,25 @@ export default function AdminModerationPage({
   // previous tab and the next deep link (or a refresh) silently overrides the
   // operator's choice. `replace` keeps tab switching out of the back stack: it
   // is a view option, not a destination.
+  //
+  // `status` describes a slice of the 用户举报 list only, so it is dropped on the
+  // way out instead of riding along on a chat/AI URL no panel reads.
   const handleTabChange = (next: string) => {
     const value = parseTabParam(next) ?? "users";
     setTab(value);
     const nextParams = new URLSearchParams(search);
     nextParams.set("tab", value);
+    if (value !== "users") nextParams.delete("status");
+    const pathname = location.split("?")[0] || "/admin/moderation";
+    navigate(`${pathname}?${nextParams.toString()}`, { replace: true });
+  };
+
+  // Same rule for the filter inside the tab: it writes its own param back, or
+  // the URL keeps claiming `status=pending` while the list shows 全部.
+  const handleReportStatusChange = (status: UserReportsFilter) => {
+    const nextParams = new URLSearchParams(search);
+    if (status === "pending") nextParams.set("status", "pending");
+    else nextParams.delete("status");
     const pathname = location.split("?")[0] || "/admin/moderation";
     navigate(`${pathname}?${nextParams.toString()}`, { replace: true });
   };
@@ -88,7 +108,10 @@ export default function AdminModerationPage({
         </TabsList>
 
         <TabsContent value="users">
-          <UserReportsTab />
+          <UserReportsTab
+            initialReportFilter={urlReportStatus}
+            onReportFilterChange={handleReportStatusChange}
+          />
         </TabsContent>
         <TabsContent value="chat">
           <ChatReportsTab />

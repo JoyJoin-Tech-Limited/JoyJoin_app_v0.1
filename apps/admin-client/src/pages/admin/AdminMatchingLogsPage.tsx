@@ -77,7 +77,7 @@ export default function AdminMatchingLogsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">匹配扫描日志</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">匹配日志</h1>
         <p className="text-muted-foreground">
           查看每次扫描的决策过程和匹配结果
         </p>

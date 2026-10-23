@@ -379,7 +379,7 @@ export default function AdminContentFilterLogsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">内容审核日志</h2>
+          <h1 className="text-2xl font-semibold tracking-tight">内容审核日志</h1>
           <p className="text-muted-foreground">
             查看内容过滤拦截记录，审核命中样本并标记误伤，帮助优化过滤规则
           </p>

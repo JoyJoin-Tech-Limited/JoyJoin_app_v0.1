@@ -330,6 +330,8 @@ export default function AdminFinancePage() {
 
   return (
     <div className="space-y-6 p-6">
+      <h1 className="text-2xl font-semibold tracking-tight">财务管理</h1>
+
       {/* Metric Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card data-testid="card-metric-total-revenue">

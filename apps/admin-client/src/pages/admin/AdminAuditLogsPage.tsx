@@ -231,7 +231,7 @@ export default function AdminAuditLogsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">审计日志</h2>
+          <h1 className="text-2xl font-semibold tracking-tight">审计日志</h1>
           <p className="text-muted-foreground">追踪管理员的关键操作记录</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>

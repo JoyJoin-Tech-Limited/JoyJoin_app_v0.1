@@ -36,6 +36,16 @@ const RANGE_OPTIONS = [
   { days: 90, label: "近 90 天" },
 ];
 
+/**
+ * 场地待定 lives on a specific card of 今日战情, not at the top of it: the page id
+ * is `VENUE_TBD_CARD_ID` in `AdminWarRoomPage`, which reads the fragment off
+ * `window.location` (wouter strips it and `pushState` never scrolls) and
+ * highlights the card for 2.4s. The same fragment is emitted by the server on
+ * the `unassigned_venues` queue row (`adminConsole.ts`) — those three strings are
+ * one deep-link contract and must change together.
+ */
+const WAR_ROOM_VENUE_TBD_HREF = "/admin/war-room#card-venue-tbd";
+
 async function getJson<T>(url: string): Promise<T> {
   const res = await apiRequest("GET", url);
   return (await res.json()) as T;
@@ -113,6 +123,10 @@ export default function AdminDashboardV2() {
     () => buildInsights(kpiQuery.data?.kpis ?? [], queueQuery.data?.rows),
     [kpiQuery.data, queueQuery.data],
   );
+
+  // Count comes from the queue row the server built, so this shortcut and the
+  // 场地待定 row cannot disagree about how many groups are still unassigned.
+  const venueTbdRow = queueQuery.data?.rows.find((row) => row.key === "unassigned_venues");
 
   const asOf = kpiQuery.data?.asOf ?? queueQuery.data?.asOf;
 
@@ -268,6 +282,22 @@ export default function AdminDashboardV2() {
               进入今日战情
               <ArrowRight className="h-3 w-3" />
             </Link>
+            {/*
+              场地待定 gets its own anchored link rather than stealing the
+              generic one above: 今日战情 is a page, 场地待定 is one card on it, so
+              one href cannot describe both. Cleared rows render nothing — a
+              "0 个" link that jumps to an empty card is the same lie in reverse.
+            */}
+            {venueTbdRow && !venueTbdRow.cleared && (
+              <Link
+                href={WAR_ROOM_VENUE_TBD_HREF}
+                className="flex items-center gap-0.5 text-[11px] text-amber-700 hover:underline"
+                data-testid="link-dashboard-venue-tbd"
+              >
+                场地待定 {venueTbdRow.count} 个 · 去分配
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>
