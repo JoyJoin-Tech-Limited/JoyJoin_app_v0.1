@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,10 +22,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, CreditCard, TrendingUp, Receipt, Store, RotateCcw, HelpCircle, Download, AlertCircle, RefreshCw } from "lucide-react";
+import { DollarSign, CreditCard, TrendingUp, Receipt, RotateCcw, HelpCircle, Download, AlertCircle, RefreshCw } from "lucide-react";
 import { downloadCsv } from "@/lib/csvExport";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { fmtDateTimeShort, safeFormat } from "@/lib/dateUtils";
+import { invalidateNavBadges } from "@/lib/navBadges";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import EmptyState from "@/components/admin/EmptyState";
@@ -49,15 +51,6 @@ interface Payment {
   user_email: string | null;
   event_title: string | null;
   subscription_plan: string | null;
-}
-
-interface VenueCommission {
-  id: string;
-  venue_name: string;
-  commission_rate: number;
-  booking_count: number;
-  total_revenue: number;
-  total_commission: number;
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -101,6 +94,50 @@ const REFUND_STATUS_MAP: Record<string, { label: string; variant: "default" | "s
   failed: { label: "退款失败", variant: "destructive" },
 };
 
+/**
+ * Finance deep links: `/admin/finance?tab=refunds&status=refund_pending`.
+ *
+ * The console action queue's 退款待处理 row counts `payments.status =
+ * 'refund_pending'`. The payments list cannot filter by status (its API only
+ * filters by payment type), so the link opens the 退款历史 tab instead — which
+ * lists `refund_attempts`, whose in-flight status is `pending` (paymentService
+ * claims completed → refund_pending and writes a `pending` attempt in the same
+ * flow). The mapping is deliberate: filtering on the literal `refund_pending`
+ * would match zero refund attempts and reproduce the very bug this deep link
+ * exists to fix — a queue row landing on a list that cannot show what was
+ * counted.
+ */
+const FINANCE_TABS = ["payments", "refunds"] as const;
+type FinanceTab = (typeof FINANCE_TABS)[number];
+
+const REFUND_STATUS_FILTERS = ["all", "pending", "success", "failed"] as const;
+type RefundStatusFilter = (typeof REFUND_STATUS_FILTERS)[number];
+
+function parseFinanceTab(value: string | null): FinanceTab | null {
+  if (value === "refunds") return "refunds";
+  // `payments` is the default view; `commissions` is a retired tab, so an old
+  // bookmark lands on the payment list instead of an empty card.
+  if (value === "payments" || value === "commissions") return "payments";
+  return null;
+}
+
+function parseRefundStatus(value: string | null): RefundStatusFilter | null {
+  switch (value) {
+    case "refund_pending":
+    case "pending":
+      return "pending";
+    case "success":
+    case "refunded":
+      return "success";
+    case "failed":
+      return "failed";
+    case "all":
+      return "all";
+    default:
+      return null;
+  }
+}
+
 function FinanceErrorState({
   title,
   error,
@@ -132,7 +169,49 @@ function FinanceErrorState({
 }
 
 export default function AdminFinancePage() {
-  const [mainTab, setMainTab] = useState<"payments" | "commissions" | "refunds">("payments");
+  const search = useSearch();
+  const [location, navigate] = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+
+  const tabParam = parseFinanceTab(searchParams.get("tab"));
+  const refundStatusParam = parseRefundStatus(searchParams.get("status"));
+  // A refund status filter only exists on the refunds tab, so its presence is
+  // enough to select that tab — `?status=refund_pending` pasted on its own
+  // (without `tab=`) still lands on the right view.
+  const mainTab: FinanceTab = tabParam ?? (refundStatusParam ? "refunds" : "payments");
+  const refundStatusFilter: RefundStatusFilter =
+    mainTab === "refunds" && refundStatusParam ? refundStatusParam : "all";
+  // Only set when the console queue sent us here; the note under the tab header
+  // explains the payments.status → refund_attempts.status mapping.
+  const fromRefundPendingQueue = searchParams.get("status") === "refund_pending";
+
+  // Tab/filter changes rewrite the query string, so reloading or pasting the URL
+  // reproduces the same view and a later deep link is never overridden by stale
+  // local state. `replace` keeps view options out of the back stack.
+  const writeParams = (mutate: (params: URLSearchParams) => void) => {
+    const next = new URLSearchParams(search);
+    mutate(next);
+    const pathname = location.split("?")[0] || "/admin/finance";
+    const query = next.toString();
+    navigate(query ? `${pathname}?${query}` : pathname, { replace: true });
+  };
+
+  const handleMainTabChange = (next: string) => {
+    writeParams((params) => {
+      params.set("tab", parseFinanceTab(next) ?? "payments");
+      // The refund status filter is meaningless on the payments tab.
+      if (next !== "refunds") params.delete("status");
+    });
+  };
+
+  const handleRefundStatusChange = (next: string) => {
+    writeParams((params) => {
+      params.set("tab", "refunds");
+      if (next === "all") params.delete("status");
+      else params.set("status", next);
+    });
+  };
+
   const [paymentFilter, setPaymentFilter] = useState<"all" | "subscription" | "event">("all");
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
@@ -172,16 +251,6 @@ export default function AdminFinancePage() {
   const paymentsTotal = paymentsData?.total ?? 0;
 
   const {
-    data: commissions = [],
-    isLoading: commissionsLoading,
-    isError: commissionsError,
-    error: commissionsQueryError,
-    refetch: refetchCommissions,
-  } = useQuery<VenueCommission[]>({
-    queryKey: ["/api/admin/finance/commissions"],
-  });
-
-  const {
     data: refundAttempts = [],
     isLoading: refundsLoading,
     isError: refundsError,
@@ -201,7 +270,9 @@ export default function AdminFinancePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/finance/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/refund-attempts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/finance/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/finance/commissions"] });
+      // The 财务管理 sidebar badge counts pending refunds, so submitting one
+      // changes it. Without this the count stays stale until the sidebar's poll.
+      invalidateNavBadges(queryClient);
       setRefundDialogOpen(false);
       setRefundPayment(null);
       setRefundReason("");
@@ -228,7 +299,13 @@ export default function AdminFinancePage() {
     return fullName || "未知用户";
   };
 
-  const sortedCommissions = [...commissions].sort((a, b) => b.total_commission - a.total_commission);
+  // The refunds tab owns a status filter. The API is asked for all recent
+  // attempts (default 200), so the slice is client-side — the deep link's
+  // 「待处理」 view is a filter, not a second request.
+  const visibleRefundAttempts =
+    refundStatusFilter === "all"
+      ? refundAttempts
+      : refundAttempts.filter((attempt) => attempt.status === refundStatusFilter);
 
   if (statsLoading) {
     return (
@@ -310,14 +387,25 @@ export default function AdminFinancePage() {
 
       {/* Main Tabs */}
       <Card data-testid="card-finance-content">
-        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as any)}>
+        {/*
+          The venue-commission tab was removed 2026-10-23 (deliberate deletion,
+          not a TODO).
+          It was fed by `/api/admin/finance/commissions` →
+          `legacyStorageRepo.getVenueCommissions`, computed as
+          `venue_bookings × commission_rate` (default 20%). But `venue_bookings`
+          rows are only ever created by hand in the admin
+          (`venuesRepo.assignVenue`); real participant spend never flows back, so
+          the table was structurally ¥0 forever while implying a 20% take rate the
+          platform does not charge. A finance surface that can only ever print ¥0
+          is worse than no surface — it launders an assumption into a number. The
+          server endpoint still exists (owned elsewhere); nothing in the admin
+          portal consumes it now.
+        */}
+        <Tabs value={mainTab} onValueChange={handleMainTabChange}>
           <CardHeader>
             <TabsList data-testid="tabs-main">
               <TabsTrigger value="payments" data-testid="tab-payments">
                 支付记录
-              </TabsTrigger>
-              <TabsTrigger value="commissions" data-testid="tab-commissions">
-                场地佣金
               </TabsTrigger>
               <TabsTrigger value="refunds" data-testid="tab-refunds" className="gap-1">
                 退款历史
@@ -524,7 +612,26 @@ export default function AdminFinancePage() {
 
             {/* Refund History Tab */}
             <TabsContent value="refunds" className="space-y-4">
-              <div className="flex items-center justify-end">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Tabs
+                  value={refundStatusFilter}
+                  onValueChange={handleRefundStatusChange}
+                >
+                  <TabsList data-testid="tabs-refund-status">
+                    <TabsTrigger value="all" data-testid="filter-refund-all">
+                      全部
+                    </TabsTrigger>
+                    <TabsTrigger value="pending" data-testid="filter-refund-pending">
+                      待处理
+                    </TabsTrigger>
+                    <TabsTrigger value="success" data-testid="filter-refund-success">
+                      已退款
+                    </TabsTrigger>
+                    <TabsTrigger value="failed" data-testid="filter-refund-failed">
+                      退款失败
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <Button
                   variant="outline"
                   size="sm"
@@ -540,6 +647,13 @@ export default function AdminFinancePage() {
                   导出 CSV
                 </Button>
               </div>
+              {fromRefundPendingQueue && (
+                <p className="text-xs text-muted-foreground" data-testid="text-refund-pending-note">
+                  已按「待处理」筛选：待办队列计数的是支付状态 refund_pending，
+                  这里列出的是同一笔退款的记账记录（已发起、尚未拿到回执）。
+                  若两个数字不一致，以支付记录为准排查。
+                </p>
+              )}
               {refundsError ? (
                 <FinanceErrorState
                   title="退款记录加载失败"
@@ -553,6 +667,12 @@ export default function AdminFinancePage() {
                 </div>
               ) : refundAttempts.length === 0 ? (
                 <EmptyState title="暂无退款记录" data-testid="text-no-refunds" />
+              ) : visibleRefundAttempts.length === 0 ? (
+                <EmptyState
+                  title="当前筛选下暂无退款记录"
+                  description="切换到「全部」可以查看最近的退款记录"
+                  data-testid="text-no-refunds-filtered"
+                />
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -569,7 +689,7 @@ export default function AdminFinancePage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {refundAttempts.map((attempt) => (
+                      {visibleRefundAttempts.map((attempt) => (
                         <TableRow key={attempt.id} data-testid={`row-refund-${attempt.id}`}>
                           <TableCell className="font-mono text-sm">
                             {attempt.id.slice(0, 8)}...
@@ -603,64 +723,6 @@ export default function AdminFinancePage() {
                           </TableCell>
                           <TableCell className="text-sm">
                             {attempt.resolved_at ? formatDateTime(attempt.resolved_at) : "—"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Venue Commissions Tab */}
-            <TabsContent value="commissions" className="space-y-4">
-              {commissionsError ? (
-                <FinanceErrorState
-                  title="场地佣金加载失败"
-                  error={commissionsQueryError}
-                  onRetry={() => refetchCommissions()}
-                  testId="error-commissions"
-                />
-              ) : commissionsLoading ? (
-                <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-commissions">
-                  加载中...
-                </div>
-              ) : sortedCommissions.length === 0 ? (
-                <EmptyState title="暂无场地佣金数据" data-testid="text-no-commissions" />
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead data-testid="header-venue-name">场地名称</TableHead>
-                        <TableHead data-testid="header-commission-rate">佣金比例</TableHead>
-                        <TableHead data-testid="header-booking-count">预订数量</TableHead>
-                        <TableHead data-testid="header-total-revenue">总营收</TableHead>
-                        <TableHead data-testid="header-total-commission">总佣金</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedCommissions.map((commission) => (
-                        <TableRow key={commission.id} data-testid={`row-commission-${commission.id}`}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Store className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium" data-testid={`text-venue-name-${commission.id}`}>
-                                {commission.venue_name}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell data-testid={`text-commission-rate-${commission.id}`}>
-                            {commission.commission_rate}%
-                          </TableCell>
-                          <TableCell data-testid={`text-booking-count-${commission.id}`}>
-                            {commission.booking_count} 次
-                          </TableCell>
-                          <TableCell className="font-semibold" data-testid={`text-total-revenue-${commission.id}`}>
-                            {formatCurrency(commission.total_revenue)}
-                          </TableCell>
-                          <TableCell className="font-semibold text-primary" data-testid={`text-total-commission-${commission.id}`}>
-                            {formatCurrency(commission.total_commission)}
                           </TableCell>
                         </TableRow>
                       ))}

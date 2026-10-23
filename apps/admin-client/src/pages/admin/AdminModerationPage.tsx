@@ -1,11 +1,18 @@
-import { useState } from "react";
-import { useSearch } from "wouter";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { invalidateNavBadges } from "@/lib/navBadges";
 import UserReportsTab from "./moderation/UserReportsTab";
 import ChatReportsTab from "./moderation/ChatReportsTab";
 import AiContentReportsTab from "./moderation/AiContentReportsTab";
 
 const VALID_TABS = ["users", "chat", "ai"] as const;
+type ModerationTab = (typeof VALID_TABS)[number];
+
+function parseTabParam(value: string | null | undefined): ModerationTab | null {
+  return value && (VALID_TABS as readonly string[]).includes(value) ? (value as ModerationTab) : null;
+}
 
 // `params` is declared optional so the component stays assignable to wouter's
 // RouteComponentProps (routes always inject `params`); it is never read.
@@ -16,12 +23,49 @@ export default function AdminModerationPage({
   params?: Record<string, string | undefined>;
 }) {
   const search = useSearch();
-  const urlTab = new URLSearchParams(search).get("tab");
-  const resolvedInitial =
-    initialTab ??
-    (urlTab && (VALID_TABS as readonly string[]).includes(urlTab) ? urlTab : undefined) ??
-    "users";
-  const [tab, setTab] = useState(resolvedInitial);
+  const [location, navigate] = useLocation();
+  const urlTab = parseTabParam(new URLSearchParams(search).get("tab"));
+  const [tab, setTab] = useState<ModerationTab>(
+    () => parseTabParam(initialTab) ?? urlTab ?? "users",
+  );
+
+  // The console action queue deep-links here (`?tab=…`) and `/admin/reports`
+  // redirects here with `?tab=chat`. Reading the URL only in the `useState`
+  // initialiser made the first deep link work and every later one lose: wouter
+  // reuses this component when only the query string changes (no remount), so
+  // local state stayed on whatever tab the operator last clicked. The URL is the
+  // tie-breaker for the page's whole lifetime, which is only safe because tab
+  // clicks write the URL back (see `handleTabChange`).
+  useEffect(() => {
+    if (urlTab && urlTab !== tab) setTab(urlTab);
+  }, [urlTab, tab]);
+
+  const queryClient = useQueryClient();
+
+  // Every tab click rewrites `?tab=`, otherwise the URL keeps describing the
+  // previous tab and the next deep link (or a refresh) silently overrides the
+  // operator's choice. `replace` keeps tab switching out of the back stack: it
+  // is a view option, not a destination.
+  const handleTabChange = (next: string) => {
+    const value = parseTabParam(next) ?? "users";
+    setTab(value);
+    const nextParams = new URLSearchParams(search);
+    nextParams.set("tab", value);
+    const pathname = location.split("?")[0] || "/admin/moderation";
+    navigate(`${pathname}?${nextParams.toString()}`, { replace: true });
+  };
+
+  // Report-resolution mutations live inside the tab components
+  // (`./moderation/*Tab`), which only invalidate their own lists. While the
+  // safety center is open, any successful action here changes the 安全中心 badge,
+  // so refresh the sidebar counts instead of waiting for the 30s poll.
+  useEffect(() => {
+    return queryClient.getMutationCache().subscribe((event) => {
+      if (event.type === "updated" && event.action.type === "success") {
+        invalidateNavBadges(queryClient);
+      }
+    });
+  }, [queryClient]);
 
   return (
     <div className="space-y-6 p-6">
@@ -30,7 +74,7 @@ export default function AdminModerationPage({
         <p className="text-muted-foreground mt-1">统一处理用户举报、聊天举报与 AI 内容举报</p>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+      <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList data-testid="tabs-safety-inbox">
           <TabsTrigger value="users" data-testid="tab-moderation-users">
             用户举报

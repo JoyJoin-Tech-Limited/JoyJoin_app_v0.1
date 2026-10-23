@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { NAV_BADGES_QUERY_KEY } from "@/lib/navBadges";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import {
@@ -27,7 +28,10 @@ import {
 } from "@/lib/adminNavConfig";
 
 const STORAGE_KEY = "jj-admin-nav-expanded";
-const BADGES_QUERY_KEY = ["/api/admin/nav-badges"];
+
+// Re-exported so callers may import the key from either the sidebar or the
+// shared `lib/navBadges` module (action surfaces should prefer the latter).
+export { NAV_BADGES_QUERY_KEY };
 
 type BadgeMap = Record<string, number>;
 
@@ -39,13 +43,19 @@ type BadgeMap = Record<string, number>;
  */
 function useNavBadges(enabled: boolean): BadgeMap {
   const { data } = useQuery({
-    queryKey: BADGES_QUERY_KEY,
+    queryKey: NAV_BADGES_QUERY_KEY,
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/nav-badges");
       return (await res.json()) as { badges: BadgeMap };
     },
     enabled,
     staleTime: 60_000,
+    // Derived counters, refreshed explicitly by the action surfaces that move
+    // them (approvals, refunds, report resolution). This poll is the safety net
+    // for anything that does not know about badges — a missed invalidation
+    // self-heals within 30s instead of staying wrong until a reload.
+    refetchInterval: enabled ? 30_000 : false,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     retry: false,
   });

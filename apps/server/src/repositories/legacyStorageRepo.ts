@@ -517,6 +517,11 @@ export class LegacyStorageRepo implements LegacyStorage {
   // ============ EVENT MANAGEMENT (Admin view of user events) ============
 
   // ============ FINANCE MANAGEMENT ============
+  // TODO(metrics): duplicate of the revenue split in lib/adminMetrics.ts
+  // (`getRevenueSplit`). This is an all-time ledger view and that one is windowed,
+  // so delegating would need an unbounded range (`resolveAdminRange` clamps to
+  // 400 days) — not a mechanical swap. Until then, the `payment_type` buckets
+  // here and in `getInsightsData` below are the two copies that can drift.
   async getFinanceStats(): Promise<any> {
     // Total revenue from all payments
     const totalRevenue = await db.execute(sql`
@@ -643,6 +648,11 @@ export class LegacyStorageRepo implements LegacyStorage {
     const matchingSuccessRate = formation.rate ?? 0;
     
     // Average match time (in hours)
+    // TODO(metrics): duplicate of `getMatchLatencyHours` in lib/adminMetrics.ts.
+    // Not delegated yet because the two implementations disagree: this one
+    // measures `updated_at - created_at` on `blind_box_events`, whose rows are
+    // CREATED at match persistence, so it reads near-zero by construction. The
+    // canonical 排桌时延 is registration_deadline → matched_at.
     const avgMatchTimeResult = await db.execute(sql`
       SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600)::float as avg_hours
       FROM blind_box_events
@@ -807,6 +817,13 @@ export class LegacyStorageRepo implements LegacyStorage {
       : 0;
     
     // Revenue breakdown
+    // TODO(metrics): duplicate of the revenue split in lib/adminMetrics.ts
+    // (`getRevenueSplit`) — and already inconsistent with `getFinanceStats`,
+    // which counts `event_bundle` as subscription revenue and `event_pack` as
+    // event revenue. Here the filters are `= 'subscription'` / `= 'event'`, so
+    // 月卡/季卡 sold through the bundle path and 连局包 are missing from both
+    // buckets and from `totalRevenue`. Delegate once this view has a window;
+    // do not fix the filters piecemeal.
     const subscriptionRevenue = await db.execute(sql`
       SELECT COALESCE(SUM(final_amount), 0)::int as total 
       FROM payments 

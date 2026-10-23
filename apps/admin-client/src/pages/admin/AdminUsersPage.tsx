@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { keepPreviousData, useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,15 +34,18 @@ import {
   Filter,
   X,
   Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { exportAdminUsersCsv } from "@/lib/adminUserCsvExport";
 import { AdminUserStarRating } from "@/components/admin/AdminUserStarRating";
 import { AdminUserDetailSheet } from "./AdminUserDetailSheet";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, resolveApiUrl } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getCanonicalDisplayName } from "@/lib/userFieldMappings";
 import { fmtDate } from "@/lib/dateUtils";
-import { useLocation, useSearch } from "wouter";
+import { useUrlFilters } from "@/lib/useUrlFilters";
+import { useScrollRestoration } from "@/lib/useScrollRestoration";
 import { CURRENT_CITY_OPTIONS } from "@shared/constants";
 import type { AdminUser, UserDetail } from "./types";
 import { getArchetypeBadgeStyle, getStuckStatus } from "./adminUserBadges";
@@ -50,17 +53,69 @@ import { getArchetypeBadgeStyle, getStuckStatus } from "./adminUserBadges";
 // fix the filter white screen
 const ALL_FILTER_VALUE = "__all__";
 
+/** Rows per page. Mirrors the audit-log page so the console has one rhythm. */
+const USERS_PAGE_SIZE = 20;
+
+/**
+ * Hard ceiling for the CSV export. The server list endpoint has no export
+ * route and no upper limit on `limit`, so the client must bound the request
+ * itself; when the population is larger we export a documented prefix and say
+ * so instead of silently shipping one page and calling it "all users".
+ */
+const EXPORT_MAX_ROWS = 5000;
+
+/**
+ * Filter keys this page owns in the query string.
+ * `maxCompleteness` is a public deep-link contract (dashboard card + the
+ * server-rendered console queue both link to `/admin/users?maxCompleteness=50`).
+ */
+const USER_FILTER_DEFAULTS: {
+  status: string;
+  city: string;
+  archetype: string;
+  maxCompleteness: string;
+  page: string;
+} = {
+  status: "all",
+  city: "",
+  archetype: "",
+  maxCompleteness: "",
+  page: "1",
+};
+
+type UserStatusFilter = "all" | "banned" | "stuck";
+
+const USER_STATUS_VALUES: readonly string[] = ["all", "banned", "stuck"];
+
+interface AdminUsersResponse {
+  users: AdminUser[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export default function AdminUsersPage() {
-  const searchParams = useSearch();
-  const [, setLocation] = useLocation();
+  const [filters, setFilter, resetFilters] = useUrlFilters(USER_FILTER_DEFAULTS, {
+    allowed: {
+      status: USER_STATUS_VALUES,
+      city: CURRENT_CITY_OPTIONS as readonly string[],
+      maxCompleteness: ["35", "50", "75"],
+    },
+  });
+
+  const filterStatus = filters.status as UserStatusFilter;
+  const cityFilter = filters.city;
+  const archetypeFilter = filters.archetype;
+  const maxCompleteness = filters.maxCompleteness;
+  const parsedPage = Number.parseInt(filters.page, 10);
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "subscribed" | "banned" | "stuck">("all");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [cityFilter, setCityFilter] = useState<string>("");
-  const [archetypeFilter, setArchetypeFilter] = useState<string>("");
-  const [maxCompleteness, setMaxCompleteness] = useState<string>("");
   const { toast } = useToast();
   const { user: authUser } = useAuth();
   const canMutate = authUser?.adminRole !== "viewer";
@@ -68,36 +123,94 @@ export default function AdminUsersPage() {
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [banReason, setBanReason] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
+  // Entering through a deep link (?maxCompleteness=…) must reveal the filter
+  // panel, otherwise the list looks filtered for no visible reason.
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    if (params.get("maxCompleteness")) {
-      setMaxCompleteness(params.get("maxCompleteness") || "");
-      setShowFilters(true);
-    }
-  }, [searchParams]);
+    if (maxCompleteness) setShowFilters(true);
+  }, [maxCompleteness]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { data: users = [], isLoading, isError, error, refetch } = useQuery<AdminUser[]>({
-    queryKey: ["/api/admin/users", { search: debouncedSearchQuery, filter: filterStatus === "all" ? undefined : filterStatus, city: cityFilter, archetype: archetypeFilter, maxCompleteness }],
-    queryFn: async () => {
+  /** Changing a filter resets pagination — page 5 of a 1-page result is a blank table. */
+  const setUserFilter = useCallback(
+    (key: keyof typeof USER_FILTER_DEFAULTS, value: string) => {
+      setFilter(key, value);
+      if (key !== "page") setFilter("page", USER_FILTER_DEFAULTS.page);
+    },
+    [setFilter],
+  );
+
+  const buildUserQuery = useCallback(
+    (pageArg: number, limitArg: number) => {
       const params = new URLSearchParams();
       if (debouncedSearchQuery) params.append("search", debouncedSearchQuery);
       if (filterStatus !== "all") params.append("filter", filterStatus);
       if (cityFilter) params.append("city", cityFilter);
       if (archetypeFilter) params.append("archetype", archetypeFilter);
       if (maxCompleteness) params.append("maxCompleteness", maxCompleteness);
-      const response = await fetch(`/api/admin/users?${params}`, { credentials: "include" });
+      params.append("page", String(pageArg));
+      params.append("limit", String(limitArg));
+      return params;
+    },
+    [debouncedSearchQuery, filterStatus, cityFilter, archetypeFilter, maxCompleteness],
+  );
+
+  const {
+    data,
+    isLoading,
+    isPlaceholderData,
+    isError,
+    error,
+    refetch,
+  } = useQuery<AdminUsersResponse>({
+    queryKey: [
+      "/api/admin/users",
+      {
+        filter: filterStatus,
+        city: cityFilter,
+        archetype: archetypeFilter,
+        maxCompleteness,
+        page,
+        limit: USERS_PAGE_SIZE,
+        search: debouncedSearchQuery,
+      },
+    ],
+    // Keep the previous page on screen while the next one loads (page flips used
+    // to blank the whole grid behind a skeleton).
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const params = buildUserQuery(page, USERS_PAGE_SIZE);
+      const response = await fetch(resolveApiUrl(`/api/admin/users?${params}`), {
+        credentials: "include",
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      return data.users || [];
+      const payload = await response.json();
+      const users: AdminUser[] = payload.users || [];
+      return {
+        users,
+        pagination: payload.pagination ?? {
+          page,
+          limit: USERS_PAGE_SIZE,
+          total: users.length,
+          totalPages: 1,
+        },
+      };
     },
     retry: 2,
   });
+
+  const users = data?.users ?? [];
+  const pagination = data?.pagination;
+  const total = pagination?.total ?? users.length;
+  const totalPages = Math.max(1, pagination?.totalPages ?? Math.ceil(total / USERS_PAGE_SIZE));
+
+  // Remember where the operator was in the list across tab navigation.
+  useScrollRestoration(undefined, { ready: !isLoading });
 
   const { data: userDetail, isLoading: isLoadingDetail } = useQuery<UserDetail>({
     queryKey: ["/api/admin/users", selectedUser, "detail"],
@@ -184,13 +297,60 @@ export default function AdminUsersPage() {
   });
 
   const clearFilters = () => {
-    setCityFilter("");
-    setArchetypeFilter("");
-    setMaxCompleteness("");
-    setLocation("/admin/users");
+    resetFilters();
   };
 
   const hasActiveFilters = cityFilter || archetypeFilter || maxCompleteness;
+
+  /**
+   * Export every row that matches the active filters — not the page on screen.
+   *
+   * There is no server export endpoint for users, and the list route slices
+   * `limit`/`page` out of a full in-memory scan, so we re-request the whole
+   * filtered set in one call, bounded by EXPORT_MAX_ROWS. If the population is
+   * larger we export the documented prefix and tell the operator exactly how
+   * many rows they got out of how many.
+   */
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    const exportCount = Math.min(
+      Math.max(total, USERS_PAGE_SIZE),
+      EXPORT_MAX_ROWS,
+    );
+    try {
+      const params = buildUserQuery(1, exportCount);
+      const response = await fetch(resolveApiUrl(`/api/admin/users?${params}`), {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const exportRows: AdminUser[] = payload.users || [];
+      const exportTotal: number = payload.pagination?.total ?? exportRows.length;
+
+      if (exportRows.length === 0) {
+        toast({ title: "没有可导出的用户", description: "当前筛选条件下没有匹配的用户。" });
+        return;
+      }
+
+      exportAdminUsersCsv(exportRows);
+
+      const truncated = exportTotal > exportRows.length;
+      toast({
+        title: truncated ? "已导出部分用户" : "已导出全部用户",
+        description: truncated
+          ? `已导出前 ${exportRows.length} 条，共 ${exportTotal} 人。请缩小筛选范围后分批导出。`
+          : `已导出 ${exportRows.length} 人。`,
+      });
+    } catch (err) {
+      toast({
+        title: "导出失败",
+        description: err instanceof Error ? err.message : "无法导出用户列表，请重试",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (isError) {
     return (
@@ -225,9 +385,21 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold tracking-tight">用户管理</h1>
           <p className="text-muted-foreground mt-1">查看和管理所有用户账户</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => exportAdminUsersCsv(users)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={isExporting || isLoading}
+          data-testid="button-export-users-csv"
+        >
           <Download className="h-4 w-4 mr-2" />
-          导出 CSV
+          {isExporting
+            ? "导出中…"
+            : total > EXPORT_MAX_ROWS
+              ? `导出前 ${EXPORT_MAX_ROWS} 人`
+              : total > USERS_PAGE_SIZE
+                ? `导出全部 ${total} 人`
+                : "导出 CSV"}
         </Button>
       </div>
 
@@ -254,10 +426,9 @@ export default function AdminUsersPage() {
               筛选
               {hasActiveFilters && <Badge variant="default" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">!</Badge>}
             </Button>
-            <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+            <Tabs value={filterStatus} onValueChange={(v) => setUserFilter("status", v)}>
               <TabsList>
                 <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
-                <TabsTrigger value="subscribed" data-testid="filter-subscribed">会员</TabsTrigger>
                 <TabsTrigger value="banned" data-testid="filter-banned">已封禁</TabsTrigger>
                 <TabsTrigger value="stuck" data-testid="filter-stuck">卡壳用户</TabsTrigger>
               </TabsList>
@@ -272,7 +443,7 @@ export default function AdminUsersPage() {
                 <label className="text-xs text-muted-foreground">城市</label>
                 <Select
                   value={cityFilter || ALL_FILTER_VALUE}
-                  onValueChange={(value) => setCityFilter(value === ALL_FILTER_VALUE ? "" : value)}
+                  onValueChange={(value) => setUserFilter("city", value === ALL_FILTER_VALUE ? "" : value)}
                 >
                   <SelectTrigger className="w-32" data-testid="select-city-filter">
                     <SelectValue placeholder="全部城市" />
@@ -290,7 +461,7 @@ export default function AdminUsersPage() {
                 <label className="text-xs text-muted-foreground">资料完整度</label>
                 <Select
                   value={maxCompleteness || ALL_FILTER_VALUE}
-                  onValueChange={(value) => setMaxCompleteness(value === ALL_FILTER_VALUE ? "" : value)}
+                  onValueChange={(value) => setUserFilter("maxCompleteness", value === ALL_FILTER_VALUE ? "" : value)}
                 >
                   <SelectTrigger className="w-36" data-testid="select-completeness-filter">
                     <SelectValue placeholder="不限" />
@@ -318,13 +489,20 @@ export default function AdminUsersPage() {
       {!isLoading && users.length > 0 && (
         <Card className="mb-4" data-testid="card-onboarding-funnel">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Onboarding 漏斗</CardTitle>
+            <div className="flex items-baseline justify-between gap-2">
+              <CardTitle className="text-sm font-medium">Onboarding 漏斗</CardTitle>
+              {/* The list is paginated, so these bars are a page sample, not the
+                  population. Saying so out loud beats mixing denominators. */}
+              <span className="text-xs text-muted-foreground" data-testid="text-funnel-sample">
+                当前页样本 {users.length} 人 / 共 {total} 人
+              </span>
+            </div>
           </CardHeader>
           <CardContent>
             {(() => {
-              const total = users.length;
+              const sampleSize = users.length;
               const steps = [
-                { label: "注册开始", count: total, key: null },
+                { label: "注册开始", count: sampleSize, key: null },
                 { label: "完成注册", count: users.filter((u) => u.hasCompletedRegistration).length, key: "hasCompletedRegistration" },
                 { label: "性格测试", count: users.filter((u) => u.hasCompletedPersonalityTest).length, key: "hasCompletedPersonalityTest" },
                 { label: "兴趣选择", count: users.filter((u) => u.hasCompletedInterestsCarousel).length, key: "hasCompletedInterestsCarousel" },
@@ -385,7 +563,14 @@ export default function AdminUsersPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={
+            isPlaceholderData
+              ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3 opacity-60 transition-opacity"
+              : "grid gap-4 md:grid-cols-2 lg:grid-cols-3 transition-opacity"
+          }
+          aria-busy={isPlaceholderData}
+        >
           {users.map((user) => (
             <Card
               key={user.id}
@@ -462,6 +647,48 @@ export default function AdminUsersPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Pagination — the list used to render exactly the server's default 50
+          rows with no way to see (or even notice) the rest. */}
+      {!isLoading && users.length > 0 && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 border-t pt-4"
+          data-testid="users-pagination"
+        >
+          <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
+            <span data-testid="text-users-pagination-summary">
+              共 {total} 人 · 第 {page}/{totalPages} 页
+            </span>
+            {isPlaceholderData && (
+              <span className="text-xs" data-testid="text-users-updating">
+                更新中…
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || isPlaceholderData}
+              onClick={() => setUserFilter("page", String(Math.max(1, page - 1)))}
+              data-testid="button-users-prev-page"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              上一页
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || isPlaceholderData}
+              onClick={() => setUserFilter("page", String(Math.min(totalPages, page + 1)))}
+              data-testid="button-users-next-page"
+            >
+              下一页
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
@@ -49,6 +49,12 @@ import type {
   VenueCandidateResponse,
 } from "./types";
 import { fmtDateTimeLocal, safeFormat } from "@/lib/dateUtils";
+import {
+  stripUrlParams,
+  useDebouncedValue,
+  useUrlFilters,
+} from "@/lib/useUrlFilters";
+import { useScrollRestoration } from "@/lib/useScrollRestoration";
 import { zhCN } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -105,6 +111,32 @@ const RAW_STATUS_LABEL: Record<
 const formatPoolDateTime = (dateTimeStr: string) =>
   safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { locale: zhCN, fallback: dateTimeStr });
 
+/**
+ * Filter keys this page owns in the query string. `lowFill` and `focus` are
+ * deliberately NOT here — they are deep-link intents owned by the todo queue
+ * and are preserved by the hook on every write.
+ */
+const POOL_FILTER_DEFAULTS: {
+  cityFilter: CityFilter;
+  waitingFilter: WaitingFilter;
+  eventsFilter: EventsFilter;
+  sortBy: SortOption;
+  q: string;
+} = {
+  cityFilter: "all",
+  waitingFilter: "all",
+  eventsFilter: "all",
+  sortBy: "newest",
+  q: "",
+};
+
+const POOL_FILTER_ALLOWED = {
+  cityFilter: ["all", "深圳", "香港"],
+  waitingFilter: ["all", "hasWaiting", "noWaiting"],
+  eventsFilter: ["all", "hasEvents", "noEvents"],
+  sortBy: ["newest", "oldest", "title", "mostRegistrations", "mostMatched"],
+} as const;
+
 /** Parse the real server error message out of an apiRequest error. */
 function getServerErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : "";
@@ -132,16 +164,25 @@ export default function AdminEventPoolsPage() {
   // 这两个参数必须真的生效，否则队列的「跳转」列就是假动作 —— 之前这条链路
   // 指向并不存在的 /admin/pools/:id，会落到 AdminNotFound。
   const search = useSearch();
-  const [, setLocation] = useLocation();
   const lowFillOnly = useMemo(() => new URLSearchParams(search).get("lowFill") === "1", [search]);
   const focusPoolId = useMemo(() => new URLSearchParams(search).get("focus"), [search]);
   const focusOpenedRef = useRef(false);
 
-  // ====== 过滤状态 ======
-  const [cityFilter, setCityFilter] = useState<CityFilter>("all");
-  const [waitingFilter, setWaitingFilter] = useState<WaitingFilter>("all");
-  const [eventsFilter, setEventsFilter] = useState<EventsFilter>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  // ====== 过滤状态（写在 URL 里，切 tab 再回来不会丢） ======
+  const [filters, setFilter] = useUrlFilters(POOL_FILTER_DEFAULTS, {
+    allowed: POOL_FILTER_ALLOWED,
+  });
+  const cityFilter = filters.cityFilter;
+  const waitingFilter = filters.waitingFilter;
+  const eventsFilter = filters.eventsFilter;
+  const sortBy = filters.sortBy;
+
+  // 标题搜索：输入框即时响应，URL / 过滤结果走 300ms 防抖，避免每次按键都写地址栏。
+  const [titleQuery, setTitleQuery] = useState(filters.q);
+  const debouncedTitleQuery = useDebouncedValue(titleQuery, 300);
+  useEffect(() => {
+    if (debouncedTitleQuery !== filters.q) setFilter("q", debouncedTitleQuery);
+  }, [debouncedTitleQuery, filters.q, setFilter]);
 
   // 创建 / 编辑 / 详情弹窗
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -171,6 +212,9 @@ export default function AdminEventPoolsPage() {
   } = useQuery<AdminEventPool[]>({
     queryKey: ["/api/admin/event-pools"],
   });
+
+  // 列表滚动位置恢复（切走再回来接着看）。必须放在所有 early return 之前。
+  useScrollRestoration(undefined, { ready: !isLoading });
 
   // 创建表单
   const form = useForm({
@@ -493,6 +537,8 @@ export default function AdminEventPoolsPage() {
       };
     });
 
+    const titleNeedle = filters.q.trim().toLowerCase();
+
     const filtered = augmented
       .filter((pool) => {
         if (cityFilter !== "all" && pool.city !== cityFilter) return false;
@@ -500,6 +546,10 @@ export default function AdminEventPoolsPage() {
         if (waitingFilter === "noWaiting" && pool._hasWaiting) return false;
         if (eventsFilter === "hasEvents" && !pool._hasEvents) return false;
         if (eventsFilter === "noEvents" && pool._hasEvents) return false;
+        // 标题搜索：空查询不过滤，保持现状列表不变。
+        if (titleNeedle && !(pool.title || "").toLowerCase().includes(titleNeedle)) {
+          return false;
+        }
         // 与 lib/adminMetrics.ts 的 getUnderfilledPoolsClosingSoon 同一判据：
         // 进行中、非测试池、24h 内截止、且报名数不足 minGroupSize × targetGroups。
         // 客户端与服务端不一致，就会让「即将截止」这一行点进来看到 0 条。
@@ -542,10 +592,12 @@ export default function AdminEventPoolsPage() {
       poolsWithEvents: augmented.filter((p) => p._hasEvents).length,
       filteredPools: filtered,
     };
-  }, [pools, cityFilter, waitingFilter, eventsFilter, sortBy, lowFillOnly]);
+  }, [pools, cityFilter, waitingFilter, eventsFilter, sortBy, lowFillOnly, filters.q]);
 
   // ?focus=<poolId>：从待办队列点某一桌进来时直接打开它的详情抽屉。
   // 用 ref 保证只自动打开一次，否则每次轮询刷新都会把用户刚关掉的抽屉重新弹开。
+  // 消费后立刻把 focus 从地址栏抹掉（保留 lowFill 与筛选条件），
+  // 这样刷新页面不会把已经关掉的抽屉又弹出来。
   useEffect(() => {
     if (!focusPoolId || focusOpenedRef.current || pools.length === 0) return;
     const target = pools.find((pool) => pool.id === focusPoolId);
@@ -553,6 +605,7 @@ export default function AdminEventPoolsPage() {
     focusOpenedRef.current = true;
     setSelectedPool(target);
     setShowDetailsDialog(true);
+    stripUrlParams(["focus"]);
   }, [focusPoolId, pools]);
 
   const handleCopyPool = (pool: AdminEventPool) => {
@@ -666,13 +719,15 @@ export default function AdminEventPoolsPage() {
 
       <EventPoolFilters
         cityFilter={cityFilter}
-        setCityFilter={setCityFilter}
+        setCityFilter={(v) => setFilter("cityFilter", v)}
         waitingFilter={waitingFilter}
-        setWaitingFilter={setWaitingFilter}
+        setWaitingFilter={(v) => setFilter("waitingFilter", v)}
         eventsFilter={eventsFilter}
-        setEventsFilter={setEventsFilter}
+        setEventsFilter={(v) => setFilter("eventsFilter", v)}
         sortBy={sortBy}
-        setSortBy={setSortBy}
+        setSortBy={(v) => setFilter("sortBy", v)}
+        searchQuery={titleQuery}
+        setSearchQuery={setTitleQuery}
       />
 
       {/* 活动池列表 */}
@@ -688,7 +743,7 @@ export default function AdminEventPoolsPage() {
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs"
-            onClick={() => setLocation("/admin/event-pools")}
+            onClick={() => stripUrlParams(["lowFill"])}
             data-testid="event-pools-lowfill-clear"
           >
             查看全部场次

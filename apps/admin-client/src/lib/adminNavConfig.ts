@@ -93,6 +93,36 @@ export interface AdminNavGroup {
   items: AdminNavItem[];
 }
 
+/*
+ * 命名权威（single source of truth）—— nav title 就是页面标题
+ *
+ * 每个页面只应该有一个一级标题，而那个标题的文案来自这里。`usePageTitle`
+ * 已经用 `item.title` 生成 document.title，`AdminLayout` 的面包屑也读它；页面
+ * 自己的 h1 必须与它逐字一致。
+ *
+ * 冲突消解规则（2026-10-23，六处历史冲突已按此收敛）：
+ *   1. 优先采用控制台里已经在用的名字——页面正文、交叉引用（例如
+ *      EventPoolDetailDialog 的「盲盒活动管理」页面）、badge 语义。
+ *   2. 其次取更短、更贴近「运营要做的事」的名字，而不是描述实现细节的名字。
+ *   3. 「管理」后缀只在去掉后会产生歧义时保留（活动池管理 / 盲盒活动管理
+ *      要彼此区分；活动模板、优惠券本身就是对象名，不需要后缀）。
+ *
+ * 结论（页面侧改名是后续 PR，本文件先定稿；页面改完后两边逐字一致）：
+ *   /admin/matching-reviews  排桌审批        ← 页面 h1 仍是「匹配审核」
+ *   /admin/events            盲盒活动管理    ← 页面 h1 已是同名（本条只改 nav）
+ *   /admin/insights          数据洞察        ← 页面 h1 仍是「运营决策指挥中心」
+ *   /admin/matching-logs     匹配日志        ← 页面 h1 仍是「匹配扫描日志」
+ *   /admin/templates         活动模板        ← 页面 h1 仍是「活动模板管理」
+ *   /admin/coupons           优惠券          ← 页面 h1 仍是「优惠券管理」
+ *
+ * 本次只收敛这六处。其余路由仍有 nav 与页面标题不一致（例如 /admin/dashboard
+ * 的「运营指挥台」、/admin/matching-config 的「实时匹配配置」、/admin/notifications
+ * 的「通知推送管理」），按同一规则逐页跟进，不要反过来改 nav 去迁就页面。
+ *
+ * 改标题时只动 `title`；`url` 与 `roles` 是路由与 RBAC 契约，改它们会静默
+ * 改动权限（见 adminNavConfig.test.ts）。
+ */
+
 /**
  * Tier 1: Daily Ops — pinned dock, always visible without expanding anything.
  *
@@ -163,7 +193,10 @@ export const ADMIN_NAV_WORKSPACES: AdminNavWorkspace[] = [
     key: "events",
     label: "活动",
     items: [
-      { title: "活动管理", url: "/admin/events", icon: CalendarDays, roles: SUPER_OPERATOR },
+      // 「活动管理」太含糊：控制台里同时有 活动池管理 / 盲盒活动 / 活动模板。
+      // 采用页面正文与交叉引用已经在用的名字（EventPoolDetailDialog 两处文案
+      // 都写「盲盒活动管理」页面）。
+      { title: "盲盒活动管理", url: "/admin/events", icon: CalendarDays, roles: SUPER_OPERATOR },
       { title: "活动模板", url: "/admin/templates", icon: CalendarCheck, roles: SUPER_OPERATOR },
     ],
   },

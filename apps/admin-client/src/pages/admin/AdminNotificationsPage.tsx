@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/ui/use-toast";
-import { Bell, Send, Users, CheckCircle, Clock } from "lucide-react";
+import { Bell, Send, Users, CheckCircle, Clock, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,17 +59,75 @@ type NotificationHistory = {
   createdAt: string;
 };
 
+/**
+ * 群发文案草稿。
+ *
+ * 写一条通知通常要 10+ 分钟，中途被打断（切去别的工单、刷新、误关标签页）不该
+ * 从空白页重来。草稿只写在本机 localStorage，不上报服务端：未发送的文案不是
+ * 已发生的动作，没有理由进审计链路；也正因为它只在这台机器上，才用得上
+ * 「已恢复草稿」这条提示。
+ */
+const NOTIFICATION_DRAFT_KEY = "joyjoin.admin.notificationDraft.v1";
+
+type NotificationDraft = { title: string; message: string };
+
+function readNotificationDraft(): NotificationDraft | null {
+  try {
+    const raw = localStorage.getItem(NOTIFICATION_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<NotificationDraft> | null;
+    const title = typeof parsed?.title === "string" ? parsed.title : "";
+    const message = typeof parsed?.message === "string" ? parsed.message : "";
+    // 空草稿等于没有草稿：不要为一个空白输入弹「已恢复草稿」。
+    if (!title.trim() && !message.trim()) return null;
+    return { title, message };
+  } catch {
+    // 损坏的 JSON 或禁用了 storage（无痕模式/配额）—— 从空白开始，不报错。
+    return null;
+  }
+}
+
+function writeNotificationDraft(draft: NotificationDraft): void {
+  try {
+    localStorage.setItem(NOTIFICATION_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // 存储不可用时撰写仍然可用，只是不具备「关掉标签页还在」的保证。
+  }
+}
+
+function clearNotificationDraft(): void {
+  try {
+    localStorage.removeItem(NOTIFICATION_DRAFT_KEY);
+  } catch {
+    // 读不到也删不掉，忽略。
+  }
+}
+
 export default function AdminNotificationsPage() {
   const { toast } = useToast();
+  // 首帧就把草稿读回来：state 初始化器是同步的，所以输入框第一次渲染就是
+  // 「上次写到哪里」。这也避免了先渲染空表单、再被 effect 覆盖造成的闪烁。
+  const [initialDraft] = useState<NotificationDraft | null>(() => readNotificationDraft());
   const [category, setCategory] = useState("discover");
   const [type, setType] = useState("admin_announcement");
-  const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
+  const [title, setTitle] = useState(initialDraft?.title ?? "");
+  const [message, setMessage] = useState(initialDraft?.message ?? "");
+  const [draftRestored, setDraftRestored] = useState(Boolean(initialDraft));
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [recipientFilter, setRecipientFilter] = useState<RecipientFilter>("all");
   const [selectedPoolId, setSelectedPoolId] = useState("");
   const [selectedEventId, setSelectedEventId] = useState("");
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+
+  // 每次改动都落盘：两个字符串的写入成本远小于丢一条写了一半的群发文案。
+  // 清空两个输入框时顺手删掉草稿，避免留下「僵尸草稿」下次又被恢复。
+  useEffect(() => {
+    if (!title.trim() && !message.trim()) {
+      clearNotificationDraft();
+      return;
+    }
+    writeNotificationDraft({ title, message });
+  }, [title, message]);
 
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
@@ -150,6 +208,9 @@ export default function AdminNotificationsPage() {
       setTitle("");
       setMessage("");
       setSelectedUserIds([]);
+      // 发出去了就不再是草稿：本地留着只会在下次进来时被误认为「未发送」。
+      clearNotificationDraft();
+      setDraftRestored(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
     },
     onError: () => {
@@ -229,6 +290,14 @@ export default function AdminNotificationsPage() {
     }
   };
 
+  /** 主动丢弃恢复出来的草稿（不是「发送成功」，是「我不想要它了」）。 */
+  const discardDraft = () => {
+    setTitle("");
+    setMessage("");
+    clearNotificationDraft();
+    setDraftRestored(false);
+  };
+
   if (usersLoading || notificationsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -266,6 +335,30 @@ export default function AdminNotificationsPage() {
         </TabsList>
 
         <TabsContent value="send" className="space-y-6">
+          {draftRestored && (
+            <div
+              className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+              role="status"
+              data-testid="notice-draft-restored"
+            >
+              <History className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">已恢复草稿</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  上次没有发出的标题和内容已经回到输入框，发送成功后会清空这份草稿。
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={discardDraft}
+                data-testid="button-discard-draft"
+              >
+                清空草稿
+              </Button>
+            </div>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>创建并发送通知</CardTitle>

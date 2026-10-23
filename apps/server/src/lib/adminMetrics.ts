@@ -90,7 +90,51 @@ export type AdminKpiKey =
   | "formation_rate"
   | "match_latency_p50"
   | "revenue_per_formed_event"
+  | "prepaid_deferred"
   | "coupon_to_paid_rate";
+
+/**
+ * KPI keys that expose cash figures. `/api/admin/kpi` blanks these for anyone
+ * below super_admin — the list lives next to the definitions so a new money
+ * metric cannot be added without deciding its redaction.
+ */
+export const REVENUE_KPI_KEYS: ReadonlySet<AdminKpiKey> = new Set<AdminKpiKey>([
+  "revenue_per_formed_event",
+  "prepaid_deferred",
+]);
+
+/**
+ * `payments.payment_type` values that are cash for ONE event — money handed over
+ * in exchange for the session that provides the denominator.
+ *
+ * Everything else is a prepayment: 三连局包/六连局包 (`event_pack`) and
+ * 悦聚月卡/季卡 (`subscription` / `event_bundle`) are billed before any session is
+ * delivered, and their credits are drawn down over later events.
+ */
+const TICKET_PAYMENT_TYPES = ["event"] as const;
+
+/**
+ * Prepaid, not-yet-delivered cash. Deliberately a superset of
+ * `TICKET_PAYMENT_TYPES` and disjoint from it — a payment type that is neither
+ * list is dropped from both figures rather than silently landing in revenue.
+ */
+const PREPAID_PAYMENT_TYPES = ["event_bundle", "subscription", "event_pack"] as const;
+
+/**
+ * Pre-built `IN (...)` lists, bound as parameters (never interpolated): the type
+ * lists are constants today, but a tier added to the pricing table must not
+ * become a SQL injection vector through an operator-edited payment type. Shared
+ * by `getRevenueSplit` and `getKpiSeries` so the card and its sparkline can
+ * never disagree about which payment types count as ticket cash.
+ */
+const TICKET_TYPE_LIST = sql.join(
+  TICKET_PAYMENT_TYPES.map((type) => sql`${type}`),
+  sql`, `,
+);
+const PREPAID_TYPE_LIST = sql.join(
+  PREPAID_PAYMENT_TYPES.map((type) => sql`${type}`),
+  sql`, `,
+);
 
 export type AdminKpiUnit = "count" | "percent" | "hours" | "cny" | "cents";
 
@@ -118,6 +162,12 @@ export interface AdminKpi {
   drill: AdminKpiDrill;
   /** Freshness of THIS block, ISO. Blocks are computed at different times. */
   asOf: string;
+  /**
+   * Weekly shape behind the number, oldest → newest. `null` marks a bucket with
+   * no denominator (e.g. no pool was due that week) — drawn as a gap, never 0%.
+   * Absent entirely for metrics whose series would be noise (see `getKpiSeries`).
+   */
+  series?: Array<number | null>;
 }
 
 function computeDelta(current: number | null, previous: number | null): {
@@ -270,46 +320,115 @@ export async function getApprovalLatencyHours(
 }
 
 /**
- * 每场实收单价 — completed cash in the window divided by events actually held.
- * Returns cents; the client converts to ¥.
+ * 实收拆分 — single-ticket cash vs prepaid cash, over ONE shared denominator.
  *
- * `payments.final_amount` is authoritative for cash (after discount). This is a
- * revenue-only figure: per-session margin is NOT computable because `venue_deals`
- * stores `discountType`/`discountValue` and no cost fields. Do not render a
- * margin or gross-profit number derived from it.
+ * Why this is two numbers and not one rate: the pre-2026-10-23 version divided
+ * every completed payment by the formed-event count, so a ¥370 六连局包 or a ¥98
+ * 悦聚月卡 sold in the same month was reported as if it were the price of the
+ * sessions held that month. One six-pack plus one formed event read as ~¥458/场
+ * against a real single-ticket price of ~¥88 — a systematic overstatement by
+ * the prepayment multiplier, on a card operators use to judge pricing.
+ *
+ * `ticketCents` is the only cash that belongs to a formed event. Prepaid cash is
+ * a liability (money received, delivery still owed), so it is returned as a
+ * total with its order count instead of a per-event rate — dividing it by events
+ * held would re-create the original error.
+ *
+ * Both sides are read in one statement so the numerator and denominator come
+ * from the same snapshot. The two windows are anchored differently on purpose
+ * and the card says so: cash is counted when it arrived (`payments.created_at`),
+ * events when they are held (`event_pools.date_time`). This is a period ratio,
+ * not per-event attribution — attributing each payment to its event would need
+ * `payments.related_id` to be populated for every completed ticket, which it is
+ * not.
+ *
+ * `payments.final_amount` is authoritative for cash (after discount). Per-session
+ * margin is NOT computable: `venue_deals` stores `discountType`/`discountValue`
+ * and no cost fields. Do not derive a margin or gross-profit number from these.
+ */
+export interface RevenueSplit {
+  /** Completed cash from single-event tickets only — `payment_type = 'event'`. */
+  ticketCents: number;
+  /** Completed cash from prepayments (连局包 + 悦聚卡). A liability, not revenue. */
+  prepaidCents: number;
+  /** How many completed prepayment orders make up `prepaidCents`. */
+  prepaidOrders: number;
+  /** Formed events in the window — the single denominator both figures report against. */
+  formedEvents: number;
+  /** `ticketCents / formedEvents`; `null` when nothing formed (never 0). */
+  perFormedEventCents: number | null;
+}
+
+/** Both halves read in one statement, so the shared denominator is one snapshot. */
+export async function getRevenueSplit(range: AdminMetricRange): Promise<RevenueSplit> {
+  const result = await db.execute(sql`
+    WITH formed AS (
+      SELECT COUNT(*)::int AS formed_events
+      FROM event_pools p
+      WHERE p.date_time >= ${range.from}
+        AND p.date_time < ${range.to}
+        AND p.is_test_pool = false
+        AND p.status <> 'cancelled'
+        AND EXISTS (
+          SELECT 1 FROM event_pool_groups g
+          WHERE g.pool_id = p.id AND g.status <> 'cancelled'
+        )
+    ),
+    cash AS (
+      SELECT
+        COALESCE(SUM(final_amount) FILTER (
+          WHERE payment_type IN (${TICKET_TYPE_LIST})
+        ), 0)::bigint AS ticket_cents,
+        COALESCE(SUM(final_amount) FILTER (
+          WHERE payment_type IN (${PREPAID_TYPE_LIST})
+        ), 0)::bigint AS prepaid_cents,
+        COUNT(*) FILTER (
+          WHERE payment_type IN (${PREPAID_TYPE_LIST})
+        )::int AS prepaid_orders
+      FROM payments
+      WHERE status = 'completed'
+        AND created_at >= ${range.from}
+        AND created_at < ${range.to}
+    )
+    SELECT
+      f.formed_events,
+      c.ticket_cents,
+      c.prepaid_cents,
+      c.prepaid_orders
+    FROM formed f
+    CROSS JOIN cash c
+  `);
+
+  const row = result.rows[0] as Record<string, unknown> | undefined;
+  const ticketCents = safeNumber(row?.ticket_cents) ?? 0;
+  const formedEvents = safeNumber(row?.formed_events) ?? 0;
+
+  return {
+    ticketCents,
+    prepaidCents: safeNumber(row?.prepaid_cents) ?? 0,
+    prepaidOrders: safeNumber(row?.prepaid_orders) ?? 0,
+    formedEvents,
+    perFormedEventCents: formedEvents > 0 ? Math.round(ticketCents / formedEvents) : null,
+  };
+}
+
+/**
+ * 每场实收单价 (compatibility shim) — now `getRevenueSplit` with the ticket half.
+ *
+ * Kept exported because the name is referenced by tooling and tests outside this
+ * module. `revenueCents` here means single-ticket cash only; before the split it
+ * also admitted 连局包/月卡 prepayments, which is the bug `getRevenueSplit`
+ * documents. New callers should use `getRevenueSplit` so the prepaid half is not
+ * silently dropped from the console.
  */
 export async function getRevenuePerFormedEvent(
   range: AdminMetricRange,
 ): Promise<{ cents: number | null; revenueCents: number; formedEvents: number }> {
-  const revenueResult = await db.execute(sql`
-    SELECT COALESCE(SUM(final_amount), 0)::bigint AS revenue_cents
-    FROM payments
-    WHERE status = 'completed'
-      AND created_at >= ${range.from}
-      AND created_at < ${range.to}
-  `);
-  const revenueCents =
-    safeNumber((revenueResult.rows[0] as Record<string, unknown> | undefined)?.revenue_cents) ?? 0;
-
-  const formedResult = await db.execute(sql`
-    SELECT COUNT(*)::int AS formed_events
-    FROM event_pools p
-    WHERE p.date_time >= ${range.from}
-      AND p.date_time < ${range.to}
-      AND p.is_test_pool = false
-      AND p.status <> 'cancelled'
-      AND EXISTS (
-        SELECT 1 FROM event_pool_groups g
-        WHERE g.pool_id = p.id AND g.status <> 'cancelled'
-      )
-  `);
-  const formedEvents =
-    safeNumber((formedResult.rows[0] as Record<string, unknown> | undefined)?.formed_events) ?? 0;
-
+  const split = await getRevenueSplit(range);
   return {
-    cents: formedEvents > 0 ? Math.round(revenueCents / formedEvents) : null,
-    revenueCents,
-    formedEvents,
+    cents: split.perFormedEventCents,
+    revenueCents: split.ticketCents,
+    formedEvents: split.formedEvents,
   };
 }
 
@@ -349,10 +468,130 @@ function round1(value: number | null): number | null {
 // ============ KPI assembly ============
 
 /**
- * Build the five KPI cards. Each carries its own `asOf` and an explicit
+ * Build the six KPI cards. Each carries its own `asOf` and an explicit
  * baseline description, because they are computed from different tables at
  * different instants — a single header timestamp would be a lie.
+ *
+ * Revenue is deliberately two cards sharing one denominator
+ * (`getRevenueSplit`): 单场票实收/场 is cash for the sessions held, and
+ * 预付递延 is cash received for sessions not yet delivered. Folding them into one
+ * rate is what made the old 每场实收单价 read ~¥458 instead of ~¥88.
  */
+/**
+ * Weekly shape behind the KPI strip.
+ *
+ * A delta chip says "+12.4%", but not whether that came from one spike day or a
+ * month-long slide — which is the one judgement a six-card strip exists to
+ * support. Buckets are generated in SQL so they are authoritative; computing
+ * week boundaries in Node drifts from the query's own boundaries.
+ *
+ * Deliberately absent: `match_latency_p50`, `coupon_to_paid_rate` and
+ * `prepaid_deferred`. Latency is a percentile over roughly 0.25 samples per week
+ * here, so a weekly line would be noise drawn as signal; the coupon/ritual
+ * source tables are empty; and prepaid cash is a liability whose weekly flow is
+ * not a balance — a line would read as "how much we earned". A card with no
+ * series renders no sparkline — never a flat line at zero, which would read as
+ * "stable".
+ */
+export async function getKpiSeries(
+  range: AdminMetricRange,
+): Promise<Record<string, Array<number | null>>> {
+  const [registrationRows, poolRows] = await Promise.all([
+    db.execute(sql`
+      WITH buckets AS (
+        SELECT generate_series(
+          ${range.from}::timestamptz,
+          ${range.to}::timestamptz - interval '1 second',
+          interval '7 days'
+        ) AS bucket_start
+      )
+      SELECT
+        b.bucket_start AS bucket,
+        (
+          SELECT COUNT(*)::int
+          FROM event_pool_registrations r
+          JOIN event_pools p ON p.id = r.pool_id
+          WHERE r.registered_at >= b.bucket_start
+            AND r.registered_at < LEAST(b.bucket_start + interval '7 days', ${range.to}::timestamptz)
+            AND p.is_test_pool = false
+        ) AS value
+      FROM buckets b
+      ORDER BY b.bucket_start
+    `),
+    db.execute(sql`
+      WITH buckets AS (
+        SELECT generate_series(
+          ${range.from}::timestamptz,
+          ${range.to}::timestamptz - interval '1 second',
+          interval '7 days'
+        ) AS bucket_start
+      )
+      SELECT
+        b.bucket_start AS bucket,
+        (
+          SELECT COUNT(*)::int FROM event_pools p
+          WHERE p.registration_deadline >= b.bucket_start
+            AND p.registration_deadline < LEAST(b.bucket_start + interval '7 days', ${range.to}::timestamptz)
+            AND p.is_test_pool = false
+            AND p.status <> 'cancelled'
+        ) AS due,
+        (
+          SELECT COUNT(*)::int FROM event_pools p
+          WHERE p.registration_deadline >= b.bucket_start
+            AND p.registration_deadline < LEAST(b.bucket_start + interval '7 days', ${range.to}::timestamptz)
+            AND p.is_test_pool = false
+            AND p.status <> 'cancelled'
+            AND EXISTS (
+              SELECT 1 FROM event_pool_groups g
+              WHERE g.pool_id = p.id AND g.status <> 'cancelled'
+            )
+        ) AS formed,
+        (
+          -- Ticket cash only: the card it draws is 单场票实收/场, so a sparkline
+          -- built from all completed payments (prepayments included) would trend
+          -- differently from the number above it. Prepaid cash deliberately has
+          -- no series here — a weekly FLOW of liability read as a balance line
+          -- would misstate how much delivery is still owed.
+          SELECT COALESCE(SUM(pm.final_amount), 0)::bigint FROM payments pm
+          WHERE pm.status = 'completed'
+            AND pm.payment_type IN (${TICKET_TYPE_LIST})
+            AND pm.created_at >= b.bucket_start
+            AND pm.created_at < LEAST(b.bucket_start + interval '7 days', ${range.to}::timestamptz)
+        ) AS revenue
+      FROM buckets b
+      ORDER BY b.bucket_start
+    `),
+  ]);
+
+  const registrations = (registrationRows.rows as Array<{ value: number | string }>).map(
+    (row) => Number(row.value) || 0,
+  );
+
+  const poolBuckets = poolRows.rows as Array<{
+    due: number | string;
+    formed: number | string;
+    revenue: number | string;
+  }>;
+
+  const formationRate = poolBuckets.map((row) => {
+    const due = Number(row.due) || 0;
+    if (due === 0) return null;
+    return Math.round((Number(row.formed) / due) * 1000) / 10;
+  });
+
+  const revenuePerEvent = poolBuckets.map((row) => {
+    const formed = Number(row.formed) || 0;
+    if (formed === 0) return null;
+    return Math.round(Number(row.revenue) / formed);
+  });
+
+  return {
+    new_registrations: registrations,
+    formation_rate: formationRate,
+    revenue_per_formed_event: revenuePerEvent,
+  };
+}
+
 export async function buildAdminKpis(range: AdminMetricRange): Promise<AdminKpi[]> {
   const prev = previousAdminRange(range);
   const baseline = describeAdminRange(range);
@@ -376,8 +615,8 @@ export async function buildAdminKpis(range: AdminMetricRange): Promise<AdminKpi[
     getFormationRate(prev),
     getMatchLatencyHours(range),
     getMatchLatencyHours(prev),
-    getRevenuePerFormedEvent(range),
-    getRevenuePerFormedEvent(prev),
+    getRevenueSplit(range),
+    getRevenueSplit(prev),
     getCouponToPaidRate(range),
     getCouponToPaidRate(prev),
   ]);
@@ -385,7 +624,14 @@ export async function buildAdminKpis(range: AdminMetricRange): Promise<AdminKpi[
   const registrationsDelta = computeDelta(regCurrent, regPrevious);
   const formationDelta = computeDelta(formationCurrent.rate, formationPrevious.rate);
   const latencyDelta = computeDelta(latencyCurrent.p50, latencyPrevious.p50);
-  const revenueDelta = computeDelta(revenueCurrent.cents, revenuePrevious.cents);
+  const revenueDelta = computeDelta(
+    revenueCurrent.perFormedEventCents,
+    revenuePrevious.perFormedEventCents,
+  );
+  // A rising liability is not growth. The delta is still useful (cash collected
+  // vs. the previous period), so it is shown — the baseline sentence says which
+  // way to read it.
+  const prepaidDelta = computeDelta(revenueCurrent.prepaidCents, revenuePrevious.prepaidCents);
   const couponDelta = computeDelta(couponCurrent.rate, couponPrevious.rate);
 
   const asOf = new Date().toISOString();
@@ -437,16 +683,30 @@ export async function buildAdminKpis(range: AdminMetricRange): Promise<AdminKpi[
     },
     {
       key: "revenue_per_formed_event",
-      label: "每场实收单价",
-      value: revenueCurrent.cents,
+      label: "单场票实收/场",
+      value: revenueCurrent.perFormedEventCents,
       unit: "cents",
-      previous: revenuePrevious.cents,
+      previous: revenuePrevious.perFormedEventCents,
       ...revenueDelta,
-      baseline: `实收 ¥${(revenueCurrent.revenueCents / 100).toFixed(0)} ÷ ${
+      baseline: `仅单场局票现金 ¥${(revenueCurrent.ticketCents / 100).toFixed(0)} ÷ ${
         revenueCurrent.formedEvents
-      } 场；对比${prevBaseline}`,
+      } 场成行（按活动日归集）；不含连局包与月卡预付款；对比${prevBaseline}`,
       drill: {
         label: "查看财务",
+        href: "/admin/finance",
+      },
+      asOf,
+    },
+    {
+      key: "prepaid_deferred",
+      label: "预付递延 · 已收未交付",
+      value: revenueCurrent.prepaidCents,
+      unit: "cents",
+      previous: revenuePrevious.prepaidCents,
+      ...prepaidDelta,
+      baseline: `${revenueCurrent.prepaidOrders} 笔连局包/月卡已收款在账；已收钱但尚未交付的场次，属于负债不是收入；不含单场局票；对比${prevBaseline}`,
+      drill: {
+        label: "查看预付订单",
         href: "/admin/finance",
       },
       asOf,
