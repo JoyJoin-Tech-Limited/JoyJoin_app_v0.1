@@ -1,7 +1,7 @@
 # Lovart Brief — Milestone Badge Batch D2 (5/10/20 场 tiers)
 
 - **Date:** 2026-10-22
-- **Status:** Ready to commission — code shipped behind `badge: null` in `MILESTONES` (`apps/mini-program/src/pages/profile/profileConstants.ts`); wiring = set the three CDN paths once assets are uploaded.
+- **Status:** ✅ **Landed 2026-10-23** — master grid (`assets-source/lovart/achievement/joyjoin achievement medallions.png`, 2400×800) cropped via `scripts/crop-batch-d2-grid.mjs` to 3× 400×400 WebP (18–21KB, corners verified transparent), wired into `MILESTONE_BADGES` (`regular5`/`veteran10`/`legend20`) + `MILESTONES`. CDN upload auto-publishes on push (manifest touched).
 - **Context:** The profile 「成就徽章」 wall grew from 2 tiers (初次见面 1场, 三场连击 3场) to a 5-tier ladder: **1 / 3 / 5 / 10 / 20 场**. The two existing medallions are Batch D (`docs/design/lovart-brief-achievement-milestone-batch-d-20260604.md`, assets `src/assets/badges/*-20260604-v1.webp`). Batch D2 completes the ladder in the SAME pixel-art medallion family.
 - **Canon:** PM memo `docs/deliberations/2026-10-22-profile-tab-polish-product-decisions.md` §3. Badge names (locked copy): 渐入佳境 (5场) · 悦聚常客 (10场) · 城市传说 (20场).
 

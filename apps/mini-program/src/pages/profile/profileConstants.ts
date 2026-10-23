@@ -113,28 +113,27 @@ export const MILESTONES: MilestoneConfig[] = [
     ariaLabel: '三场连击徽章',
   },
   // P1-4 (2026-10-22, PM memo §3): the wall grows to the 5-tier ladder
-  // 1/3/5/10/20 场. Badge art for the three new tiers lands with Lovart
-  // Batch-D2 (brief: docs/design/lovart-brief-milestone-batch-d2-20261022.md)
-  // — until then badge:null renders the CSS medallion states.
+  // 1/3/5/10/20 场. Badge art: Lovart Batch-D2 (brief:
+  // docs/design/lovart-brief-milestone-batch-d2-20261022.md, landed 2026-10-23).
   {
     key: 'regular5',
     label: '渐入佳境',
     threshold: 5,
-    badge: null,
+    badge: MILESTONE_BADGES.regular5,
     ariaLabel: '渐入佳境徽章',
   },
   {
     key: 'veteran10',
     label: '悦聚常客',
     threshold: 10,
-    badge: null,
+    badge: MILESTONE_BADGES.veteran10,
     ariaLabel: '悦聚常客徽章',
   },
   {
     key: 'legend20',
     label: '城市传说',
     threshold: 20,
-    badge: null,
+    badge: MILESTONE_BADGES.legend20,
     ariaLabel: '城市传说徽章',
   },
 ]
