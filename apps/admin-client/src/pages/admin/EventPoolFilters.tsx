@@ -1,4 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Search, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,6 +27,12 @@ interface EventPoolFiltersProps {
   setEventsFilter: (v: EventsFilter) => void;
   sortBy: SortOption;
   setSortBy: (v: SortOption) => void;
+  /**
+   * 标题搜索输入值。防抖与 URL 写入由页面负责（`?q=`），这里只负责呈现，
+   * 这样输入框不会被替换成 URL 往返后的值，光标不会跳。
+   */
+  searchQuery: string;
+  setSearchQuery: (v: string) => void;
 }
 
 export default function EventPoolFilters({
@@ -36,16 +44,44 @@ export default function EventPoolFilters({
   setEventsFilter,
   sortBy,
   setSortBy,
+  searchQuery,
+  setSearchQuery,
 }: EventPoolFiltersProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium">筛选条件</CardTitle>
         <CardDescription className="text-xs">
-          通过城市 + 是否有等待报名 + 是否已有成局来筛活动池。
+          通过标题搜索 + 城市 + 是否有等待报名 + 是否已有成局来筛活动池。
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">标题</span>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索活动池标题"
+              aria-label="按标题搜索活动池"
+              className="h-8 w-[220px] pl-8 pr-8 text-xs"
+              data-testid="input-search-event-pool"
+            />
+            {searchQuery.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="清除标题搜索"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                data-testid="button-clear-event-pool-search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">城市</span>
           <Select

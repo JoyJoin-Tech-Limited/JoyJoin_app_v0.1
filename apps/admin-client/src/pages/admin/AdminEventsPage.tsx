@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMemo, useState, useCallback } from "react";
+import { keepPreviousData, useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -50,6 +50,8 @@ import EventCreateDialog from "./EventCreateDialog";
 import EmptyState from "@/components/admin/EmptyState";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import { safeFormat } from "@/lib/dateUtils";
+import { useUrlFilters } from "@/lib/useUrlFilters";
+import { useScrollRestoration } from "@/lib/useScrollRestoration";
 
 // =============== 类型定义 ===============
 
@@ -151,6 +153,40 @@ const budgetOptions = [
 const formatEventDateTime = (dateTimeStr: string) =>
   safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { locale: zhCN, fallback: dateTimeStr });
 
+/**
+ * Filter keys this page owns in the query string. Kept module-level so the
+ * hook's parse memo is stable, and so the URL contract is greppable.
+ */
+const EVENT_FILTER_DEFAULTS: {
+  status: string;
+  city: string;
+  eventType: string;
+  budget: string;
+  language: string;
+  taste: string;
+  cuisine: string;
+  page: string;
+} = {
+  status: "all",
+  city: "all",
+  eventType: "all",
+  budget: "all",
+  language: "all",
+  taste: "all",
+  cuisine: "all",
+  page: "1",
+};
+
+const EVENT_FILTER_ALLOWED = {
+  status: ["all", "pending_match", "matched", "in_progress", "completed"],
+  city: ["all", "深圳", "香港"],
+  eventType: ["all", "饭局", "酒局", "其他"],
+  budget: ["all", ...budgetOptions.map((opt) => opt.value)],
+  language: ["all", ...languageOptions.map((opt) => opt.value)],
+  taste: ["all", ...tasteIntensityOptions.map((opt) => opt.value)],
+  cuisine: ["all", ...cuisineOptions.map((opt) => opt.value)],
+} as const;
+
 /** Parse the real server error message out of an apiRequest error. */
 function getServerErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : "";
@@ -194,19 +230,28 @@ type CuisineFilter =
   | "日料";
 
 export default function AdminEventsPage() {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [cityFilter, setCityFilter] = useState<CityFilter>("all");
-  const [eventTypeFilter, setEventTypeFilter] =
-    useState<EventTypeFilter>("all");
-  const [budgetFilter, setBudgetFilter] = useState<BudgetFilter>("all");
-  const [languageFilter, setLanguageFilter] = useState<LanguageFilter>("all");
-  const [tasteFilter, setTasteFilter] = useState<TasteFilter>("all");
-  const [cuisineFilter, setCuisineFilter] = useState<CuisineFilter>("all");
-  const [eventsPage, setEventsPage] = useState(1);
+  // ====== 过滤状态（写在 URL 里，切 tab 再回来不会丢） ======
+  const [filters, setFilter] = useUrlFilters(EVENT_FILTER_DEFAULTS, {
+    allowed: EVENT_FILTER_ALLOWED,
+  });
+  const statusFilter = filters.status as StatusFilter;
+  const cityFilter = filters.city as CityFilter;
+  const eventTypeFilter = filters.eventType as EventTypeFilter;
+  const budgetFilter = filters.budget as BudgetFilter;
+  const languageFilter = filters.language as LanguageFilter;
+  const tasteFilter = filters.taste as TasteFilter;
+  const cuisineFilter = filters.cuisine as CuisineFilter;
+  const parsedPage = Number.parseInt(filters.page, 10);
+  const eventsPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
-  useEffect(() => {
-    setEventsPage(1);
-  }, [statusFilter, cityFilter, eventTypeFilter, budgetFilter, languageFilter, tasteFilter, cuisineFilter]);
+  /** 改筛选条件时回到第一页：否则会停在新结果不存在的第 5 页。 */
+  const setEventFilter = useCallback(
+    (key: keyof typeof EVENT_FILTER_DEFAULTS, value: string) => {
+      setFilter(key, value);
+      if (key !== "page") setFilter("page", EVENT_FILTER_DEFAULTS.page);
+    },
+    [setFilter],
+  );
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -221,6 +266,7 @@ export default function AdminEventsPage() {
   const {
     data: eventsData,
     isLoading: isLoadingEvents,
+    isPlaceholderData: isEventsPlaceholder,
     isError: isEventsError,
     error: eventsError,
     refetch: refetchEvents,
@@ -238,6 +284,9 @@ export default function AdminEventsPage() {
         page: eventsPage,
       },
     ],
+    // Keep the current page visible while the next one loads — flipping page
+    // used to replace the whole list with the loading shell.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("limit", String(EVENTS_PAGE_SIZE));
@@ -260,6 +309,9 @@ export default function AdminEventsPage() {
 
   const events = eventsData?.items ?? [];
   const eventsTotal = eventsData?.total ?? 0;
+
+  // 列表滚动位置恢复（切走再回来接着看）。必须放在 early return 之前。
+  useScrollRestoration(undefined, { ready: !isLoadingEvents });
 
   // 活动池列表（用于创建盲盒活动时选择池子）
   const { data: pools = [] } = useQuery<EventPoolSummary[]>({
@@ -497,7 +549,7 @@ export default function AdminEventsPage() {
             <span className="text-xs text-muted-foreground">状态</span>
             <Select
               value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+              onValueChange={(v) => setEventFilter("status", v)}
             >
               <SelectTrigger className="h-8 w-[120px] text-xs">
                 <SelectValue placeholder="全部" />
@@ -517,7 +569,7 @@ export default function AdminEventsPage() {
             <span className="text-xs text-muted-foreground">城市</span>
             <Select
               value={cityFilter}
-              onValueChange={(v) => setCityFilter(v as CityFilter)}
+              onValueChange={(v) => setEventFilter("city", v)}
             >
               <SelectTrigger className="h-8 w-[120px] text-xs">
                 <SelectValue placeholder="全部城市" />
@@ -535,7 +587,7 @@ export default function AdminEventsPage() {
             <span className="text-xs text-muted-foreground">活动类型</span>
             <Select
               value={eventTypeFilter}
-              onValueChange={(v) => setEventTypeFilter(v as EventTypeFilter)}
+              onValueChange={(v) => setEventFilter("eventType", v)}
             >
               <SelectTrigger className="h-8 w-[120px] text-xs">
                 <SelectValue placeholder="全部类型" />
@@ -554,7 +606,7 @@ export default function AdminEventsPage() {
             <span className="text-xs text-muted-foreground">预算</span>
             <Select
               value={budgetFilter}
-              onValueChange={(v) => setBudgetFilter(v as BudgetFilter)}
+              onValueChange={(v) => setEventFilter("budget", v)}
             >
               <SelectTrigger className="h-8 w-[140px] text-xs">
                 <SelectValue placeholder="全部预算" />
@@ -575,7 +627,7 @@ export default function AdminEventsPage() {
             <span className="text-xs text-muted-foreground">语言偏好</span>
             <Select
               value={languageFilter}
-              onValueChange={(v) => setLanguageFilter(v as LanguageFilter)}
+              onValueChange={(v) => setEventFilter("language", v)}
             >
               <SelectTrigger className="h-8 w-[160px] text-xs">
                 <SelectValue placeholder="全部语言" />
@@ -596,7 +648,7 @@ export default function AdminEventsPage() {
             <span className="text-xs text-muted-foreground">口味偏好</span>
             <Select
               value={tasteFilter}
-              onValueChange={(v) => setTasteFilter(v as TasteFilter)}
+              onValueChange={(v) => setEventFilter("taste", v)}
             >
               <SelectTrigger className="h-8 w-[160px] text-xs">
                 <SelectValue placeholder="全部口味" />
@@ -617,7 +669,7 @@ export default function AdminEventsPage() {
             <span className="text-xs text-muted-foreground">菜系偏好</span>
             <Select
               value={cuisineFilter}
-              onValueChange={(v) => setCuisineFilter(v as CuisineFilter)}
+              onValueChange={(v) => setEventFilter("cuisine", v)}
             >
               <SelectTrigger className="h-8 w-[160px] text-xs">
                 <SelectValue placeholder="全部菜系" />
@@ -656,7 +708,14 @@ export default function AdminEventsPage() {
             />
           ) : (
             <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div
+                className={
+                  isEventsPlaceholder
+                    ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3 opacity-60 transition-opacity"
+                    : "grid gap-4 md:grid-cols-2 lg:grid-cols-3 transition-opacity"
+                }
+                aria-busy={isEventsPlaceholder}
+              >
               {filteredEvents.map((event) => (
                 <Card
                   key={event.id}
@@ -763,13 +822,20 @@ export default function AdminEventsPage() {
               ))}
               </div>
               <div className="flex items-center justify-between pt-4">
-                <div className="text-sm text-muted-foreground">共 {eventsTotal} 条</div>
+                <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
+                  <span>共 {eventsTotal} 条</span>
+                  {isEventsPlaceholder && (
+                    <span className="text-xs" data-testid="text-events-updating">
+                      更新中…
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={eventsPage <= 1}
-                    onClick={() => setEventsPage((prev) => Math.max(1, prev - 1))}
+                    disabled={eventsPage <= 1 || isEventsPlaceholder}
+                    onClick={() => setEventFilter("page", String(Math.max(1, eventsPage - 1)))}
                   >
                     上一页
                   </Button>
@@ -779,8 +845,8 @@ export default function AdminEventsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={eventsPage * EVENTS_PAGE_SIZE >= eventsTotal}
-                    onClick={() => setEventsPage((prev) => prev + 1)}
+                    disabled={eventsPage * EVENTS_PAGE_SIZE >= eventsTotal || isEventsPlaceholder}
+                    onClick={() => setEventFilter("page", String(eventsPage + 1))}
                   >
                     下一页
                   </Button>

@@ -11,7 +11,12 @@ import { storage } from "../../storage";
 import { revokeUserSessions } from "../../lib/revokeUserSessions";
 import { clearUserBanCache } from "../../middleware/auth";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
-import { getUnderfilledPoolsClosingSoon } from "../../lib/adminMetrics";
+import {
+  countPendingRefunds,
+  countPendingReports,
+  countStuckOnboarding,
+  getUnderfilledPoolsClosingSoon,
+} from "../../lib/adminMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { notifyAdminAction } from "../../lib/wecomNotifications";
 import { cascadeDeleteByIds } from "../../lib/fkCascadeDelete";
@@ -282,6 +287,11 @@ export function registerAdminUserRoutes(app: Express): void {
         db.execute(sql`SELECT COUNT(*)::int as count FROM ${subscriptions} WHERE status = 'active'`),
         db.execute(sql`SELECT COUNT(*)::int as count FROM ${users} WHERE created_at >= NOW() - INTERVAL '7 days'`),
         db.execute(sql`SELECT COUNT(*)::int as count FROM ${users} WHERE created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days'`),
+        // TODO(metrics): duplicate of the revenue sums in lib/adminMetrics.ts
+        // (`getRevenueSplit`). This is a calendar-month window over an unfiltered
+        // `payment_type`, so 单场局票 and 预付 (连局包/月卡) cash are added
+        // together. Delegating would change the reported figure — that is a
+        // decision, not a mechanical swap.
         db.execute(sql`SELECT COALESCE(SUM(final_amount), 0)::int as total FROM ${payments} WHERE status = 'completed' AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW()) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())`),
         db.execute(sql`SELECT COUNT(*)::int as count FROM blind_box_events WHERE created_at >= date_trunc('month', NOW())`),
         db
@@ -532,37 +542,24 @@ export function registerAdminUserRoutes(app: Express): void {
         noShowCount: Math.max(0, (Number(row.registeredCount) || 0) - (Number(row.checkedInCount) || 0)),
       }));
 
-      // Alerts
-      const pendingReportsResult = await db.execute(sql`
-        SELECT COUNT(*) as count FROM reports WHERE status = 'pending'
-      `);
-      const pendingReports = Number((pendingReportsResult.rows[0] as any).count) || 0;
-
-      // D3 (2026-10-22): this counted EVERY pool closing in 24h with no fill
-      // condition at all, while the tile read 「即将截止 · 报名不足」. The fill
-      // test now lives in lib/adminMetrics.ts (single source) and compares
-      // against min_group_size * target_groups so multi-group pools are not
-      // under-counted.
-      const underfilledPoolsClosingSoon = (await getUnderfilledPoolsClosingSoon(24)).length;
-
-      const refundsPendingResult = await db.execute(sql`
-        SELECT COUNT(*) as count FROM payments WHERE status = 'refund_pending'
-      `);
-      const refundsPending = Number((refundsPendingResult.rows[0] as any).count) || 0;
-
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const stuckUsersResult = await db.execute(sql`
-        SELECT COUNT(*) as count FROM users
-        WHERE (
-          onboarding_checkpoint IS NULL
-          OR onboarding_checkpoint NOT IN ('profile-review')
-        )
-        AND COALESCE(onboarding_checkpoint_timestamp, created_at) < ${sevenDaysAgo}
-        AND created_at < ${sevenDaysAgo}
-      `);
-      const usersStuckInOnboarding = Number((stuckUsersResult.rows[0] as any).count) || 0;
+      // Alerts — every number below comes from lib/adminMetrics.ts, which is the
+      // single source for these counts (see its header rule: one concept, one
+      // SQL implementation). Do not re-derive them inline here: this handler
+      // used to carry its own copies of all four predicates, and the fill test
+      // for `underfilledPoolsClosingSoon` had already drifted from the console's
+      // definition (D3, 2026-10-22). The response shape is unchanged so
+      // AdminWarRoomPage keeps working.
+      const [
+        pendingReports,
+        underfilledPoolsClosingSoon,
+        refundsPending,
+        usersStuckInOnboarding,
+      ] = await Promise.all([
+        countPendingReports(),
+        getUnderfilledPoolsClosingSoon(24).then((pools) => pools.length),
+        countPendingRefunds(),
+        countStuckOnboarding(),
+      ]);
 
       res.json({
         todayEvents,

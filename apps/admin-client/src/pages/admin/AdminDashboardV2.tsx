@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard, formatKpiValue, type AdminKpi } from "@/components/admin/kpi/KpiCard";
 import { ActionQueue, type ActionQueueRow } from "@/components/admin/kpi/ActionQueue";
+import { TrendCard } from "@/components/admin/kpi/TrendCard";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import { apiRequest } from "@/lib/queryClient";
 import { safeFormat } from "@/lib/dateUtils";
@@ -80,7 +81,7 @@ function buildInsights(kpis: AdminKpi[], queue: ActionQueueRow[] | undefined): s
   const revenue = kpis.find((k) => k.key === "revenue_per_formed_event");
   if (revenue && revenue.value !== null) {
     out.push(
-      `每场实收 ${formatKpiValue(revenue.value, revenue.unit)}。这是现金口径，不含场地成本，因此不等于毛利。`,
+      `单场票实收 ${formatKpiValue(revenue.value, revenue.unit)}。只含单场局票现金，不含连局包与月卡预付款；也不含场地成本，因此不等于毛利。`,
     );
   }
 
@@ -161,7 +162,7 @@ export default function AdminDashboardV2() {
           onRetry={() => kpiQuery.refetch()}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           {kpiQuery.isLoading
             ? Array.from({ length: 5 }).map((_, i) => <KpiCard key={i} kpi={null as never} loading />)
             : kpiQuery.data?.kpis.map((kpi) => <KpiCard key={kpi.key} kpi={kpi} />)}
@@ -184,6 +185,15 @@ export default function AdminDashboardV2() {
           </ul>
         </CardContent>
       </Card>
+
+      {/* One trend, above the queue: the queue says what to do today, this says
+          whether the business underneath it is moving. */}
+      <TrendCard
+        kpi={kpiQuery.data?.kpis.find((kpi) => kpi.key === "new_registrations")}
+        from={kpiQuery.data?.range.from}
+        title="新增报名走势"
+        caption="按周汇总的报名人数。这是供给的上游 —— 报名少，后面的成行与收入都不会发生。"
+      />
 
       {queueQuery.isError ? (
         <AdminQueryError

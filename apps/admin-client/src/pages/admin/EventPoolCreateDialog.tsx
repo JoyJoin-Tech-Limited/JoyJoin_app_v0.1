@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import {
   Dialog,
@@ -9,6 +9,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Store, MapPin, RefreshCw, RotateCcw } from "lucide-react";
+import { Calendar, Store, MapPin, RefreshCw, RotateCcw, AlertTriangle, Table2 } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -35,6 +45,8 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { CITY_DISTRICTS } from "@/lib/cityDistricts";
 import { useToast } from "@/hooks/ui/use-toast";
+import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { cn } from "@/lib/utils";
 
 /**
  * Venue data enriched with date-level availability from the smart-venues API.
@@ -50,12 +62,47 @@ interface AvailableVenue {
     priceRange: string | null;
     tags: string[] | null;
     cuisines: string[] | null;
+    /** 场地单场上限人数（`seatingCapacity ?? capacity`）。排桌引擎用它判断一桌人坐不坐得下。 */
+    seatingCapacity: number | null;
+    capacity: number | null;
   };
   /** Whether the venue has at least one slot with capacity remaining on the selected date */
   hasAvailabilityOnDate: boolean | null;
   /** Number of slots with remaining capacity on the selected date (null if date not queried) */
   availableSlotCount: number | null;
 }
+
+/**
+ * Stable serialisation of the form's values.
+ *
+ * Used instead of react-hook-form's `formState.isDirty` for two reasons:
+ * - the form instance is owned by the parent page (typed `any` here) and is
+ *   pre-filled for edit mode with `reset(values)`;
+ * - `setValue` marks a field dirty even when the value is unchanged (picking
+ *   the already-selected city would look like an edit).
+ * Comparing actual values means "dirty" = "an operator changed something".
+ */
+function serializeFormValues(values: Record<string, unknown>): string {
+  return JSON.stringify(
+    Object.keys(values)
+      .sort()
+      .map((key) => [key, values[key] ?? null])
+  );
+}
+
+/** Capacity verdict for the plan in the dialog. */
+type CapacityEstimate =
+  | { status: "loading" }
+  | { status: "unavailable"; reason: string }
+  | {
+      status: "estimated";
+      /** 可容纳的桌数 = 本区当天可预订的 (场地, 时段) 档期数，已排除坐不下一桌的场地 */
+      tables: number;
+      /** 参与估算的场地数 */
+      venueCount: number;
+      /** 是否有场地没拿到档期数据（未计入估算） */
+      unknownAvailability: boolean;
+    };
 
 interface EventPoolCreateDialogProps {
   open: boolean;
@@ -126,6 +173,8 @@ export default function EventPoolCreateDialog({
         priceRange: string | null;
         tags: string[] | null;
         cuisines: string[] | null;
+        seatingCapacity: number | null;
+        capacity: number | null;
         hasTimeSlots: boolean | null;
         hasAvailabilityOnDate: boolean | null;
         availableSlotCount: number | null;
@@ -143,6 +192,8 @@ export default function EventPoolCreateDialog({
             priceRange: v.priceRange,
             tags: v.tags,
             cuisines: v.cuisines,
+            seatingCapacity: v.seatingCapacity ?? null,
+            capacity: v.capacity ?? null,
           },
           hasAvailabilityOnDate: v.hasAvailabilityOnDate,
           availableSlotCount: v.availableSlotCount,
@@ -165,15 +216,104 @@ export default function EventPoolCreateDialog({
     }
   }, [isVenuesError, venuesError, toast]);
 
+  // ====== 未保存内容守卫 ======
+  // 关闭这个弹窗有三条路：底部「取消」、右上角 X、点遮罩或按 Esc。三条路都会
+  // 走到 handleCloseDialog，所以守卫必须装在那里，而不是只挂在取消按钮上。
+  // 此前这里无条件 form.reset()：20 个字段填完、误点遮罩，内容静默清零。
+  // 注意：`form.watch()` 的无参形式会打开 react-hook-form 的 watchAll 标记，
+  // 从而让表单所有者（父页面）在每次字段变化时重渲染 —— 也就是让下面的
+  // `isDirty` 在用户点「关闭」之前一定是最新的。删掉这行会让守卫读到旧的
+  // isDirty（点了没反应或该拦的没拦），它不是「顺手订阅」，是正确性依赖。
+  const watchedValues = (form.watch() ?? {}) as Record<string, unknown>;
+  const openSnapshotRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // 基线 = 弹窗打开那一刻的值。只在开关时重算，因此编辑模式的预填
+    // （父组件先 reset(poolValues) 再打开）是基线，而不是「改动」。
+    openSnapshotRef.current = open ? serializeFormValues(form.getValues() ?? {}) : null;
+  }, [open, form]);
+
+  const isDirty =
+    open &&
+    openSnapshotRef.current !== null &&
+    serializeFormValues(watchedValues) !== openSnapshotRef.current;
+
+  const { confirmOpen, requestClose, cancelClose, confirmDiscard } = useUnsavedGuard(isDirty);
+
+  // ====== 场地容量预估：计划 M 桌 vs 本区当天可容纳 N 桌 ======
+  // N 不是猜的，也不是服务端的排桌结论：`/api/admin/smart-venues` 已经按
+  // venueAssignmentService 的同一个规则（`该日时段的已确认预订数 < maxConcurrentEvents`）
+  // 返回每个场地的 availableSlotCount。这里把它按区/日汇总，再用同一条
+  // 座位数硬约束（`seatingCapacity < 单桌人数` → score 0 → 不参与排桌）筛场地。
+  //
+  // 它是「粗略估算」，两个方向都可能偏：
+  //   偏多：smart-venues 数的是当天所有时段，排桌只认覆盖活动时间的时段；
+  //         且未叠加合作状态 / 合同有效期 / 预算 / 菜系打分。
+  //   偏少：一个时段 maxConcurrentEvents > 1 时可排多桌，这里只算 1。
+  // 所以文案只承诺「估算」，并逐条写明偏差来源 —— 不写「可以排得下」。
+  const targetGroups = Number(form.watch("targetGroups") ?? 0);
+  const maxGroupSize = Number(form.watch("maxGroupSize") ?? 0);
+  const plannedGroups = Number.isFinite(targetGroups) && targetGroups > 0 ? targetGroups : 1;
+  const editingTitle = (form.watch("title") ?? "") as string;
+
+  const capacityEstimate = useMemo<CapacityEstimate>(() => {
+    if (!currentCity || !selectedDate) {
+      return { status: "unavailable", reason: "选择城市和活动时间后可估算" };
+    }
+    if (isLoadingVenues) return { status: "loading" };
+    if (isVenuesError) return { status: "unavailable", reason: "场地档期加载失败，可刷新后重试" };
+
+    // 与 venueAssignmentService 一致：已知座位数坐不下一桌的场地直接排除；
+    // 座位数未知（0/null）按可用放行，服务端也是这么处理的。
+    const hostable = availableVenues.filter(({ venue }) => {
+      const seating = venue.seatingCapacity ?? venue.capacity ?? 0;
+      return !(seating > 0 && maxGroupSize > 0 && seating < maxGroupSize);
+    });
+
+    return {
+      status: "estimated",
+      tables: hostable.reduce((sum, v) => sum + (v.availableSlotCount ?? 0), 0),
+      venueCount: hostable.length,
+      unknownAvailability: hostable.some((v) => v.availableSlotCount === null),
+    };
+  }, [availableVenues, currentCity, isVenuesError, isLoadingVenues, maxGroupSize, selectedDate]);
+
+  const capacityShortfall =
+    capacityEstimate.status === "estimated" && capacityEstimate.tables < plannedGroups
+      ? plannedGroups - capacityEstimate.tables
+      : 0;
+  const capacityShort = capacityShortfall > 0;
+
+  const capacitySuggestions: string[] =
+    capacityEstimate.status !== "estimated" || !capacityShort
+      ? []
+      : capacityEstimate.tables > 0
+        ? [
+            `把计划桌数降到 ${capacityEstimate.tables} 桌（当前 ${plannedGroups} 桌）`,
+            "换一个区域，或把活动日期改到有档期的一天",
+            "先到场地管理，为现有场地补充当天档期",
+          ]
+        : [
+            "换一个区域，或把活动日期改到有档期的一天",
+            "先到场地管理，为现有场地补充当天档期",
+            "拆成多场活动，分别挂到不同区域的池子",
+          ];
+
   const handleCloseDialog = (value: boolean) => {
-    if (!value) {
+    if (value) {
+      onOpenChange(true);
+      return;
+    }
+    // 有改动就先问；确认后才真的销毁这份输入。
+    requestClose(() => {
       setEditingPoolId(null);
       form.reset();
-    }
-    onOpenChange(value);
+      onOpenChange(false);
+    });
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogTrigger asChild>
         <Button data-testid="button-create-pool" onClick={() => { setEditingPoolId(null); form.reset(); }}>
@@ -567,6 +707,77 @@ export default function EventPoolCreateDialog({
                 />
               </div>
 
+              {/* 场地容量预估：计划 M 桌 vs 本区当天可容纳 N 桌 */}
+              <div
+                className={cn(
+                  "mt-4 rounded-md border p-3 text-sm",
+                  capacityShort
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "bg-muted/30"
+                )}
+                aria-live="polite"
+                data-testid="capacity-estimate"
+                data-capacity-short={capacityShort ? "true" : "false"}
+              >
+                <div className="flex items-start gap-2">
+                  {capacityShort ? (
+                    <AlertTriangle
+                      className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Table2
+                      className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    {capacityEstimate.status === "estimated" ? (
+                      <p className={cn("font-medium", capacityShort && "text-destructive")}>
+                        可容纳 {capacityEstimate.tables} 桌 / 计划 {plannedGroups} 桌
+                        {capacityEstimate.venueCount === 0 && (
+                          <span className="ml-1 font-normal">（本区没有坐得下这一桌的场地）</span>
+                        )}
+                      </p>
+                    ) : capacityEstimate.status === "loading" ? (
+                      <p className="font-medium text-muted-foreground">正在估算可容纳桌数…</p>
+                    ) : (
+                      <p className="font-medium text-muted-foreground">
+                        暂无法预估
+                        <span className="ml-1 font-normal">（{capacityEstimate.reason}）</span>
+                      </p>
+                    )}
+
+                    {capacityEstimate.status === "estimated" && (
+                      <p className="text-xs text-muted-foreground">
+                        按本区场地在该日可预订的档期数估算（与排桌引擎的时段并发上限同一规则）。
+                        实际可容纳可能更少——只算覆盖活动时间的时段，且还要过合作状态、
+                        合同有效期、预算与菜系；也可能更多——同一时段允许排多桌。
+                        最终以排桌结果为准。
+                        {capacityEstimate.unknownAvailability && (
+                          <span className="mt-0.5 block text-amber-600">
+                            部分场地档期未确认，未计入估算。
+                          </span>
+                        )}
+                      </p>
+                    )}
+
+                    {capacityShort && capacitySuggestions.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-destructive">
+                          按当前计划，会有 {capacityShortfall} 桌排不到场地（截止后落到「地点待定」）。可以先：
+                        </p>
+                        <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+                          {capacitySuggestions.map((suggestion) => (
+                            <li key={suggestion}>{suggestion}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="isTestPool"
@@ -725,5 +936,38 @@ export default function EventPoolCreateDialog({
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* 放弃未保存内容？—— 只在有改动且操作员尝试关闭时出现。
+        取消回到编辑状态，弹窗保持原样（不 reset、不关闭）。 */}
+    <AlertDialog
+      open={confirmOpen}
+      onOpenChange={(next) => {
+        if (!next) cancelClose();
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>放弃未保存的内容？</AlertDialogTitle>
+          <AlertDialogDescription>
+            {editingTitle
+              ? `「${editingTitle}」还有未保存的内容`
+              : "这个活动池还有未保存的内容"}
+            ，关闭后无法恢复。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={cancelClose} data-testid="button-keep-editing-pool">
+            继续编辑
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmDiscard}
+            data-testid="button-confirm-discard-pool"
+          >
+            放弃并关闭
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

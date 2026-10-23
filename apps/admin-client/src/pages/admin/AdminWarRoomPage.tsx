@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -38,6 +38,7 @@ import AdminQueryError from "@/components/admin/AdminQueryError";
 import EmptyState from "@/components/admin/EmptyState";
 import { apiRequest } from "@/lib/queryClient";
 import { safeFormat } from "@/lib/dateUtils";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/ui/use-toast";
 import {
   ATTENDANCE_STATUS_LABELS,
@@ -101,6 +102,14 @@ const OPS_DASHBOARD_KEY = ["/api/admin/ops-dashboard"];
 const UNASSIGNED_KEY = ["/api/admin/venue-assignment/unassigned"];
 const SESSIONS_KEY = ["/api/admin/icebreaker-sessions"];
 const POOLS_KEY = ["/api/admin/event-pools"];
+
+/**
+ * Anchor for the console action queue's 场地待定 row
+ * (`/admin/war-room#card-venue-tbd`). The id and the deep-link target must stay
+ * in sync — server route `adminConsole.ts` emits the fragment.
+ */
+const VENUE_TBD_CARD_ID = "card-venue-tbd";
+const VENUE_TBD_LIST_LIMIT = 5;
 
 function attendanceSummaryKey(eventId: string) {
   return [`/api/admin/events/${eventId}/attendance-summary`];
@@ -180,6 +189,37 @@ export default function AdminWarRoomPage() {
     () => filterPoolsClosingWithin24h(poolsQuery.data),
     [poolsQuery.data],
   );
+
+  const unassignedGroups = useMemo(() => unassignedQuery.data ?? [], [unassignedQuery.data]);
+
+  const [venueTbdHighlighted, setVenueTbdHighlighted] = useState(false);
+  const venueTbdScrolledRef = useRef(false);
+
+  /**
+   * Deep link from the console action queue's 场地待定 row
+   * (`/admin/war-room#card-venue-tbd`).
+   *
+   * wouter's location excludes the fragment (and `pushState` never scrolls on
+   * its own), so the hash is read straight off `window` and the card is brought
+   * into view manually. Two guards keep it from fighting the live refresh:
+   *   - the ref makes it one-shot, so the 60s polling refetch cannot yank the
+   *     operator back to this card while they are working elsewhere;
+   *   - the node may not exist yet on the first pass (`opsQuery.isLoading`
+   *     early-returns the whole tree), so the effect re-runs when loading ends.
+   * This hook must stay above every early return on this page — a hook below
+   * one crashes React mid-mount and freezes the loading screen.
+   */
+  useEffect(() => {
+    if (venueTbdScrolledRef.current) return;
+    if (window.location.hash !== `#${VENUE_TBD_CARD_ID}`) return;
+    const node = document.getElementById(VENUE_TBD_CARD_ID);
+    if (!node) return;
+    venueTbdScrolledRef.current = true;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+    setVenueTbdHighlighted(true);
+    const timer = window.setTimeout(() => setVenueTbdHighlighted(false), 2400);
+    return () => window.clearTimeout(timer);
+  }, [opsQuery.isLoading]);
 
   const isFetchingAny =
     opsQuery.isFetching || unassignedQuery.isFetching || sessionsQuery.isFetching || poolsQuery.isFetching;
@@ -281,7 +321,14 @@ export default function AdminWarRoomPage() {
 
       {/* 待处理 strip */}
       <div className="mb-6 grid gap-4 md:grid-cols-2">
-        <Card data-testid="card-venue-tbd">
+        <Card
+          id={VENUE_TBD_CARD_ID}
+          data-testid="card-venue-tbd"
+          className={cn(
+            "scroll-mt-6 transition-shadow",
+            venueTbdHighlighted && "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
+          )}
+        >
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <MapPin className="h-4 w-4" />
@@ -296,20 +343,61 @@ export default function AdminWarRoomPage() {
                 onRetry={() => unassignedQuery.refetch()}
                 className="py-6"
               />
+            ) : unassignedQuery.isLoading ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">加载中...</p>
+            ) : unassignedGroups.length === 0 ? (
+              <p
+                className="py-4 text-center text-xs text-muted-foreground"
+                data-testid="text-venue-tbd-empty"
+              >
+                已成组的小组都已分配场地
+              </p>
             ) : (
-              <Link href="/admin/venues">
-                <button
-                  className="w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100 transition-colors"
-                  data-testid="link-venue-tbd"
-                >
-                  <div className="text-2xl font-bold text-amber-700">
-                    {unassignedQuery.data?.length ?? 0} 个
-                  </div>
-                  <p className="mt-1 text-xs text-amber-700">
-                    已成组但未分配场地，点击前往场地管理处理
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-amber-700" data-testid="text-venue-tbd-count">
+                  {unassignedGroups.length} 个
+                </div>
+                {/* 待办队列的「场地待定」行就是跳到这里，所以这张卡必须列出记录本身，
+                    而不只是一个数字 —— 数字跳数字的话，队列仍然无法落到可处理的记录上。 */}
+                <div className="space-y-1">
+                  {unassignedGroups.slice(0, VENUE_TBD_LIST_LIMIT).map((group) => (
+                    <Link
+                      key={group.groupId}
+                      href={`/admin/event-pools?focus=${encodeURIComponent(group.poolId)}`}
+                      className="block"
+                    >
+                      <div
+                        className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 transition-colors hover:bg-amber-100"
+                        data-testid={`venue-tbd-group-${group.groupId}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-medium text-amber-900">
+                            {group.poolTitle} · 第 {group.groupNumber} 组
+                          </div>
+                          <div className="truncate text-[11px] text-amber-700">
+                            {group.memberCount} 人
+                            {group.poolCity ? ` · ${group.poolCity}` : ""}
+                            {group.poolDistrict ? ` ${group.poolDistrict}` : ""}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[11px] font-medium text-amber-700">去分配</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {unassignedGroups.length > VENUE_TBD_LIST_LIMIT && (
+                  <p className="text-[11px] text-amber-700">
+                    还有 {unassignedGroups.length - VENUE_TBD_LIST_LIMIT} 个，见活动池详情
                   </p>
-                </button>
-              </Link>
+                )}
+                {/* 口径说明：这个列表来自 /api/admin/venue-assignment/unassigned，
+                    只按 venue_assignment_status='unassigned' 过滤（含已过期场次、最多
+                    前 50 条）；待办队列的计数只算未开始且非测试场次。列表可以比队列数字
+                    大，两个数字不必相等。 */}
+                <p className="text-[11px] text-muted-foreground">
+                  列表含全部未分配小组（含已过期场次），与待办队列的「未开始场次」口径不完全相同
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

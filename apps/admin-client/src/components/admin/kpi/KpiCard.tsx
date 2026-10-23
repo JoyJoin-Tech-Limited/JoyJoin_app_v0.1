@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
+import { Sparkline } from "./Sparkline";
+
 export type AdminKpiUnit = "count" | "percent" | "hours" | "cny" | "cents";
 
 export interface AdminKpi {
@@ -19,10 +21,15 @@ export interface AdminKpi {
   drill?: { label: string; href: string } | null;
   asOf: string;
   restricted?: boolean;
+  /** Weekly shape, oldest → newest. `null` = no data for that bucket. */
+  series?: Array<number | null>;
 }
 
 /** Metrics where a DECREASE is the good outcome. */
+// 预付递延是负债：它涨上去意味着「已收钱但还没交付」变多，不是好消息。
+// 不加进这个集合，负债增长会渲染成绿色涨幅。
 const LOWER_IS_BETTER = new Set([
+  "prepaid_deferred",
   "match_latency_p50",
   "approval_latency_p50",
 ]);
@@ -73,7 +80,10 @@ export function KpiCard({ kpi, loading }: KpiCardProps) {
 
   if (kpi.restricted) {
     return (
-      <Card data-testid={`kpi-${kpi.key}`}>
+      <Card
+      data-testid={`kpi-${kpi.key}`}
+      className="border-border/60 shadow-sm"
+    >
         <CardContent className="p-4 space-y-2">
           <div className="text-xs font-medium text-muted-foreground">{kpi.label}</div>
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -97,7 +107,10 @@ export function KpiCard({ kpi, loading }: KpiCardProps) {
   const DeltaIcon = !hasDelta ? Minus : kpi.deltaPct! > 0 ? TrendingUp : TrendingDown;
 
   return (
-    <Card data-testid={`kpi-${kpi.key}`}>
+    <Card
+      data-testid={`kpi-${kpi.key}`}
+      className="border-border/60 shadow-sm"
+    >
       <CardContent className="p-4 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <span className="text-xs font-medium text-muted-foreground">{kpi.label}</span>
@@ -115,6 +128,22 @@ export function KpiCard({ kpi, loading }: KpiCardProps) {
         <div className="text-2xl font-semibold tabular-nums tracking-tight">
           {formatKpiValue(kpi.value, kpi.unit)}
         </div>
+
+        {/* Shape before delta: a percentage says which way, the sparkline says
+            whether it was one spike or a month of drift. */}
+        {kpi.series && kpi.series.length > 1 ? (
+          <Sparkline
+            data={kpi.series}
+            height={36}
+            color={
+              good === true
+                ? "#059669"
+                : good === false
+                  ? "#e11d48"
+                  : "hsl(var(--primary))"
+            }
+          />
+        ) : null}
 
         <div className="flex items-center gap-1.5 text-xs">
           {kpi.insufficientBaseline ? (

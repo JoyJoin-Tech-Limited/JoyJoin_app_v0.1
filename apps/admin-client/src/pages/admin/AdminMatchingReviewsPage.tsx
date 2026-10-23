@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/ui/use-toast";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { ToastAction } from "@/components/ui/toast";
+import { invalidateNavBadges } from "@/lib/navBadges";
 import { apiRequest } from "@/lib/queryClient";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,6 +91,50 @@ interface ReviewPoolGroupsResponse {
   groups: ReviewGroup[];
 }
 
+/** Per-pool outcome of `POST /api/admin/matching-reviews/approve-batch`. */
+type BatchApproveResultCode =
+  | "approved"
+  | "already_approved"
+  | "not_pending"
+  | "not_found"
+  | "error";
+
+interface BatchApproveOutcome {
+  poolId: string;
+  result: BatchApproveResultCode;
+  approvedGroups?: number;
+  message?: string;
+}
+
+type BatchApproveFailure = BatchApproveOutcome & {
+  result: "not_pending" | "not_found" | "error";
+};
+
+interface BatchApproveResponse {
+  success: boolean;
+  approvedCount: number;
+  alreadyApprovedCount: number;
+  failedCount: number;
+  outcomes?: BatchApproveOutcome[];
+}
+
+const BATCH_FAILURE_LABEL: Record<BatchApproveFailure["result"], string> = {
+  not_pending: "已不在待审核状态",
+  not_found: "场次不存在",
+  error: "处理出错",
+};
+
+function isBatchFailure(outcome: BatchApproveOutcome): outcome is BatchApproveFailure {
+  return (
+    outcome.result === "not_pending" ||
+    outcome.result === "not_found" ||
+    outcome.result === "error"
+  );
+}
+
+/** Rows shown in the confirm dialog before falling back to 「等 N 个」. */
+const BATCH_VISIBLE_LIMIT = 8;
+
 const statusBadge: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "待审核", variant: "secondary" },
   approved: { label: "已通过", variant: "default" },
@@ -122,6 +168,24 @@ export default function AdminMatchingReviewsPage() {
     enabled: Boolean(viewPoolId),
   });
 
+  const pools = data?.pools ?? [];
+  // The batch response only carries pool ids; titles come from the loaded list so
+  // a failure can be reported by name instead of by count.
+  const poolTitleById = new Map(pools.map((pool) => [pool.id, pool.title]));
+
+  // Selection holds ids, so a refetch can strand ids whose pool left the list
+  // (approved elsewhere, deleted, or filtered out by the status tab). Validate on
+  // every list or selection change: submitting a ghost id comes back as
+  // `not_found` and hands the operator a failure they cannot act on.
+  useEffect(() => {
+    if (!data?.pools) return;
+    const present = new Set(data.pools.map((pool) => pool.id));
+    setSelectedIds((prev) => {
+      const next = prev.filter((id) => present.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [data, selectedIds]);
+
   const approveMutation = useMutation({
     mutationFn: async (poolId: string) => {
       return await apiRequest("POST", `/api/admin/matching-reviews/pools/${poolId}/approve`).then(
@@ -132,6 +196,7 @@ export default function AdminMatchingReviewsPage() {
       toast({ title: "已通过", description: "匹配结果已审核通过，用户将收到匹配通知" });
       setAnnouncement("已通过：匹配结果已审核通过，用户将收到匹配通知");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-reviews/pools"] });
+      invalidateNavBadges(queryClient);
       setApprovePoolId(null);
       setViewPoolId(null);
     },
@@ -142,29 +207,72 @@ export default function AdminMatchingReviewsPage() {
   });
 
   const batchApproveMutation = useMutation({
-    mutationFn: async (poolIds: string[]) => {
-      return await apiRequest("POST", "/api/admin/matching-reviews/approve-batch", {
+    mutationFn: async (poolIds: string[]): Promise<BatchApproveResponse> => {
+      const response = await apiRequest("POST", "/api/admin/matching-reviews/approve-batch", {
         poolIds,
-      }).then((response) => response.json());
-    },
-    onSuccess: (result: {
-      approvedCount: number;
-      alreadyApprovedCount: number;
-      failedCount: number;
-    }) => {
-      const parts = [`已通过 ${result.approvedCount} 个场次`];
-      if (result.alreadyApprovedCount > 0) parts.push(`${result.alreadyApprovedCount} 个此前已通过`);
-      if (result.failedCount > 0) parts.push(`${result.failedCount} 个失败`);
-      const description = parts.join("，");
-      toast({
-        title: result.failedCount > 0 ? "批量通过部分完成" : "批量通过完成",
-        description,
-        variant: result.failedCount > 0 ? "destructive" : undefined,
       });
-      setAnnouncement(`批量通过：${description}`);
-      setSelectedIds([]);
+      return (await response.json()) as BatchApproveResponse;
+    },
+    onSuccess: (result) => {
+      const outcomes = result.outcomes ?? [];
+      const failures = outcomes.filter(isBatchFailure);
+      const failedPoolIds = failures.map((outcome) => outcome.poolId);
+      // `outcomes` is always present on the current server; fall back to the
+      // aggregate count so a partial payload still reports a failure.
+      const failedCount = failures.length > 0 ? failures.length : (result.failedCount ?? 0);
+
+      const successParts: string[] = [];
+      if (result.approvedCount > 0) successParts.push(`已通过 ${result.approvedCount} 个场次`);
+      if (result.alreadyApprovedCount > 0) {
+        successParts.push(`${result.alreadyApprovedCount} 个此前已通过`);
+      }
+      const successClause = successParts.join("，") || "没有场次通过";
+
+      if (failedCount === 0) {
+        toast({ title: "批量通过完成", description: successClause });
+        setAnnouncement(`批量通过：${successClause}`);
+        // Nothing left to retry — drop the selection.
+        setSelectedIds([]);
+      } else {
+        const titleOf = (poolId: string) =>
+          poolTitleById.get(poolId) ?? `场次 ${poolId.slice(0, 8)}`;
+        const failureClause =
+          failures.length > 0
+            ? `${failedCount} 个未通过：${failures
+                .slice(0, 3)
+                .map((outcome) => `${titleOf(outcome.poolId)}（${BATCH_FAILURE_LABEL[outcome.result]}）`)
+                .join("、")}${failures.length > 3 ? ` 等 ${failedCount} 个` : ""}`
+            : `${failedCount} 个未通过，请刷新列表后重试`;
+        const description = `${successClause}；${failureClause}`;
+
+        toast({
+          title:
+            result.approvedCount === 0 && result.alreadyApprovedCount === 0
+              ? "批量通过未成功"
+              : "批量通过部分完成",
+          description,
+          variant: "destructive",
+          // Long enough to read the pool names and to reach the retry shortcut.
+          duration: failedPoolIds.length > 0 ? 12_000 : 8_000,
+          action:
+            failedPoolIds.length > 0 ? (
+              <ToastAction
+                altText="查看失败场次"
+                onClick={() => setSelectedIds(failedPoolIds)}
+                data-testid="matching-reviews-batch-view-failed"
+              >
+                查看失败场次
+              </ToastAction>
+            ) : undefined,
+        });
+        setAnnouncement(`批量通过：${description}`);
+        // Do NOT clear: the operator may retry without re-selecting, and the
+        // ghost-selection guard trims anything the refreshed list dropped.
+      }
+
       setBatchConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-reviews/pools"] });
+      invalidateNavBadges(queryClient);
     },
     onError: (err: Error) => {
       toast({ title: "批量通过失败", description: err.message, variant: "destructive" });
@@ -172,6 +280,9 @@ export default function AdminMatchingReviewsPage() {
     },
   });
 
+  // Adds are only reachable from a rendered row (so the id is in the list);
+  // removals are always allowed. Ids that disappear because the list refreshed
+  // are dropped by the prune effect above.
   const toggleSelected = (poolId: string) => {
     setSelectedIds((prev) =>
       prev.includes(poolId)
@@ -192,6 +303,7 @@ export default function AdminMatchingReviewsPage() {
       toast({ title: "已驳回", description: "匹配结果已驳回，报名状态已重置为匹配中" });
       setAnnouncement("已驳回：匹配结果已驳回，报名状态已重置为匹配中");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-reviews/pools"] });
+      invalidateNavBadges(queryClient);
       setRejectPoolId(null);
       setRejectReason("");
     },
@@ -201,7 +313,6 @@ export default function AdminMatchingReviewsPage() {
     },
   });
 
-  const pools = data?.pools ?? [];
   const selectedPool = pools.find((p) => p.id === viewPoolId);
 
   const handleApprove = (poolId: string) => {
@@ -522,7 +633,9 @@ export default function AdminMatchingReviewsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Approve Confirmation Dialog */}
+      {/* Batch approval confirmation. The aggregate counts are not enough to
+          judge a mass reveal, so the dialog names every pool that is about to
+          be published (8 rows, then 「等 N 个」). */}
       <AlertDialog open={batchConfirmOpen} onOpenChange={setBatchConfirmOpen}>
         <AlertDialogContent data-testid="matching-reviews-batch-dialog">
           <AlertDialogHeader>
@@ -532,10 +645,47 @@ export default function AdminMatchingReviewsPage() {
               该操作会为每个场次单独记录审计日志。
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div
+            className="max-h-64 space-y-1 overflow-y-auto rounded-md border bg-muted/30 p-2 text-sm"
+            // Focusable so the list can be scrolled from the keyboard.
+            tabIndex={0}
+            role="group"
+            aria-label="待通过场次列表"
+            data-testid="matching-reviews-batch-list"
+          >
+            {selectedIds.slice(0, BATCH_VISIBLE_LIMIT).map((poolId) => {
+              const pool = pools.find((candidate) => candidate.id === poolId);
+              return (
+                <div
+                  key={poolId}
+                  className="flex items-baseline justify-between gap-3"
+                  data-testid={`matching-reviews-batch-row-${poolId}`}
+                >
+                  <span className="min-w-0 flex-1 truncate" title={pool?.title ?? poolId}>
+                    {pool?.title ?? `场次 ${poolId.slice(0, 8)}`}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {pool ? `${pool.groupCount} 个小组` : "小组数未知"}
+                  </span>
+                </div>
+              );
+            })}
+            {selectedIds.length > BATCH_VISIBLE_LIMIT && (
+              <div
+                className="pt-1 text-xs text-muted-foreground"
+                data-testid="matching-reviews-batch-overflow"
+              >
+                等 {selectedIds.length} 个
+              </div>
+            )}
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="matching-reviews-batch-cancel">取消</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => batchApproveMutation.mutate(selectedIds)}
+              // The server rejects more than 20 ids; slice as a second guard so
+              // a future selection path can never send an oversized batch.
+              onClick={() => batchApproveMutation.mutate(selectedIds.slice(0, BATCH_LIMIT))}
+              disabled={batchApproveMutation.isPending}
               data-testid="matching-reviews-batch-confirm"
             >
               确认通过

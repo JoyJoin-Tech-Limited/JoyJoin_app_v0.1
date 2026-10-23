@@ -21,6 +21,10 @@ export const moderationRepo: ModerationRepository = {
       SELECT COUNT(*)::int as count FROM reports
     `);
     
+    // TODO(metrics): duplicate of `countPendingReports` in lib/adminMetrics.ts.
+    // Not delegated because the error contracts differ: that helper fails open
+    // (logs and returns 0), and a moderation queue that silently reads 0 is
+    // indistinguishable from "nothing to review". Unify on one contract first.
     const pendingReports = await db.execute(sql`
       SELECT COUNT(*)::int as count FROM reports WHERE status = 'pending'
     `);

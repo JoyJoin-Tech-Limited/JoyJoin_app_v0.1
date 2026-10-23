@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest } from "@/lib/queryClient";
 import { fmtDateTime } from "@/lib/dateUtils";
+import { useUrlFilters, useDebouncedValue } from "@/lib/useUrlFilters";
 import { Shield, RefreshCw } from "lucide-react";
 
 interface AuditLog {
@@ -91,6 +92,22 @@ const ACTION_OPTIONS = [
 
 const PAGE_SIZE = 20;
 
+/**
+ * Filter keys this page owns in the query string. Kept module-level so the
+ * hook's parse memo is stable; URL keys are the operator-facing contract
+ * (a filtered log list is shareable and survives a refresh).
+ */
+const FILTER_DEFAULTS: { action: string; adminId: string; page: string } = {
+  action: "all",
+  adminId: "",
+  page: "1",
+};
+
+const ALLOWED_ACTION_VALUES: readonly string[] = [
+  "all",
+  ...ACTION_OPTIONS.map((option) => option.value),
+];
+
 function getActionLabel(action: string): string {
   return ACTION_OPTIONS.find((o) => o.value === action)?.label || action;
 }
@@ -109,14 +126,36 @@ function getActionVariant(action: string): "default" | "destructive" | "secondar
 }
 
 export default function AdminAuditLogsPage() {
-  const [page, setPage] = useState(1);
-  const [actionFilter, setActionFilter] = useState<string>("all");
-  const [adminIdFilter, setAdminIdFilter] = useState("");
+  const [filters, setFilter] = useUrlFilters(FILTER_DEFAULTS, {
+    allowed: { action: ALLOWED_ACTION_VALUES },
+  });
+
+  const actionFilter = filters.action;
+  const adminIdFilter = filters.adminId;
+  const parsedPage = Number.parseInt(filters.page, 10);
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  const setActionFilter = (value: string) => {
+    setFilter("action", value);
+    setFilter("page", FILTER_DEFAULTS.page);
+  };
+
+  // 管理员 ID 是自由输入：输入框即时响应，写地址栏与查询都走 300ms 防抖。
+  const [adminIdInput, setAdminIdInput] = useState(filters.adminId);
+  const debouncedAdminId = useDebouncedValue(adminIdInput, 300);
+  useEffect(() => {
+    if (debouncedAdminId === filters.adminId) return;
+    setFilter("adminId", debouncedAdminId);
+    setFilter("page", FILTER_DEFAULTS.page);
+  }, [debouncedAdminId, filters.adminId, setFilter]);
 
   const offset = (page - 1) * PAGE_SIZE;
 
-  const { data, isLoading, error, refetch } = useQuery<AuditLogsResponse>({
+  const { data, isLoading, isPlaceholderData, error, refetch } = useQuery<AuditLogsResponse>({
     queryKey: ["/api/admin/audit-logs", { limit: PAGE_SIZE, offset, action: actionFilter !== "all" ? actionFilter : undefined, adminId: adminIdFilter || undefined }],
+    // Keep the previous page visible while the next one loads — flipping page
+    // used to replace the whole table body with a skeleton.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       try {
         const params = new URLSearchParams();
@@ -139,7 +178,7 @@ export default function AdminAuditLogsPage() {
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      setPage(newPage);
+      setFilter("page", String(newPage));
     }
   };
 
@@ -206,7 +245,7 @@ export default function AdminAuditLogsPage() {
         <CardContent className="pt-6 flex flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">操作类型</span>
-            <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setPage(1); }}>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
@@ -221,8 +260,8 @@ export default function AdminAuditLogsPage() {
             <span className="text-sm text-muted-foreground">管理员 ID</span>
             <Input
               placeholder="输入管理员 ID"
-              value={adminIdFilter}
-              onChange={(e) => { setAdminIdFilter(e.target.value); setPage(1); }}
+              value={adminIdInput}
+              onChange={(e) => setAdminIdInput(e.target.value)}
               className="w-[200px]"
             />
           </div>
@@ -236,7 +275,14 @@ export default function AdminAuditLogsPage() {
             <CardTitle className="text-sm font-medium">总记录数</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.total ?? 0}</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-bold">{data?.total ?? 0}</div>
+              {isPlaceholderData && (
+                <span className="text-xs text-muted-foreground" data-testid="text-audit-logs-updating">
+                  更新中…
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -246,8 +292,11 @@ export default function AdminAuditLogsPage() {
         <CardContent className="p-0">
           <ScrollArea className="h-[600px]">
             <Table>
-              <TableHeader>
-                <TableRow>
+              {/* Sticky header: inert inside this ScrollArea today (Radix Viewport +
+                  the shadcn Table wrapper both establish scrollports), see the
+                  AdminTable sticky note in the wave report. */}
+              <TableHeader className="sticky top-0 z-10 bg-card">
+                <TableRow className="bg-card hover:bg-card">
                   <TableHead className="w-[180px]">时间</TableHead>
                   <TableHead>操作</TableHead>
                   <TableHead>目标类型</TableHead>
@@ -256,7 +305,7 @@ export default function AdminAuditLogsPage() {
                   <TableHead className="w-[200px]">上下文</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className={isPlaceholderData ? "opacity-50 transition-opacity" : "transition-opacity"}>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">

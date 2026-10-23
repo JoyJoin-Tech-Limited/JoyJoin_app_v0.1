@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,8 @@ import { useAuth } from "@/hooks/auth/useAuth";
 import MapPicker from "@/components/discover/MapPicker";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import { fmtDate } from "@/lib/dateUtils";
+import { useDebouncedValue, useUrlFilters } from "@/lib/useUrlFilters";
+import { useScrollRestoration } from "@/lib/useScrollRestoration";
 import {
   CITIES,
   DAYS_OF_WEEK,
@@ -128,18 +130,58 @@ const ONBOARDING_STATUS_CONFIG: Record<
 const shortDayLabel = (day: number) =>
   DAYS_OF_WEEK.find((d) => d.value === day)?.label.replace("周", "") ?? "";
 
+type VenueTypeFilter = "all" | "restaurant" | "bar";
+type VenueStatusFilter = "all" | "draft" | "pending_review" | "active" | "suspended";
+type VenueCityFilter = "all" | "深圳" | "香港";
+
+/**
+ * Filter keys this page owns in the query string. `view` is here too — landing
+ * back on the calendar after a detour beats being silently flipped to cards.
+ */
+const VENUE_FILTER_DEFAULTS: {
+  type: string;
+  status: string;
+  city: string;
+  view: string;
+  q: string;
+} = {
+  type: "all",
+  status: "all",
+  city: "all",
+  view: "venues",
+  q: "",
+};
+
+const VENUE_FILTER_ALLOWED = {
+  type: ["all", "restaurant", "bar"],
+  status: ["all", "draft", "pending_review", "active", "suspended"],
+  city: ["all", ...CITIES.map((city) => city.value)],
+  view: ["venues", "calendar"],
+} as const;
+
 export default function AdminVenuesPage() {
+  // ====== 过滤状态（写在 URL 里，切 tab 再回来不会丢） ======
+  const [filters, setFilter] = useUrlFilters(VENUE_FILTER_DEFAULTS, {
+    allowed: VENUE_FILTER_ALLOWED,
+  });
+  const filterType = filters.type as VenueTypeFilter;
+  const filterOnboardingStatus = filters.status as VenueStatusFilter;
+  const filterCity = filters.city as VenueCityFilter;
+  const viewMode = filters.view as "venues" | "calendar";
+
+  // 搜索框即时响应，URL / 过滤结果走 300ms 防抖。
+  const [searchQuery, setSearchQuery] = useState(filters.q);
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+  useEffect(() => {
+    if (debouncedSearchQuery !== filters.q) setFilter("q", debouncedSearchQuery);
+  }, [debouncedSearchQuery, filters.q, setFilter]);
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTimeSlotsDialog, setShowTimeSlotsDialog] = useState(false);
   const [showDealsDialog, setShowDealsDialog] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
-  const [filterType, setFilterType] = useState<"all" | "restaurant" | "bar">("all");
-  const [filterOnboardingStatus, setFilterOnboardingStatus] = useState<"all" | "draft" | "pending_review" | "active" | "suspended">("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterCity, setFilterCity] = useState<"all" | "深圳" | "香港">("all");
-  const [viewMode, setViewMode] = useState<"venues" | "calendar">("venues");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -196,6 +238,9 @@ export default function AdminVenuesPage() {
   } = useQuery<Venue[]>({
     queryKey: ["/api/admin/venues"],
   });
+
+  // 列表滚动位置恢复（切走再回来接着看）。必须放在 early return 之前。
+  useScrollRestoration(undefined, { ready: !isLoading });
 
   // Query for all time slots (always fetch for card summaries + calendar view)
   const {
@@ -540,7 +585,7 @@ export default function AdminVenuesPage() {
     if (filterCity !== "all") {
       result = result.filter(v => v.city === filterCity);
     }
-    const query = searchQuery.trim().toLowerCase();
+    const query = filters.q.trim().toLowerCase();
     if (query) {
       result = result.filter(v =>
         (v.name || "").toLowerCase().includes(query) ||
@@ -549,7 +594,7 @@ export default function AdminVenuesPage() {
       );
     }
     return result;
-  }, [venues, filterType, filterOnboardingStatus, filterCity, searchQuery]);
+  }, [venues, filterType, filterOnboardingStatus, filterCity, filters.q]);
 
   const { activeVenues, pendingReviewCount, totalBookings, totalCommission } = useMemo(() => ({
     activeVenues: venues.filter(v => v.isActive).length,
@@ -641,7 +686,7 @@ export default function AdminVenuesPage() {
           </div>
           <Select
             value={filterCity}
-            onValueChange={(v) => setFilterCity(v as "all" | "深圳" | "香港")}
+            onValueChange={(v) => setFilter("city", v)}
           >
             <SelectTrigger className="h-9 w-[120px] text-sm" data-testid="select-filter-city">
               <SelectValue placeholder="全部城市" />
@@ -655,14 +700,14 @@ export default function AdminVenuesPage() {
               ))}
             </SelectContent>
           </Select>
-          <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+          <Tabs value={filterType} onValueChange={(v) => setFilter("type", v)}>
             <TabsList>
               <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
               <TabsTrigger value="restaurant" data-testid="filter-restaurant">餐厅</TabsTrigger>
               <TabsTrigger value="bar" data-testid="filter-bar">酒吧</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Tabs value={filterOnboardingStatus} onValueChange={(v) => setFilterOnboardingStatus(v as any)}>
+          <Tabs value={filterOnboardingStatus} onValueChange={(v) => setFilter("status", v)}>
             <TabsList>
               <TabsTrigger value="all">全部状态</TabsTrigger>
               <TabsTrigger value="draft">草稿</TabsTrigger>
@@ -684,7 +729,7 @@ export default function AdminVenuesPage() {
           <Button
             variant={viewMode === "venues" ? "default" : "outline"}
             size="sm"
-            onClick={() => setViewMode("venues")}
+            onClick={() => setFilter("view", "venues")}
             data-testid="view-venues"
           >
             <LayoutGrid className="h-4 w-4 mr-2" />
@@ -693,7 +738,7 @@ export default function AdminVenuesPage() {
           <Button
             variant={viewMode === "calendar" ? "default" : "outline"}
             size="sm"
-            onClick={() => setViewMode("calendar")}
+            onClick={() => setFilter("view", "calendar")}
             data-testid="view-calendar"
           >
             <CalendarDays className="h-4 w-4 mr-2" />
@@ -786,7 +831,7 @@ export default function AdminVenuesPage() {
       ) : filteredVenues.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            {searchQuery.trim() || filterCity !== "all"
+            {filters.q.trim() || filterCity !== "all"
               ? "暂无符合搜索条件的场地"
               : filterType === "all"
                 ? "暂无场地记录"

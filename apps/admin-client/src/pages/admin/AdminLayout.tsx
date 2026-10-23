@@ -84,17 +84,41 @@ export default function AdminLayout() {
           <header className="flex min-w-0 items-center justify-between gap-3 border-b px-4 py-3 md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <div className="flex min-w-0 items-center gap-2">
+              {/*
+                这里只是「面包屑」，不是页面标题 —— 页面自己拥有唯一的一级标题。
+                （导航文案是页面标题的权威来源，见 lib/adminNavConfig.ts 的
+                「命名权威」注释。）
+
+                为什么降级：此前本文件的 h1 与 29 个页面各自的 h1 同时存在，
+                同一文档出现两个一级标题，读屏软件会念出两个常常互相矛盾的页名；
+                标题层级也只该有一条主线。面包屑天然负责「我在哪个工作区 / 哪一页」
+                的定位，让出标题语义后，视觉层级也回到页面标题手里。
+
+                已知缺口（2026-10-23，本文件负责记录）：AdminFinancePage 与
+                AdminAuditLogsPage 目前没有页面级的一级标题，它们原本依赖的就是这里
+                被移除的那一枚。在补齐之前，这两页的正文是无标题的（名字仍出现在
+                document.title 与本面包屑里），而不是「有标题但重复」。补法是给这
+                两页各加一个 h1 标签，而不是把标题职责退回 layout —— 本文件不得再
+                渲染任何一级标题。
+              */}
+              <nav aria-label="面包屑" className="flex min-w-0 items-center gap-2">
                 {activeWorkspace && (
                   <>
                     <span className="truncate text-sm text-muted-foreground">
                       {activeWorkspace.workspace.label}
                     </span>
-                    <span className="text-sm text-muted-foreground/60">/</span>
+                    <span className="text-sm text-muted-foreground/60" aria-hidden="true">
+                      /
+                    </span>
                   </>
                 )}
-                <h1 className="truncate text-lg font-medium">{pageTitle}</h1>
-              </div>
+                <span
+                  className="truncate text-sm text-muted-foreground"
+                  aria-current="page"
+                >
+                  {pageTitle}
+                </span>
+              </nav>
             </div>
             <div className="flex items-center gap-2">
               <span className="max-w-32 truncate text-sm text-muted-foreground">

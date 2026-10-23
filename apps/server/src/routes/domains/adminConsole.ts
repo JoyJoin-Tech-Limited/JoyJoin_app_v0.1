@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import { requireAdmin } from "../../adminAuth";
 import {
+  REVENUE_KPI_KEYS,
   buildAdminKpis,
   countPendingAttendanceToday,
   countPendingOperatorReviews,
@@ -28,6 +29,7 @@ import {
   countStuckOnboarding,
   countUnassignedUpcomingVenues,
   getApprovalLatencyHours,
+  getKpiSeries,
   getMatchLatencyHours,
   getUnderfilledPoolsClosingSoon,
   previousAdminRange,
@@ -74,6 +76,18 @@ function hoursUntil(iso: string): number {
  *
  * Every row is always returned, in the same order, regardless of count — a row
  * that disappears when it hits zero trains operators to distrust the panel.
+ *
+ * `href` contract (2026-10-23): a row's link must land on a view that actually
+ * renders the records the count was computed from. A link that 404s, or that
+ * opens a list filtered to a different population, is worse than no link —
+ * the operator reads a number, follows it, and sees something else. Where the
+ * destination needs help to show the right slice, the href carries the tab /
+ * anchor and the destination is responsible for honouring it:
+ *   - `/admin/moderation?tab=users`             → `AdminModerationPage`
+ *   - `/admin/finance?tab=refunds&status=…`     → `AdminFinancePage`
+ *   - `/admin/war-room#card-venue-tbd`          → `AdminWarRoomPage`
+ * Widening this set means teaching the destination the new parameter, not just
+ * appending it here.
  */
 async function buildActionQueue(): Promise<ActionQueueRow[]> {
   const [
@@ -102,12 +116,18 @@ async function buildActionQueue(): Promise<ActionQueueRow[]> {
       key: "pending_reports",
       label: "举报待审核",
       count: pendingReports,
-      correctNumber: `${pendingReports} 条举报等待处理`,
+      // `countPendingReports()` counts `reports WHERE status = 'pending'`. That
+      // table is the 用户举报 list (`/api/admin/moderation/reports` →
+      // moderationRepo.getAllReports), which also carries the AI-content rows;
+      // 聊天举报 lives in `chat_reports` and is NOT part of this number, so the
+      // deep link must not pre-select the chat tab. `/admin/safety-center` used
+      // to be the target and is a sidebar badge key only — no route existed.
+      correctNumber: `${pendingReports} 条举报（reports 表，不含聊天举报）等待处理`,
       recommendedAction: "逐条判定，超过 24h 未处理的优先",
       slaHours: 24,
       owner: "operator",
       severity: pendingReports > 0 ? "critical" : "info",
-      href: "/admin/safety-center",
+      href: "/admin/moderation?tab=users",
       cleared: pendingReports === 0,
     },
     {
@@ -119,7 +139,10 @@ async function buildActionQueue(): Promise<ActionQueueRow[]> {
       slaHours: 48,
       owner: "super_admin",
       severity: pendingRefunds > 0 ? "critical" : "info",
-      href: "/admin/finance",
+      // Lands on the 退款历史 tab (the payments list cannot filter by status) with
+      // the 待处理 filter applied. `refund_pending` is a `payments.status`; the
+      // finance page maps it onto the equivalent `refund_attempts.status='pending'`.
+      href: "/admin/finance?tab=refunds&status=refund_pending",
       cleared: pendingRefunds === 0,
     },
     {
@@ -168,10 +191,20 @@ async function buildActionQueue(): Promise<ActionQueueRow[]> {
     },
     {
       key: "stuck_onboarding",
-      label: "用户停留在注册流程",
+      // Item 2(d), 2026-10-23: the number and the only list we can link to are
+      // DIFFERENT POPULATIONS, and this row used to imply otherwise.
+      //   count  = `countStuckOnboarding()` → users whose
+      //            `onboarding_checkpoint` has not advanced in 7 days
+      //            (adminMetrics.ts, carried over from the ops dashboard).
+      //   list   = `/admin/users?maxCompleteness=50` → a 资料完整度 ≤50% sample
+      //            of ALL users, from an unrelated predicate.
+      // There is no stuck-onboarding list endpoint. Until one exists, the label
+      // and copy name the sample, and the recommendation says the two numbers
+      // must not be reconciled against each other.
+      label: "注册卡点 · 资料完整度抽样",
       count: stuckOnboarding,
-      correctNumber: `${stuckOnboarding} 个账号 7 天未推进注册步骤`,
-      recommendedAction: "抽样查看卡点在哪个步骤，必要时人工触达",
+      correctNumber: `${stuckOnboarding} 个账号 7 天未推进注册步骤；链接打开的是资料完整度 ≤50% 抽样列表（不同集合）`,
+      recommendedAction: "在取样列表中定位卡点步骤，必要时人工触达；两个数字不可互相校验",
       slaHours: null,
       owner: "operator",
       severity: stuckOnboarding > 0 ? "warning" : "info",
@@ -187,7 +220,9 @@ async function buildActionQueue(): Promise<ActionQueueRow[]> {
       slaHours: 24,
       owner: "ops",
       severity: unassignedVenues > 0 ? "critical" : "info",
-      href: "/admin/venues",
+      // 场地管理 has no unassigned view; the records live on the war-room card,
+      // which now lists the groups and anchors itself for this deep link.
+      href: "/admin/war-room#card-venue-tbd",
       cleared: unassignedVenues === 0,
     },
   ];
@@ -197,8 +232,10 @@ export function registerAdminConsoleRoutes(app: Express): void {
   /**
    * GET /api/admin/kpi?from&to&days
    *
-   * The five console KPIs. Revenue is redacted for non-super_admin into a
+   * The six console KPIs. Revenue is redacted for non-super_admin into a
    * placeholder card rather than a 403 — an operator still needs the layout.
+   * Revenue is two cards by design: 单场票实收/场 (cash for sessions held) and
+   * 预付递延 (cash received, delivery owed). See `getRevenueSplit`.
    */
   app.get("/api/admin/kpi", requireAdmin, async (req, res) => {
     try {
@@ -210,16 +247,26 @@ export function registerAdminConsoleRoutes(app: Express): void {
       const range = resolveAdminRange(parsed.data);
       const previousRange = previousAdminRange(range);
 
-      const [kpis, systemLatency, approvalLatency] = await Promise.all([
+      const [kpis, systemLatency, approvalLatency, series] = await Promise.all([
         buildAdminKpis(range),
         getMatchLatencyHours(range),
         getApprovalLatencyHours(range),
+        getKpiSeries(range),
       ]);
+
+      // Attach the weekly shape here rather than inside buildAdminKpis so the
+      // KPI definitions stay one concern and the series stay another.
+      const kpisWithSeries = kpis.map((kpi) =>
+        series[kpi.key] ? { ...kpi, series: series[kpi.key] } : kpi,
+      );
 
       const isSuperAdmin = req.adminRole === "super_admin";
 
-      const visibleKpis = kpis.map((kpi) => {
-        if (kpi.key === "revenue_per_formed_event" && !isSuperAdmin) {
+      // Redaction is driven by the metric definitions (`REVENUE_KPI_KEYS`), not
+      // by a key literal here: adding a cash metric must not silently ship an
+      // unredacted money figure to operators.
+      const visibleKpis = kpisWithSeries.map((kpi) => {
+        if (REVENUE_KPI_KEYS.has(kpi.key) && !isSuperAdmin) {
           return {
             ...kpi,
             value: null,
