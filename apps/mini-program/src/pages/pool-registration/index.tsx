@@ -1123,6 +1123,7 @@ export default function PoolRegistrationPage() {
               mode={duo.duoCardState === 'error' ? 'solo' : duo.duoMode}
               isCreatingInvite={duo.isCreatingDuoInvite}
               partnerName={duo.partnerName}
+              waitingCopy={duo.duoWaitingCopy}
               reduceMotion={reduceMotion}
               onSelectMode={(nextMode) => { void duo.selectDuoMode(nextMode) }}
               onOpenInfo={duo.openDuoSheet}

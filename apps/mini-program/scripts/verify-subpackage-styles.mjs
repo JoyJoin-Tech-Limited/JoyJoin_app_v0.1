@@ -146,6 +146,10 @@ const REQUIREMENTS = [
       'pool-reg-duo__segmented-thumb{',
       'pool-reg-duo-banner{',
       'duo-info-sheet__surface{',
+      // S3 waiting copy (2026-10-23): the 88rpx-hit 再喊一次 pill + primary
+      // waiting text live in the same @use'd duo card SCSS — guard them too.
+      'pool-reg-duo__waiting-text{',
+      'pool-reg-duo__again-pill{',
       // Step 0 三拍化 (2026-08-17): the VibePeek expander SCSS is @use'd by the
       // page SCSS and must reach the page WXSS.
       'pool-reg-vibe-peek__toggle{',

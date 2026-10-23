@@ -15,6 +15,7 @@ import {
   writeDuoShareTimestamp,
 } from '../lib/duo/duoContext'
 import { resolveDuoCardState, resolveInitialDuoMode, shouldAutoExpandDuoRow } from '../lib/duo/duoState'
+import { resolveDuoWaitingCopy, type DuoWaitingCopyResolved } from '../lib/duo/duoCopy'
 import { haptics } from '../lib/utils/haptics'
 import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
 import { logWarn } from '../lib/utils/logger'
@@ -68,6 +69,12 @@ export interface UseDuoRegistrationResult {
   selectDuoMode: (mode: 'solo' | 'duo') => void
   retryDuoStatus: () => void
   partnerName: string
+  /**
+   * S3 (PR-2): direction-aware waiting copy for the duo card, resolved from
+   * the duo-status viewerRole × pendingSide matrix (lib/duo/duoCopy.ts).
+   * Undefined whenever the card is not in the waiting state.
+   */
+  duoWaitingCopy?: DuoWaitingCopyResolved
   duoPartnerNameForAlreadyJoined?: string
   successDuo?: { bound: boolean; partnerName: string }
 }
@@ -326,6 +333,21 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     [duoStatus?.friendDisplayName, duoInviteInfo?.inviter.displayName],
   )
 
+  // S3 (PR-2) waiting copy: the viewerRole × pendingSide matrix lives in
+  // lib/duo/duoCopy.ts. The name source is duoStatus ONLY — never the invite
+  // lookup's inviter name, which belongs to a different pair when the viewer
+  // also holds their own code. Missing direction fields (old server) fall
+  // back to D1 inside the resolver, so 「就等你」 never renders without a
+  // positive signal (AC-3).
+  const duoWaitingCopy = useMemo<DuoWaitingCopyResolved | undefined>(() => {
+    if (duoCardState !== 'waiting') return undefined
+    return resolveDuoWaitingCopy({
+      viewerRole: duoStatus?.viewerRole,
+      pendingSide: duoStatus?.pendingSide,
+      friendDisplayName: duoStatus?.friendDisplayName,
+    })
+  }, [duoCardState, duoStatus?.viewerRole, duoStatus?.pendingSide, duoStatus?.friendDisplayName])
+
   const successDuo = useMemo(() => {
     if (duoStatus?.state === 'bound') {
       return { bound: true, partnerName }
@@ -352,6 +374,7 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     selectDuoMode,
     retryDuoStatus,
     partnerName,
+    duoWaitingCopy,
     duoPartnerNameForAlreadyJoined: duoStatus?.state === 'bound' ? partnerName : undefined,
     successDuo,
   }
