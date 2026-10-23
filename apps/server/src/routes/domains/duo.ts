@@ -318,6 +318,22 @@ export function registerDuoRoutes(app: Express): void {
         .where(eq(users.id, invitation.inviterId))
         .limit(1);
 
+      // S3 (AC-0): a pre-registration invitee can only learn whether the
+      // inviter already holds a seat from THIS endpoint (duo-status stays
+      // "none" for them until their own registration writes the use row).
+      // One point query on the event_pool_registrations (pool_id, user_id)
+      // unique index; boolean only — the inviter's userId never leaves the
+      // server. Cancelling a registration deletes the row, so row-existence
+      // IS the current truth (no dangling state).
+      const [inviterRegistration] = await db
+        .select({ id: eventPoolRegistrations.id })
+        .from(eventPoolRegistrations)
+        .where(and(
+          eq(eventPoolRegistrations.poolId, invitation.poolId),
+          eq(eventPoolRegistrations.userId, invitation.inviterId),
+        ))
+        .limit(1);
+
       // Click tracking — same behavior as the referral/invitation lookups.
       await db
         .update(invitations)
@@ -330,6 +346,7 @@ export function registerDuoRoutes(app: Express): void {
         },
         poolId: invitation.poolId,
         status: "active",
+        inviterRegistered: Boolean(inviterRegistration),
       });
     } catch (error: any) {
       logger.error("Error fetching duo invite", { error: String(error) });
