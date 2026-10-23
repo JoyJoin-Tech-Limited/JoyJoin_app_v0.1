@@ -260,7 +260,7 @@ Run this checklist each day during internal beta.
 - [ ] Check error logs for any `500` responses or unhandled exceptions
 - [ ] Confirm `[AdminAudit]` entries are appearing for any actions taken the previous day
 - [ ] Review any new user reports in `/admin/moderation` (用户举报)
-- [ ] Check scheduled events for the day in `/admin/events` (活动管理)
+- [ ] Check scheduled events for the day in `/admin/events` (盲盒活动管理)
 
 ### Before Events
 

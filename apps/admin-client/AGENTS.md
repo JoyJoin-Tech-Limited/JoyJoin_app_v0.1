@@ -90,7 +90,7 @@ main.tsx                          # Vite bootstrap → renders AdminApp
                     ├── /matching-config     (匹配配置)
                     ├── /insights            (数据洞察)
                     ├── /templates           (活动模板)
-                    ├── /events              (活动管理)
+                    ├── /events              (盲盒活动管理)
                     ├── /notifications       (通知推送)
                     ├── /content             (内容管理)
                     ├── /subscriptions       (订阅管理)
@@ -142,6 +142,7 @@ src/
 - Pages go in `pages/admin/` — NOT top-level `pages/`
 - Components go in feature subdirs (discover/, event/, profile/, etc.) — NOT flat at `components/`
 - Hooks go in domain subdirs (auth/, event/, ui/, etc.) — NOT flat at `hooks/`
+  - Declared deviation: `hooks/useUnsavedGuard.ts` sits at the `hooks/` root on purpose — it is a route-agnostic navigation guard shared by any form, so it has no single domain to belong to.
 - Admin-local UI goes in `components/` — shared primitives go to `packages/shared/src/ui/`
 - Every page must handle: loading, empty, error, unauthorized states
 - **Date formatting:** Use `@/lib/dateUtils` (`safeFormat`, `fmtDate`, `fmtDateTime`) instead of raw `format(new Date(...))` to avoid crashes on invalid strings

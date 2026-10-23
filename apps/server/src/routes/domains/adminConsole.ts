@@ -83,9 +83,9 @@ function hoursUntil(iso: string): number {
  * the operator reads a number, follows it, and sees something else. Where the
  * destination needs help to show the right slice, the href carries the tab /
  * anchor and the destination is responsible for honouring it:
- *   - `/admin/moderation?tab=users`             → `AdminModerationPage`
- *   - `/admin/finance?tab=refunds&status=…`     → `AdminFinancePage`
- *   - `/admin/war-room#card-venue-tbd`          → `AdminWarRoomPage`
+ *   - `/admin/moderation?tab=users&status=pending` → `AdminModerationPage`
+ *   - `/admin/finance?tab=refunds&status=…`        → `AdminFinancePage`
+ *   - `/admin/war-room#card-venue-tbd`             → `AdminWarRoomPage`
  * Widening this set means teaching the destination the new parameter, not just
  * appending it here.
  */
@@ -122,12 +122,18 @@ async function buildActionQueue(): Promise<ActionQueueRow[]> {
       // 聊天举报 lives in `chat_reports` and is NOT part of this number, so the
       // deep link must not pre-select the chat tab. `/admin/safety-center` used
       // to be the target and is a sidebar badge key only — no route existed.
+      //
+      // `status=pending` is what makes the destination show THIS population: the
+      // tab's filter defaults to 全部, so `?tab=users` alone opened every report
+      // and the operator had to re-apply the filter to find the number they
+      // clicked. The parameter is only meaningful on `tab=users`, and the page
+      // drops it when the operator leaves that tab.
       correctNumber: `${pendingReports} 条举报（reports 表，不含聊天举报）等待处理`,
       recommendedAction: "逐条判定，超过 24h 未处理的优先",
       slaHours: 24,
       owner: "operator",
       severity: pendingReports > 0 ? "critical" : "info",
-      href: "/admin/moderation?tab=users",
+      href: "/admin/moderation?tab=users&status=pending",
       cleared: pendingReports === 0,
     },
     {

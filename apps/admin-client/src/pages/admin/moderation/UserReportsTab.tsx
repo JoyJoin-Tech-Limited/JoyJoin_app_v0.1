@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,13 +89,47 @@ const getReportedName = (report: Report) =>
   [report.reported_first_name, report.reported_last_name].filter(Boolean).join(" ") ||
   report.reported_user_id;
 
-export default function UserReportsTab() {
+export type UserReportsFilter = "all" | "pending";
+
+export default function UserReportsTab({
+  initialReportFilter = "all",
+  onReportFilterChange,
+}: {
+  /**
+   * Entry filter, owned by the page because it comes from the URL
+   * (`/admin/moderation?tab=users&status=pending`, emitted by the console
+   * action queue's 举报待审核 row). Defaults to the tab's historical "all".
+   */
+  initialReportFilter?: UserReportsFilter;
+  /**
+   * Fired only on an operator click, never on the prop sync below, so the page
+   * can write the choice back to `?status=` instead of leaving the URL claiming
+   * a filter the list is not applying.
+   */
+  onReportFilterChange?: (filter: UserReportsFilter) => void;
+}) {
   const [mainTab, setMainTab] = useState<"reports" | "logs">("reports");
-  const [reportFilter, setReportFilter] = useState<"all" | "pending">("all");
+  const [reportFilter, setReportFilter] = useState<UserReportsFilter>(initialReportFilter);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [editStatus, setEditStatus] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState<string>("");
   const [pendingAction, setPendingAction] = useState<{ report: Report; action: ConfirmableAction } | null>(null);
+
+  // Radix unmounts inactive tab panels, but wouter reuses `AdminModerationPage`
+  // when only the query string changes — so a second deep link can arrive while
+  // this tab is already mounted, and a `useState` initialiser alone would ignore
+  // it. When the prop (URL truth) changes, follow it; the operator's own filter
+  // clicks never change the prop, so they are never clobbered.
+  useEffect(() => {
+    setReportFilter(initialReportFilter);
+  }, [initialReportFilter]);
+
+  const handleReportFilterChange = (value: string) => {
+    const next: UserReportsFilter = value === "pending" ? "pending" : "all";
+    setReportFilter(next);
+    onReportFilterChange?.(next);
+  };
+
   const { toast } = useToast();
 
   const {
@@ -115,7 +149,21 @@ export default function UserReportsTab() {
     error: reportsError,
     refetch: refetchReports,
   } = useQuery<Report[]>({
-    queryKey: ["/api/admin/moderation/reports", reportFilter === "all" ? undefined : reportFilter],
+    // The key carries the filter so 全部/待处理 cache separately; the existing
+    // `invalidateQueries({ queryKey: ["/api/admin/moderation/reports"] })` prefix
+    // still matches both.
+    queryKey: ["/api/admin/moderation/reports", reportFilter],
+    // Explicit queryFn: the route filters with `?status=pending`
+    // (`userEventPools.ts` reads `req.query.status`). The default queryFn joins
+    // the key into the path, so the previous key asked for
+    // `/api/admin/moderation/reports/pending` — a path with no handler — and 待处理
+    // rendered a load error instead of a filtered list. A deep link into a broken
+    // filter is the same lie as no deep link.
+    queryFn: async () => {
+      const search = reportFilter === "pending" ? "?status=pending" : "";
+      const res = await apiRequest("GET", `/api/admin/moderation/reports${search}`);
+      return (await res.json()) as Report[];
+    },
   });
 
   const {
@@ -363,7 +411,7 @@ export default function UserReportsTab() {
           <CardContent>
             {/* Reports Tab */}
             <TabsContent value="reports" className="space-y-4">
-              <Tabs value={reportFilter} onValueChange={(v) => setReportFilter(v as any)}>
+              <Tabs value={reportFilter} onValueChange={handleReportFilterChange}>
                 <TabsList data-testid="tabs-report-filter">
                   <TabsTrigger value="all" data-testid="filter-all">
                     全部

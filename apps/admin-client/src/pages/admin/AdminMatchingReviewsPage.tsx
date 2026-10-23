@@ -354,7 +354,7 @@ export default function AdminMatchingReviewsPage() {
       )}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">匹配审核</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">排桌审批</h1>
           <p className="text-muted-foreground">
             审核待确认的匹配结果，通过后用户将看到匹配状态。
           </p>

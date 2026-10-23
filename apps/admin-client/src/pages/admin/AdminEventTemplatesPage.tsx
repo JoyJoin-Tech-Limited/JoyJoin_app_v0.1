@@ -287,7 +287,7 @@ export default function AdminEventTemplatesPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">活动模板管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">活动模板</h1>
           <p className="text-muted-foreground mt-1">管理周期性活动时段和主题</p>
         </div>
         <Button onClick={() => { resetForm(); setShowCreateDialog(true); }} data-testid="button-create-template">

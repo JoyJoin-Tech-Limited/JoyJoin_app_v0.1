@@ -1,5 +1,5 @@
 import { downloadCsv } from "@/lib/csvExport";
-import { fmtDate } from "@/lib/dateUtils";
+import { fmtCsvDate, fmtDate } from "@/lib/dateUtils";
 import {
   getCanonicalDisplayName,
   getDietaryRestrictionDisplay,
@@ -61,7 +61,42 @@ const CSV_FIELD_RENDERERS: Partial<Record<CsvFieldKey, (u: AdminUser) => string>
   isBanned: (u) => (u.isBanned ? "已封禁" : "正常"),
 };
 
-export function exportAdminUsersCsv(users: AdminUser[]): void {
+export interface AdminUsersCsvExportOptions {
+  /**
+   * Scope suffix appended to the default filename, e.g. `全部12人` or
+   * `前5000人-共9000人`.
+   *
+   * Without it the file is `users-YYYY-MM-DD.csv`, which is indistinguishable
+   * between "every user" and "the first 5000 of 9000" once it is out of the
+   * toast and sitting in a downloads folder next to another one from the same
+   * day. The caller knows the scope — the filename is where it has to live.
+   */
+  filenameHint?: string;
+}
+
+/** Keeps a hint long enough to stay descriptive, short enough to stay a filename. */
+const FILENAME_HINT_MAX_LENGTH = 80;
+
+/**
+ * Strip the characters that filesystems reserve (`/ : * ? " < > | \`) plus
+ * whitespace, so the name the operator reads in the toast is the name that
+ * lands on disk. Browsers silently rewrite an illegal `download` attribute,
+ * which is how `users-2026/10/23.csv` used to arrive as `users-2026_10_23.csv`.
+ */
+function sanitizeFilenameHint(hint: string): string {
+  return hint
+    .normalize("NFKC")
+    .replace(/[\\/:*?"<>|\s]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, FILENAME_HINT_MAX_LENGTH)
+    .replace(/-+$/g, "");
+}
+
+export function exportAdminUsersCsv(
+  users: AdminUser[],
+  options: AdminUsersCsvExportOptions = {},
+): void {
   const headers = CSV_FIELD_ORDER.map((key) => adminUserCsvLabelMap[key] ?? key);
   const rows = users.map((u) =>
     CSV_FIELD_ORDER.map((key) => {
@@ -71,5 +106,10 @@ export function exportAdminUsersCsv(users: AdminUser[]): void {
       return value == null ? "" : String(value);
     })
   );
-  downloadCsv({ filename: `users-${fmtDate(new Date())}.csv`, headers, rows });
+  const hint = options.filenameHint ? sanitizeFilenameHint(options.filenameHint) : "";
+  downloadCsv({
+    filename: `users-${fmtCsvDate(new Date())}${hint ? `-${hint}` : ""}.csv`,
+    headers,
+    rows,
+  });
 }
