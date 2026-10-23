@@ -507,13 +507,25 @@ async function captureMatchingStatusPuzzlePrelude() {
   )
 }
 
+// Wave A F3 fixture (2026-10-23): explicit badge-ledger seeds. The mock user
+// has eventsJoined=4 → unlocked badge keys are firstEvent + streak3.
+// Taro H5 storage entries carry the {"data": ...} wrapper (same convention as
+// the assessment-session seed below) or getStorageSync reads ''.
+const PROFILE_BADGE_LEDGER_KEY = 'joyjoin_profile_badges_seen:user-screenshot-001'
+const PROFILE_BADGES_ALL_UNLOCKED = { data: ['firstEvent', 'streak3'] }
+const PROFILE_BADGES_STREAK_FRESH = { data: ['firstEvent'] }
+
 async function captureProfileV17() {
   return withBrowserPage(V17_VIEWPORT, async (page) => {
     await page.goto(`${H5_BASE_URL}/#/pages/profile/index?motion=reduce`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
-    await clearAndSeedStorage(page)
+    // Settled baseline: every unlocked badge already in the ledger → no
+    // just-unlocked ring, no auto-expand, no poster glow.
+    await clearAndSeedStorage(page, {
+      [PROFILE_BADGE_LEDGER_KEY]: PROFILE_BADGES_ALL_UNLOCKED,
+    })
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
     await waitForContent(page, '.profile-page__identity-stage--entered')
@@ -525,6 +537,50 @@ async function captureProfileV17() {
       const storyCta = document.querySelector('.profile-page__story-cta')?.textContent?.trim()
       return growth === '260' && stats.includes('4') && stats.includes('11') && storyCta === '进入我的故事'
     }, undefined, { timeout: 10000 })
+    // Wave A render guards (2026-10-23): the mock fixtures are designed so the
+    // streak continuation line (lastActivityDate in the previous ISO week) and
+    // the next-event row (matched event later today) both render. Asserting
+    // them here catches fixture drift before a human F3 pass does.
+    await page.waitForFunction(() => {
+      const streakHint = document.querySelector('.profile-page__streak-hint')?.textContent?.trim() ?? ''
+      const nextEvent = document.querySelector('.profile-page__next-event-text')?.textContent?.trim() ?? ''
+      return streakHint.includes('连击续到') && nextEvent.includes('今天')
+    }, undefined, { timeout: 10000 })
+
+    return screenshotViewport(page)
+  })
+}
+
+// Wave A F3 state: fresh-badge capture. The ledger knows firstEvent only, so
+// streak3 (unlocked at eventsJoined=4 ≥ threshold 3) diffs as newly unlocked →
+// just-unlocked ring + one-shot wall auto-expand + poster-pill glow latch +
+// 「新徽章到手，存下这张卡」 copy.
+async function captureProfileFreshBadge() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/profile/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page, {
+      [PROFILE_BADGE_LEDGER_KEY]: PROFILE_BADGES_STREAK_FRESH,
+    })
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.profile-page__identity-stage--entered')
+    // Auto-expand opens the wall on the fresh diff; the ring marks streak3 and
+    // the poster pill latches its glow + new-badge copy.
+    await page.waitForSelector('.profile-page__milestone--just-unlocked', {
+      state: 'visible',
+      timeout: 10000,
+    })
+    await page.waitForFunction(() => {
+      const posterPill = document.querySelector('.profile-page__poster-pill')
+      const posterText = document.querySelector('.profile-page__poster-pill-text')?.textContent?.trim() ?? ''
+      return Boolean(posterPill?.classList.contains('profile-page__poster-pill--glow'))
+        && posterText.includes('新徽章到手')
+    }, undefined, { timeout: 10000 })
+    // Let the just-unlocked ring animation settle into its visible state.
+    await page.waitForTimeout(800)
 
     return screenshotViewport(page)
   })
@@ -992,6 +1048,7 @@ register('onboarding-essential-step2', captureEssentialDataStep2)
 register('onboarding-welcome-back', captureWelcomeBack)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 register('profile-v17', captureProfileV17)
+register('profile-fresh-badge', captureProfileFreshBadge)
 register('discover-alang-v17', captureDiscoverAlangV17)
 register('alang-search-v17', captureAlangSearchV17)
 register('personal-story-v17', capturePersonalStoryV17)
