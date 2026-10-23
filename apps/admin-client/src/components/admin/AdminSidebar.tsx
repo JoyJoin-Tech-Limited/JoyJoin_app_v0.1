@@ -213,7 +213,15 @@ export function AdminSidebar() {
   }, []);
 
   const badges = useNavBadges(Boolean(user?.isAdmin));
-  const filteredDailyOps = filterNavByRole(DAILY_OPS_ITEMS, role);
+  const filteredDailyOps = filterNavByRole(DAILY_OPS_ITEMS, role).filter((item) => {
+    // 功能开关驱动的可见性（例：人工复核关闭时，排桌审批队列恒空）。
+    // 只在开关明确为 false 时隐藏 —— 未加载时保持可见，避免导航闪烁。
+    if (!item.featureFlag) return true;
+    const flags: Record<string, boolean | undefined> = {
+      matchingOperatorReviewEnabled: user?.matchingOperatorReviewEnabled,
+    };
+    return flags[item.featureFlag] !== false;
+  });
   const workspaces = filterWorkspacesByRole(ADMIN_NAV_WORKSPACES, role);
 
   return (
