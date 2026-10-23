@@ -646,8 +646,11 @@ describe('Profile approved V4 layout', () => {
       data: {
         story: {
           chapters: [
-            { id: 'c1', title: '第一次破冰', body: '', activityType: 'blind_box', occurredAt: '2026-10-10T12:00:00Z' },
-            { id: 'c2', title: '深夜食堂局', body: '', activityType: 'blind_box', occurredAt: '2026-10-18T12:00:00Z' },
+            // Real server title format (formatPersonalStoryChapterTitle):
+            // `${YYYY.MM.DD} · ${activityType}` — the display must strip the
+            // date prefix or it renders twice (re-audit #3 P0 regression lock).
+            { id: 'c1', title: '2026.10.10 · 第一次破冰', body: '', activityType: 'blind_box', occurredAt: '2026-10-10T12:00:00Z' },
+            { id: 'c2', title: '2026.10.18 · 深夜食堂局', body: '', activityType: 'blind_box', occurredAt: '2026-10-18T12:00:00Z' },
           ],
         },
         pendingExperienceCount: 2,
@@ -661,6 +664,46 @@ describe('Profile approved V4 layout', () => {
     // Chapters ascend by chapterNumber → display number = count, latest = last.
     expect(getByText('第 2 章 · 深夜食堂局 · 10月18日写下')).toBeTruthy()
     expect(getByTestId('profile-story-badge').textContent).toContain('2 段新经历待写成')
+  })
+
+  it('A2-2: hides the bio nudge while the quest line renders (one ask per screen)', () => {
+    state.user = { ...makeUser(true), hasSeenProfileReview: true, bio: null }
+    // No registrations → quest renders with undone steps; the nudge must not
+    // compete with the quest's own bio step.
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    const { getByTestId, queryByTestId, rerender } = render(<ProfilePage />)
+    expect(getByTestId('profile-quest')).toBeTruthy()
+    expect(queryByTestId('profile-bio-prompt')).toBeNull()
+
+    // Once the quest completes (a matched registration), it retires and the
+    // bio nudge returns — the ask is never lost, only arbitrated.
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'reg-m1', matchStatus: 'matched', poolDateTime: '2026-10-25T11:30:00.000Z' }],
+    })
+    rerender(<ProfilePage />)
+    expect(queryByTestId('profile-quest')).toBeNull()
+    expect(getByTestId('profile-bio-prompt')).toBeTruthy()
+  })
+
+  it('A5-2: next-event row navigates pending → matching-status, matched → events tab', () => {
+    const future = new Date(Date.now() + 3 * 86_400_000).toISOString()
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'reg-p1', matchStatus: 'pending', poolDateTime: future, finalDateTime: null, poolDistrict: '南山区' }],
+    })
+    state.navigateTo.mockClear()
+    const { getByTestId, rerender } = render(<ProfilePage />)
+    fireEvent.click(getByTestId('profile-next-event'))
+    expect(state.navigateTo).toHaveBeenCalledWith({
+      url: `${MINI_PROGRAM_ROUTES.matchingStatus}?registrationId=reg-p1`,
+    })
+
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'reg-m1', matchStatus: 'matched', poolDateTime: future, finalDateTime: null, poolDistrict: null }],
+    })
+    state.switchTab.mockClear()
+    rerender(<ProfilePage />)
+    fireEvent.click(getByTestId('profile-next-event'))
+    expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.events })
   })
 
   it('P2-5: large title shows 我的 + date sub-line (greeting joins only when a bio exists)', () => {

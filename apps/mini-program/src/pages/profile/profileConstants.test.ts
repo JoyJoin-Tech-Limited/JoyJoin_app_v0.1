@@ -16,6 +16,7 @@ import {
   getNextUpcomingRegistration,
   getEventDayGreeting,
   formatChapterDate,
+  stripChapterDatePrefix,
   getBadgeProximity,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
@@ -411,6 +412,24 @@ describe('formatChapterDate (A2-3)', () => {
     expect(formatChapterDate(null)).toBeNull()
     expect(formatChapterDate(undefined)).toBeNull()
     expect(formatChapterDate('garbage')).toBeNull()
+  })
+})
+
+describe('stripChapterDatePrefix (P0, re-audit #3)', () => {
+  it('strips the server canonical YYYY.MM.DD prefix (real production format)', () => {
+    expect(stripChapterDatePrefix('2026.07.15 · 闪现')).toBe('闪现')
+    expect(stripChapterDatePrefix('2026.10.18 · 深夜食堂局')).toBe('深夜食堂局')
+  })
+
+  it('passes date-free titles through unchanged', () => {
+    expect(stripChapterDatePrefix('深夜食堂局')).toBe('深夜食堂局')
+    expect(stripChapterDatePrefix('2026 年的第一场局')).toBe('2026 年的第一场局')
+  })
+
+  it('handles null/empty and falls back when nothing would remain', () => {
+    expect(stripChapterDatePrefix(null)).toBeNull()
+    expect(stripChapterDatePrefix(undefined)).toBeNull()
+    expect(stripChapterDatePrefix('2026.07.15 · ')).toBe('2026.07.15 · ')
   })
 })
 

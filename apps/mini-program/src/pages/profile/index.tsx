@@ -68,6 +68,7 @@ import {
   getNextUpcomingRegistration,
   getEventDayGreeting,
   formatChapterDate,
+  stripChapterDatePrefix,
   getBadgeProximity,
   MILESTONES,
   PROFILE_STORY_ARTWORK_PATH,
@@ -626,7 +627,9 @@ export default function ProfilePage() {
   // verified), plus a badge for pending unwritten experiences.
   const storyChapters = personalStoryTeaserQuery.data?.story?.chapters ?? []
   const storyChapterCount = storyChapters.length
-  const latestStoryChapterTitle = storyChapterCount > 0 ? storyChapters[storyChapterCount - 1]?.title ?? null : null
+  const latestStoryChapterTitle = storyChapterCount > 0
+    ? stripChapterDatePrefix(storyChapters[storyChapterCount - 1]?.title)
+    : null
   // A2-3 (full-marks Wave A): the title also carries WHEN the latest chapter
   // was written — 「第 N 章 · {title} · M月D日写下」 (memo §6 spec).
   const latestStoryChapterOccurredAt = storyChapterCount > 0

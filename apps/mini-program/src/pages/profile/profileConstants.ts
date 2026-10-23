@@ -325,6 +325,20 @@ export function formatChapterDate(iso: string | null | undefined): string | null
 }
 
 /**
+ * P0 (re-audit #3, 2026-10-23): the server's canonical chapter title is
+ * `${YYYY.MM.DD} · ${activityType}` (formatPersonalStoryChapterTitle, locked
+ * by server test) — the date is already IN the title. A2-3 appends
+ * 「· M月D日写下」, so the display title must strip the server date prefix
+ * first or the date renders twice. Titles without the prefix pass through
+ * unchanged; null → null; a prefix-only title falls back to the original.
+ */
+export function stripChapterDatePrefix(title: string | null | undefined): string | null {
+  if (!title) return null
+  const stripped = title.replace(/^\d{4}\.\d{2}\.\d{2}\s*·\s*/, '').trim()
+  return stripped.length > 0 ? stripped : title
+}
+
+/**
  * A5-3: badge proximity — the first locked milestone within `maxRemaining`
  * events. Returns null when nothing is close (no nagging from far away).
  */
