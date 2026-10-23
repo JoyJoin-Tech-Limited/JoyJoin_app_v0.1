@@ -875,7 +875,7 @@ export default function ProfilePage() {
       >
         <Text className='profile-page__nav-title'>我的</Text>
         {/* P0-2 notification bell — mirrors Discover's anatomy (72rpx circle,
-            primary badge pill, 99+ cap); absolute so the centered title is
+            primary badge pill, 9+ cap); absolute so the centered title is
             untouched. Badge hidden at 0 unread. */}
         <View
           className='profile-page__nav-bell'
@@ -930,13 +930,13 @@ export default function ProfilePage() {
                 className={`profile-page__identity-rail${pixelAvatarEnabled ? '' : ' profile-page__identity-rail--no-entry'}`}
               >
               {/* Readable glass card for the identity copy (top-left).
-                  Whole card is the basic-profile hub: tap → 回看人格报告. */}
+                  Whole card is the basic-profile hub: tap → 回看氛围报告. */}
               <View
                 className='profile-page__identity-copy-card'
                 hoverClass='profile-page__identity-copy-card--pressed'
                 onClick={() => { void handleOpenPersonalityType('v17_card') }}
                 role='button'
-                aria-label={archetypeName ? `回看 ${archetypeName} 的人格测评报告` : '测测你的氛围原型'}
+                aria-label={archetypeName ? `回看 ${archetypeName} 的氛围报告` : '测测你的氛围原型'}
                 data-testid='profile-identity-copy-card'
               >
                 <View className='profile-page__identity-copy'>

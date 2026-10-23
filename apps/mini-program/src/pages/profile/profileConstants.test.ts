@@ -84,11 +84,11 @@ describe('profileConstants', () => {
 
   describe('getProfilePersonalityActionLabel', () => {
     it('keeps the personality result entry in compact rollback mode', () => {
-      expect(getProfilePersonalityActionLabel('corgi')).toBe('查看人格结果')
+      expect(getProfilePersonalityActionLabel('corgi')).toBe('回看氛围报告')
     })
 
     it('keeps the personality test entry before an archetype is available', () => {
-      expect(getProfilePersonalityActionLabel(null)).toBe('完成人格测试')
+      expect(getProfilePersonalityActionLabel(null)).toBe('完成氛围测试')
     })
   })
 
@@ -254,7 +254,7 @@ describe('getDailyGreeting (P0-3, 2026-10-22)', () => {
     const morning = new Date('2026-10-22T08:00:00')
     const evening = new Date('2026-10-22T20:00:00')
     expect(getDailyGreeting('fox', morning)).toBe(getDailyGreeting('fox', evening))
-    // +1 day always shifts dayOfYear % 3 by one → a different pool entry.
+    // +1 day always shifts dayOfYear % pool.length by one → a different pool entry.
     const nextDay = new Date('2026-10-23T08:00:00')
     expect(getDailyGreeting('fox', nextDay)).not.toBe(getDailyGreeting('fox', morning))
   })
@@ -268,6 +268,18 @@ describe('getDailyGreeting (P0-3, 2026-10-22)', () => {
   it('every family-named archetype also has a greeting pool', () => {
     for (const key of Object.keys(ARCHETYPE_FAMILY_NAME)) {
       expect(ARCHETYPE_GREETINGS[key]?.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('keeps pool depth at 5 per archetype (2026-10-23 re-audit a3) and copy-safe', () => {
+    const banned = ['匹配', '社交', '灵魂', 'AI', '会员', 'VIP', '诱导']
+    for (const [key, pool] of Object.entries(ARCHETYPE_GREETINGS)) {
+      expect(pool.length, `${key} pool depth`).toBe(5)
+      for (const line of pool) {
+        for (const token of banned) {
+          expect(line, `${key}: "${line}" contains banned token ${token}`).not.toContain(token)
+        }
+      }
     }
   })
 })

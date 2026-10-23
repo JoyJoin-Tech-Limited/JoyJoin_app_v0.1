@@ -815,7 +815,7 @@ describe('Profile approved V4 layout', () => {
     ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
 
     const { getByLabelText } = render(<ProfilePage />)
-    fireEvent.click(getByLabelText('查看人格结果'))
+    fireEvent.click(getByLabelText('回看氛围报告'))
 
     expect(state.navigateTo).toHaveBeenCalledWith({
       url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?source=profile`,
