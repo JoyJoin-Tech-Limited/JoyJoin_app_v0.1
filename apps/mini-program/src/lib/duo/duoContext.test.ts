@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import Taro from '@tarojs/taro'
 import {
   buildDuoSharePath,
   buildDuoShareStorageKey,
+  consumePendingDuoContext,
   isPendingDuoContextStale,
   resolveInviteShareMode,
 } from './duoContext'
@@ -36,5 +38,34 @@ describe('duoContext pure helpers', () => {
     expect(resolveInviteShareMode({ duoSharePath: '/pages/pool-registration/index?id=p&invitationCode=c&duo=1', duoEnabled: true })).toBe('duo')
     expect(resolveInviteShareMode({ duoSharePath: null, duoEnabled: true })).toBe('referral')
     expect(resolveInviteShareMode({ duoSharePath: '/x', duoEnabled: false })).toBe('referral')
+  })
+})
+
+/**
+ * S2 (Dependencies, solo 归因压制): the pending duo context replay is
+ * single-shot BY CONSTRUCTION (read + clear in one call). After a
+ * 「就我一个人」confirm the replay must never inject the code into a
+ * payload again — the first lock is that the context itself can only
+ * replay once.
+ */
+describe('consumePendingDuoContext — replay exactly once (S2 Dependencies)', () => {
+  it('returns the context on first consume and null on every later read', () => {
+    const context = { poolId: 'pool-1', invitationCode: 'abc123', duo: true, savedAt: Date.now() }
+    const storage = new Map<string, unknown>([['jj_pending_duo_context', context]])
+    vi.mocked(Taro.getStorageSync).mockImplementation((key: string) => storage.get(key) ?? '')
+    vi.mocked(Taro.removeStorageSync).mockImplementation((key: string) => {
+      storage.delete(key)
+    })
+
+    expect(consumePendingDuoContext()).toEqual(context)
+    expect(Taro.removeStorageSync).toHaveBeenCalledWith('jj_pending_duo_context')
+    // Second consume: the context is gone — no replay, no re-injection.
+    expect(consumePendingDuoContext()).toBeNull()
+    expect(consumePendingDuoContext()).toBeNull()
+  })
+
+  it('returns null when nothing was captured', () => {
+    vi.mocked(Taro.getStorageSync).mockReturnValue('')
+    expect(consumePendingDuoContext()).toBeNull()
   })
 })

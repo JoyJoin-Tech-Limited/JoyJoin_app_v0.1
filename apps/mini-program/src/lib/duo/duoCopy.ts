@@ -36,6 +36,14 @@ export const DUO_WAITING_COPY_PROMISED = '你和 {name} 约好了，等 TA 报�
 export const DUO_GUEST_COPY_RESERVED_L1 = '{name} 这局给你留了个位置'
 export const DUO_GUEST_COPY_SHARED_TABLE_L2 = '报名后你们会被排进同一桌'
 
+// S2 (D-5 逐字): solo-confirm dialog copy. Lives in this single-authority
+// module so the dialog component never inlines strings (same ownership rule
+// as the waiting/guest lines above). {name} interpolates via truncateDuoName.
+export const DUO_SOLO_CONFIRM_TITLE = '这场是和 {name} 约好的'
+export const DUO_SOLO_CONFIRM_BODY = '一个人报名也可以，只是不会和 TA 同桌。'
+export const DUO_SOLO_CONFIRM_PRIMARY = '还是一起去'
+export const DUO_SOLO_CONFIRM_SECONDARY = '就我一个人'
+
 const NAME_TOKEN = '{name}'
 
 /** duo-status 路径的三向标识。 */
@@ -143,6 +151,11 @@ export function getGuestDuoCopy(
     line1: interpolateDuoName(template, inviterDisplayName),
     line2: DUO_GUEST_COPY_SHARED_TABLE_L2,
   }
+}
+
+/** S2 solo-confirm dialog title（{name} 经 truncateDuoName 截断插值，缺省「朋友」）。 */
+export function getDuoSoloConfirmTitle(inviterDisplayName?: string | null): string {
+  return interpolateDuoName(DUO_SOLO_CONFIRM_TITLE, inviterDisplayName)
 }
 
 /**

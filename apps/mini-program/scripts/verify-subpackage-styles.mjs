@@ -150,6 +150,14 @@ const REQUIREMENTS = [
       // waiting text live in the same @use'd duo card SCSS — guard them too.
       'pool-reg-duo__waiting-text{',
       'pool-reg-duo__again-pill{',
+      // S2 invitee role separation (2026-10-23): the guest note-card region
+      // lives in the @use'd duo card SCSS, and the solo-confirm dialog in its
+      // own @use'd component SCSS — both must reach the page WXSS or the
+      // invitee surfaces render unstyled on device.
+      'pool-reg-duo__guest{',
+      'pool-reg-duo__guest-line1{',
+      'duo-solo-confirm{',
+      'duo-solo-confirm__primary{',
       // Step 0 三拍化 (2026-08-17): the VibePeek expander SCSS is @use'd by the
       // page SCSS and must reach the page WXSS.
       'pool-reg-vibe-peek__toggle{',

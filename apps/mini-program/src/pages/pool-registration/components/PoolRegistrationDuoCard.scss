@@ -142,6 +142,54 @@
     }
   }
 
+  // S2 guest region (D-3): two plain text lines inside the existing __expand
+  // container — zero buttons, zero new keyframes (reuses fade-slide-up via
+  // __expand; skeletons reuse pool-reg-shimmer). Height budget: header 56rpx
+  // + expand margin 16rpx + region 84rpx + card padding 48rpx = 204rpx,
+  // ≤256rpx cap. Skeleton bars carry the SAME outer box heights as the final
+  // text lines (40/36rpx) so the lookup landing causes zero layout shift.
+  // P1 兼容条款: L1/L2 与 __guest 类名钩子保持稳定——P1 的顶线/第三行/淡入
+  // 均为纯增量，不得重写此处结构。
+  &__guest {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__guest-line1 {
+    display: block;
+    font-size: 28rpx;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: 40rpx;
+    @include text-truncate;
+  }
+
+  &__guest-line2 {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 36rpx;
+  }
+
+  &__guest-skel {
+    border-radius: 6rpx;
+    background: $color-divider;
+    animation: pool-reg-shimmer 1.5s ease-in-out infinite;
+
+    &--l1 {
+      width: 55%;
+      height: 28rpx;
+      margin: 6rpx 0;
+    }
+
+    &--l2 {
+      width: 40%;
+      height: 24rpx;
+      margin: 6rpx 0;
+    }
+  }
+
   &__share-btn {
     width: 100%;
   }
@@ -329,6 +377,11 @@
     }
 
     &__skeleton-line {
+      animation: none;
+      opacity: 0.4;
+    }
+
+    &__guest-skel {
       animation: none;
       opacity: 0.4;
     }

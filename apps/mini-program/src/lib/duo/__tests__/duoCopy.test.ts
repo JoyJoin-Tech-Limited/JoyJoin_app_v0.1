@@ -3,9 +3,14 @@ import {
   DUO_GUEST_COPY_RESERVED_L1,
   DUO_GUEST_COPY_SHARED_TABLE_L2,
   DUO_NAME_FALLBACK,
+  DUO_SOLO_CONFIRM_BODY,
+  DUO_SOLO_CONFIRM_PRIMARY,
+  DUO_SOLO_CONFIRM_SECONDARY,
+  DUO_SOLO_CONFIRM_TITLE,
   DUO_WAITING_COPY_ONLY_YOU,
   DUO_WAITING_COPY_PROMISED,
   DUO_WAITING_COPY_SENT_FRIEND,
+  getDuoSoloConfirmTitle,
   getDuoWaitingCopy,
   getGuestDuoCopy,
   interpolateDuoName,
@@ -192,6 +197,44 @@ describe('resolveGuestCopyVariant — lookup 路径 (AC-2/AC-3)', () => {
   })
 })
 
+/**
+ * S2 (contract duo-s2-invitee-role-separation, D-5 逐字): solo-confirm
+ * dialog copy lives in this single-authority module — the dialog component
+ * never inlines strings (same ownership rule as the waiting/guest lines).
+ */
+describe('S2 solo-confirm dialog copy (D-5 逐字)', () => {
+  it('locks the four dialog strings verbatim', () => {
+    expect(DUO_SOLO_CONFIRM_TITLE).toBe('这场是和 {name} 约好的')
+    expect(DUO_SOLO_CONFIRM_BODY).toBe('一个人报名也可以，只是不会和 TA 同桌。')
+    expect(DUO_SOLO_CONFIRM_PRIMARY).toBe('还是一起去')
+    expect(DUO_SOLO_CONFIRM_SECONDARY).toBe('就我一个人')
+  })
+
+  it('getDuoSoloConfirmTitle interpolates via truncateDuoName (>6 字 → 6 字+…)', () => {
+    expect(getDuoSoloConfirmTitle('阿明')).toBe('这场是和 阿明 约好的')
+    expect(getDuoSoloConfirmTitle('一二三四五六七')).toBe('这场是和 一二三四五六… 约好的')
+  })
+
+  it('名字缺失/空白 → 「朋友」兜底（与三向 waiting 文案同一兜底）', () => {
+    expect(getDuoSoloConfirmTitle(undefined)).toBe('这场是和 朋友 约好的')
+    expect(getDuoSoloConfirmTitle('')).toBe('这场是和 朋友 约好的')
+    expect(getDuoSoloConfirmTitle('   ')).toBe('这场是和 朋友 约好的')
+  })
+
+  it('S2 guest 文案与 S3 常量同一引用（AC-9：S2 不复制字符串）', () => {
+    // The guest surface resolves through getGuestDuoCopy — its L1 templates
+    // ARE the S3 constants (not re-typed copies).
+    expect(getGuestDuoCopy('reserved', '阿明').line1).toBe(
+      interpolateDuoName(DUO_GUEST_COPY_RESERVED_L1, '阿明'),
+    )
+    expect(getGuestDuoCopy('onlyYou', '阿明').line1).toBe(
+      interpolateDuoName(DUO_WAITING_COPY_ONLY_YOU, '阿明'),
+    )
+    expect(getGuestDuoCopy('reserved', '阿明').line2).toBe(DUO_GUEST_COPY_SHARED_TABLE_L2)
+    expect(getGuestDuoCopy('onlyYou', '阿明').line2).toBe(DUO_GUEST_COPY_SHARED_TABLE_L2)
+  })
+})
+
 describe('resolveDuoWaitingPresentation — D-6 优先级 bound > D3 > guest/D2 > D1', () => {
   it('bound 压过一切 waiting/guest 信号', () => {
     expect(
@@ -290,6 +333,11 @@ describe('D-4 合规扫描：全部文案无 emoji、无审核禁用词 (AC-5)',
     DUO_GUEST_COPY_RESERVED_L1,
     DUO_GUEST_COPY_SHARED_TABLE_L2,
     DUO_NAME_FALLBACK,
+    // S2 (D-10): solo-confirm dialog copy is user-facing — same compliance.
+    DUO_SOLO_CONFIRM_TITLE,
+    DUO_SOLO_CONFIRM_BODY,
+    DUO_SOLO_CONFIRM_PRIMARY,
+    DUO_SOLO_CONFIRM_SECONDARY,
   ]
 
   const RENDERED_SAMPLES = [
