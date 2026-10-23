@@ -27,7 +27,7 @@ export interface UseProfileCardShareInput {
 
 export interface UseProfileCardShareResult {
   isGenerating: boolean
-  handleShare: () => Promise<void>
+  handleShare: (source?: 'default' | 'badge_glow') => Promise<void>
 }
 
 type TaroWithShareImageMenu = typeof Taro & {
@@ -117,7 +117,7 @@ export function useProfileCardShare(input: UseProfileCardShareInput): UseProfile
     [saveToAlbum],
   )
 
-  const handleShare = useCallback(async () => {
+  const handleShare = useCallback(async (source: 'default' | 'badge_glow' = 'default') => {
     if (!enabled || isGeneratingRef.current) {
       return
     }
@@ -147,6 +147,7 @@ export function useProfileCardShare(input: UseProfileCardShareInput): UseProfile
       })
       profileAnalytics.track('profile_share_card_generated', {
         hasQr: Boolean(qrCodeImagePath),
+        source,
       })
       if (pageHiddenRef.current) return
 

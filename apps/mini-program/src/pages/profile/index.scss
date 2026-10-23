@@ -696,6 +696,59 @@
     animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
   }
 
+  // A5-2 (full-marks Wave A): next-event one-line row — slimmer sibling of
+  // the milestones-entry chrome. Static render (no entrance animation): the
+  // row appears with late-arriving registration data and must not flash.
+  &__next-event {
+    min-height: 72rpx;
+    margin: 0 $container-padding $spacing-md;
+    padding: 0 $spacing-md;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.985);
+      background: var(--profile-primary-06);
+    }
+  }
+
+  &__next-event-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: $color-landed-gold;
+    flex-shrink: 0;
+  }
+
+  &__next-event-text {
+    flex: 1;
+    min-width: 0;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    line-height: $line-height-normal;
+    color: var(--profile-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__next-event-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    margin-right: 4rpx;
+    border-top: 3rpx solid var(--profile-text-tertiary);
+    border-right: 3rpx solid var(--profile-text-tertiary);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
   // Single entry row — same chrome family as the settings entry below so the
   // collapsed section reads as one quiet list row, not a section of its own.
   &__milestones-entry {
@@ -1765,6 +1818,13 @@
     align-items: flex-end;
     justify-content: center;
     gap: 2rpx;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    // A5-1 (full-marks Wave A): the capsule is tappable → Discover.
+    &--pressed {
+      transform: scale(0.96);
+      background: rgba($color-brand-gold, 0.2);
+    }
   }
 
   &__streak-main {
@@ -2691,6 +2751,19 @@
     &--busy {
       opacity: 0.6;
     }
+
+    // A6-2 (full-marks Wave A): one-shot gold breathe while a fresh badge is
+    // unshared. RM kills the animation (border tint remains as the static
+    // pose); the degradation tier never applies the class (TSX guard).
+    &--glow {
+      border-color: rgba($color-landed-gold, 0.6);
+      animation: profile-poster-glow 2s ease-in-out infinite;
+    }
+  }
+
+  @keyframes profile-poster-glow {
+    0%, 100% { box-shadow: 0 0 0 rgba($color-landed-gold, 0); }
+    50% { box-shadow: 0 4rpx 20rpx rgba($color-landed-gold, 0.45); }
   }
 
   &__poster-pill-text {
@@ -2754,6 +2827,11 @@
   }
 
   .profile-page__milestones-row {
+    animation: none;
+  }
+
+  // A6-2: the fresh-badge poster glow freezes to its static gold border.
+  .profile-page__poster-pill--glow {
     animation: none;
   }
 

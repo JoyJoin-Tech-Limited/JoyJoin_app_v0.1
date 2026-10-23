@@ -53,6 +53,7 @@ import { logError, logInfo } from '../../lib/utils/logger'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
+import { formatEventDateShort } from '../../lib/utils/eventDisplay'
 import './index.scss'
 import {
   getProfileCompletion,
@@ -63,6 +64,11 @@ import {
   ARCHETYPE_FAMILY_NAME,
   getDailyGreeting,
   getStreakMilestoneTeaser,
+  getStreakContinuationTarget,
+  getNextUpcomingRegistration,
+  getEventDayGreeting,
+  formatChapterDate,
+  getBadgeProximity,
   MILESTONES,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
@@ -428,6 +434,14 @@ export default function ProfilePage() {
   // resolved archetype; constants lived unused in profileConstants).
   const archetypeFamilyName = archetype ? (ARCHETYPE_FAMILY_NAME[archetype] ?? null) : null
   const dailyGreeting = useMemo(() => getDailyGreeting(archetype), [archetype])
+  // A4-3 (full-marks Wave A): on an event day the greeting becomes concrete
+  // (time + district) and replaces the daily rotation — one greeting concept
+  // shared by the identity card and the large-title sub-line.
+  const eventDayGreeting = useMemo(
+    () => getEventDayGreeting(registrationsQuery.data),
+    [registrationsQuery.data],
+  )
+  const greetingLine = eventDayGreeting ?? dailyGreeting
 
   const lifeStage = authUser?.lifeStage
   const bio = typeof authUser?.bio === 'string' ? authUser.bio.trim() : null
@@ -439,8 +453,8 @@ export default function ProfilePage() {
     const now = new Date()
     const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
     const dateLine = `${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`
-    return bio && dailyGreeting ? `${dateLine} · ${dailyGreeting}` : dateLine
-  }, [bio, dailyGreeting])
+    return bio && greetingLine ? `${dateLine} · ${greetingLine}` : dateLine
+  }, [bio, greetingLine])
   const profileCompletion = getProfileCompletion(authUser)
   const growth = getProfileGrowthSummary(
     gamificationQuery.data ?? {
@@ -457,6 +471,18 @@ export default function ProfilePage() {
   // real ladder rung (3/6/12 weeks → +200/+500/+1000, server-authoritative).
   const activityStreak = gamificationQuery.data?.activityStreak ?? 0
   const streakTeaser = useMemo(() => getStreakMilestoneTeaser(activityStreak), [activityStreak])
+  // A5-1 (full-marks Wave A): continuation warning when the flame dies unless
+  // the user attends THIS week — UTC-mirrored against the server week math,
+  // so the line is never a lie. Wins the single sub-line slot over the
+  // milestone teaser (urgency > aspiration).
+  const streakContinuationTarget = useMemo(
+    () => getStreakContinuationTarget(
+      activityStreak,
+      gamificationQuery.data?.lastActivityDate,
+      gamificationQuery.data?.streakFreezeAvailable ?? false,
+    ),
+    [activityStreak, gamificationQuery.data],
+  )
 
   // P1-5 quest line (PM memo §2): 4 steps live until the first 成行
   // (matched/completed registration), then hide forever — no dismiss button,
@@ -480,6 +506,13 @@ export default function ProfilePage() {
       ],
     }
   }, [profileV17Enabled, registrationsQuery.data, archetype, bio])
+
+  // A5-2 (full-marks Wave A): next upcoming event — pending or matched with
+  // the time still ahead — for the Act-2 one-line row.
+  const nextRegistration = useMemo(
+    () => getNextUpcomingRegistration(registrationsQuery.data),
+    [registrationsQuery.data],
+  )
 
   const handleQuestStepTap = useCallback((key: 'assessment' | 'bio' | 'register' | 'matched') => {
     haptics('light')
@@ -594,6 +627,12 @@ export default function ProfilePage() {
   const storyChapters = personalStoryTeaserQuery.data?.story?.chapters ?? []
   const storyChapterCount = storyChapters.length
   const latestStoryChapterTitle = storyChapterCount > 0 ? storyChapters[storyChapterCount - 1]?.title ?? null : null
+  // A2-3 (full-marks Wave A): the title also carries WHEN the latest chapter
+  // was written — 「第 N 章 · {title} · M月D日写下」 (memo §6 spec).
+  const latestStoryChapterOccurredAt = storyChapterCount > 0
+    ? storyChapters[storyChapterCount - 1]?.occurredAt ?? null
+    : null
+  const latestChapterDateLabel = formatChapterDate(latestStoryChapterOccurredAt)
   const pendingStoryCount = personalStoryTeaserQuery.data?.pendingExperienceCount ?? 0
 
   // P0-5: 我的 tab dot = live pending-equipment-draw count. Passed live to
@@ -661,14 +700,32 @@ export default function ProfilePage() {
     () => MILESTONES.filter((milestone) => joinedEventsCount >= milestone.threshold),
     [joinedEventsCount],
   )
+  // A5-3 (full-marks Wave A): proximity line in the entry summary — surfaces
+  // only when the next badge is ≤ 3 events away (no far-away nagging).
+  const badgeProximity = useMemo(() => getBadgeProximity(joinedEventsCount), [joinedEventsCount])
+  // A4-4 + A6-2 (full-marks Wave A): a fresh unlock auto-expands the wall
+  // once AND latches the poster glow until tapped. Ref-gated so the user can
+  // still collapse the wall while the ring shows; the ref re-arms when the
+  // unlock batch clears so the NEXT batch celebrates again.
+  const badgeAutoExpandRef = useRef(false)
+  const [posterGlow, setPosterGlow] = useState(false)
+  useEffect(() => {
+    if (justUnlockedKeys.length > 0 && !badgeAutoExpandRef.current) {
+      badgeAutoExpandRef.current = true
+      setMilestonesOpen(true)
+      setPosterGlow(true)
+    } else if (justUnlockedKeys.length === 0) {
+      badgeAutoExpandRef.current = false
+    }
+  }, [justUnlockedKeys])
 
   const archetypeTagline = useMemo(() => {
     if (!archetype || !(archetype in archetypeRegistry)) return null
     return archetypeRegistry[archetype as keyof typeof archetypeRegistry]?.narrative.tagline ?? null
   }, [archetype])
-  // P0-3: user's own bio always wins; the daily greeting beats the static
-  // tagline so the card says something fresh each day.
-  const displayBio = bio || dailyGreeting || archetypeTagline || null
+  // P0-3: user's own bio always wins; the greeting (event-day concrete, else
+  // daily rotation) beats the static tagline so the card says something fresh.
+  const displayBio = bio || greetingLine || archetypeTagline || null
 
   // P2-3 形象名片 (PM memo §8): rebuilt on the compliant canvas pipeline —
   // pixel-avatar composite (archetype art fallback) + displayName + 家族名 +
@@ -798,10 +855,13 @@ export default function ProfilePage() {
     }
   }, [bioPromptStorageKey])
 
+  // A2-2 (full-marks Wave A): one ask per screen — while the quest line
+  // renders, its bio step already carries the same ask, so the nudge hides.
   const showBioPrompt = !authLoading
     && authUser?.hasSeenProfileReview === true
     && !bio
     && !bioPromptDismissed
+    && !quest
 
   const handleBioPromptTap = () => {
     haptics('light')
@@ -1075,16 +1135,26 @@ export default function ProfilePage() {
                       </View>
                       {activityStreak > 0 && (
                         <View
-                          className={`profile-page__streak-capsule${streakTeaser ? ' profile-page__streak-capsule--near-milestone' : ''}`}
+                          className={`profile-page__streak-capsule${streakTeaser || streakContinuationTarget != null ? ' profile-page__streak-capsule--near-milestone' : ''}`}
                           data-testid='profile-streak-capsule'
+                          hoverClass='profile-page__streak-capsule--pressed'
+                          onClick={() => {
+                            haptics('light')
+                            profileAnalytics.track('profile_streak_capsule_tap', { streakWeeks: activityStreak })
+                            void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
+                          }}
+                          role='button'
+                          aria-label={`连续 ${activityStreak} 周，去活动页保持连击`}
                         >
                           <View className='profile-page__streak-main'>
                             <JoyJoinIcon emoji='🔥' tier='chemistry' size={28} className='profile-page__streak-icon' />
                             <Text className='profile-page__streak-text'>连续 {activityStreak} 周</Text>
                           </View>
-                          {streakTeaser && (
-                            <Text className='profile-page__streak-hint'>再坚持 1 周领 +{streakTeaser.xp}</Text>
-                          )}
+                          {streakContinuationTarget != null ? (
+                            <Text className='profile-page__streak-hint'>本周再 1 场，连击续到 {streakContinuationTarget} 周</Text>
+                          ) : streakTeaser ? (
+                            <Text className='profile-page__streak-hint'>再坚持 1 周，潮流值 +{streakTeaser.xp}</Text>
+                          ) : null}
                         </View>
                       )}
                     </View>
@@ -1411,6 +1481,39 @@ export default function ProfilePage() {
           </View>
         </View>
 
+        {/* A5-2 (full-marks Wave A): next-event one-line row — concrete
+            forward motion in Act 2. Pending → matching-status (live status);
+            matched → events tab. No entrance animation: the row appears with
+            late-arriving registration data and must not flash. */}
+        {profileV17Enabled && nextRegistration && (
+          <View
+            className='profile-page__next-event'
+            hoverClass='profile-page__next-event--pressed'
+            onClick={() => {
+              haptics('light')
+              profileAnalytics.track('profile_next_event_tap', {
+                matchStatus: nextRegistration.matchStatus ?? 'pending',
+              })
+              if (nextRegistration.matchStatus === 'pending') {
+                void Taro.navigateTo({
+                  url: `${MINI_PROGRAM_ROUTES.matchingStatus}?registrationId=${encodeURIComponent(nextRegistration.id)}`,
+                })
+              } else {
+                void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })
+              }
+            }}
+            role='button'
+            aria-label={`下一场活动，${formatEventDateShort(nextRegistration.finalDateTime ?? nextRegistration.poolDateTime)}`}
+            data-testid='profile-next-event'
+          >
+            <View className='profile-page__next-event-dot' aria-hidden='true' />
+            <Text className='profile-page__next-event-text'>
+              {`下一场 · ${formatEventDateShort(nextRegistration.finalDateTime ?? nextRegistration.poolDateTime)}${nextRegistration.poolDistrict ? ` · ${nextRegistration.poolDistrict}` : ''}`}
+            </Text>
+            <View className='profile-page__next-event-chevron' aria-hidden='true' />
+          </View>
+        )}
+
         {profileV17Enabled && !isLoadingStats && joinedEventsCount >= 1 && (
           <View className='profile-page__milestones'>
             {/* P6b density redesign: badge grid collapsed to a single entry
@@ -1443,7 +1546,7 @@ export default function ProfilePage() {
               <View className='profile-page__milestones-entry-text'>
                 <Text className='profile-page__milestones-entry-title'>成就徽章</Text>
                 <Text className='profile-page__milestones-entry-summary'>
-                  {`已点亮 ${unlockedMilestones.length}/${MILESTONES.length} 枚`}
+                  {`已点亮 ${unlockedMilestones.length}/${MILESTONES.length} 枚${badgeProximity ? ` · 再 ${badgeProximity.remaining} 场点亮${badgeProximity.label}` : ''}`}
                 </Text>
               </View>
               <View
@@ -1594,7 +1697,7 @@ export default function ProfilePage() {
                 )}
                 <Text className='profile-page__story-title'>
                   {storyChapterCount > 0 && latestStoryChapterTitle
-                    ? `第 ${storyChapterCount} 章 · ${latestStoryChapterTitle}`
+                    ? `第 ${storyChapterCount} 章 · ${latestStoryChapterTitle}${latestChapterDateLabel ? ` · ${latestChapterDateLabel}写下` : ''}`
                     : '开始你的第一章'}
                 </Text>
                 <Text className='profile-page__story-summary'>
@@ -1617,22 +1720,30 @@ export default function ProfilePage() {
         )}
 
         {/* P2-3 形象名片 entry — quiet text-pill directly under the story
-            card (PM memo §8). Visible when an archetype exists. */}
-        {profileV17DataPolicy.personalStoryEnabled && archetype && (
+            card (PM memo §8). A6-1 (full-marks Wave A): gate is archetype
+            only — decoupled from personalStoryEnabled so story-off users
+            keep the share surface. A6-2: a fresh badge latches a one-shot
+            gold glow + celebratory copy until the tap. */}
+        {archetype && (
           <View className='profile-page__poster-entry'>
             <View
-              className={`profile-page__poster-pill${profileCardShare.isGenerating ? ' profile-page__poster-pill--busy' : ''}`}
+              className={`profile-page__poster-pill${profileCardShare.isGenerating ? ' profile-page__poster-pill--busy' : ''}${posterGlow && !deviceTier.isDegradation ? ' profile-page__poster-pill--glow' : ''}`}
               hoverClass={profileCardShare.isGenerating ? undefined : 'profile-page__poster-pill--pressed'}
               onClick={() => {
-                if (!profileCardShare.isGenerating) void profileCardShare.handleShare()
+                if (profileCardShare.isGenerating) return
+                if (posterGlow) {
+                  profileAnalytics.track('profile_poster_glow_tap')
+                  setPosterGlow(false)
+                }
+                void profileCardShare.handleShare(posterGlow ? 'badge_glow' : 'default')
               }}
               role='button'
               aria-disabled={profileCardShare.isGenerating}
-              aria-label={profileCardShare.isGenerating ? '正在生成卡片' : '存下这张卡'}
+              aria-label={profileCardShare.isGenerating ? '正在生成卡片' : posterGlow ? '新徽章到手，存下这张卡' : '存下这张卡'}
               data-testid='profile-poster-entry'
             >
               <Text className='profile-page__poster-pill-text'>
-                {profileCardShare.isGenerating ? '正在生成…' : '存下这张卡'}
+                {profileCardShare.isGenerating ? '正在生成…' : posterGlow ? '新徽章到手，存下这张卡' : '存下这张卡'}
               </Text>
             </View>
           </View>

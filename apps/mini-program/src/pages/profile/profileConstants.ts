@@ -1,3 +1,4 @@
+import type { PoolRegistrationSummary } from '@shared/api'
 import type { AuthUser } from '../../hooks/useAuth'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 
@@ -216,6 +217,130 @@ export function getStreakMilestoneTeaser(streak: number): { weeks: number; xp: n
   return STREAK_MILESTONE_LADDER.find((rung) => rung.weeks === streak + 1) ?? null
 }
 
+// ---- Full-marks Wave A (2026-10-23, PM plan) -------------------------------
+
+/** Monday 00:00Z of the UTC ISO week containing `time` (ms). */
+function getUtcIsoWeekStart(time: number): number {
+  const day = new Date(time).getUTCDay() // 0=Sun..6=Sat
+  return time - ((day + 6) % 7) * 86_400_000
+}
+
+/**
+ * A5-1: streak-continuation target (streak + 1) when the user must attend
+ * THIS week to keep the flame alive; null when the streak is safe (already
+ * attended this week), at zero, or unrecoverable (server will reset).
+ *
+ * Truth condition mirrors apps/server/src/gamificationService.ts
+ * updateStreak: lastActivityDate is stored as a UTC date string
+ * ('YYYY-MM-DD' via toISOString) and the streak increments when the ISO-week
+ * gap is exactly 1 (or 2 with an unused freeze card). We reproduce the gap
+ * with UTC week starts so a +08:00 device cannot disagree with the UTC
+ * container by up to 8h at the Monday boundary. Year-boundary parity was
+ * checked against the server's getWeeksDiff (correct for gaps ≤ 2).
+ */
+export function getStreakContinuationTarget(
+  activityStreak: number,
+  lastActivityDate: string | null | undefined,
+  streakFreezeAvailable: boolean,
+  now: Date = new Date(),
+): number | null {
+  if (!Number.isFinite(activityStreak) || activityStreak <= 0) return null
+  if (!lastActivityDate) return null
+  const last = Date.parse(`${lastActivityDate}T00:00:00Z`)
+  if (Number.isNaN(last)) return null
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const weeksDiff = Math.round(
+    (getUtcIsoWeekStart(todayUtc) - getUtcIsoWeekStart(last)) / (7 * 86_400_000),
+  )
+  if (weeksDiff <= 0) return null
+  if (weeksDiff === 1) return activityStreak + 1
+  if (weeksDiff === 2 && streakFreezeAvailable) return activityStreak + 1
+  return null
+}
+
+/**
+ * A5-2: next upcoming registration — pending or matched with the event time
+ * still in the future, soonest first. `finalDateTime` (revealed time) wins
+ * over `poolDateTime` when present, matching the server's precedence.
+ */
+export function getNextUpcomingRegistration(
+  registrations: PoolRegistrationSummary[] | null | undefined,
+  now: Date = new Date(),
+): PoolRegistrationSummary | null {
+  if (!registrations?.length) return null
+  const nowMs = now.getTime()
+  let best: PoolRegistrationSummary | null = null
+  let bestMs = Infinity
+  for (const reg of registrations) {
+    if (reg.matchStatus !== 'pending' && reg.matchStatus !== 'matched') continue
+    const timeStr = reg.finalDateTime ?? reg.poolDateTime
+    if (!timeStr) continue
+    const ms = Date.parse(timeStr)
+    if (Number.isNaN(ms) || ms <= nowMs) continue
+    if (ms < bestMs) {
+      best = reg
+      bestMs = ms
+    }
+  }
+  return best
+}
+
+/**
+ * A4-3: event-day greeting — when the user has an event TODAY the greeting
+ * line becomes concrete (time + district) instead of the daily rotation.
+ * Copy decision (PM plan): factual 「今天 HH:mm 有局 · {district}见」 — no
+ * 今晚 (morning events exist), no exclamation inflation. Wall-clock fields
+ * use device-local time because this is a user-facing clock, unlike the
+ * streak math above which must match the UTC server.
+ */
+export function getEventDayGreeting(
+  registrations: PoolRegistrationSummary[] | null | undefined,
+  now: Date = new Date(),
+): string | null {
+  const next = getNextUpcomingRegistration(registrations, now)
+  if (!next) return null
+  const timeStr = next.finalDateTime ?? next.poolDateTime
+  if (!timeStr) return null
+  const ms = Date.parse(timeStr)
+  if (Number.isNaN(ms)) return null
+  const eventDate = new Date(ms)
+  const sameDay =
+    eventDate.getFullYear() === now.getFullYear() &&
+    eventDate.getMonth() === now.getMonth() &&
+    eventDate.getDate() === now.getDate()
+  if (!sameDay) return null
+  const hh = String(eventDate.getHours()).padStart(2, '0')
+  const mm = String(eventDate.getMinutes()).padStart(2, '0')
+  const district = next.poolDistrict ? ` · ${next.poolDistrict}见` : ''
+  return `今天 ${hh}:${mm} 有局${district}`
+}
+
+/** A2-3: 「M月D日」 for the story title's chapter date. */
+export function formatChapterDate(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return null
+  const d = new Date(ms)
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
+/**
+ * A5-3: badge proximity — the first locked milestone within `maxRemaining`
+ * events. Returns null when nothing is close (no nagging from far away).
+ */
+export function getBadgeProximity(
+  joinedEventsCount: number,
+  maxRemaining = 3,
+): { label: string; remaining: number } | null {
+  if (!Number.isFinite(joinedEventsCount)) return null
+  const next = MILESTONES.find((milestone) => milestone.threshold > joinedEventsCount)
+  if (!next) return null
+  const remaining = next.threshold - joinedEventsCount
+  return remaining > 0 && remaining <= maxRemaining
+    ? { label: next.label, remaining }
+    : null
+}
+
 export function getProfileCompletion(user?: AuthUser | null): number {
   if (!user) return 0
   const essential = user.profileEssentialComplete ? 40 : 0
@@ -225,24 +350,4 @@ export function getProfileCompletion(user?: AuthUser | null): number {
   const bioBonus =
     typeof user.bio === 'string' && user.bio.trim().length > 0 ? 10 : 0
   return Math.min(100, essential + extended + archetype + bioBonus)
-}
-
-export function getXiaoyueGreeting(
-  displayName: string,
-  archetypeName: string | null,
-  completion: number,
-  isFirstVisit: boolean,
-  userCity?: string | null,
-): string {
-  if (!archetypeName) {
-    return '先测测你是哪种氛围原型？'
-  }
-  if (isFirstVisit) {
-    const cityBit = userCity ? `在${userCity}的` : ''
-    return `欢迎来到你的 JoyJoin 基地，${cityBit}${archetypeName}`
-  }
-  if (completion < 100) {
-    return `${archetypeName}，完成资料，让更多人找到你`
-  }
-  return `${archetypeName}，和悦聚玩家们一起探索吧`
 }

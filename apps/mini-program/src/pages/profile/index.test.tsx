@@ -659,7 +659,7 @@ describe('Profile approved V4 layout', () => {
 
     const { getByText, getByTestId } = render(<ProfilePage />)
     // Chapters ascend by chapterNumber → display number = count, latest = last.
-    expect(getByText('第 2 章 · 深夜食堂局')).toBeTruthy()
+    expect(getByText('第 2 章 · 深夜食堂局 · 10月18日写下')).toBeTruthy()
     expect(getByTestId('profile-story-badge').textContent).toContain('2 段新经历待写成')
   })
 
@@ -771,7 +771,7 @@ describe('Profile approved V4 layout', () => {
     const { getByTestId, getByText, queryByText } = render(<ProfilePage />)
 
     expect(getByText('成就徽章')).toBeTruthy()
-    expect(getByText('已点亮 2/5 枚')).toBeTruthy()
+    expect(getByText('已点亮 2/5 枚 · 再 1 场点亮渐入佳境')).toBeTruthy()
     // Badge cells stay collapsed until the entry row is tapped.
     expect(queryByText('初次见面')).toBeNull()
 

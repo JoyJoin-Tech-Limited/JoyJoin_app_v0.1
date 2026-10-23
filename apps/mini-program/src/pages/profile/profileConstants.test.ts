@@ -6,15 +6,20 @@ import {
   getProfileGrowthSummary,
   getProfilePersonalityActionLabel,
   getProfileV17DataPolicy,
-  getXiaoyueGreeting,
   isProfileV17Enabled,
   MILESTONES,
   ARCHETYPE_FAMILY_NAME,
   ARCHETYPE_GREETINGS,
   getDailyGreeting,
   getStreakMilestoneTeaser,
+  getStreakContinuationTarget,
+  getNextUpcomingRegistration,
+  getEventDayGreeting,
+  formatChapterDate,
+  getBadgeProximity,
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
+import type { PoolRegistrationSummary } from '@shared/api'
 import type { AuthUser } from '../../hooks/useAuth'
 
 function makeUser(partial: Partial<AuthUser>): AuthUser {
@@ -202,32 +207,6 @@ describe('profileConstants', () => {
     })
   })
 
-  describe('getXiaoyueGreeting', () => {
-    it('prompts personality test when archetype is missing', () => {
-      expect(getXiaoyueGreeting('User', null, 0, false)).toBe(
-        '先测测你是哪种氛围原型？',
-      )
-    })
-
-    it('welcomes first-time visitors with city and archetype', () => {
-      expect(getXiaoyueGreeting('User', '开心柯基', 100, true, '深圳')).toBe(
-        '欢迎来到你的 JoyJoin 基地，在深圳的开心柯基',
-      )
-    })
-
-    it('nudges completion when profile is incomplete', () => {
-      expect(getXiaoyueGreeting('User', '开心柯基', 70, false)).toBe(
-        '开心柯基，完成资料，让更多人找到你',
-      )
-    })
-
-    it('defaults to exploration prompt for complete profiles', () => {
-      expect(getXiaoyueGreeting('User', '开心柯基', 100, false)).toBe(
-        '开心柯基，和悦聚玩家们一起探索吧',
-      )
-    })
-  })
-
   describe('milestone catalog', () => {
     it('lists milestones in ascending threshold order', () => {
       const thresholds = MILESTONES.map((m) => m.threshold)
@@ -299,5 +278,154 @@ describe('getStreakMilestoneTeaser (P0-4, 2026-10-22)', () => {
     expect(getStreakMilestoneTeaser(8)).toBeNull()
     expect(getStreakMilestoneTeaser(12)).toBeNull()
     expect(getStreakMilestoneTeaser(-1)).toBeNull()
+  })
+})
+
+// ---- Full-marks Wave A (2026-10-23, PM plan) -------------------------------
+
+function makeRegistration(partial: Partial<PoolRegistrationSummary>): PoolRegistrationSummary {
+  return {
+    id: 'reg-1',
+    matchStatus: 'pending',
+    poolDateTime: '2026-10-25T11:30:00.000Z',
+    finalDateTime: null,
+    poolDistrict: null,
+    ...partial,
+  } as PoolRegistrationSummary
+}
+
+describe('getStreakContinuationTarget (A5-1)', () => {
+  // Server truth (gamificationService.updateStreak): UTC 'YYYY-MM-DD'
+  // lastActivityDate; gap 0 → no increment (safe), 1 → +1, 2 + freeze → +1,
+  // else reset. All fixtures below pin UTC ISO weeks.
+  const NOW = new Date(Date.UTC(2026, 9, 21, 12, 0, 0)) // Wed 2026-10-21, ISO W43
+
+  it('returns null when the streak is zero or the date is missing/invalid', () => {
+    expect(getStreakContinuationTarget(0, '2026-10-14', false, NOW)).toBeNull()
+    expect(getStreakContinuationTarget(3, null, false, NOW)).toBeNull()
+    expect(getStreakContinuationTarget(3, 'not-a-date', false, NOW)).toBeNull()
+  })
+
+  it('returns null when the user already attended this week (gap 0 — safe)', () => {
+    expect(getStreakContinuationTarget(3, '2026-10-19', false, NOW)).toBeNull() // Mon W43
+    expect(getStreakContinuationTarget(3, '2026-10-21', false, NOW)).toBeNull() // same day
+  })
+
+  it('returns streak + 1 when last week was the last attendance (gap 1)', () => {
+    expect(getStreakContinuationTarget(3, '2026-10-14', false, NOW)).toBe(4) // Wed W42
+  })
+
+  it('returns streak + 1 at gap 2 only while a freeze card covers the skip', () => {
+    expect(getStreakContinuationTarget(3, '2026-10-07', true, NOW)).toBe(4) // W41 + freeze
+    expect(getStreakContinuationTarget(3, '2026-10-07', false, NOW)).toBeNull()
+  })
+
+  it('returns null when the server would already have reset (gap ≥ 3)', () => {
+    expect(getStreakContinuationTarget(3, '2026-09-30', true, NOW)).toBeNull()
+    expect(getStreakContinuationTarget(3, '2026-09-01', false, NOW)).toBeNull()
+  })
+
+  it('handles the ISO year boundary like the server (2025-W52 → 2026-W01 = gap 1)', () => {
+    const newYear = new Date(Date.UTC(2025, 11, 30, 12, 0, 0)) // Tue 2025-12-30, ISO 2026-W01
+    expect(getStreakContinuationTarget(5, '2025-12-28', false, newYear)).toBe(6) // Sun 2025-W52
+  })
+})
+
+describe('getNextUpcomingRegistration (A5-2)', () => {
+  const NOW = new Date('2026-10-22T10:00:00.000Z')
+
+  it('returns null for empty input, past events, and non-upcoming statuses', () => {
+    expect(getNextUpcomingRegistration(null, NOW)).toBeNull()
+    expect(getNextUpcomingRegistration([], NOW)).toBeNull()
+    expect(
+      getNextUpcomingRegistration(
+        [makeRegistration({ poolDateTime: '2026-10-20T11:00:00.000Z' })],
+        NOW,
+      ),
+    ).toBeNull()
+    expect(
+      getNextUpcomingRegistration(
+        [
+          makeRegistration({ matchStatus: 'completed', poolDateTime: '2026-10-25T11:00:00.000Z' }),
+          makeRegistration({ matchStatus: 'unmatched', poolDateTime: '2026-10-25T11:00:00.000Z' }),
+        ],
+        NOW,
+      ),
+    ).toBeNull()
+  })
+
+  it('picks the soonest pending/matched registration', () => {
+    const soon = makeRegistration({ id: 'soon', matchStatus: 'matched', poolDateTime: '2026-10-23T11:00:00.000Z' })
+    const later = makeRegistration({ id: 'later', poolDateTime: '2026-10-26T11:00:00.000Z' })
+    expect(getNextUpcomingRegistration([later, soon], NOW)?.id).toBe('soon')
+  })
+
+  it('prefers finalDateTime over poolDateTime (matched reveal time wins)', () => {
+    // reg's poolDateTime (23rd 11:00) is earlier than other's (23rd 12:00),
+    // but its finalDateTime (24th 11:00) is LATER — so finalDateTime
+    // precedence means `other` must win. Without precedence reg would win.
+    const reg = makeRegistration({
+      id: 'final-wins',
+      matchStatus: 'matched',
+      poolDateTime: '2026-10-23T11:00:00.000Z',
+      finalDateTime: '2026-10-24T11:00:00.000Z',
+    })
+    const other = makeRegistration({ id: 'other', poolDateTime: '2026-10-23T12:00:00.000Z' })
+    expect(getNextUpcomingRegistration([reg, other], NOW)?.id).toBe('other')
+  })
+})
+
+describe('getEventDayGreeting (A4-3)', () => {
+  it('greets with time + district when an event happens today', () => {
+    const now = new Date(2026, 9, 22, 10, 0, 0) // local 2026-10-22 10:00
+    const tonight = new Date(2026, 9, 22, 19, 30, 0).toISOString()
+    const reg = makeRegistration({ matchStatus: 'matched', poolDateTime: tonight, poolDistrict: '南山区' })
+    expect(getEventDayGreeting([reg], now)).toBe('今天 19:30 有局 · 南山区见')
+  })
+
+  it('omits the district suffix when none is known', () => {
+    const now = new Date(2026, 9, 22, 7, 0, 0) // local 07:00 — event still upcoming
+    const thisMorning = new Date(2026, 9, 22, 8, 5, 0).toISOString()
+    expect(getEventDayGreeting([makeRegistration({ poolDateTime: thisMorning })], now))
+      .toBe('今天 08:05 有局')
+  })
+
+  it('returns null for tomorrow / yesterday / nothing upcoming', () => {
+    const now = new Date(2026, 9, 22, 10, 0, 0)
+    const tomorrow = new Date(2026, 9, 23, 19, 30, 0).toISOString()
+    const yesterday = new Date(2026, 9, 21, 19, 30, 0).toISOString()
+    expect(getEventDayGreeting([makeRegistration({ poolDateTime: tomorrow })], now)).toBeNull()
+    expect(getEventDayGreeting([makeRegistration({ poolDateTime: yesterday })], now)).toBeNull()
+    expect(getEventDayGreeting([], now)).toBeNull()
+    expect(getEventDayGreeting(null, now)).toBeNull()
+  })
+})
+
+describe('formatChapterDate (A2-3)', () => {
+  it('formats an ISO timestamp as M月D日', () => {
+    const iso = new Date(2026, 8, 9, 20, 0, 0).toISOString() // local 2026-09-09
+    expect(formatChapterDate(iso)).toBe('9月9日')
+  })
+
+  it('returns null for missing or unparseable input', () => {
+    expect(formatChapterDate(null)).toBeNull()
+    expect(formatChapterDate(undefined)).toBeNull()
+    expect(formatChapterDate('garbage')).toBeNull()
+  })
+})
+
+describe('getBadgeProximity (A5-3)', () => {
+  it('surfaces the next milestone when it is ≤ 3 events away', () => {
+    expect(getBadgeProximity(0)).toEqual({ label: '初次见面', remaining: 1 })
+    expect(getBadgeProximity(2)).toEqual({ label: '三场连击', remaining: 1 })
+    expect(getBadgeProximity(4)).toEqual({ label: '渐入佳境', remaining: 1 })
+    expect(getBadgeProximity(7)).toEqual({ label: '悦聚常客', remaining: 3 })
+    expect(getBadgeProximity(17)).toEqual({ label: '城市传说', remaining: 3 })
+  })
+
+  it('stays quiet when the next milestone is far away or everything is unlocked', () => {
+    expect(getBadgeProximity(6)).toBeNull() // 4 away from 10
+    expect(getBadgeProximity(20)).toBeNull()
+    expect(getBadgeProximity(25)).toBeNull()
   })
 })

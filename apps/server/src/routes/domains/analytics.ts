@@ -541,6 +541,11 @@ const PROFILE_EVENT_TYPES = [
   "profile_personality_action_tap",
   // P0-1 entitlement strip pill taps (2026-10-22): pill = pass|coupon|coins.
   "profile_entitlement_pill_tap",
+  // Full-marks Wave A (2026-10-23): next-event row, streak capsule, and the
+  // fresh-badge poster glow entry.
+  "profile_next_event_tap",
+  "profile_streak_capsule_tap",
+  "profile_poster_glow_tap",
 ] as const;
 
 type ProfileEventType = (typeof PROFILE_EVENT_TYPES)[number];
