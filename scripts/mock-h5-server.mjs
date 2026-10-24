@@ -638,7 +638,7 @@ app.get('/api/personal-story', (req, res) => {
       chapters: [
         {
           id: 'personal-story-chapter-001',
-          title: '2026年06月03日 · 盲盒活动',
+          title: '2026.06.03 · 盲盒活动',
           body: '故事发生在2026年6月3日。这次真实经历属于盲盒活动。\n\n这一段发生在悦聚小馆。\n\n本次分组中的伙伴类型包括猫头鹰伙伴。',
           activityType: '盲盒活动',
           occurredAt: '2026-06-03T19:00:00+08:00',
@@ -646,7 +646,7 @@ app.get('/api/personal-story', (req, res) => {
         },
         {
           id: 'personal-story-chapter-002',
-          title: '2026年07月12日 · 闪现',
+          title: '2026.07.12 · 闪现',
           body: '故事发生在2026年7月12日。这次真实经历属于闪现。\n\n这一段发生在深圳湾公园。这次经历中出现了阿浪。\n\n最后留下的心情是释然。',
           activityType: '闪现',
           occurredAt: '2026-07-12T20:42:00+08:00',

@@ -20,8 +20,6 @@ import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import IdentityStageScene from '../../components/profile/IdentityStageScene'
-import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
-import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -74,62 +72,15 @@ import {
   PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
 import { useProfileScroll } from './useProfileScroll'
+import ProfilePartnerVisual, { EquipmentPreviewArtwork } from './ProfilePartnerVisual'
 import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 
 // P1-3 (UIUX memo §9): the four profile numbers count 0→N once on first
 // data arrival — 600ms, brand bezier, 33ms cadence floor. Shared options.
 const PROFILE_COUNT_UP_OPTS = { duration: 600, easing: 'brandBezier', cadenceFloorMs: 33 } as const
 
-const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {  topItemId: null,
-  bottomItemId: null,
-  shoesItemId: null,
-  accessoryItemId: null,
-  version: 0,
-}
-
-const DEFAULT_EQUIPMENT_PLACEHOLDER_URL = localAsset('/assets/joyjoin-logo-tab.png')
-
 /** Local-storage prefix for the dismissed 悦仔 bio prompt (per user). */
 const BIO_PROMPT_DISMISS_STORAGE_PREFIX = 'joyjoin_profile_bio_prompt_dismissed'
-
-function EquipmentPreviewArtwork({
-  item,
-  artworkUrl,
-}: {
-  item: EquipmentItem
-  artworkUrl: string | null
-}) {
-  const [source, setSource] = useState<'artwork' | 'default' | 'empty'>(
-    artworkUrl ? 'artwork' : 'default',
-  )
-
-  useEffect(() => {
-    setSource(artworkUrl ? 'artwork' : 'default')
-  }, [artworkUrl, item.id])
-
-  const image = source === 'artwork' ? artworkUrl : DEFAULT_EQUIPMENT_PLACEHOLDER_URL
-
-  if (source === 'empty' || !image) {
-    return <View className='profile-page__equipment-slot-mark' aria-hidden='true' />
-  }
-
-  return (
-    <Image
-      className={`profile-page__equipment-slot-art${source === 'default' ? ' profile-page__equipment-slot-art--placeholder' : ''}`}
-      src={image}
-      mode='aspectFit'
-      lazyLoad={false}
-      aria-hidden='true'
-      onError={() => {
-        logError('profile:equipment_asset_error', {
-          itemId: item.id,
-          image,
-        })
-        setSource((current) => current === 'artwork' ? 'default' : 'empty')
-      }}
-    />
-  )
-}
 
 function getGenderLabel(value?: string | null): string | null {
   switch (value?.trim().toLowerCase()) {
@@ -146,99 +97,6 @@ function getGenderLabel(value?: string | null): string | null {
     default:
       return null
   }
-}
-
-function ProfilePartnerVisual({
-  archetype,
-  archetypeName,
-  displayName,
-  pixelEnabled,
-  equipmentState,
-  outfit,
-  itemsById,
-  onRetryEquipment,
-}: {
-  archetype: string | null
-  archetypeName: string | null
-  displayName: string
-  pixelEnabled: boolean
-  equipmentState: 'ready' | 'loading' | 'error'
-  outfit?: EquipmentOutfit
-  itemsById: Map<string, EquipmentItem>
-  onRetryEquipment: () => void
-}) {
-  const asset = archetype ? ARCHETYPE_ASSET_MAP[archetype] : undefined
-  const [sourceKind, setSourceKind] = useState<'webp' | 'png' | 'fallback'>('webp')
-
-  if (pixelEnabled && archetype) {
-    if (equipmentState !== 'ready' || !outfit) {
-      const isError = equipmentState === 'error'
-      return (
-        <View
-          className={`profile-page__partner-equipment-state${isError ? ' profile-page__partner-equipment-state--error' : ''}`}
-          role='status'
-          aria-live='polite'
-        >
-          <View className='profile-page__partner-equipment-placeholder' aria-hidden='true'>
-            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--short' />
-            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--tall' />
-            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--medium' />
-          </View>
-          <Text className='profile-page__partner-equipment-state-title'>
-            {isError ? '装备暂未同步' : '装备同步中…'}
-          </Text>
-          <Text className='profile-page__partner-equipment-state-copy'>
-            {isError ? '已保存的搭配不会丢失' : '正在取回你已保存的搭配'}
-          </Text>
-          {isError && (
-            <View
-              className='profile-page__partner-equipment-retry'
-              onClick={onRetryEquipment}
-              role='button'
-              aria-label='重新同步装备'
-            >
-              <Text>重试</Text>
-            </View>
-          )}
-        </View>
-      )
-    }
-
-    return (
-      <View className='profile-page__partner-pixel'>
-        <PixelAvatarComposite
-          archetypeId={archetype}
-          outfit={outfit ?? EMPTY_EQUIPMENT_OUTFIT}
-          itemsById={itemsById}
-          variant='compact'
-          className='profile-page__partner-pixel-composite'
-        />
-      </View>
-    )
-  }
-
-  if (!asset || sourceKind === 'fallback') {
-    return (
-      <View
-        className='profile-page__partner-fallback'
-        role='img'
-        aria-label={archetypeName ? `${archetypeName}伙伴形象` : `${displayName}的伙伴形象待解锁`}
-      >
-        <ArchetypeHead archetype={archetype} size={248} fallbackText={displayName} />
-      </View>
-    )
-  }
-
-  return (
-    <Image
-      className='profile-page__partner-image'
-      src={sourceKind === 'webp' ? asset.webp : asset.png}
-      mode='aspectFit'
-      lazyLoad={false}
-      aria-label={archetypeName ? `${archetypeName}伙伴形象` : '伙伴形象'}
-      onError={() => setSourceKind(sourceKind === 'webp' ? 'png' : 'fallback')}
-    />
-  )
 }
 
 function ProfileStoryArtwork({ paused, noDrift }: { paused: boolean; noDrift: boolean }) {
@@ -310,24 +168,11 @@ export default function ProfilePage() {
     if (isFirstShow) {
       hasDidShowRef.current = true
     }
-    // P1-4 badge ledger: baseline on the first ready read (never ring for
-    // unlocks that predate the ledger); ring fresh unlocks on later shows.
-    // Reads cache only — runs even inside the refresh-staleness window.
-    if (authUser?.id && !isLoadingStats) {
-      const unlockedKeys = unlockedMilestones.map((milestone) => milestone.key)
-      const seen = readSeenBadges(authUser.id)
-      if (seen === null) {
-        writeSeenBadges(authUser.id, unlockedKeys)
-      } else {
-        const fresh = unlockedKeys.filter((key) => !seen.includes(key))
-        if (fresh.length > 0) {
-          haptics('success')
-          setJustUnlockedKeys(fresh)
-          writeSeenBadges(authUser.id, [...seen, ...fresh])
-          setTimeout(() => setJustUnlockedKeys([]), 1000)
-        }
-      }
-    }
+    // P1-4 badge ledger detection lives in the data-ready effect below
+    // (2026-10-24): running it here meant a cold show with stats still
+    // loading skipped the read entirely — useDidShow never re-fires when
+    // loading finishes, so the fresh-unlock celebration was lost on exactly
+    // the cold-start moment it exists for.
     if (isFirstShow) {
       return
     }
@@ -722,6 +567,28 @@ export default function ProfilePage() {
     }
   }, [justUnlockedKeys])
 
+  // P1-4 badge ledger: baseline on the first READY read (never ring for
+  // unlocks that predate the ledger); ring fresh unlocks as soon as data is
+  // ready. Effect-keyed (not useDidShow-keyed) so a cold show whose stats
+  // arrive after the show still celebrates — the ledger write makes this
+  // idempotent, and re-reads after invalidation see fresh=[] and stay quiet.
+  useEffect(() => {
+    if (!authUser?.id || isLoadingStats) return
+    const unlockedKeys = unlockedMilestones.map((milestone) => milestone.key)
+    const seen = readSeenBadges(authUser.id)
+    if (seen === null) {
+      writeSeenBadges(authUser.id, unlockedKeys)
+      return
+    }
+    const fresh = unlockedKeys.filter((key) => !seen.includes(key))
+    if (fresh.length === 0) return
+    haptics('success')
+    setJustUnlockedKeys(fresh)
+    writeSeenBadges(authUser.id, [...seen, ...fresh])
+    const timer = setTimeout(() => setJustUnlockedKeys([]), 1000)
+    return () => clearTimeout(timer)
+  }, [authUser?.id, isLoadingStats, unlockedMilestones])
+
   const archetypeTagline = useMemo(() => {
     if (!archetype || !(archetype in archetypeRegistry)) return null
     return archetypeRegistry[archetype as keyof typeof archetypeRegistry]?.narrative.tagline ?? null
@@ -1079,6 +946,7 @@ export default function ProfilePage() {
                     </View>
                     <View
                       className='profile-page__identity-nudge-dismiss'
+                      hoverClass='profile-page__identity-nudge-dismiss--pressed'
                       onClick={(event) => {
                         event.stopPropagation()
                         handleBioPromptDismiss()
@@ -1154,9 +1022,9 @@ export default function ProfilePage() {
                             <Text className='profile-page__streak-text'>连续 {activityStreak} 周</Text>
                           </View>
                           {streakContinuationTarget != null ? (
-                            <Text className='profile-page__streak-hint'>本周再 1 场，连击续到 {streakContinuationTarget} 周</Text>
+                            <Text className='profile-page__streak-hint'>再 1 场续到 {streakContinuationTarget} 周</Text>
                           ) : streakTeaser ? (
-                            <Text className='profile-page__streak-hint'>再坚持 1 周，潮流值 +{streakTeaser.xp}</Text>
+                            <Text className='profile-page__streak-hint'>再 1 周，潮流值 +{streakTeaser.xp}</Text>
                           ) : null}
                         </View>
                       )}
@@ -1242,7 +1110,12 @@ export default function ProfilePage() {
                         ? '当前装备同步失败'
                         : '当前装备正在同步'}
                   >
-                    <Text className='profile-page__equipment-label'>当前装备</Text>
+                    {/* 2026-10-24 render pass: the strip has ~606rpx of inner
+                        width. A status chip (claim or pity) replaces the
+                        decorative label so slots + action never collide. */}
+                    {!equipmentClaimPending && !showPityChip && (
+                      <Text className='profile-page__equipment-label'>当前装备</Text>
+                    )}
                     {equipmentClaimPending ? (
                       // W3 claim signal (warm-gold dot + chip) temporarily
                       // swaps the plain inventory count — the pending claim
@@ -1264,9 +1137,11 @@ export default function ProfilePage() {
                       </View>
                     ) : equipmentState === 'ready' && (
                       <>
-                        <Text className='profile-page__partner-entry-count'>
-                          {`${equipmentInventory.length} 件`}
-                        </Text>
+                        {!showPityChip && (
+                          <Text className='profile-page__partner-entry-count'>
+                            {`${equipmentInventory.length} 件`}
+                          </Text>
+                        )}
                         {showPityChip && (
                           <Text
                             className={`profile-page__equipment-pity-chip${pityMisses >= 3 ? ' profile-page__equipment-pity-chip--guaranteed' : ''}`}
@@ -1382,6 +1257,12 @@ export default function ProfilePage() {
           </View>
         )}
 
+        {/* Act 2 我有什么 — structural wrapper (craft pass 2026-10-24):
+            owns the 24rpx intra-act gaps and the 40rpx Act-2 → Act-3 gap, so
+            the rhythm survives EVERY optional-module combination (previously
+            the act gap lived on conditional milestones and vanished for new
+            users). Children carry horizontal margins only. */}
+        <View className='profile-page__act-two'>
         {/* P0-1 entitlement strip: factual readout pills; hidden when the
             user holds zero assets (no empty-wallet CTA — PM memo §1c). */}
         {entitlementPills.length > 0 && (
@@ -1617,6 +1498,7 @@ export default function ProfilePage() {
             )}
           </View>
         )}
+        </View>
 
         {/* P2-4 Duo 同桌卡 (PM memo §7 copy, UIUX memo §4 Act-3 top):
             stage-glass material family, contextual — renders only while a
@@ -1645,6 +1527,7 @@ export default function ProfilePage() {
             </View>
             <View
               className='profile-page__duo-card-dismiss'
+              hoverClass='profile-page__duo-card-dismiss--pressed'
               onClick={(event) => {
                 event.stopPropagation()
                 handleDuoDismiss()
@@ -1700,7 +1583,7 @@ export default function ProfilePage() {
                 )}
                 <Text className='profile-page__story-title'>
                   {storyChapterCount > 0 && latestStoryChapterTitle
-                    ? `第 ${storyChapterCount} 章 · ${latestStoryChapterTitle}${latestChapterDateLabel ? ` · ${latestChapterDateLabel}写下` : ''}`
+                    ? `第 ${storyChapterCount} 章 · ${latestStoryChapterTitle}`
                     : '开始你的第一章'}
                 </Text>
                 <Text className='profile-page__story-summary'>
@@ -1709,7 +1592,12 @@ export default function ProfilePage() {
                 <Text className='profile-page__story-status'>
                   不使用姓名、定位或未发生的情节
                 </Text>
-                <Text className='profile-page__story-cta'>进入我的故事</Text>
+                {/* Craft pass (2026-10-24): the write-date moved off the title
+                    (one 390rpx line ellipsized the chapter title AND hid the
+                    date) into the roomier CTA line. */}
+                <Text className='profile-page__story-cta'>
+                  {latestChapterDateLabel ? `${latestChapterDateLabel}写下 · 进入我的故事` : '进入我的故事'}
+                </Text>
                 <View className='profile-page__story-action'>
                   <View
                     className={`profile-page__story-action-ring${!pageVisible || deviceTier.isDegradation ? ' profile-page__story-action-ring--paused' : ''}`}

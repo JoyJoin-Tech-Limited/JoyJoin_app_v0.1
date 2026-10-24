@@ -532,10 +532,10 @@ async function captureProfileV17() {
     await page.waitForSelector('.profile-page__story-card', { state: 'visible', timeout: 10000 })
     await page.waitForFunction(() => {
       const growth = document.querySelector('.profile-page__growth-value')?.textContent?.trim()
-      const stats = Array.from(document.querySelectorAll('.profile-page__stat-value'))
+      const stats = Array.from(document.querySelectorAll('.profile-page__data-band-value'))
         .map((element) => element.textContent?.trim())
       const storyCta = document.querySelector('.profile-page__story-cta')?.textContent?.trim()
-      return growth === '260' && stats.includes('4') && stats.includes('11') && storyCta === '进入我的故事'
+      return growth === '260' && stats.includes('4') && stats.includes('11') && storyCta?.endsWith('进入我的故事')
     }, undefined, { timeout: 10000 })
     // Wave A render guards (2026-10-23): the mock fixtures are designed so the
     // streak continuation line (lastActivityDate in the previous ISO week) and
@@ -544,7 +544,7 @@ async function captureProfileV17() {
     await page.waitForFunction(() => {
       const streakHint = document.querySelector('.profile-page__streak-hint')?.textContent?.trim() ?? ''
       const nextEvent = document.querySelector('.profile-page__next-event-text')?.textContent?.trim() ?? ''
-      return streakHint.includes('连击续到') && nextEvent.includes('今天')
+      return streakHint.includes('续到') && nextEvent.includes('今天')
     }, undefined, { timeout: 10000 })
 
     return screenshotViewport(page)

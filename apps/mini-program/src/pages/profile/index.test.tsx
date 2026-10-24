@@ -662,7 +662,10 @@ describe('Profile approved V4 layout', () => {
 
     const { getByText, getByTestId } = render(<ProfilePage />)
     // Chapters ascend by chapterNumber → display number = count, latest = last.
-    expect(getByText('第 2 章 · 深夜食堂局 · 10月18日写下')).toBeTruthy()
+    // Craft pass (2026-10-24): the write-date lives on the CTA line, not the
+    // title (the 390rpx title ellipsized both chapter name and date).
+    expect(getByText('第 2 章 · 深夜食堂局')).toBeTruthy()
+    expect(getByText('10月18日写下 · 进入我的故事')).toBeTruthy()
     expect(getByTestId('profile-story-badge').textContent).toContain('2 段新经历待写成')
   })
 

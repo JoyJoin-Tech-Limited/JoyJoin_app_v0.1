@@ -51,7 +51,7 @@ const REQUIREMENTS = [
     // keep an explicit `height` next to its `min-height`.
     page: 'pages/profile/index.wxss',
     selectors: [
-      'profile-page__identity-stage{position:relative;height:728rpx',
+      'profile-page__identity-stage{position:relative;height:792rpx',
       // P6 profile first-visit guidance tip (2026-09-11): GuidanceTipCard
       // carries no TSX-side SCSS import; its rules are @use'd by the page
       // SCSS and must reach the profile page WXSS — same subpackage
