@@ -24,6 +24,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { fmtDateTimeShort } from "@/lib/dateUtils";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import EmptyState from "@/components/admin/EmptyState";
+import { formatDuoSeatedRate, getDuoRewardOutcome, getDuoSeatedOutcome, type DuoOutcome } from "@/components/admin/duo/duoInviteUtils";
 import type { AdminEventPool } from "./types";
 
 type DuoInviteStatus = "pending" | "bound" | "expired";
@@ -44,6 +45,19 @@ interface DuoInviteItem {
   createdAt: string | null;
   expiresAt: string | null;
   boundAt: string | null;
+  hasConflict: boolean;
+  matchedTogether: boolean | null;
+  rewardIssued: boolean | null;
+}
+
+interface DuoInviteSummary {
+  total: number;
+  pending: number;
+  bound: number;
+  expired: number;
+  conflict: number;
+  seated: number;
+  rewarded: number;
 }
 
 interface DuoInviteListResponse {
@@ -52,18 +66,25 @@ interface DuoInviteListResponse {
   page: number;
   pageSize: number;
   totalPages: number;
+  summary: DuoInviteSummary;
 }
 
 const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "all", label: "全部" },
-  { value: "pending", label: "待绑定" },
-  { value: "bound", label: "已绑定" },
-  { value: "expired", label: "已过期" },
+  { value: "all", label: "状态：全部" },
+  { value: "pending", label: "状态：待绑定" },
+  { value: "bound", label: "状态：已绑定" },
+  { value: "expired", label: "状态：已过期" },
+];
+
+const CONFLICT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "all", label: "冲突：全部" },
+  { value: "true", label: "冲突：仅冲突" },
+  { value: "false", label: "冲突：无冲突" },
 ];
 
 function StatusBadge({ status }: { status: DuoInviteStatus }) {
   if (status === "bound") {
-    return <Badge className="bg-green-500 hover:bg-green-500">已绑定</Badge>;
+    return <Badge className="border-green-200 bg-green-100 text-green-800 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:text-green-300">已绑定</Badge>;
   }
   if (status === "pending") {
     return <Badge variant="secondary">待绑定</Badge>;
@@ -71,10 +92,21 @@ function StatusBadge({ status }: { status: DuoInviteStatus }) {
   return <Badge variant="outline">已过期</Badge>;
 }
 
+function OutcomeDisplay({ outcome }: { outcome: DuoOutcome }) {
+  if (outcome.tone === "success") {
+    return <Badge className="border-green-200 bg-green-100 text-green-800 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:text-green-300">{outcome.label}</Badge>;
+  }
+  if (outcome.tone === "attention") {
+    return <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">{outcome.label}</Badge>;
+  }
+  return <span className="text-sm text-muted-foreground">{outcome.label}</span>;
+}
+
 const PAGE_SIZE = 20;
 
 export default function AdminDuoInvitesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [conflictFilter, setConflictFilter] = useState("all");
   const [poolFilter, setPoolFilter] = useState("all");
   const [page, setPage] = useState(1);
 
@@ -89,10 +121,14 @@ export default function AdminDuoInvitesPage() {
     error,
     refetch,
   } = useQuery<DuoInviteListResponse>({
-    queryKey: ["/api/admin/duo-invites", { status: statusFilter, poolId: poolFilter, page }],
+    queryKey: [
+      "/api/admin/duo-invites",
+      { status: statusFilter, conflict: conflictFilter, poolId: poolFilter, page },
+    ],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (conflictFilter !== "all") params.set("conflict", conflictFilter);
       if (poolFilter !== "all") params.set("poolId", poolFilter);
       params.set("page", String(page));
       params.set("pageSize", String(PAGE_SIZE));
@@ -103,6 +139,11 @@ export default function AdminDuoInvitesPage() {
 
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
+    setPage(1);
+  };
+
+  const handleConflictChange = (value: string) => {
+    setConflictFilter(value);
     setPage(1);
   };
 
@@ -123,9 +164,68 @@ export default function AdminDuoInvitesPage() {
         </p>
       </div>
 
+      {isLoading && !data ? (
+        <div className="space-y-2" data-testid="duo-summary-loading" aria-busy="true" aria-label="双人成行统计加载中">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {["待绑定", "已绑定", "冲突", "同桌率"].map((label) => (
+              <Card key={label}>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">{label}</p>
+                  <Skeleton className="mt-2 h-8 w-16" />
+                  {label === "同桌率" ? <Skeleton className="mt-1 h-4 w-full max-w-56" /> : null}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            按当前活动池统计，不随状态或冲突筛选变化
+          </p>
+        </div>
+      ) : data ? (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" data-testid="duo-summary-cards">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">待绑定</p>
+              <p className="mt-2 text-2xl font-semibold">{data.summary.pending}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">已绑定</p>
+              <p className="mt-2 text-2xl font-semibold">{data.summary.bound}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">冲突</p>
+              <p className="mt-2 text-2xl font-semibold">{data.summary.conflict}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">同桌率</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatDuoSeatedRate(data.summary.seated, data.summary.bound)}
+              </p>
+              <p
+                className="mt-1 truncate text-xs text-muted-foreground"
+                title={`${data.summary.seated} 条同桌记录 / ${data.summary.bound} 份已绑定邀请`}
+              >
+                {data.summary.seated} 条同桌记录 / {data.summary.bound} 份已绑定邀请
+              </p>
+            </CardContent>
+          </Card>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            按当前活动池统计，不随状态或冲突筛选变化
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-3">
         <Select value={statusFilter} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-40" data-testid="select-status-filter">
+          <SelectTrigger className="w-40" data-testid="select-status-filter" aria-label="按绑定状态筛选">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -137,8 +237,21 @@ export default function AdminDuoInvitesPage() {
           </SelectContent>
         </Select>
 
+        <Select value={conflictFilter} onValueChange={handleConflictChange}>
+          <SelectTrigger className="w-40" data-testid="select-conflict-filter" aria-label="按冲突状态筛选">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CONFLICT_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={poolFilter} onValueChange={handlePoolChange}>
-          <SelectTrigger className="w-64" data-testid="select-pool-filter">
+          <SelectTrigger className="w-64" data-testid="select-pool-filter" aria-label="按活动池筛选">
             <SelectValue placeholder="全部活动池" />
           </SelectTrigger>
           <SelectContent>
@@ -173,15 +286,17 @@ export default function AdminDuoInvitesPage() {
       ) : (
         <>
           <div className="rounded-md border">
-            <Table>
+            <Table className="min-w-[1180px] table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>邀请人</TableHead>
-                  <TableHead>被邀请人</TableHead>
-                  <TableHead>所属活动池</TableHead>
-                  <TableHead>邀请码</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>过期时间</TableHead>
+                  <TableHead className="w-[170px]">邀请人</TableHead>
+                  <TableHead className="w-[170px]">被邀请人</TableHead>
+                  <TableHead className="w-[230px]">所属活动池</TableHead>
+                  <TableHead className="w-[120px]">邀请码</TableHead>
+                  <TableHead className="w-[130px]">状态</TableHead>
+                  <TableHead className="w-[110px]">同桌结果</TableHead>
+                  <TableHead className="w-[110px]">奖励结果</TableHead>
+                  <TableHead className="w-[140px]">过期时间</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -189,14 +304,14 @@ export default function AdminDuoInvitesPage() {
                   <TableRow key={item.id} data-testid={`row-duo-invite-${item.id}`}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{item.inviterDisplayName || "未设置昵称"}</p>
+                        <p className="truncate font-medium" title={item.inviterDisplayName || "未设置昵称"}>{item.inviterDisplayName || "未设置昵称"}</p>
                         <p className="text-xs text-muted-foreground">{item.inviterId.slice(0, 12)}…</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       {item.inviteeId ? (
                         <div>
-                          <p className="font-medium">{item.inviteeDisplayName || "未设置昵称"}</p>
+                          <p className="truncate font-medium" title={item.inviteeDisplayName || "未设置昵称"}>{item.inviteeDisplayName || "未设置昵称"}</p>
                           <p className="text-xs text-muted-foreground">{item.inviteeId.slice(0, 12)}…</p>
                         </div>
                       ) : (
@@ -206,20 +321,33 @@ export default function AdminDuoInvitesPage() {
                     <TableCell>
                       {item.poolTitle ? (
                         <div>
-                          <p className="font-medium">{item.poolTitle}</p>
+                          <p className="truncate font-medium" title={item.poolTitle}>{item.poolTitle}</p>
                           <p className="text-xs text-muted-foreground">{fmtDateTimeShort(item.poolDateTime)}</p>
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{item.code}</code>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={item.status} />
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <StatusBadge status={item.status} />
+                        {item.hasConflict ? (
+                          <Badge className="border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            冲突
+                          </Badge>
+                        ) : null}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell>
+                      <OutcomeDisplay outcome={getDuoSeatedOutcome(item.matchedTogether)} />
+                    </TableCell>
+                    <TableCell>
+                      <OutcomeDisplay outcome={getDuoRewardOutcome(item.rewardIssued, item.matchedTogether)} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                       {fmtDateTimeShort(item.expiresAt)}
                     </TableCell>
                   </TableRow>

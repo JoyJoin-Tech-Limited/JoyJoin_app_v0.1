@@ -202,6 +202,9 @@ export interface DuoInviteListItem {
   createdAt: Date | null;
   expiresAt: Date | null;
   boundAt: Date | null;
+  /** Null when no invitation_uses row exists; otherwise the persisted result. */
+  matchedTogether: boolean | null;
+  rewardIssued: boolean | null;
   /**
    * S1 (one-partner-per-pool) read-only conflict marker: this invitation is
    * part of an overlap — the same invitation has 2+ valid duo bindings, or
@@ -303,20 +306,10 @@ function buildDuoWhere(
   return and(...conditions);
 }
 
-export async function listDuoInvites(params: DuoInviteListParams): Promise<{
-  items: DuoInviteListItem[];
-  total: number;
-}> {
-  const now = new Date();
-  const offset = (params.page - 1) * params.pageSize;
-
-  // S1: load every VALID duo binding (both sides registered in the
-  // invitation's pool — same definition as the write-side guard) and derive
-  // the conflicted-invitation set in one pass. Runs unconditionally because
-  // the per-item hasConflict marker needs it even without the filter; admin
-  // surface, single grouped scan, no N+1.
+/** Load valid bindings once per read model; optional pool scoping is used by summary. */
+async function loadValidDuoBindingRows(poolId?: string): Promise<DuoValidBindingRow[]> {
   const inviterRegs = alias(eventPoolRegistrations, "duo_conflict_inviter_regs");
-  const validBindingRows: DuoValidBindingRow[] = await db
+  return db
     .select({
       invitationId: invitationUses.invitationId,
       inviteeId: invitationUses.inviteeId,
@@ -343,8 +336,22 @@ export async function listDuoInvites(params: DuoInviteListParams): Promise<{
         eq(inviterRegs.poolId, invitations.poolId),
         eq(inviterRegs.userId, invitations.inviterId),
       ),
-    );
+    )
+    .where(poolId ? eq(invitations.poolId, poolId) : undefined);
+}
 
+export async function listDuoInvites(params: DuoInviteListParams): Promise<{
+  items: DuoInviteListItem[];
+  total: number;
+}> {
+  const now = new Date();
+  const offset = (params.page - 1) * params.pageSize;
+
+  // S1: derive the conflicted-invitation set from every VALID duo binding
+  // (both sides registered in the invitation's pool). Runs unconditionally
+  // because the per-item hasConflict marker needs it even without the filter;
+  // admin surface, single grouped scan, no N+1.
+  const validBindingRows = await loadValidDuoBindingRows();
   const conflictInvitationIds = computeDuoConflictInvitationIds(validBindingRows);
 
   // conflict=true with an empty conflict set can never match — short-circuit
@@ -366,6 +373,8 @@ export async function listDuoInvites(params: DuoInviteListParams): Promise<{
         inviteeId: invitationUses.inviteeId,
         inviteeDisplayName: inviteeUsers.displayName,
         boundAt: invitationUses.createdAt,
+        matchedTogether: invitationUses.matchedTogether,
+        rewardIssued: invitationUses.rewardIssued,
         poolId: invitations.poolId,
         poolTitle: eventPools.title,
         poolCity: eventPools.city,
@@ -400,4 +409,79 @@ export async function listDuoInvites(params: DuoInviteListParams): Promise<{
   });
 
   return { items, total: countRows[0]?.count ?? 0 };
+}
+
+export interface DuoInviteSummary {
+  total: number;
+  pending: number;
+  bound: number;
+  expired: number;
+  conflict: number;
+  seated: number;
+  rewarded: number;
+}
+
+/**
+ * Pool-scoped operational baseline, independent of list status/conflict/page.
+ * total/pending/bound/expired/conflict count invitations; seated/rewarded count
+ * invitation_uses rows. Thus seated/bound is an operational ratio across two
+ * related granularities, not a per-invitation probability.
+ */
+export async function getDuoInviteSummary(
+  params: { poolId?: string } = {},
+): Promise<DuoInviteSummary> {
+  const now = new Date();
+  const invitationConditions: SQL[] = [eq(invitations.invitationType, "duo")];
+  if (params.poolId) {
+    invitationConditions.push(eq(invitations.poolId, params.poolId));
+  }
+  const usePoolCondition = params.poolId
+    ? eq(invitations.poolId, params.poolId)
+    : undefined;
+
+  const [invitationRows, useRows, validBindingRows] = await Promise.all([
+    db
+      .select({
+        total: sql<number>`count(*)::int`,
+        bound: sql<number>`count(*) filter (where ${boundExists})::int`,
+        pending: sql<number>`count(*) filter (
+          where not ${boundExists}
+          and (${invitations.expiresAt} is null or ${invitations.expiresAt} >= ${now})
+        )::int`,
+        expired: sql<number>`count(*) filter (
+          where not ${boundExists} and ${invitations.expiresAt} < ${now}
+        )::int`,
+      })
+      .from(invitations)
+      .where(and(...invitationConditions)),
+    db
+      .select({
+        seated: sql<number>`count(*) filter (where ${invitationUses.matchedTogether})::int`,
+        rewarded: sql<number>`count(*) filter (where ${invitationUses.rewardIssued})::int`,
+      })
+      .from(invitationUses)
+      .innerJoin(
+        invitations,
+        and(
+          eq(invitations.id, invitationUses.invitationId),
+          eq(invitations.invitationType, "duo"),
+        ),
+      )
+      .where(usePoolCondition),
+    // Recompute from pool-scoped valid bindings; never reuse the list's global set.
+    loadValidDuoBindingRows(params.poolId),
+  ]);
+
+  const invitationCounts = invitationRows[0] ?? {
+    total: 0,
+    pending: 0,
+    bound: 0,
+    expired: 0,
+  };
+  const useCounts = useRows[0] ?? { seated: 0, rewarded: 0 };
+  return {
+    ...invitationCounts,
+    conflict: computeDuoConflictInvitationIds(validBindingRows).size,
+    ...useCounts,
+  };
 }

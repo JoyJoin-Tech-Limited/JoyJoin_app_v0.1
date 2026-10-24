@@ -11,7 +11,11 @@ import type { Express } from "express";
 import { z } from "zod";
 import { requireAdmin } from "../../adminAuth";
 import { logger } from "../../lib/logger";
-import { getReferralStats, listDuoInvites } from "../../repositories/adminReferralsRepo";
+import {
+  getDuoInviteSummary,
+  getReferralStats,
+  listDuoInvites,
+} from "../../repositories/adminReferralsRepo";
 
 const duoInviteListQuerySchema = z.object({
   poolId: z.string().min(1).optional(),
@@ -47,7 +51,10 @@ export function registerAdminReferralRoutes(app: Express): void {
         });
       }
 
-      const { items, total } = await listDuoInvites(parsed.data);
+      const [{ items, total }, summary] = await Promise.all([
+        listDuoInvites(parsed.data),
+        getDuoInviteSummary({ poolId: parsed.data.poolId }),
+      ]);
 
       return res.json({
         items,
@@ -55,6 +62,7 @@ export function registerAdminReferralRoutes(app: Express): void {
         page: parsed.data.page,
         pageSize: parsed.data.pageSize,
         totalPages: Math.ceil(total / parsed.data.pageSize),
+        summary,
       });
     } catch (error) {
       logger.error("[AdminReferrals] duo-invites list failed", { error: String(error) });
