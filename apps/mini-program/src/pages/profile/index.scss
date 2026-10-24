@@ -2880,4 +2880,87 @@
       bottom: 28rpx;
     }
   }
+
+  // 精致度 (2026-10-24 render matrix): ≤340px compaction. The 320px capture
+  // showed the identity column cramped (truncated name, tall pill stack) and
+  // 我的形象 colliding with the last equipment slot when the claim chip shows.
+  .profile-page__identity-copy {
+    gap: $spacing-sm;
+  }
+
+  .profile-page__identity-avatar {
+    width: 72rpx;
+    height: 72rpx;
+    border-width: 3rpx;
+
+    > .archetype-head {
+      width: 68rpx !important;
+      height: 68rpx !important;
+    }
+
+    .archetype-head__image {
+      width: 62rpx !important;
+      height: 62rpx !important;
+    }
+  }
+
+  .profile-page__identity-name {
+    max-width: 200rpx;
+    font-size: 28rpx;
+  }
+
+  .profile-page__identity-tag {
+    min-height: 32rpx;
+    padding: 2rpx 12rpx;
+    font-size: 20rpx;
+  }
+
+  .profile-page__partner-entry {
+    gap: 12rpx;
+  }
+
+  .profile-page__equipment-slot {
+    width: 44rpx;
+    height: 44rpx;
+  }
+
+  .profile-page__equipment-wait-chip {
+    padding: 2rpx 8rpx;
+    font-size: 20rpx;
+  }
+
+  .profile-page__partner-entry-action {
+    gap: $spacing-xs;
+    max-width: 160rpx;
+  }
+
+  .profile-page__partner-entry-action-text {
+    font-size: 24rpx;
+  }
+
+  // 320px re-render (2026-10-24): three residual collisions fixed.
+  // 1) growth-card 280 + partner 300 + margins exceeded the 592rpx stage
+  //    inner width by 20rpx — the partner glass overlapped the growth card.
+  //    Measured after first fix: growth/partner still overlapped 14px at
+  //    320px (growth right 160.9 vs partner left 146.5). 224rpx leaves a
+  //    real gap; 390/414px were already clean and are untouched.
+  .profile-page__growth-card {
+    max-width: 224rpx;
+  }
+
+  // 2) identity column stacked 7 rows (name + 4 pills + bio + affordance).
+  //    Keep the two identity pills (archetype + family); life-stage/gender
+  //    demographics stay editable in edit-profile, not the narrow hero.
+  .profile-page__identity-tag--stage,
+  .profile-page__identity-tag--gender {
+    display: none;
+  }
+
+  // 3) claim chip + 4 slots + action still exceeded the strip at 320px even
+  //    after shrinking. Drop the 4th (accessory) PREVIEW slot only at this
+  //    tier — chip (reward signal) and 我的形象 (navigation) outrank a 4th
+  //    preview; the full outfit lives on the 我的形象 page.
+  .profile-page__equipment-slots .profile-page__equipment-slot:last-child {
+    display: none;
+  }
 }

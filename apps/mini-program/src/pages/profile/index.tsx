@@ -896,10 +896,10 @@ export default function ProfilePage() {
                         </Text>
                       )}
                       {lifeStage && (
-                        <Text className='profile-page__identity-tag'>{lifeStage}</Text>
+                        <Text className='profile-page__identity-tag profile-page__identity-tag--stage'>{lifeStage}</Text>
                       )}
                       {genderLabel && (
-                        <Text className='profile-page__identity-tag'>{genderLabel}</Text>
+                        <Text className='profile-page__identity-tag profile-page__identity-tag--gender'>{genderLabel}</Text>
                       )}
                     </View>
                     {displayBio && (
