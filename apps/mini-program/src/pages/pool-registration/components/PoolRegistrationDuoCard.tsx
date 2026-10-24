@@ -186,7 +186,9 @@ export default function PoolRegistrationDuoCard({
           onClick={onRetry}
           role='button'
         >
-          <Text className='pool-reg-duo__error-text'>双人状态没刷出来，点我重试</Text>
+          <View role='alert' aria-live='polite'>
+            <Text className='pool-reg-duo__error-text'>双人状态没刷出来，点我重试</Text>
+          </View>
         </View>
       </View>
     )
@@ -246,7 +248,7 @@ export default function PoolRegistrationDuoCard({
       {renderHeaderRow(segmentedLocked)}
 
       {state === 'expanded' ? (
-        <View className={expandedClass}>
+        <View id='pool-reg-duo-expanded' className={expandedClass}>
           <Button
             variant='primary'
             size='sm'

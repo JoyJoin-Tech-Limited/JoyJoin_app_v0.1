@@ -143,13 +143,30 @@ function findConsumedRows(condition: any): any[] {
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
 }
 
+/** invitationUses ⋈ eventPoolRegistrations — live invitee half of a binding. */
+function findRegisteredDuoInviteeRows(condition: any, joinCondition: any): any[] {
+  const [, poolEq] = joinCondition?.conditions ?? [];
+  return mockState.uses.filter(
+    (u) =>
+      u.invitationId === condition?.value &&
+      mockState.registrations.some(
+        (r) => r.id === u.poolRegistrationId && r.poolId === poolEq?.value,
+      ),
+  );
+}
+
 vi.mock("../db", () => ({
   db: {
     select: () => ({
       from: (table: unknown) => ({
         where: (condition: any) => makeAwaitable(findRows(table, condition)),
-        innerJoin: () => ({
-          where: (condition: any) => makeAwaitable(findConsumedRows(condition)),
+        innerJoin: (joinTable: unknown, joinCondition: any) => ({
+          where: (condition: any) =>
+            makeAwaitable(
+              table === invitationUsesTable && joinTable === eventPoolRegistrationsTable
+                ? findRegisteredDuoInviteeRows(condition, joinCondition)
+                : findConsumedRows(condition),
+            ),
         }),
       }),
     }),
@@ -361,6 +378,98 @@ describe("GET /api/duo-invites/:code — inviterRegistered (S3, AC-0)", () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as any;
       expect(body.inviterRegistered).toBe(false);
+    });
+  });
+});
+
+// ── public lookup inviterBound ──────────────────────────────────────────────
+
+describe("GET /api/duo-invites/:code — inviterBound (duo-trust-feedback, AC-1/AC-2)", () => {
+  beforeEach(() => {
+    mockState.invitations = [makeDuoInvitation()];
+    mockState.users = [{ id: INVITER_ID, displayName: "阿杰", firstName: null }];
+  });
+
+  function setLiveBinding() {
+    mockState.registrations = [
+      { id: "reg-1", poolId: POOL_ID, userId: INVITER_ID },
+      { id: "reg-2", poolId: POOL_ID, userId: INVITEE_ID },
+    ];
+    mockState.uses = [
+      { id: "use-1", invitationId: "inv-1", inviteeId: INVITEE_ID, poolRegistrationId: "reg-2" },
+    ];
+  }
+
+  it("true when the code has a live consumer and both sides are registered; response stays boolean-only", async () => {
+    setLiveBinding();
+
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/duo-invites/${VALID_CODE}`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body).toEqual({
+        inviter: { displayName: "阿杰" },
+        poolId: POOL_ID,
+        status: "active",
+        inviterRegistered: true,
+        inviterBound: true,
+      });
+      expect(JSON.stringify(body)).not.toContain(INVITEE_ID);
+      expect(JSON.stringify(body)).not.toContain("reg-2");
+      expect(JSON.stringify(body)).not.toContain("use-1");
+    });
+  });
+
+  it("false when the inviter is registered but the code has not been consumed", async () => {
+    mockState.registrations = [{ id: "reg-1", poolId: POOL_ID, userId: INVITER_ID }];
+
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/duo-invites/${VALID_CODE}`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.inviterRegistered).toBe(true);
+      expect(body.inviterBound).toBe(false);
+    });
+  });
+
+  it("false after the inviter cancels even though the invitee use row remains", async () => {
+    setLiveBinding();
+    mockState.registrations = [{ id: "reg-2", poolId: POOL_ID, userId: INVITEE_ID }];
+
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/duo-invites/${VALID_CODE}`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.inviterRegistered).toBe(false);
+      expect(body.inviterBound).toBe(false);
+    });
+  });
+
+  it("false after the paired invitee cancels and their registration row is deleted", async () => {
+    setLiveBinding();
+    mockState.registrations = [{ id: "reg-1", poolId: POOL_ID, userId: INVITER_ID }];
+
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/duo-invites/${VALID_CODE}`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.inviterRegistered).toBe(true);
+      expect(body.inviterBound).toBe(false);
+    });
+  });
+
+  it("keeps the 410 expired payload unchanged and omits inviterBound", async () => {
+    setLiveBinding();
+    mockState.invitations = [
+      makeDuoInvitation({ expiresAt: new Date("2020-01-01T00:00:00Z") }),
+    ];
+
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/duo-invites/${VALID_CODE}`);
+      expect(res.status).toBe(410);
+      const body = (await res.json()) as any;
+      expect(body).toEqual({ message: "Invitation has expired", status: "expired" });
+      expect("inviterBound" in body).toBe(false);
     });
   });
 });

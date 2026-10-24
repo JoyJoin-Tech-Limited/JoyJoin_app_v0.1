@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
-import { registerForPool, type EventPoolRegistrationPayload } from '@shared/api'
+import {
+  registerForPool,
+  type EventPoolRegistrationPayload,
+  type RegisterForPoolResponse,
+} from '@shared/api'
 import { getErrorMessage, ERROR_CODE_GENERIC_FALLBACK, type ErrorCode } from '@shared/copy/errorBaselines'
 
 import { apiRequest, type ApiError } from '../lib/api/api'
@@ -139,6 +143,8 @@ export interface UseOptimisticRegistrationOptions {
   setError: (message: string) => void
   setResumeContext: (context: MiniProgramPoolRegistrationReturnContext | null) => void
   setShowBlindBoxFlow: (visible: boolean) => void
+  /** Receives only this submit's confirmed response; never cached by the hook. */
+  onRegistrationResponse?: (response: RegisterForPoolResponse) => void
 }
 
 export interface UseOptimisticRegistrationResult {
@@ -169,6 +175,7 @@ export function useOptimisticRegistration(
     setError,
     setResumeContext,
     setShowBlindBoxFlow,
+    onRegistrationResponse,
   } = options
   const queryClient = useQueryClient()
 
@@ -188,7 +195,7 @@ export function useOptimisticRegistration(
   // comes from the hook; queryKeys: [] coalesces every optimistic tap on the
   // '[]' key. The hook re-throws the ORIGINAL error so getEntitlementCode
   // keeps reading error.data.code.
-  const optimisticRegistration = useOptimisticMutation<EventPoolRegistrationPayload, { id: string }>({
+  const optimisticRegistration = useOptimisticMutation<EventPoolRegistrationPayload, RegisterForPoolResponse>({
     mutationFn: (payload) => {
       if (!poolId) {
         return Promise.reject(new Error('缺少报名信息'))
@@ -239,7 +246,7 @@ export function useOptimisticRegistration(
       interactionLatency.trackInteraction('registration_submit_optimistic', t0)
 
       void optimisticRegistration.mutate(payload).then(
-        () => {
+        (response) => {
           setOptimisticBusy(false)
           // AC-3a/AC-6: server confirm — side-effects + celebration run once
           // per page session (the held-waiter path resolves both callers).
@@ -248,6 +255,7 @@ export function useOptimisticRegistration(
           // (the first rejection already navigated/rolled back).
           if (celebratedRef.current || handledErrorRef.current) return
           celebratedRef.current = true
+          onRegistrationResponse?.(response)
           void bustRegistrationCaches(queryClient, { poolId })
           // Refresh duo state so the success page reflects a fresh binding.
           void queryClient.invalidateQueries({ queryKey: ['mini-program', 'duo-status', poolId] })
@@ -349,6 +357,7 @@ export function useOptimisticRegistration(
       eventType,
       optimisticBusy,
       optimisticRegistration,
+      onRegistrationResponse,
       poolTitle,
       poolArea,
       poolId,

@@ -35,6 +35,37 @@ import type { DuoBindingAvailabilityInput } from "../lib/eventPoolRegistration";
 type QueryExecutor = NodePgDatabase<typeof schema>;
 
 /**
+ * Check the invitee half of a presented invitation's live binding.
+ *
+ * The public lookup MUST combine this with its inviter-registration probe:
+ * an inviter cancellation leaves the invitee's use row behind, so this probe
+ * alone intentionally does not mean the inviter is currently bound.
+ */
+export async function hasRegisteredDuoInvitee(
+  dbOrTx: QueryExecutor,
+  params: {
+    poolId: string;
+    invitationId: string;
+  },
+): Promise<boolean> {
+  const { poolId, invitationId } = params;
+  const rows = await dbOrTx
+    .select({ id: invitationUses.id })
+    .from(invitationUses)
+    .innerJoin(
+      eventPoolRegistrations,
+      and(
+        eq(eventPoolRegistrations.id, invitationUses.poolRegistrationId),
+        eq(eventPoolRegistrations.poolId, poolId),
+      ),
+    )
+    .where(eq(invitationUses.invitationId, invitationId))
+    .limit(1);
+
+  return rows.length > 0;
+}
+
+/**
  * Resolve the two duo-guard facts for a (user, duo invitation, pool) triple.
  *
  * Only call this for invitations with invitationType === "duo" scoped to the

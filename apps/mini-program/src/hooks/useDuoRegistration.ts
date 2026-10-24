@@ -86,6 +86,8 @@ export interface UseDuoRegistrationResult {
   isDuoStatusLoading: boolean
   duoStatusError: boolean
   duoInviteInfo?: DuoInviteInfoResponse | null
+  /** Terminal 404/410 landing state; suppresses duplicate expired notices. */
+  duoInviteInvalid: boolean
   showDuoBanner: boolean
   isDuoSheetOpen: boolean
   openDuoSheet: () => void
@@ -302,8 +304,9 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     discoverAnalytics.track('duo_card_impression', poolId)
   }, [step, stepBrief, authLoading, poolId, enabled])
 
-  // Duo banner impression
-  const showDuoBanner = useMemo(
+  // Lookup-active keeps the step-0 guest card mounted even when the invite
+  // can no longer create a pair. Only the cross-step banner is unloaded.
+  const lookupActive = useMemo(
     () =>
       isDuoInvite &&
       !duoInviteInvalid &&
@@ -312,6 +315,9 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
       duoInviteInfo.poolId === poolId,
     [isDuoInvite, duoInviteInvalid, duoInviteInfo, poolId],
   )
+  const duoInviteUsable =
+    duoInviteInfo?.status === 'active' && duoInviteInfo.inviterBound !== true
+  const showDuoBanner = lookupActive && duoInviteUsable
 
   // S2 (D-8): the public invite lookup is still in flight — the guest region
   // renders its two skeleton lines (55%/40%, zero-shift heights) instead of
@@ -328,38 +334,52 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     [enabled, isDuoInvite, invitationCode, duoInviteInvalid, duoInviteLookupFailed, duoInviteInfo],
   )
 
-  // S2 (D-1): guest arrival = the current showDuoBanner condition, plus the
-  // lookup-in-flight skeleton window; the session-level duoDeclinedSolo flag
-  // suppresses both entirely (「就我一个人」 confirmed → collapsed card, no
-  // banner, no guest region until a fresh link landing).
+  // Guest arrival is intentionally independent of duoInviteUsable: a taken
+  // invite still needs its two-line host on step 0. Declining solo suppresses
+  // the whole surface for the rest of this page session.
   const guestArrival = useMemo(
-    () => !duoDeclinedSolo && (showDuoBanner || guestLoading),
-    [duoDeclinedSolo, showDuoBanner, guestLoading],
+    () => !duoDeclinedSolo && (lookupActive || guestLoading),
+    [duoDeclinedSolo, lookupActive, guestLoading],
   )
 
-  // S2 (AC-8): duo-status.viewerRole is the SOLE role authority — the lookup
-  // only fills the gaps it structurally cannot speak to (pre-registration
-  // invitee, duo-status network failure). Locked by tests.
+  // A taken lookup downgrades only the lookup-derived invitee role. An
+  // explicit duo-status role still wins for an inviter opening their own link.
   const duoRole = useMemo<DuoViewerRole>(
-    () => resolveDuoViewerRole({ viewerRole: duoStatus?.viewerRole, isGuest: guestArrival }),
-    [duoStatus?.viewerRole, guestArrival],
+    () =>
+      resolveDuoViewerRole({
+        viewerRole: duoStatus?.viewerRole,
+        isGuest: guestArrival,
+        duoInviteUsable: duoInviteInfo ? duoInviteUsable : undefined,
+      }),
+    [duoStatus?.viewerRole, guestArrival, duoInviteInfo, duoInviteUsable],
   )
 
-  // S2 (D-6 trigger + card-state veto): a positive server inviter role always
-  // vetoes the guest surface (inviter opening their own share link keeps the
-  // normal inviter card).
-  const isGuestSurface = guestArrival && duoRole !== 'inviter'
+  // Solo confirmation is exclusively an active-invitee surface. In particular,
+  // role='none' after a taken lookup must not reopen the dialog.
+  const isGuestSurface = guestArrival && duoRole === 'invitee'
 
-  // S2 (AC-9): guest two-line copy via the lookup-path matrix — copy
-  // ownership stays in lib/duo/duoCopy.ts. The name source is the invite
-  // lookup ONLY (this surface is the pre-registration invitee's; duoStatus
-  // belongs to a different pair here). inviterRegistered gates 「就等你」
-  // (AC-3): absent/false → the reserved L1 variant, never「就等你」.
+  // Settle the initial invite pre-selection to solo exactly once. Setting the
+  // interaction guard prevents the async invite-arrival effect from flipping
+  // the row back to duo; a later explicit 2人 tap remains available.
+  useEffect(() => {
+    if (duoInviteInfo?.inviterBound !== true || duoRole !== 'none') return
+    duoUserInteractedRef.current = true
+    duoAutoExpandAppliedRef.current = true
+    setIsSoloConfirmOpen(false)
+    setDuoMode((currentMode) => (currentMode === 'duo' ? 'solo' : currentMode))
+  }, [duoInviteInfo?.inviterBound, duoRole])
+
+  // Copy is driven by lookup-active, NOT showDuoBanner. Otherwise the taken
+  // state would lose its copy host and fall back to the reserved shared-table
+  // promise precisely when that promise is false.
   const guestDuoCopy = useMemo(() => {
-    if (!showDuoBanner) return undefined
-    const variant = resolveGuestCopyVariant({ inviterRegistered: duoInviteInfo?.inviterRegistered })
+    if (!lookupActive) return undefined
+    const variant = resolveGuestCopyVariant({
+      inviterRegistered: duoInviteInfo?.inviterRegistered,
+      inviterBound: duoInviteInfo?.inviterBound,
+    })
     return getGuestDuoCopy(variant, duoInviteInfo?.inviter.displayName)
-  }, [showDuoBanner, duoInviteInfo])
+  }, [lookupActive, duoInviteInfo])
 
   useEffect(() => {
     if (!showDuoBanner || hasTrackedDuoBannerImpressionRef.current) return
@@ -496,6 +516,16 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     void refetchDuoStatus()
   }, [refetchDuoStatus])
 
+  // Once a taken visitor explicitly starts their own duo flow, expanded or
+  // waiting replaces the taken note instead of sharing the screen with it.
+  const cardGuestArrival =
+    guestArrival &&
+    !(
+      duoInviteInfo?.inviterBound === true &&
+      duoUserInteractedRef.current &&
+      duoMode === 'duo'
+    )
+
   const duoCardState = useMemo(
     () =>
       resolveDuoCardState({
@@ -505,9 +535,9 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
         mode: duoMode,
         hasShared: duoShared,
         role: duoRole,
-        isGuest: guestArrival,
+        isGuest: cardGuestArrival,
       }),
-    [isDuoStatusLoading, duoStatus, duoStatusError, duoMode, duoShared, duoRole, guestArrival],
+    [isDuoStatusLoading, duoStatus, duoStatusError, duoMode, duoShared, duoRole, cardGuestArrival],
   )
 
   const partnerName = useMemo(
@@ -549,6 +579,7 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     isDuoStatusLoading,
     duoStatusError,
     duoInviteInfo,
+    duoInviteInvalid,
     showDuoBanner,
     isDuoSheetOpen,
     openDuoSheet,

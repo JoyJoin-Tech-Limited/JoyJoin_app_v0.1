@@ -54,6 +54,15 @@ describe('pool-registration S2 页面接线（D-1 单一表面 / Dependencies �
     expect(source).toContain('onGoSolo={duo.confirmGoSolo}')
   })
 
+  it('首次展开通过 nearest ScrollView anchor 露出分享 CTA，且不改变 error 的 start 对齐', () => {
+    expect(source).toContain("previousState !== 'collapsed' || duo.duoCardState !== 'expanded'")
+    expect(source).toContain("setScrollDuoId('pool-reg-duo-expanded')")
+    expect(source).toContain('scrollIntoView={scrollErrorId || scrollDuoId}')
+    expect(source).toContain("scrollIntoViewAlignment={scrollDuoId && !scrollErrorId ? 'nearest' : 'start'}")
+    const cardSource = readFileSync(resolve(__dirname, '..', 'components', 'PoolRegistrationDuoCard.tsx'), 'utf-8')
+    expect(cardSource).toContain("id='pool-reg-duo-expanded'")
+  })
+
   it('页面 SCSS @use 弹窗样式（subpackage 分包样式门；TSX 零 import）', () => {
     const pageScss = readFileSync(resolve(__dirname, '..', 'index.scss'), 'utf-8')
     expect(pageScss).toContain("@use './components/DuoSoloConfirmDialog.scss' as *;")

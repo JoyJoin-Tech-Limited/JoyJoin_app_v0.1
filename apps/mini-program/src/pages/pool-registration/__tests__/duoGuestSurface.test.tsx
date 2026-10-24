@@ -131,6 +131,23 @@ describe('PoolRegistrationDuoCard — S2 guest 表面（D-2/D-3/AC-9）', () => 
       '报名后你们会被排进同一桌',
     )
   })
+
+  it('Batch B taken：沿用两行/零按钮结构，回 1人且全屏不承诺同一桌', () => {
+    const { container } = renderGuestCard({
+      mode: 'solo',
+      guestCopy: getGuestDuoCopy('taken', '阿明'),
+    })
+    expect(container.querySelector('.pool-reg-duo__guest-line1')?.textContent).toBe(
+      '阿明 这局已经有同行了',
+    )
+    expect(container.querySelector('.pool-reg-duo__guest-line2')?.textContent).toBe(
+      '你照常报名，悦仔会给你排一桌',
+    )
+    expect(container.textContent).not.toContain('同一桌')
+    expect(container.querySelector('button')).toBeNull()
+    expect(container.querySelector('.pool-reg-duo__segmented-thumb--duo')).toBeNull()
+    expect(container.querySelector('.pool-reg-duo__segmented--locked')).toBeNull()
+  })
 })
 
 describe('S2 guest 表面 — 接线结构合同（copy 唯一权威在 lib/duo/duoCopy.ts）', () => {
@@ -149,6 +166,8 @@ describe('S2 guest 表面 — 接线结构合同（copy 唯一权威在 lib/duo/
     expect(cardSource).not.toContain('这局给你留了个位置')
     expect(cardSource).not.toContain('排进同一桌')
     expect(cardSource).not.toContain('已经报名了，就等你')
+    expect(cardSource).not.toContain('这局已经有同行了')
+    expect(cardSource).not.toContain('你照常报名，悦仔会给你排一桌')
   })
 
   it('D-3 规格：L1 28rpx medium / L2 24rpx secondary / 间距 8rpx / 骨架 55%+40%', () => {

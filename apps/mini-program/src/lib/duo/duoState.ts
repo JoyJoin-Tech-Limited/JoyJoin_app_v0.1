@@ -93,10 +93,13 @@ export function resolveDuoViewerRole(input: {
   viewerRole?: DuoRole | null
   /** Guest arrival from the public lookup (see DuoCardStateInput.isGuest). */
   isGuest: boolean
+  /** False only after lookup resolves an invite that cannot create a new pair. */
+  duoInviteUsable?: boolean
 }): DuoViewerRole {
   if (input.viewerRole === 'inviter' || input.viewerRole === 'invitee') {
     return input.viewerRole
   }
+  if (input.duoInviteUsable === false) return 'none'
   return input.isGuest ? 'invitee' : 'none'
 }
 

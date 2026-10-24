@@ -33,6 +33,7 @@ import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { logger } from "../../lib/logger";
 import { getFeatureFlag } from "../../lib/featureFlags";
 import { duoInviteLookupLimiter } from "../../rateLimiter";
+import { hasRegisteredDuoInvitee } from "../../repositories/duoBindingRepo";
 import {
   DUO_INVITATION_TYPE,
   buildDuoSharePath,
@@ -334,6 +335,14 @@ export function registerDuoRoutes(app: Express): void {
         ))
         .limit(1);
 
+      const inviterRegistered = Boolean(inviterRegistration);
+      // A residual use row stops counting when either side cancels. The
+      // invitee probe runs at most once, and is skipped when the inviter is out.
+      const inviterBound = inviterRegistered && await hasRegisteredDuoInvitee(db, {
+        poolId: invitation.poolId,
+        invitationId: invitation.id,
+      });
+
       // Click tracking — same behavior as the referral/invitation lookups.
       await db
         .update(invitations)
@@ -346,7 +355,8 @@ export function registerDuoRoutes(app: Express): void {
         },
         poolId: invitation.poolId,
         status: "active",
-        inviterRegistered: Boolean(inviterRegistration),
+        inviterRegistered,
+        inviterBound,
       });
     } catch (error: any) {
       logger.error("Error fetching duo invite", { error: String(error) });

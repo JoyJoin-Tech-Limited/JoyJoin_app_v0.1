@@ -171,6 +171,73 @@ describe('useDuoRegistration — S2 invitee 落地（AC-2/D-2/D-8）', () => {
   })
 })
 
+describe('useDuoRegistration — Batch B taken 信任闭环（AC-3/4/5）', () => {
+  function renderTakenLanding() {
+    mockGetDuoStatus.mockResolvedValue({ state: 'none' })
+    mockGetDuoInviteInfo.mockResolvedValue({
+      ...ACTIVE_INVITE,
+      inviterRegistered: true,
+      inviterBound: true,
+    })
+    const cardStates: string[] = []
+    const rendered = renderHook(
+      () => {
+        const duo = useDuoRegistration(
+          makeOptions({ invitationCode: 'abc123def456', isDuoInvite: true, inviteArrival: true }),
+        )
+        cardStates.push(duo.duoCardState)
+        return duo
+      },
+      { wrapper: createWrapper() },
+    )
+    return { ...rendered, cardStates }
+  }
+
+  it('banner 关闭后 guest 仍显示 taken；role=none、solo 稳定且不弹确认', async () => {
+    const rendered = renderTakenLanding()
+
+    await waitFor(() => expect(rendered.result.current.duoMode).toBe('solo'))
+    expect(rendered.result.current.duoRole).toBe('none')
+    expect(rendered.result.current.duoCardState).toBe('guest')
+    expect(rendered.result.current.showDuoBanner).toBe(false)
+    // Amendment 1: showDuoBanner=false 不得切断 taken 的文案宿主。
+    expect(rendered.result.current.guestDuoCopy).toEqual({
+      line1: '阿明 这局已经有同行了',
+      line2: '你照常报名，悦仔会给你排一桌',
+    })
+
+    rendered.rerender()
+    await act(async () => Promise.resolve())
+    expect(rendered.result.current.duoMode).toBe('solo')
+
+    await act(async () => {
+      await rendered.result.current.selectDuoMode('solo')
+    })
+    expect(rendered.result.current.isSoloConfirmOpen).toBe(false)
+    expect(rendered.result.current.duoMode).toBe('solo')
+    expect(mockCreateDuoInvite).toHaveBeenCalledTimes(0)
+    // 从 lookup 落地到 solo effect 之间也不得闪过分享/等待态。
+    expect(rendered.cardStates).not.toContain('expanded')
+    expect(rendered.cardStates).not.toContain('waiting')
+  })
+
+  it('taken 后主动点 2人真实 POST，taken 让位 expanded 且不再自动翻回', async () => {
+    const { result } = renderTakenLanding()
+    await waitFor(() => expect(result.current.duoMode).toBe('solo'))
+
+    await act(async () => {
+      await result.current.selectDuoMode('duo')
+    })
+
+    expect(mockCreateDuoInvite).toHaveBeenCalledTimes(1)
+    expect(result.current.duoRole).toBe('none')
+    expect(result.current.duoMode).toBe('duo')
+    expect(result.current.duoCardState).toBe('expanded')
+    expect(result.current.showDuoBanner).toBe(false)
+    expect(result.current.isSoloConfirmOpen).toBe(false)
+  })
+})
+
 describe('useDuoRegistration — S2 solo 确认弹窗（AC-4/D-6/D-9）', () => {
   async function renderGuestWithDialog() {
     mockInviteeLanding()

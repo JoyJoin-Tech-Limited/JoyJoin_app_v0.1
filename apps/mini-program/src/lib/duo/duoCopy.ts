@@ -13,7 +13,9 @@ import type { DuoRole, DuoStatusState } from '../api/duo'
  *   D2       {name} 已经报名了，就等你         — 「就等你」: 对方已报名 × 我未报名
  *   D3       你和 {name} 约好了，等 TA 报名    — invitee × pendingSide=inviter
  *   guest L1 {name} 这局给你留了个位置         — 报名前 invitee（inviterRegistered 假/缺失）
- *   guest L2 报名后你们会被排进同一桌          — guest 副行，恒为此句
+ *   guest L2 报名后你们会被排进同一桌          — reserved/onlyYou 副行
+ *   taken L1 {name} 这局已经有同行了           — inviterBound 真，优先于 inviterRegistered
+ *   taken L2 你照常报名，悦仔会给你排一桌       — 不再承诺一起排桌
  *
  * 「就等你」门槛（AC-3）: 仅在 viewer 本人是未报名方时可渲染 ——
  *   duo-status 路径: viewerRole === pendingSide（inviter × inviter）
@@ -35,6 +37,14 @@ export const DUO_WAITING_COPY_ONLY_YOU = '{name} 已经报名了，就等你'
 export const DUO_WAITING_COPY_PROMISED = '你和 {name} 约好了，等 TA 报名'
 export const DUO_GUEST_COPY_RESERVED_L1 = '{name} 这局给你留了个位置'
 export const DUO_GUEST_COPY_SHARED_TABLE_L2 = '报名后你们会被排进同一桌'
+export const DUO_GUEST_COPY_TAKEN_L1 = '{name} 这局已经有同行了'
+export const DUO_GUEST_COPY_TAKEN_L2 = '你照常报名，悦仔会给你排一桌'
+
+export const DUO_BINDING_NOTICE_PARTNER_TAKEN = '{name} 这局已经有同行了，这次就各排各的'
+export const DUO_BINDING_NOTICE_EXPIRED = '这张邀请已经过期了，这次就按你一个人的报名排'
+export const DUO_BINDING_NOTICE_POOL_MISMATCH = '这张邀请是另一场局的，这次就按你这场来'
+export const DUO_BINDING_NOTICE_ALREADY_BOUND = '你已经有一位同行的朋友，这次就按原来的来'
+export const DUO_BINDING_NOTICE_UNKNOWN = '这次的同行邀请没有生效，这次就按你一个人的报名排'
 
 // S2 (D-5 逐字): solo-confirm dialog copy. Lives in this single-authority
 // module so the dialog component never inlines strings (same ownership rule
@@ -52,10 +62,11 @@ export type DuoWaitingDirection =
   | 'onlyYou' // D2 — 对方已经报名了，就等你
   | 'promised' // D3 — 你和对方约好了，等 TA 报名
 
-/** lookup（guest）路径的两向标识。 */
+/** lookup（guest）路径的三向标识。 */
 export type DuoGuestCopyVariant =
   | 'reserved' // guest L1 — 对方这局给你留了个位置
   | 'onlyYou' // D2 — 对方已经报名了，就等你
+  | 'taken' // 对方这局已有同行，不再承诺一起排桌
 
 export interface DuoWaitingCopyResolved {
   direction: DuoWaitingDirection
@@ -131,25 +142,58 @@ export function resolveDuoWaitingCopy(input: {
 }
 
 /**
- * lookup 路径矩阵（AC-2/AC-3，guest 表面）:
+ * lookup 路径矩阵（guest 表面）:
+ *   inviterBound === true      → taken（优先级最高，不再承诺一起排桌）
  *   inviterRegistered === true → D2（对方已经报名了，就等你）
  *   false / 缺失               → guest L1（对方这局给你留了个位置）
  */
 export function resolveGuestCopyVariant(input: {
   inviterRegistered?: boolean | null
+  inviterBound?: boolean | null
 }): DuoGuestCopyVariant {
+  if (input.inviterBound === true) return 'taken'
   return input.inviterRegistered === true ? 'onlyYou' : 'reserved'
 }
 
-/** guest 表面两行文案（L2 恒为「报名后你们会被排进同一桌」）。 */
+/** guest 表面两行文案；taken 使用独立 L2，其余变体沿用既有承诺。 */
 export function getGuestDuoCopy(
   variant: DuoGuestCopyVariant,
   inviterDisplayName?: string | null,
 ): { line1: string; line2: string } {
+  if (variant === 'taken') {
+    return {
+      line1: interpolateDuoName(DUO_GUEST_COPY_TAKEN_L1, inviterDisplayName),
+      line2: DUO_GUEST_COPY_TAKEN_L2,
+    }
+  }
   const template = variant === 'onlyYou' ? DUO_WAITING_COPY_ONLY_YOU : DUO_GUEST_COPY_RESERVED_L1
   return {
     line1: interpolateDuoName(template, inviterDisplayName),
     line2: DUO_GUEST_COPY_SHARED_TABLE_L2,
+  }
+}
+
+/**
+ * Registration-response-only duo explanation. A bound or absent outcome has
+ * no notice; unavailable always has a governed line, including future reasons.
+ */
+export function getDuoBindingNotice(input: {
+  state?: 'bound' | 'unavailable' | null
+  reason?: 'already_bound' | 'partner_taken' | 'expired' | 'pool_mismatch' | null
+  inviterDisplayName?: string | null
+}): string | null {
+  if (input.state !== 'unavailable') return null
+  switch (input.reason) {
+    case 'partner_taken':
+      return interpolateDuoName(DUO_BINDING_NOTICE_PARTNER_TAKEN, input.inviterDisplayName)
+    case 'expired':
+      return DUO_BINDING_NOTICE_EXPIRED
+    case 'pool_mismatch':
+      return DUO_BINDING_NOTICE_POOL_MISMATCH
+    case 'already_bound':
+      return DUO_BINDING_NOTICE_ALREADY_BOUND
+    default:
+      return DUO_BINDING_NOTICE_UNKNOWN
   }
 }
 

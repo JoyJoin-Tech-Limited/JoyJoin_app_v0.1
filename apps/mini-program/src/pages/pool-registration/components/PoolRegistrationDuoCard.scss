@@ -52,10 +52,20 @@
   // transparent padding. No new image asset (E' CSS-only glyph rule).
   &__info-hit {
     @include flex-center;
+    position: relative;
     width: 48rpx;
     height: 48rpx;
     margin: -12rpx 0;
     border-radius: 50%;
+
+    // Keep the quiet 48rpx visual while expanding the real tap target to
+    // 88rpx. The pseudo hit area belongs to the same View, so no extra button
+    // or layout width is introduced.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -20rpx;
+    }
 
     &--active {
       background: rgba($color-text-tertiary, 0.08);
@@ -119,6 +129,16 @@
     z-index: 1;
     flex: 1;
     @include flex-center;
+
+    // The thumb stays 44rpx tall; only the tap target grows to 88rpx.
+    &::before {
+      content: '';
+      position: absolute;
+      top: -22rpx;
+      right: 0;
+      bottom: -22rpx;
+      left: 0;
+    }
 
     &--active .pool-reg-duo__segment-text {
       color: $color-primary-dark;
@@ -204,6 +224,7 @@
   &__waiting-text {
     @include type-label;
     flex: 1;
+    min-width: 0;
     // D-2: 等待主行从 secondary 升为 primary（单行主行、无副行）；名字经
     // truncateDuoName 截断到 6 字+…，再兜一层单行截断防窄屏折行。
     color: $color-text-primary;
@@ -215,6 +236,9 @@
   // 透明 padding 落在按钮上、视觉 pill 收进内部子节点；负 margin 让 ≤56rpx
   // 的 waiting 行不被撑高，透明区只没入卡片 padding，不与文案行视觉重叠。
   &__again-btn {
+    // Taro's native button defaults to width:100%; without this override it
+    // consumes the whole flex row and collapses the D1 waiting copy to 0px.
+    width: auto;
     height: 88rpx;
     min-height: 88rpx;
     margin: -16rpx 0;
@@ -327,6 +351,11 @@
 
   // Local non-blocking error row (spec A.4): never blocks registration.
   &__error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    box-sizing: border-box;
     margin-top: $spacing-sm;
     padding: $spacing-xs $spacing-md;
     border-radius: 24rpx;

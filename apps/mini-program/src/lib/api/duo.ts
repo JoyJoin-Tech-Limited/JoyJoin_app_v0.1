@@ -60,6 +60,12 @@ export interface DuoInviteInfoResponse {
    * never leaves the server (Security pillar).
    */
   inviterRegistered?: boolean
+  /**
+   * Whether the inviter already has a valid duo binding in this pool.
+   * Optional for backward compatibility; true makes this invite unusable for
+   * a new pair without exposing the other partner's identity.
+   */
+  inviterBound?: boolean
 }
 
 export function createDuoInvite(request: ApiRequest, poolId: string): Promise<DuoInviteCreateResponse> {

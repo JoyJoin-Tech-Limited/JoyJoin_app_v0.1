@@ -177,6 +177,17 @@ describe('resolveDuoViewerRole (AC-8 priority lock)', () => {
     expect(resolveDuoViewerRole({ viewerRole: undefined, isGuest: true })).toBe('invitee')
   })
 
+  it('Batch B: unusable taken lookup downgrades lookup-derived invitee to none', () => {
+    expect(resolveDuoViewerRole({ isGuest: true, duoInviteUsable: false })).toBe('none')
+    expect(shouldCreateDuoCode({ role: 'none', mode: 'duo' })).toBe(true)
+  })
+
+  it('Batch B: explicit duo-status role still wins for an inviter opening their own link', () => {
+    expect(
+      resolveDuoViewerRole({ viewerRole: 'inviter', isGuest: true, duoInviteUsable: false }),
+    ).toBe('inviter')
+  })
+
   it('no server role + no lookup signal → none (non-invitee, code creation allowed)', () => {
     expect(resolveDuoViewerRole({ viewerRole: undefined, isGuest: false })).toBe('none')
     expect(resolveDuoViewerRole({ viewerRole: null, isGuest: false })).toBe('none')

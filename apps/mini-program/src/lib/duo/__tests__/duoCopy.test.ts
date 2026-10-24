@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DUO_BINDING_NOTICE_ALREADY_BOUND,
+  DUO_BINDING_NOTICE_EXPIRED,
+  DUO_BINDING_NOTICE_PARTNER_TAKEN,
+  DUO_BINDING_NOTICE_POOL_MISMATCH,
+  DUO_BINDING_NOTICE_UNKNOWN,
   DUO_GUEST_COPY_RESERVED_L1,
   DUO_GUEST_COPY_SHARED_TABLE_L2,
+  DUO_GUEST_COPY_TAKEN_L1,
+  DUO_GUEST_COPY_TAKEN_L2,
   DUO_NAME_FALLBACK,
   DUO_SOLO_CONFIRM_BODY,
   DUO_SOLO_CONFIRM_PRIMARY,
@@ -10,6 +17,7 @@ import {
   DUO_WAITING_COPY_ONLY_YOU,
   DUO_WAITING_COPY_PROMISED,
   DUO_WAITING_COPY_SENT_FRIEND,
+  getDuoBindingNotice,
   getDuoSoloConfirmTitle,
   getDuoWaitingCopy,
   getGuestDuoCopy,
@@ -197,6 +205,59 @@ describe('resolveGuestCopyVariant — lookup 路径 (AC-2/AC-3)', () => {
   })
 })
 
+describe('Batch B taken guest copy（AC-4/AC-8 逐字）', () => {
+  it('inviterBound 优先于 inviterRegistered，两行均不再承诺同一桌', () => {
+    expect(resolveGuestCopyVariant({ inviterBound: true, inviterRegistered: true })).toBe('taken')
+    expect(DUO_GUEST_COPY_TAKEN_L1).toBe('{name} 这局已经有同行了')
+    expect(DUO_GUEST_COPY_TAKEN_L2).toBe('你照常报名，悦仔会给你排一桌')
+    const copy = getGuestDuoCopy('taken', '阿明')
+    expect(copy).toEqual({
+      line1: '阿明 这局已经有同行了',
+      line2: '你照常报名，悦仔会给你排一桌',
+    })
+    expect(`${copy.line1}${copy.line2}`).not.toContain('同一桌')
+  })
+
+  it('taken 姓名同样经 truncateDuoName 截断与兜底', () => {
+    expect(getGuestDuoCopy('taken', '一二三四五六七').line1).toBe('一二三四五六… 这局已经有同行了')
+    expect(getGuestDuoCopy('taken').line1).toBe('朋友 这局已经有同行了')
+  })
+})
+
+describe('getDuoBindingNotice（AC-6/AC-8 五条 + 两条 null）', () => {
+  it('五种 unavailable 结果逐字解析，already_bound 保留纯函数覆盖', () => {
+    expect(DUO_BINDING_NOTICE_PARTNER_TAKEN).toBe('{name} 这局已经有同行了，这次就各排各的')
+    expect(DUO_BINDING_NOTICE_EXPIRED).toBe('这张邀请已经过期了，这次就按你一个人的报名排')
+    expect(DUO_BINDING_NOTICE_POOL_MISMATCH).toBe('这张邀请是另一场局的，这次就按你这场来')
+    expect(DUO_BINDING_NOTICE_ALREADY_BOUND).toBe('你已经有一位同行的朋友，这次就按原来的来')
+    expect(DUO_BINDING_NOTICE_UNKNOWN).toBe('这次的同行邀请没有生效，这次就按你一个人的报名排')
+
+    expect(
+      getDuoBindingNotice({ state: 'unavailable', reason: 'partner_taken', inviterDisplayName: '阿明' }),
+    ).toBe('阿明 这局已经有同行了，这次就各排各的')
+    expect(getDuoBindingNotice({ state: 'unavailable', reason: 'expired' })).toBe(
+      '这张邀请已经过期了，这次就按你一个人的报名排',
+    )
+    expect(getDuoBindingNotice({ state: 'unavailable', reason: 'pool_mismatch' })).toBe(
+      '这张邀请是另一场局的，这次就按你这场来',
+    )
+    expect(getDuoBindingNotice({ state: 'unavailable', reason: 'already_bound' })).toBe(
+      '你已经有一位同行的朋友，这次就按原来的来',
+    )
+    expect(getDuoBindingNotice({ state: 'unavailable' })).toBe(
+      '这次的同行邀请没有生效，这次就按你一个人的报名排',
+    )
+  })
+
+  it('partner_taken 缺名回朋友；bound 与字段缺失两个分支均为 null', () => {
+    expect(getDuoBindingNotice({ state: 'unavailable', reason: 'partner_taken' })).toBe(
+      '朋友 这局已经有同行了，这次就各排各的',
+    )
+    expect(getDuoBindingNotice({ state: 'bound' })).toBeNull()
+    expect(getDuoBindingNotice({})).toBeNull()
+  })
+})
+
 /**
  * S2 (contract duo-s2-invitee-role-separation, D-5 逐字): solo-confirm
  * dialog copy lives in this single-authority module — the dialog component
@@ -332,6 +393,13 @@ describe('D-4 合规扫描：全部文案无 emoji、无审核禁用词 (AC-5)',
     DUO_WAITING_COPY_PROMISED,
     DUO_GUEST_COPY_RESERVED_L1,
     DUO_GUEST_COPY_SHARED_TABLE_L2,
+    DUO_GUEST_COPY_TAKEN_L1,
+    DUO_GUEST_COPY_TAKEN_L2,
+    DUO_BINDING_NOTICE_PARTNER_TAKEN,
+    DUO_BINDING_NOTICE_EXPIRED,
+    DUO_BINDING_NOTICE_POOL_MISMATCH,
+    DUO_BINDING_NOTICE_ALREADY_BOUND,
+    DUO_BINDING_NOTICE_UNKNOWN,
     DUO_NAME_FALLBACK,
     // S2 (D-10): solo-confirm dialog copy is user-facing — same compliance.
     DUO_SOLO_CONFIRM_TITLE,
@@ -349,6 +417,7 @@ describe('D-4 合规扫描：全部文案无 emoji、无审核禁用词 (AC-5)',
   it('模板常量无 emoji、无禁用词', () => {
     for (const template of ALL_TEMPLATES) {
       expect(EMOJI_RE.test(template), template).toBe(false)
+      expect(/[!！]/.test(template), template).toBe(false)
       for (const banned of BANNED_LITERALS) {
         expect(template.includes(banned), `${template} 含禁用词 ${banned}`).toBe(false)
       }

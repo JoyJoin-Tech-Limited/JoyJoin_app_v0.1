@@ -23,6 +23,8 @@ interface PoolRegistrationSuccessCeremonyProps {
   userArchetype: string | null
   /** Duo variant (spec §C.3/C'-2): bound → duo title + body; waiting → extra pill. */
   duo?: { partnerName: string; bound: boolean }
+  /** Latest free/entitlement submit's unavailable-duo explanation. */
+  duoBindingNotice?: string | null
   onEnableNotifications: () => void
   isEnablingNotifications?: boolean
   notificationsEnabled?: boolean
@@ -44,6 +46,7 @@ function PoolRegistrationSuccessCeremony({
   pool,
   userArchetype,
   duo,
+  duoBindingNotice,
   onEnableNotifications,
   isEnablingNotifications = false,
   notificationsEnabled = false,
@@ -131,6 +134,9 @@ function PoolRegistrationSuccessCeremony({
           ctaDisabled={isNavigating}
           after={chemistryGrid}
         >
+          {!duo?.bound && duoBindingNotice ? (
+            <Text className='registration-ceremony__text'>{duoBindingNotice}</Text>
+          ) : null}
           {duo?.bound ? (
             <Text className='registration-ceremony__text'>
               已和 {duo.partnerName} 组成双人，悦仔会安排同桌。

@@ -48,9 +48,14 @@
   // so content ran edge-to-edge and the footer scrolled away on long steps.
   display: flex;
   flex-direction: column;
+  // Bounded flex shell: the document itself must not scroll. Only the inner
+  // ScrollView owns scrolling; otherwise a completed registration can retain
+  // the form's page scroll offset and put the success title above the viewport.
   // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   box-sizing: border-box;
 
   &__scroll {
