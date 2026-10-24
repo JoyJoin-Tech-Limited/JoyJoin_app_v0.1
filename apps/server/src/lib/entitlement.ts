@@ -30,21 +30,41 @@ export interface ResolvedEntitlement {
   mode: EntitlementMode;
   /** Credit count surfaced by the gate's 403 body (forced 0 in test/subscription branches). */
   availableEventCredits: number;
+  /**
+   * Subscription detail for the profile entitlement strip (P0-1, 2026-10-22).
+   * Populated ONLY in the subscription branch; null otherwise. planType
+   * mirrors subscriptions.plan_type; daysRemaining uses the same formula as
+   * subscriptionService.getUserSubscriptionStatus (ceil to endDate, floor 0).
+   * No extra DB reads — derived from the row the branch already fetched.
+   */
+  subscription: { planType: "monthly" | "quarterly"; daysRemaining: number } | null;
 }
 
 export async function resolveEntitlementMode(userId: string): Promise<ResolvedEntitlement> {
   if ((process.env.APP_MODE ?? "production") === "test") {
-    return { mode: "test", availableEventCredits: 0 };
+    return { mode: "test", availableEventCredits: 0, subscription: null };
   }
 
   const subscription = await storage.getUserSubscription(userId);
   if (subscription) {
-    return { mode: "subscription", availableEventCredits: 0 };
+    const msRemaining = new Date(subscription.endDate).getTime() - Date.now();
+    return {
+      mode: "subscription",
+      availableEventCredits: 0,
+      subscription: {
+        planType: subscription.planType === "quarterly" ? "quarterly" : "monthly",
+        // Guard: a missing/invalid endDate must never leak NaN into the pill.
+        daysRemaining: Number.isFinite(msRemaining)
+          ? Math.max(0, Math.ceil(msRemaining / (24 * 60 * 60 * 1000)))
+          : 0,
+      },
+    };
   }
 
   const availableEventCredits = await eventCreditsRepo.getAvailableCreditCount(userId);
   return {
     mode: availableEventCredits > 0 ? "event_pack" : null,
     availableEventCredits,
+    subscription: null,
   };
 }

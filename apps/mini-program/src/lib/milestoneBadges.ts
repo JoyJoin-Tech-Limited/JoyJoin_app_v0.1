@@ -47,6 +47,12 @@ export const MILESTONE_BADGES = {
   matchReasonHometownIndustry: cdnAsset(`${BASE}/match-reason-hometown-industry-20260604-v1.webp`),
   /** D5 — `RecapPhaseView` end stamp overlay */
   recapStamp: cdnAsset(`${BASE}/recap-stamp-of-you-20260604-v1.webp`),
+  /** D2-5 — Profile badge wall, 渐入佳境 (5 场) */
+  regular5: cdnAsset(`${BASE}/badge-5-events-20261022-v1.webp`),
+  /** D2-10 — Profile badge wall, 悦聚常客 (10 场) */
+  veteran10: cdnAsset(`${BASE}/badge-10-events-20261022-v1.webp`),
+  /** D2-20 — Profile badge wall, 城市传说 (20 场) */
+  legend20: cdnAsset(`${BASE}/badge-20-events-20261022-v1.webp`),
 } as const
 
 export type MilestoneBadgeKey = keyof typeof MILESTONE_BADGES

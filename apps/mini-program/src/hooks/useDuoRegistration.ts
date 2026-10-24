@@ -14,7 +14,20 @@ import {
   readDuoShareTimestamp,
   writeDuoShareTimestamp,
 } from '../lib/duo/duoContext'
-import { resolveDuoCardState, resolveInitialDuoMode, shouldAutoExpandDuoRow } from '../lib/duo/duoState'
+import {
+  resolveDuoCardState,
+  resolveDuoViewerRole,
+  resolveInitialDuoMode,
+  shouldAutoExpandDuoRow,
+  shouldCreateDuoCode,
+  type DuoViewerRole,
+} from '../lib/duo/duoState'
+import {
+  getGuestDuoCopy,
+  resolveDuoWaitingCopy,
+  resolveGuestCopyVariant,
+  type DuoWaitingCopyResolved,
+} from '../lib/duo/duoCopy'
 import { haptics } from '../lib/utils/haptics'
 import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
 import { logWarn } from '../lib/utils/logger'
@@ -50,6 +63,18 @@ export interface UseDuoRegistrationOptions {
   onInviteInvalid: () => void
   /** Called when invite creation fails; the hook has already rolled back to solo. */
   onInviteCreateError?: (error: unknown) => void
+  /**
+   * S2 (D-6 trigger guard): true when the viewer already holds a registration
+   * in this pool — the solo-confirm dialog never opens for them.
+   */
+  meRegistered: boolean
+  /**
+   * S2 (Dependencies): called once when the invitee confirms 「就我一个人」.
+   * The page strips the duo attribution (invitationCode) from the
+   * registration payload and blocks both refill sources (URL param +
+   * user.pendingReferralCode) for the rest of the session.
+   */
+  onDuoDeclinedSolo?: () => void
 }
 
 export interface UseDuoRegistrationResult {
@@ -68,8 +93,42 @@ export interface UseDuoRegistrationResult {
   selectDuoMode: (mode: 'solo' | 'duo') => void
   retryDuoStatus: () => void
   partnerName: string
+  /**
+   * S3 (PR-2): direction-aware waiting copy for the duo card, resolved from
+   * the duo-status viewerRole × pendingSide matrix (lib/duo/duoCopy.ts).
+   * Undefined whenever the card is not in the waiting state.
+   */
+  duoWaitingCopy?: DuoWaitingCopyResolved
   duoPartnerNameForAlreadyJoined?: string
   successDuo?: { bound: boolean; partnerName: string }
+  /**
+   * S2 (AC-8): resolved viewer role — duo-status.viewerRole is the sole
+   * authority; the public lookup only fills the pre-registration /
+   * network-failure gaps. Exposed for metadata + tests.
+   */
+  duoRole: DuoViewerRole
+  /**
+   * S2 (AC-9): guest two-line copy resolved from the lookup path
+   * (resolveGuestCopyVariant + getGuestDuoCopy). Undefined before the
+   * invite lookup lands — pair with `guestLoading`.
+   */
+  guestDuoCopy?: { line1: string; line2: string }
+  /** S2 (D-8): the public invite lookup is still in flight (skeleton window). */
+  guestLoading: boolean
+  /**
+   * S2 (D-6): session-level 「就我一个人」 marker — suppresses the guest
+   * surface and the cross-step banner until a fresh link landing (never
+   * persisted).
+   */
+  duoDeclinedSolo: boolean
+  /** S2 (D-4/D-9): solo-confirm dialog visibility (resets on swipe-back). */
+  isSoloConfirmOpen: boolean
+  /** S2: 主按钮「还是一起去」/遮罩 — dismiss, mode stays 'duo', no analytics. */
+  confirmStayTogether: () => void
+  /** S2: 次按钮「就我一个人」 — solo + collapse + session decline + analytics. */
+  confirmGoSolo: () => void
+  /** S2 (D-9 overlay mutex): close the dialog without a decision. */
+  closeSoloConfirm: () => void
 }
 
 /**
@@ -92,6 +151,8 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     authLoading,
     onInviteInvalid,
     onInviteCreateError,
+    meRegistered,
+    onDuoDeclinedSolo,
   } = options
 
   const queryClient = useQueryClient()
@@ -110,6 +171,12 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
   const [duoStatusError, setDuoStatusError] = useState(false)
   const [duoInviteInvalid, setDuoInviteInvalid] = useState(false)
   const [isDuoSheetOpen, setIsDuoSheetOpen] = useState(false)
+  // S2: invitee solo-confirm dialog (D-4) + session-level decline marker (D-6)
+  // + non-terminal lookup failure flag (Reliability pillar — falls back to
+  // non-invitee behavior instead of sticking in the skeleton window).
+  const [isSoloConfirmOpen, setIsSoloConfirmOpen] = useState(false)
+  const [duoDeclinedSolo, setDuoDeclinedSolo] = useState(false)
+  const [duoInviteLookupFailed, setDuoInviteLookupFailed] = useState(false)
 
   const prevDuoServerStateRef = useRef<string | null>(null)
   const hasTrackedDuoCardImpressionRef = useRef(false)
@@ -140,7 +207,7 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     setDuoMode('duo')
   }, [inviteArrival, duoMode, duoShared])
 
-  useResetOnShow(setIsDuoSheetOpen)
+  useResetOnShow(setIsDuoSheetOpen, setIsSoloConfirmOpen)
 
   // Duo status (non-blocking by design)
   const {
@@ -178,6 +245,11 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
         if (statusCode === 404 || statusCode === 410) {
           setDuoInviteInvalid(true)
         } else {
+          // Non-terminal failure (network/transient): fall back to
+          // non-invitee behavior — no guest surface, code creation stays
+          // allowed (AC-7 network-failure fallback / Reliability pillar);
+          // never leave the card stuck in the skeleton window.
+          setDuoInviteLookupFailed(true)
           logWarn('[useDuoRegistration] Duo invite lookup failed', {
             poolId,
             message: err instanceof Error ? err.message : String(err),
@@ -209,10 +281,16 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     prevDuoServerStateRef.current = nextState
   }, [duoStatus?.state, poolId])
 
-  // Invalid/expired duo code: notify parent once.
+  // Invalid/expired duo code: notify parent once. S2 (D-8): a 404/410 lookup
+  // also snaps the segmented display back to 1人, closes any open solo-confirm
+  // dialog, and disarms the C3 auto-expand so the duo row can never resurrect
+  // from the still-present URL params (role falls back to 'none' — AC-7).
   useEffect(() => {
     if (!duoInviteInvalid || duoInvalidToastShownRef.current) return
     duoInvalidToastShownRef.current = true
+    duoAutoExpandAppliedRef.current = true
+    setIsSoloConfirmOpen(false)
+    setDuoMode('solo')
     onInviteInvalid()
   }, [duoInviteInvalid, onInviteInvalid])
 
@@ -234,6 +312,54 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
       duoInviteInfo.poolId === poolId,
     [isDuoInvite, duoInviteInvalid, duoInviteInfo, poolId],
   )
+
+  // S2 (D-8): the public invite lookup is still in flight — the guest region
+  // renders its two skeleton lines (55%/40%, zero-shift heights) instead of
+  // popping the copy in. The window closes on data, on 404/410, AND on a
+  // non-terminal failure (Reliability: never stuck in a middle state).
+  const guestLoading = useMemo(
+    () =>
+      enabled &&
+      isDuoInvite &&
+      !!invitationCode &&
+      !duoInviteInvalid &&
+      !duoInviteLookupFailed &&
+      !duoInviteInfo,
+    [enabled, isDuoInvite, invitationCode, duoInviteInvalid, duoInviteLookupFailed, duoInviteInfo],
+  )
+
+  // S2 (D-1): guest arrival = the current showDuoBanner condition, plus the
+  // lookup-in-flight skeleton window; the session-level duoDeclinedSolo flag
+  // suppresses both entirely (「就我一个人」 confirmed → collapsed card, no
+  // banner, no guest region until a fresh link landing).
+  const guestArrival = useMemo(
+    () => !duoDeclinedSolo && (showDuoBanner || guestLoading),
+    [duoDeclinedSolo, showDuoBanner, guestLoading],
+  )
+
+  // S2 (AC-8): duo-status.viewerRole is the SOLE role authority — the lookup
+  // only fills the gaps it structurally cannot speak to (pre-registration
+  // invitee, duo-status network failure). Locked by tests.
+  const duoRole = useMemo<DuoViewerRole>(
+    () => resolveDuoViewerRole({ viewerRole: duoStatus?.viewerRole, isGuest: guestArrival }),
+    [duoStatus?.viewerRole, guestArrival],
+  )
+
+  // S2 (D-6 trigger + card-state veto): a positive server inviter role always
+  // vetoes the guest surface (inviter opening their own share link keeps the
+  // normal inviter card).
+  const isGuestSurface = guestArrival && duoRole !== 'inviter'
+
+  // S2 (AC-9): guest two-line copy via the lookup-path matrix — copy
+  // ownership stays in lib/duo/duoCopy.ts. The name source is the invite
+  // lookup ONLY (this surface is the pre-registration invitee's; duoStatus
+  // belongs to a different pair here). inviterRegistered gates 「就等你」
+  // (AC-3): absent/false → the reserved L1 variant, never「就等你」.
+  const guestDuoCopy = useMemo(() => {
+    if (!showDuoBanner) return undefined
+    const variant = resolveGuestCopyVariant({ inviterRegistered: duoInviteInfo?.inviterRegistered })
+    return getGuestDuoCopy(variant, duoInviteInfo?.inviter.displayName)
+  }, [showDuoBanner, duoInviteInfo])
 
   useEffect(() => {
     if (!showDuoBanner || hasTrackedDuoBannerImpressionRef.current) return
@@ -270,13 +396,34 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     async (nextMode: 'solo' | 'duo') => {
       if (nextMode === duoMode) return
       duoUserInteractedRef.current = true
-      discoverAnalytics.track('duo_segment_select', poolId, { mode: nextMode })
+
+      // S2 (D-6): an invitee tapping 1人 gets the solo-confirm dialog instead
+      // of an immediate switch — the thumb stays FROZEN on the 2人 side while
+      // the dialog is open (duoMode untouched), duo_segment_select only fires
+      // after a confirm, and overlay mutex (D-9) closes the info sheet.
+      if (
+        nextMode === 'solo' &&
+        isGuestSurface &&
+        !meRegistered &&
+        duoMode === 'duo' &&
+        duoStatus?.state !== 'bound'
+      ) {
+        setIsDuoSheetOpen(false)
+        setIsSoloConfirmOpen(true)
+        return
+      }
+
+      // AC-5: metadata gains role; event name + whitelist are unchanged.
+      discoverAnalytics.track('duo_segment_select', poolId, { mode: nextMode, role: duoRole })
       if (nextMode === 'solo') {
         setDuoMode('solo')
         return
       }
       setDuoMode('duo')
       if (duoCode || isCreatingDuoInvite) return
+      // S2 (AC-2): display state ≠ code-creation intent — an invitee never
+      // POSTs /duo-invites (spy-locked at 0 calls).
+      if (!shouldCreateDuoCode({ role: duoRole, mode: 'duo' })) return
       setIsCreatingDuoInvite(true)
       try {
         const created = await createDuoInvite(apiRequest, poolId)
@@ -291,10 +438,50 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
         setIsCreatingDuoInvite(false)
       }
     },
-    [duoMode, duoCode, isCreatingDuoInvite, poolId, apiRequest, refetchDuoStatus],
+    [
+      duoMode,
+      duoCode,
+      isCreatingDuoInvite,
+      poolId,
+      apiRequest,
+      refetchDuoStatus,
+      isGuestSurface,
+      meRegistered,
+      duoStatus?.state,
+      duoRole,
+      onInviteCreateError,
+    ],
   )
 
+  // S2 (D-6): 主按钮「还是一起去」/遮罩 — dismiss only; mode stays 'duo' and
+  // NO duo_segment_select fires (no selection happened).
+  const confirmStayTogether = useCallback(() => {
+    setIsSoloConfirmOpen(false)
+  }, [])
+
+  // S2 (D-6 + Dependencies): 次按钮「就我一个人」 — close + mode='solo' +
+  // card collapses + session-level decline (banner/guest surface never
+  // re-appear this session) + duo_segment_select fires NOW with the invitee
+  // role + the page strips the duo attribution from the payload.
+  const confirmGoSolo = useCallback(() => {
+    setIsSoloConfirmOpen(false)
+    setDuoDeclinedSolo(true)
+    duoUserInteractedRef.current = true
+    discoverAnalytics.track('duo_segment_select', poolId, { mode: 'solo', role: 'invitee' })
+    setDuoMode('solo')
+    onDuoDeclinedSolo?.()
+  }, [poolId, onDuoDeclinedSolo])
+
+  // S2 (D-9 overlay mutex): close the dialog without a decision (e.g. the
+  // registration confirm modal is opening).
+  const closeSoloConfirm = useCallback(() => {
+    setIsSoloConfirmOpen(false)
+  }, [])
+
   const openDuoSheet = useCallback(() => {
+    // D-9 overlay mutex: the info sheet and the solo-confirm dialog never
+    // share the viewport.
+    setIsSoloConfirmOpen(false)
     setIsDuoSheetOpen(true)
     discoverAnalytics.track('duo_info_sheet_open', poolId)
   }, [poolId])
@@ -317,14 +504,31 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
         serverState: duoStatus?.state,
         mode: duoMode,
         hasShared: duoShared,
+        role: duoRole,
+        isGuest: guestArrival,
       }),
-    [isDuoStatusLoading, duoStatus, duoStatusError, duoMode, duoShared],
+    [isDuoStatusLoading, duoStatus, duoStatusError, duoMode, duoShared, duoRole, guestArrival],
   )
 
   const partnerName = useMemo(
     () => duoStatus?.friendDisplayName || duoInviteInfo?.inviter.displayName || '朋友',
     [duoStatus?.friendDisplayName, duoInviteInfo?.inviter.displayName],
   )
+
+  // S3 (PR-2) waiting copy: the viewerRole × pendingSide matrix lives in
+  // lib/duo/duoCopy.ts. The name source is duoStatus ONLY — never the invite
+  // lookup's inviter name, which belongs to a different pair when the viewer
+  // also holds their own code. Missing direction fields (old server) fall
+  // back to D1 inside the resolver, so 「就等你」 never renders without a
+  // positive signal (AC-3).
+  const duoWaitingCopy = useMemo<DuoWaitingCopyResolved | undefined>(() => {
+    if (duoCardState !== 'waiting') return undefined
+    return resolveDuoWaitingCopy({
+      viewerRole: duoStatus?.viewerRole,
+      pendingSide: duoStatus?.pendingSide,
+      friendDisplayName: duoStatus?.friendDisplayName,
+    })
+  }, [duoCardState, duoStatus?.viewerRole, duoStatus?.pendingSide, duoStatus?.friendDisplayName])
 
   const successDuo = useMemo(() => {
     if (duoStatus?.state === 'bound') {
@@ -352,7 +556,16 @@ export function useDuoRegistration(options: UseDuoRegistrationOptions): UseDuoRe
     selectDuoMode,
     retryDuoStatus,
     partnerName,
+    duoWaitingCopy,
     duoPartnerNameForAlreadyJoined: duoStatus?.state === 'bound' ? partnerName : undefined,
     successDuo,
+    duoRole,
+    guestDuoCopy,
+    guestLoading,
+    duoDeclinedSolo,
+    isSoloConfirmOpen,
+    confirmStayTogether,
+    confirmGoSolo,
+    closeSoloConfirm,
   }
 }

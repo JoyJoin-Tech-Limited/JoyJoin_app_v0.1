@@ -18,6 +18,7 @@ import { eventCreditsRepo } from "./eventCreditsRepo";
 import { resolveEffectivePreferenceDNA } from "../lib/matchCompass";
 import { resolveOptionalRegistrationAttribution } from "../lib/eventPoolRegistration";
 import { normalizeBudgetRangeForWrite } from "../lib/budgetTierWrite";
+import { resolveDuoBindingAvailability } from "./duoBindingRepo";
 import { logger } from "../lib/logger"; 
 import { users } from "@shared/schema";
 
@@ -401,7 +402,8 @@ export const paymentFulfillmentRepo = {
           // presented a code at register-with-payment time; mirror the
           // invitation_uses write from POST /api/event-pools/:id/register so
           // duo pairs bind for paid invitees too. Guards match that route
-          // (expiry, self-invite, duo pool-scope, dedup). Referral codes stay
+          // (expiry, self-invite, duo pool-scope, dedup, and the S1
+          // one-partner-per-pool availability probes). Referral codes stay
           // untouched (they are not carried over the payment hop today).
           const invitationCode = eventRegistrationPayload?.invitationCode;
           if (invitationCode) {
@@ -411,10 +413,26 @@ export const paymentFulfillmentRepo = {
               .where(eq(invitations.code, invitationCode))
               .limit(1);
 
+            // S1 (one-partner-per-pool): same pre-fetch as the free route —
+            // a refused binding skips the invitation_uses write (and the
+            // total_acceptances increment) but NEVER the payment or the
+            // registration write (both already committed above/below).
+            const duoAvailability =
+              invitation &&
+              invitation.invitationType === "duo" &&
+              invitation.poolId === updatedPayment.relatedId
+                ? await resolveDuoBindingAvailability(tx, {
+                    poolId: updatedPayment.relatedId,
+                    userId: updatedPayment.userId,
+                    invitationId: invitation.id,
+                  })
+                : undefined;
+
             const attribution = resolveOptionalRegistrationAttribution({
               userId: updatedPayment.userId,
               poolId: updatedPayment.relatedId,
               invitation: invitation ?? null,
+              duo: duoAvailability,
             });
 
             if (attribution.kind === "invitation") {

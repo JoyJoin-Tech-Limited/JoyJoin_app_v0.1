@@ -89,6 +89,7 @@ import XiaoyueLetterCard from './components/XiaoyueLetterCard'
 import PoolRegistrationDuoCard from './components/PoolRegistrationDuoCard'
 import PoolRegistrationDuoBanner from './components/PoolRegistrationDuoBanner'
 import DuoInfoSheet from './components/DuoInfoSheet'
+import DuoSoloConfirmDialog from './components/DuoSoloConfirmDialog'
 import {
   PoolRegistrationLoading,
   PoolRegistrationEmpty,
@@ -301,6 +302,11 @@ export default function PoolRegistrationPage() {
   )
 
   // 双人成行 (duo registration): state/queries/handlers live in the custom hook.
+  // S2 (Dependencies): session-level 「就我一个人」 marker — once the invitee
+  // confirms solo, BOTH invitationCode refill sources (URL param +
+  // user.pendingReferralCode) stay suppressed for this page's lifetime; a
+  // fresh link landing is a new decision context (the ref re-initializes).
+  const duoDeclinedSoloRef = useRef(false)
   const duo = useDuoRegistration({
     apiRequest,
     poolId,
@@ -316,12 +322,19 @@ export default function PoolRegistrationPage() {
     stepBrief: STEP_BRIEF,
     authLoading,
     reduceMotion,
+    meRegistered: alreadyRegistered,
     onInviteInvalid: () => {
       Taro.showToast({ title: '这张邀请卡过期啦，自己来也很好玩', icon: 'none', duration: TOAST_LONG_MS })
       setFormState((currentState) => ({ ...currentState, invitationCode: undefined }))
     },
     onInviteCreateError: (error) => {
       Taro.showToast({ title: resolveMessage(error, 'submit-failed'), icon: 'none', duration: TOAST_LONG_MS })
+    },
+    onDuoDeclinedSolo: () => {
+      duoDeclinedSoloRef.current = true
+      // S2 solo 归因压制: the registration payload no longer carries
+      // invitationCode (no use row → no pair → no reward; server untouched).
+      setFormState((currentState) => ({ ...currentState, invitationCode: undefined }))
     },
   })
 
@@ -441,7 +454,9 @@ export default function PoolRegistrationPage() {
     setFormState({
       ...INITIAL_FORM_STATE,
       eventIntent: initialIntent,
-      invitationCode: resolvedInvitationCode || undefined,
+      // S2: after a「就我一个人」confirm neither refill source (URL param /
+      // pendingReferralCode) may re-inject the duo code this session.
+      invitationCode: duoDeclinedSoloRef.current ? undefined : resolvedInvitationCode || undefined,
     })
     setRegistered(false)
     registeredRef.current = false
@@ -524,7 +539,11 @@ export default function PoolRegistrationPage() {
     appliedReturnContextRef.current = nextContext.updatedAt
     setFormState({
       ...buildFormStateFromDraft(nextContext.draft),
-      invitationCode: resolvedInvitationCode || buildFormStateFromDraft(nextContext.draft).invitationCode,
+      // S2: the payment-return draft restore respects the same solo-decline
+      // suppression as the mount effect (invitationCode stays stripped).
+      invitationCode: duoDeclinedSoloRef.current
+        ? undefined
+        : resolvedInvitationCode || buildFormStateFromDraft(nextContext.draft).invitationCode,
     })
     setStep(resolveRegistrationStep(nextContext.resumeStep))
     setResumeContext(nextContext)
@@ -962,8 +981,9 @@ export default function PoolRegistrationPage() {
       return
     }
     discoverAnalytics.track('registration_confirm_shown', poolId)
-    // Overlay mutual exclusion (B'-5): never show both overlays at once.
+    // Overlay mutual exclusion (B'-5 / S2 D-9): never show two overlays at once.
     duo.closeDuoSheet()
+    duo.closeSoloConfirm()
     setShowConfirmModal(true)
   }, [hasBudgetSelection, hasIntentSelection, poolId, duo])
 
@@ -1123,6 +1143,9 @@ export default function PoolRegistrationPage() {
               mode={duo.duoCardState === 'error' ? 'solo' : duo.duoMode}
               isCreatingInvite={duo.isCreatingDuoInvite}
               partnerName={duo.partnerName}
+              waitingCopy={duo.duoWaitingCopy}
+              guestCopy={duo.guestDuoCopy}
+              guestLoading={duo.guestLoading}
               reduceMotion={reduceMotion}
               onSelectMode={(nextMode) => { void duo.selectDuoMode(nextMode) }}
               onOpenInfo={duo.openDuoSheet}
@@ -1132,8 +1155,11 @@ export default function PoolRegistrationPage() {
         </>
       ) : null}
 
-      {/* Invitee duo context banner — persistent across steps 0–2 (spec §C.1). */}
-      {duoRegistrationEnabled && duo.showDuoBanner ? (
+      {/* Invitee duo context banner — S2 (D-1): steps 1–2 only; step 0 is
+          owned by the guest card surface so exactly ONE duo-context surface
+          is ever on screen. Session-level duoDeclinedSolo (「就我一个人」)
+          suppresses it entirely (D-6). */}
+      {duoRegistrationEnabled && duo.showDuoBanner && step !== STEP_BRIEF && !duo.duoDeclinedSolo ? (
         <PoolRegistrationDuoBanner inviterName={duo.partnerName} />
       ) : null}
 
@@ -1272,6 +1298,17 @@ export default function PoolRegistrationPage() {
       {duo.isDuoSheetOpen ? (
         <DuoInfoSheet reduceMotion={reduceMotion} onClose={duo.closeDuoSheet} />
       ) : null}
+
+      {/* S2 (D-4..D-9): invitee solo-confirm dialog — self-drawn centered
+          dialog; overlay mutex with the info sheet + confirm modal is owned
+          by the open handlers; visibility resets on swipe-back via the hook. */}
+      <DuoSoloConfirmDialog
+        visible={duo.isSoloConfirmOpen}
+        inviterName={duo.partnerName}
+        reduceMotion={reduceMotion}
+        onStayTogether={duo.confirmStayTogether}
+        onGoSolo={duo.confirmGoSolo}
+      />
     </View>
   )
 }

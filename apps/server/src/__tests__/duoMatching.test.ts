@@ -12,6 +12,19 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// S1: capture the structured duo_conflict warn (poolFormation imports the
+// logger directly — the mock is file-wide and inert for the other tests).
+const mockLoggerWarn = vi.fn();
+vi.mock('../lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: mockLoggerWarn,
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
+  },
+}));
+
 vi.mock('../archetypeChemistry', () => ({
   chemistryMatrix: {
     corgi: { corgi: 90, koala: 50 },
@@ -35,6 +48,7 @@ vi.mock('../matchingSemantic', () => ({
 
 const { runGreedyPoolMatchingCore } = await import('../poolMatchingService');
 import type { UserWithProfile } from '../poolMatchingService';
+import type { GreedyPoolMatchingConfig } from '../matching/poolMatchingTypes';
 
 function makeUser(id: string, archetype = 'corgi'): UserWithProfile {
   return {
@@ -280,9 +294,20 @@ describe('runGreedyPoolMatchingCore — 双人成行 duo atomic units', () => {
       [],
     );
 
+    // AC-6: same-fixture snapshot over group集合 + 成员顺序 + 分数 (not just
+    // sorted membership) — the conflict backstop must be inert for zero-duo
+    // pools.
     const shape = (groups: typeof withoutParam) =>
-      groups.map((g) => g.members.map((m) => m.userId).sort());
+      groups.map((g) => ({
+        memberIds: g.members.map((m) => m.userId),
+        avgPairScore: g.avgPairScore,
+        overallScore: g.overallScore,
+        diversityScore: g.diversityScore,
+        communicationBalance: g.communicationBalance,
+        temperatureLevel: g.temperatureLevel,
+      }));
     expect(shape(withEmptyDuo)).toEqual(shape(withoutParam));
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
   });
 
   it('R1 no-isolate holds for EACH duo member individually (duo-internal tie does not count)', async () => {
@@ -322,5 +347,180 @@ describe('runGreedyPoolMatchingCore — 双人成行 duo atomic units', () => {
 
     expect(groupOf(groups, 'u1')).toBeUndefined();
     expect(groupOf(groups, 'u2')).toBeUndefined();
+  });
+});
+
+/**
+ * S1 (one-partner-per-pool) AC-4 — overlap backstop in the greedy core.
+ * Overlapping pairs (a user in 2+ distinct pairs — legacy rows or a
+ * concurrent double-consume race) must resolve deterministically: every
+ * conflict-involved user exits the eligible roster (整组顺延), no user ever
+ * appears in two groups/pairs, and a structured `duo_conflict` warn carries
+ * poolId + conflictingUserIds + pairCount.
+ */
+describe('runGreedyPoolMatchingCore — duo overlap conflict backstop (S1 AC-4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('strands every conflict-involved user for A→B / A→C / B→C and logs duo_conflict', async () => {
+    const users = ['a', 'b', 'c', 's1', 's2', 's3', 's4'].map((id) => makeUser(id));
+    const ids = users.map((u) => u.userId);
+    const cache = buildPairScoreCache(ids, () => 95);
+    // pool.id is read defensively in poolFormation for structured logging.
+    const pool: GreedyPoolMatchingConfig & { id: string } = {
+      id: 'pool-conflict-1',
+      minGroupSize: 4,
+      maxGroupSize: 6,
+      targetGroups: 10,
+    };
+
+    const groups = await runGreedyPoolMatchingCore(
+      users,
+      pool,
+      new Map(),
+      cache,
+      undefined,
+      false,
+      undefined,
+      [],
+      undefined,
+      undefined,
+      50,
+      false,
+      false,
+      false,
+      [...DUO('a', 'b'), ...DUO('a', 'c'), ...DUO('b', 'c')],
+    );
+
+    // The 4 solos form one group; every conflict-involved user is absent from
+    // ALL groups (no repeats, no half-units).
+    expect(groups.length).toBe(1);
+    expect(groups[0].members.map((m) => m.userId).sort()).toEqual(['s1', 's2', 's3', 's4']);
+    for (const conflicted of ['a', 'b', 'c']) {
+      expect(groupOf(groups, conflicted)).toBeUndefined();
+    }
+
+    // Structured warn: poolId + conflictingUserIds + pairCount.
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      'duo_conflict',
+      expect.objectContaining({
+        poolId: 'pool-conflict-1',
+        conflictingUserIds: ['a', 'b', 'c'],
+        pairCount: 3,
+        droppedPairCount: 3,
+      }),
+    );
+  });
+
+  it('single overlap A→B / A→C strands the pivot AND both single-binding members', async () => {
+    const users = ['a', 'b', 'c', 's1', 's2', 's3', 's4'].map((id) => makeUser(id));
+    const ids = users.map((u) => u.userId);
+    const cache = buildPairScoreCache(ids, () => 95);
+
+    const groups = await runGreedyPoolMatchingCore(
+      users,
+      { minGroupSize: 4, maxGroupSize: 6, targetGroups: 10 },
+      new Map(),
+      cache,
+      undefined,
+      false,
+      undefined,
+      [],
+      undefined,
+      undefined,
+      50,
+      false,
+      false,
+      false,
+      [...DUO('a', 'b'), ...DUO('a', 'c')],
+    );
+
+    expect(groups.length).toBe(1);
+    // b and c each had only ONE binding, but it was dropped with the pivot —
+    // duo atomicity means they strand together rather than match solo.
+    for (const conflicted of ['a', 'b', 'c']) {
+      expect(groupOf(groups, conflicted)).toBeUndefined();
+    }
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      'duo_conflict',
+      expect.objectContaining({
+        conflictingUserIds: ['a', 'b', 'c'],
+        pairCount: 2,
+        droppedPairCount: 2,
+      }),
+    );
+  });
+
+  it('does not flag a conflict for a duplicated IDENTICAL pair (dedup, not overlap)', async () => {
+    const users = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'].map((id) => makeUser(id));
+    const ids = users.map((u) => u.userId);
+    const cache = buildPairScoreCache(ids, () => 95);
+
+    const groups = await runGreedyPoolMatchingCore(
+      users,
+      { minGroupSize: 6, maxGroupSize: 6, targetGroups: 1 },
+      new Map(),
+      cache,
+      undefined,
+      false,
+      undefined,
+      [],
+      undefined,
+      undefined,
+      50,
+      false,
+      false,
+      false,
+      // Same binding twice, direction flipped once — one logical duo.
+      [...DUO('u1', 'u2'), ...DUO('u2', 'u1'), ...DUO('u1', 'u2')],
+    );
+
+    expect(groups.length).toBe(1);
+    expect(groupOf(groups, 'u1')).toBe(groups[0]);
+    expect(groupOf(groups, 'u2')).toBe(groups[0]);
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('keeps clean duos intact when a disjoint conflict cluster exists', async () => {
+    const users = ['a', 'b', 'c', 'x', 'y', 's1', 's2', 's3', 's4'].map((id) => makeUser(id));
+    const ids = users.map((u) => u.userId);
+    const cache = buildPairScoreCache(ids, () => 95);
+
+    const groups = await runGreedyPoolMatchingCore(
+      users,
+      { minGroupSize: 4, maxGroupSize: 5, targetGroups: 10 },
+      new Map(),
+      cache,
+      undefined,
+      false,
+      undefined,
+      [],
+      undefined,
+      undefined,
+      50,
+      false,
+      false,
+      false,
+      [...DUO('a', 'b'), ...DUO('a', 'c'), ...DUO('x', 'y')],
+    );
+
+    // The clean duo x↔y still forms a group with solos; the conflict cluster
+    // strands. No user appears in more than one group.
+    const allMembers = groups.flatMap((g) => g.members.map((m) => m.userId));
+    expect(new Set(allMembers).size).toBe(allMembers.length);
+    expect(groupOf(groups, 'x')).toBeDefined();
+    expect(groupOf(groups, 'x')).toBe(groupOf(groups, 'y'));
+    for (const conflicted of ['a', 'b', 'c']) {
+      expect(groupOf(groups, conflicted)).toBeUndefined();
+    }
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      'duo_conflict',
+      expect.objectContaining({
+        conflictingUserIds: ['a', 'b', 'c'],
+        pairCount: 3,
+        droppedPairCount: 2,
+      }),
+    );
   });
 });

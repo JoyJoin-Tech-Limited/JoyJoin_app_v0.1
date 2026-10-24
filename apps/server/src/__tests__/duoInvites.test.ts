@@ -122,3 +122,111 @@ describe("resolveDuoStatus", () => {
     expect(status.friendDisplayName).toBeUndefined();
   });
 });
+
+describe("resolveDuoStatus — viewerRole × pendingSide direction matrix (S3, AC-0/AC-1)", () => {
+  const invitedAt = new Date("2026-08-07T06:00:00Z");
+
+  it("inviter × pendingSide=invitee — I created the code, the friend has not registered (D1)", () => {
+    const status = resolveDuoStatus({ invitationCreatedAt: invitedAt, userRegistered: true });
+    expect(status.state).toBe("waiting");
+    expect(status.viewerRole).toBe("inviter");
+    expect(status.pendingSide).toBe("invitee");
+  });
+
+  it("inviter × pendingSide=inviter — the friend registered, only I am missing (「就等你」, D2)", () => {
+    const status = resolveDuoStatus({
+      invitationCreatedAt: invitedAt,
+      inviteeRegistered: true,
+      inviteeDisplayName: "小鹿",
+      userRegistered: false,
+    });
+    expect(status.state).toBe("waiting");
+    expect(status.viewerRole).toBe("inviter");
+    expect(status.pendingSide).toBe("inviter");
+    expect(status.friendDisplayName).toBe("小鹿");
+  });
+
+  it("invitee × pendingSide=inviter — I consumed the code, the inviter has not registered (D3)", () => {
+    const status = resolveDuoStatus({
+      consumedInvitationCreatedAt: invitedAt,
+      inviterRegistered: false,
+      inviterDisplayName: "阿杰",
+    });
+    expect(status.state).toBe("waiting");
+    expect(status.viewerRole).toBe("invitee");
+    expect(status.pendingSide).toBe("inviter");
+    expect(status.friendDisplayName).toBe("阿杰");
+  });
+
+  it("never emits the unreachable invitee × pendingSide=invitee combination (AC-2)", () => {
+    // invitation_uses rows are written only at registration time, so an
+    // invitee-side viewer is registered by definition — the invitee branch
+    // hard-codes pendingSide="inviter" regardless of the remaining inputs.
+    const status = resolveDuoStatus({
+      consumedInvitationCreatedAt: invitedAt,
+      inviterRegistered: false,
+    });
+    expect(status).toMatchObject({
+      state: "waiting",
+      viewerRole: "invitee",
+      pendingSide: "inviter",
+    });
+    expect([status.viewerRole, status.pendingSide]).not.toEqual(["invitee", "invitee"]);
+  });
+
+  it("inviter side with BOTH sides unregistered still waits on the invitee (never 「就等你」)", () => {
+    const status = resolveDuoStatus({ invitationCreatedAt: invitedAt, userRegistered: false });
+    expect(status.state).toBe("waiting");
+    expect(status.viewerRole).toBe("inviter");
+    expect(status.pendingSide).toBe("invitee");
+  });
+
+  it("missing registration flags degrade to waiting on the friend, never fabricate 「就等你」", () => {
+    // invitationCreatedAt alone (inviteeRegistered / userRegistered omitted)
+    // must resolve to the safe D1 direction.
+    const status = resolveDuoStatus({ invitationCreatedAt: invitedAt });
+    expect(status.state).toBe("waiting");
+    expect(status.viewerRole).toBe("inviter");
+    expect(status.pendingSide).toBe("invitee");
+  });
+
+  it("AC-6: dual-hold (own code + consumed code) resolves from the inviter perspective", () => {
+    const status = resolveDuoStatus({
+      invitationCreatedAt: invitedAt,
+      userRegistered: true,
+      consumedInvitationCreatedAt: invitedAt,
+      inviterRegistered: false,
+      inviterDisplayName: "阿杰",
+    });
+    expect(status.state).toBe("waiting");
+    expect(status.viewerRole).toBe("inviter");
+    expect(status.pendingSide).toBe("invitee");
+    expect(status.friendDisplayName).toBeUndefined();
+  });
+
+  it("bound responses carry no direction fields (waiting-only surface)", () => {
+    const inviterBound = resolveDuoStatus({
+      invitationCreatedAt: invitedAt,
+      inviteeRegistered: true,
+      inviteeDisplayName: "小鹿",
+      userRegistered: true,
+    });
+    expect(inviterBound.state).toBe("bound");
+    expect(inviterBound.viewerRole).toBeUndefined();
+    expect(inviterBound.pendingSide).toBeUndefined();
+
+    const inviteeBound = resolveDuoStatus({
+      consumedInvitationCreatedAt: invitedAt,
+      inviterRegistered: true,
+      inviterDisplayName: "阿杰",
+    });
+    expect(inviteeBound.state).toBe("bound");
+    expect(inviteeBound.viewerRole).toBeUndefined();
+    expect(inviteeBound.pendingSide).toBeUndefined();
+  });
+
+  it("none responses carry no direction fields", () => {
+    const status = resolveDuoStatus({});
+    expect(status).toEqual({ state: "none" });
+  });
+});

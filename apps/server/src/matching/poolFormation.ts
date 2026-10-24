@@ -62,6 +62,7 @@ import {
   groupSatisfiesRematchNoveltyRule,
   type MatchHistoryLookup,
 } from "../services/matchHistoryDerivation";
+import { resolveDuoPairSet } from "./duoPairResolution";
 
 /**
  * In-memory greedy pool matching (same algorithm as `matchEventPool` after eligibility + caches).
@@ -148,13 +149,30 @@ export async function runGreedyPoolMatchingCore(
   // ── 双人成行 (duo) atomic units: variant A 整组顺延 (spec §D.3) ───────────
   // Duo = hard atomic unit: both members together or unmatched together.
   // MAX 1 duo per group. Fallback semantics live in guards marked [DUO].
-  const duoPartnerOf = new Map<string, string>();
-  const duoInternalPairKeys = new Set<string>();
-  for (const duo of duoPairs) {
-    duoPartnerOf.set(duo.inviterId, duo.inviteeId);
-    duoPartnerOf.set(duo.inviteeId, duo.inviterId);
-    duoInternalPairKeys.add([duo.inviterId, duo.inviteeId].sort().join('|'));
+  //
+  // S1 (one-partner-per-pool) overlap backstop: a user appearing in 2+
+  // distinct pairs (legacy rows or a concurrent double-consume — the DB
+  // unique index is deferred on the precondition that THIS backstop exists)
+  // poisons the bare last-write-wins Map this replaces. resolveDuoPairSet is
+  // deterministic (appearance counting, order-independent): every pair
+  // touching a conflict pivot is dropped and ALL conflict-involved users are
+  // removed from the eligible roster — they stay unmatched together
+  // (整组顺延) and surface via the structured duo_conflict warn below.
+  const duoResolution = resolveDuoPairSet(duoPairs);
+  if (duoResolution.conflictingUserIds.length > 0) {
+    logger.warn("duo_conflict", {
+      poolId: poolIdForLog,
+      conflictingUserIds: duoResolution.conflictingUserIds,
+      pairCount: duoPairs.length,
+      droppedPairCount: duoResolution.droppedPairCount,
+    });
+    const conflictedUserIdSet = new Set(duoResolution.conflictingUserIds);
+    eligibleUsers = eligibleUsers.filter(
+      (user) => !conflictedUserIdSet.has(user.userId),
+    );
   }
+  const duoPartnerOf = duoResolution.duoPartnerOf;
+  const duoInternalPairKeys = duoResolution.duoInternalPairKeys;
   const isDuoInternalPair = (userAId: string, userBId: string): boolean =>
     duoInternalPairKeys.has([userAId, userBId].sort().join('|'));
   // Exclusion set for group-quality metrics (duo-internal pair must not

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import type { DuoCardState } from '../../../lib/duo/duoState'
+import {
+  getGuestDuoCopy,
+  resolveDuoWaitingCopy,
+  type DuoWaitingCopyResolved,
+} from '../../../lib/duo/duoCopy'
 import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
 
@@ -12,6 +17,26 @@ interface PoolRegistrationDuoCardProps {
   isCreatingInvite: boolean
   /** Bound partner name (server `friendDisplayName`, falling back to inviter lookup). */
   partnerName?: string
+  /**
+   * S3 (PR-2): direction-aware waiting copy resolved by useDuoRegistration
+   * from the duo-status viewerRole × pendingSide matrix. Optional — a missing
+   * value falls back to the D1 direction with the 朋友 name fallback (AC-3).
+   */
+  waitingCopy?: DuoWaitingCopyResolved
+  /**
+   * S2 (AC-9): guest two-line copy resolved by useDuoRegistration via
+   * lib/duo/duoCopy (resolveGuestCopyVariant + getGuestDuoCopy). Optional —
+   * a missing value defensively falls back to the reserved variant with the
+   * 朋友 name fallback. Copy ownership stays in lib/duo/duoCopy.ts; this
+   * component never inlines strings.
+   */
+  guestCopy?: { line1: string; line2: string }
+  /**
+   * S2 (D-8): the public invite lookup is still in flight — the guest region
+   * renders two skeleton lines (55%/40%, same heights as the final lines) so
+   * the card never pops height when the copy lands.
+   */
+  guestLoading?: boolean
   reduceMotion: boolean
   onSelectMode: (mode: 'solo' | 'duo') => void
   onOpenInfo: () => void
@@ -36,6 +61,9 @@ export default function PoolRegistrationDuoCard({
   mode,
   isCreatingInvite,
   partnerName,
+  waitingCopy,
+  guestCopy,
+  guestLoading = false,
   reduceMotion,
   onSelectMode,
   onOpenInfo,
@@ -73,6 +101,16 @@ export default function PoolRegistrationDuoCard({
   const expandedClass = reduceMotion
     ? 'pool-reg-duo__expand pool-reg-duo__expand--static'
     : 'pool-reg-duo__expand'
+
+  // S3 (PR-2): direction-aware waiting copy; a missing prop defensively falls
+  // back to the D1 direction (AC-3 — 「就等你」 never renders without a
+  // positive direction signal).
+  const waiting = waitingCopy ?? resolveDuoWaitingCopy({})
+
+  // S2 (AC-9): guest two-line copy; a missing prop defensively falls back to
+  // the reserved variant with the 朋友 name fallback (lookup path AC-3 —
+  // 「就等你」 never renders without inviterRegistered === true upstream).
+  const guest = guestCopy ?? getGuestDuoCopy('reserved', null)
 
   const renderSegmented = (disabled: boolean) => (
     <View
@@ -175,6 +213,34 @@ export default function PoolRegistrationDuoCard({
     )
   }
 
+  if (state === 'guest') {
+    // S2 (D-2/D-3): pre-registration invitee note card — two plain text
+    // lines, ZERO buttons (no openType='share', no「喊朋友一起来」), zero new
+    // keyframes (enters on the shared fade-slide-up via __expand). The
+    // segmented stays tappable: picking 1人 opens the solo-confirm dialog
+    // upstream (D-6), it does not switch directly.
+    // P1 兼容条款: keep the __guest hook + L1/L2 line structure stable — the
+    // P1 便签卡 top-rule/third-line/fade-in are additive on top of this.
+    return (
+      <View className='pool-reg-duo'>
+        {renderHeaderRow(false)}
+        <View className={expandedClass}>
+          {guestLoading ? (
+            <View className='pool-reg-duo__guest' aria-busy='true'>
+              <View className='pool-reg-duo__guest-skel pool-reg-duo__guest-skel--l1' />
+              <View className='pool-reg-duo__guest-skel pool-reg-duo__guest-skel--l2' />
+            </View>
+          ) : (
+            <View className='pool-reg-duo__guest' aria-live='polite'>
+              <Text className='pool-reg-duo__guest-line1'>{guest.line1}</Text>
+              <Text className='pool-reg-duo__guest-line2'>{guest.line2}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View className='pool-reg-duo'>
       {renderHeaderRow(segmentedLocked)}
@@ -194,18 +260,26 @@ export default function PoolRegistrationDuoCard({
       ) : null}
 
       {state === 'waiting' ? (
-        <View className={expandedClass}>
-          {/* 待入队态保持静止（附录 H · A'-9）：等待不是成就，不配动画。 */}
+        // D-5: 待入队态保持静止（附录 H · A'-9）——等待不是成就，三向文案全部
+        // 无动画；waiting 行固定 --static，不随 reduceMotion 切换。
+        <View className='pool-reg-duo__expand pool-reg-duo__expand--static'>
           <View className='pool-reg-duo__waiting-row'>
-            <Text className='pool-reg-duo__waiting-text'>已发给朋友，等 TA 报名</Text>
-            <Button
-              variant='secondary'
-              size='sm'
-              className='pool-reg-duo__again-btn'
-              openType='share'
-            >
-              再喊一次
-            </Button>
+            <Text className='pool-reg-duo__waiting-text'>{waiting.text}</Text>
+            {waiting.showAgain ? (
+              // AC-8: 仅 D1 方向渲染「再喊一次」。D-2: 视觉 pill 维持 56rpx，
+              // 命中区经按钮透明 padding 扩到 88rpx（不与文案行视觉重叠）。
+              <Button
+                variant='secondary'
+                size='sm'
+                className='pool-reg-duo__again-btn'
+                openType='share'
+                aria-label='再喊一次'
+              >
+                <View className='pool-reg-duo__again-pill'>
+                  <Text className='pool-reg-duo__again-pill-text'>再喊一次</Text>
+                </View>
+              </Button>
+            ) : null}
           </View>
         </View>
       ) : null}

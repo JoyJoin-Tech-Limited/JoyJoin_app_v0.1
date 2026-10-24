@@ -3,6 +3,8 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
+import { haptics } from '../../lib/utils/haptics'
+import { getDailyGreeting } from './profileConstants'
 import ProfilePage from './index'
 
 const state = vi.hoisted(() => ({
@@ -51,6 +53,9 @@ vi.mock('@tarojs/components', () => ({
   Text: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => <span {...props}>{children}</span>,
   Image: ({ lazyLoad: _lazyLoad, mode: _mode, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { lazyLoad?: boolean; mode?: string }) => <img {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, enhanced: _enhanced, showScrollbar: _showScrollbar, ...props }: React.HTMLAttributes<HTMLDivElement> & { scrollY?: boolean; enhanced?: boolean; showScrollbar?: boolean }) => <div {...props}>{children}</div>,
+  // P2-3: the poster canvas is an offscreen bitmap target — a plain canvas
+  // element suffices for jsdom (no 2D context calls happen in page tests).
+  Canvas: ({ canvasId, style }: { canvasId?: string; style?: React.CSSProperties }) => <canvas id={canvasId} style={style} />,
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -491,10 +496,248 @@ describe('Profile approved V4 layout', () => {
     )
   })
 
-  it('shows the archetype tagline as a bio fallback and prompts to review the report', () => {
+  it('P1-6: zero-inventory users get the first-draw stepper teaser instead of empty slots', () => {
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    const equipment = state.queryStates.get('mini-program/equipment/me')
+    state.queryStates.set('mini-program/equipment/me', {
+      data: {
+        ...(equipment?.data as Record<string, unknown>),
+        outfit: { topItemId: null, bottomItemId: null, shoesItemId: null, accessoryItemId: null, version: 1 },
+        inventory: [],
+      },
+    })
+
+    const { getByTestId, getByText } = render(<ProfilePage />)
+    expect(getByTestId('profile-equipment-teaser')).toBeTruthy()
+    expect(getByText('报名一场局，结束后可抽一件')).toBeTruthy()
+  })
+
+  it('P1-6: pity chip shows 保底 n/3 for partial guarantees and 必得 at 3', () => {
+    const equipment = state.queryStates.get('mini-program/equipment/me')
+    const base = equipment?.data as Record<string, unknown>
+    state.queryStates.set('mini-program/equipment/me', {
+      data: { ...base, wallet: { fragmentBalance: 0, pityMisses: 2, pityTarget: 4 } },
+    })
+
+    const { getByTestId, rerender } = render(<ProfilePage />)
+    expect(getByTestId('profile-equipment-pity-chip').textContent).toContain('新装备保底 2/3')
+
+    state.queryStates.set('mini-program/equipment/me', {
+      data: { ...base, wallet: { fragmentBalance: 0, pityMisses: 3, pityTarget: 4 } },
+    })
+    rerender(<ProfilePage />)
+    expect(getByTestId('profile-equipment-pity-chip').textContent).toContain('下一抽必得新装备')
+  })
+
+  it('P2-4: Duo card shows for a pending registration and navigates to the invite duo lane', () => {
+    const duoFeatures = { ...makeUser(true).features, duoRegistrationEnabled: true }
+    state.user = { ...makeUser(true), features: duoFeatures }
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', poolId: 'pool-9', matchStatus: 'pending' }],
+    })
+    state.queryStates.set('mini-program/duo-status/pool-9', { data: { state: 'none' } })
+    state.navigateTo.mockClear()
+
+    const { getByTestId, getByText } = render(<ProfilePage />)
+    expect(getByTestId('profile-duo-card')).toBeTruthy()
+    expect(getByText('你报名的那场局，还差一位同桌')).toBeTruthy()
+
+    fireEvent.click(getByTestId('profile-duo-card-cta'))
+    expect(state.navigateTo).toHaveBeenCalledWith({
+      url: `${MINI_PROGRAM_ROUTES.invite}?poolId=pool-9`,
+    })
+  })
+
+  it('P2-4: Duo card hides when the pool is already duo-bound', () => {
+    const duoFeatures = { ...makeUser(true).features, duoRegistrationEnabled: true }
+    state.user = { ...makeUser(true), features: duoFeatures }
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', poolId: 'pool-9', matchStatus: 'pending' }],
+    })
+    state.queryStates.set('mini-program/duo-status/pool-9', { data: { state: 'bound' } })
+
+    const { queryByTestId } = render(<ProfilePage />)
+    expect(queryByTestId('profile-duo-card')).toBeNull()
+  })
+
+  it('P2-4: dismiss writes a 72h per-pool snooze and hides the card', async () => {
+    const duoFeatures = { ...makeUser(true).features, duoRegistrationEnabled: true }
+    state.user = { ...makeUser(true), features: duoFeatures }
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', poolId: 'pool-9', matchStatus: 'pending' }],
+    })
+    state.queryStates.set('mini-program/duo-status/pool-9', { data: { state: 'none' } })
+
+    const { getByTestId, queryByTestId } = render(<ProfilePage />)
+    expect(getByTestId('profile-duo-card')).toBeTruthy()
+
+    fireEvent.click(getByTestId('profile-duo-card-dismiss'))
+    await waitFor(() => expect(queryByTestId('profile-duo-card')).toBeNull(), { timeout: 1000 })
+    expect(typeof state.storage.get('jj_profile_duo_card_dismissed:pool-9')).toBe('number')
+  })
+
+  it('P1-5: shows the quest line for a pre-成行 user and hides it forever once matched', () => {
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    const { getByTestId, getByText, queryByTestId, rerender } = render(<ProfilePage />)
+
+    // Fresh user: quest visible; step 1 (测评) auto-checked for corgi,
+    // steps 2/3 carry CTAs, step 4 waits without a CTA.
+    expect(getByTestId('profile-quest')).toBeTruthy()
+    expect(getByText('启程任务')).toBeTruthy()
+    expect(getByTestId('profile-quest-cta-register')).toBeTruthy()
+    expect(document.querySelector('[data-testid="profile-quest-cta-matched"]')).toBeNull()
+
+    // Once a registration is matched/completed the quest never renders again.
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'r1', matchStatus: 'matched' }],
+    })
+    rerender(<ProfilePage />)
+    expect(queryByTestId('profile-quest')).toBeNull()
+  })
+
+  it('P1-5: register CTA switchTabs to discover', () => {
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    state.switchTab.mockClear()
+    const { getByTestId } = render(<ProfilePage />)
+
+    fireEvent.click(getByTestId('profile-quest-cta-register'))
+    expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.discover })
+  })
+
+  it('P1-2: the foil sweep band renders on the identity stage with the archetype hue gradient', () => {
+    const { getByTestId } = render(<ProfilePage />)
+    const sweep = getByTestId('profile-foil-sweep')
+    expect(sweep.style.background).toContain('linear-gradient(-45deg')
+    // Hue comes from the archetype foil family (corgi) — rgba, never hsla.
+    expect(sweep.style.background).toContain('rgba(')
+  })
+
+  it('P2-1: modules render in the three-act order (我是谁 → 我有什么 → 我能干嘛)', () => {
+    state.queryStates.set('mini-program/shell/profile', {
+      data: { stats: { eventsJoined: 4, connectionsCount: 2 } },
+    })
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+
+    const { getByTestId } = render(<ProfilePage />)
+    const stage = getByTestId('profile-v4')
+    const band = getByTestId('profile-data-band')
+    const badges = getByTestId('profile-milestones-entry')
+    const story = getByTestId('profile-growth-archive')
+    const quest = getByTestId('profile-quest')
+    const settings = getByTestId('profile-settings-entry')
+
+    const follows = (a: HTMLElement, b: HTMLElement) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+    expect(follows(stage, band)).toBe(true)
+    expect(follows(band, badges)).toBe(true)
+    expect(follows(badges, story)).toBe(true)
+    expect(follows(story, quest)).toBe(true)
+    expect(follows(quest, settings)).toBe(true)
+  })
+
+  it('P2-3: 存下这张卡 entry renders under the story card when an archetype exists', () => {
+    const { getByTestId, getByText } = render(<ProfilePage />)
+    expect(getByTestId('profile-poster-entry')).toBeTruthy()
+    expect(getByText('存下这张卡')).toBeTruthy()
+  })
+
+  it('P2-2: story card carries the latest chapter title and the pending-experience badge', () => {
+    state.queryStates.set('mini-program/personal-story/profile-teaser', {
+      data: {
+        story: {
+          chapters: [
+            // Real server title format (formatPersonalStoryChapterTitle):
+            // `${YYYY.MM.DD} · ${activityType}` — the display must strip the
+            // date prefix or it renders twice (re-audit #3 P0 regression lock).
+            { id: 'c1', title: '2026.10.10 · 第一次破冰', body: '', activityType: 'blind_box', occurredAt: '2026-10-10T12:00:00Z' },
+            { id: 'c2', title: '2026.10.18 · 深夜食堂局', body: '', activityType: 'blind_box', occurredAt: '2026-10-18T12:00:00Z' },
+          ],
+        },
+        pendingExperienceCount: 2,
+        aiEnabled: false,
+        canUpdate: false,
+        updateJob: null,
+      },
+    })
+
+    const { getByText, getByTestId } = render(<ProfilePage />)
+    // Chapters ascend by chapterNumber → display number = count, latest = last.
+    // Craft pass (2026-10-24): the write-date lives on the CTA line, not the
+    // title (the 390rpx title ellipsized both chapter name and date).
+    expect(getByText('第 2 章 · 深夜食堂局')).toBeTruthy()
+    expect(getByText('10月18日写下 · 进入我的故事')).toBeTruthy()
+    expect(getByTestId('profile-story-badge').textContent).toContain('2 段新经历待写成')
+  })
+
+  it('A2-2: hides the bio nudge while the quest line renders (one ask per screen)', () => {
+    state.user = { ...makeUser(true), hasSeenProfileReview: true, bio: null }
+    // No registrations → quest renders with undone steps; the nudge must not
+    // compete with the quest's own bio step.
+    state.queryStates.set('mini-program/my-pool-registrations', { data: [] })
+    const { getByTestId, queryByTestId, rerender } = render(<ProfilePage />)
+    expect(getByTestId('profile-quest')).toBeTruthy()
+    expect(queryByTestId('profile-bio-prompt')).toBeNull()
+
+    // Once the quest completes (a matched registration), it retires and the
+    // bio nudge returns — the ask is never lost, only arbitrated.
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'reg-m1', matchStatus: 'matched', poolDateTime: '2026-10-25T11:30:00.000Z' }],
+    })
+    rerender(<ProfilePage />)
+    expect(queryByTestId('profile-quest')).toBeNull()
+    expect(getByTestId('profile-bio-prompt')).toBeTruthy()
+  })
+
+  it('A5-2: next-event row navigates pending → matching-status, matched → events tab', () => {
+    const future = new Date(Date.now() + 3 * 86_400_000).toISOString()
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'reg-p1', matchStatus: 'pending', poolDateTime: future, finalDateTime: null, poolDistrict: '南山区' }],
+    })
+    state.navigateTo.mockClear()
+    const { getByTestId, rerender } = render(<ProfilePage />)
+    fireEvent.click(getByTestId('profile-next-event'))
+    expect(state.navigateTo).toHaveBeenCalledWith({
+      url: `${MINI_PROGRAM_ROUTES.matchingStatus}?registrationId=reg-p1`,
+    })
+
+    state.queryStates.set('mini-program/my-pool-registrations', {
+      data: [{ id: 'reg-m1', matchStatus: 'matched', poolDateTime: future, finalDateTime: null, poolDistrict: null }],
+    })
+    state.switchTab.mockClear()
+    rerender(<ProfilePage />)
+    fireEvent.click(getByTestId('profile-next-event'))
+    expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.events })
+  })
+
+  it('P2-5: large title shows 我的 + date sub-line (greeting joins only when a bio exists)', () => {
+    const { getByTestId } = render(<ProfilePage />)
+    expect(getByTestId('profile-large-title')).toBeTruthy()
+    // Mock user has no bio → sub-line is date + weekday only (greeting
+    // stays in the identity card; never rendered twice — memo §3).
+    const sub = document.querySelector('.profile-page__large-title-sub')?.textContent ?? ''
+    expect(sub).toMatch(/^\d+月\d+日 周[一二三四五六日]$/)
+  })
+
+  it('P1-1: tapping the partner avatar fires one ref-locked bounce haptic', () => {
+    const { getByTestId } = render(<ProfilePage />)
+    ;(haptics as unknown as ReturnType<typeof vi.fn>).mockClear()
+
+    const touch = getByTestId('profile-partner-touch')
+    fireEvent.click(touch)
+    expect(haptics).toHaveBeenCalledWith('medium')
+    // Ref lock: a second tap inside the bounce window does not re-fire.
+    fireEvent.click(touch)
+    expect(haptics).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the daily greeting as the bio fallback (P0-3 precedence: bio > greeting > tagline) and prompts to review the report', () => {
     const { getByText } = render(<ProfilePage />)
 
-    expect(getByText('瞬间破冰的气氛点火手')).toBeTruthy()
+    // The default mock user (corgi, no bio) renders the daily-rotating
+    // greeting instead of the static archetype tagline.
+    const greeting = getDailyGreeting('corgi')
+    expect(greeting).not.toBeNull()
+    expect(getByText(greeting!)).toBeTruthy()
     expect(getByText('回看报告')).toBeTruthy()
   })
 
@@ -508,7 +751,7 @@ describe('Profile approved V4 layout', () => {
     ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
 
     const { getByText, getByTestId } = render(<ProfilePage />)
-    expect(getByText('测测你的社交原型')).toBeTruthy()
+    expect(getByText('测测你的氛围原型')).toBeTruthy()
 
     fireEvent.click(getByTestId('profile-identity-copy-card'))
     expect(state.navigateTo).toHaveBeenCalledWith({
@@ -564,7 +807,7 @@ describe('Profile approved V4 layout', () => {
     expect(getByText('回看报告')).toBeTruthy()
   })
 
-  it('collapses milestones into a single entry row that expands the unlocked badges inline', () => {
+  it('collapses milestones into a single entry row that expands the 5-tier badge wall inline (P1-4)', () => {
     state.queryStates.set('mini-program/shell/profile', {
       data: { stats: { eventsJoined: 4, connectionsCount: 0 } },
     })
@@ -574,14 +817,20 @@ describe('Profile approved V4 layout', () => {
     const { getByTestId, getByText, queryByText } = render(<ProfilePage />)
 
     expect(getByText('成就徽章')).toBeTruthy()
-    expect(getByText('已解锁 2/2 枚')).toBeTruthy()
-    // Badge cards stay collapsed until the entry row is tapped.
+    expect(getByText('已点亮 2/5 枚 · 再 1 场点亮渐入佳境')).toBeTruthy()
+    // Badge cells stay collapsed until the entry row is tapped.
     expect(queryByText('初次见面')).toBeNull()
 
     fireEvent.click(getByTestId('profile-milestones-entry'))
 
+    // P1-4: all five tiers render — 2 unlocked, 3 locked with 还差 N 场.
     expect(getByText('初次见面')).toBeTruthy()
     expect(getByText('三场连击')).toBeTruthy()
+    expect(getByText('渐入佳境')).toBeTruthy()
+    expect(getByText('悦聚常客')).toBeTruthy()
+    expect(getByText('城市传说')).toBeTruthy()
+    expect(getByText('还差 1 场')).toBeTruthy()
+    expect(getByText('还差 16 场')).toBeTruthy()
     expect(profileAnalytics.track).toHaveBeenCalledWith(
       'profile_milestone_tap',
       { action: 'expand' },
@@ -612,7 +861,7 @@ describe('Profile approved V4 layout', () => {
     ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
 
     const { getByLabelText } = render(<ProfilePage />)
-    fireEvent.click(getByLabelText('查看人格结果'))
+    fireEvent.click(getByLabelText('回看氛围报告'))
 
     expect(state.navigateTo).toHaveBeenCalledWith({
       url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?source=profile`,

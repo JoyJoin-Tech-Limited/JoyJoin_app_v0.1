@@ -71,7 +71,7 @@
   }
 
   &__info-glyph-text {
-    font-size: 18rpx;
+    font-size: 18rpx; // Icon: pure-CSS "?" glyph sized to its 24rpx circle, not prose text
     line-height: 1;
     color: $color-text-tertiary;
   }
@@ -142,6 +142,54 @@
     }
   }
 
+  // S2 guest region (D-3): two plain text lines inside the existing __expand
+  // container — zero buttons, zero new keyframes (reuses fade-slide-up via
+  // __expand; skeletons reuse pool-reg-shimmer). Height budget: header 56rpx
+  // + expand margin 16rpx + region 84rpx + card padding 48rpx = 204rpx,
+  // ≤256rpx cap. Skeleton bars carry the SAME outer box heights as the final
+  // text lines (40/36rpx) so the lookup landing causes zero layout shift.
+  // P1 兼容条款: L1/L2 与 __guest 类名钩子保持稳定——P1 的顶线/第三行/淡入
+  // 均为纯增量，不得重写此处结构。
+  &__guest {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__guest-line1 {
+    display: block;
+    font-size: 28rpx;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: 40rpx;
+    @include text-truncate;
+  }
+
+  &__guest-line2 {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 36rpx;
+  }
+
+  &__guest-skel {
+    border-radius: 6rpx;
+    background: $color-divider;
+    animation: pool-reg-shimmer 1.5s ease-in-out infinite;
+
+    &--l1 {
+      width: 55%;
+      height: 28rpx;
+      margin: 6rpx 0;
+    }
+
+    &--l2 {
+      width: 40%;
+      height: 24rpx;
+      margin: 6rpx 0;
+    }
+  }
+
   &__share-btn {
     width: 100%;
   }
@@ -156,17 +204,54 @@
   &__waiting-text {
     @include type-label;
     flex: 1;
+    // D-2: 等待主行从 secondary 升为 primary（单行主行、无副行）；名字经
+    // truncateDuoName 截断到 6 字+…，再兜一层单行截断防窄屏折行。
+    color: $color-text-primary;
+    @include text-truncate;
   }
 
-  // Compact secondary action inside the ≤56rpx waiting row; overrides the
-  // default joy-button min-height (44pt tap floor) to stay within the A'-10
-  // ≤200rpx waiting budget.
+  // D-2: 「再喊一次」视觉 pill 维持 56rpx，命中区经透明 padding 扩到 88rpx。
+  // 命中区必须是原生 button 元素本身（openType='share' 的 tap 目标），所以
+  // 透明 padding 落在按钮上、视觉 pill 收进内部子节点；负 margin 让 ≤56rpx
+  // 的 waiting 行不被撑高，透明区只没入卡片 padding，不与文案行视觉重叠。
   &__again-btn {
-    min-height: 56rpx;
+    height: 88rpx;
+    min-height: 88rpx;
+    margin: -16rpx 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    flex-shrink: 0;
+
+    &:active {
+      background: transparent;
+      border: none;
+      opacity: 1;
+    }
+  }
+
+  &__again-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     height: 56rpx;
     padding: 0 $spacing-md;
+    border-radius: $card-radius-sm;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    box-sizing: border-box;
+  }
+
+  // Active 反馈挪到 pill（按钮本体是透明命中层）。
+  &__again-btn:active &__again-pill {
+    background: rgba($color-text-primary, 0.05);
+    border-color: rgba($color-primary, 0.4);
+  }
+
+  &__again-pill-text {
     font-size: $font-size-xs;
-    flex-shrink: 0;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
   }
 
   // Bound row: CSS check pops once (moment ②), reusing pool-reg-check-pop.
@@ -211,7 +296,7 @@
   &__bound-whisper {
     display: block;
     margin-top: 8rpx;
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     line-height: 1.4;
     color: $color-success-text-on-light;
     opacity: 0.85;
@@ -254,7 +339,7 @@
   }
 
   &__error-text {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-text-tertiary;
     text-align: center;
     display: block;
@@ -292,6 +377,11 @@
     }
 
     &__skeleton-line {
+      animation: none;
+      opacity: 0.4;
+    }
+
+    &__guest-skel {
       animation: none;
       opacity: 0.4;
     }

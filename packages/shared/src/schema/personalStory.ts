@@ -206,6 +206,12 @@ export interface PersonalStoryResponse {
   updateJob: PersonalStoryUpdateJobView | null;
   aiEnabled: boolean;
   canUpdate: boolean;
+  /**
+   * P2-2 (2026-10-22, PM memo §6): eligible-but-unwritten experience count
+   * (alang + flash + blind_box snapshots without chapters). Absent when the
+   * count could not be computed — clients render no badge (fail-open).
+   */
+  pendingExperienceCount?: number;
 }
 
 export interface PersonalStoryUpdateResponse {

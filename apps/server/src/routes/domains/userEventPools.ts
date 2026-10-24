@@ -24,9 +24,12 @@ import {
   buildEventPoolRegistrationInsert,
   BudgetTierValidationError,
   isSessionPendingReferralCode,
+  resolveDuoBindingResult,
   resolveOptionalRegistrationAttribution,
+  type DuoBindingResult,
   type EventPoolRegistrationPreferenceDNA,
 } from "../../lib/eventPoolRegistration";
+import { resolveDuoBindingAvailability } from "../../repositories/duoBindingRepo";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
 import { resolveEntitlementMode } from "../../lib/entitlement";
@@ -726,6 +729,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
       let invitationId: string | undefined;
       let inviterId: string | undefined;
       let referralCodeId: string | undefined;
+      // 双人成行 S1: duo-binding outcome surfaced on the registration response
+      // (undefined unless the presented code is a duo invitation).
+      let duoBinding: DuoBindingResult | undefined;
       if (invitationCode) {
         // First check if it's an invitation code
         const [invitation] = await db
@@ -745,11 +751,34 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
         }
 
+        // S1 (one-partner-per-pool): pre-fetch the duo-binding facts BEFORE the
+        // attribution decision so the shared resolver stays pure. Scoped to
+        // duo invitations for THIS pool — a mismatched-pool code discards as
+        // pool_mismatch before the guard is consulted, so the probes are
+        // skipped there. Refusal never blocks registration: the invitation_uses
+        // write (and the total_acceptances increment) is simply skipped.
+        const duoAvailability =
+          invitation &&
+          invitation.invitationType === "duo" &&
+          invitation.poolId === poolId
+            ? await resolveDuoBindingAvailability(db, {
+                poolId,
+                userId,
+                invitationId: invitation.id,
+              })
+            : undefined;
+
         const attribution = resolveOptionalRegistrationAttribution({
           userId,
           poolId,
           invitation,
           referral,
+          duo: duoAvailability,
+        });
+
+        duoBinding = resolveDuoBindingResult({
+          invitationType: invitation?.invitationType,
+          attribution,
         });
 
         if (attribution.kind === "invitation") {
@@ -893,6 +922,10 @@ export function registerUserEventPoolRoutes(app: Express): void {
       res.json({
         ...registration,
         entitlementMode,
+        // 双人成行 S1: present only when a duo code was presented; a refused
+        // binding reports { state: "unavailable", reason } and never fails the
+        // registration itself.
+        duoBinding,
       });
 
       // Fire-and-forget: if the pool just reached capacity, notify registered users.

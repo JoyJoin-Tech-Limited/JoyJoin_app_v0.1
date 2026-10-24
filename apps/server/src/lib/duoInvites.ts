@@ -33,10 +33,30 @@ export function buildDuoSharePath(poolId: string, code: string): string {
 
 export type DuoState = "none" | "waiting" | "bound";
 
+/** Which side of a duo pair a user is on. */
+export type DuoRole = "inviter" | "invitee";
+
 export interface DuoStatusResult {
   state: DuoState;
   friendDisplayName?: string;
   invitedAt?: string;
+  /**
+   * Which side of the pair the current viewer is on (S3, additive optional —
+   * older clients ignore it). Emitted on every `waiting` response together
+   * with `pendingSide`; `bound` and `none` responses keep their previous
+   * shape and carry no direction fields.
+   */
+  viewerRole?: DuoRole;
+  /**
+   * Which side of the pair has NOT registered yet (S3, additive optional).
+   * `viewerRole === pendingSide` means the viewer is the one being waited on
+   * (「就等你」); otherwise the friend is.
+   *
+   * The combination `viewerRole="invitee" && pendingSide="invitee"` is
+   * unreachable by construction: an invitation_uses row is written only at
+   * registration time, so an invitee-side viewer is registered by definition.
+   */
+  pendingSide?: DuoRole;
 }
 
 /**
@@ -80,6 +100,12 @@ export function resolveDuoStatus(input: {
       state: "waiting",
       friendDisplayName: input.inviteeRegistered ? named(input.inviteeDisplayName) : undefined,
       invitedAt: toIso(input.invitationCreatedAt),
+      viewerRole: "inviter",
+      // 「就等你」 direction (the viewer is the missing seat): the invitee
+      // already registered and only the inviter (viewer) has not. Every other
+      // waiting shape — including both-unregistered — waits on the invitee,
+      // because the card narrates the friend's side of the pair.
+      pendingSide: input.inviteeRegistered && !input.userRegistered ? "inviter" : "invitee",
     };
   }
 
@@ -96,6 +122,14 @@ export function resolveDuoStatus(input: {
       state: "waiting",
       friendDisplayName: named(input.inviterDisplayName),
       invitedAt: toIso(input.consumedInvitationCreatedAt),
+      viewerRole: "invitee",
+      // Always "inviter": the invitee-side viewer consumed the code WITH their
+      // registration (invitation_uses rows are written at registration time),
+      // so the only side that can still be missing is the inviter. The inverse
+      // combination (viewerRole="invitee" && pendingSide="invitee") is
+      // therefore unreachable and must never be emitted — a defensive renderer
+      // falls back to the inviter×invitee copy if it ever appears.
+      pendingSide: "inviter",
     };
   }
 

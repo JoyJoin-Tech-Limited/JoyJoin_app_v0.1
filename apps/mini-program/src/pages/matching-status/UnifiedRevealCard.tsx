@@ -39,6 +39,9 @@ const MATCH_BADGE_LABELS: Record<MilestoneBadgeKey, string> = {
   streak3: '三场连击',
   quizHalfway: '已经一半了',
   recapStamp: '纪念章',
+  regular5: '渐入佳境',
+  veteran10: '悦聚常客',
+  legend20: '城市传说',
 }
 
 export default function UnifiedRevealCard({

@@ -6,6 +6,37 @@
 // verify-subpackage-styles gate).
 @use '../../components/guidance/GuidanceTipCard.scss' as *;
 
+// P0-7 stage-glass (2026-10-22, profile polish): one material recipe for the
+// three on-stage surfaces (identity copy card, growth card, equipment strip).
+// Warm translucent fill lets the HD-2D scene read through (alpha ≥0.78 for
+// text readability), gold rim echoes the stage rim-light, inset top highlight
+// + bottom cut give the glass thickness, and a dual-layer drop shadow lifts
+// the card off the scene. No backdrop-filter — translucency only, so low
+// tiers degrade to the same recipe with zero perf traps. rgba only (WXSS).
+// (Lives below every @use — Sass requires all @use rules before any other
+// statements; inserting mixins above the GuidanceTipCard @use breaks the
+// whole page compile, which the class-coverage gate then reports as
+// missing story-* styles.)
+@mixin profile-stage-glass {
+  background: linear-gradient(165deg, rgba($color-bg-tint-cream, 0.82), rgba($color-bg-tint-pink, 0.78));
+  border: 1rpx solid rgba($color-landed-gold, 0.35);
+  box-shadow:
+    inset 0 2rpx 0 rgba($color-surface, 0.6),
+    inset 0 -2rpx 0 rgba($color-text-primary, 0.05),
+    0 12rpx 32rpx rgba($color-text-primary, 0.12),
+    0 2rpx 8rpx rgba($color-text-primary, 0.06);
+}
+
+// Pressed variant: slightly deeper fill + flattened lift, same glass family.
+@mixin profile-stage-glass-pressed {
+  background: linear-gradient(165deg, rgba($color-bg-tint-cream, 0.76), rgba($color-bg-tint-pink, 0.72));
+  box-shadow:
+    inset 0 2rpx 0 rgba($color-surface, 0.5),
+    inset 0 -2rpx 0 rgba($color-text-primary, 0.06),
+    0 8rpx 22rpx rgba($color-text-primary, 0.1),
+    0 2rpx 6rpx rgba($color-text-primary, 0.05);
+}
+
 .profile-page {
   display: flex;
   flex-direction: column;
@@ -54,6 +85,56 @@
     justify-content: center;
     background: rgba($color-bg, 0.94);
     z-index: 20;
+    // P0-8/P2-5: the scrolled state lives on the PAGE ROOT (one shared state
+    // machine — useProfileScroll's 96/64rpx hysteresis band). Nav condenses,
+    // large title folds, nav title fades in, all in the same 180-200ms window.
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  &--scrolled &__nav {
+    background: rgba($color-bg, 0.98);
+    box-shadow: 0 1rpx 0 var(--profile-divider),
+      0 8rpx 24rpx rgba($color-text-primary, 0.06);
+  }
+
+  &--scrolled &__large-title {
+    opacity: 0;
+    transform: translateY(-8rpx);
+    pointer-events: none;
+  }
+
+  &--scrolled &__nav-title {
+    opacity: 1;
+  }
+
+  // P2-5 iOS large title (UIUX memo §3): first ScrollView child — scrolls
+  // away under the condensing nav.
+  &__large-title {
+    padding: 16rpx $container-padding 8rpx;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  &__large-title-text {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    // Display-moment leading (was 1.18 — cramped against the meta line).
+    line-height: 1.4;
+    letter-spacing: 2rpx;
+    color: var(--profile-text-primary);
+  }
+
+  &__large-title-sub {
+    display: block;
+    margin-top: 8rpx;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__nav-title {
@@ -62,6 +143,51 @@
     line-height: 1.4;
     font-weight: $font-weight-bold;
     color: var(--profile-text-primary);
+    // P2-5: hidden until the large title scrolls away (iOS crossfade).
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+
+  // P0-2 notification bell (2026-10-22): mirrors discover-auth__bell anatomy
+  // (72rpx circle, primary badge pill, 99+ cap). Absolutely positioned so the
+  // centered title layout is untouched; sits in the 88rpx band below the
+  // safe-area inset.
+  &__nav-bell {
+    position: absolute;
+    right: $container-padding;
+    top: calc(env(safe-area-inset-top) + 8rpx);
+    width: 72rpx;
+    height: 72rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.08);
+    }
+  }
+
+  &__nav-bell-badge {
+    position: absolute;
+    top: -4rpx;
+    right: -8rpx;
+    min-width: 32rpx;
+    height: 32rpx;
+    padding: 0 6rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  &__nav-bell-badge-text {
+    font-size: 20rpx;
+    line-height: 1;
+    color: $color-text-white;
   }
 
   &__settings-entry {
@@ -79,6 +205,7 @@
     border-radius: $card-radius-sm;
     box-shadow: $shadow-card;
     transition: transform 0.12s ease, background 0.12s ease;
+    // P2-1 (UIUX memo §2): settings is chrome — NO entrance motion.
 
     &--pressed {
       transform: scale(0.985);
@@ -142,8 +269,9 @@
     align-items: center;
     gap: $spacing-md;
     min-height: 224rpx;
-    // P6 density pass: bottom gap normalized to $spacing-md (24rpx).
-    margin: $spacing-md $container-padding $spacing-md;
+    // P2-1: 40rpx act gap below the stage (Act 1 我是谁 → Act 2 我有什么);
+    // 24rpx remains the intra-act rhythm everywhere else.
+    margin: $spacing-md $container-padding $spacing-lg;
     padding: $spacing-lg;
     padding-right: $spacing-lg;
     background: var(--profile-surface);
@@ -233,109 +361,229 @@
     transform: rotate(45deg);
   }
 
-  // Stats row
-  &__stats {
-    display: flex;
-    gap: $spacing-sm;
-    padding: 0 $container-padding;
-    // P6 density pass: section gap normalized to $spacing-md (24rpx).
-    margin-bottom: $spacing-md;
-    opacity: 0;
-    transform: translateY(16rpx);
-    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
-
-    &--entered {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  // P6 density pass (2026-09-11): tiles flattened toward a lighter one-liner
-  // feel — shorter tile, tighter padding, no drop shadow, lighter tint
-  // borders, and the 2rpx brand-gradient anchor strip removed. All data,
-  // tints, and tap behavior are unchanged; radii stay on the card tokens.
-  &__stat {
-    position: relative;
-    flex: 1;
-    min-width: 0;
-    min-height: 128rpx;
+  // Act 2 structural wrapper (craft pass 2026-10-24): owns the 24rpx
+  // intra-act gaps and the 40rpx Act-2 → Act-3 gap regardless of which
+  // optional modules render (previously the act gap lived on conditional
+  // milestones and vanished for new users). Children: horizontal margins only.
+  &__act-two {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    gap: $spacing-md;
+    margin-bottom: $spacing-lg;
+  }
+
+  // Stats row
+  // P0-1 entitlement strip (2026-10-22, PM memo §1 / UIUX memo §6): factual
+  // readout pills — settings-entry chrome family (quiet list-row), fixed row
+  // of ≤3 equal pills. Renders only when ≥1 pill has a real datum.
+  &__entitlement-strip {
+    display: flex;
     gap: $spacing-xs;
-    padding: $spacing-sm;
-    background: var(--profile-surface);
-    border: 1rpx solid transparent;
+    padding: 0 $container-padding;
+    // Craft pass (2026-10-24): static render — the strip mounts when the
+    // shell query resolves; a late stagger is a second ceremony, not polish.
+    // Bottom gap comes from the Act-2 wrapper.
+  }
+
+  &__entitlement-pill {
+    flex: 1;
+    min-width: 0;
+    height: $cta-min-tap;
+    padding: 0 $spacing-sm;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
     border-radius: $card-radius-sm;
-    overflow: hidden;
-    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-
-    // Semantic brand tints: footprint=cream, connections=pink,
-    // completion=purple (matches its primary progress bar).
-    &--tint-cream {
-      background: $color-bg-tint-cream;
-      border-color: rgba($color-landed-gold, 0.2);
-    }
-
-    &--tint-pink {
-      background: $color-bg-tint-pink;
-      border-color: rgba($color-secondary, 0.16);
-    }
-
-    &--tint-purple {
-      background: $color-bg-tint-purple;
-      border-color: rgba($color-primary, 0.12);
-    }
+    box-shadow: $shadow-card;
+    transition: transform 0.12s ease, background 0.12s ease;
 
     &--pressed {
       transform: scale(0.97);
       background: var(--profile-primary-04);
     }
-
   }
 
-  &__stat-progress {
-    width: 80%;
+  &__entitlement-pill-icon {
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--coin {
+      // 悦币 has no ui-tier icon (💰 exists only at reaction tier — wrong
+      // size class; PM memo §1b) — a 16rpx gold dot carries the readout.
+      color: $color-brand-gold;
+    }
+  }
+
+  &__entitlement-pill-coin-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-brand-gold;
+    box-shadow: 0 0 0 4rpx rgba($color-brand-gold, 0.18);
+  }
+
+  &__entitlement-pill-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+  }
+
+  &__entitlement-pill-label {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-normal;
+    line-height: 1.4;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__entitlement-pill-value {
+    // Mixed CJK+numeral copy (剩 3 天 / 2 张可用) must NOT use Quicksand —
+    // the fallback CJK metrics clash inside one run. $font-en-brand stays
+    // on pure-numeric readouts only. 28/20rpx + 600/400 restores the
+    // ≥8rpx / ≥100-weight label-value hierarchy.
+    font-family: $font-ui;
+    font-size: 28rpx;
+    line-height: 1.2;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // P2-1 compact data band (2026-10-22, UIUX memo §2): the three tinted
+  // stat cards demote to one quiet one-liner band (96rpx) — Act 2 我有什么
+  // middle module. Equal cells, hairline dividers, completion carries a mini
+  // progress bar. Count-up numbers ride CountUpText (memo §9 unchanged).
+  &__data-band {
+    display: flex;
+    align-items: center;
+    margin: 0 $container-padding;
+    padding: 0 $spacing-sm;
+    min-height: 96rpx;
+    box-sizing: border-box;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    // Stagger slot C (120ms, 0.35s — UIUX §2 timing table).
+    animation: profile-card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.12s backwards;
+  }
+
+  &__data-band-cell {
+    flex: 1;
+    min-width: 0;
+    min-height: 96rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rpx;
+    padding: $spacing-xs 4rpx;
+    box-sizing: border-box;
+    border-radius: $radius-md;
+    transition: background 0.12s ease, transform 0.12s ease;
+
+    &--pressed {
+      background: var(--profile-primary-04);
+      transform: scale(0.98);
+    }
+  }
+
+  &__data-band-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+  }
+
+  &__data-band-value {
+    font-family: $font-en-brand;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+    line-height: 1.2;
+    // P1-3 anti-jitter: reserve 2-3 digits' width for the count-up ticks.
+    min-width: 64rpx;
+    text-align: center;
+  }
+
+  &__data-band-suffix {
+    font-family: $font-en-brand;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+    line-height: 1.2;
+  }
+
+  &__data-band-label {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+  }
+
+  &__data-band-divider {
+    width: 1rpx;
+    height: 40rpx;
+    background: var(--profile-divider);
+    flex-shrink: 0;
+  }
+
+  &__data-band-mini-progress {
+    margin-top: 4rpx;
+    width: 72rpx;
     height: 6rpx;
-    background: var(--profile-primary-08);
     border-radius: 3rpx;
-    margin-top: $spacing-xs;
+    background: var(--profile-primary-08);
     overflow: hidden;
   }
 
-  &__stat-progress-bar {
-    height: 100%;
+  &__data-band-mini-progress-bar {
     width: 100%;
+    height: 100%;
     border-radius: 3rpx;
-    background: var(--profile-primary);
-    transform: scaleX(0);
+    background: $color-primary;
     transform-origin: left center;
     transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  &__stat-value {
-    font-size: $font-size-xl;
-    font-family: $font-en-brand;
-    font-weight: $font-weight-bold;
-    color: $color-primary-dark;
-    line-height: $line-height-normal;
+  // P0-6 entrance keyframes: backwards fill ONLY — a forwards fill would
+  // keep the final keyframe applied forever and silently override the
+  // --pressed scale transform on tappable cards (CSS animation wins over
+  // class transforms). After the animation ends the element must fall back
+  // to its natural styles so press feedback keeps working.
+  @keyframes profile-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(12rpx);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  // Taro H5 drops dynamic inline rpx — bound the 40rpx stat icons everywhere.
-  &__stat-icon {
-    width: 40rpx !important;
-    height: 40rpx !important;
-  }
-
-  &__stat-label {
-    font-size: $font-size-xs;
-    font-family: $font-ui;
-    font-weight: $font-weight-normal;
-    color: var(--profile-text-secondary);
-    line-height: $line-height-normal;
+  @keyframes profile-row-in {
+    from {
+      opacity: 0;
+      transform: translateY(8rpx);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   // Milestones — P6b density redesign (2026-09-14): the badge grid is
@@ -343,8 +591,64 @@
   // below it (accordion) since no dedicated milestones route exists.
   &__milestones {
     padding: 0 $container-padding;
-    // P6 density pass: section gap normalized to $spacing-md (24rpx).
-    margin-bottom: $spacing-md;
+    // Craft pass (2026-10-24): NO entrance animation — the wall mounts when
+    // async event data arrives, and a late second ceremony reads cheaper
+    // than a quiet appearance. Act gaps belong to the Act-2 wrapper.
+  }
+
+  // A5-2 (full-marks Wave A): next-event one-line row — slimmer sibling of
+  // the milestones-entry chrome. Static render (no entrance animation): the
+  // row appears with late-arriving registration data and must not flash.
+  &__next-event {
+    min-height: 72rpx;
+    margin: 0 $container-padding;
+    padding: 0 $spacing-md;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.985);
+      background: var(--profile-primary-06);
+    }
+  }
+
+  &__next-event-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: $color-landed-gold;
+    flex-shrink: 0;
+  }
+
+  &__next-event-text {
+    flex: 1;
+    min-width: 0;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    line-height: $line-height-normal;
+    color: var(--profile-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__next-event-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    margin-right: 4rpx;
+    // Primary like every sibling tappable-row chevron (tertiary made this
+    // row look inert by comparison).
+    border-top: 3rpx solid $color-primary;
+    border-right: 3rpx solid $color-primary;
+    transform: rotate(45deg);
+    flex-shrink: 0;
   }
 
   // Single entry row — same chrome family as the settings entry below so the
@@ -423,6 +727,148 @@
     animation: profile-milestones-in 180ms ease-out both;
   }
 
+  // P1-4 five-up badge wall (2026-10-22, UIUX memo §1 / PM memo §3): the
+  // accordion renders ALL FIVE tiers — unlocked full art, locked silhouette
+  // (0.38 opacity, NOT filter: grayscale — WeChat unreliable) + lock corner
+  // + 还差 N 场. Cells pre-sized → the 60ms-staggered pop-in never shifts
+  // layout. Tiers without Batch-D2 art (5/10/20) render the CSS medallion.
+  &__milestones-row--five-up {
+    gap: $spacing-xs;
+
+    .profile-page__milestone {
+      position: relative;
+      padding: $spacing-sm $spacing-xs;
+      gap: 4rpx;
+      animation: profile-badge-pop 0.24s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+      &:nth-child(2) {
+        animation-delay: 40ms;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 80ms;
+      }
+
+      &:nth-child(4) {
+        animation-delay: 120ms;
+      }
+
+      &:nth-child(5) {
+        animation-delay: 160ms;
+      }
+    }
+
+    .profile-page__milestone-img {
+      width: 72rpx;
+      height: 72rpx;
+    }
+
+    .profile-page__milestone-label {
+      font-size: $font-size-2xs;
+      white-space: nowrap;
+    }
+  }
+
+  @keyframes profile-badge-pop {
+    // Craft pass (2026-10-24): quiet rise-and-settle (was scale 0.5 → 1.06
+    // overshoot — made the Lovart medallions behave like casual-game
+    // reward sprites). Whole 5-up sequence now finishes in 400ms.
+    0% {
+      opacity: 0;
+      transform: translateY(8rpx) scale(0.96);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  &__milestone--locked {
+    background: rgba($color-surface, 0.6);
+    box-shadow: none;
+  }
+
+  // The unlock ring child carries the one-shot animation; while it lives
+  // (~950ms) the freshly unlocked cell itself keeps a quiet gold tint.
+  &__milestone--just-unlocked {
+    background: rgba($color-landed-gold, 0.08);
+  }
+
+  &__milestone-img--locked {
+    opacity: 0.38;
+  }
+
+  // CSS medallion for tiers whose Batch-D2 art has not landed yet.
+  &__milestone-medallion {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    color: var(--profile-text-tertiary);
+    background: radial-gradient(circle, rgba($color-landed-gold, 0.1) 0%, rgba($color-landed-gold, 0.04) 70%);
+    border: 1rpx dashed rgba($color-landed-gold, 0.45);
+
+    &--unlocked {
+      background: radial-gradient(circle, rgba($color-landed-gold, 0.28) 0%, rgba($color-brand-gold, 0.12) 72%);
+      border: 1rpx solid rgba($color-landed-gold, 0.6);
+    }
+  }
+
+  &__milestone-badge-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__milestone-lock {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28rpx;
+    height: 28rpx;
+    border-radius: 50%;
+    background: rgba($color-text-primary, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__milestone-hint {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+  }
+
+  // One-shot ring on freshly unlocked cells (ledger diff on tab return).
+  &__milestone-unlock-ring {
+    position: absolute;
+    top: -6rpx;
+    left: -6rpx;
+    right: -6rpx;
+    bottom: -6rpx;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid rgba($color-landed-gold, 0.8);
+    opacity: 0.8;
+    animation: profile-badge-unlock-ring 0.9s ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes profile-badge-unlock-ring {
+    from {
+      opacity: 0.8;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.15);
+    }
+  }
+
   @keyframes profile-milestones-in {
     from {
       opacity: 0;
@@ -475,15 +921,20 @@
     // `min-height` (they fall back to `auto` → the scene collapses to 0 and
     // its overflow:hidden clips the whole identity card). Mirrors the proven
     // `my-image__stage` pattern (`height` + `min-height`).
-    // 728rpx: the left rail must fit the tallest identity card (name + up to
-    // 3 whole-pill tag rows + bio + affordance ≈ 333rpx) + 16rpx gap above
-    // the growth card (≈189rpx) and keep the 152rpx equipment-bar
-    // reservation — 24 + 333 + 16 + 189 + 152 = 714. The old 560rpx stage
-    // made the two cards overlap in render (text-on-text, 2026-08-01 audit).
-    height: 728rpx;
-    min-height: 728rpx;
-    // P6 density pass: bottom gap normalized to $spacing-md (24rpx).
-    margin: $spacing-md $container-padding $spacing-md;
+    // 792rpx (raised 2026-10-24 render pass): the left rail must fit the
+    // tallest identity card (name + up to 3 whole-pill tag rows + bio +
+    // affordance ≈ 333rpx) + 16rpx gap + the growth card with its two-row
+    // heading and the streak capsule wrapped onto its own foot row
+    // (≈260rpx), keeping the 152rpx equipment-bar reservation:
+    // 24 + 333 + 16 + 260 + 152 = 785 → 792 on the 8rpx grid.
+    // The old 560rpx stage made the two cards overlap in render
+    // (text-on-text, 2026-08-01 audit); 728rpx clipped the streak
+    // continuation behind the equipment strip (2026-10-24 capture).
+    height: 792rpx;
+    min-height: 792rpx;
+    // P2-1: 40rpx act gap below the stage (Act 1 我是谁 → Act 2 我有什么);
+    // 24rpx remains the intra-act rhythm everywhere else.
+    margin: $spacing-md $container-padding $spacing-lg;
     border-radius: $card-radius;
     overflow: hidden;
     box-sizing: border-box;
@@ -492,8 +943,9 @@
     box-shadow: 0 16rpx 38rpx rgba($color-text-primary, 0.09);
     opacity: 0;
     transform: translateY(16rpx);
-    transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    // P0-6 choreography: stage leads the entrance timeline (0ms, 0.35s).
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 
     &--entered {
       opacity: 1;
@@ -507,6 +959,41 @@
   // card — rendered text-on-text overlap (2026-08-01 audit). As flex
   // children they can never intersect; worst case (extreme content) the
   // growth card simply flows past the rail's bottom edge, never under text.
+  // P1-2 foil sweep (2026-10-22, UIUX memo §11): one -45° band at 20% width
+  // in the archetype hue (gradient inline from TSX) crosses the stage once
+  // per page instance — animation iteration 1, opacity edges hold it
+  // invisible at rest/end. translateX(-150% → 350%) per the memo; the
+  // opacity envelope makes the rest position irrelevant. z-8: above the
+  // equipment strip (z-7), pointer-events none so it never eats taps.
+  &__identity-foil-sweep {
+    position: absolute;
+    top: -10%;
+    bottom: -10%;
+    left: 0;
+    width: 20%;
+    z-index: 8;
+    pointer-events: none;
+    opacity: 0;
+    animation: profile-foil-sweep 1.6s ease-in-out 0.5s 1;
+  }
+
+  @keyframes profile-foil-sweep {
+    0% {
+      transform: translateX(-150%);
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    88% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(350%);
+      opacity: 0;
+    }
+  }
+
   &__identity-rail {
     position: absolute;
     z-index: 4;
@@ -532,11 +1019,8 @@
   // stage's rim-light/particle warmth instead of plain white.
   &__identity-copy-card,
   &__growth-card {
+    @include profile-stage-glass;
     border-radius: 24rpx;
-    background: linear-gradient(145deg, rgba($color-bg-tint-cream, 0.94), rgba($color-bg-tint-pink, 0.9));
-    border: 1rpx solid rgba($color-landed-gold, 0.35);
-    box-shadow: 0 12rpx 32rpx rgba($color-text-primary, 0.12),
-      0 2rpx 8rpx rgba($color-text-primary, 0.06);
     box-sizing: border-box;
   }
 
@@ -547,9 +1031,7 @@
 
     &--pressed {
       transform: scale(0.985);
-      background: linear-gradient(145deg, rgba($color-bg-tint-cream, 0.88), rgba($color-bg-tint-pink, 0.84));
-      box-shadow: 0 8rpx 22rpx rgba($color-text-primary, 0.10),
-        0 2rpx 6rpx rgba($color-text-primary, 0.05);
+      @include profile-stage-glass-pressed;
     }
   }
 
@@ -557,7 +1039,9 @@
     // Explicit cap (was shrink-to-fit): shares the 638rpx bottom band with the
     // 352rpx partner visual — 24 + 280 + 352 + 8 = 664 ≤ 670rpx stage width.
     max-width: 280rpx;
-    padding: $spacing-sm $spacing-md;
+    // Tightened (was 16/24) to fund the two-row growth heading inside the
+    // fixed 728rpx stage geometry.
+    padding: 8rpx 16rpx;
   }
 
   &__identity-copy {
@@ -644,6 +1128,14 @@
       color: $color-primary-dark;
       background: rgba($color-primary, 0.12);
     }
+
+    // P0-3: tribe family pill — landed-gold tint (level-plate family), kept
+    // quieter than the --primary archetype pill so hierarchy stays name-first.
+    &--family {
+      color: $color-primary-dark;
+      background: rgba($color-landed-gold, 0.14);
+      border-color: rgba($color-landed-gold, 0.4);
+    }
   }
 
   &__identity-bio {
@@ -656,6 +1148,19 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // P0-3: the daily greeting is a full sentence (13-18 chars) — it gets a
+    // 2-line clamp instead of nowrap-ellipsis so the line actually reads.
+    // User-authored bios keep the single-line ellipsis above. Height impact:
+    // ≤ +1 line (26rpx), absorbed by the rail's reservation gap.
+    &--daily {
+      max-width: none;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+    }
   }
 
   &__identity-affordance {
@@ -818,6 +1323,89 @@
     }
   }
 
+  // P1-1 (2026-10-22, UIUX memo §11): tap bounce. Squash&stretch lives on
+  // this WRAPPER around &__partner-breath so the breathing loop keeps its
+  // own transform layer (composition rule). One 360ms bounce per tap,
+  // ref-locked in TSX; RM = haptic only (page RM block strips these).
+  &__partner-touch {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-origin: bottom center;
+  }
+
+  &__partner-halo {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 300rpx;
+    height: 300rpx;
+    margin-left: -150rpx;
+    margin-top: -150rpx;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba($color-brand-gold, 0.28) 0%, rgba($color-brand-gold, 0) 68%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__partner-visual--tapped &__partner-touch {
+    animation: profile-avatar-bounce 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__partner-visual--tapped &__partner-halo {
+    animation: profile-avatar-halo 0.36s ease-out;
+  }
+
+  &__partner-visual--tapped &__partner-platform {
+    // Contact shadow compresses once with the squash; the breathing pulse
+    // stays as the first layer (the tap layer wins only while it runs).
+    animation: profile-avatar-platform-pulse 5.6s ease-in-out infinite,
+      profile-avatar-shadow 0.36s ease-out;
+  }
+
+  @keyframes profile-avatar-bounce {
+    0% {
+      transform: scaleY(1);
+    }
+    30% {
+      transform: scaleY(0.93);
+    }
+    65% {
+      transform: scaleY(1.04);
+    }
+    100% {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes profile-avatar-halo {
+    0% {
+      opacity: 0;
+      transform: scale(0.82);
+    }
+    35% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.12);
+    }
+  }
+
+  // Every keyframe preserves the platform's base translateX(-50%).
+  @keyframes profile-avatar-shadow {
+    0%, 100% {
+      transform: translateX(-50%) scale(1);
+    }
+    30% {
+      transform: translateX(-50%) scaleX(1.08) scaleY(0.88);
+    }
+    65% {
+      transform: translateX(-50%) scaleX(0.97) scaleY(1.04);
+    }
+  }
+
   @keyframes profile-avatar-breath {
     0%, 100% {
       transform: translateY(0) scale(1);
@@ -904,10 +1492,11 @@
     align-items: center;
     flex-direction: column;
     justify-content: center;
-    border: 1rpx solid rgba($color-primary, 0.14);
-    border-radius: 30rpx;
-    background: rgba($color-surface, 0.9);
-    box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.1);
+    // Same glass family as the other on-stage surfaces (was a one-off opaque
+    // white card with a purple shadow and 30rpx radius — read as a generic
+    // fallback instead of another state of the same object).
+    @include profile-stage-glass;
+    border-radius: 24rpx;
     text-align: center;
 
     &--error {
@@ -993,13 +1582,19 @@
 
   &__growth-heading {
     display: flex;
-    align-items: baseline;
+    align-items: center; // R2: never baseline-align mixed CN/EN font rows
+    flex-wrap: wrap;
     gap: $spacing-xs;
   }
 
   &__growth-label {
+    // Own row: 230rpx inner width cannot fit label + 4-digit reservation +
+    // target on one line; stacking keeps the numeral hero-sized instead of
+    // shrinking it to fit.
+    flex: 0 0 100%;
     font-family: $font-ui;
     font-size: $font-size-sm;
+    line-height: 1.2;
     font-weight: $font-weight-semibold;
     color: var(--profile-text-secondary);
   }
@@ -1010,11 +1605,14 @@
     font-weight: $font-weight-bold;
     line-height: 1;
     color: $color-primary-dark;
+    // P1-3 anti-jitter: reserve 4 digits' width for the count-up (48rpx
+    // Quicksand digits ≈ 108rpx; 160rpx starved the single-row layout).
+    min-width: 120rpx;
   }
 
   &__growth-target {
     font-family: $font-en-brand;
-    font-size: $font-size-sm;
+    font-size: $font-size-2xs;
     color: var(--profile-text-secondary);
   }
 
@@ -1078,12 +1676,22 @@
   // RPG level plate: gold-trimmed pill carrying `Lv.X 名称`. Hidden on
   // gamification error (error copy renders as the plain `&__growth-level`
   // line above — never on the plate).
+  // P0-4 (2026-10-22, UIUX memo §8): level plate + streak capsule share one
+  // foot row (space-between). The row owns the top margin now — the plate's
+  // own margin-top/align-self were removed when the row was introduced.
+  &__growth-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
   &__level-plate {
     display: inline-flex;
     align-items: center;
-    align-self: flex-start;
     gap: 8rpx;
-    margin-top: $spacing-xs;
     padding: 4rpx $spacing-sm;
     min-height: 40rpx;
     box-sizing: border-box;
@@ -1111,6 +1719,58 @@
     white-space: nowrap;
   }
 
+  // P0-4 streak capsule — equipment-wait-chip gold family (rgba brand-gold
+  // 0.12). Single line commonly (48rpx vs the plate's 40rpx → +8rpx, inside
+  // the card's ~29rpx slack); --near-milestone adds the hint line (+28rpx →
+  // fits by ~1rpx; ≤340px hides the hint — locked degradation, memo §8).
+  &__streak-capsule {
+    min-height: 48rpx;
+    max-width: 100%;
+    padding: 4rpx 16rpx;
+    box-sizing: border-box;
+    border-radius: $radius-pill;
+    background: rgba($color-brand-gold, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2rpx;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    // A5-1 (full-marks Wave A): the capsule is tappable → Discover.
+    &--pressed {
+      transform: scale(0.96);
+      background: rgba($color-brand-gold, 0.2);
+    }
+  }
+
+  &__streak-main {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  &__streak-icon {
+    flex-shrink: 0;
+  }
+
+  &__streak-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+    color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
+  &__streak-hint {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    line-height: $line-height-normal;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+  }
+
   &__partner-entry {
     position: absolute;
     z-index: 7;
@@ -1123,15 +1783,15 @@
     border-radius: $card-radius-sm;
     display: flex;
     align-items: center;
-    gap: $spacing-md;
-    background: rgba($color-bg-tint-purple, 0.92);
-    border: 1rpx solid rgba($color-primary, 0.18);
-    box-shadow: 0 10rpx 24rpx rgba($color-text-primary, 0.08);
-    transition: transform 0.12s ease, background 0.12s ease;
+    gap: $spacing-sm;
+    @include profile-stage-glass;
+    // 2rpx bottom gold edge — pressable affordance, echoes the stage rim-light.
+    border-bottom: 2rpx solid rgba($color-landed-gold, 0.55);
+    transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
 
     &--pressed {
       transform: scale(0.985);
-      background: rgba($color-primary, 0.06);
+      @include profile-stage-glass-pressed;
     }
   }
 
@@ -1180,6 +1840,7 @@
 
   &__equipment-slots {
     display: flex;
+    flex-shrink: 0;
     gap: 8rpx;
   }
 
@@ -1191,6 +1852,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    position: relative;
     background: rgba($color-primary, 0.045);
     border: 1rpx solid rgba($color-primary, 0.12);
 
@@ -1198,6 +1860,133 @@
       border-color: rgba($color-secondary, 0.72);
       background: linear-gradient(145deg, rgba($color-primary, 0.16), rgba($color-secondary, 0.15));
       box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.1);
+    }
+
+    // P1-6 (UIUX memo §5): rare items carry a static gold rim + a slow
+    // opacity-only ::after pulse (2.4s). RM strips the pulse; degradation
+    // tier uses --rare-static (rim only). Rarity weights never surface.
+    &--rare {
+      border: 2rpx solid rgba($color-landed-gold, 0.72);
+      box-shadow: 0 0 12rpx rgba($color-landed-gold, 0.25);
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 2rpx;
+        left: 2rpx;
+        right: 2rpx;
+        bottom: 2rpx;
+        border-radius: $radius-md;
+        border: 2rpx solid rgba($color-landed-gold, 0.5);
+        opacity: 0.5;
+        animation: profile-equipment-rare-flow 2.4s ease-in-out infinite;
+        pointer-events: none;
+      }
+    }
+
+    &--rare-static::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  @keyframes profile-equipment-rare-flow {
+    0%, 100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  // P1-6 pity chip (PM memo §4b): rides beside the inventory count when a
+  // partial guarantee exists. 3/3 → gold guaranteed variant 「下一抽必得新
+  // 装备」. Never exposes draw weights or 「稀有」 probability framing.
+  &__equipment-pity-chip {
+    flex-shrink: 0;
+    margin-left: $spacing-xs;
+    padding: 4rpx 12rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-brand-gold, 0.12);
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+
+    &--guaranteed {
+      background: rgba($color-landed-gold, 0.22);
+      border: 1rpx solid rgba($color-landed-gold, 0.55);
+      box-sizing: border-box;
+    }
+  }
+
+  // P1-6 first-draw teaser (UIUX memo §5): mode swap of the empty 4-slot
+  // cluster for zero-inventory users — honest 3-segment stepper
+  // (报名→赴约→反馈), lit only from real registration state. Segments 2/3
+  // stay dark until the client carries per-event feedback state (memo risk
+  // b: fail-open, no invented progress).
+  &__equipment-teaser {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8rpx;
+  }
+
+  &__equipment-teaser-copy {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__equipment-teaser-track {
+    display: flex;
+    gap: 8rpx;
+  }
+
+  &__equipment-teaser-segment {
+    width: 56rpx;
+    height: 8rpx;
+    border-radius: 4rpx;
+    background: var(--profile-primary-08);
+
+    &--lit {
+      background: $color-primary;
+    }
+  }
+
+  // P1-6 claimable whole-strip signal (UIUX memo §5): static gold border +
+  // 1.5s opacity-breathe edge ring (same calm rate as the wait-dot). RM =
+  // static gold edge only (the page RM block strips the ::after).
+  &__partner-entry--claimable {
+    border-color: rgba($color-landed-gold, 0.72);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: -2rpx;
+      left: -2rpx;
+      right: -2rpx;
+      bottom: -2rpx;
+      border-radius: $card-radius-sm;
+      border: 2rpx solid rgba($color-landed-gold, 0.45);
+      opacity: 0.4;
+      animation: profile-equipment-claim-breathe 2.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+  }
+
+  @keyframes profile-equipment-claim-breathe {
+    0%, 100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 0.65;
     }
   }
 
@@ -1325,13 +2114,249 @@
     color: $color-primary;
   }
 
+  // P1-5 quest line (2026-10-22, PM memo §2): quiet checklist card in the
+  // list-row chrome family (settings-entry surface). Enters with the story
+  // card's stagger slot (240ms).
+  &__quest {
+    margin: 0 $container-padding $spacing-md;
+    padding: $spacing-md;
+    box-sizing: border-box;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    // Craft pass (2026-10-24): static render — quest visibility depends on
+    // async registration data, so an entrance stagger fired at data-arrival
+    // time rather than with the page choreography.
+  }
+
+  &__quest-header {
+    display: flex;
+    align-items: center; // R2: 32rpx display title + 20rpx UI subtitle
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__quest-title {
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: var(--profile-text-primary);
+  }
+
+  &__quest-subtitle {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+    white-space: nowrap;
+  }
+
+  &__quest-step {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 72rpx;
+    box-sizing: border-box;
+
+    & + & {
+      border-top: 1rpx solid var(--profile-divider);
+    }
+  }
+
+  &__quest-check {
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    border: 2rpx solid rgba($color-text-primary, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+
+    &--done {
+      background: rgba($color-landed-gold, 0.16);
+      border-color: rgba($color-landed-gold, 0.6);
+    }
+  }
+
+  &__quest-step-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+  }
+
+  &__quest-step-title {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: var(--profile-text-primary);
+
+    &--done {
+      color: var(--profile-text-tertiary);
+    }
+  }
+
+  &__quest-step-sub {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    color: var(--profile-text-tertiary);
+  }
+
+  &__quest-cta {
+    flex-shrink: 0;
+    padding: 8rpx $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.08);
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.96);
+      background: rgba($color-primary, 0.14);
+    }
+  }
+
+  &__quest-cta-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
+  // P2-4 Duo 同桌卡 (2026-10-22, PM memo §7 / UIUX memo §4): stage-glass
+  // material family (shared mixin — no lighting drift; motion is reserved
+  // for permanent on-stage surfaces). Contextual card: entrance on the
+  // Act-E slot (220ms), user-initiated dismiss fades then unmounts.
+  &__duo-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin: 0 $container-padding $spacing-md;
+    padding: $spacing-md;
+    min-height: 128rpx;
+    box-sizing: border-box;
+    border-radius: $card-radius;
+    @include profile-stage-glass;
+    // Craft pass (2026-10-24): no entrance animation — the card mounts on
+    // async duo-status resolution; only the dismissal transition remains.
+    transition: opacity 0.16s ease, transform 0.16s ease;
+
+    &--dismissing {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+
+  &__duo-card-icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    background: $color-primary-light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__duo-card-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__duo-card-headline {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-primary);
+    line-height: $line-height-normal;
+  }
+
+  &__duo-card-sub {
+    margin-top: 4rpx;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-normal;
+  }
+
+  &__duo-card-cta {
+    flex-shrink: 0;
+    height: 64rpx;
+    padding: 0 24rpx;
+    margin-right: 64rpx; // clears the 88rpx dismiss hit box at the top-right
+    border-radius: $radius-pill;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.97);
+    }
+  }
+
+  &__duo-card-cta-text {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+    white-space: nowrap;
+  }
+
+  // 88rpx × 88rpx hit area (= 44pt at 750rpx/375pt); the glyph is a 20rpx
+  // CSS-drawn × (same two-bar technique as the bio-nudge dismiss).
+  &__duo-card-dismiss {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 88rpx;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__duo-card-dismiss-icon {
+    position: relative;
+    width: 20rpx;
+    height: 20rpx;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 20rpx;
+      height: 2rpx;
+      border-radius: 2rpx;
+      background: var(--profile-text-tertiary);
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+  }
+
   &__archive {
     // P6 density pass: section gap normalized to $spacing-md (24rpx).
     margin: 0 $container-padding $spacing-md;
+    // P0-6 choreography: story card follows the stat tiles (240ms, 0.3s).
     opacity: 0;
-    transform: translateY(16rpx);
-    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.16s,
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.16s;
+    transform: translateY(12rpx);
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.24s,
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.24s;
 
     &--entered {
       opacity: 1;
@@ -1390,7 +2415,10 @@
 
   &__story-card {
     position: relative;
-    height: 280rpx;
+    // Craft pass (2026-10-24): 280rpx clipped the returning-user variant
+    // (badge + wrapped summary + status + CTA ≈ 307rpx). 320rpx restores
+    // 24–32rpx of bottom air in the fullest state.
+    height: 320rpx;
     border-radius: $card-radius;
     overflow: hidden;
     background: $color-primary-light;
@@ -1413,10 +2441,27 @@
   &__story-image {
     width: 100%;
     height: 100%;
+    // P0-9: develop-in (0.45s→1.2s) hands the transform to the Ken Burns
+    // drift — 10s out + 10s back ping-pong (20s period, seamless), scale
+    // 1.0→1.06 with a -1.5% lateral push (UIUX memo 2026-10-22 §P0-9).
+    // No base opacity/transform — the RM / --no-drift path must show the
+    // artwork statically.
+    animation: profile-story-develop 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.45s backwards,
+      profile-story-drift 10s ease-in-out 1.2s infinite alternate;
+
+    &--paused {
+      animation-play-state: paused;
+    }
+
+    &--no-drift {
+      animation: none;
+    }
   }
 
   &__story-wash {
     background: linear-gradient(90deg, rgba($color-bg-tint-purple, 0.96) 0%, rgba($color-bg-tint-purple, 0.78) 42%, rgba($color-bg-tint-purple, 0.08) 76%);
+    // P0-9: wash develops just after the artwork starts appearing.
+    animation: profile-story-wash-in 0.6s ease-out 0.55s backwards;
   }
 
   &__story-placeholder {
@@ -1434,7 +2479,13 @@
 
   &__story-content {
     z-index: 2;
-    padding: $spacing-lg;
+    // Flex column: makes story-badge's align-self effective (R8 dead
+    // declaration on a non-flex parent) and keeps the content stack's
+    // spacing explicit inside the taller card.
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24rpx 32rpx;
     box-sizing: border-box;
   }
 
@@ -1445,6 +2496,39 @@
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     line-height: $line-height-normal;
+    color: $color-text-primary;
+    // P2-2: title now carries the chapter's real title — cap at one line.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // P2-2 serialization badge (PM memo §6): quiet pill for 连载中, warm-gold
+  // for pending experiences. Sits above the title inside story-content.
+  &__story-badge {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    min-height: 36rpx;
+    padding: 2rpx 14rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.6);
+    margin-bottom: $spacing-xs;
+    box-sizing: border-box;
+
+    &--pending {
+      background: rgba($color-landed-gold, 0.92);
+    }
+  }
+
+  &__story-badge-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-tertiary);
+  }
+
+  &__story-badge--pending &__story-badge-text {
     color: $color-text-primary;
   }
 
@@ -1481,8 +2565,8 @@
 
   &__story-action {
     position: absolute;
-    right: $spacing-lg;
-    bottom: $spacing-lg;
+    right: 32rpx;
+    bottom: 32rpx;
     width: 72rpx;
     height: 72rpx;
     border-radius: 50%;
@@ -1494,27 +2578,169 @@
     box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.12);
   }
 
+  // P0-9: soft pulse ring around the continue chevron. Craft pass
+  // (2026-10-24): ONE-SHOT invitation (2.8s after a 1.2s settle, then rests
+  // invisible) — a perpetual attention loop competes with the avatar's
+  // breathing and reads busy rather than premium. Paused off-screen, RM off.
+  &__story-action-ring {
+    position: absolute;
+    inset: -10rpx;
+    border-radius: 50%;
+    border: 2rpx solid rgba($color-primary, 0.35);
+    pointer-events: none;
+    animation: profile-story-ring 2.8s ease-out 1.2s both;
+
+    &--paused {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes profile-story-develop {
+    from {
+      opacity: 0;
+      transform: scale(1.05);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes profile-story-drift {
+    from {
+      transform: scale(1) translateX(0);
+    }
+    to {
+      transform: scale(1.06) translateX(-1.5%);
+    }
+  }
+
+  @keyframes profile-story-wash-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes profile-story-ring {
+    0% {
+      opacity: 0.55;
+      transform: scale(0.9);
+    }
+    70% {
+      opacity: 0;
+      transform: scale(1.16);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.16);
+    }
+  }
+
+  // Craft pass (2026-10-24): pressed feedback for the quiet utility controls
+  // that previously had none (retry / nudge dismiss / duo dismiss).
+  &__duo-card-dismiss--pressed,
+  &__identity-nudge-dismiss--pressed {
+    opacity: 0.64;
+    transform: scale(0.96);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+  }
+
+  &__partner-equipment-retry--pressed {
+    transform: scale(0.97);
+    background: rgba($color-primary, 0.16);
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+
   &__spacer {
     @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-md + $spacing-xs);
     height: 0;
+  }
+
+  // P2-3 形象名片 entry (PM memo §8): quiet text-pill centered under the
+  // story card. Enters right after the story card's stagger slot.
+  &__poster-entry {
+    display: flex;
+    justify-content: center;
+    margin: 0 $container-padding $spacing-md;
+    animation: profile-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
+  }
+
+  &__poster-pill {
+    min-height: 56rpx;
+    padding: 6rpx $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.9);
+    border: 1rpx solid var(--profile-divider);
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.96);
+      background: var(--profile-primary-06);
+    }
+
+    &--busy {
+      opacity: 0.6;
+    }
+
+    // A6-2 (full-marks Wave A): one-shot gold breathe while a fresh badge is
+    // unshared. RM kills the animation (border tint remains as the static
+    // pose); the degradation tier never applies the class (TSX guard).
+    &--glow {
+      border-color: rgba($color-landed-gold, 0.6);
+      animation: profile-poster-glow 2.8s ease-in-out infinite;
+    }
+  }
+
+  @keyframes profile-poster-glow {
+    0%, 100% { box-shadow: 0 0 0 rgba($color-landed-gold, 0); }
+    50% { box-shadow: 0 4rpx 20rpx rgba($color-landed-gold, 0.3); }
+  }
+
+  &__poster-pill-text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: var(--profile-text-secondary);
+    white-space: nowrap;
+  }
+
+  &__poster-canvas {
+    // Off-screen but full internal bitmap size — canvasToTempFilePath
+    // exports blank when the bitmap dimensions don't match (results-page
+    // convention; bitmap dimensions supplied inline in px on the Canvas).
+    position: fixed;
+    left: -9999rpx;
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .profile-page__identity-stage,
-  .profile-page__stats,
   .profile-page__archive {
     opacity: 1;
     transform: none;
     transition: none;
   }
 
-  .profile-page__stat,
+  .profile-page__data-band,
   .profile-page__fallback-personality,
   .profile-page__nav-settings,
   .profile-page__partner-entry,
   .profile-page__story-card,
   .profile-page__growth-progress-bar,
+  .profile-page__milestones,
+  .profile-page__settings-entry,
+  .profile-page__entitlement-strip,
+  .profile-page__quest,
+  .profile-page__poster-entry,
+  .profile-page__duo-card,
   .profile-page__milestone {
     opacity: 1;
     transform: none;
@@ -1538,6 +2764,65 @@
   .profile-page__milestones-row {
     animation: none;
   }
+
+  // A6-2: the fresh-badge poster glow freezes to its static gold border.
+  .profile-page__poster-pill--glow {
+    animation: none;
+  }
+
+  // P0-9: story artwork rests at the mid-drift crop (scale 1.02, matching the
+  // loop's visual centre), wash fully developed, pulse ring removed entirely.
+  .profile-page__story-image {
+    animation: none;
+    opacity: 1;
+    transform: scale(1.02);
+  }
+
+  .profile-page__story-wash {
+    animation: none;
+    opacity: 1;
+  }
+
+  .profile-page__story-action-ring {
+    display: none;
+    animation: none;
+  }
+
+  // P1-1: RM = haptic only. The --tapped rules out-specify the platform's own
+  // nested RM rule, so the tap-layer animations must be stripped here.
+  .profile-page__partner-visual--tapped .profile-page__partner-touch,
+  .profile-page__partner-visual--tapped .profile-page__partner-halo,
+  .profile-page__partner-visual--tapped .profile-page__partner-platform {
+    animation: none;
+  }
+
+  // P1-6: rare rim and claimable edge keep their STATIC gold border under
+  // RM — only the opacity pulses are removed.
+  .profile-page__equipment-slot--rare::after,
+  .profile-page__partner-entry--claimable::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  // P1-4: the unlock ring keeps its static gold rim under RM (animation off,
+  // border stays); the pop-in is killed via the .profile-page__milestone rule.
+  .profile-page__milestone-unlock-ring {
+    animation: none;
+  }
+
+  // P2-5: the large-title/nav-title crossfade is a state change, not a
+  // decoration — under RM it happens instantly.
+  .profile-page__large-title,
+  .profile-page__nav-title {
+    transition: none;
+  }
+
+  // P1-2: the foil sweep is pure decoration — removed entirely under RM
+  // (base opacity is 0; display:none is belt-and-suspenders).
+  .profile-page__identity-foil-sweep {
+    display: none;
+    animation: none;
+  }
 }
 
 // Narrow-device guard: the identity rail + partner visual are both absolutely
@@ -1554,6 +2839,37 @@
     max-width: 160rpx;
   }
 
+  // P0-3: the daily greeting keeps its full-width 2-line clamp even here —
+  // squeezing a sentence into 160rpx would cut it off mid-thought.
+  .profile-page__identity-bio--daily {
+    max-width: none;
+  }
+
+  // P0-4 locked degradation (UIUX memo §8): the near-milestone hint line is
+  // the first thing to go on ≤340px — capsule stays a single line.
+  .profile-page__streak-hint {
+    display: none;
+  }
+
+  // P1-4 (UIUX memo §1 risk a): 5-up cells shrink to ≈105rpx on ≤340px —
+  // badge art and the CSS medallion drop to 64rpx.
+  .profile-page__milestones-row--five-up .profile-page__milestone-img,
+  .profile-page__milestones-row--five-up .profile-page__milestone-medallion {
+    width: 64rpx;
+    height: 64rpx;
+  }
+
+  // P2-1 (UIUX memo §2 risk c): data-band values drop to 24rpx on ≤340px —
+  // labels keep the 20rpx floor.
+  .profile-page__data-band-value,
+  .profile-page__data-band-suffix {
+    font-size: 24rpx;
+  }
+
+  .profile-page__data-band-value {
+    min-width: 48rpx;
+  }
+
   .profile-page__partner-visual {
     right: 4rpx;
     bottom: 132rpx;
@@ -1563,5 +2879,88 @@
     &--no-entry {
       bottom: 28rpx;
     }
+  }
+
+  // 精致度 (2026-10-24 render matrix): ≤340px compaction. The 320px capture
+  // showed the identity column cramped (truncated name, tall pill stack) and
+  // 我的形象 colliding with the last equipment slot when the claim chip shows.
+  .profile-page__identity-copy {
+    gap: $spacing-sm;
+  }
+
+  .profile-page__identity-avatar {
+    width: 72rpx;
+    height: 72rpx;
+    border-width: 3rpx;
+
+    > .archetype-head {
+      width: 68rpx !important;
+      height: 68rpx !important;
+    }
+
+    .archetype-head__image {
+      width: 62rpx !important;
+      height: 62rpx !important;
+    }
+  }
+
+  .profile-page__identity-name {
+    max-width: 200rpx;
+    font-size: 28rpx;
+  }
+
+  .profile-page__identity-tag {
+    min-height: 32rpx;
+    padding: 2rpx 12rpx;
+    font-size: 20rpx;
+  }
+
+  .profile-page__partner-entry {
+    gap: 12rpx;
+  }
+
+  .profile-page__equipment-slot {
+    width: 44rpx;
+    height: 44rpx;
+  }
+
+  .profile-page__equipment-wait-chip {
+    padding: 2rpx 8rpx;
+    font-size: 20rpx;
+  }
+
+  .profile-page__partner-entry-action {
+    gap: $spacing-xs;
+    max-width: 160rpx;
+  }
+
+  .profile-page__partner-entry-action-text {
+    font-size: 24rpx;
+  }
+
+  // 320px re-render (2026-10-24): three residual collisions fixed.
+  // 1) growth-card 280 + partner 300 + margins exceeded the 592rpx stage
+  //    inner width by 20rpx — the partner glass overlapped the growth card.
+  //    Measured after first fix: growth/partner still overlapped 14px at
+  //    320px (growth right 160.9 vs partner left 146.5). 224rpx leaves a
+  //    real gap; 390/414px were already clean and are untouched.
+  .profile-page__growth-card {
+    max-width: 224rpx;
+  }
+
+  // 2) identity column stacked 7 rows (name + 4 pills + bio + affordance).
+  //    Keep the two identity pills (archetype + family); life-stage/gender
+  //    demographics stay editable in edit-profile, not the narrow hero.
+  .profile-page__identity-tag--stage,
+  .profile-page__identity-tag--gender {
+    display: none;
+  }
+
+  // 3) claim chip + 4 slots + action still exceeded the strip at 320px even
+  //    after shrinking. Drop the 4th (accessory) PREVIEW slot only at this
+  //    tier — chip (reward signal) and 我的形象 (navigation) outrank a 4th
+  //    preview; the full outfit lives on the 我的形象 page.
+  .profile-page__equipment-slots .profile-page__equipment-slot:last-child {
+    display: none;
   }
 }
