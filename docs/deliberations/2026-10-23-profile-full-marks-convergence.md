@@ -68,3 +68,10 @@ Wave B ◀── p50≥50?          Lovart 约稿 ◀── 定档 15/20     gre
 - 海报 glow 在降级档只去动画（静态金边保留），非整体移除
 
 *收敛人：主会话。下一步建议：先跑 D-2/D-4 两条 SQL（一条命令的事），它们同时解锁 Wave B 与 Wave C。*
+
+---
+
+## Addendum 2026-10-23 — D-2/D-4 dev-DB gate run
+
+- **D-2:** dev `xp_transactions` empty (0/128 users) → undecidable locally; ledger writes confirmed live (gamificationService ×4). Awaiting staging/prod read-only run. A5-4 stays quarantined per PM plan §181.
+- **D-4:** dev p95 = 1 (both variants), max 12–16; if prod p95 < 12 → tier-5 = 15场 (pre-agreed rule). Sub-finding: shell eventsJoined formula (pending|matched only) may under-count post-completion-sweep when no attendance row exists — semantics decision deferred to PM, prod data first.
