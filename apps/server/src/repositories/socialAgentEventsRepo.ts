@@ -53,6 +53,7 @@ const finiteNonNegativeNumber = z.number().finite().nonnegative();
 const finiteNonNegativeInteger = finiteNonNegativeNumber.int();
 
 const signalsSchema = z.record(
+  z.string(),
   z.union([z.number().finite(), z.boolean()]),
 );
 
