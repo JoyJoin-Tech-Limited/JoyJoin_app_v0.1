@@ -158,7 +158,7 @@ describe('buildMiniProgramPaymentAmountSummary', () => {
     })
 
     expect(withoutCoupon.payableAmount).toBe(120)
-    expect(withoutCoupon.rows.at(-1)?.value).toBe('¥120')
+    expect(withoutCoupon.rows[withoutCoupon.rows.length - 1]?.value).toBe('¥120')
   })
 
   it('renders the struck-through original price when the operator set one', () => {
