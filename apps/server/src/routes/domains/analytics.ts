@@ -511,6 +511,12 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   "quip_chip_shown",
   "quip_chip_tap",
   "quip_chip_adopted",
+  // Xiaoyue facilitation copilot M1 (contract AC-11/OBS-02) — askId-joinable
+  // funnel facts only; no prompts, roster data or participant monitoring.
+  "agent_ask_shown",
+  "agent_ask_decision",
+  "agent_action_result",
+  "agent_policy_changed",
   // E9 UGC 举报闭环 (sprint e9-ugc-report, contract AC-08 / OBS-01) — fired
   // once per successful report-content submission with {phase, kind} metadata
   // only (never the reported text). Whitelist parity only.

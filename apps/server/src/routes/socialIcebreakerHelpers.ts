@@ -97,6 +97,19 @@ export function sanitizeStateForClient(
   const sanitized = { ...state };
   delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
   delete (sanitized as Partial<SocialSessionState>).xiaoyueSessionPackMeta;
+  // M1 (AC-03/SEC-01): the bounded copilot state is host-only. The entire
+  // `xiaoyueAgent` object (Ask, decision keys, cost counters, policy cooldowns)
+  // is removed for every non-host projection; only the monotonic warmup topic
+  // revision fields below remain visible to participants.
+  delete (sanitized as Partial<SocialSessionState>).xiaoyueAgent;
+  if (
+    requestingUserId &&
+    state.hostUserId === requestingUserId &&
+    state.xiaoyueAgent &&
+    state.warmupTopicSetRevision !== undefined
+  ) {
+    sanitized.xiaoyueAgent = state.xiaoyueAgent;
+  }
   // perf-W1: `expiresAt` is a server-owned sliding-TTL timestamp with zero
   // client readers (the client uses `isActive` for presence). It changes on
   // every heartbeat-driven TTL bump, so it defeated TanStack structural

@@ -694,6 +694,13 @@
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1793004994309,
+      "tag": "0099_social_agent_events",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,10 @@ import {
 } from '../socialIcebreakerAIService';
 import { generateXiaoyueAdaptiveSuggestion } from '../xiaoyueAdaptiveEngine';
 import { PHASE_CONFIG } from '@shared/socialIcebreaker';
+import { applyXiaoyueAgentAskDecision } from '../lib/xiaoyueAgentPolicy';
+import { executeWarmupTopicRotation } from '../lib/xiaoyueAgentActions';
+import { updateSessionAtomic } from '../lib/socialIcebreakerStore';
+import { appendSocialAgentEvent } from '../repositories/socialAgentEventsRepo';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -144,6 +148,176 @@ router.post('/:socialSessionId/xiaoyue/adaptive-suggestion', async (req: Request
     logger.error('[SocialIcebreaker] xiaoyue/adaptive-suggestion error:', { error });
     return res.status(500).json({ error: 'Failed to generate adaptive suggestion' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/xiaoyue/agent/decision
+// ---------------------------------------------------------------------------
+const agentDecisionSchema = z.object({
+  askId: z.string().min(1).max(80),
+  decision: z.enum(['accepted', 'ignored', 'closed_session', 'action_failed_dismissed']),
+  idempotencyKey: z.string().min(8).max(80).optional(),
+  clientActionId: z.string().max(120).optional(),
+});
+
+function agentError(res: Response, status: number, code: string) {
+  return res.status(status).json({ code, error: code });
+}
+
+router.post('/:socialSessionId/xiaoyue/agent/decision', async (req: Request, res: Response) => {
+  const paramsParse = socialSessionIdParamSchema.safeParse(req.params);
+  if (!paramsParse.success) return agentError(res, 400, 'INVALID_SOCIAL_SESSION_ID');
+  const { socialSessionId } = paramsParse.data;
+
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = agentDecisionSchema.safeParse(req.body);
+  if (!parsed.success) return agentError(res, 400, 'INVALID_AGENT_DECISION');
+  const { askId, decision, idempotencyKey, clientActionId } = parsed.data;
+  if (decision === 'accepted' && !idempotencyKey) {
+    return agentError(res, 400, 'IDEMPOTENCY_KEY_REQUIRED');
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return agentError(res, 403, 'AGENT_NOT_HOST');
+  }
+
+  const ask = state.xiaoyueAgent?.ask;
+  if (!ask || ask.id !== askId) return agentError(res, 400, 'AGENT_ASK_NOT_FOUND');
+  if (ask.phase !== state.currentPhase || state.currentPhase !== 'warmup') {
+    return agentError(res, 409, 'AGENT_PHASE_MISMATCH');
+  }
+  if (ask.status !== 'pending' && ask.status !== 'failed' && ask.status !== 'unknown') {
+    return agentError(res, 409, 'AGENT_ASK_EXPIRED');
+  }
+
+  if (decision === 'accepted') {
+    const outcome = await executeWarmupTopicRotation({
+      state,
+      socialSessionId,
+      userId,
+      askId,
+      idempotencyKey: idempotencyKey!,
+    });
+    return res.json({
+      status: outcome.status,
+      ...(outcome.topicSetRevision !== undefined
+        ? { topicSetRevision: outcome.topicSetRevision }
+        : {}),
+      ...(outcome.errorCode ? { code: outcome.errorCode } : {}),
+      state: await buildClientState(outcome.state, userId),
+    });
+  }
+
+  let applied = false;
+  const atomic = await updateSessionAtomic(
+    socialSessionId,
+    (latest) => {
+      const latestAsk = latest.xiaoyueAgent?.ask;
+      if (!latestAsk || latestAsk.id !== askId) return false;
+      if (latestAsk.status !== 'pending' && latestAsk.status !== 'failed' && latestAsk.status !== 'unknown') {
+        return false;
+      }
+      const next = applyXiaoyueAgentAskDecision(latest, decision, Date.now());
+      Object.assign(latest, next);
+      applied = true;
+      return true;
+    },
+    async (latest, tx) => {
+      if (!applied) return;
+      await appendSocialAgentEvent(
+        {
+          socialSessionId,
+          phase: latest.currentPhase,
+          kind: 'ask_decision',
+          askId,
+          actorUserId: userId,
+          payload: {
+            decision,
+            askKind: ask.kind,
+            ...(idempotencyKey ? { idempotencyKey } : {}),
+          },
+        },
+        tx,
+      );
+    },
+  );
+
+  if (atomic.outcome === 'not_found') return agentError(res, 410, 'SESSION_EXPIRED');
+  if (atomic.outcome !== 'updated') return agentError(res, 409, 'AGENT_ASK_EXPIRED');
+
+  logger.info('[XiaoyueAgent] decision recorded', {
+    socialSessionId,
+    askId,
+    decision,
+    clientActionId,
+  });
+
+  return res.json({
+    status: 'decision_recorded',
+    state: await buildClientState(atomic.state, userId),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/xiaoyue/agent/policy
+// ---------------------------------------------------------------------------
+const agentPolicySchema = z.object({ proactiveEnabled: z.boolean() });
+
+router.post('/:socialSessionId/xiaoyue/agent/policy', async (req: Request, res: Response) => {
+  const paramsParse = socialSessionIdParamSchema.safeParse(req.params);
+  if (!paramsParse.success) return agentError(res, 400, 'INVALID_SOCIAL_SESSION_ID');
+  const { socialSessionId } = paramsParse.data;
+
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = agentPolicySchema.safeParse(req.body);
+  if (!parsed.success) return agentError(res, 400, 'INVALID_AGENT_POLICY');
+  const { proactiveEnabled } = parsed.data;
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return agentError(res, 403, 'AGENT_NOT_HOST');
+  }
+
+  const atomic = await updateSessionAtomic(
+    socialSessionId,
+    (latest) => {
+      if (!latest.xiaoyueAgent) return false;
+      latest.xiaoyueAgent.policy.proactiveDisabled = !proactiveEnabled;
+      if (proactiveEnabled) latest.xiaoyueAgent.policy.ignoredStreak = 0;
+      return true;
+    },
+    async (latest, tx) => {
+      await appendSocialAgentEvent(
+        {
+          socialSessionId,
+          phase: latest.currentPhase,
+          kind: 'policy_changed',
+          actorUserId: userId,
+          payload: {
+            proactiveEnabled,
+            ignoredStreak: latest.xiaoyueAgent?.policy.ignoredStreak ?? 0,
+          },
+        },
+        tx,
+      );
+    },
+  );
+
+  if (atomic.outcome === 'not_found') return agentError(res, 410, 'SESSION_EXPIRED');
+  if (atomic.outcome !== 'updated') return agentError(res, 400, 'AGENT_POLICY_UNAVAILABLE');
+
+  return res.json({
+    status: 'decision_recorded',
+    state: await buildClientState(atomic.state, userId),
+  });
 });
 
 export default router;

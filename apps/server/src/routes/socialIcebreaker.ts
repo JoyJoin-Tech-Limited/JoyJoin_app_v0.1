@@ -38,6 +38,12 @@ import {
   validateLieDetectiveV2Tags,
   getDynamicDifficulty,
 } from '../socialIcebreakerAIService';
+import {
+  commitWholeTopicSet,
+  markTopicAdvanced,
+  stampPrecompiledTopicSet,
+} from '../lib/warmupTopicSetRevision';
+import { runXiaoyueAgentTick } from '../lib/xiaoyueAgentRuntime';
 import { buildCachedAIMeta, buildFallbackAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
   cleanupPhaseStateForNextPhase,
@@ -283,6 +289,7 @@ function scheduleStartBackgroundGeneration(params: {
 
         latestState.warmupTopics = topicResult.data;
         latestState.warmupTopicsMeta = topicResult.meta;
+        stampPrecompiledTopicSet(latestState, Date.now());
         await updateSession(socialSessionId, latestState);
         logger.info('Warmup topics pre-compiled after session start', {
           socialSessionId,
@@ -612,6 +619,10 @@ router.post('/start', async (req: any, res) => {
     vibe: resolvedVibe,
     enabledPhases: getServerEnabledPhases(),
     commonGroundCount: 0,
+    warmupTopicSetRevision: 1,
+    warmupTopicSetUpdatedAt: now,
+    warmupTopicAdvancedAt: now,
+    warmupTopicSetProvenance: 'precompile',
     // Single-test bot attendees default to ready so the host can preview the
     // full "everyone ready" warmup flow immediately.
     warmupReadyUserIds: singleTestMeta?.botPersonas?.map((p) => p.userId) ?? [],
@@ -797,7 +808,22 @@ router.get('/:socialSessionId', async (req: any, res) => {
     state.activePlayerCount = activeCount;
   }
 
-  return res.json(await buildClientState(state, userId));
+  // M1 bounded copilot: host-only, flag-gated, zero behaviour when off.
+  // The 3s poll is the only driver — there is no autonomous background loop.
+  let clientState = state;
+  if (userId && state.hostUserId === userId) {
+    const agentEnabled = await getFeatureFlag('icebreakerAgentCopilotEnabled', true);
+    if (agentEnabled) {
+      clientState = await runXiaoyueAgentTick({
+        state,
+        socialSessionId,
+        userId,
+        flagEnabled: agentEnabled,
+      });
+    }
+  }
+
+  return res.json(await buildClientState(clientState, userId));
 });
 
 // ---------------------------------------------------------------------------
@@ -957,11 +983,12 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   }
 
   stateToPersist.selectedMood = mood;
-  stateToPersist.warmupTopics = topicResult.data;
-  stateToPersist.warmupTopicsMeta = topicResult.meta;
-  stateToPersist.warmupTopicsStatus = 'ready';
-  stateToPersist.warmupTopicsGeneratingAt = undefined;
-  stateToPersist.currentTopicIndex = 0;
+  commitWholeTopicSet(stateToPersist, {
+    topics: topicResult.data as NonNullable<SocialSessionState['warmupTopics']>,
+    meta: topicResult.meta,
+    provenance: 'host_manual',
+    now: Date.now(),
+  });
   stateToPersist.warmupReadyUserIds = [];
   // Single-test bot attendees default to ready on the fresh topic set.
   seedSingleTestBotsWarmupReady(stateToPersist);
@@ -1014,13 +1041,14 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
   if ((state.warmupTopics || []).length === 0) {
     const healingMood = state.selectedMood ?? 'relaxed';
     state.selectedMood = healingMood;
-    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe, {
-      dedupeKey: state.icebreakerSessionId,
+    commitWholeTopicSet(state, {
+      topics: getCuratedWarmupTopics(healingMood, state.vibe, {
+        dedupeKey: state.icebreakerSessionId,
+      }),
+      meta: buildFallbackAIMeta('ready_route_missing_topics', 'social-warmup-topics-ready-heal'),
+      provenance: 'host_manual',
+      now: Date.now(),
     });
-    state.warmupTopicsMeta = buildFallbackAIMeta('ready_route_missing_topics', 'social-warmup-topics-ready-heal');
-    state.warmupTopicsStatus = 'ready';
-    state.warmupTopicsGeneratingAt = undefined;
-    state.currentTopicIndex = 0;
   }
 
   const readyUserIds = new Set(state.warmupReadyUserIds || []);
@@ -1079,13 +1107,14 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
   if ((state.warmupTopics || []).length === 0) {
     const healingMood = state.selectedMood ?? 'relaxed';
     state.selectedMood = healingMood;
-    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe, {
-      dedupeKey: state.icebreakerSessionId,
+    commitWholeTopicSet(state, {
+      topics: getCuratedWarmupTopics(healingMood, state.vibe, {
+        dedupeKey: state.icebreakerSessionId,
+      }),
+      meta: buildFallbackAIMeta('next_topic_route_missing_topics', 'social-warmup-topics-next-heal'),
+      provenance: 'host_manual',
+      now: Date.now(),
     });
-    state.warmupTopicsMeta = buildFallbackAIMeta('next_topic_route_missing_topics', 'social-warmup-topics-next-heal');
-    state.warmupTopicsStatus = 'ready';
-    state.warmupTopicsGeneratingAt = undefined;
-    state.currentTopicIndex = 0;
     seedSingleTestBotsWarmupReady(state);
     await updateSession(socialSessionId, state);
   }
@@ -1106,6 +1135,7 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
 
   incrementCommonGround(state);
   state.currentTopicIndex = currentTopicIndex + 1;
+  markTopicAdvanced(state, Date.now());
   state.warmupReadyUserIds = [];
   // Single-test bot attendees default to ready on each new topic card.
   seedSingleTestBotsWarmupReady(state);

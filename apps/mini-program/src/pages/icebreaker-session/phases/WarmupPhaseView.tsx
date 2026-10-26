@@ -32,6 +32,8 @@ import type { TopicsRecoveryState } from '../viewModels/warmupViewModels'
 interface WarmupPhaseViewProps {
   topics: SocialTopic[]
   currentIndex: number
+  /** M1 monotonic whole-deck revision; absent on legacy sessions. */
+  topicSetRevision?: number
   readyUserIds: string[]
   participants: SessionParticipant[]
   currentUserId: string
@@ -75,6 +77,7 @@ interface WarmupPhaseViewProps {
 export function WarmupPhaseView({
   topics,
   currentIndex,
+  topicSetRevision,
   readyUserIds,
   participants,
   currentUserId,
@@ -362,6 +365,7 @@ export function WarmupPhaseView({
             state={cardState}
             topics={topics}
             currentIndex={currentIndex}
+            topicSetRevision={topicSetRevision}
             selectedMood={selectedMood}
             vibe={vibe}
             isFlipped={topicFlipped}

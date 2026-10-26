@@ -298,6 +298,7 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
         <WarmupPhaseView
           topics={session.warmupTopics ?? []}
           currentIndex={session.currentTopicIndex ?? 0}
+          topicSetRevision={session.warmupTopicSetRevision}
           readyUserIds={session.warmupReadyUserIds ?? []}
           warmupDataReady={session.warmupReadyUserIds !== undefined}
           participants={participants}

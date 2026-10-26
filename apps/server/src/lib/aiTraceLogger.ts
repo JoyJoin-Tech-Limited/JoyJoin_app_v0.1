@@ -133,10 +133,59 @@ export interface AICallTrace {
   reasoningTokens?: number;
 
   /**
-   * Arbitrary extra metadata for domain-specific telemetry extensions.
-   * Example: quality-gate scores, embedding dimensions, cache hit details.
+   * Domain-specific telemetry extensions. Callers may keep their existing
+   * shape; only explicitly whitelisted finite numbers and booleans reach
+   * stdout. Text, prompts, roster data, and profile payloads are always dropped.
    */
   extra?: Record<string, unknown>;
+}
+
+/** Non-PII telemetry keys that may be forwarded inside `extra`. */
+const AI_TRACE_EXTRA_SAFE_KEYS = new Set([
+  'latencyMs',
+  'llmCallCount',
+  'inputTokens',
+  'outputTokens',
+  'totalTokens',
+  'promptTokens',
+  'completionTokens',
+  'reasoningTokens',
+  'estimatedCostYuan',
+  'fallbackUsed',
+  'fromCache',
+  'highlightsInjected',
+  'diversityScore',
+  'members',
+  'sharedInterestCount',
+  'rosterSize',
+  'lineCount',
+  'evidenceCount',
+  'totalChars',
+  'textLength',
+  'paddedCount',
+  'quality_fun',
+  'quality_brand',
+  'quality_safety',
+  'quality_clarity',
+  'quality_passed',
+  'quality_refinement_attempts',
+  'judge_evaluated',
+]);
+
+function sanitizeAITraceExtra(
+  extra: Record<string, unknown> | undefined,
+): Record<string, number | boolean> | undefined {
+  if (!extra) return undefined;
+
+  const safe: Record<string, number | boolean> = {};
+  for (const [key, value] of Object.entries(extra)) {
+    if (!AI_TRACE_EXTRA_SAFE_KEYS.has(key)) continue;
+    if (typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) {
+      safe[key] = value;
+    }
+  }
+
+  return Object.keys(safe).length > 0 ? safe : undefined;
 }
 
 /**
@@ -167,6 +216,7 @@ export function logAITrace(
     promptVersion: fields.promptVersion,
     errorCode: fields.errorCode,
     reasoningTokens: fields.reasoningTokens,
+    extra: sanitizeAITraceExtra(fields.extra),
   };
 
   // Strip undefined keys for compact output
