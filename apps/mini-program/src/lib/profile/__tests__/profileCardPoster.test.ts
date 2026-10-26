@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   drawProfileCardPosterContent,
   fitCanvasTextToWidth,
+  planArchetypeArtLayer,
   planPortraitLayers,
   PROFILE_CARD_NO_QR_COPY,
   PROFILE_CARD_QR_COPY,
@@ -225,5 +226,17 @@ describe('planPortraitLayers (pre-ship B1/B2/C1)', () => {
 
   it('returns no layers when there is nothing to draw', () => {
     expect(planPortraitLayers({ displayName: '小悦' })).toEqual([])
+  })
+
+  // Step-3 audit Class A: when every pixel layer fails to resolve, the export
+  // degrades to this rect instead of painting a blank 320×480 well.
+  it('shares one archetype-art rect with the degraded export path', () => {
+    expect(planArchetypeArtLayer('/tmp/corgi.webp')).toEqual({
+      url: '/tmp/corgi.webp',
+      left: 380,
+      top: 230,
+      width: 320,
+      height: 320,
+    })
   })
 })

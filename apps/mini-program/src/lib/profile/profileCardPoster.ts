@@ -211,16 +211,25 @@ export function planPortraitLayers(input: ProfileCardPosterInput): ProfileCardPo
     if (layers.length > 0) return layers
   }
 
-  if (input.archetypeAsset) {
-    return [{
-      url: input.archetypeAsset,
-      left: CENTER_X - ARCHETYPE_ART_SIZE / 2,
-      top: PORTRAIT_Y + (PORTRAIT_HEIGHT - ARCHETYPE_ART_SIZE) / 2,
-      width: ARCHETYPE_ART_SIZE,
-      height: ARCHETYPE_ART_SIZE,
-    }]
-  }
+  if (input.archetypeAsset) return [planArchetypeArtLayer(input.archetypeAsset)]
   return []
+}
+
+/**
+ * Step-3 audit Class A: the archetype artwork is the export's LAST line of
+ * defence. Every pixel layer can fail to resolve at once (CDN miss, or a 5s
+ * `resolveImagePath` timeout on the body), and the old code then exported a
+ * blank portrait well — 31% of the card, still saveable and shareable. Shared
+ * with `resolvePortraitStack`'s degradation path so both emit the same rect.
+ */
+export function planArchetypeArtLayer(archetypeAsset: string): ProfileCardPortraitLayer {
+  return {
+    url: archetypeAsset,
+    left: CENTER_X - ARCHETYPE_ART_SIZE / 2,
+    top: PORTRAIT_Y + (PORTRAIT_HEIGHT - ARCHETYPE_ART_SIZE) / 2,
+    width: ARCHETYPE_ART_SIZE,
+    height: ARCHETYPE_ART_SIZE,
+  }
 }
 
 /**
@@ -356,10 +365,23 @@ async function resolvePortraitStack(
       }
     }),
   )
-  return planned.flatMap((layer, index) => {
+  const resolved = planned.flatMap((layer, index) => {
     const path = paths[index]
     return path ? [{ ...layer, url: path }] : []
   })
+  if (resolved.length > 0) return resolved
+  // Step-3 audit Class A: never export a blank portrait well. When every pixel
+  // layer fails to resolve, degrade to the archetype artwork — the fallback the
+  // pre-fix implementation had and this rewrite had silently dropped.
+  if (!input.archetypeAsset) return []
+  try {
+    const fallbackPath = await resolveImagePath(input.archetypeAsset)
+    return fallbackPath
+      ? [{ ...planArchetypeArtLayer(input.archetypeAsset), url: fallbackPath }]
+      : []
+  } catch {
+    return []
+  }
 }
 
 /**
