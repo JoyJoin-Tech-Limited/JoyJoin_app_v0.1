@@ -439,11 +439,13 @@ describe('getBadgeProximity (A5-3)', () => {
     expect(getBadgeProximity(2)).toEqual({ label: '三场连击', remaining: 1 })
     expect(getBadgeProximity(4)).toEqual({ label: '渐入佳境', remaining: 1 })
     expect(getBadgeProximity(7)).toEqual({ label: '悦聚常客', remaining: 3 })
-    expect(getBadgeProximity(17)).toEqual({ label: '城市传说', remaining: 3 })
+    expect(getBadgeProximity(12)).toEqual({ label: '城市传说', remaining: 3 })
+    expect(getBadgeProximity(14)).toEqual({ label: '城市传说', remaining: 1 })
   })
 
   it('stays quiet when the next milestone is far away or everything is unlocked', () => {
     expect(getBadgeProximity(6)).toBeNull() // 4 away from 10
+    expect(getBadgeProximity(17)).toBeNull() // all unlocked at 15+ (tier-5 = 15场 since 2026-10-26)
     expect(getBadgeProximity(20)).toBeNull()
     expect(getBadgeProximity(25)).toBeNull()
   })

@@ -830,7 +830,7 @@ describe('Profile approved V4 layout', () => {
     expect(getByText('悦聚常客')).toBeTruthy()
     expect(getByText('城市传说')).toBeTruthy()
     expect(getByText('还差 1 场')).toBeTruthy()
-    expect(getByText('还差 16 场')).toBeTruthy()
+    expect(getByText('还差 11 场')).toBeTruthy()
     expect(profileAnalytics.track).toHaveBeenCalledWith(
       'profile_milestone_tap',
       { action: 'expand' },

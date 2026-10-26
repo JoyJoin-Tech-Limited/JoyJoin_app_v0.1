@@ -132,7 +132,9 @@ export const MILESTONES: MilestoneConfig[] = [
   {
     key: 'legend20',
     label: '城市传说',
-    threshold: 20,
+    // 2026-10-26 advisor convergence (UIUX + PM-relaunch + 🏦 3:1): launch at 15场.
+    // Permanent: never raise 15→20 (ownership); later evidence may only ADD a new honour.
+    threshold: 15,
     badge: MILESTONE_BADGES.legend20,
     ariaLabel: '城市传说徽章',
   },
