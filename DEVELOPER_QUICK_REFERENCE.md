@@ -103,15 +103,35 @@ npm run upload:cdn-assets -w mini-program       # Upload CDN assets locally (rsy
 npm run upload:cdn-assets:dry-run -w mini-program  # Preview what would upload
 npm run orchestration:validate      # Validate .github/orchestration.yaml and related runtime files
 npm run orchestration:tooling-report # Print the agent tooling sufficiency audit
+npm run harness:gate     # 5-pillar Harness gate (add --strict in CI-shaped runs)
+npm run design:audit:changed        # Diff-scoped design audit (--scope changed --fail-on error is what CI runs)
+npm run check:deps       # Runtime dependency reachability/ratchet gate
+npm run check:dependency-vulns      # Known-vulnerability gate over the shipped runtime tree
+npm run verify:deployment-freshness # Reject a deploy candidate whose ref is not the expected commit
+npm run verify:upload-assets -w mini-program      # Every bundled asset is include-covered or explicitly excluded
+npm run verify:subpackage-styles -w mini-program  # Required selectors exist in the compiled page WXSS (run after build:weapp)
+npm run verify:subscribe-templates  # WeChat subscribe-message template IDs + field keys vs the live API
 npm run db:push          # Sync Drizzle schema to database
 npm run db:push --force  # Force sync (use when db:push fails)
+npm run db:generate -- --custom  # Scaffold a numbered .sql migration and register it in _journal.json
+npm run db:rebuild-journal          # Re-register migrations in _journal.json
+npm run db:verify        # CI gate: Drizzle schema vs the live database
 npm run db:studio        # Open Drizzle Studio (database GUI)
 ```
+
+Screenshot generators (`npm run screenshot:*`, e.g. `screenshot:discover-area`, `screenshot:events`,
+`screenshot:event-feedback`, `screenshot:checkout-conversion-*`) render real pages through
+`scripts/screenshot-server.mjs`; add a generator with a UI change that has a visual state worth locking.
 
 ### Production deployment topology
 
 - Active production deploys run from `.github/workflows/deploy-production.yml` (triggered by pushes to `release`): GitHub Actions SSHes to `SERVER_IP`, rsyncs code to the remote host, runs `deployment/scripts/deploy-production.sh`, which reloads Nginx and restarts containers. Pushes to `main` deploy to staging via `.github/workflows/deploy-staging.yml`.
-- Staging images are built on the GitHub runner, transferred as a bundle, and switched with rollback on the CVM; staging deployment never runs application builds or DDL on the shared host. A successful `Deploy Staging` run triggers the matching mini-program 开发版 upload, so the client is not published ahead of its API.
+- **Image delivery (2026-07-28, hardened 2026-08-13):** staging API/Admin images are built on the GitHub runner and pulled on the CVM from a registry, in precedence order **TCR → GHCR → legacy tar bundle**. Steady state is a registry pull; the bundle path only runs when `STAGING_API_IMAGE` is unset. The CVM never compiles staging images and never applies DDL. A registry pull that fails falls back to the next mode instead of failing the deploy.
+- **Pre-switch import guard (2026-10-22):** `deploy-production.sh` runs the new API image's own entrypoint to `import('drizzle-orm')` before touching running containers. A pulled-but-unstartable image (a dependency no longer hoisted into `/app/node_modules`) leaves the previous release serving traffic instead of entering a restart loop. `granite-embedding` is only rebuilt when its image is missing or `GRANITE_EMBEDDING_REBUILD=1`.
+- **Three-tier images + stale-upload escape hatch (2026-10-26):** `apps/server/Dockerfile` builds `base → deps → builder → runner` (`runner` is `FROM deps`); `.github/workflows/publish-api-base.yml` publishes `joyjoin-api-base:<tag>` and `joyjoin-api-deps:sha256-<lock12>` with the built-in `GITHUB_TOKEN`, and `deploy-staging.yml` consumes the deps ref as a registry `cache-from`. `builder` must set `ENV NODE_ENV=development` (otherwise `npm ci` skips `esbuild` and `npm run build` fails) and `runner` must copy `apps/server/node_modules` (`drizzle-orm` is no longer hoisted after the 2026-10-22 upgrade). Staging still delivers via bundle — `STAGING_GHCR_ENABLED=false`, because a 515 MB cross-Pacific pull exceeds the 8m×3 budget and GHCR has no bundle fallback — so `deploy-staging.yml` accepts a manual `allow_stale` input (default `false`, push-triggered runs stay strict) to deploy an already-built commit while main keeps advancing during the ~25-minute upload. TCR was decommissioned on 2026-10-26 (enterprise instance not reachable with project credentials; all `TCR_*` secrets/vars deleted).
+- **Concurrency locks are split by environment (2026-10-22):** staging uses the `joyjoin-cvm-staging` concurrency group and `/var/lock/joyjoin-cvm-staging.lock`; production and host-level maintenance keep `joyjoin-cvm-remote` / `/var/lock/joyjoin-cvm-remote.lock`; the mini-program upload holds no lock. A single lock made a 40-minute production deploy starve staging (29m51s queue, then a stale-candidate rejection). Scripts can override with `JOYJOIN_STAGING_LOCK_FILE`.
+- **Every `docker image prune` is age-filtered (`--filter until=24h`):** with two environments on one host, an unfiltered prune deletes the other environment's pulled-but-not-yet-started image. `scripts/check/check-docker-prune-safety.mjs` (in `npm run guardrails`) fails any `image|system prune -a` without a `--filter` on the same line.
+- **Freshness before cost:** `deploy-staging.yml` runs a lock-free `deploy-preflight` job (`scripts/verify-deployment-freshness.mjs`) so a stale commit is rejected in ~30s instead of after gates and a build. The gates job is cancellable (`joyjoin-staging-gates-<ref>`); the deploy job is never cancelled. Deploy job timeout is 75m, sized to the GHCR fallback budget.
 - The public edge is the self-managed remote server plus host Nginx using `deployment/nginx/joyjoin.conf` (`joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, `api.joyjoinapp.com`). This is the active production path; do not revive old Fly.io deployment assumptions in active docs or scripts.
 - The app runtime requires `DATABASE_URL`; production PostgreSQL 16 is the `postgres` service in `deployment/docker-compose.nginx.yml`, backed by the persistent `pgdata` volume and bound to host loopback only.
 
@@ -242,6 +262,8 @@ joyjoin-monorepo/
 | Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. The hero image is **CDN-only** (`/assets/promo/banner-hero-lovart-v1.webp`); a gradient overlay skeleton preserves first paint while the asset loads. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
 | Status card (empty/error) | `apps/mini-program/src/components/ui/StatusCard.tsx` — unified status surface with Lovart hero illustration (WebP + PNG fallback), title, description, and optional action. Used on Discover and Events for empty states and on Discover for list-fetch error states. |
 | Profile tab (V1.7 target) | `apps/mini-program/src/pages/profile/index.tsx` — existing warm-white/purple Profile UI with the user's canonical V4 archetype rendered from one of 12 Profile-only 512×768 transparent full-body pixel WebP assets (CDN-first, character-only fallback), real XP/trend progress from `GET /api/user/gamification`, real event/connection stats from `GET /api/shell/profile`, profile completion, milestones, service grid, settings, the private continuous-story entry, and the Profile-only “我的形象” entry. The approved base assets already include initial clothing. Equip/unequip/save/inventory remain server-backed, while unpublished per-item raster is visually omitted—do not substitute purple geometric or other fabricated blocks; keep the clothed base character until formal layered art is approved and published. `profileRedesignEnabled=false` selects the compact real-data fallback and skips V1.7 gamification/equipment/personal-story requests. `profilePixelAvatarEnabled`, `equipmentRewardsEnabled`, and `personalStoryEnabled` independently gate the new surfaces and default off. |
+| Profile tab polish (2026-10-22 → 2026-10-24) | `apps/mini-program/src/pages/profile/` — three-act layout (我是谁 → 我有什么 → 我能干嘛), condensing nav, five-tier milestone wall (1/3/5/10/20 场, Batch-D2 art landed 2026-10-23), 形象名片 poster (`profileCardPoster.ts` structurally excludes city/age/interests/bio/referral), 启程任务 quest line, streak capsule, and honest equipment teasers. Deterministic helpers live in `pages/profile/profileConstants.ts`; `ProfilePartnerVisual.tsx` keeps the page under the 1800-line harness limit. Full module map + rulings: `docs/agent-context/mini-program-profile.md`. |
+| 双人成行 (duo) registration | `apps/mini-program/src/lib/duo/` + `pages/profile-linked/invite`; server `routes/domains/duo.ts`, `lib/duoInvites.ts`. A binding is valid only when **both** sides hold a registration in the same pool; a rejected or overlapping binding never blocks registration or payment (`duoBinding.state='unavailable'`), and an unplaceable duo is carried as one atomic 2-seat unit with 整组顺延 fallback. `duoRegistrationEnabled` defaults `true`. Admin surface `/admin/duo-invites` reports conflicts, accepted/seated outcomes, and pool KPIs. Spec: `docs/design/duo-registration-spec-20260807.md`; copy: `docs/design/duo-binding-feedback-copy-20261024.md`. |
 | Footprint event card | `apps/mini-program/src/components/events/FootprintOracleCard.tsx` — event card for the "足迹" tab. Uses a two-rail layout: left body shows status pulse, title, date/time/location; right rail shows a compact Nothing-design-inspired countdown, group-size hint, price, or a "待公布" placeholder. Venue-disclosure gating and status-aware waiting copy remain. Completed/cancelled cards are muted with no countdown. Venue location is hidden until the server-derived `displayStatus` reaches `confirmed`/`venue_unlocked`; the raw `matched` status means the group is formed but the venue is still being assigned. The card always renders event type + city/district and only appends the venue name once unlocked. Terminal pool states (`completed`/`cancelled`) override the registration-level status. The right rail is not `aria-hidden`; only the decorative `›` cue is hidden, and rail contents are included in the card's `aria-label` via `railAriaLabel`. |
 | Countdown hook | `apps/mini-program/src/hooks/useEventCountdown.ts` — visibility-aware countdown that returns `display`, structured `segments` (`days/hours/minutes/seconds/progress`), `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport state, app background state, `prefers-reduced-motion`, and degradation-tier devices. |
 | Event display helpers | `apps/mini-program/src/lib/utils/eventDisplay.ts` — `formatEventDateTime` with relative near-term prefixes (`今天`/`明天`/`后天`) and `getJoinedEventDisplayDateTime` for display vs matching-time precedence. |
@@ -607,6 +629,8 @@ The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker
 - **Moment Card server render:** `GET /api/social-icebreaker/:id/moment-card.png` returns a 640×1040 PNG via `@napi-rs/canvas` when `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER=true`.
 - **Bonus gate:** when `mini_script` would be next, phase advance pauses at a host+player vote gate (`bonusGateOffered`) if `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`. Routes: `POST .../bonus/respond` (host), `POST .../bonus/sentiment` (player).
 - **Phase metrics:** `social_icebreaker_phase_metrics` table captures `dwellTimeMs` per phase on every advance.
+- **UGC report loop (E9, 2026-10-22):** `POST /api/social-icebreaker/:socialSessionId/report-content` accepts six content kinds from four long-press mount points (phase cards, script cards, lie-detective statements, recap card). The route snapshots the offending content **before** the cleanup pass in the same request, so a report on already-purged content still returns 201 with the snapshot; the reporter's free-text note is the only field that goes through content validation (self-harm evidence must never be filtered). Rate-limited to 3 per session-hour. No schema change. Contract: `sprint-contract.e9-ugc-report.md`; canonical entry in `docs/agent-context/social-icebreaker.md`.
+- **Sensory + pacing wave 2 (2026-10-20):** host one-tap nudge (`POST .../nudge-incomplete` — 「还差 N 人」, emits a state-free `SOCIAL_GROUP_BEAT`, at most one per host per session per 30s), a shared haptic grammar (`lib/utils/haptics.ts` + `socialHapticGrammar.test.ts`), quip-battle inspiration chips, per-phase duration expectations, and a recap share poster entry. The recap share path ships behind `recapSharePosterEnabled` (env `RECAP_SHARE_POSTER_ENABLED`, default **false**).
 - Full reference: `docs/icebreaker/icebreaker-system.md`
 
 Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.
@@ -1442,8 +1466,55 @@ middleware.
 npm test -w @joyjoin/server -- src/__tests__/adminRbacCoverage.test.ts
 ```
 
-Expected output: 5 tests passing. The snapshot test also prints the full route/middleware
+Expected output: 6 tests passing. The snapshot test also prints the full route/middleware
 table to the CI log for audit purposes.
+
+### Console Truth Contract (2026-10-22 → 2026-10-23)
+
+The admin console is a decision surface, not a chart gallery. Its numbers are only allowed
+to be displayed once they are structurally correct; the rules below are what keep them
+honest and are the reference when adding a new console page.
+
+- **One metric source.** `apps/server/src/lib/adminMetrics.ts` owns every cross-page
+  counter as SQL; `apps/server/src/lib/adminAnalytics.ts` owns funnel/coverage queries over
+  `discover_analytics_events`. `apps/server/src/routes/domains/adminConsole.ts` exposes them
+  read-only at `/api/admin/{kpi,action-queue,nav-badges,analytics/funnel,analytics/events}`.
+  `GET /api/admin/stats` and `/api/admin/ops-dashboard` both delegate here — do not add a
+  second aggregation path in a page-specific route.
+- **Every card names its own baseline.** A KPI renders a named comparison window, a delta,
+  and a drill-down link; a zero-baseline comparison renders 基线不足 rather than a
+  meaningless percentage. Profile-completeness sampling reports `isSampled` /
+  `sampleSize` / `totalUsers` so a bounded sample is never presented as the population.
+- **The action queue is fixed and honest.** Seven rows always render, including rows that
+  are cleared (they show 0 instead of disappearing), and every row links to a view that can
+  actually resolve it. Under-fill is measured against `min_group_size × target_groups` and
+  excludes test pools; the matching-success denominator counts due pools only.
+- **Revenue is two lines, never one.** 单场票实收/场 is a rate (`payment_type='event'` cash
+  divided by formed events); 预付递延 · 已收未交付 is a liability and deliberately has no
+  trend line. Summing bundle/subscription payments into per-event cash inflated the figure
+  5.1× before 2026-10-23.
+- **No chart ships before the number is right.** Charts are intentionally absent from
+  `AdminDashboardV2` until each series has a correct source.
+- **Rollback is a URL, not a flag.** `/admin/dashboard?v=1` renders the legacy dashboard
+  (`AdminDashboardSwitch`). A feature flag was rejected because `GET /api/admin/feature-flags`
+  is `requireSuperAdmin`, which would strand operator/viewer roles.
+- **Navigation is 16 entries in ten tabbed workspaces** (`AdminWorkspaceTabs` mounted once in
+  the layout); 排桌审批 sits in the pinned dock behind `matchingOperatorReviewEnabled` but is
+  hidden only when the flag is explicitly `false`, never while auth is loading.
+- **One `h1` per page, and the title must equal the nav label verbatim.** Five pages were
+  renamed for exactly this reason (匹配审核→排桌审批, 运营决策指挥中心→数据洞察,
+  匹配扫描日志→匹配日志, 活动模板管理→活动模板, 优惠券管理→优惠券).
+- **Sticky `thead` needs an overflow-x-only wrapper.** `table.tsx` must apply overflow
+  horizontally only when the table has no sticky head: CSS Overflow 3 makes
+  `overflow-x: auto` + `overflow-y: visible` impossible, so a scrollport kills stickiness.
+- **Role denial renders `AdminForbidden`** (role, attempted path, and "re-login will not
+  change the outcome"), never a toast followed by a redirect.
+- **Nav badges are invalidated on mutation** (approve/reject/batch-approve/refund/moderation)
+  and re-poll every 30s; a failed badge fetch yields `{}` and never blocks navigation.
+- **Exports carry their scope in the filename** (全部N人 / 前N人-共M人) with `fmtCsvDate`
+  timestamps, so two downloads are distinguishable in a folder listing.
+- **The feature-flags page is 86 switches, 14 sections, Chinese names and plain-language
+  descriptions, with search**; `featureFlagCopyContract` locks that copy coverage.
 
 ### Audit Logging
 
