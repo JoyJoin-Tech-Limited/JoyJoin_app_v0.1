@@ -110,3 +110,32 @@ describe('gathering room absent-member rendering contract', () => {
     expect(SCENE_SCSS).toMatch(/&--absent\s*\{[^}]*opacity/)
   })
 })
+
+describe('gathering room table occlusion contract (2026-10-26)', () => {
+  it('seats the back row behind the table plane and the front row in front', () => {
+    // The old anchors put seat 4 at y=68.5 (body bottom below the tablecloth)
+    // and painted every avatar above the flat backdrop, so people appeared to
+    // stand on the table. Painter z is 10 + round(anchor.y).
+    expect(seatZIndex(38.8)).toBe(49) // back-centre, behind the overlay (52)
+    expect(seatZIndex(57.4)).toBe(67) // front flanks, in front
+    expect(seatZIndex(71.3)).toBe(81) // front-centre, in front
+  })
+
+  it('keeps the table overlay and name plates on separate scene-level layers', () => {
+    expect(SCENE_TSX).toContain('ROOM_TABLE_OVERLAY')
+    expect(SCENE_TSX).toMatch(/layer--table-overlay/)
+    expect(SCENE_TSX).toMatch(/GatheringRoomNameCard/)
+    expect(SCENE_TSX).toMatch(/name-card-layer/)
+    expect(SCENE_SCSS).toMatch(/&--table-overlay\s*\{[^}]*z-index:\s*52/)
+    expect(SCENE_SCSS).toMatch(/&__name-card-layer\s*\{[^}]*z-index:\s*90/)
+  })
+
+  it('keeps side plates inside the scene edge at the narrowest seat', () => {
+    // Seats 3/5 are the outermost side-plate anchors. 160rpx + the 12rpx gap
+    // leaves a design-space margin above 16rpx at a 750rpx scene width.
+    const outerAnchorRpx = (32.5 / 100) * 750
+    const plateRightRpx = outerAnchorRpx - 48 - 12
+    expect(plateRightRpx - 160).toBeGreaterThanOrEqual(16)
+    expect(SCENE_SCSS).toMatch(/max-width:\s*160rpx/)
+  })
+})

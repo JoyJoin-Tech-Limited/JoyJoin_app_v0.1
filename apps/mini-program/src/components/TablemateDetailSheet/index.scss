@@ -295,11 +295,114 @@
   &__action-slot {
     margin-top: $spacing-md;
   }
+
+  &__lookbook-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    margin-top: 12rpx;
+    padding: 0 24rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: 600;
+  }
+
+  &__lookbook-link-text {
+    line-height: 1;
+  }
+
+  &__secondary-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: $spacing-md;
+  }
+
+  &__secondary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 0 24rpx;
+    border-radius: 999rpx;
+    background: rgba($color-text-primary, 0.04);
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+
+  &__secondary-link-text {
+    line-height: 1;
+  }
+
+  &__lookbook {
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal + 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48rpx;
+    background: rgba($color-text-primary, 0.55);
+  }
+
+  &__lookbook-panel {
+    width: 640rpx;
+    max-width: 100%;
+    padding: 32rpx;
+    border-radius: 40rpx;
+    background: $color-surface;
+    box-shadow: 0 24rpx 64rpx rgba($color-text-primary, 0.18);
+  }
+
+  &__lookbook-stage {
+    width: 400rpx;
+    height: 600rpx;
+    margin: 0 auto;
+    padding: 16rpx;
+    border-radius: 32rpx;
+    background: rgba($color-primary, 0.06);
+    overflow: hidden;
+  }
+
+  &__lookbook-title {
+    display: block;
+    margin-top: $spacing-md;
+    color: $color-text-primary;
+    font-size: $font-size-md;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  &__lookbook-caption {
+    display: block;
+    margin-top: 8rpx;
+    color: $color-text-tertiary;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  &__lookbook-actions {
+    display: flex;
+    gap: 16rpx;
+    margin-top: $spacing-lg;
+  }
+
+  &__lookbook-actions > * {
+    flex: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tablemate-sheet {
     &__surface {
+      animation: none;
+    }
+
+    &__lookbook-panel {
       animation: none;
     }
   }

@@ -43,6 +43,8 @@ import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { getFeatureFlag } from "../../lib/featureFlags";
+import { countGatheringRoomAttendance } from "../../lib/gatheringRoomAttendance";
+import { POOL_COMPLETION_BUFFER_MS } from "../../lib/poolCompletionSweep";
 import { buildGuestEventPreview } from "../../lib/guestEventPreview";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
@@ -1796,12 +1798,46 @@ export function registerUserEventPoolRoutes(app: Express): void {
           };
         });
 
+        const eventStart = group.finalDateTime ?? pool.dateTime ?? null;
+        const eventStartMs = eventStart ? eventStart.getTime() : null;
+        const eventPhase =
+          pool.status === 'completed' ||
+          (eventStartMs != null && Date.now() >= eventStartMs + POOL_COMPLETION_BUFFER_MS)
+            ? 'ended'
+            : eventStartMs != null &&
+                Date.now() >= eventStartMs &&
+                Date.now() < eventStartMs + POOL_COMPLETION_BUFFER_MS
+              ? 'live'
+              : 'upcoming';
+        const attendanceCounts = countGatheringRoomAttendance(
+          memberStates.map((member: (typeof memberStates)[number]) => ({
+            status: member.attendanceStatus,
+          })),
+        );
+        const venueStatus = (group.venueAssignmentStatus ?? 'pending') as
+          | 'pending'
+          | 'assigned'
+          | 'unassigned'
+          | 'manual_override';
+        const venue =
+          group.venueName || group.venueAddress
+            ? {
+                name: group.venueName ?? null,
+                address: group.venueAddress ?? null,
+                status: venueStatus,
+              }
+            : null;
+
         res.json({
           groupId,
+          poolId: pool.id,
           blindBoxEventId,
+          eventPhase,
           totalParticipants: memberStates.length,
-          confirmedCount: memberStates.filter((m: (typeof memberStates)[number]) => m.attendanceStatus === 'confirmed').length,
-          eventDateTime: pool.dateTime ? pool.dateTime.toISOString() : null,
+          confirmedCount: attendanceCounts.confirmedCount,
+          arrivingLateCount: attendanceCounts.arrivingLateCount,
+          eventDateTime: eventStart ? eventStart.toISOString() : null,
+          venue,
           members: memberStates,
         });
       } catch (error) {
@@ -2023,10 +2059,15 @@ export function registerUserEventPoolRoutes(app: Express): void {
           });
         }
 
-        // Idempotency: if already confirmed, return clean 200 without DB write or re-broadcast.
+        // Idempotency: a confirmed OR late member is already committed.
+        // Never let the legacy confirm button downgrade an explicit "late".
         const currentAttendance = await storage.getAttendanceStatus(blindBoxEventId, userId);
-        if (currentAttendance?.status === 'confirmed') {
-          return res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
+        if (currentAttendance?.status === 'confirmed' || currentAttendance?.status === 'late') {
+          return res.json({
+            success: true,
+            blindBoxEventId,
+            attendanceStatus: currentAttendance.status,
+          });
         }
 
         await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed');
@@ -2047,7 +2088,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
             blindBoxEventId,
             memberRows.map((m: { userId: string }) => m.userId),
           );
-          const confirmedCount = attendanceRows.filter((r) => r.status === 'confirmed').length;
+          const { confirmedCount } = countGatheringRoomAttendance(attendanceRows);
           const totalParticipants = group.memberCount ?? memberRows.length;
 
           broadcastUserConfirmed(blindBoxEventId, userId, displayName, confirmedCount, totalParticipants);
