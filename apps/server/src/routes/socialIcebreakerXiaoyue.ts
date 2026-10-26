@@ -22,6 +22,7 @@ import { executeWarmupTopicRotation } from '../lib/xiaoyueAgentActions';
 import { updateSessionAtomic } from '../lib/socialIcebreakerStore';
 import { appendSocialAgentEvent } from '../repositories/socialAgentEventsRepo';
 import { logger } from '../lib/logger';
+import { icebreakerAgentLimiter } from '../rateLimiter';
 
 const router = Router();
 
@@ -164,7 +165,7 @@ function agentError(res: Response, status: number, code: string) {
   return res.status(status).json({ code, error: code });
 }
 
-router.post('/:socialSessionId/xiaoyue/agent/decision', async (req: Request, res: Response) => {
+router.post('/:socialSessionId/xiaoyue/agent/decision', icebreakerAgentLimiter, async (req: Request, res: Response) => {
   const paramsParse = socialSessionIdParamSchema.safeParse(req.params);
   if (!paramsParse.success) return agentError(res, 400, 'INVALID_SOCIAL_SESSION_ID');
   const { socialSessionId } = paramsParse.data;
@@ -268,7 +269,7 @@ router.post('/:socialSessionId/xiaoyue/agent/decision', async (req: Request, res
 // ---------------------------------------------------------------------------
 const agentPolicySchema = z.object({ proactiveEnabled: z.boolean() });
 
-router.post('/:socialSessionId/xiaoyue/agent/policy', async (req: Request, res: Response) => {
+router.post('/:socialSessionId/xiaoyue/agent/policy', icebreakerAgentLimiter, async (req: Request, res: Response) => {
   const paramsParse = socialSessionIdParamSchema.safeParse(req.params);
   if (!paramsParse.success) return agentError(res, 400, 'INVALID_SOCIAL_SESSION_ID');
   const { socialSessionId } = paramsParse.data;

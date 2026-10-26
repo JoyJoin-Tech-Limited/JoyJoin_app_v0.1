@@ -185,6 +185,19 @@ export const momentCardLimiter = createRateLimiter({
 });
 
 /**
+ * Host-only icebreaker agent decision limiter (M1 copilot). An accepted Ask
+ * can trigger an LLM-backed topic regeneration, so retries need a budget even
+ * though the action itself is idempotent by `idempotencyKey`. 20 per minute
+ * leaves room for a genuine 6s-timeout retry loop while bounding cost.
+ */
+export const icebreakerAgentLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 20,
+  keyPrefix: 'ib-agent',
+  errorCode: 'ICEBREAKER_AGENT_RATE_LIMITED',
+});
+
+/**
  * Animated share-clip limiter — canvas frames + ffmpeg are significantly
  * heavier than a single PNG. Allow 2 requests per minute per user.
  */
