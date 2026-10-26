@@ -149,6 +149,9 @@ vi.mock('../lib/featureFlags', async (importActual) => {
 vi.mock('../rateLimiter', () => ({
   aiEndpointLimiter: (_req: any, _res: any, next: any) => next(),
   momentCardLimiter: (_req: any, _res: any, next: any) => next(),
+  // M1: host-only Xiaoyue agent routes import this limiter (pass-through here;
+  // the 429 contract lives in socialIcebreakerXiaoyue tests).
+  icebreakerAgentLimiter: (_req: any, _res: any, next: any) => next(),
   // E9: socialIcebreakerUgcReport.ts module-scope limiter factory (pass-through;
   // these suites never exercise /report-content 429 behavior).
   createRateLimiter: () => (_req: any, _res: any, next: any) => next(),
