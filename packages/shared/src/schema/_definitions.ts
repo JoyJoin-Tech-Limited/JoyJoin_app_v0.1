@@ -1184,24 +1184,24 @@ export const registerUserSchema = z.object({
   birthdate: z.string().min(1, "请选择生日"), // ISO date string - now required
   ageVisibility: z.enum(["hide_all", "show_age_range"]).default("show_age_range"),
   gender: z.enum(GENDER_OPTIONS, {
-    errorMap: () => ({ message: "请选择性别" }),
+    error: "请选择性别",
   }),
   pronouns: z.enum(PRONOUNS_OPTIONS).optional(),
   
   // Background
   relationshipStatus: z.enum(RELATIONSHIP_STATUS_OPTIONS, {
-    errorMap: () => ({ message: "请选择关系状态" }),
+    error: "请选择关系状态",
   }),
   
   // Education - All required for matching algorithm
   educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS, {
-    errorMap: () => ({ message: "请选择教育水平" }),
+    error: "请选择教育水平",
   }),
   
   // Work - New standardized occupation system
   occupationId: z.string().optional(),
   workMode: z.enum(WORK_MODE_OPTIONS, {
-    errorMap: () => ({ message: "请选择身份" }),
+    error: "请选择身份",
   }),
   
   // Legacy fields (optional, for backward compatibility)

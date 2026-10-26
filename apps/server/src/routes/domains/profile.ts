@@ -578,7 +578,12 @@ export function registerProfileRoutes(app: Express): void {
         profileData.industryConfidence = String(profileData.industryConfidence);
       }
 
-      const user = await storage.updateFullProfile(userId, profileData);
+      // drizzle-zod 0.8 tightened the inferred type (required nullable fields),
+      // while profileData is assembled field-by-field as a loose record above.
+      const user = await storage.updateFullProfile(
+        userId,
+        profileData as Parameters<typeof storage.updateFullProfile>[1],
+      );
       
       // Set hasCompletedRegistration if profile is being set with essential data
       if (user && (req.body.displayName || req.body.gender || req.body.currentCity)) {

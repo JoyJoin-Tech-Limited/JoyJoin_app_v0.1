@@ -14,7 +14,7 @@ const EventsAnalyticsEventSchema = z.object({
     // 2026-07-28 — replaces the placeholder QR support cards.
     'support_contact_tap',
   ]),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.number(),
 })
 

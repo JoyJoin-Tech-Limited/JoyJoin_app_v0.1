@@ -166,7 +166,7 @@ const onboardingAnalyticsBodySchema = z.object({
   stepId: z.string().max(MAX_ONBOARDING_STEP_LENGTH).optional(),
   stepIndex: z.number().int().min(0).optional(),
   eventType: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.union([z.number(), z.string()]).optional(),
   sessionDuration: z.number().min(0).optional(),
   stepDuration: z.number().min(0).optional(),

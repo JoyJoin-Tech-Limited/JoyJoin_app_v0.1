@@ -122,12 +122,14 @@ const RELATIONAL_DEFAULTS: Record<string, RelationalDefault[]> = {
 
 // ─── Utility: deep get/set by path ───────────────────────────────────────────
 
-function getByPath(obj: unknown, path: (string | number)[]): unknown {
+function getByPath(obj: unknown, path: PropertyKey[]): unknown {
   let current: unknown = obj;
   for (const key of path) {
     if (current === null || current === undefined) return undefined;
     if (typeof current === 'object') {
-      current = (current as Record<string, unknown>)[key];
+      // zod 4 widened issue.path to PropertyKey[], so index with the full key type
+      // rather than string-only (symbols are legal keys on a Record).
+      current = (current as Record<PropertyKey, unknown>)[key];
     } else {
       return undefined;
     }
@@ -137,7 +139,7 @@ function getByPath(obj: unknown, path: (string | number)[]): unknown {
 
 function setByPath(
   obj: Record<string, unknown>,
-  path: (string | number)[],
+  path: PropertyKey[],
   value: unknown,
 ): void {
   if (path.length === 0) return;
@@ -153,7 +155,7 @@ function setByPath(
   current[lastKey] = value;
 }
 
-function deleteByPath(obj: Record<string, unknown>, path: (string | number)[]): void {
+function deleteByPath(obj: Record<string, unknown>, path: PropertyKey[]): void {
   if (path.length === 0) return;
   let current: Record<string, unknown> = obj;
   for (let i = 0; i < path.length - 1; i++) {
@@ -216,8 +218,7 @@ function repairStringifiedArray(
   for (const issue of issues) {
     if (
       issue.code === 'invalid_type' &&
-      issue.expected === 'array' &&
-      issue.received === 'string'
+      issue.expected === 'array'
     ) {
       const value = getByPath(repaired, issue.path);
       if (typeof value === 'string') {
@@ -257,8 +258,7 @@ function repairSingletonWrap(
   for (const issue of issues) {
     if (
       issue.code === 'invalid_type' &&
-      issue.expected === 'array' &&
-      issue.received === 'object'
+      issue.expected === 'array'
     ) {
       const value = getByPath(repaired, issue.path);
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -297,8 +297,7 @@ function repairBareStringForArray(
   for (const issue of issues) {
     if (
       issue.code === 'invalid_type' &&
-      issue.expected === 'array' &&
-      issue.received === 'string'
+      issue.expected === 'array'
     ) {
       const value = getByPath(repaired, issue.path);
       if (typeof value === 'string') {
