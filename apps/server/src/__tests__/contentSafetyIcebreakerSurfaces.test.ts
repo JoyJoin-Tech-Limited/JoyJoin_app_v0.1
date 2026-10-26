@@ -189,6 +189,9 @@ vi.mock('../lib/socialIcebreakerAccess', () => ({
 vi.mock('../rateLimiter', () => ({
   aiEndpointLimiter: (_req: any, _res: any, next: any) => next(),
   momentCardLimiter: (_req: any, _res: any, next: any) => next(),
+  // M1: host-only Xiaoyue agent routes import this limiter (pass-through here;
+  // the 429 contract lives in socialIcebreakerXiaoyue tests).
+  icebreakerAgentLimiter: (_req: any, _res: any, next: any) => next(),
   // Pass-through factory — the 429 contract is locked in
   // socialIcebreakerUgcReport.test.ts with the REAL limiter; this file only
   // exercises content gates.
