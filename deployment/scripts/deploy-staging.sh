@@ -325,6 +325,17 @@ fi
 
 COMPOSE_FILE="$DEPLOY_DIR/docker-compose.staging.yml"
 STAGING_IMAGE_BUNDLE="${STAGING_IMAGE_BUNDLE:-$DEPLOY_DIR/.staging-images.tar.gz}"
+# 2026-10-26 delta delivery: only the app payload (dist/data/manifests, ~10 MiB)
+# is uploaded instead of the whole ~640 MiB image pair. The runtime base images
+# (base+deps layers) stay pinned on the host, so each deploy adds a single COPY
+# layer. Falls back to the bundle path whenever the pinned base is missing or
+# its lockfile hash no longer matches the payload.
+STAGING_DELTA_PAYLOAD="${STAGING_DELTA_PAYLOAD:-$DEPLOY_DIR/.staging-delta.tar.gz}"
+RUNTIME_BASE_MARKER="${RUNTIME_BASE_MARKER:-$DEPLOY_DIR/.staging-runtime-base.json}"
+RUNTIME_API_BASE="${RUNTIME_API_BASE:-joyjoin-api-runtime-base:api}"
+RUNTIME_ADMIN_BASE="${RUNTIME_ADMIN_BASE:-joyjoin-admin-runtime-base:admin}"
+USED_DELTA_DELIVERY=false
+USED_BUNDLE_DELIVERY=false
 API_IMAGE_REF="joyjoin-api-staging:candidate"
 ADMIN_IMAGE_REF="joyjoin-admin-staging:candidate"
 
@@ -346,6 +357,7 @@ cleanup_deploy_files() {
         restore_previous_image_tags || true
     fi
     rm -f -- "$STAGING_IMAGE_BUNDLE"
+    rm -f -- "$STAGING_DELTA_PAYLOAD"
     if [[ "$ROLLBACK_FAILED" != "true" ]]; then
         if [[ -n "$ENV_CANDIDATE" ]]; then
             rm -f -- "$ENV_CANDIDATE"
@@ -546,6 +558,82 @@ if [[ "$USE_REGISTRY_PULL" == "true" ]]; then
         restore_previous_image_tags
         exit 1
     fi
+elif [[ "${STAGING_DELIVERY_MODE:-bundle}" == "delta" ]]; then
+    # Delta assembly: no npm, no compiler, no network — a COPY-only build on top
+    # of the pinned runtime base (which already holds the base + deps layers for
+    # this lockfile). Measured payload ~10 MiB instead of ~290 MiB compressed
+    # images: minutes instead of ~48 over the cross-Pacific link.
+    if [[ ! -s "$STAGING_DELTA_PAYLOAD" ]]; then
+        echo "❌ Delta delivery was selected but the payload is missing: $STAGING_DELTA_PAYLOAD"
+        exit 1
+    fi
+
+    delta_dir="$(mktemp -d)"
+    if ! tar -xzf "$STAGING_DELTA_PAYLOAD" -C "$delta_dir"; then
+        echo "❌ Failed to extract the staging delta payload."
+        exit 1
+    fi
+    delta_lock="$(sed -n 's/.*"lock":"\([^"]*\)".*/\1/p' "$delta_dir/meta.json" 2>/dev/null | head -1)"
+    base_lock=""
+    if [[ -s "$RUNTIME_BASE_MARKER" ]]; then
+        base_lock="$(sed -n 's/.*"lock":"\([^"]*\)".*/\1/p' "$RUNTIME_BASE_MARKER" 2>/dev/null | head -1)"
+    fi
+    if [[ -z "$delta_lock" || "$delta_lock" != "$base_lock" ]]; then
+        echo "❌ Runtime base lock '${base_lock}' does not match payload lock '${delta_lock}'."
+        echo "   The pinned base was built for a different lockfile; rerun the workflow so it ships a full bundle."
+        exit 1
+    fi
+    if ! docker image inspect "$RUNTIME_API_BASE" >/dev/null 2>&1 || \
+       ! docker image inspect "$RUNTIME_ADMIN_BASE" >/dev/null 2>&1; then
+        echo "❌ Pinned runtime base images are missing ($RUNTIME_API_BASE / $RUNTIME_ADMIN_BASE)."
+        echo "   They are created by the first successful full-bundle deploy; rerun the workflow in bundle mode."
+        exit 1
+    fi
+
+    available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+    storage_use_percent="$(df -P "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
+    if (( storage_use_percent >= 70 || available_bytes < 3221225472 )); then
+        echo "  Disk headroom low; pruning unused images and build cache (never containers or volumes)."
+        timeout 180s docker builder prune -af || true
+        timeout 120s docker image prune -af --filter "until=24h" || true
+        available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+    fi
+    if (( available_bytes < 2147483648 )); then
+        echo "❌ Not enough disk headroom to assemble the staging images safely."
+        exit 1
+    fi
+
+    EARLY_IMAGE_TAG_ROLLBACK=true
+    cat > "$delta_dir/Dockerfile.api" <<DELTA_API_DOCKERFILE
+FROM ${RUNTIME_API_BASE}
+RUN rm -rf /app/apps/server/dist /app/apps/server/data /app/packages/shared/src
+COPY ./apps/server/dist /app/apps/server/dist
+COPY ./apps/server/data /app/apps/server/data
+COPY ./apps/server/package.json /app/apps/server/package.json
+COPY ./packages/shared/src /app/packages/shared/src
+COPY ./packages/shared/package.json /app/packages/shared/package.json
+DELTA_API_DOCKERFILE
+    cat > "$delta_dir/Dockerfile.admin" <<DELTA_ADMIN_DOCKERFILE
+FROM ${RUNTIME_ADMIN_BASE}
+RUN rm -rf /usr/share/nginx/html
+COPY ./admin/html /usr/share/nginx/html
+COPY ./admin/default.conf /etc/nginx/conf.d/default.conf
+DELTA_ADMIN_DOCKERFILE
+
+    echo "  Assembling API + Admin images from the pinned runtime base (COPY only, no network)..."
+    if ! docker build --network=none --pull=false -f "$delta_dir/Dockerfile.api" -t "$API_IMAGE_REF" "$delta_dir"; then
+        echo "❌ Failed to assemble the staging API image from the delta payload."
+        restore_previous_image_tags
+        exit 1
+    fi
+    if ! docker build --network=none --pull=false -f "$delta_dir/Dockerfile.admin" -t "$ADMIN_IMAGE_REF" "$delta_dir"; then
+        echo "❌ Failed to assemble the staging Admin image from the delta payload."
+        restore_previous_image_tags
+        exit 1
+    fi
+    USED_DELTA_DELIVERY=true
+    rm -f -- "$STAGING_DELTA_PAYLOAD"
+    echo "  Delta assembly complete (payload lock ${delta_lock})."
 else
     if [[ ! -s "$STAGING_IMAGE_BUNDLE" ]]; then
         echo "❌ Missing prebuilt image bundle: $STAGING_IMAGE_BUNDLE"
@@ -579,6 +667,7 @@ else
     fi
 
     EARLY_IMAGE_TAG_ROLLBACK=true
+    USED_BUNDLE_DELIVERY=true
     if ! gzip -dc "$STAGING_IMAGE_BUNDLE" | docker load; then
         restore_previous_image_tags
         exit 1
@@ -593,6 +682,28 @@ if ! docker image inspect "$API_IMAGE_REF" >/dev/null || \
     exit 1
 fi
 
+# Pin the freshly loaded images as the runtime base for future delta deploys.
+# The base keeps the base+deps layers the next COPY-only build inherits, and the
+# lock hash gates a stale base out instead of silently mixing dependency trees.
+if [[ "$USED_BUNDLE_DELIVERY" == "true" ]]; then
+    if docker image tag "$API_IMAGE_REF" "$RUNTIME_API_BASE" >/dev/null 2>&1 && \
+       docker image tag "$ADMIN_IMAGE_REF" "$RUNTIME_ADMIN_BASE" >/dev/null 2>&1; then
+        printf '{"lock":"%s","sha":"%s","updatedAt":"%s"}\n' \
+            "${STAGING_LOCK12:-unknown}" "${DEPLOY_SOURCE_SHA:-unknown}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RUNTIME_BASE_MARKER"
+        # Anchor each base to a never-started container so the age-filtered
+        # `docker image prune --filter until=24h` (there for the parallel
+        # production deploys) cannot delete a base that no container references.
+        for base_pair in "api:$RUNTIME_API_BASE" "admin:$RUNTIME_ADMIN_BASE"; do
+            keepalive_name="joyjoin-runtime-base-keepalive-${base_pair%%:*}"
+            docker rm -f "$keepalive_name" >/dev/null 2>&1 || true
+            docker create --name "$keepalive_name" "${base_pair#*:}" true >/dev/null 2>&1 || true
+        done
+        echo "  Pinned runtime base images for delta deploys (lock ${STAGING_LOCK12:-unknown})."
+    else
+        echo "  WARNING: could not pin runtime base images; the next deploy uses the full bundle again."
+    fi
+fi
 new_api_image_id="$(docker image inspect --format '{{.Id}}' "$API_IMAGE_REF")"
 new_admin_image_id="$(docker image inspect --format '{{.Id}}' "$ADMIN_IMAGE_REF")"
 available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"

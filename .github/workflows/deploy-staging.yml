@@ -229,6 +229,54 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+      # 2026-10-26 delta delivery: the image pair above re-ships ~640 MiB even
+      # though only the app layer changes between deploys. Export just that
+      # (dist/data/manifests, ~10 MiB) so the cross-Pacific transfer stops being
+      # the deploy bottleneck; the CVM assembles the images from a pinned
+      # runtime base it already holds.
+      - name: Export staging app delta
+        if: steps.delivery-mode.outputs.registry_active == 'bundle'
+        run: |
+          set -euo pipefail
+          DELTA="$RUNNER_TEMP/joyjoin-staging-delta"
+          rm -rf "$DELTA"
+          mkdir -p "$DELTA/apps/server" "$DELTA/packages/shared" "$DELTA/admin"
+
+          docker create --name staging-delta-api joyjoin-api-staging:candidate >/dev/null
+          docker cp staging-delta-api:/app/apps/server/dist "$DELTA/apps/server/dist"
+          docker cp staging-delta-api:/app/apps/server/data "$DELTA/apps/server/data"
+          docker cp staging-delta-api:/app/apps/server/package.json "$DELTA/apps/server/package.json"
+          docker cp staging-delta-api:/app/packages/shared/src "$DELTA/packages/shared/src"
+          docker cp staging-delta-api:/app/packages/shared/package.json "$DELTA/packages/shared/package.json"
+          docker rm staging-delta-api >/dev/null
+
+          docker create --name staging-delta-admin joyjoin-admin-staging:candidate >/dev/null
+          docker cp staging-delta-admin:/usr/share/nginx/html "$DELTA/admin/html"
+          docker cp staging-delta-admin:/etc/nginx/conf.d/default.conf "$DELTA/admin/default.conf"
+          docker rm staging-delta-admin >/dev/null
+
+          # The lock hash gates the pinned base: a base built for a different
+          # dependency tree must never silently absorb a new app layer.
+          LOCK12="$(sha256sum package-lock.json | cut -c1-12)"
+          printf '{"lock":"%s","sha":"%s"}\n' "$LOCK12" "$GITHUB_SHA" > "$DELTA/meta.json"
+          tar -C "$DELTA" -czf "$RUNNER_TEMP/joyjoin-staging-delta.tar.gz" .
+
+          test -s "$RUNNER_TEMP/joyjoin-staging-delta.tar.gz"
+          DELTA_BYTES=$(stat -c '%s' "$RUNNER_TEMP/joyjoin-staging-delta.tar.gz")
+          echo "Delta payload: ${DELTA_BYTES} bytes (lock ${LOCK12})"
+          # Guard rail: if the payload ever balloons, the assumption behind this
+          # path (app-only delta) broke, so fail loudly instead of shipping it.
+          test "$DELTA_BYTES" -lt 67108864
+
+      - name: Preserve staging app delta
+        if: steps.delivery-mode.outputs.registry_active == 'bundle'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: joyjoin-staging-delta-${{ github.sha }}
+          path: ${{ runner.temp }}/joyjoin-staging-delta.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
   deploy-staging:
     name: Staging Deployment
     needs: [build-images, deploy-preflight]
@@ -338,6 +386,13 @@ jobs:
           name: joyjoin-staging-images-${{ github.sha }}
           path: ${{ runner.temp }}
 
+      - name: Restore staging app delta
+        if: steps.delivery-mode.outputs.registry_active == 'bundle'
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: joyjoin-staging-delta-${{ github.sha }}
+          path: ${{ runner.temp }}
+
       - name: Prepare remote and upload deployment workspace
         env:
           SERVER_IP: ${{ secrets.SERVER_IP }}
@@ -345,6 +400,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           STAGING_IMAGE_BUNDLE: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
+          STAGING_DELTA: ${{ runner.temp }}/joyjoin-staging-delta.tar.gz
           # Keep the selected delivery mode consistent through transfer and
           # remote deployment; a token alone must not reactivate a registry.
           STAGING_API_IMAGE: ${{ steps.delivery-mode.outputs.api_image }}
@@ -406,6 +462,8 @@ jobs:
             --exclude=.env.*
             --exclude=.staging-deployed-sha
             --exclude=.staging-deployed-sha.tmp
+            --exclude=.staging-runtime-base.json
+            --exclude=.staging-delta.tar.gz
             --exclude=.staging-images.tar.gz
             --exclude=.staging-images-*.tar.gz.part
             --exclude=.staging-images-*.parts/
@@ -566,11 +624,33 @@ jobs:
             -e "$RSYNC_SSH" \
             deployment/ "$CVM:~/JoyJoin/deployment/"
 
+          # Delta delivery (2026-10-26): when the host already holds a runtime
+          # base pinned to this exact lockfile, only the ~10 MiB app payload is
+          # uploaded and the CVM assembles the images with a COPY-only build.
+          # Otherwise the full image bundle below is the only safe path.
+          LOCK12="$(sha256sum package-lock.json | cut -c1-12)"
+          DELIVERY_MODE="bundle"
+          if [[ -s "$STAGING_DELTA" ]]; then
+            REMOTE_BASE_JSON="$(ssh "${SSH_OPTIONS[@]}" "$CVM" 'cat ~/JoyJoin/deployment/.staging-runtime-base.json 2>/dev/null || true' || true)"
+            if printf '%s' "$REMOTE_BASE_JSON" | grep -q "\"lock\":\"$LOCK12\""; then
+              DELIVERY_MODE="delta"
+            else
+              echo "::notice::Remote runtime base is missing or built for a different lockfile; shipping the full image bundle this run"
+            fi
+          fi
+          echo "STAGING_DELIVERY_MODE=$DELIVERY_MODE" >> "$GITHUB_ENV"
+          echo "STAGING_LOCK12=$LOCK12" >> "$GITHUB_ENV"
+
           # GHCR delivery active (STAGING_API_IMAGE set): the CVM pulls the
           # images itself in deploy-staging.sh, so skip the multi-chunk rsync
           # bundle upload that historically dominated the ~40-minute transfer.
           if [[ -n "${STAGING_API_IMAGE:-}" && -n "${STAGING_ADMIN_IMAGE:-}" ]]; then
             echo "::notice::GHCR image delivery is active (STAGING_API_IMAGE set); skipping the rsync bundle upload"
+          elif [[ "$DELIVERY_MODE" == "delta" ]]; then
+            echo "::notice::Delta delivery active (lock ${LOCK12}): uploading the app payload instead of the image bundle"
+            run_transport_with_backoff 10m rsync "${RSYNC_OPTS[@]}" \
+              -e "$RSYNC_SSH" \
+              "$STAGING_DELTA" "$CVM:~/JoyJoin/deployment/.staging-delta.tar.gz"
           else
           # Check capacity before writing the bundle. The reserve covers the
           # compressed upload, Docker's expanded layers, and 2 GiB of emergency
@@ -934,6 +1014,8 @@ jobs:
           STAGING_FALLBACK_API_IMAGE: ${{ steps.delivery-mode.outputs.fallback_api_image }}
           STAGING_FALLBACK_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.fallback_admin_image }}
           STAGING_REGISTRY_MODE: ${{ steps.delivery-mode.outputs.registry_active }}
+          STAGING_DELIVERY_MODE: ${{ env.STAGING_DELIVERY_MODE }}
+          STAGING_LOCK12: ${{ env.STAGING_LOCK12 }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           TCR_REGISTRY: ${{ secrets.TCR_REGISTRY }}
           TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
@@ -951,7 +1033,7 @@ jobs:
           # switch, and readiness gate.
           timeout: 120s
           command_timeout: 60m
-          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA,STAGING_API_IMAGE,STAGING_ADMIN_IMAGE,STAGING_REGISTRY_MODE,STAGING_FALLBACK_API_IMAGE,STAGING_FALLBACK_ADMIN_IMAGE,GHCR_TOKEN,TCR_REGISTRY,TCR_USERNAME,TCR_TOKEN,WECHAT_SUBSCRIBE_TMPL_MATCH_SUCCESS,WECHAT_SUBSCRIBE_TMPL_EVENT_REMINDER,WECHAT_SUBSCRIBE_TMPL_RECAP
+          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA,STAGING_API_IMAGE,STAGING_ADMIN_IMAGE,STAGING_REGISTRY_MODE,STAGING_DELIVERY_MODE,STAGING_LOCK12,STAGING_FALLBACK_API_IMAGE,STAGING_FALLBACK_ADMIN_IMAGE,GHCR_TOKEN,TCR_REGISTRY,TCR_USERNAME,TCR_TOKEN,WECHAT_SUBSCRIBE_TMPL_MATCH_SUCCESS,WECHAT_SUBSCRIBE_TMPL_EVENT_REMINDER,WECHAT_SUBSCRIBE_TMPL_RECAP
           script: |
             set -euo pipefail
             umask 077
