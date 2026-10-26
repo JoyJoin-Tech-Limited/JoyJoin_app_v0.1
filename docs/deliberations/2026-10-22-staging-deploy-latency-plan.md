@@ -294,4 +294,8 @@ Phase 2（TCR）被否定后，改用「让每次部署传输量正比于改动�
 
 **已做**：base/deps 镜像已按当前 lock hash 发布（run `40332154388`，tag `joyjoin-api-deps:sha256-679faf840866`）。
 
+**增量交付（2026-10-26，已落地）**：三层镜像只解决了「构建重复」，传输仍在重发整包。实测 API 镜像 576 MB 的层构成 —— alpine 基础 122 MB + `apk add font-noto-cjk/ffmpeg` 223 MB + `npm ci` 206 MB（三者跨部署不变），app 层只有 `dist` 6.11 MB、`data` 1.51 MB、`shared/src` 2.22 MB、两个 `package.json`，合计 **~10.7 MB**；把 551 MB 的不变层每次重传，才是 48 分钟的真因。
+
+新增路径：build job 导出 ~13 MiB delta tarball（超过 64 MiB 直接失败）→ deploy job 在既有 SSH 控制连接上读 `.staging-runtime-base.json`、比对 lock 前 12 位**先决定**走 delta 还是 bundle → 远端用 `docker build --network=none`（`FROM` 固定底座 + `RUN rm -rf` + `COPY`）组装，无 npm/编译器/网络，CMD/ENV 继承。实测：13 MB payload、API 组装 2.4s、Admin 0.7s、镜像 +9.8 MB。一次成功的 bundle 部署把当次镜像钉成 `joyjoin-api-runtime-base:{api,admin}` 并写入含 lock 的 marker；底座被一个从不启动的 keepalive 容器引用，避免被按年龄过滤的 `docker image prune` 清掉。lockfile 变更时底座失效 → 自动回落 bundle（zod 4 这类升级仍会走一次全量）。
+
 **尚未做**：`deploy-production.yml` 接同样的 `cache-from`；`deployment/.release.json` 记录 last-known-good digest；bundle 路径本身的替代方案（同地域对象存储 COS 上传/下载，可把 48 分钟压到分钟级，但需要新凭据与成本确认）。
