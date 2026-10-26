@@ -1618,7 +1618,7 @@ export default function ProfilePage() {
         {archetype && (
           <View className='profile-page__poster-entry'>
             <View
-              className={`profile-page__poster-pill${profileCardShare.isGenerating ? ' profile-page__poster-pill--busy' : ''}${posterGlow && !deviceTier.isDegradation ? ' profile-page__poster-pill--glow' : ''}`}
+              className={`profile-page__poster-pill${profileCardShare.isGenerating ? ' profile-page__poster-pill--busy' : ''}${posterGlow ? ' profile-page__poster-pill--glow' : ''}${posterGlow && deviceTier.isDegradation ? ' profile-page__poster-pill--glow-static' : ''}`}
               hoverClass={profileCardShare.isGenerating ? undefined : 'profile-page__poster-pill--pressed'}
               onClick={() => {
                 if (profileCardShare.isGenerating) return

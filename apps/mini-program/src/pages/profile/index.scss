@@ -2689,17 +2689,34 @@
     }
 
     // A6-2 (full-marks Wave A): one-shot gold breathe while a fresh badge is
-    // unshared. RM kills the animation (border tint remains as the static
-    // pose); the degradation tier never applies the class (TSX guard).
+    // unshared. Static pose = gold border; the breathing ring is a separate
+    // opacity-only ::after (UIUX 2026-10-26 #4: no box-shadow repaint loops).
+    // RM freezes to the border alone; degradation keeps border + static ring
+    // via --glow-static (UIUX #1: the static rim must NOT disappear).
     &--glow {
+      position: relative;
       border-color: rgba($color-landed-gold, 0.6);
-      animation: profile-poster-glow 2.8s ease-in-out infinite;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -8rpx;
+        border: 2rpx solid rgba($color-landed-gold, 0.55);
+        border-radius: $radius-pill;
+        pointer-events: none;
+        animation: profile-poster-glow 2.8s ease-in-out infinite;
+      }
+    }
+
+    &--glow-static::after {
+      animation: none;
+      opacity: 0.6;
     }
   }
 
   @keyframes profile-poster-glow {
-    0%, 100% { box-shadow: 0 0 0 rgba($color-landed-gold, 0); }
-    50% { box-shadow: 0 4rpx 20rpx rgba($color-landed-gold, 0.3); }
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.9; }
   }
 
   &__poster-pill-text {
@@ -2765,9 +2782,14 @@
     animation: none;
   }
 
-  // A6-2: the fresh-badge poster glow freezes to its static gold border.
+  // A6-2: the fresh-badge poster glow freezes to its static gold border;
+  // the breathing ::after ring is removed entirely under reduced motion.
   .profile-page__poster-pill--glow {
     animation: none;
+
+    &::after {
+      display: none;
+    }
   }
 
   // P0-9: story artwork rests at the mid-drift crop (scale 1.02, matching the

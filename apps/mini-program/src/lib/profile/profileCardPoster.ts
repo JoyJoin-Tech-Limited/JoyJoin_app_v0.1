@@ -34,6 +34,9 @@ export const PROFILE_CARD_CANVAS_ID = 'profile-card-poster-canvas'
 export const PROFILE_CARD_WIDTH = 1080
 export const PROFILE_CARD_HEIGHT = 1560
 export const PROFILE_CARD_QR_COPY = '微信扫一扫，来悦聚认识我'
+// UIUX 2026-10-26 residual #3: no-QR exports must not instruct the viewer to
+// scan a code that is not there — neutral non-scan invitation instead.
+export const PROFILE_CARD_NO_QR_COPY = '来悦聚认识我'
 
 export interface ProfileCardPosterInput {
   /** Resolved page display name. */
@@ -83,6 +86,25 @@ const FOOTER_Y = 1500
 const BRAND_WORDMARK = 'JoyJoin 悦聚'
 const CHROME_LABEL = '我的悦聚名片'
 
+// UIUX 2026-10-26 residual #2: displayName is user-controlled — constrain it
+// to the 96px-safe content width with an ellipsis (code-point safe, never
+// mid-word-squished by canvas maxWidth). Curated family/tagline stay as-is.
+const NAME_MAX_WIDTH = RIGHT_EDGE - LEFT_EDGE
+
+export function fitCanvasTextToWidth(
+  ctx: Taro.CanvasContext,
+  text: string,
+  maxWidth: number,
+): string {
+  if (ctx.measureText(text).width <= maxWidth) return text
+  const chars = Array.from(text)
+  let end = chars.length - 1
+  while (end > 1 && ctx.measureText(`${chars.slice(0, end).join('')}…`).width > maxWidth) {
+    end -= 1
+  }
+  return `${chars.slice(0, end).join('')}…`
+}
+
 /**
  * Draw the card onto a canvas context. Exported separately from the export
  * pipeline so layout/privacy tests can spy on canvas primitives without
@@ -120,7 +142,7 @@ export function drawProfileCardPosterContent(
   ctx.setFillStyle(PALETTE.textDark)
   ctx.setFontSize(52)
   ctx.setTextAlign('center')
-  ctx.fillText(input.displayName, CENTER_X, NAME_Y)
+  ctx.fillText(fitCanvasTextToWidth(ctx, input.displayName, NAME_MAX_WIDTH), CENTER_X, NAME_Y)
   ctx.restore()
 
   // ── Family pill (gold tint) ──
@@ -170,7 +192,11 @@ export function drawProfileCardPosterContent(
   ctx.setFillStyle(PALETTE.textMuted)
   ctx.setFontSize(30)
   ctx.setTextAlign('left')
-  ctx.fillText(PROFILE_CARD_QR_COPY, LEFT_EDGE, QR_BAND_Y + 90)
+  ctx.fillText(
+    input.qrCodeImagePath ? PROFILE_CARD_QR_COPY : PROFILE_CARD_NO_QR_COPY,
+    LEFT_EDGE,
+    QR_BAND_Y + 90,
+  )
   ctx.restore()
   if (input.qrCodeImagePath) {
     ctx.drawImage(input.qrCodeImagePath, RIGHT_EDGE - QR_SIZE, QR_BAND_Y, QR_SIZE, QR_SIZE)
