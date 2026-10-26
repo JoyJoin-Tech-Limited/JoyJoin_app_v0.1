@@ -73,9 +73,13 @@ describe('POST /api/analytics/flash-story', () => {
         poolId: null,
         metadata: { unitId: 's1-p2-momo' },
       })
-      expect(JSON.stringify(values)).not.toContain('13800000000')
-      expect(JSON.stringify(values)).not.toContain('22.5')
-      expect(JSON.stringify(values)).not.toContain('private')
+      // `timestamp` is a Date, so it serialises as an ISO string that can contain
+      // "22.5" by pure coincidence (e.g. 11:12:22.501Z). Strip it before the PII
+      // scan, otherwise this assertion flakes once every ~600 events.
+      const serialized = JSON.stringify({ ...(values as Record<string, unknown>), timestamp: undefined })
+      expect(serialized).not.toContain('13800000000')
+      expect(serialized).not.toContain('22.5')
+      expect(serialized).not.toContain('private')
     }
   })
 
@@ -116,9 +120,10 @@ describe('POST /api/analytics/flash-story', () => {
         poolId: null,
         metadata: { unitId: 's1-p1-alang' },
       })
-      expect(JSON.stringify(values)).not.toContain('22.5')
-      expect(JSON.stringify(values)).not.toContain('gestureTrace')
-      expect(JSON.stringify(values)).not.toContain('私密回复')
+      const serialized = JSON.stringify({ ...(values as Record<string, unknown>), timestamp: undefined })
+      expect(serialized).not.toContain('22.5')
+      expect(serialized).not.toContain('gestureTrace')
+      expect(serialized).not.toContain('私密回复')
     }
   })
 
