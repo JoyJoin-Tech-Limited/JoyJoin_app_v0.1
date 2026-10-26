@@ -19,7 +19,6 @@ import {
   Bell,
   FileText,
   Filter,
-  Image,
   CreditCard,
   Tags,
   Tag,
@@ -206,7 +205,6 @@ export const ADMIN_NAV_WORKSPACES: AdminNavWorkspace[] = [
     items: [
       { title: "通知推送", url: "/admin/notifications", icon: Bell, roles: SUPER_ONLY },
       { title: "内容管理", url: "/admin/content", icon: FileText, roles: SUPER_ONLY },
-      { title: "横幅管理", url: "/admin/banners", icon: Image, roles: SUPER_OPERATOR },
     ],
   },
   {

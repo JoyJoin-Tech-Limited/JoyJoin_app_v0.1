@@ -403,47 +403,6 @@ export type ReunionResponse = typeof reunionResponses.$inferSelect;
 export type InsertReunionRequest = z.infer<typeof insertReunionRequestSchema>;
 export type InsertReunionResponse = z.infer<typeof insertReunionResponseSchema>;
 
-// Promotion Banners table - 推广横幅管理（发现页轮播+Landing Page素材）
-export const promotionBanners = pgTable("promotion_banners", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // 基本信息
-  imageUrl: varchar("image_url").notNull(), // 图片URL
-  title: varchar("title"), // 标题（可选，用于SEO和管理）
-  subtitle: varchar("subtitle"), // 副标题（可选，覆盖在图片上）
-  
-  // 链接配置
-  linkUrl: varchar("link_url"), // 点击跳转链接
-  linkType: varchar("link_type").default("internal"), // internal(站内) | external(外链) | none(无链接)
-  
-  // 展示位置和范围
-  placement: varchar("placement").default("discover"), // discover(发现页) | landing(落地页) | both(两处都显示)
-  city: varchar("city"), // 香港 | 深圳 | null(全部城市)
-  
-  // 排序和状态
-  sortOrder: integer("sort_order").default(0), // 数字越小越靠前
-  isActive: boolean("is_active").default(true),
-  
-  // 有效期
-  effectiveFrom: timestamp("effective_from").defaultNow(),
-  effectiveUntil: timestamp("effective_until"), // null表示永久有效
-  
-  // 元数据
-  createdBy: varchar("created_by").references(() => users.id), // 创建者（Admin）
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Insert schema for promotion banners
-export const insertPromotionBannerSchema = createInsertSchema(promotionBanners).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type PromotionBanner = typeof promotionBanners.$inferSelect;
-export type InsertPromotionBanner = z.infer<typeof insertPromotionBannerSchema>;
-
 // ============ 场地时间段管理系统 ============
 
 // Venue Time Slots table - 场地可用时间段（支持每周固定+具体日期两种模式）
