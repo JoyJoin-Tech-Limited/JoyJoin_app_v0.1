@@ -248,7 +248,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # jsdom 30 (bumped in 7b1dd3910) now pulls undici 8, whose engine is
+          # node >= 22.19.0. On Node 20 the forks worker dies before any test
+          # runs: "Cannot read properties of undefined (reading 'bind')" at
+          # undici/lib/interceptor/decompress.js. Server jobs stay on 20 to keep
+          # parity with the node:20-alpine production runtime.
+          node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
@@ -265,7 +270,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Same Node 22 requirement as test-admin-client: jsdom 30 -> undici 8.
+          node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
