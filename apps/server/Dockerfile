@@ -73,6 +73,13 @@ RUN npm config set prefer-offline true
 # deliberately NOT copied here. This keeps the npm ci layer's cache stable
 # against frequent .github/docs churn instead of forcing a full ~1.3 GiB
 # reinstall on every build.
+#
+# NODE_ENV is production in the base stage (correct for the runtime image), but
+# the build needs devDependencies: esbuild drives apps/server/build.mjs. Without
+# this override `npm ci` omits them and the build dies with
+# "Cannot find package 'esbuild' imported from /app/apps/server/build.mjs"
+# (caught by CI on 2026-10-26, first three-tier build).
+ENV NODE_ENV=development
 RUN npm ci --no-audit --no-fund
 
 # Copy shared package source
