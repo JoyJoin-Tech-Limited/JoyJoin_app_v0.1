@@ -11,6 +11,7 @@ import {
   getPixelAvatarApprovedStarterLookUrl,
   getPixelAvatarBodyUrl,
   getPixelEquipmentAsset,
+  isApprovedStarterOutfit,
   normalizePixelArchetypeId,
   PIXEL_AVATAR_EQUIPMENT_SLOTS,
 } from './pixelAvatarAssets'
@@ -140,7 +141,8 @@ function getOutfitItemId(
 }
 
 /**
- * Mirrors `PixelAvatarComposite`'s `usesApprovedStarterLook`: the approved
+ * Adapter over the shared predicate: gather the four equipped items into the
+ * `{slot, assetKey}` shape `isApprovedStarterOutfit` takes. The approved
  * starter look is a flattened composite of the DEFAULT starter set, so it may
  * only stand in for the body when every slot still holds that archetype's
  * starter piece. Any real equipped item needs body + placement layers.
@@ -150,15 +152,12 @@ function isStarterOutfitEquipped(
   outfit: EquipmentOutfit,
   itemsById: Map<string, EquipmentItem>,
 ): boolean {
-  return PIXEL_AVATAR_EQUIPMENT_SLOTS.every((slot) => {
+  const equipped = PIXEL_AVATAR_EQUIPMENT_SLOTS.flatMap((slot) => {
     const itemId = getOutfitItemId(outfit, slot)
     const item = itemId ? itemsById.get(itemId) : undefined
-    return Boolean(
-      item
-      && item.slot === slot
-      && item.assetKey === `equipment/starter/${pixelArchetypeId}/${slot}/v1`,
-    )
+    return item && item.slot === slot ? [{ slot, assetKey: item.assetKey }] : []
   })
+  return isApprovedStarterOutfit(pixelArchetypeId, equipped)
 }
 
 /**
