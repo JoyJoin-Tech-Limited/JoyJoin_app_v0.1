@@ -1,0 +1,130 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// DuoSoloConfirmDialog — S2 invitee solo-confirm dialog (D-4..D-7).
+// Centered decision dialog: primary 还是一起去 (solid brand purple, on top,
+// default focus = backdrop tap), secondary 就我一个人 (text style). No ×
+// close. Motion REUSES reg-confirm-backdrop-in (200ms) +
+// reg-confirm-card-pop (320ms) from RegistrationConfirmModal.scss — both
+// SCSS files are @use'd into the same page WXSS, so zero new keyframes here.
+// This file is @use'd by pages/pool-registration/index.scss (subpackage
+// style-splitting guard: never import it from the TSX).
+.duo-solo-confirm-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: $color-overlay;
+  z-index: $z-modal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: reg-confirm-backdrop-in 200ms ease-out;
+
+  &--static {
+    animation: none;
+  }
+}
+
+.duo-solo-confirm {
+  position: relative;
+  width: 624rpx;
+  max-width: 86%;
+  background: $color-surface;
+  border-radius: $card-radius;
+  padding: 48rpx 40rpx 32rpx;
+  box-sizing: border-box;
+  box-shadow: $shadow-lg;
+  animation: reg-confirm-card-pop 320ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--static {
+    animation: none;
+  }
+
+  // D-5 逐字 + single-line hard rule: the interpolated title (name truncated
+  // to 6 code points + … upstream) must stay on ONE line at the 544rpx
+  // content width — the CSS truncate is the second-line defense.
+  &__title {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: 32rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+    margin-bottom: 16rpx;
+    @include text-truncate;
+  }
+
+  &__body {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-bottom: 32rpx;
+  }
+
+  // Primary 还是一起去 — the only solid-$color-primary button in the dialog,
+  // 96rpx pill (≥88rpx hit area), on top.
+  &__primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 96rpx;
+    border-radius: 48rpx;
+    background: $color-primary;
+    transition: opacity 120ms ease, transform 120ms ease;
+
+    &--pressed {
+      opacity: 0.88;
+      transform: scale(0.98);
+    }
+  }
+
+  &__primary-text {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    line-height: 1;
+  }
+
+  // Secondary 就我一个人 — text style; the 88rpx hit area comes from the
+  // transparent full-height row (the visual is just the label).
+  &__secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 88rpx;
+    margin-top: 8rpx;
+    border-radius: 44rpx;
+    transition: background 120ms ease;
+
+    &--pressed {
+      background: $color-bg;
+    }
+  }
+
+  &__secondary-text {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    line-height: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .duo-solo-confirm-overlay {
+    animation: none;
+  }
+
+  .duo-solo-confirm {
+    animation: none;
+
+    &__primary,
+    &__secondary {
+      transition: none;
+    }
+  }
+}

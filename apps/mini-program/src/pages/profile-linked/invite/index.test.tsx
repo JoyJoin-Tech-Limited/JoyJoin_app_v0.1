@@ -21,9 +21,11 @@ import InvitePage from './index'
 
 const mocks = vi.hoisted(() => ({
   getCurrentInstance: vi.fn(),
+  useShareAppMessage: vi.fn(),
   createDuoInvite: vi.fn(),
   getReferralStats: vi.fn(),
   getMyPoolRegistrations: vi.fn(),
+  track: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -33,7 +35,7 @@ vi.mock('@tarojs/taro', () => ({
     showToast: vi.fn(),
   },
   useDidShow: vi.fn(),
-  useShareAppMessage: vi.fn(),
+  useShareAppMessage: mocks.useShareAppMessage,
 }))
 
 vi.mock('@tarojs/components', () => ({
@@ -54,6 +56,10 @@ vi.mock('../../../lib/api/api', () => ({
 
 vi.mock('../../../lib/api/duo', () => ({
   createDuoInvite: mocks.createDuoInvite,
+}))
+
+vi.mock('../../../lib/analytics/discoverAnalytics', () => ({
+  discoverAnalytics: { track: mocks.track },
 }))
 
 vi.mock('../../../hooks/useAuthGuard', () => ({
@@ -101,6 +107,13 @@ function renderPage() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
   return render(<InvitePage />, { wrapper: Wrapper })
+}
+
+function getShareHandler(): () => { title: string; path: string } {
+  const calls = mocks.useShareAppMessage.mock.calls
+  const handler = calls[calls.length - 1]?.[0]
+  expect(handler).toBeTypeOf('function')
+  return handler
 }
 
 beforeEach(() => {
@@ -187,5 +200,71 @@ describe('InvitePage — duo lane pool scoping (对标平台 B1)', () => {
     )
     expect(mocks.createDuoInvite).not.toHaveBeenCalled()
     expect(screen.getByText('邀请链接长期有效，分享给朋友即可。')).toBeInTheDocument()
+  })
+})
+
+describe('InvitePage — duo share analytics (C3)', () => {
+  it('Duo query poolId → one event with the resolved query poolId', async () => {
+    mocks.getCurrentInstance.mockReturnValue({
+      router: { params: { poolId: QUERY_POOL_ID } },
+    })
+    mocks.getMyPoolRegistrations.mockResolvedValue([
+      { poolId: REGISTRATION_POOL_ID },
+    ])
+
+    renderPage()
+    expect(await screen.findByText('本场同行码')).toBeInTheDocument()
+    expect(mocks.track).not.toHaveBeenCalled()
+
+    getShareHandler()()
+
+    expect(mocks.track).toHaveBeenCalledTimes(1)
+    expect(mocks.track).toHaveBeenCalledWith('duo_share_trigger', QUERY_POOL_ID)
+  })
+
+  it('Duo fallback poolId → one event with the active registration poolId', async () => {
+    mocks.getCurrentInstance.mockReturnValue({ router: { params: {} } })
+    mocks.getMyPoolRegistrations.mockResolvedValue([
+      { poolId: REGISTRATION_POOL_ID },
+    ])
+
+    renderPage()
+    expect(await screen.findByText('本场同行码')).toBeInTheDocument()
+
+    getShareHandler()()
+
+    expect(mocks.track).toHaveBeenCalledTimes(1)
+    expect(mocks.track).toHaveBeenCalledWith('duo_share_trigger', REGISTRATION_POOL_ID)
+  })
+
+  it('referral share → zero Duo events', async () => {
+    mocks.getCurrentInstance.mockReturnValue({ router: { params: {} } })
+    mocks.getMyPoolRegistrations.mockResolvedValue([])
+
+    renderPage()
+    expect(await screen.findByText('你的邀请码')).toBeInTheDocument()
+
+    getShareHandler()()
+
+    expect(mocks.track).not.toHaveBeenCalled()
+  })
+
+  it('emits exactly once per actual Duo handler call, without render-time duplication', async () => {
+    mocks.getCurrentInstance.mockReturnValue({
+      router: { params: { poolId: QUERY_POOL_ID } },
+    })
+    mocks.getMyPoolRegistrations.mockResolvedValue([])
+
+    renderPage()
+    expect(await screen.findByText('本场同行码')).toBeInTheDocument()
+    expect(mocks.track).not.toHaveBeenCalled()
+
+    const handleShare = getShareHandler()
+    handleShare()
+    handleShare()
+
+    expect(mocks.track).toHaveBeenCalledTimes(2)
+    expect(mocks.track).toHaveBeenNthCalledWith(1, 'duo_share_trigger', QUERY_POOL_ID)
+    expect(mocks.track).toHaveBeenNthCalledWith(2, 'duo_share_trigger', QUERY_POOL_ID)
   })
 })

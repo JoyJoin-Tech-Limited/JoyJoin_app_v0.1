@@ -81,7 +81,7 @@ Distinct from L1 user filters — these are per-pool group-formation controls on
 
 ## Duo atomic units (双人成行)
 
-Bound duos are hard atomic units: they consume 2 seats, a group may contain at most one duo, the duo's unit score is the mean of both members' scores, the internal duo pair is excluded from group-quality metrics, and R1 must hold per member. If a duo cannot be placed, the variant A fallback keeps the duo unmatched together and routes them into the 场次未成行 auto-refund pipeline. Full details: `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` §4.2.2 and `docs/design/duo-registration-spec-20260807.md`.
+Bound duos are hard atomic units: they consume 2 seats, a group may contain at most one duo, the duo's unit score is the mean of both members' scores, the internal duo pair is excluded from group-quality metrics, and R1 must hold per member. A valid binding requires both users' registrations in the same pool, with at most one valid partner per user per pool. Overlapping candidate pairs are excluded together with every affected partner and logged as `duo_conflict`; one-sided hard-constraint survival strands both. If a duo cannot be placed, the variant A fallback keeps the duo unmatched together and routes them into the 场次未成行 auto-refund pipeline. Full details: `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` §4.2.2 and `docs/design/duo-registration-spec-20260807.md`.
 
 ## Execution safety
 

@@ -212,7 +212,13 @@
 
 - [ ] `invitations`（活动级，`expiresAt`/`invitationType`）vs `referral_codes`（永久）双表消歧：注册时 `invitationCode` 先查 invitations 再查 referral_codes
 - [ ] `pendingReferralCode` 跨登录归因不丢失；`invitation_uses` 与 `referral_conversions` 双表防自推、防重复
-- [ ] Duo 邀请：`POST /api/pools/:id/duo-invites` 幂等、过期 = `preference_lock_at`；公开端点 `GET /api/duo-invites/:code` 限流生效
+- [ ] Duo 邀请：`POST /api/pools/:id/duo-invites` 幂等、过期 = `preference_lock_at`；公开端点 `GET /api/duo-invites/:code` 限流生效，响应只含必要的 inviter displayName/poolId/status 与布尔状态，不泄漏 userId
+- [ ] Duo 一人一伴：第二位被邀请人使用同一码时报名/支付仍成功、`duoBinding.state='unavailable'`、不新增绑定；同一用户改用另一码时仍保留原 partner；被拒时 `total_acceptances` 不增
+- [ ] Duo 取消/重叠：inviter 取消后 invitee 可接受新码；构造 A→B、A→C、B→C 后跑排桌，重叠 pair 整体顺延且有 `duo_conflict` 日志，无人被静默换 partner（staging 手工项）
+- [ ] Duo 角色与文案：guest 不建自己的码；「就等你」只在 viewer 本人未报名时出现；taken 链接显示「这局已经有同行了」；「就我一个人」后 URL 与 pending context 均不再携带邀请归因
+- [ ] Duo 结果反馈：免费/权益成功页只显示本次响应的 `duoBinding`，新提交/swipe-back 清空，落地 410 不重复提示 expired；单场局票/悦聚月卡呈现仍是明确 follow-up，不得宣称已覆盖
+- [ ] Duo admin：`/admin/duo-invites` 冲突筛选、冲突徽标、同桌/奖励三态、poolId 范围 KPI 与 accepted=0 同桌率 `—`；accepted 表示至少一条使用记录，不等于双方当前有效绑定，也不等于 seated；false 不显示误导性的「未同桌」；多历史使用记录不得挤坏邀请分页或产生重复 row key
+- [ ] Duo 真机：微信 DevTools 检查 guest/taken/waiting/bound、长名与 emoji 名、88rpx 命中区、展开分享 CTA 的 `scrollIntoView='nearest'`、rAF、safe-area、reduced-motion 与 swipe-back
 - [ ] 分享卡片落地页参数（`?invitationCode=`）在落地页正确透传（`pages/index/index`）
 - [ ] **本批 `routes/domains/referrals.ts` 有改动 — 本节重测**
 

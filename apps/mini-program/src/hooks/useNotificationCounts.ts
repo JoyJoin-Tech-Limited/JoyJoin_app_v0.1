@@ -9,7 +9,10 @@ import {
 import { POLL_NOTIFICATIONS_MS, STALE_TIME_DEFAULT_MS } from '../lib/utils/uiConstants'
 import { apiRequest } from '../lib/api/api'
 
-const NOTIFICATION_COUNTS_KEY = ['mini-program', 'notification-counts'] as const
+// Exported for cache-mirror readers (P0-2 profile bell, 2026-10-22): the
+// profile tab mounts a disabled observer on this key so Discover's active
+// polling stays the single fetch loop — never a second interval.
+export const NOTIFICATION_COUNTS_KEY = ['mini-program', 'notification-counts'] as const
 
 export function useNotificationCounts(enabled = true) {
   const queryClient = useQueryClient()

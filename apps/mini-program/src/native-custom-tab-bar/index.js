@@ -90,7 +90,9 @@ Component({
         icon: '../assets/tab-icons/我的 icon_inactive.png',
         selectedIcon: '../assets/tab-icons/我的 icon.png',
         badgeCount: 0,
-        badgeCategory: null,
+        // P0-5 (2026-10-22): pending equipment draws surface as the 我的 tab
+        // badge, same number-pill system as the sibling tabs.
+        badgeCategory: 'profile',
       },
     ],
   },

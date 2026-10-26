@@ -18,6 +18,10 @@ export interface CountUpTextProps {
   delay?: number
   /** Respect reduced-motion settings; if omitted the hook reads the system setting. */
   prefersReducedMotion?: boolean
+  /** P1-3: easing curve (default 'easeOutCubic'; 'brandBezier' = brand token). */
+  easing?: 'easeOutCubic' | 'brandBezier'
+  /** P1-3: minimum ms between ticks (0 = every frame). */
+  cadenceFloorMs?: number
 }
 
 /**
@@ -35,10 +39,12 @@ export function CountUpText({
   duration,
   delay = 0,
   prefersReducedMotion,
+  easing,
+  cadenceFloorMs,
 }: CountUpTextProps) {
   // reducedMotion gating is delegated to the underlying useCountUp hook,
   // which reads the system setting and accepts an explicit override.
-  const display = useCountUp(value, { enabled, delay, duration, prefersReducedMotion })
+  const display = useCountUp(value, { enabled, delay, duration, prefersReducedMotion, easing, cadenceFloorMs })
   return (
     <Text className={className} style={style}>
       {String(display)}

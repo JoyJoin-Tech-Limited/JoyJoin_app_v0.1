@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockDb } = vi.hoisted(() => ({
+const { mockDb, mockResolveDuoBindingAvailability, mockLoggerWarn } = vi.hoisted(() => ({
   mockDb: {
     transaction: vi.fn(),
   },
+  mockResolveDuoBindingAvailability: vi.fn(),
+  mockLoggerWarn: vi.fn(),
 }));
 
 vi.mock("../db", () => ({
@@ -14,6 +16,23 @@ vi.mock("../repositories/eventCreditsRepo", () => ({
   eventCreditsRepo: {
     grantCreditsForPayment: vi.fn(),
     reverseCreditsForPayment: vi.fn(),
+  },
+}));
+
+// 双人成行 S1: the availability probes are mocked at the repo boundary — their
+// own query semantics are locked in duoBindingRepo.test.ts; this file asserts
+// the fulfillment call-site wiring (AC-3).
+vi.mock("../repositories/duoBindingRepo", () => ({
+  resolveDuoBindingAvailability: mockResolveDuoBindingAvailability,
+}));
+
+vi.mock("../lib/logger", () => ({
+  logger: {
+    info: vi.fn(),
+    warn: mockLoggerWarn,
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
   },
 }));
 
@@ -274,5 +293,211 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
       planType: "pack_3",
     });
     expect(insertMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 双人成行 S1 (one-partner-per-pool) AC-3 + AC-7 — the PAID registration path
+ * must refuse a duplicate duo binding WITHOUT blocking payment completion or
+ * the registration write, and a refusal must not increment
+ * invitations.total_acceptances. The availability probes are mocked at the
+ * repo boundary (their query semantics live in duoBindingRepo.test.ts); the
+ * real resolver + real call-site gating are exercised end to end here.
+ */
+describe("paymentFulfillmentRepo.finalizeConfirmedPayment — duo binding guard (S1 AC-3)", () => {
+  const duoEventPayment = {
+    ...basePayment,
+    paymentType: "event",
+    relatedId: "pool-1",
+    eventRegistrationPayload: {
+      // No budgetRange literal here — the T6 budget guardrail ratchet forbids
+      // new hardcoded tier literals, and fulfillment defaults the field to [].
+      invitationCode: "abc123def456",
+    },
+  };
+  const completedDuoEventPayment = {
+    ...duoEventPayment,
+    status: "completed",
+    paidAt: new Date(),
+    wechatTransactionId: "wx_txn_duo",
+  };
+  const duoInvitationRow = {
+    id: "inv-duo-1",
+    code: "abc123def456",
+    inviterId: "user-inviter",
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    invitationType: "duo",
+    poolId: "pool-1",
+  };
+
+  function buildDuoTx(options: {
+    existingUseRows?: any[];
+  }) {
+    return createTxHarness({
+      // payment → pool → user (DNA, empty) → invitation → [existingUse]
+      selectResults: [
+        [duoEventPayment],
+        [{ id: "pool-1" }],
+        [],
+        [duoInvitationRow],
+        ...(options.existingUseRows ? [options.existingUseRows] : []),
+      ],
+      // payments (returning) → eventPools → [invitations total_acceptances]
+      updateResults: [
+        [completedDuoEventPayment],
+        [],
+        [],
+      ],
+      // registration (direct + onConflict returning) → [invitation_uses] → notification
+      insertResults: [
+        [],
+        [{ id: "registration-1" }],
+        [],
+        [],
+      ],
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("AC-3/AC-7: refuses a second consumer of a claimed duo code (partner_taken) without blocking payment or registration", async () => {
+    mockResolveDuoBindingAvailability.mockResolvedValue({
+      invitationAlreadyBound: true,
+      userAlreadyBoundInPool: false,
+    });
+    const { tx, insertValuesCalls } = buildDuoTx({});
+    mockDb.transaction.mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId: duoEventPayment.wechatOrderId,
+      transactionId: "wx_txn_duo",
+    });
+
+    // Payment completes and the registration row is written — refusal never
+    // blocks the main transaction.
+    expect(result.alreadyCompleted).toBe(false);
+    expect(result.payment?.status).toBe("completed");
+    expect(
+      insertValuesCalls.some(
+        ({ values }) => values?.poolId === "pool-1" && values?.userId === "user-1",
+      ),
+    ).toBe(true);
+
+    // The probes were consulted with the payment's pool/user/invitation…
+    expect(mockResolveDuoBindingAvailability).toHaveBeenCalledWith(tx, {
+      poolId: "pool-1",
+      userId: "user-1",
+      invitationId: "inv-duo-1",
+    });
+
+    // …but NO invitation_uses row is written…
+    expect(
+      insertValuesCalls.some(({ values }) => values?.invitationId && values?.inviteeId),
+    ).toBe(false);
+
+    // …and total_acceptances is NOT incremented (updates = payments + pools only).
+    expect(tx.update).toHaveBeenCalledTimes(2);
+
+    // The discard is observable with the countable reason.
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "Discarding unusable invitation during payment fulfillment",
+      expect.objectContaining({ reason: "duo_partner_taken" }),
+    );
+  });
+
+  it("AC-3: refuses when the paying user already holds a valid duo binding in the pool (already_bound)", async () => {
+    mockResolveDuoBindingAvailability.mockResolvedValue({
+      invitationAlreadyBound: false,
+      userAlreadyBoundInPool: true,
+    });
+    const { tx, insertValuesCalls } = buildDuoTx({});
+    mockDb.transaction.mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId: duoEventPayment.wechatOrderId,
+      transactionId: "wx_txn_duo",
+    });
+
+    expect(result.payment?.status).toBe("completed");
+    expect(
+      insertValuesCalls.some(({ values }) => values?.invitationId && values?.inviteeId),
+    ).toBe(false);
+    expect(tx.update).toHaveBeenCalledTimes(2);
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "Discarding unusable invitation during payment fulfillment",
+      expect.objectContaining({ reason: "duo_already_bound" }),
+    );
+  });
+
+  it("AC-3: binds a clean duo code over the payment hop (invitation_uses write + total_acceptances increment)", async () => {
+    mockResolveDuoBindingAvailability.mockResolvedValue({
+      invitationAlreadyBound: false,
+      userAlreadyBoundInPool: false,
+    });
+    const { tx, insertValuesCalls } = buildDuoTx({ existingUseRows: [] });
+    mockDb.transaction.mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId: duoEventPayment.wechatOrderId,
+      transactionId: "wx_txn_duo",
+    });
+
+    expect(result.payment?.status).toBe("completed");
+    // invitation_uses row links the code to the NEW registration id.
+    expect(
+      insertValuesCalls.some(
+        ({ values }) =>
+          values?.invitationId === "inv-duo-1" &&
+          values?.inviteeId === "user-1" &&
+          values?.poolRegistrationId === "registration-1",
+      ),
+    ).toBe(true);
+    // payments + eventPools + invitations(total_acceptances) = 3 updates.
+    expect(tx.update).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not probe duo availability for non-duo invitations (legacy codes stay multi-use)", async () => {
+    const legacyEventPayment = {
+      ...duoEventPayment,
+      id: "payment-legacy",
+      wechatOrderId: "JJ_ORDER_LEGACY",
+    };
+    const { tx, insertValuesCalls } = createTxHarness({
+      selectResults: [
+        [legacyEventPayment],
+        [{ id: "pool-1" }],
+        [],
+        [
+          {
+            id: "inv-legacy-1",
+            inviterId: "user-inviter",
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            invitationType: "pre_match",
+            poolId: null,
+          },
+        ],
+        [], // existingUse
+      ],
+      updateResults: [
+        [{ ...legacyEventPayment, status: "completed", paidAt: new Date() }],
+        [],
+        [],
+      ],
+      insertResults: [[], [{ id: "registration-1" }], [], []],
+    });
+    mockDb.transaction.mockImplementation(async (callback: any) => callback(tx));
+
+    await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId: legacyEventPayment.wechatOrderId,
+      transactionId: "wx_txn_legacy",
+    });
+
+    expect(mockResolveDuoBindingAvailability).not.toHaveBeenCalled();
+    expect(
+      insertValuesCalls.some(({ values }) => values?.invitationId === "inv-legacy-1"),
+    ).toBe(true);
+    expect(tx.update).toHaveBeenCalledTimes(3);
   });
 });

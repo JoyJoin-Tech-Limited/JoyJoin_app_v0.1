@@ -27,6 +27,7 @@ import type { DiscoverShellPoolItem, ProfileShellResponse, UserCouponsResponse, 
 import { getArchetypeFamily } from "@shared/archetypeColors";
 import { computeOracleCardFields } from "../lib/oracleCardComputation";
 import { buildAuthUserResponse } from "../lib/buildAuthUserResponse";
+import { resolveEntitlementMode } from "../lib/entitlement";
 import { paymentsRepo } from "./paymentsRepo";
 import { notificationsRepo } from "./notificationsRepo";
 import { getUserJoinedEventsSummary, getConnectionsContextEvents } from "./joinedEventsRepo";
@@ -413,6 +414,8 @@ export interface ProfileShellQueryResult {
     eventsJoined: number
     connectionsCount: number
   }
+  // P0-1 entitlement strip (2026-10-22): pills render from this + coupons.
+  entitlement: NonNullable<ProfileShellResponse['entitlement']>
   meta: { cacheKey: string; serverTime: string }
 }
 
@@ -428,8 +431,12 @@ export async function getProfileShellData(params: {
     throw new Error(`User not found: ${userId}`)
   }
 
-  // 2. Coupons + stats in parallel (3 round-trips → 1 parallel batch)
-  const [couponRows, eventsJoinedRows, connectionsRows] = await Promise.all([
+  // 2. Coupons + stats + entitlement in parallel (4 round-trips → 1 batch).
+  //    NOTE: buildAuthUserResponse already resolved entitlement internally for
+  //    the user payload; this second resolveEntitlementMode call repeats 1-2
+  //    indexed reads rather than widening the auth hot-path signature — the
+  //    shell endpoint is cached, so the duplicate read is the cheaper trade.
+  const [couponRows, eventsJoinedRows, connectionsRows, entitlementResolution] = await Promise.all([
     paymentsRepo.getUserCoupons(userId),
     db
       .select({ count: sql<number>`count(*)::int` })
@@ -444,6 +451,7 @@ export async function getProfileShellData(params: {
           eq(connections.status, 'mutual')
         )
       ),
+    resolveEntitlementMode(userId),
   ])
 
   // Also count pool registrations as "events joined"
@@ -472,6 +480,11 @@ export async function getProfileShellData(params: {
     stats: {
       eventsJoined,
       connectionsCount,
+    },
+    entitlement: {
+      mode: entitlementResolution.mode,
+      eventCredits: entitlementResolution.availableEventCredits,
+      subscription: entitlementResolution.subscription,
     },
     meta: {
       cacheKey: `shell-profile-${userId}`,

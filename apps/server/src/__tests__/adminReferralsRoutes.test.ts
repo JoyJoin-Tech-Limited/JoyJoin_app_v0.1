@@ -14,8 +14,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockGetReferralStats = vi.fn();
 const mockListDuoInvites = vi.fn();
+const mockGetDuoInviteSummary = vi.fn();
 
 vi.mock("../repositories/adminReferralsRepo", () => ({
+  getDuoInviteSummary: mockGetDuoInviteSummary,
   getReferralStats: mockGetReferralStats,
   listDuoInvites: mockListDuoInvites,
 }));
@@ -56,6 +58,16 @@ const stubStats = {
   topReferrers: [{ userId: "u2", displayName: "Bob", count: 3 }],
 };
 
+const stubDuoSummary = {
+  total: 9,
+  pending: 3,
+  accepted: 4,
+  expired: 2,
+  conflict: 1,
+  seated: 2,
+  rewarded: 1,
+};
+
 describe("GET /api/admin/referrals/stats", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -90,6 +102,7 @@ describe("GET /api/admin/duo-invites", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockListDuoInvites.mockResolvedValue({ items: [], total: 0 });
+    mockGetDuoInviteSummary.mockResolvedValue(stubDuoSummary);
   });
 
   it("applies default pagination (page 1, pageSize 20)", async () => {
@@ -97,8 +110,16 @@ describe("GET /api/admin/duo-invites", () => {
       const res = await fetch(`${base}/api/admin/duo-invites`);
       expect(res.status).toBe(200);
       expect(mockListDuoInvites).toHaveBeenCalledWith({ page: 1, pageSize: 20 });
+      expect(mockGetDuoInviteSummary).toHaveBeenCalledWith({ poolId: undefined });
       const body = (await res.json()) as any;
-      expect(body).toMatchObject({ items: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });
+      expect(body).toMatchObject({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+        totalPages: 0,
+        summary: stubDuoSummary,
+      });
     });
   });
 
@@ -112,6 +133,55 @@ describe("GET /api/admin/duo-invites", () => {
         page: 2,
         pageSize: 50,
       });
+    });
+  });
+
+  it("keeps summary pool-scoped and present when filtered list results are empty", async () => {
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(
+        `${base}/api/admin/duo-invites?poolId=pool-1&status=expired&conflict=true&page=3`,
+      );
+      expect(res.status).toBe(200);
+      expect(mockListDuoInvites).toHaveBeenCalledWith({
+        poolId: "pool-1",
+        status: "expired",
+        conflict: true,
+        page: 3,
+        pageSize: 20,
+      });
+      expect(mockGetDuoInviteSummary).toHaveBeenCalledWith({ poolId: "pool-1" });
+      const body = (await res.json()) as any;
+      expect(body).toMatchObject({
+        items: [],
+        total: 0,
+        totalPages: 0,
+        summary: stubDuoSummary,
+      });
+    });
+  });
+
+  // S1 (AC-5): the conflict marker filter threads through as a boolean;
+  // omitted = no filter (the default-pagination test above locks that shape).
+  it.each([
+    { query: "conflict=true", expected: true },
+    { query: "conflict=false", expected: false },
+  ])("threads $query through to the repo as conflict=$expected", async ({ query, expected }) => {
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/admin/duo-invites?${query}`);
+      expect(res.status).toBe(200);
+      expect(mockListDuoInvites).toHaveBeenCalledWith({
+        conflict: expected,
+        page: 1,
+        pageSize: 20,
+      });
+    });
+  });
+
+  it("rejects an invalid conflict value with 400", async () => {
+    await withServer(buildTestApp(), async (base) => {
+      const res = await fetch(`${base}/api/admin/duo-invites?conflict=bogus`);
+      expect(res.status).toBe(400);
+      expect(mockListDuoInvites).not.toHaveBeenCalled();
     });
   });
 

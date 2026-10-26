@@ -53,6 +53,15 @@ node scripts/mock-h5-server.mjs
 node scripts/screenshot-server.mjs
 ```
 
+**Gotchas (2026-10-24, profile craft pass):**
+- `apps/mini-program/.env.local` may pin `TARO_APP_API_BASE_URL` to staging — a plain
+  `npm run build:h5 -w mini-program` then points every API call at the (possibly down)
+  remote host. Always pass `TARO_APP_API_BASE_URL=http://localhost:5001` explicitly at build time.
+- Both servers hold their code in memory: after editing `scripts/mock-h5-server.mjs`
+  (fixtures) or `scripts/screenshot-server.mjs` (guards/selectors), **restart both** before
+  capturing — a stale server produces guard timeouts that look like product bugs.
+- `build:weapp` wipes the H5 dist — rebuild H5 after any weapp build before screenshots.
+
 Then open the URL in a browser (do not paste the URL into the terminal):
 
 | URL | Page |

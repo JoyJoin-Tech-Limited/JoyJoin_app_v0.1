@@ -11,11 +11,21 @@ import type { Express } from "express";
 import { z } from "zod";
 import { requireAdmin } from "../../adminAuth";
 import { logger } from "../../lib/logger";
-import { getReferralStats, listDuoInvites } from "../../repositories/adminReferralsRepo";
+import {
+  getDuoInviteSummary,
+  getReferralStats,
+  listDuoInvites,
+} from "../../repositories/adminReferralsRepo";
 
 const duoInviteListQuerySchema = z.object({
   poolId: z.string().min(1).optional(),
   status: z.enum(["pending", "bound", "expired"]).optional(),
+  // S1: conflict marker filter — "true" shows only overlapped bindings,
+  // "false" only clean ones; omitted shows all (marker still present per item).
+  conflict: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value === "true")),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -41,7 +51,10 @@ export function registerAdminReferralRoutes(app: Express): void {
         });
       }
 
-      const { items, total } = await listDuoInvites(parsed.data);
+      const [{ items, total }, summary] = await Promise.all([
+        listDuoInvites(parsed.data),
+        getDuoInviteSummary({ poolId: parsed.data.poolId }),
+      ]);
 
       return res.json({
         items,
@@ -49,6 +62,7 @@ export function registerAdminReferralRoutes(app: Express): void {
         page: parsed.data.page,
         pageSize: parsed.data.pageSize,
         totalPages: Math.ceil(total / parsed.data.pageSize),
+        summary,
       });
     } catch (error) {
       logger.error("[AdminReferrals] duo-invites list failed", { error: String(error) });

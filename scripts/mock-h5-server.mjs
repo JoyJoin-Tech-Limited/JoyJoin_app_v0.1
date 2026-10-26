@@ -511,6 +511,17 @@ app.get('/api/shell/profile', (req, res) => {
 })
 
 app.get('/api/user/gamification', (req, res) => {
+  // Wave A F3 fixture (2026-10-23): the real server stores lastActivityDate as
+  // a UTC date-only string (gamificationService: toISOString().split('T')[0]),
+  // and the profile's streak continuation line (A5-1) only renders when the
+  // date sits in the previous ISO week. The old hard-coded datetime was both
+  // the wrong shape and months stale, so no live streak state could render.
+  const now = new Date()
+  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  weekStart.setUTCDate(weekStart.getUTCDate() - ((now.getUTCDay() + 6) % 7)) // ISO Monday
+  const lastWeek = new Date(weekStart)
+  lastWeek.setUTCDate(lastWeek.getUTCDate() - 3) // safely inside the previous ISO week
+  const lastActivityDate = lastWeek.toISOString().split('T')[0]
   res.json({
     experiencePoints: 260,
     joyCoins: 148,
@@ -529,7 +540,7 @@ app.get('/api/user/gamification', (req, res) => {
       xpNeeded: 40,
     },
     activityStreak: 3,
-    lastActivityDate: '2026-07-13T20:20:00+08:00',
+    lastActivityDate,
     streakFreezeAvailable: true,
     eventsAttended: 4,
   })
@@ -627,7 +638,7 @@ app.get('/api/personal-story', (req, res) => {
       chapters: [
         {
           id: 'personal-story-chapter-001',
-          title: '2026年06月03日 · 盲盒活动',
+          title: '2026.06.03 · 盲盒活动',
           body: '故事发生在2026年6月3日。这次真实经历属于盲盒活动。\n\n这一段发生在悦聚小馆。\n\n本次分组中的伙伴类型包括猫头鹰伙伴。',
           activityType: '盲盒活动',
           occurredAt: '2026-06-03T19:00:00+08:00',
@@ -635,7 +646,7 @@ app.get('/api/personal-story', (req, res) => {
         },
         {
           id: 'personal-story-chapter-002',
-          title: '2026年07月12日 · 闪现',
+          title: '2026.07.12 · 闪现',
           body: '故事发生在2026年7月12日。这次真实经历属于闪现。\n\n这一段发生在深圳湾公园。这次经历中出现了阿浪。\n\n最后留下的心情是释然。',
           activityType: '闪现',
           occurredAt: '2026-07-12T20:42:00+08:00',
@@ -729,6 +740,17 @@ app.post('/api/pools/:id/duo-invites', (req, res) => {
 
 // My registrations
 app.get('/api/my-pool-registrations', (req, res) => {
+  // Wave A F3 fixture (2026-10-23): reg-screenshot-002 keeps one event on
+  // TODAY's local date so the profile renders the A4-3 event-day greeting
+  // (「今天 HH:mm 有局 · 南山见」) and the A5-2 next-event row. Deliberately
+  // MATCHED, not pending — a pending registration would flip the invite page
+  // into duo share mode and change that capture's baseline. The +3h/same-date
+  // clamp keeps the event upcoming for any run before ~23:30 local.
+  const todayEvent = new Date(Date.now() + 3 * 60 * 60 * 1000)
+  if (todayEvent.getDate() !== new Date().getDate()) {
+    todayEvent.setHours(23, 50, 0, 0)
+  }
+  const todayEventIso = todayEvent.toISOString()
   res.json([
     {
       id: 'reg-screenshot-001',
@@ -743,6 +765,21 @@ app.get('/api/my-pool-registrations', (req, res) => {
       poolDateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000).toISOString(),
       finalDateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000).toISOString(),
       matchScore: 87,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'reg-screenshot-002',
+      poolId: 'pool-screenshot-001',
+      matchStatus: 'matched',
+      poolStatus: 'matched',
+      assignedGroupId: 'group-screenshot-002',
+      poolTitle: '周中夜话小桌 · 南山',
+      poolEventType: '饭局',
+      poolCity: '深圳',
+      poolDistrict: '南山',
+      poolDateTime: todayEventIso,
+      finalDateTime: todayEventIso,
+      matchScore: 84,
       createdAt: new Date().toISOString(),
     },
   ])

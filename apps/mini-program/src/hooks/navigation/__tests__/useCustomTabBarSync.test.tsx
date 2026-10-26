@@ -77,7 +77,25 @@ describe('useCustomTabBarSync', () => {
     act(() => didShowCallback?.())
 
     await waitFor(() => {
-      expect(mockSyncState).toHaveBeenCalledWith({ center, badges: { discover: 5, activities: 0, chat: 2 } })
+      expect(mockSyncState).toHaveBeenCalledWith({ center, badges: { discover: 5, activities: 0, chat: 2, profile: 0 } })
+    })
+  })
+
+  it('P0-5: passes a live profileBadgeCount through to the 我的 tab badge', async () => {
+    const poolRegistrations = [{ id: 'reg-1', poolId: 'pool-1', matchStatus: 'pending' as const }]
+    const events: any[] = []
+    const center = getMiniProgramCenterState(poolRegistrations, events)
+    mockUseNotificationCounts.mockReturnValue({ data: { discover: 0, activities: 0, chat: 0 } } as any)
+
+    renderHook(
+      () => useCustomTabBarSync({ enabled: true, poolRegistrations, events, profileBadgeCount: 2 }),
+      { wrapper: createWrapper() },
+    )
+
+    act(() => didShowCallback?.())
+
+    await waitFor(() => {
+      expect(mockSyncState).toHaveBeenCalledWith({ center, badges: { discover: 0, activities: 0, chat: 0, profile: 2 } })
     })
   })
 

@@ -337,11 +337,22 @@ export function getPoolGroupAnalysis(
   })
 }
 
+export interface DuoBindingResponse {
+  state: 'bound' | 'unavailable'
+  reason?: 'already_bound' | 'partner_taken' | 'expired' | 'pool_mismatch'
+}
+
+export interface RegisterForPoolResponse {
+  id: string
+  /** Additive duo outcome; omitted for non-duo registration and older servers. */
+  duoBinding?: DuoBindingResponse
+}
+
 export function registerForPool(
   api: ApiTransport,
   poolId: string,
   payload?: EventPoolRegistrationPayload
-): Promise<{ id: string }> {
+): Promise<RegisterForPoolResponse> {
   const request: ApiTransportRequest = {
     path: `/api/event-pools/${encodeURIComponent(poolId)}/register`,
     method: 'POST',
@@ -351,7 +362,7 @@ export function registerForPool(
     request.data = normalizeEventPoolRegistrationPayload(payload)
   }
 
-  return api<{ id: string }>(request)
+  return api<RegisterForPoolResponse>(request)
 }
 
 export interface RegisterWithPaymentResponse {

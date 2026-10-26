@@ -75,6 +75,16 @@ export const ProfileShellResponseSchema = z.object({
     eventsJoined: z.number(),
     connectionsCount: z.number(),
   }),
+  // P0-1 entitlement strip (2026-10-22): optional so legacy servers simply
+  // omit it — the client strip renders from whatever data exists (fail-open).
+  entitlement: z.object({
+    mode: z.enum(['subscription', 'event_pack', 'test']).nullable(),
+    eventCredits: z.number(),
+    subscription: z.object({
+      planType: z.enum(['monthly', 'quarterly']),
+      daysRemaining: z.number(),
+    }).nullable(),
+  }).optional(),
   meta: z.object({
     cacheKey: z.string(),
     serverTime: z.string(),

@@ -117,13 +117,38 @@ export interface EventPoolRegistrationPreferenceDNA {
   kolComfort: string | null;
 }
 
-type OptionalRegistrationAttribution =
+export type OptionalRegistrationAttribution =
   | { kind: "invitation"; invitationId: string; inviterId: string }
   | { kind: "referral"; referralCodeId: string; inviterId: string }
   | {
       kind: "discard";
-      reason: "expired_invitation" | "self_invitation" | "self_referral" | "invalid_code" | "pool_mismatch";
+      reason:
+        | "expired_invitation"
+        | "self_invitation"
+        | "self_referral"
+        | "invalid_code"
+        | "pool_mismatch"
+        | "duo_partner_taken"
+        | "duo_already_bound";
     };
+
+/**
+ * 双人成行 S1 (one-partner-per-pool): pre-fetched binding facts for the
+ * presented duo invitation, consulted ONLY when invitationType === "duo".
+ *
+ * Fetched by `repositories/duoBindingRepo.resolveDuoBindingAvailability` at
+ * each registration call site (free route + payment fulfillment share this
+ * resolver — one rule point, both paths). "Valid binding" = both sides hold a
+ * registration in the pool; the query layer joins BOTH registrations so an
+ * inviter cancel (which leaves the invitee's invitation_uses row behind) does
+ * not lock the invitee out of a new code (S1 AC-8).
+ */
+export interface DuoBindingAvailabilityInput {
+  /** The presented invitation already has a live invitee-side consumer. */
+  invitationAlreadyBound?: boolean;
+  /** The registering user already holds a valid duo binding in this pool. */
+  userAlreadyBoundInPool?: boolean;
+}
 
 export function resolveOptionalRegistrationAttribution(input: {
   userId: string;
@@ -142,6 +167,8 @@ export function resolveOptionalRegistrationAttribution(input: {
     id: string;
     userId: string;
   } | null;
+  /** S1: duo one-partner-per-pool guard facts (duo invitations only). */
+  duo?: DuoBindingAvailabilityInput | null;
 }): OptionalRegistrationAttribution {
   if (input.invitation) {
     if (
@@ -164,6 +191,21 @@ export function resolveOptionalRegistrationAttribution(input: {
       input.invitation.poolId !== input.poolId
     ) {
       return { kind: "discard", reason: "pool_mismatch" };
+    }
+
+    // S1 (one-partner-per-pool): a duo code is single-use per pool on BOTH
+    // sides — the invitation accepts at most one live invitee consumer, and a
+    // user holds at most one valid duo binding per pool (either role). A
+    // refusal NEVER blocks registration/payment: call sites skip the
+    // invitation_uses write (and the total_acceptances increment) and surface
+    // `duoBinding.state = "unavailable"` with the mapped reason instead.
+    if (input.invitation.invitationType === "duo") {
+      if (input.duo?.invitationAlreadyBound) {
+        return { kind: "discard", reason: "duo_partner_taken" };
+      }
+      if (input.duo?.userAlreadyBoundInPool) {
+        return { kind: "discard", reason: "duo_already_bound" };
+      }
     }
 
     return {
@@ -197,6 +239,45 @@ export function isSessionPendingReferralCode(
     pendingReferralCode.trim() !== "" &&
     submittedCode.trim() === pendingReferralCode.trim()
   );
+}
+
+/**
+ * 双人成行 S1 — response shape of the duo-binding outcome on
+ * POST /api/event-pools/:id/register. Registration/payment NEVER fails over a
+ * refused binding; the outcome is surfaced here instead (PR-2/S3 owns the
+ * client presentation of `reason`).
+ */
+export interface DuoBindingResult {
+  state: "bound" | "unavailable";
+  reason?: "already_bound" | "partner_taken" | "expired" | "pool_mismatch";
+}
+
+/**
+ * Map the attribution decision to the registration response's `duoBinding`
+ * field. Returns undefined when the presented code is not a duo invitation or
+ * the discard reason carries no duo-binding semantics (self-invite) — the
+ * field is then omitted from the response entirely.
+ */
+export function resolveDuoBindingResult(input: {
+  invitationType?: string | null;
+  attribution: OptionalRegistrationAttribution;
+}): DuoBindingResult | undefined {
+  if (input.invitationType !== "duo") return undefined;
+  const { attribution } = input;
+  if (attribution.kind === "invitation") return { state: "bound" };
+  if (attribution.kind !== "discard") return undefined;
+  switch (attribution.reason) {
+    case "duo_already_bound":
+      return { state: "unavailable", reason: "already_bound" };
+    case "duo_partner_taken":
+      return { state: "unavailable", reason: "partner_taken" };
+    case "expired_invitation":
+      return { state: "unavailable", reason: "expired" };
+    case "pool_mismatch":
+      return { state: "unavailable", reason: "pool_mismatch" };
+    default:
+      return undefined;
+  }
 }
 
 export function buildEventPoolRegistrationInsert(input: {

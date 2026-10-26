@@ -17,6 +17,11 @@
 @use './components/PoolRegistrationDuoCard.scss' as *;
 @use './components/DuoInfoSheet.scss' as *;
 @use './components/PoolRegistrationDuoBanner.scss' as *;
+// S2 (2026-10-23): the invitee solo-confirm dialog SCSS is @use'd into the
+// page SCSS so its rules compile into the page WXSS — same subpackage
+// style-splitting guard as the duo card above (never imported from the TSX).
+// It REUSES the reg-confirm keyframes from RegistrationConfirmModal.scss.
+@use './components/DuoSoloConfirmDialog.scss' as *;
 // Step 0 三拍化 (2026-08-17): VibePeek expander SCSS is @use'd into the page
 // SCSS so its rules compile into the pool-registration subpackage page WXSS
 // (subpackage style-splitting gate).
@@ -43,9 +48,14 @@
   // so content ran edge-to-edge and the footer scrolled away on long steps.
   display: flex;
   flex-direction: column;
+  // Bounded flex shell: the document itself must not scroll. Only the inner
+  // ScrollView owns scrolling; otherwise a completed registration can retain
+  // the form's page scroll offset and put the success title above the viewport.
   // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   box-sizing: border-box;
 
   &__scroll {

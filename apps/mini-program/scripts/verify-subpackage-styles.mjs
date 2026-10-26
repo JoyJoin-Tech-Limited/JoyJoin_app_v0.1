@@ -51,7 +51,7 @@ const REQUIREMENTS = [
     // keep an explicit `height` next to its `min-height`.
     page: 'pages/profile/index.wxss',
     selectors: [
-      'profile-page__identity-stage{position:relative;height:728rpx',
+      'profile-page__identity-stage{position:relative;height:792rpx',
       // P6 profile first-visit guidance tip (2026-09-11): GuidanceTipCard
       // carries no TSX-side SCSS import; its rules are @use'd by the page
       // SCSS and must reach the profile page WXSS — same subpackage
@@ -146,6 +146,18 @@ const REQUIREMENTS = [
       'pool-reg-duo__segmented-thumb{',
       'pool-reg-duo-banner{',
       'duo-info-sheet__surface{',
+      // S3 waiting copy (2026-10-23): the 88rpx-hit 再喊一次 pill + primary
+      // waiting text live in the same @use'd duo card SCSS — guard them too.
+      'pool-reg-duo__waiting-text{',
+      'pool-reg-duo__again-pill{',
+      // S2 invitee role separation (2026-10-23): the guest note-card region
+      // lives in the @use'd duo card SCSS, and the solo-confirm dialog in its
+      // own @use'd component SCSS — both must reach the page WXSS or the
+      // invitee surfaces render unstyled on device.
+      'pool-reg-duo__guest{',
+      'pool-reg-duo__guest-line1{',
+      'duo-solo-confirm{',
+      'duo-solo-confirm__primary{',
       // Step 0 三拍化 (2026-08-17): the VibePeek expander SCSS is @use'd by the
       // page SCSS and must reach the page WXSS.
       'pool-reg-vibe-peek__toggle{',

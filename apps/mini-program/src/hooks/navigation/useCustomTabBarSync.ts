@@ -12,11 +12,14 @@ import { apiRequest } from '../../lib/api/api'
 import { getMiniProgramCenterState, type CustomTabBarSyncState } from '../../lib/navigation/centerTabRouting'
 import { MINI_PROGRAM_CENTER_HUB_TAB_ITEM, MINI_PROGRAM_TAB_INDEX, MINI_PROGRAM_TAB_ITEMS } from '../../lib/navigation/tabBarConfig'
 import { useNotificationCounts } from '../useNotificationCounts'
+import { readProfileTabDotCount } from '../../lib/profile/profileTabDot'
 
 export interface TabBadgeCounts {
   discover: number
   activities: number
   chat: number
+  // P0-5 (2026-10-22): 我的 tab — pending equipment draws.
+  profile: number
 }
 
 /** Native WeChat custom-tab-bar component interface (syncState method). */
@@ -29,6 +32,12 @@ interface UseCustomTabBarSyncOptions {
   enabled?: boolean
   poolRegistrations?: PoolRegistrationSummary[]
   events?: JoinedEventSummary[]
+  /**
+   * P0-5: live pending-equipment-draw count from the profile page. When
+   * omitted (other tabs), the count falls back to the storage value the
+   * profile page last wrote — no extra fetch on non-profile tabs.
+   */
+  profileBadgeCount?: number
 }
 
 function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCustomTabBar | undefined {
@@ -62,6 +71,7 @@ export function useCustomTabBarSync({
   enabled = true,
   poolRegistrations: providedPoolRegistrations,
   events: providedEvents,
+  profileBadgeCount,
 }: UseCustomTabBarSyncOptions) {
   const { data: queriedPoolRegistrations } = useQuery({
     queryKey: ['mini-program', 'my-pool-registrations'],
@@ -87,8 +97,9 @@ export function useCustomTabBarSync({
       discover: notificationCounts?.discover ?? 0,
       activities: notificationCounts?.activities ?? 0,
       chat: notificationCounts?.chat ?? 0,
+      profile: profileBadgeCount ?? readProfileTabDotCount(),
     }),
-    [notificationCounts]
+    [notificationCounts, profileBadgeCount]
   )
 
   const centerState = useMemo(

@@ -126,4 +126,23 @@ describe('poolRegistrationForm', () => {
     // Deselecting alcohol comfort returns undefined, not empty string
     expect(hasAnyDetailSelection({ ...base, alcoholComfort: undefined }, '酒局')).toBe(false)
   })
+
+  // S2 (Dependencies, solo 归因压制): 「就我一个人」确认后报名 payload 不再
+  // 携带 invitationCode —— 无 use 行 → 无 pair → 无奖励，服务端零改动。
+  // 页面在确认时清空 formState.invitationCode；这里钉死 payload 层的映射。
+  // （预算档位与本断言无关，避免新增 budget-tier 字面量——guardrails 棘轮。）
+  it('buildRegistrationPayload omits invitationCode once the form state is stripped (S2 solo 归因)', () => {
+    const base = {
+      eventIntent: ['a'],
+      preferredLanguages: [],
+      barThemes: [],
+    }
+    // 正常路径：formState 持有码 → payload 携带（归因照常）。
+    expect(
+      buildRegistrationPayload({ ...base, invitationCode: 'abc123def456' }, '饭局').invitationCode,
+    ).toBe('abc123def456')
+    // S2 确认 solo 后：formState.invitationCode = undefined → payload 不携带。
+    expect(buildRegistrationPayload({ ...base, invitationCode: undefined }, '饭局').invitationCode).toBeUndefined()
+    expect(buildRegistrationPayload(base, '饭局').invitationCode).toBeUndefined()
+  })
 })
