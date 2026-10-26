@@ -142,12 +142,17 @@ describe('route review follow-ups', () => {
 
   it('publishes pricing display aliases and explicit browser payment redirect metadata', () => {
     const adminBillingSource = readRepoFile('apps/server/src/routes/domains/adminBilling.ts');
+    const publicPricingSource = readRepoFile('apps/server/src/lib/publicPricing.ts');
     const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
     const paymentsApiSource = readRepoFile('packages/shared/src/api/payments.ts');
 
-    expect(adminBillingSource).toContain('displayName: s.displayName');
-    expect(adminBillingSource).toContain('displayNameEn: s.displayNameEn');
-    expect(adminBillingSource).toContain('isActive: s.isActive');
+    // The alias mapping moved out of the route into the public-pricing
+    // serializer on 2026-10-26; assert the contract where it now lives
+    // instead of pinning an inline `s.displayName` shape.
+    expect(adminBillingSource).toContain('serializePricingSettings(settings)');
+    expect(publicPricingSource).toContain('displayName: setting.displayName');
+    expect(publicPricingSource).toContain('displayNameEn: setting.displayNameEn');
+    expect(publicPricingSource).toContain('isActive: setting.isActive');
     expect(paymentsRoutesSource).toContain('const paymentRedirectUrl = paymentResult.h5Url ?? null;');
     expect(paymentsRoutesSource).toContain('const paymentStatus = paymentRedirectUrl ? "pending" : "completed";');
     expect(paymentsApiSource).toContain("paymentStatus?: 'pending' | 'completed'");
