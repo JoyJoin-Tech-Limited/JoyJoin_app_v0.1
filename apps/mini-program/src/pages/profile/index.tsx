@@ -159,6 +159,10 @@ export default function ProfilePage() {
     setPageVisible(false)
   })
   useDidShow(() => {
+    // Pre-ship R2 (step-3 audit): one transient CDN miss used to downgrade a
+    // badge to the CSS medallion for the whole session — WeChat keeps this tab
+    // alive, so there was no retry. Clear the failures on every re-show.
+    setFailedBadgeKeys([])
     setPageVisible(true)
     setAvatarBouncing(false)
     avatarBounceLockRef.current = false
@@ -1502,7 +1506,7 @@ export default function ProfilePage() {
                             {!unlocked && <JoyJoinIcon emoji='🔒' tier='ui' size={20} />}
                           </View>
                         )}
-                        {!unlocked && milestone.badge && (
+                        {!unlocked && milestone.badge && !failedBadgeKeys.includes(milestone.key) && (
                           <View className='profile-page__milestone-lock' aria-hidden='true'>
                             <JoyJoinIcon emoji='🔒' tier='ui' size={16} />
                           </View>
