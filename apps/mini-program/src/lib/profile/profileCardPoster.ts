@@ -343,17 +343,23 @@ const DRAW_TIMEOUT_MS = 15_000
 async function resolvePortraitStack(
   input: ProfileCardPosterInput,
 ): Promise<ProfileCardPortraitLayer[]> {
-  const resolved: ProfileCardPortraitLayer[] = []
-  for (const layer of planPortraitLayers(input)) {
-    if (!layer.url) continue
-    try {
-      const path = await resolveImagePath(layer.url)
-      if (path) resolved.push({ ...layer, url: path })
-    } catch {
-      // skip the layer
-    }
-  }
-  return resolved
+  const planned = planPortraitLayers(input).filter((layer) => Boolean(layer.url))
+  // Pre-ship R4 (step-3 audit): resolving these SERIALLY could spend up to five
+  // layers × the 5s `resolveImagePath` timeout before the 15s draw guard even
+  // starts, leaving 「正在生成…」 on screen for ~25s. Resolve in parallel.
+  const paths = await Promise.all(
+    planned.map(async (layer) => {
+      try {
+        return await resolveImagePath(layer.url)
+      } catch {
+        return ''
+      }
+    }),
+  )
+  return planned.flatMap((layer, index) => {
+    const path = paths[index]
+    return path ? [{ ...layer, url: path }] : []
+  })
 }
 
 /**

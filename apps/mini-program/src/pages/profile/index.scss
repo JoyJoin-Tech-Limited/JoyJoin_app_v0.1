@@ -2896,11 +2896,12 @@
     height: 64rpx;
   }
 
-  // Pre-ship CONCERN-1: `white-space: nowrap` on the label/hint made each
-  // flex:1 cell's min-content ≈108rpx, so the expanded five-up row measured
-  // ≈572rpx against a 560rpx content box and spilled ~7px past the right
-  // gutter (asymmetric vs the collapsed entry row). Let the cells shrink below
-  // min-content and ellipsize the hint instead of pushing the row wide.
+  // Pre-ship guard (step-3 audit R3 corrected the original rationale): the
+  // review's min-content math assumed a 560rpx parent box, but this row's box
+  // is 670rpx and every input is width-independent — so no 7px spill is
+  // reproducible today. Kept as a cheap defensive rule: letting the cells
+  // shrink below min-content and ellipsizing the hint means a future longer
+  // label/hint can never push the row past the gutter.
   .profile-page__milestones-row--five-up .profile-page__milestone {
     min-width: 0;
   }
