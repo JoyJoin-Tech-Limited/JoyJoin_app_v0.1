@@ -127,14 +127,26 @@ const PREPAID_PAYMENT_TYPES = ["event_bundle", "subscription", "event_pack"] as 
  * by `getRevenueSplit` and `getKpiSeries` so the card and its sparkline can
  * never disagree about which payment types count as ticket cash.
  */
-const TICKET_TYPE_LIST = sql.join(
-  TICKET_PAYMENT_TYPES.map((type) => sql`${type}`),
-  sql`, `,
-);
-const PREPAID_TYPE_LIST = sql.join(
-  PREPAID_PAYMENT_TYPES.map((type) => sql`${type}`),
-  sql`, `,
-);
+// Built lazily: these used to be module-level constants, which ran `sql.join`
+// at import time. Any test that partially mocks `drizzle-orm` supplies a plain
+// `sql` function without `.join`, so collection failed before an assertion ran
+// (2026-10-26). Memoised, so the fragment is still constructed exactly once.
+let ticketTypeList: ReturnType<typeof sql.join> | undefined;
+function getTicketTypeList() {
+  ticketTypeList ??= sql.join(
+    TICKET_PAYMENT_TYPES.map((type) => sql`${type}`),
+    sql`, `,
+  );
+  return ticketTypeList;
+}
+let prepaidTypeList: ReturnType<typeof sql.join> | undefined;
+function getPrepaidTypeList() {
+  prepaidTypeList ??= sql.join(
+    PREPAID_PAYMENT_TYPES.map((type) => sql`${type}`),
+    sql`, `,
+  );
+  return prepaidTypeList;
+}
 
 export type AdminKpiUnit = "count" | "percent" | "hours" | "cny" | "cents";
 
@@ -377,13 +389,13 @@ export async function getRevenueSplit(range: AdminMetricRange): Promise<RevenueS
     cash AS (
       SELECT
         COALESCE(SUM(final_amount) FILTER (
-          WHERE payment_type IN (${TICKET_TYPE_LIST})
+          WHERE payment_type IN (${getTicketTypeList()})
         ), 0)::bigint AS ticket_cents,
         COALESCE(SUM(final_amount) FILTER (
-          WHERE payment_type IN (${PREPAID_TYPE_LIST})
+          WHERE payment_type IN (${getPrepaidTypeList()})
         ), 0)::bigint AS prepaid_cents,
         COUNT(*) FILTER (
-          WHERE payment_type IN (${PREPAID_TYPE_LIST})
+          WHERE payment_type IN (${getPrepaidTypeList()})
         )::int AS prepaid_orders
       FROM payments
       WHERE status = 'completed'
@@ -554,7 +566,7 @@ export async function getKpiSeries(
           -- would misstate how much delivery is still owed.
           SELECT COALESCE(SUM(pm.final_amount), 0)::bigint FROM payments pm
           WHERE pm.status = 'completed'
-            AND pm.payment_type IN (${TICKET_TYPE_LIST})
+            AND pm.payment_type IN (${getTicketTypeList()})
             AND pm.created_at >= b.bucket_start
             AND pm.created_at < LEAST(b.bucket_start + interval '7 days', ${range.to}::timestamptz)
         ) AS revenue
