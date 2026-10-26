@@ -4,7 +4,6 @@ import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAdminAlangRoutes } from "./routes/domains/adminAlang";
 import { registerAdminEquipmentRoutes } from "./routes/domains/adminEquipment";
 import { registerAdminBillingRoutes } from "./routes/domains/adminBilling";
-import { registerAdminBannerRoutes } from "./routes/domains/adminBanners";
 import { registerAdminEventManagementRoutes } from "./routes/domains/adminEventManagement";
 import { registerAdminEventPoolRoutes } from "./routes/domains/adminEventPools";
 import { registerAdminGeolocationRoutes } from "./routes/domains/adminGeolocation";
@@ -189,7 +188,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminAlangRoutes(app);
   registerAdminEquipmentRoutes(app);
   registerAdminBillingRoutes(app);
-  registerAdminBannerRoutes(app);
   registerAdminUserRoutes(app);
   registerAdminOperationsRoutes(app);
   registerAdminPoolRegistrationRoutes(app);

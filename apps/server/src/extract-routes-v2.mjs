@@ -80,7 +80,6 @@ function getDomain(path) {
   if (path.startsWith('/api/admin/subscriptions')) return 'admin';
   if (path.startsWith('/api/admin/coupons')) return 'admin';
   if (path.startsWith('/api/public/')) return 'analytics';
-  if (path === '/api/banners') return 'analytics';
   if (path.startsWith('/api/pricing') || path.startsWith('/api/admin/pricing')) return 'payments';
   if (path.startsWith('/api/admin/venues') || path.startsWith('/api/venues/') || path === '/api/venues/match' || path === '/api/venues/select-best') return 'venues';
   if (path.startsWith('/api/admin/event-pools') || path.startsWith('/api/event-pools') || path.startsWith('/api/pool-groups') || path === '/api/my-pool-registrations' || path.startsWith('/api/pool-registrations/')) return 'eventPools';

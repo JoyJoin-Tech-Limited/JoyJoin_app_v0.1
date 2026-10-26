@@ -42,7 +42,6 @@ const AdminFeatureFlagsPage = lazy(() => import("@/pages/admin/AdminFeatureFlags
 const AdminFlashPage = lazy(() => import("@/pages/admin/AdminFlashPage"));
 const AdminReferralsPage = lazy(() => import("@/pages/admin/AdminReferralsPage"));
 const AdminDuoInvitesPage = lazy(() => import("@/pages/admin/AdminDuoInvitesPage"));
-const AdminBannersPage = lazy(() => import("@/pages/admin/AdminBannersPage"));
 
 function AdminNotFound() {
   return (
@@ -146,7 +145,6 @@ export default function AdminLayout() {
                 <Route path="/admin/finance" component={AdminFinancePage} />
                 <Route path="/admin/referrals" component={AdminReferralsPage} />
                 <Route path="/admin/duo-invites" component={AdminDuoInvitesPage} />
-                <Route path="/admin/banners" component={AdminBannersPage} />
                 <Route path="/admin/insights" component={AdminDataInsightsPage} />
                 <Route path="/admin/funnel" component={AdminFunnelPage} />
                 <Route path="/admin/outcome-analytics" component={AdminOutcomeAnalyticsPage} />

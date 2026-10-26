@@ -200,23 +200,6 @@ export function registerAdminBillingRoutes(app: Express): void {
     }
   });
 
-  // ============ PROMOTION BANNERS ============
-
-  // Public API - Get active banners
-  app.get("/api/banners", async (req, res) => {
-    try {
-      const { city, placement } = req.query;
-      const banners = await storage.getActiveBanners(
-        city as string | undefined,
-        placement as string | undefined
-      );
-      res.json(banners);
-    } catch (error) {
-      logger.error("Error fetching banners", { error: String(error) });
-      res.status(500).json({ message: "Failed to fetch banners" });
-    }
-  });
-
   // ============ PRICING MANAGEMENT ============
 
   // Public API - Get active pricing settings (for payment page)
