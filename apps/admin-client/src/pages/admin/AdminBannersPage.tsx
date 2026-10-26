@@ -264,7 +264,9 @@ export default function AdminBannersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">横幅管理</h1>
-          <p className="text-muted-foreground mt-1">横幅展示在小程序发现页顶部轮播。</p>
+          <p className="text-muted-foreground mt-1">
+            运营位预留：小程序发现页当前使用内置的 A/B/C/D 运营图，此处创建的横幅尚未展示。
+          </p>
         </div>
         {canMutate && (
           <Button onClick={openCreate} data-testid="button-create-banner">

@@ -5,7 +5,10 @@ import { eq, and, desc, sql } from "drizzle-orm";
 export interface PricingRepository {
   getAllPricingSettings(): Promise<PricingSetting[]>;
   getPricingSetting(id: string): Promise<PricingSetting | undefined>;
-  updatePricingSetting(id: string, updates: Partial<PricingSetting>): Promise<PricingSetting>;
+  updatePricingSetting(
+    id: string,
+    updates: Partial<PricingSetting>
+  ): Promise<PricingSetting | undefined>;
   getActivePricingSettings(): Promise<PricingSetting[]>;
   getActiveBanners(city?: string, placement?: string): Promise<PromotionBanner[]>;
   listAllBanners(): Promise<PromotionBanner[]>;
@@ -36,8 +39,17 @@ export const pricingRepo: PricingRepository = {
     return setting;
   },
 
-  async updatePricingSetting(id: string, updates: Partial<PricingSetting>): Promise<PricingSetting> {
-    const result = await db.execute(sql`
+  async updatePricingSetting(
+    id: string,
+    updates: Partial<PricingSetting>
+  ): Promise<PricingSetting | undefined> {
+    // `RETURNING *` hands back raw snake_case columns (plan_type,
+    // price_in_cents, …) while every other pricing read returns the
+    // Drizzle-mapped camelCase row. Callers type the response against
+    // PricingSetting, so the two shapes silently drift apart (exactly the
+    // bug that white-screened /admin/pricing when it read snake_case).
+    // Re-read through Drizzle so PATCH and GET always agree.
+    await db.execute(sql`
       UPDATE pricing_settings 
       SET 
         display_name = COALESCE(${updates.displayName ?? null}, display_name),
@@ -57,9 +69,13 @@ export const pricingRepo: PricingRepository = {
         is_featured = COALESCE(${updates.isFeatured ?? null}, is_featured),
         updated_at = NOW()
       WHERE id = ${id}
-      RETURNING *
     `);
-    return result.rows[0] as PricingSetting;
+
+    const [setting] = await db
+      .select()
+      .from(pricingSettings)
+      .where(eq(pricingSettings.id, id));
+    return setting;
   },
 
   async getActivePricingSettings(): Promise<PricingSetting[]> {

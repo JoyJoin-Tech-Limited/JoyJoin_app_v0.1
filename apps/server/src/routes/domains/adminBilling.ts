@@ -4,6 +4,7 @@ import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { logger } from "../../lib/logger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
+import { serializePricingSettings } from "../../lib/publicPricing";
 import { storage } from "../../storage";
 
 const subscriptionSchema = z.object({
@@ -222,21 +223,7 @@ export function registerAdminBillingRoutes(app: Express): void {
   app.get("/api/pricing", async (req, res) => {
     try {
       const settings = await storage.getActivePricingSettings();
-      const formatted = settings.map(s => ({
-        id: s.id,
-        planType: s.planType,
-        displayName: s.displayName,
-        displayNameEn: s.displayNameEn,
-        name: s.displayName,
-        nameEn: s.displayNameEn,
-        description: s.description,
-        price: s.priceInCents / 100,
-        originalPrice: s.originalPriceInCents ? s.originalPriceInCents / 100 : null,
-        durationDays: s.durationDays,
-        isActive: s.isActive,
-        isFeatured: s.isFeatured,
-      }));
-      res.json(formatted);
+      res.json(serializePricingSettings(settings));
     } catch (error) {
       logger.error("Error fetching pricing", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch pricing" });
@@ -284,7 +271,11 @@ export function registerAdminBillingRoutes(app: Express): void {
         isActive,
         isFeatured,
       });
-      
+
+      if (!setting) {
+        return res.status(404).json({ message: "Pricing setting not found" });
+      }
+
       res.json(setting);
     } catch (error) {
       logger.error("Error updating pricing setting", { error: String(error) });

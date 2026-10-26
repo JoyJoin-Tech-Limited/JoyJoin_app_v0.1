@@ -188,7 +188,9 @@ export default function AdminContentPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">内容管理</h1>
-          <p className="text-muted-foreground mt-1">管理平台公告、帮助文档和社区规范</p>
+          <p className="text-muted-foreground mt-1">
+            管理平台公告、帮助文档和社区规范。小程序暂未接入内容中心，发布后不会出现在用户端；如需触达用户，公告可在发布时勾选「推送通知给所有用户」。
+          </p>
         </div>
         <Button onClick={() => handleOpenDialog()} data-testid="button-create-content">
           <Plus className="h-4 w-4 mr-2" />
