@@ -13,7 +13,11 @@ import GatheringRoomScene, {
   type GatheringRoomMemberProfile,
 } from '../../components/gathering-room/GatheringRoomScene'
 import { haptics } from '../../lib/utils/haptics'
-import { navigateBackOrEventsTab } from '../../lib/navigation/matchingNavigation'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
+import {
+  navigateBackOrEventsTab,
+  openPoolGroupDetail,
+} from '../../lib/navigation/matchingNavigation'
 import { formatMeetDayLabel, useGatheringRoomController } from './useGatheringRoomController'
 import './index.scss'
 
@@ -32,6 +36,17 @@ function useCountRollClass(value: number): string {
   return `gathering-room__header-count--roll-${nonce % 2}`
 }
 
+/** Preparation-card date line: "10月30日 周五 19:00". */
+function formatArrivalTime(iso: string | null | undefined): string {
+  if (!iso) return '活动时间待定'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '活动时间待定'
+  const weekday = formatMeetDayLabel(iso).replace('见', '')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${weekday} ${hh}:${mm}`
+}
+
 export default function GatheringRoomPage() {
   const router = useRouter()
   const groupId = router.params.groupId ?? ''
@@ -44,15 +59,39 @@ export default function GatheringRoomPage() {
     presenceByUserId,
     selectedMember,
     presentCount,
+    confirmedCount,
+    arrivingLateCount,
     presentUserIds,
     ownConfirmed,
+    ownAttendanceStatus,
     isSubmitting,
+    isReportingLate,
     confirmPending,
+    canReportLate,
+    handleReportLate,
     blindBoxEventId,
     currentUserId,
+    viewerPairByMemberId,
+    venue,
+    eventPhase,
   } = controller
   const presentRollClass = useCountRollClass(presentCount)
-  const confirmedRollClass = useCountRollClass(roomState?.confirmedCount ?? 0)
+  const confirmedRollClass = useCountRollClass(confirmedCount)
+
+  // Full-body pixel look for the tablemate sheet. The room already receives
+  // the same equipment payload the seat avatars render, so the sheet can show
+  // the exact look the group sees without another request.
+  const selectedPixelAvatar = useMemo(() => {
+    if (!selectedMember?.archetype || !selectedMember.outfit) return null
+    const itemsById = new Map(
+      (selectedMember.equippedItems ?? []).map((item) => [item.id, item] as const),
+    )
+    return {
+      archetype: selectedMember.archetype,
+      outfit: selectedMember.outfit,
+      itemsById,
+    }
+  }, [selectedMember])
 
   // Live event countdown gives users a natural reason to check back. Hero
   // digits (天/时, or 时/分 on event day) replace the old segmented clock leaf
@@ -99,6 +138,59 @@ export default function GatheringRoomPage() {
     const id = setTimeout(() => setSceneMounted(true), 50)
     return () => clearTimeout(id)
   }, [controller.reducedMotion])
+
+  // Keep the 750×960 room coordinate system intact on short screens. Scaling
+  // the whole scene preserves art, seats, name cards and motion together;
+  // clamping only its height used to stretch the art and collide with the
+  // absolutely-positioned header. The scene stays hidden for the first measure
+  // so a short device never flashes a clipped, unscaled room.
+  const [sceneLayout, setSceneLayout] = useState<{
+    width: number
+    height: number
+    scale: number
+  } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
+    const measure = () => {
+      Taro.nextTick(() => {
+        if (cancelled) return
+        Taro.createSelectorQuery()
+          .select('.gathering-room__scene-wrap')
+          .boundingClientRect()
+          .exec((result) => {
+            const rect = result?.[0] as { width?: number; height?: number } | null | undefined
+            if (cancelled || !rect?.width || !rect.height) return
+            const width = getWindowInfoCompat().windowWidth || rect.width
+            const height = width * (960 / 750)
+            const scale = Math.min(1, rect.width / width, rect.height / height)
+            setSceneLayout({ width, height, scale })
+          })
+      })
+    }
+    const handleResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(measure, 100)
+    }
+    measure()
+    if (process.env.TARO_ENV === 'h5' && typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize)
+    }
+    return () => {
+      cancelled = true
+      if (resizeTimer) clearTimeout(resizeTimer)
+      if (process.env.TARO_ENV === 'h5' && typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize)
+      }
+    }
+  }, [
+    controller.authLoading,
+    controller.error,
+    controller.gatheringRoomEnabled,
+    controller.isLoading,
+    controller.roomState?.groupId,
+    ownConfirmed,
+  ])
 
   // First-visit hint: teaches the door-queue / held-seat metaphor once, then
   // never again (session-less storage flag).
@@ -194,13 +286,28 @@ export default function GatheringRoomPage() {
   }
 
   const total = roomState?.totalParticipants || memberProfiles.length
-  const absentCount = memberProfiles.filter(
-    (profile) => (presenceByUserId.get(profile.userId) ?? 'absent') === 'absent',
+  const members = roomState?.members ?? []
+  const pendingCount = members.filter((member) => member.attendanceStatus === 'pending').length
+  const explicitlyAbsentCount = members.filter((member) => member.attendanceStatus === 'absent').length
+  const confirmedOfflineCount = members.filter(
+    (member) =>
+      (member.attendanceStatus === 'confirmed' || member.attendanceStatus === 'late') &&
+      !presentUserIds.has(member.userId),
   ).length
-  const remainingToConfirm = Math.max(
-    (roomState?.totalParticipants ?? 0) - (roomState?.confirmedCount ?? 0),
-    0,
-  )
+  const remainingToConfirm = Math.max(total - confirmedCount, 0)
+  const wayCaptionParts: string[] = []
+  if (arrivingLateCount > 0) wayCaptionParts.push(`${arrivingLateCount} 位已确认会晚到`)
+  if (explicitlyAbsentCount > 0) wayCaptionParts.push(`${explicitlyAbsentCount} 位已告知无法出席`)
+  if (pendingCount > 0) wayCaptionParts.push(`${pendingCount} 位还没确认`)
+  if (wayCaptionParts.length === 0 && confirmedOfflineCount > 0) {
+    wayCaptionParts.push(`${confirmedOfflineCount} 位已确认，座位已留`)
+  }
+  const wayCaption = wayCaptionParts.join(' · ')
+  const venueReady =
+    venue?.status === 'assigned' || venue?.status === 'manual_override'
+  const venueName = venueReady ? venue?.name?.trim() : ''
+  const venueAddress = venueReady ? venue?.address?.trim() : ''
+  const ownIsLate = ownAttendanceStatus === 'late'
   // Restart the ticker animation on each new line without keyed remounts
   // (keyed Text remounts leak stale nodes on H5/WeChat — see useCountRollClass).
   const activityRollClass = controller.activityLine
@@ -212,7 +319,9 @@ export default function GatheringRoomPage() {
       <View className='gathering-room__status-stack'>
         {countdown ? (
           <View className='gathering-room__countdown-chip'>
-            {countdown.started ? (
+            {eventPhase === 'ended' ? (
+              <Text className='gathering-room__countdown-live'>活动已结束 · 回看这一桌</Text>
+            ) : countdown.started ? (
               <Text className='gathering-room__countdown-live'>现场见 · 活动进行中</Text>
             ) : (
               <>
@@ -223,25 +332,27 @@ export default function GatheringRoomPage() {
                   </>
                 ) : null}
                 {countdown.days > 0 ? (
-                  <>
+                  <View className='gathering-room__countdown-pair'>
                     <Text className='gathering-room__countdown-num'>{countdown.days}</Text>
                     <Text className='gathering-room__countdown-unit'>天</Text>
-                  </>
+                  </View>
                 ) : null}
-                <Text className='gathering-room__countdown-num'>{countdown.hours}</Text>
-                <Text className='gathering-room__countdown-unit'>时</Text>
+                <View className='gathering-room__countdown-pair'>
+                  <Text className='gathering-room__countdown-num'>{countdown.hours}</Text>
+                  <Text className='gathering-room__countdown-unit'>时</Text>
+                </View>
                 {countdown.days === 0 ? (
-                  <>
+                  <View className='gathering-room__countdown-pair'>
                     <Text className='gathering-room__countdown-num'>{countdown.minutes}</Text>
                     <Text className='gathering-room__countdown-unit'>分</Text>
-                  </>
+                  </View>
                 ) : null}
               </>
             )}
           </View>
         ) : null}
         <View className='gathering-room__arrive-chip'>
-          <Text className='gathering-room__arrive-label'>已到</Text>
+          <Text className='gathering-room__arrive-label'>在房间</Text>
           <Text className={`gathering-room__header-count ${presentRollClass}`}>{presentCount}</Text>
           <Text className='gathering-room__arrive-total'>/{total}</Text>
           <View className='gathering-room__arrive-dots' aria-hidden='true'>
@@ -257,13 +368,13 @@ export default function GatheringRoomPage() {
           </View>
           <Text className='gathering-room__arrive-label'>已确认</Text>
           <Text className={`gathering-room__header-count ${confirmedRollClass}`}>
-            {roomState?.confirmedCount ?? 0}
+            {confirmedCount}
           </Text>
           <Text className='gathering-room__arrive-total'>/{total}</Text>
         </View>
-        {absentCount > 0 ? (
+        {wayCaption ? (
           <Text className='gathering-room__way-caption'>
-            {`${absentCount} 位桌友正在路上，到了会走过来 · ${formatMeetDayLabel(roomState?.eventDateTime)}`}
+            {`${wayCaption} · ${formatMeetDayLabel(roomState?.eventDateTime)}`}
           </Text>
         ) : null}
         {controller.activityLine ? (
@@ -292,6 +403,7 @@ export default function GatheringRoomPage() {
           <GatheringRoomScene
             memberProfiles={memberProfiles}
             presenceByUserId={presenceByUserId}
+            layout={sceneLayout}
             ownUserId={controller.currentUserId}
             enteringUserIds={controller.enteringUserIds}
             playOwnDoorEntry={controller.playOwnDoorEntry}
@@ -307,7 +419,7 @@ export default function GatheringRoomPage() {
             onAvatarTap={handleSeatTap}
           />
         )}
-        {showHint ? (
+        {showHint && (sceneLayout?.scale ?? 1) >= 0.9 ? (
           <View className='gathering-room__hint' role='status'>
             <Text className='gathering-room__hint-text'>名牌是留好的座位，点伙伴的头像可以打个招呼</Text>
           </View>
@@ -315,6 +427,20 @@ export default function GatheringRoomPage() {
       </View>
 
       <View className='gathering-room__action-bar'>
+        {eventPhase === 'ended' ? (
+          <Button
+            className='gathering-room__memory-btn'
+            variant='secondary'
+            onClick={() => {
+              haptics('light')
+              void Taro.navigateTo({
+                url: `/pages/gathering-room/memory/index?groupId=${groupId}`,
+              })
+            }}
+          >
+            回看这一桌
+          </Button>
+        ) : null}
         {ownConfirmed ? (
           <View className='gathering-room__success-card'>
             <View className='gathering-room__success-glow' aria-hidden='true' />
@@ -323,12 +449,28 @@ export default function GatheringRoomPage() {
             </View>
             <View className='gathering-room__success-copy'>
               <Text className='gathering-room__success-title'>
-                {`座位已锁定 · ${formatMeetDayLabel(roomState?.eventDateTime)}`}
+                {`已确认出席 · ${formatMeetDayLabel(roomState?.eventDateTime)}`}
               </Text>
+              <View className='gathering-room__arrival-prep'>
+                <Text className='gathering-room__arrival-time'>
+                  {formatArrivalTime(roomState?.eventDateTime)}
+                </Text>
+                <Text className='gathering-room__arrival-venue'>
+                  {venueReady ? (venueName || '地点已确认') : '地点待定'}
+                </Text>
+                <Text className='gathering-room__arrival-address'>
+                  {venueReady ? (venueAddress || '具体地址确认后同步') : '地点确认后会在这里显示'}
+                </Text>
+                <Text className='gathering-room__arrival-route'>
+                  {venueAddress
+                    ? '路线：点下方「看看活动详情」查看地址与导航'
+                    : '路线：地点确定后可在活动详情里查看导航'}
+                </Text>
+              </View>
               <Text className='gathering-room__success-sub'>
                 {remainingToConfirm > 0
-                  ? `还差 ${remainingToConfirm} 位桌友确认，到齐一起庆祝`
-                  : '这桌全员到齐，现场见～'}
+                  ? `还差 ${remainingToConfirm} 位桌友确认`
+                  : '全员确认，现场见～'}
               </Text>
             </View>
           </View>
@@ -340,9 +482,29 @@ export default function GatheringRoomPage() {
             disabled={isSubmitting || confirmPending}
             loading={isSubmitting || confirmPending}
           >
-            {isSubmitting || confirmPending ? '确认中…' : '确认出席 · 锁定座位'}
+            {isSubmitting || confirmPending ? '确认中…' : '确认出席'}
           </Button>
         )}
+        {canReportLate ? (
+          <View
+            className={
+              ownIsLate
+                ? 'gathering-room__late-link gathering-room__late-link--done'
+                : 'gathering-room__late-link'
+            }
+            role='button'
+            aria-label={ownIsLate ? '已登记会晚到' : '告诉大家你会晚到'}
+            onClick={ownIsLate || isReportingLate ? undefined : handleReportLate}
+          >
+            <Text className='gathering-room__late-link-text'>
+              {isReportingLate
+                ? '正在登记…'
+                : ownIsLate
+                  ? '已登记会晚到'
+                  : '会晚到？提前告诉大家'}
+            </Text>
+          </View>
+        ) : null}
         {blindBoxEventId ? (
           <Button
             className='gathering-room__detail-btn'
@@ -363,9 +525,16 @@ export default function GatheringRoomPage() {
         <TablemateDetailSheet
           visible={!!selectedMember}
           member={selectedMember as PoolGroupMemberSummary}
+          viewerPair={viewerPairByMemberId.get(selectedMember.userId) ?? null}
+          pixelAvatar={selectedPixelAvatar}
           isCurrentUser={selectedMember.userId === currentUserId}
           reduceMotion={controller.reducedMotion}
           onClose={controller.closeSheet}
+          onOpenMyImage={() => {
+            haptics('light')
+            void Taro.navigateTo({ url: '/pages/profile-linked/my-image/index' })
+          }}
+          onViewAllMembers={() => openPoolGroupDetail(groupId)}
           actionSlot={
             selectedMember.userId !== currentUserId && presentUserIds.has(selectedMember.userId) ? (
               <View className='gathering-room__poke'>

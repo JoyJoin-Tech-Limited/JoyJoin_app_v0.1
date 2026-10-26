@@ -15,11 +15,14 @@ $room-coral: $flow-accent-human;
 $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
 .gathering-room-scene {
-  position: relative;
-  width: 100%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 750rpx;
   height: 960rpx;
-  max-height: 100%;
+  max-height: none;
   overflow: hidden;
+  transform-origin: center center;
   background: $room-floor;
   animation: gathering-room-scene-fade-in 360ms ease-out;
 
@@ -32,6 +35,14 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       z-index: 0;
       width: 100%;
       height: 100%;
+    }
+
+    // Table/tablecloth pixels lifted from the composite art. Sits above the
+    // back-row body (z49) but below the middle/front rows so the back seat
+    // reads as sitting *behind* the table instead of standing on it.
+    &--table-overlay {
+      inset: auto;
+      z-index: 52;
     }
 
     // Warm breathing pulse over the composite art's lamp zone — keeps the
@@ -60,6 +71,21 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       transition: opacity 300ms ease-out;
       overflow: hidden;
     }
+  }
+
+  // Name plates are scene-level so the table overlay can cover a seat body
+  // without also covering its label.
+  &__name-card-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 90;
+    pointer-events: none;
+  }
+
+  &__name-card-slot {
+    position: absolute;
+    width: 96rpx;
+    height: 144rpx;
   }
 
   &__fallback-window {
@@ -159,8 +185,13 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     // when the member actually arrives. Declared before --pressed/--entering
     // so interaction and arrival states override the dim.
     &--absent {
-      opacity: 0.45;
-      filter: grayscale(0.9);
+      opacity: 1;
+
+      .gathering-room-scene__avatar-frame {
+        opacity: 0.45;
+        filter: grayscale(0.9);
+        transition: opacity 360ms ease-out;
+      }
     }
 
     // One-hop celebration when a member's attendance flips to confirmed.
@@ -330,7 +361,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     // the whole pill; the name text flex-shrinks and ellipsizes inside it.
     &--left,
     &--right {
-      max-width: 184rpx;
+      max-width: 160rpx;
 
       .gathering-room-scene__name-card-text {
         max-width: 96rpx;
@@ -448,6 +479,11 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
   }
 
   &__quick-poke-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 88rpx;
     padding: 10rpx 18rpx;
     border-radius: $radius-pill;
     background: $color-primary-light;
@@ -477,6 +513,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
   // ── First-arriver banner ───────────────────────────────────────────────
   &__first-arriver {
     position: absolute;
+    z-index: 70;
     left: 50%;
     top: 40rpx;
     transform: translateX(-50%);

@@ -16,6 +16,19 @@ import type { EquipmentItemView, EquipmentOutfitView } from '../schema/equipment
 
 export type GatheringRoomAttendanceStatus = 'pending' | 'confirmed' | 'late' | 'absent'
 
+/**
+ * Room lifecycle derived from the pool + event start, never from
+ * `event_pool_groups.status` (the completion sweep does not update it).
+ * `ended` starts at event start + POOL_COMPLETION_BUFFER_MS (3h).
+ */
+export type GatheringRoomEventPhase = 'upcoming' | 'live' | 'ended'
+
+export interface GatheringRoomVenue {
+  name: string | null
+  address: string | null
+  status: 'pending' | 'assigned' | 'unassigned' | 'manual_override'
+}
+
 export interface GatheringRoomMember {
   userId: string
   displayName?: string | null
@@ -39,13 +52,22 @@ export interface GatheringRoomMember {
 
 export interface GatheringRoomStateResponse {
   groupId: string
+  /** Real event-pool id. Analytics must use this, never the group id. */
+  poolId: string
   /** WS room id (USER_JOINED eventId). Null when the blind-box event row has
    *  not been created yet — clients must skip the WS join in that case. */
   blindBoxEventId: string | null
+  /** Room lifecycle derived from the pool + event start. */
+  eventPhase: GatheringRoomEventPhase
   totalParticipants: number
+  /** Confirmed + late (both are a commitment to attend). */
   confirmedCount: number
+  /** Subset of confirmedCount: members who said they will be late. */
+  arrivingLateCount: number
   /** Event date/time (ISO string) so the room can show a live countdown. */
   eventDateTime: string | null
+  /** Venue for the arrival-preparation card. Null while not yet assigned. */
+  venue: GatheringRoomVenue | null
   members: GatheringRoomMember[]
 }
 

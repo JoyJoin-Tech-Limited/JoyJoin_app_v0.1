@@ -87,6 +87,7 @@ const USER_SCOPED_PREFIX_KEYS = [
   'jj_deck_collapsed_',       // squad-unboxing deck collapse per group
   'jj_deck_collapse_hint_',   // squad-unboxing collapse hint per group
   'jj_group_seat_count_',     // group seat vacancy counts
+  'jj_gathering_room_visit_', // gathering-room first-visit / visit count per user+group
   'jj_persona_pile_played',   // persona snapshot animation played flags
   'jj_flow_seen_',            // flow-animation seen flags per user+kind
   'jj_arrival_pending_',      // arrival migration pending per user

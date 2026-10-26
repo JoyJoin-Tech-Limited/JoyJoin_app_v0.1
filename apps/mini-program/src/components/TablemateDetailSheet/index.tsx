@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode
 import { resolveArchetype } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
+import type { EquipmentItemView, EquipmentOutfitView } from '@shared/schema/equipment'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import {
@@ -14,6 +15,7 @@ import {
 } from '../../lib/utils/pairChemistry'
 import { haptics } from '../../lib/utils/haptics'
 import MissingArchetypePlaceholder from '../mascot/MissingArchetypePlaceholder'
+import PixelAvatarComposite from '../profile/PixelAvatarComposite'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import Button from '../ui/Button'
 // Styles are owned by consuming page SCSS (@use) — see TablemateCard import
@@ -31,6 +33,14 @@ export interface TablemateDetailSheetProps {
   /** Optional action slot rendered between the interest-tags section and
    *  the primary CTA (e.g., gathering-room poke buttons). */
   actionSlot?: ReactNode
+  /** Full equipped look for the large pixel-avatar preview. */
+  pixelAvatar?: {
+    archetype: string
+    outfit: EquipmentOutfitView
+    itemsById: ReadonlyMap<string, EquipmentItemView>
+  } | null
+  onOpenMyImage?: () => void
+  onViewAllMembers?: () => void
 }
 
 const MAX_CONNECTION_POINTS = 3
@@ -53,16 +63,21 @@ function TablemateDetailSheet({
   reduceMotion = false,
   onClose,
   actionSlot,
+  pixelAvatar = null,
+  onOpenMyImage,
+  onViewAllMembers,
 }: TablemateDetailSheetProps) {
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [showLookbook, setShowLookbook] = useState(false)
 
   // Reset the fallback chain whenever a different member is shown.
   useEffect(() => {
     setAvatarFailed(false)
     setImageError(false)
     setImageLoaded(false)
+    setShowLookbook(false)
   }, [member?.userId, member?.avatarUrl, member?.archetype])
 
   const archetypeId = useMemo(
@@ -153,12 +168,29 @@ function TablemateDetailSheet({
   }, [member?.avatarUrl, avatarFailed])
   const handleImageLoad = useCallback(() => setImageLoaded(true), [])
 
-  // Tap the hero avatar to inspect it full-screen (only for real avatars).
+  // Tap the hero avatar to inspect the full equipped look when available;
+  // otherwise fall back to the existing photo preview.
   const handlePreviewAvatar = useCallback(() => {
+    if (pixelAvatar) {
+      haptics('light')
+      setShowLookbook(true)
+      return
+    }
     if (!usingAvatar || !member?.avatarUrl) return
     haptics('light')
     Taro.previewImage({ urls: [member.avatarUrl], current: member.avatarUrl })
-  }, [usingAvatar, member?.avatarUrl])
+  }, [pixelAvatar, usingAvatar, member?.avatarUrl])
+
+  const handleOpenMyImage = useCallback(() => {
+    haptics('light')
+    setShowLookbook(false)
+    onOpenMyImage?.()
+  }, [onOpenMyImage])
+
+  const handleViewAllMembers = useCallback(() => {
+    haptics('light')
+    onViewAllMembers?.()
+  }, [onViewAllMembers])
 
   if (!visible || !member) return null
 
@@ -264,6 +296,16 @@ function TablemateDetailSheet({
           <Text className='tablemate-sheet__industry' numberOfLines={1}>{member.industryNicheLabel}</Text>
         ) : null}
 
+        {pixelAvatar ? (
+          <View
+            className='tablemate-sheet__lookbook-link'
+            role='button'
+            onClick={handlePreviewAvatar}
+          >
+            <Text className='tablemate-sheet__lookbook-link-text'>查看整套穿搭</Text>
+          </View>
+        ) : null}
+
         <ScrollView className='tablemate-sheet__scroll' scrollY enhanced showScrollbar={false}>
           {connectionPoints.length > 0 ? (
             <View className='tablemate-sheet__section'>
@@ -306,6 +348,29 @@ function TablemateDetailSheet({
             <View className='tablemate-sheet__action-slot'>{actionSlot}</View>
           ) : null}
 
+          {onViewAllMembers || onOpenMyImage ? (
+            <View className='tablemate-sheet__secondary-actions'>
+              {onViewAllMembers ? (
+                <View
+                  className='tablemate-sheet__secondary-link'
+                  role='button'
+                  onClick={handleViewAllMembers}
+                >
+                  <Text className='tablemate-sheet__secondary-link-text'>看全部同桌</Text>
+                </View>
+              ) : null}
+              {onOpenMyImage ? (
+                <View
+                  className='tablemate-sheet__secondary-link'
+                  role='button'
+                  onClick={handleOpenMyImage}
+                >
+                  <Text className='tablemate-sheet__secondary-link-text'>去我的形象调整穿搭</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
           <View className='tablemate-sheet__cta'>
             <Button variant='primary' onClick={handleClose}>
               现场见
@@ -313,6 +378,37 @@ function TablemateDetailSheet({
           </View>
         </ScrollView>
       </View>
+
+      {showLookbook && pixelAvatar ? (
+        <View
+          className='tablemate-sheet__lookbook'
+          catchMove
+          onClick={(event) => event.stopPropagation()}
+        >
+          <View className='tablemate-sheet__lookbook-panel' role='dialog' aria-modal='true'>
+            <View className='tablemate-sheet__lookbook-stage'>
+              <PixelAvatarComposite
+                archetypeId={pixelAvatar.archetype}
+                outfit={pixelAvatar.outfit}
+                itemsById={pixelAvatar.itemsById}
+                variant='full'
+              />
+            </View>
+            <Text className='tablemate-sheet__lookbook-title'>活动当天会以这套形象出现</Text>
+            <Text className='tablemate-sheet__lookbook-caption'>装备与穿搭来自 TA 的「我的形象」</Text>
+            <View className='tablemate-sheet__lookbook-actions'>
+              {onOpenMyImage ? (
+                <Button variant='secondary' onClick={handleOpenMyImage}>
+                  去我的形象
+                </Button>
+              ) : null}
+              <Button variant='secondary' onClick={() => setShowLookbook(false)}>
+                收起
+              </Button>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   )
 }

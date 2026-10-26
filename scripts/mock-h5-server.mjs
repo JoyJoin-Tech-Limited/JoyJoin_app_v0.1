@@ -10,6 +10,7 @@ const app = express()
 const PORT = process.env.PORT || 5001
 const DIST_DIR = path.resolve(__dirname, '../apps/mini-program/dist')
 const SOURCE_ASSET_DIR = path.resolve(__dirname, '../apps/mini-program/src/assets')
+const GATHERING_ROOM_ASSET_DIR = path.resolve(__dirname, '../apps/mini-program/src/pages/gathering-room/assets')
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -28,6 +29,7 @@ app.use(express.json())
 // from source. The production mini-program build still owns its normal asset
 // copy/CDN rules; this route exists only in the screenshot harness.
 app.use('/assets', express.static(SOURCE_ASSET_DIR))
+app.use('/pages/gathering-room/assets', express.static(GATHERING_ROOM_ASSET_DIR))
 
 const MOCK_USER = {
   id: 'user-screenshot-001',
@@ -1351,7 +1353,8 @@ const GATHERING_ROOM_MEMBERS = [
     userId: 'user-screenshot-003',
     displayName: '桃桃',
     archetype: 'hamster_praise',
-    attendanceStatus: 'confirmed',
+    attendanceStatus: 'late',
+    estimatedLateMinutes: 15,
     topInterests: ['烘焙', '瑜伽', '手账'],
     ageLabel: '26',
     industryNicheLabel: '心理咨询',
@@ -1378,7 +1381,7 @@ const GATHERING_ROOM_MEMBERS = [
     userId: 'user-screenshot-006',
     displayName: '老王',
     archetype: 'owl',
-    attendanceStatus: 'pending',
+    attendanceStatus: 'absent',
     topInterests: ['围棋', '历史', '茶'],
     ageLabel: '35',
     industryNicheLabel: '高校教师',
@@ -1387,20 +1390,33 @@ const GATHERING_ROOM_MEMBERS = [
 
 // Exclude exactly one member (the owl, user-screenshot-006) from WS presence
 // so the screenshots cover the absent-member rendering path: header reads
-// 已到 5/6, the owl's avatar queues at the room door, and its name card stays
-// at the seat. REST room-state still returns all six members.
+// 在房间 5/6, the owl's avatar queues at the room door, and its name card stays
+// at the seat. REST room-state still returns all six members. One member is
+// `late` and one is `absent` so the screenshot also locks the honest
+// “已确认会晚到 / 已告知无法出席” copy instead of a blanket “正在路上”.
 const GATHERING_ROOM_PRESENT_USER_IDS = GATHERING_ROOM_MEMBERS
   .map((member) => member.userId)
   .filter((userId) => userId !== 'user-screenshot-006')
 
 app.get('/api/pool-groups/:id/room-state', (req, res) => {
+  const confirmedMembers = GATHERING_ROOM_MEMBERS.filter(
+    (member) => member.attendanceStatus === 'confirmed' || member.attendanceStatus === 'late')
   res.json({
     groupId: req.params.id,
+    poolId: 'pool-screenshot-001',
     blindBoxEventId: GATHERING_ROOM_EVENT_ID,
     totalParticipants: GATHERING_ROOM_MEMBERS.length,
-    confirmedCount: GATHERING_ROOM_MEMBERS.filter((member) => member.attendanceStatus === 'confirmed').length,
+    confirmedCount: confirmedMembers.length,
+    arrivingLateCount: GATHERING_ROOM_MEMBERS.filter(
+      (member) => member.attendanceStatus === 'late').length,
+    eventPhase: 'upcoming',
     // ~1 day out so the header countdown renders 还有 1 天.
     eventDateTime: new Date(Date.now() + 26 * 60 * 60 * 1000).toISOString(),
+    venue: {
+      name: '山止川行·南山店',
+      address: '深圳市南山区科苑南路 2666 号',
+      status: 'assigned',
+    },
     members: GATHERING_ROOM_MEMBERS,
   })
 })
