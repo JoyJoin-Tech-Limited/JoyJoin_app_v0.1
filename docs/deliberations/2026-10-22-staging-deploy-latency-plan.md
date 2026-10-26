@@ -268,6 +268,30 @@ Phase 2（TCR）被否定后，改用「让每次部署传输量正比于改动�
 
 **stale 上传的结构性冲突**：bundle 路径需 ~25 分钟（36 个 8 MiB 分片、6 条 SSH 连接），协作高峰期 main 每 10–20 分钟被 push 一次，导致 mid-upload stale 守卫反复中止（`40304453463`、`40308249109` 都是只传完一半）。新增 `workflow_dispatch` 输入 `allow_stale`（默认 `false`；为 `true` 时 4 处 freshness 守卫与 2 处 mid-upload 中止点降级为 warning），用于手动部署一个已构建的 commit 到 staging；push 触发与生产均保持严格。
 
-**验证状态（2026-10-26）**：`Build Staging Images` 已连续两次 success（三层构建成立，run `40304453463` / `40308249109`）；15 个 quality gate 全绿。**运行时验证（API 启动 + `/api/readyz` 200）仍待完成** —— 前两次都因 mid-upload stale 中止而未进入 `Staging Deployment`，现由 `allow_stale=true` 的 run `40310778102` 承担。
+**验证状态（2026-10-26 已闭环）**：run **`40314994920`（HEAD `c06b8ec85`）`completed/success`** —— 这是三层镜像的首次完整 staging 部署，15 个 quality gate + `Build Staging Images` + `Staging Deployment` 全绿。
 
-**尚未做**：base/deps 镜像按当前 lock hash 重新发布（消除 `joyjoin-api-deps:sha256-...: not found` 的 cache importer 告警）；开 `STAGING_GHCR_ENABLED` 实测 `pull_seconds` / `new_bytes`（首次仍需跨太平洋拉 base+deps 层）；`deploy-production.yml` 接同样的 `cache-from`；`deployment/.release.json` 记录 last-known-good digest。
+实测耗时分解（run 创建 11:25:43Z → 结束 12:24:37Z，约 59 分钟墙钟）：
+
+| 阶段 | 实测 | 说明 |
+|---|---|---|
+| `Preflight freshness` | 25s | 拒绝过期 commit 的快速门 |
+| quality gates 批 | ~5m40s | 最慢 `Mini Program Tests` 3m50s、`Server Tests` 2m22s |
+| `Build Staging Images` | **2m09s** | 三层构建，已不是瓶颈 |
+| `Staging Deployment` | **50m26s** | 其中 bundle 分块上传 **48m34s**（chunk-0001..0035，5–6 个/批并行，批间隔 5–11 分钟） |
+| 切容器 → readiness | ~50s | 12:24:23 首次 attempt 未就绪，12:24:28 本机+公网 reachable |
+
+**结论：构建 2 分钟、交付 48 分钟 —— 跨太平洋 rsync `1–2 GiB` bundle 是唯一瓶颈**（deploy 日志原文：`a single cross-Pacific rsync of ~1-2 GiB reliably stalls`）。
+
+运行时验证（三层镜像 + zod 4 首次真跑，全部通过）：
+- `GET https://staging.joyjoinapp.com/api/readyz` → **200**（3.17s），`{"status":"ready","checks":{"database":"ok","config":"ok"}}`
+- `GET /api/health` → **200**，`tencentMapConfigured: true`
+- `GET /api/pricing` → **200**，返回真实定价（悦聚月卡 ¥98 / 30 天 / `displayNameEn: "YueJu Monthly"`）→ zod 4 + drizzle-zod 0.8 + `lib/publicPricing.ts` serializer + DB 读路径运行时全部正常
+
+**GHCR 交付复测（2026-10-26，结论：仍不可用）**：CVM `ssh root@1.12.243.104`（`~/.ssh/OpenCode.pem`）上实测——
+- 自家 staging 镜像 `ghcr.io/.../joyjoin-api-staging:c06b8ec8…` **6 秒**拉完，但这是**假象**：所有层早已存在于本机（bundle `docker load` 保留层 digest），实际只拉了 manifest。
+- 冷层对照组 `ghcr.io/actions/actions-runner:latest`（公开包、无共同层）：**600 秒上限打满，5 轮 `Retrying`，从未完成**。
+→ 跨太平洋 GHCR 拉取在 2026-10-26 仍然不可靠，与 2026-08-13 的 3×8 分钟超时一致。叠加「GHCR 失败不回落 bundle」这一事实，**`STAGING_GHCR_ENABLED` 继续保持 `false`**。
+
+**已做**：base/deps 镜像已按当前 lock hash 发布（run `40332154388`，tag `joyjoin-api-deps:sha256-679faf840866`）。
+
+**尚未做**：`deploy-production.yml` 接同样的 `cache-from`；`deployment/.release.json` 记录 last-known-good digest；bundle 路径本身的替代方案（同地域对象存储 COS 上传/下载，可把 48 分钟压到分钟级，但需要新凭据与成本确认）。

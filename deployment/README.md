@@ -218,6 +218,8 @@ cp deployment/.env.production.example deployment/.env.production
 
 > **2026-10-26 修正（上面那条「修复」已被实测推翻）：** 打开 `STAGING_GHCR_ENABLED` 并不能解决慢——GHCR 在美西，CVM 拉 515 MB API 镜像时最大层 8 分钟拉不完，3 次重试耗尽后 `deploy-staging.sh` 直接失败（2026-10-22 两次 run 均如此），而且 **GHCR 失败不会回落 bundle**（只有 TCR 失败回落 GHCR）。所以 staging 现在稳定走 bundle（两个 registry 旗标均为 `false`）。真正缩短交付的是下面「三层镜像构建」；首次拉取 base/deps 层仍需跨太平洋，只有在这些层已驻留 CVM 之后 registry 才有意义。GHCR pull 失败（token 失效）时 `deploy-staging.sh` 会 `restore_previous_release` 安全回滚旧镜像，无停机。
 
+> **2026-10-26 复测（结论：GHCR 仍不可用）：** 在 CVM 上实测——自家 staging 镜像 6 秒「拉完」是假象（所有层早已由 bundle `docker load` 驻留，只拉到了 manifest）；冷层对照组 `ghcr.io/actions/actions-runner:latest`（公开包、无共同层）打满 600 秒上限、5 轮 `Retrying` 仍未完成。同日的三层镜像部署实测：构建 **2m09s**、`Staging Deployment` **50m26s**（其中 bundle 分块上传 **48m34s**）。即瓶颈已完全是跨太平洋传输体积，不是构建。若日后要真正缩短，方向是同地域对象存储（腾讯云 COS）承载 bundle，而不是镜像仓库。
+
 #### 三层镜像构建（2026-10-26）
 
 > 目标：让每次部署的传输量正比于「改动量」而不是镜像大小，且不在共享 CVM 上构建。
