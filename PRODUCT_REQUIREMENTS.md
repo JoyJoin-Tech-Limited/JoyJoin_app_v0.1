@@ -2902,24 +2902,23 @@ Actions:
   - Preview
 ```
 
-**Announcement Publishing Flow:**
+**Announcement Publishing Flow (as implemented, 2026-10-26):**
 
 ```typescript
 When admin publishes announcement:
 
 1. Content status → "published"
-2. If "show_in_app" = true:
-   - Push notification to targeted users
-   - Show banner in app home page
-   - Add to notification center
-3. If "show_on_website" = true:
-   - Display on website homepage
-4. Log publication event
+2. Optional: "推送通知给所有用户" pushes one in-app notification to every user
+   - This is the only user-facing outlet that exists today
+3. Log publication event
 
-Auto-Archive:
-  - Daily cron job checks expiry_date
-  - If past expiry, status → "archived"
-  - Remove from active displays
+Not built yet — do not assume any of these run:
+   - "show_in_app" banner on the app home page: the mini-program discover page
+     renders its own hardcoded A/B/C/D promo variants (HeroPromoBanner), and
+     nothing reads GET /api/banners
+   - "show_on_website": the web client is archived; there is no website
+   - A content reader in the mini-program: no client calls GET /api/contents/:type
+   - Auto-archive: no scheduler expires or archives content
 ```
 
 ---

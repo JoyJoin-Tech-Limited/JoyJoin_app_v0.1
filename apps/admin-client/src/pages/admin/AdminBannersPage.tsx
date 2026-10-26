@@ -93,6 +93,13 @@ const EMPTY_FORM: BannerFormState = {
   effectiveUntil: "",
 };
 
+// The mini-program discover page renders its own hardcoded A/B/C/D promo
+// variants (`HeroPromoBanner`); nothing reads `/api/banners` yet. Until that
+// wiring exists, creating or editing a banner produces an object no user can
+// ever see, so those controls stay disabled and only cleanup (delete) is
+// offered. Flip this constant when the banner is actually consumed.
+const BANNERS_WIRED = false;
+
 const PLACEMENT_LABELS: Record<string, string> = {
   discover: "发现页",
   landing: "落地页",
@@ -269,7 +276,12 @@ export default function AdminBannersPage() {
           </p>
         </div>
         {canMutate && (
-          <Button onClick={openCreate} data-testid="button-create-banner">
+          <Button
+            onClick={openCreate}
+            disabled={!BANNERS_WIRED}
+            title={BANNERS_WIRED ? undefined : "小程序尚未接入横幅位，新建后不会展示"}
+            data-testid="button-create-banner"
+          >
             <Plus className="h-4 w-4 mr-2" />
             新建横幅
           </Button>
@@ -287,7 +299,10 @@ export default function AdminBannersPage() {
       ) : banners.length === 0 ? (
         <Card>
           <CardContent className="p-0">
-            <EmptyState title="暂无横幅" description="点击右上角「新建横幅」创建第一条轮播" />
+            <EmptyState
+              title="暂无横幅"
+              description="小程序发现页当前使用内置运营图，横幅位接入后此处内容才会展示。"
+            />
           </CardContent>
         </Card>
       ) : (
@@ -346,7 +361,7 @@ export default function AdminBannersPage() {
                       onCheckedChange={(checked) =>
                         toggleMutation.mutate({ id: banner.id, isActive: checked })
                       }
-                      disabled={!canMutate || toggleMutation.isPending}
+                      disabled={!canMutate || !BANNERS_WIRED || toggleMutation.isPending}
                       data-testid={`switch-active-${banner.id}`}
                     />
                   </TableCell>
@@ -357,6 +372,8 @@ export default function AdminBannersPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => openEdit(banner)}
+                          disabled={!BANNERS_WIRED}
+                          title={BANNERS_WIRED ? undefined : "小程序尚未接入横幅位，编辑后不会展示"}
                           data-testid={`button-edit-${banner.id}`}
                         >
                           <Pencil className="h-4 w-4" />
@@ -546,7 +563,7 @@ export default function AdminBannersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>删除横幅</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除横幅「{deletingBanner?.title || deletingBanner?.id}」吗？删除后将立即从发现页轮播中移除，该操作无法撤销。
+              确定要删除横幅「{deletingBanner?.title || deletingBanner?.id}」吗？该操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
