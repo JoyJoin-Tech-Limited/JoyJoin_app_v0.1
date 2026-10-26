@@ -123,7 +123,7 @@ export default function AdminFlashPage() {
             <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
             深圳 · 数字叙事 NPC
           </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">街头盲盒运营</h1>
+          <h1 className="text-2xl font-semibold tracking-tight mt-2">街头盲盒运营</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             以「第一季故事」为内容主线，配合当日排班、NPC 与安全地点完成运营。故事季发布和当日排班是两道独立门槛：前者决定内容是否可进入正式流程，后者决定今天是否真正上线。
           </p>

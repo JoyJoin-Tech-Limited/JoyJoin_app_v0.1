@@ -12,7 +12,6 @@
     "mcp:observability": "node mcp-servers/observability.mjs"
   },
   "devDependencies": {
-    "@executeautomation/playwright-mcp-server": "^1.0.12",
     "@playwright/test": "^1.49.0"
   }
 }

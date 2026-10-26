@@ -263,7 +263,7 @@ export default function AdminBannersPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">横幅管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">横幅管理</h1>
           <p className="text-muted-foreground mt-1">横幅展示在小程序发现页顶部轮播。</p>
         </div>
         {canMutate && (

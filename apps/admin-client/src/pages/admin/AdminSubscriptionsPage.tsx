@@ -271,7 +271,7 @@ export default function AdminSubscriptionsPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">订阅管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">订阅管理</h1>
           <p className="text-muted-foreground mt-1">管理用户权益订阅</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-subscription">

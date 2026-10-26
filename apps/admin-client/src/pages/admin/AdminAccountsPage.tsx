@@ -173,7 +173,7 @@ export default function AdminAccountsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">管理员账号</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">管理员账号</h1>
           <p className="text-sm text-muted-foreground mt-1">管理后台账号及权限</p>
         </div>
 

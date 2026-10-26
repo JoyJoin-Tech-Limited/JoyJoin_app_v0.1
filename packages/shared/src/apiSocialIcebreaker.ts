@@ -16,7 +16,7 @@ export type SocialIcebreakerEndSessionRequest = z.infer<typeof socialIcebreakerE
 
 export const socialIcebreakerAnalyticsEventSchema = z.object({
   eventType: z.string().min(1),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().optional(),
 })
 

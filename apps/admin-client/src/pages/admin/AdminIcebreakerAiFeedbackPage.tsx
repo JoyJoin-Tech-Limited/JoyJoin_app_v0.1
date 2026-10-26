@@ -96,7 +96,7 @@ export default function AdminIcebreakerAiFeedbackPage() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             <Sparkles className="h-7 w-7 text-primary" />
             破冰会话
           </h1>

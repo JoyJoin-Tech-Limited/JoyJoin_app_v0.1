@@ -1,0 +1,104 @@
+name: Publish API base and deps images
+
+# Publishes the two slow-changing tiers of apps/server/Dockerfile so that a
+# normal deploy only builds and transfers the app layer (dist). This is the
+# mechanism behind the deploy-latency plan in
+# docs/deliberations/2026-10-22-staging-deploy-latency-plan.md: the app image
+# inherits `FROM deps`, so the base + deps layers already exist in GHCR and the
+# CVM pulls tens of MB instead of ~1 GB.
+#
+# Run this manually:
+#   - joyjoin-api-deps  -> whenever package-lock.json changes (or monthly, to
+#                          refresh apk packages in the base tier)
+#   - joyjoin-api-base  -> when the Node major or the apk package list changes
+#
+# Not on push: rebuilding these on every commit would recreate the exact
+# problem the split is meant to solve.
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_base:
+        description: 'Also rebuild and push the base image (alpine + fonts + ffmpeg)'
+        type: boolean
+        default: false
+      base_tag:
+        description: 'Base image tag (only used when build_base is true)'
+        type: string
+        default: 'node20'
+
+concurrency:
+  group: publish-api-base
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # Use the built-in token (this job declares `packages: write`). The
+          # GHCR_TOKEN PAT has no write:packages scope, so pushing the base tier
+          # failed with "denied: permission_denied: The token provided does not
+          # match expected scopes" on 2026-10-26. deploy-staging.yml already
+          # logs in with GITHUB_TOKEN for the same reason.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute dependency key
+        id: key
+        run: |
+          set -euo pipefail
+          echo "deps=sha256-$(sha256sum package-lock.json | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push base tier
+        if: ${{ inputs.build_base }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          target: base
+          push: true
+          tags: ghcr.io/joyjoin-tech-limited/joyjoin-api-base:${{ inputs.base_tag }}
+          cache-from: type=gha,scope=joyjoin-api
+          cache-to: type=gha,mode=max,scope=joyjoin-api
+
+      - name: Build and push deps tier
+        id: deps
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          target: deps
+          push: true
+          tags: ghcr.io/joyjoin-tech-limited/joyjoin-api-deps:${{ steps.key.outputs.deps }}
+          cache-from: type=gha,scope=joyjoin-api
+          cache-to: type=gha,mode=max,scope=joyjoin-api
+
+      - name: Summary
+        run: |
+          {
+            echo "### API deps tier published"
+            echo ""
+            echo "| Tier | Reference | Digest |"
+            echo "|---|---|---|"
+            echo "| deps | \`joyjoin-api-deps:${{ steps.key.outputs.deps }}\` | \`${{ steps.deps.outputs.digest }}\` |"
+            if [ "${{ inputs.build_base }}" = "true" ]; then
+              echo "| base | \`joyjoin-api-base:${{ inputs.base_tag }}\` | — |"
+            fi
+            echo ""
+            echo "Deploys pick this up automatically through \`cache-from type=registry\`,"
+            echo "and only fetch the app layer that changed."
+          } >> "$GITHUB_STEP_SUMMARY"

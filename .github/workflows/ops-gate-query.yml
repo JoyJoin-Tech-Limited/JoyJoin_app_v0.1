@@ -1,0 +1,192 @@
+name: Ops Gate Query (read-only)
+
+# Manual read-only aggregate probes against staging/production Postgres.
+# Pattern mirrors repair-staging-users-phone-unique.yml (appleboy/ssh-action +
+# docker exec psql). Safety contract:
+#   - enum-gated queries only (NO free-text SQL input)
+#   - every query wrapped in BEGIN READ ONLY + statement_timeout
+#   - database name asserted before any query runs
+# Origin: 2026-10-23 profile full-marks D-2 (weekly XP) / D-4 (eventsJoined)
+# gate decisions — local network could not reach the CVM directly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Database target'
+        type: choice
+        options:
+          - staging
+          - production
+        required: true
+      query:
+        description: 'Gate query to run'
+        type: choice
+        options:
+          - both
+          - d2-weekly-xp
+          - d4-events-joined
+        required: true
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize with the matching environment's deploy lock (2026-10-22 split).
+  group: joyjoin-cvm-${{ inputs.target == 'production' && 'remote' || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  gate-query:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Run ${{ inputs.query }} on ${{ inputs.target }} (read-only)
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GATE_TARGET: ${{ inputs.target }}
+          GATE_QUERY: ${{ inputs.query }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 10m
+          envs: GATE_TARGET,GATE_QUERY
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin
+
+            if [ "$GATE_TARGET" = "production" ]; then
+              LOCK=/var/lock/joyjoin-cvm-remote.lock
+              ENV_FILE=deployment/.env
+              CONTAINER=postgres
+              DB=joyjoin
+            else
+              LOCK=/var/lock/joyjoin-cvm-staging.lock
+              ENV_FILE=deployment/.env.staging
+              CONTAINER=postgres-staging
+              DB=joyjoin_staging
+            fi
+
+            exec 9>"$LOCK"
+            flock -w 120 9
+
+            test -f "$ENV_FILE"
+            set -a
+            source "$ENV_FILE"
+            set +a
+            : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+            run_psql() {
+              docker exec -i \
+                -e PGPASSWORD="$POSTGRES_PASSWORD" \
+                "$CONTAINER" \
+                psql -h 127.0.0.1 -U joyjoin -d "$DB" "$@"
+            }
+
+            database_name="$(run_psql -Atc 'select current_database()')"
+            test "$database_name" = "$DB"
+            echo "Target verified: $GATE_TARGET ($database_name) via container $CONTAINER"
+
+            if [ "$GATE_QUERY" = "both" ] || [ "$GATE_QUERY" = "d2-weekly-xp" ]; then
+              echo "=== D-2: weekly positive-XP distribution (trailing 12 ISO weeks) ==="
+              run_psql -v ON_ERROR_STOP=1 -f /dev/stdin <<'SQL'
+            BEGIN READ ONLY;
+            SET LOCAL statement_timeout = '30s';
+
+            WITH w AS (
+              SELECT user_id,
+                     date_trunc('week', created_at) AS iso_week,
+                     SUM(xp_amount) AS xp_gain
+              FROM xp_transactions
+              WHERE xp_amount > 0
+                AND created_at >= date_trunc('week', now()) - interval '12 weeks'
+              GROUP BY 1, 2
+            )
+            SELECT count(*)                    AS gain_weeks,
+                   count(DISTINCT user_id)     AS users_with_gains,
+                   round(percentile_cont(0.50) WITHIN GROUP (ORDER BY xp_gain)) AS p50_gain,
+                   round(percentile_cont(0.75) WITHIN GROUP (ORDER BY xp_gain)) AS p75_gain,
+                   round(avg(xp_gain))         AS mean_gain,
+                   max(xp_gain)                AS max_gain,
+                   min(iso_week)::date         AS from_week,
+                   max(iso_week)::date         AS to_week
+            FROM w;
+
+            SELECT (SELECT count(*) FROM xp_transactions)                AS total_rows,
+                   (SELECT count(DISTINCT user_id) FROM xp_transactions) AS users_ever,
+                   (SELECT count(*) FROM users)                          AS total_users,
+                   (SELECT max(created_at) FROM xp_transactions)         AS latest_row,
+                   (SELECT count(*) FROM xp_transactions
+                     WHERE created_at >= now() - interval '28 days')     AS rows_last_28d;
+
+            WITH cw AS (
+              SELECT DISTINCT user_id
+              FROM xp_transactions
+              WHERE xp_amount > 0
+                AND created_at >= date_trunc('week', now())
+            )
+            SELECT (SELECT count(*) FROM cw)    AS users_with_gain_this_week,
+                   (SELECT count(*) FROM users) AS total_users;
+
+            COMMIT;
+            SQL
+            fi
+
+            if [ "$GATE_QUERY" = "both" ] || [ "$GATE_QUERY" = "d4-events-joined" ]; then
+              echo "=== D-4: eventsJoined distribution (A = shell formula, B = incl completed) ==="
+              run_psql -v ON_ERROR_STOP=1 -f /dev/stdin <<'SQL'
+            BEGIN READ ONLY;
+            SET LOCAL statement_timeout = '30s';
+
+            WITH ea AS (
+              SELECT user_id, count(*) AS c FROM event_attendance GROUP BY user_id
+            ),
+            pr AS (
+              SELECT user_id, count(*) AS c FROM event_pool_registrations
+              WHERE match_status IN ('pending','matched') GROUP BY user_id
+            ),
+            j AS (
+              SELECT u.id, COALESCE(ea.c,0) + COALESCE(pr.c,0) AS events_joined
+              FROM users u
+              LEFT JOIN ea ON ea.user_id = u.id
+              LEFT JOIN pr ON pr.user_id = u.id
+            )
+            SELECT 'A_shell_formula' AS variant,
+                   count(*) AS users,
+                   round(percentile_cont(0.50) WITHIN GROUP (ORDER BY events_joined)) AS p50,
+                   round(percentile_cont(0.95) WITHIN GROUP (ORDER BY events_joined)) AS p95,
+                   max(events_joined) AS max,
+                   count(*) FILTER (WHERE events_joined >= 15) AS users_ge15,
+                   count(*) FILTER (WHERE events_joined >= 20) AS users_ge20
+            FROM j;
+
+            WITH ea AS (
+              SELECT user_id, count(*) AS c FROM event_attendance GROUP BY user_id
+            ),
+            pr AS (
+              SELECT user_id, count(*) AS c FROM event_pool_registrations
+              WHERE match_status IN ('pending','matched','completed') GROUP BY user_id
+            ),
+            j AS (
+              SELECT u.id, COALESCE(ea.c,0) + COALESCE(pr.c,0) AS events_joined
+              FROM users u
+              LEFT JOIN ea ON ea.user_id = u.id
+              LEFT JOIN pr ON pr.user_id = u.id
+            )
+            SELECT 'B_incl_completed' AS variant,
+                   count(*) AS users,
+                   round(percentile_cont(0.50) WITHIN GROUP (ORDER BY events_joined)) AS p50,
+                   round(percentile_cont(0.95) WITHIN GROUP (ORDER BY events_joined)) AS p95,
+                   max(events_joined) AS max,
+                   count(*) FILTER (WHERE events_joined >= 15) AS users_ge15,
+                   count(*) FILTER (WHERE events_joined >= 20) AS users_ge20
+            FROM j;
+
+            COMMIT;
+            SQL
+            fi
+
+            echo "Gate query run complete."

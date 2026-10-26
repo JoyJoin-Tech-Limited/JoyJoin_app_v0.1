@@ -145,6 +145,16 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_TOKEN }}
 
+      # The API image is split into base / deps / app stages. `publish-api-base.yml`
+      # publishes the deps stage as ghcr.io/.../joyjoin-api-deps:<lockfile hash>;
+      # importing it as registry cache here makes the app build reuse those layers
+      # verbatim, so the pushed image shares its base+deps digest with the published
+      # one and the CVM only downloads the app layer (tens of MB, not ~1 GB).
+      # A missing deps image only costs a slower first build — never a failure.
+      - name: Resolve API dependency image
+        id: api-deps
+        run: echo "ref=ghcr.io/joyjoin-tech-limited/joyjoin-api-deps:sha256-$(sha256sum package-lock.json | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
       - name: Build and push staging API image
         uses: docker/build-push-action@v6
         with:
@@ -153,8 +163,10 @@ jobs:
           push: true
           load: true
           tags: ${{ steps.delivery-mode.outputs.api_tags }}
-          cache-from: type=gha,scope=joyjoin-staging-api
-          cache-to: type=gha,mode=max,scope=joyjoin-staging-api
+          cache-from: |
+            type=registry,ref=${{ steps.api-deps.outputs.ref }}
+            type=gha,scope=joyjoin-api
+          cache-to: type=gha,mode=max,scope=joyjoin-api
 
       - name: Build and push staging Admin image
         uses: docker/build-push-action@v6

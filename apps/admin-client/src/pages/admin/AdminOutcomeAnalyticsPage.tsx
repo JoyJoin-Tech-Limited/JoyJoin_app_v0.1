@@ -318,7 +318,7 @@ export default function AdminOutcomeAnalyticsPage() {
     <div className="space-y-6 p-8" data-testid="admin-outcome-analytics-page">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             <Database className="h-7 w-7 text-primary" />
             成行分析 / AI 就绪度
           </h1>

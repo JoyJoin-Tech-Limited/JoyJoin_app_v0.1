@@ -56,7 +56,7 @@ function AdminRouter() {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <h1 className="text-2xl font-bold text-destructive">无权限访问</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-destructive">无权限访问</h1>
           <p className="text-muted-foreground">您没有管理员权限</p>
           <div className="flex gap-2 justify-center mt-4">
             <Button

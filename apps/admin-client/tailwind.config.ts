@@ -5,6 +5,11 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
+    // Shared UI primitives carry their own class strings (e.g.
+    // `@shared/ui/buttonVariants`). Without this glob Tailwind never emits
+    // those utilities, so every <Button> renders as unstyled white-on-white
+    // text — that was the 2026-10-26 /admin/venues bug.
+    "../../packages/shared/src/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {

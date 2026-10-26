@@ -34,7 +34,7 @@ const ProfileAnalyticsEventSchema = z.object({
     'profile_streak_capsule_tap',
     'profile_poster_glow_tap',
   ]),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.number(),
 })
 
