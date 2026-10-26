@@ -50,7 +50,12 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          # Use the built-in token (this job declares `packages: write`). The
+          # GHCR_TOKEN PAT has no write:packages scope, so pushing the base tier
+          # failed with "denied: permission_denied: The token provided does not
+          # match expected scopes" on 2026-10-26. deploy-staging.yml already
+          # logs in with GITHUB_TOKEN for the same reason.
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compute dependency key
         id: key
