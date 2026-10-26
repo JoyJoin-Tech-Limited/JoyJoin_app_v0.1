@@ -21,9 +21,9 @@ export function getDuoRewardOutcome(
   return { label: "—", tone: "empty" };
 }
 
-/** seated counts use rows while bound counts invitations; see server summary semantics. */
-export function formatDuoSeatedRate(seated: number, bound: number): string {
-  if (bound <= 0) return "—";
-  const percent = Math.round((seated / bound) * 1000) / 10;
+/** seated counts use rows while accepted counts invitations; see server summary semantics. */
+export function formatDuoSeatedRate(seated: number, accepted: number): string {
+  if (accepted <= 0) return "—";
+  const percent = Math.round((seated / accepted) * 1000) / 10;
   return `${percent}%`;
 }

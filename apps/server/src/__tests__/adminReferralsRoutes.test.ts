@@ -61,7 +61,7 @@ const stubStats = {
 const stubDuoSummary = {
   total: 9,
   pending: 3,
-  bound: 4,
+  accepted: 4,
   expired: 2,
   conflict: 1,
   seated: 2,

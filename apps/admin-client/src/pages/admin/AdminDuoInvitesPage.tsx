@@ -31,6 +31,7 @@ type DuoInviteStatus = "pending" | "bound" | "expired";
 
 interface DuoInviteItem {
   id: string;
+  useId: string | null;
   code: string;
   invitationType: string | null;
   inviterId: string;
@@ -53,7 +54,7 @@ interface DuoInviteItem {
 interface DuoInviteSummary {
   total: number;
   pending: number;
-  bound: number;
+  accepted: number;
   expired: number;
   conflict: number;
   seated: number;
@@ -71,8 +72,8 @@ interface DuoInviteListResponse {
 
 const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "all", label: "状态：全部" },
-  { value: "pending", label: "状态：待绑定" },
-  { value: "bound", label: "状态：已绑定" },
+  { value: "pending", label: "状态：待接受" },
+  { value: "bound", label: "状态：已接受" },
   { value: "expired", label: "状态：已过期" },
 ];
 
@@ -84,10 +85,10 @@ const CONFLICT_OPTIONS: Array<{ value: string; label: string }> = [
 
 function StatusBadge({ status }: { status: DuoInviteStatus }) {
   if (status === "bound") {
-    return <Badge className="border-green-200 bg-green-100 text-green-800 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:text-green-300">已绑定</Badge>;
+    return <Badge className="border-green-200 bg-green-100 text-green-800 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:text-green-300">已接受</Badge>;
   }
   if (status === "pending") {
-    return <Badge variant="secondary">待绑定</Badge>;
+    return <Badge variant="secondary">待接受</Badge>;
   }
   return <Badge variant="outline">已过期</Badge>;
 }
@@ -162,12 +163,15 @@ export default function AdminDuoInvitesPage() {
         <p className="text-muted-foreground mt-1">
           双人成行绑定后在排桌中作为整体入组，未成行将整组顺延并自动退款。
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          accepted = 至少一条使用记录；seated = 排桌后同桌记录；均不是双方当前绑定状态。
+        </p>
       </div>
 
       {isLoading && !data ? (
         <div className="space-y-2" data-testid="duo-summary-loading" aria-busy="true" aria-label="双人成行统计加载中">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {["待绑定", "已绑定", "冲突", "同桌率"].map((label) => (
+            {["待接受", "已接受", "冲突", "同桌率"].map((label) => (
               <Card key={label}>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">{label}</p>
@@ -186,14 +190,14 @@ export default function AdminDuoInvitesPage() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" data-testid="duo-summary-cards">
           <Card>
             <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">待绑定</p>
+              <p className="text-sm text-muted-foreground">待接受</p>
               <p className="mt-2 text-2xl font-semibold">{data.summary.pending}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">已绑定</p>
-              <p className="mt-2 text-2xl font-semibold">{data.summary.bound}</p>
+              <p className="text-sm text-muted-foreground">已接受</p>
+              <p className="mt-2 text-2xl font-semibold">{data.summary.accepted}</p>
             </CardContent>
           </Card>
           <Card>
@@ -206,13 +210,13 @@ export default function AdminDuoInvitesPage() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">同桌率</p>
               <p className="mt-2 text-2xl font-semibold">
-                {formatDuoSeatedRate(data.summary.seated, data.summary.bound)}
+                {formatDuoSeatedRate(data.summary.seated, data.summary.accepted)}
               </p>
               <p
                 className="mt-1 truncate text-xs text-muted-foreground"
-                title={`${data.summary.seated} 条同桌记录 / ${data.summary.bound} 份已绑定邀请`}
+                title={`${data.summary.seated} 条同桌记录 / ${data.summary.accepted} 份已接受邀请`}
               >
-                {data.summary.seated} 条同桌记录 / {data.summary.bound} 份已绑定邀请
+                {data.summary.seated} 条同桌记录 / {data.summary.accepted} 份已接受邀请
               </p>
             </CardContent>
           </Card>
@@ -225,7 +229,7 @@ export default function AdminDuoInvitesPage() {
 
       <div className="flex flex-wrap gap-3">
         <Select value={statusFilter} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-40" data-testid="select-status-filter" aria-label="按绑定状态筛选">
+          <SelectTrigger className="w-40" data-testid="select-status-filter" aria-label="按接受状态筛选">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -301,7 +305,10 @@ export default function AdminDuoInvitesPage() {
               </TableHeader>
               <TableBody>
                 {data.items.map((item) => (
-                  <TableRow key={item.id} data-testid={`row-duo-invite-${item.id}`}>
+                  <TableRow
+                    key={`${item.id}:${item.useId ?? "no-use"}`}
+                    data-testid={`row-duo-invite-${item.id}-${item.useId ?? "no-use"}`}
+                  >
                     <TableCell>
                       <div>
                         <p className="truncate font-medium" title={item.inviterDisplayName || "未设置昵称"}>{item.inviterDisplayName || "未设置昵称"}</p>

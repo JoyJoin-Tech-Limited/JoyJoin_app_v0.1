@@ -24,6 +24,27 @@ describe("admin duo invite result copy guardrail", () => {
   });
 });
 
+describe("admin duo invite accepted semantics", () => {
+  it("uses accepted copy and explains that neither accepted nor seated is current binding state", () => {
+    const source = fs.readFileSync(DUO_PAGE, "utf8");
+    expect(source).not.toContain("已绑定");
+    expect(source).not.toContain("待绑定");
+    expect(source).toContain("已接受");
+    expect(source).toContain("待接受");
+    expect(source).toContain("accepted = 至少一条使用记录");
+    expect(source).toContain("seated = 排桌后同桌记录");
+    expect(source).toContain("不是双方当前绑定状态");
+  });
+
+  it("keys and identifies rows by invitation id plus use id, including an explicit empty-use suffix", () => {
+    const source = fs.readFileSync(DUO_PAGE, "utf8");
+    expect(source).toContain('key={`${item.id}:${item.useId ?? "no-use"}`}');
+    expect(source).toContain('data-testid={`row-duo-invite-${item.id}-${item.useId ?? "no-use"}`}');
+    expect(source).not.toContain("key={item.id}");
+    expect(source).not.toContain('data-testid={`row-duo-invite-${item.id}`}');
+  });
+});
+
 describe("duo outcome semantics", () => {
   it("keeps seating true, unfinished, and absent states distinct", () => {
     expect(getDuoSeatedOutcome(true)).toEqual({ label: "已同桌", tone: "success" });

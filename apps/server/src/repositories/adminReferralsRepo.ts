@@ -188,6 +188,8 @@ export interface DuoInviteListParams {
 
 export interface DuoInviteListItem {
   id: string;
+  /** Null only for the invitation's empty-use row. */
+  useId: string | null;
   code: string;
   invitationType: string | null;
   inviterId: string;
@@ -271,8 +273,8 @@ export function computeDuoConflictInvitationIds(
 
 const inviteeUsers = alias(users, "duo_invitee_users");
 
-/** invitation_uses row exists for this invitation (duo bind marker). */
-const boundExists: SQL = sql`exists (
+/** invitation_uses row exists for this invitation (historical acceptance marker). */
+const acceptedExists: SQL = sql`exists (
   select 1 from ${invitationUses}
   where ${invitationUses.invitationId} = ${invitations.id}
 )`;
@@ -287,12 +289,12 @@ function buildDuoWhere(
     conditions.push(eq(invitations.poolId, params.poolId));
   }
   if (params.status === "bound") {
-    conditions.push(boundExists);
+    conditions.push(acceptedExists);
   } else if (params.status === "expired") {
-    conditions.push(sql`not ${boundExists}`);
+    conditions.push(sql`not ${acceptedExists}`);
     conditions.push(sql`${invitations.expiresAt} < ${now}`);
   } else if (params.status === "pending") {
-    conditions.push(sql`not ${boundExists}`);
+    conditions.push(sql`not ${acceptedExists}`);
     conditions.push(sql`(${invitations.expiresAt} is null or ${invitations.expiresAt} >= ${now})`);
   }
   // S1 conflict filter: an empty conflict set means NO invitation can match
@@ -362,33 +364,14 @@ export async function listDuoInvites(params: DuoInviteListParams): Promise<{
 
   const whereClause = buildDuoWhere(params, now, conflictInvitationIds);
 
-  const [rows, countRows] = await Promise.all([
+  // Page invitations before joining uses: one invitation may have multiple
+  // historical acceptance rows, and join-row pagination would drop invitations.
+  const [pageInvitationRows, countRows] = await Promise.all([
     db
-      .select({
-        id: invitations.id,
-        code: invitations.code,
-        invitationType: invitations.invitationType,
-        inviterId: invitations.inviterId,
-        inviterDisplayName: users.displayName,
-        inviteeId: invitationUses.inviteeId,
-        inviteeDisplayName: inviteeUsers.displayName,
-        boundAt: invitationUses.createdAt,
-        matchedTogether: invitationUses.matchedTogether,
-        rewardIssued: invitationUses.rewardIssued,
-        poolId: invitations.poolId,
-        poolTitle: eventPools.title,
-        poolCity: eventPools.city,
-        poolDateTime: eventPools.dateTime,
-        createdAt: invitations.createdAt,
-        expiresAt: invitations.expiresAt,
-      })
+      .select({ id: invitations.id })
       .from(invitations)
-      .leftJoin(users, eq(invitations.inviterId, users.id))
-      .leftJoin(invitationUses, eq(invitationUses.invitationId, invitations.id))
-      .leftJoin(inviteeUsers, eq(invitationUses.inviteeId, inviteeUsers.id))
-      .leftJoin(eventPools, eq(invitations.poolId, eventPools.id))
       .where(whereClause)
-      .orderBy(desc(invitations.createdAt))
+      .orderBy(desc(invitations.createdAt), desc(invitations.id))
       .limit(params.pageSize)
       .offset(offset),
     db
@@ -397,24 +380,59 @@ export async function listDuoInvites(params: DuoInviteListParams): Promise<{
       .where(whereClause),
   ]);
 
+  const total = countRows[0]?.count ?? 0;
+  const pageInvitationIds = pageInvitationRows.map((row: { id: string }) => row.id);
+  if (pageInvitationIds.length === 0) {
+    return { items: [], total };
+  }
+
+  const rows = await db
+    .select({
+      id: invitations.id,
+      useId: invitationUses.id,
+      code: invitations.code,
+      invitationType: invitations.invitationType,
+      inviterId: invitations.inviterId,
+      inviterDisplayName: users.displayName,
+      inviteeId: invitationUses.inviteeId,
+      inviteeDisplayName: inviteeUsers.displayName,
+      boundAt: invitationUses.createdAt,
+      matchedTogether: invitationUses.matchedTogether,
+      rewardIssued: invitationUses.rewardIssued,
+      poolId: invitations.poolId,
+      poolTitle: eventPools.title,
+      poolCity: eventPools.city,
+      poolDateTime: eventPools.dateTime,
+      createdAt: invitations.createdAt,
+      expiresAt: invitations.expiresAt,
+    })
+    .from(invitations)
+    .leftJoin(users, eq(invitations.inviterId, users.id))
+    .leftJoin(invitationUses, eq(invitationUses.invitationId, invitations.id))
+    .leftJoin(inviteeUsers, eq(invitationUses.inviteeId, inviteeUsers.id))
+    .leftJoin(eventPools, eq(invitations.poolId, eventPools.id))
+    .where(inArray(invitations.id, pageInvitationIds))
+    .orderBy(desc(invitations.createdAt), desc(invitations.id), desc(invitationUses.createdAt));
+
   const items: DuoInviteListItem[] = rows.map((row: (typeof rows)[number]) => {
-    const bound = row.inviteeId !== null;
+    const accepted = row.useId !== null;
     const expired =
-      !bound && row.expiresAt !== null && new Date(row.expiresAt).getTime() < now.getTime();
+      !accepted && row.expiresAt !== null && new Date(row.expiresAt).getTime() < now.getTime();
     return {
       ...row,
-      status: bound ? "bound" : expired ? "expired" : "pending",
+      // Keep the legacy status value for API/filter compatibility; it means accepted.
+      status: accepted ? "bound" : expired ? "expired" : "pending",
       hasConflict: conflictInvitationIds.has(row.id),
     };
   });
 
-  return { items, total: countRows[0]?.count ?? 0 };
+  return { items, total };
 }
 
 export interface DuoInviteSummary {
   total: number;
   pending: number;
-  bound: number;
+  accepted: number;
   expired: number;
   conflict: number;
   seated: number;
@@ -423,8 +441,8 @@ export interface DuoInviteSummary {
 
 /**
  * Pool-scoped operational baseline, independent of list status/conflict/page.
- * total/pending/bound/expired/conflict count invitations; seated/rewarded count
- * invitation_uses rows. Thus seated/bound is an operational ratio across two
+ * total/pending/accepted/expired/conflict count invitations; seated/rewarded count
+ * invitation_uses rows. Thus seated/accepted is an operational ratio across two
  * related granularities, not a per-invitation probability.
  */
 export async function getDuoInviteSummary(
@@ -443,13 +461,13 @@ export async function getDuoInviteSummary(
     db
       .select({
         total: sql<number>`count(*)::int`,
-        bound: sql<number>`count(*) filter (where ${boundExists})::int`,
+        accepted: sql<number>`count(*) filter (where ${acceptedExists})::int`,
         pending: sql<number>`count(*) filter (
-          where not ${boundExists}
+          where not ${acceptedExists}
           and (${invitations.expiresAt} is null or ${invitations.expiresAt} >= ${now})
         )::int`,
         expired: sql<number>`count(*) filter (
-          where not ${boundExists} and ${invitations.expiresAt} < ${now}
+          where not ${acceptedExists} and ${invitations.expiresAt} < ${now}
         )::int`,
       })
       .from(invitations)
@@ -475,7 +493,7 @@ export async function getDuoInviteSummary(
   const invitationCounts = invitationRows[0] ?? {
     total: 0,
     pending: 0,
-    bound: 0,
+    accepted: 0,
     expired: 0,
   };
   const useCounts = useRows[0] ?? { seated: 0, rewarded: 0 };

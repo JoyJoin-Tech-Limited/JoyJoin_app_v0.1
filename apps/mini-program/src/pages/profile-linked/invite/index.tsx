@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getReferralStats, getMyPoolRegistrations, type ReferralStatsResponse, type PoolRegistrationSummary } from '@shared/api'
 import { apiRequest } from '../../../lib/api/api'
 import { createDuoInvite } from '../../../lib/api/duo'
+import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import { resolveInviteShareMode } from '../../../lib/duo/duoContext'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useAuth } from '../../../hooks/useAuth'
@@ -95,6 +96,7 @@ export default function InvitePage() {
 
   useShareAppMessage(() => {
     if (shareMode === 'duo' && miniProgramPath) {
+      discoverAnalytics.track('duo_share_trigger', duoSharePoolId)
       return {
         title: '我报名了这场局，要不要和我坐一桌？',
         path: miniProgramPath,

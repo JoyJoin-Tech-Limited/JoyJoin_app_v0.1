@@ -415,8 +415,8 @@ export const paymentFulfillmentRepo = {
 
             // S1 (one-partner-per-pool): same pre-fetch as the free route —
             // a refused binding skips the invitation_uses write (and the
-            // total_acceptances increment) but NEVER the payment or the
-            // registration write (both already committed above/below).
+            // total_acceptances increment) but NEVER interrupts the payment or
+            // registration writes in this same outer transaction.
             const duoAvailability =
               invitation &&
               invitation.invitationType === "duo" &&

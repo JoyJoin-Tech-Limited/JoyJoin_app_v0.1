@@ -41,8 +41,6 @@ export interface DuoPairResolution {
   conflictingUserIds: string[];
   /** Number of input pairs dropped by the conflict rule (post-dedup). */
   droppedPairCount: number;
-  /** Surviving pairs in input order (deduped, conflict-free). */
-  pairs: DuoPairInput[];
 }
 
 export function duoPairKey(inviterId: string, inviteeId: string): string {
@@ -77,7 +75,6 @@ export function resolveDuoPairSet(duoPairs: DuoPairInput[]): DuoPairResolution {
   const duoPartnerOf = new Map<string, string>();
   const duoInternalPairKeys = new Set<string>();
   const conflicting = new Set<string>();
-  const survivingPairs: DuoPairInput[] = [];
   let droppedPairCount = 0;
 
   for (const pair of uniquePairs) {
@@ -87,7 +84,6 @@ export function resolveDuoPairSet(duoPairs: DuoPairInput[]): DuoPairResolution {
       droppedPairCount++;
       continue;
     }
-    survivingPairs.push(pair);
     duoPartnerOf.set(pair.inviterId, pair.inviteeId);
     duoPartnerOf.set(pair.inviteeId, pair.inviterId);
     duoInternalPairKeys.add(duoPairKey(pair.inviterId, pair.inviteeId));
@@ -98,6 +94,5 @@ export function resolveDuoPairSet(duoPairs: DuoPairInput[]): DuoPairResolution {
     duoInternalPairKeys,
     conflictingUserIds: [...conflicting].sort(),
     droppedPairCount,
-    pairs: survivingPairs,
   };
 }

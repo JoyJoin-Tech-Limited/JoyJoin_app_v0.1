@@ -16,7 +16,7 @@ describe("resolveDuoPairSet", () => {
 
     expect(result.conflictingUserIds).toEqual([]);
     expect(result.droppedPairCount).toBe(0);
-    expect(result.pairs).toEqual([P("a", "b"), P("c", "d")]);
+    expect(result).not.toHaveProperty("pairs");
     expect(result.duoPartnerOf.get("a")).toBe("b");
     expect(result.duoPartnerOf.get("b")).toBe("a");
     expect(result.duoPartnerOf.get("c")).toBe("d");
@@ -35,7 +35,6 @@ describe("resolveDuoPairSet", () => {
     const result = resolveDuoPairSet([P("a", "b"), P("a", "c")]);
 
     expect(result.droppedPairCount).toBe(2);
-    expect(result.pairs).toEqual([]);
     // The pivot (a) AND both single-binding members strand together — a duo
     // never matches as a half-unit.
     expect(result.conflictingUserIds).toEqual(["a", "b", "c"]);
@@ -47,7 +46,6 @@ describe("resolveDuoPairSet", () => {
     const result = resolveDuoPairSet([P("a", "b"), P("a", "c"), P("b", "c")]);
 
     expect(result.droppedPairCount).toBe(3);
-    expect(result.pairs).toEqual([]);
     expect(result.conflictingUserIds).toEqual(["a", "b", "c"]);
   });
 
@@ -55,7 +53,6 @@ describe("resolveDuoPairSet", () => {
     const result = resolveDuoPairSet([P("a", "b"), P("a", "c"), P("x", "y")]);
 
     expect(result.conflictingUserIds).toEqual(["a", "b", "c"]);
-    expect(result.pairs).toEqual([P("x", "y")]);
     expect(result.duoPartnerOf.get("x")).toBe("y");
     expect(result.duoInternalPairKeys).toEqual(new Set(["x|y"]));
   });
@@ -65,7 +62,6 @@ describe("resolveDuoPairSet", () => {
 
     expect(result.conflictingUserIds).toEqual([]);
     expect(result.droppedPairCount).toBe(0);
-    expect(result.pairs).toEqual([P("a", "b")]);
     expect(result.duoPartnerOf.get("a")).toBe("b");
     expect(result.duoInternalPairKeys).toEqual(new Set(["a|b"]));
   });
@@ -74,7 +70,6 @@ describe("resolveDuoPairSet", () => {
     const result = resolveDuoPairSet([P("a", "a"), P("b", "c")]);
 
     expect(result.conflictingUserIds).toEqual([]);
-    expect(result.pairs).toEqual([P("b", "c")]);
     expect(result.duoPartnerOf.has("a")).toBe(false);
   });
 
@@ -93,6 +88,5 @@ describe("resolveDuoPairSet", () => {
     expect([...b.duoInternalPairKeys].sort()).toEqual(
       [...a.duoInternalPairKeys].sort(),
     );
-    expect(b.pairs).toEqual(a.pairs);
   });
 });
