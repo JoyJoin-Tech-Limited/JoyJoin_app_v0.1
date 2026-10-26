@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   confirmPoolGroupAttendance,
+  getPoolGroupAnalysis,
   getPoolGroupRoomState,
   type GatheringRoomMember,
   type GatheringRoomStateResponse,
 } from '@shared/api'
+import type { PairExplanation } from '@shared/types/groupAnalysis'
 import {
   ROOM_POKE_EMOJIS,
   type RoomPokeEmoji,
@@ -26,7 +28,9 @@ import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { logInfo, logWarn } from '../../lib/utils/logger'
 import { TOAST_SHORT_MS, TOAST_MEDIUM_MS } from '../../lib/utils/uiConstants'
 import { gatheringRoomAnalytics } from '../../lib/analytics/gatheringRoomAnalytics'
-import type { GatheringRoomMemberProfile, GatheringRoomPokeBadge, GatheringRoomPresence } from '../../components/gathering-room/GatheringRoomScene'
+import type { GatheringRoomMemberProfile, GatheringRoomPokeBadge } from '../../components/gathering-room/GatheringRoomScene'
+import { buildPairKeyMemberMap } from '../../lib/utils/pairChemistry'
+import { resolveGatheringRoomPresence } from './gatheringRoomPresence'
 
 /**
  * useGatheringRoomController — view-model for the 集结房间 page.
@@ -58,6 +62,32 @@ const ROOM_WS_EVENT_TYPES = [
 const ACTIVITY_LINE_MS = 3600
 
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
+
+const GATHERING_ROOM_VISIT_PREFIX = 'jj_gathering_room_visit_'
+
+/**
+ * Device-local first-visit marker, keyed by user + group. This is deliberately
+ * not server-authoritative: clearing storage or switching devices resets
+ * firstVisit, which the analytics contract records as a known limitation.
+ */
+function recordGatheringRoomVisit(userId: string, groupId: string) {
+  const key = `${GATHERING_ROOM_VISIT_PREFIX}${userId}:${groupId}`
+  try {
+    const raw = Taro.getStorageSync(key)
+    const parsed = typeof raw === 'string' && raw ? JSON.parse(raw) : raw
+    const previousCount = Number(parsed?.visitCount)
+    const visitCount = Number.isFinite(previousCount) && previousCount >= 0
+      ? Math.min(previousCount + 1, 9999)
+      : 1
+    Taro.setStorageSync(key, JSON.stringify({ visitCount, lastSeenAt: Date.now() }))
+    return { firstVisit: visitCount === 1, visitCount }
+  } catch (error) {
+    logWarn('[GatheringRoom] Failed to persist visit marker', {
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return { firstVisit: false, visitCount: 0 }
+  }
+}
 
 /** "周六见" style farewell derived from the event's actual date — the
  *  hardcoded 周六 lie about every non-Saturday event (fix 2026-08-12).
@@ -102,6 +132,17 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
 
   const blindBoxEventId = roomState?.blindBoxEventId ?? null
   const currentUserId = currentUser?.id
+
+  // Pair intelligence is an optional enrichment. It must never block the room:
+  // an unavailable analysis simply means the member sheet hides its chemistry
+  // section (fail-open, retry once).
+  const { data: groupAnalysis } = useQuery({
+    queryKey: ['mini-program', 'pool-group-analysis', groupId],
+    queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
+    enabled: !!groupId && !!roomState && !authLoading,
+    staleTime: 10 * 60_000,
+    retry: 1,
+  })
 
   // ── Presence state (WS) ──────────────────────────────────────────────────
   const [presentUserIds, setPresentUserIds] = useState<ReadonlySet<string>>(() => new Set())
@@ -236,10 +277,10 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
             !celebratedRef.current
           ) {
             celebratedRef.current = true
-            setCelebrationText(`全员到齐！这桌稳了，${formatMeetDayLabel(roomState?.eventDateTime)}～`)
+            setCelebrationText(`大家都确认出席啦，${formatMeetDayLabel(roomState?.eventDateTime)}～`)
             haptics('success')
             gatheringRoomAnalytics.track('room_all_present', {
-              poolId: groupId,
+              poolId: roomState?.poolId,
               groupId,
               screen: 'gathering-room',
               totalParticipants: data.totalParticipants,
@@ -253,7 +294,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
             const remaining = Math.max(data.totalParticipants - data.confirmedCount, 0)
             const name = data.displayName || '队友'
             pushActivityLine(
-              remaining > 0 ? `${name} 锁定了座位 · 还差 ${remaining} 人` : `${name} 锁定了座位`,
+              remaining > 0 ? `${name} 确认了出席 · 还差 ${remaining} 人` : `${name} 确认了出席`,
             )
           }
           // Keep the confirmed counts fresh for the header strip.
@@ -263,31 +304,37 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         default:
       }
     },
-    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, markEntering, setManagedTimeout, pushActivityLine],
+    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, roomState?.poolId, markEntering, setManagedTimeout, pushActivityLine],
   )
 
-  const { send } = useWebSocket({
+  const { send, state: wsState } = useWebSocket({
     autoConnect: !!blindBoxEventId && gatheringRoomEnabled,
     eventTypes: [...ROOM_WS_EVENT_TYPES],
     eventId: blindBoxEventId ?? undefined,
     joinEventId: blindBoxEventId ?? undefined,
     onMessage: handleWsMessage,
   })
+  const wsConnected = wsState === 'connected'
 
   // ── Analytics: room_entered once per page visit ──────────────────────────
   const enteredTrackedRef = useRef(false)
   useEffect(() => {
-    if (!roomState || enteredTrackedRef.current) return
+    if (!roomState || !currentUserId || enteredTrackedRef.current) return
     enteredTrackedRef.current = true
-    logInfo('[GatheringRoom] Room entered', { groupId })
+    const visit = recordGatheringRoomVisit(currentUserId, groupId)
+    logInfo('[GatheringRoom] Room entered', { groupId, poolId: roomState.poolId })
     gatheringRoomAnalytics.track('room_entered', {
-      poolId: groupId,
+      poolId: roomState.poolId,
       groupId,
       screen: 'gathering-room',
       totalParticipants: roomState.totalParticipants,
       confirmedCount: roomState.confirmedCount,
+      arrivingLateCount: roomState.arrivingLateCount,
+      eventPhase: roomState.eventPhase,
+      firstVisit: visit.firstVisit,
+      visitCount: visit.visitCount,
     })
-  }, [roomState, groupId])
+  }, [roomState, currentUserId, groupId])
 
   // ── Derived view model ───────────────────────────────────────────────────
   // Keep member profiles stable (identity + equipment) and presence transient
@@ -335,15 +382,10 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
   const presenceByUserId = useMemo(
     () =>
       new Map(
-        (roomState?.members ?? []).map((member: GatheringRoomMember) => {
-          const presence: GatheringRoomPresence =
-            member.attendanceStatus === 'confirmed' || member.attendanceStatus === 'late'
-              ? 'confirmed'
-              : presentUserIds.has(member.userId)
-                ? 'present'
-                : 'absent'
-          return [member.userId, presence]
-        }),
+        (roomState?.members ?? []).map((member: GatheringRoomMember) => [
+          member.userId,
+          resolveGatheringRoomPresence(member.attendanceStatus, presentUserIds.has(member.userId)),
+        ] as const),
       ),
     [roomState?.members, presentUserIds],
   )
@@ -352,13 +394,44 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     () => roomState?.members.find((member) => member.userId === currentUserId) ?? null,
     [roomState?.members, currentUserId],
   )
+  const ownAttendanceStatus = ownMember?.attendanceStatus ?? 'pending'
   const ownConfirmed =
-    ownMember?.attendanceStatus === 'confirmed' || ownMember?.attendanceStatus === 'late'
+    ownAttendanceStatus === 'confirmed' || ownAttendanceStatus === 'late'
 
+  // Presence is an online-only signal from WS. Confirmation is the persistent
+  // attendance promise from the server — never mix the two in the header.
   const presentCount = useMemo(
-    () => [...presenceByUserId.values()].filter((presence) => presence !== 'absent').length,
-    [presenceByUserId],
+    () => (roomState?.members ?? []).filter((member) => presentUserIds.has(member.userId)).length,
+    [presentUserIds, roomState?.members],
   )
+  const confirmedCount = roomState?.confirmedCount ?? 0
+  const arrivingLateCount = roomState?.arrivingLateCount ?? 0
+
+  const viewerPairByMemberId = useMemo(() => {
+    const map = new Map<string, PairExplanation>()
+    if (!currentUserId || !groupAnalysis || !roomState?.members.length) return map
+    const pairKeyMemberMap = buildPairKeyMemberMap(
+      roomState.members as unknown as Parameters<typeof buildPairKeyMemberMap>[0],
+    )
+    const viewerPairs = (groupAnalysis.myPairs ?? groupAnalysis.pairExplanations ?? []).filter((pair) => {
+      const pairMembers = pairKeyMemberMap.get(pair.pairKey)
+      return Boolean(pairMembers?.some((member) => member.userId === currentUserId))
+    })
+    viewerPairs.forEach((pair) => {
+      const otherMember = pairKeyMemberMap
+        .get(pair.pairKey)
+        ?.find((member) => member.userId !== currentUserId)
+      if (otherMember) map.set(otherMember.userId, pair)
+    })
+    return map
+  }, [currentUserId, groupAnalysis, roomState?.members])
+
+  const eventStartMs = roomState?.eventDateTime ? Date.parse(roomState.eventDateTime) : Number.NaN
+  const canReportLate =
+    Boolean(blindBoxEventId) &&
+    Number.isFinite(eventStartMs) &&
+    Date.now() >= eventStartMs - 120 * 60_000 &&
+    Date.now() <= eventStartMs + 45 * 60_000
 
   // ── Tablemate card sheet ─────────────────────────────────────────────────
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -385,6 +458,10 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         logWarn('[GatheringRoom] Ignoring unknown poke emoji', { emoji })
         return
       }
+      if (!wsConnected) {
+        Taro.showToast({ title: '还没连上房间，稍后再试', icon: 'none', duration: TOAST_SHORT_MS })
+        return
+      }
       send({
         type: 'ROOM_POKE',
         userId: currentUserId,
@@ -392,7 +469,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         data: { targetUserId, emoji },
       })
       gatheringRoomAnalytics.track('room_poke', {
-        poolId: groupId,
+        poolId: roomState?.poolId,
         groupId,
         screen: 'gathering-room',
         targetUserId,
@@ -400,9 +477,9 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
       })
       haptics('light')
       setSelectedUserId(null)
-      Taro.showToast({ title: '已经替你传达啦', icon: 'none', duration: TOAST_SHORT_MS })
+      Taro.showToast({ title: '招呼已经发出啦', icon: 'none', duration: TOAST_SHORT_MS })
     },
-    [blindBoxEventId, currentUserId, groupId, send],
+    [blindBoxEventId, currentUserId, groupId, roomState?.poolId, send, wsConnected],
   )
 
   // ── Confirm attendance ───────────────────────────────────────────────────
@@ -416,13 +493,13 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         blindBoxEventId: response.blindBoxEventId,
       })
       gatheringRoomAnalytics.track('room_confirm_attendance', {
-        poolId: groupId,
+        poolId: roomState?.poolId,
         groupId,
         screen: 'gathering-room',
         blindBoxEventId: response.blindBoxEventId,
       })
       haptics('success')
-      Taro.showToast({ title: `座位已锁定，${formatMeetDayLabel(roomState?.eventDateTime)}`, icon: 'none', duration: TOAST_SHORT_MS })
+      Taro.showToast({ title: `已确认出席，${formatMeetDayLabel(roomState?.eventDateTime)}`, icon: 'none', duration: TOAST_SHORT_MS })
       // Seated animation: the refetched snapshot flips presence to confirmed
       // and the CSS transition on the seat body animates the shift.
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })
@@ -443,6 +520,53 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     confirmAttendanceMutation.mutate()
   }, [confirmAttendanceMutation, isSubmitting, ownConfirmed])
 
+  const lateMutation = useMutation({
+    mutationFn: async (estimatedLateMinutes: number) => {
+      if (!blindBoxEventId) {
+        throw new Error('当前活动暂未开放会晚到登记，请稍后再试')
+      }
+      await apiRequest({
+        path: `/api/blind-box-events/${encodeURIComponent(blindBoxEventId)}/attendance-status`,
+        method: 'POST',
+        data: { status: 'late', estimatedLateMinutes },
+      })
+    },
+    onSuccess: (_result, estimatedLateMinutes) => {
+      gatheringRoomAnalytics.track('room_confirm_attendance', {
+        poolId: roomState?.poolId,
+        groupId,
+        screen: 'gathering-room',
+        blindBoxEventId,
+        attendanceStatus: 'late',
+        estimatedLateMinutes,
+      })
+      haptics('success')
+      Taro.showToast({ title: '已经告诉大家你会晚到', icon: 'none', duration: TOAST_SHORT_MS })
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })
+    },
+    onError: (mutationError) => {
+      const message = mutationError instanceof Error ? mutationError.message : '晚到登记没成功'
+      logWarn('[GatheringRoom] Late report failed', { groupId, message })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_MEDIUM_MS })
+    },
+  })
+
+  const handleReportLate = useCallback(() => {
+    if (!canReportLate || lateMutation.isPending) return
+    const minuteOptions = [15, 30, 60]
+    haptics('light')
+    void Taro.showActionSheet({
+      itemList: ['会晚到 15 分钟', '会晚到 30 分钟', '会晚到 60 分钟'],
+    })
+      .then((result) => {
+        const minutes = minuteOptions[result.tapIndex]
+        if (minutes) lateMutation.mutate(minutes)
+      })
+      .catch(() => {
+        // User dismissed the sheet — no toast, no analytics.
+      })
+  }, [canReportLate, lateMutation])
+
   useResetOnShow(setIsSubmitting)
 
   return {
@@ -456,19 +580,29 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     presenceByUserId,
     currentUserId,
     ownConfirmed,
+    ownAttendanceStatus,
     presentCount,
+    confirmedCount,
+    arrivingLateCount,
     presentUserIds,
     enteringUserIds,
     playOwnDoorEntry,
     pokeBadge,
-    firstArriverText: firstArriver ? '你是第一个到的～悦仔陪你等大家推门进来' : null,
+    firstArriverText: firstArriver ? '你先来啦～悦仔陪你等大家推门进来' : null,
     celebrationText,
     activityLine,
     reducedMotion,
     pageVisible,
     selectedMember,
     isSubmitting,
+    isReportingLate: lateMutation.isPending,
     confirmPending: confirmAttendanceMutation.isPending,
+    canReportLate,
+    handleReportLate,
+    viewerPairByMemberId,
+    wsConnected,
+    eventPhase: roomState?.eventPhase ?? 'upcoming',
+    venue: roomState?.venue ?? null,
     retry: () =>
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] }),
     handleAvatarTap,

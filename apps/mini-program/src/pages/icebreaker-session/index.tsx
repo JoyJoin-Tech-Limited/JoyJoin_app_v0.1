@@ -43,6 +43,8 @@ import BonusGateOverlay from './overlays/BonusGateOverlay'
 import { useMiniScriptGeneration } from './hooks/useMiniScriptGeneration'
 import { useSocialActions } from './hooks/useSocialActions'
 import { useWarmupReadiness } from './hooks/useWarmupReadiness'
+import { useXiaoyueAgentAsk } from './hooks/useXiaoyueAgentAsk'
+import { XiaoyueAgentAsk } from './components/XiaoyueAgentAsk'
 import { getPhaseBroadcastWeight } from './viewModels/phaseBroadcast'
 import { WarmupActionBar } from './components/WarmupActionBar'
 import {
@@ -454,6 +456,34 @@ export default function IcebreakerSessionPage() {
     [session, hostUserId]
   )
   const playerCount = session?.playerCount ?? participants.length
+
+  // M1 bounded copilot: host-only Ask. Kept next to the other session hooks,
+  // BEFORE the host menu so `agent-reopen` can call it directly (no ref shim).
+  const xiaoyueAgentAsk = useXiaoyueAgentAsk({
+    session,
+    socialSessionId: socialSessionId ?? null,
+    isHost: isHost && phase === 'warmup',
+    offline: syncLost,
+    applySessionState: applySocialSessionState,
+    refetchSession: () => {
+      void socialSessionQuery.refetch()
+    },
+  })
+  const xiaoyueAgentAskNode =
+    xiaoyueAgentAsk.visible && xiaoyueAgentAsk.view ? (
+      <XiaoyueAgentAsk
+        view={xiaoyueAgentAsk.view}
+        onAccept={xiaoyueAgentAsk.accept}
+        onIgnore={xiaoyueAgentAsk.ignore}
+        onCloseSession={() => {
+          void xiaoyueAgentAsk.closeSession()
+        }}
+        onRetry={xiaoyueAgentAsk.retry}
+        onDismissFailure={xiaoyueAgentAsk.dismissFailure}
+        onAigcFeedbackTap={xiaoyueAgentAsk.onAigcFeedbackTap}
+      />
+    ) : undefined
+
   // W3 (AC-W3.4): stable callback so `handleGenerateStatements` does not churn
   // its identity every poll tick.
   const handleLieRosterLocked = useCallback(() => setLieRosterLocked(true), [])
@@ -808,8 +838,9 @@ export default function IcebreakerSessionPage() {
         isHost,
         tier: session?.eventTier ?? 'glow',
         vibe: apiVibeToClient(session?.vibe),
+        agentProactiveDisabled: session?.xiaoyueAgent?.policy.proactiveDisabled === true,
       }),
-    [phase, isHost, session?.eventTier, session?.vibe],
+    [phase, isHost, session?.eventTier, session?.vibe, session?.xiaoyueAgent?.policy.proactiveDisabled],
   )
 
   // ─── Wave 2 壳层定向 (AC-01/02/03) ───────────────────────────────────────
@@ -882,6 +913,8 @@ export default function IcebreakerSessionPage() {
         setIsTierSheetOpen(true)
       } else if (selected?.id === 'suggestion') {
         handleRequestAdaptiveSuggestion()
+      } else if (selected?.id === 'agent-reopen') {
+        void xiaoyueAgentAsk.reopenPolicy()
       } else if (selected?.id === 'early-end') {
         // PM-locked copy (2026-07-17): next-chapter framing, neutral tone,
         // consequence stated plainly. Analytics: shown/confirm/cancel funnel.
@@ -921,7 +954,7 @@ export default function IcebreakerSessionPage() {
     } catch {
       // User cancelled the action sheet
     }
-  }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion, performSocialAction, playerCount, persistCoachmarkSeen])
+  }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion, performSocialAction, playerCount, persistCoachmarkSeen, xiaoyueAgentAsk.reopenPolicy])
 
   const handleAigcFeedbackTap = useCallback(
     (location: 'footer' | 'suggestion' | 'card') => {
@@ -1115,7 +1148,10 @@ export default function IcebreakerSessionPage() {
     <XiaoyueSessionShell
       phase={phase}
       sessionPack={session?.xiaoyueSessionPack}
-      adaptiveSuggestion={suggestionOverlayOpen ? adaptiveSuggestion : undefined}
+      adaptiveSuggestion={
+        suggestionOverlayOpen && !xiaoyueAgentAsk.visible ? adaptiveSuggestion : undefined
+      }
+      agentAsk={xiaoyueAgentAskNode}
       isHost={isHost}
       syncLost={syncLost}
       showHostMenu={hostMenuItems.length > 0}

@@ -954,15 +954,54 @@ async function captureWelcomeBack() {
 // ─── Gathering room (集结房间, 2026-08-15) ──────────────────────
 // Presence arrives over the mock WS endpoint (/ws on the mock server): after
 // USER_JOINED the mock replies ROOM_PRESENCE_STATE with five of the six fixture
-// members (the owl is absent), so the header must reach 已到 5/6 before we
-// capture. Every member's avatar renders at their own seat — the absent owl
-// shows as a muted seat-anchored silhouette (占位剪影) with its held-place
-// name card (fixed 2026-09-10: absent members previously rendered no avatar
-// at all, so on device every offline/unconfirmed tablemate was a blank seat).
+// members (the owl is absent), so the header must reach 在房间 5/6 before we
+// capture. "在房间" is live WS presence only; confirmed/late are persistent
+// attendance facts and must never be folded into that counter. Every member's
+// avatar renders at their own seat — the absent owl shows as a muted
+// seat-anchored silhouette (占位剪影) with its held-place name card (fixed
+// 2026-09-10: absent members previously rendered no avatar at all, so on
+// device every offline/unconfirmed tablemate was a blank seat).
 // Avatar art resolves to the approved full-starter composites via the
 // CDN-intercept in withBrowserPage (served from apps/mini-program/src/assets).
-async function captureGatheringRoom(viewport = V17_VIEWPORT) {
+async function captureGatheringRoom(
+  viewport = V17_VIEWPORT,
+  { forceRoomArtFailure = false, longNickname = false, ended = false } = {}
+) {
   return withBrowserPage(viewport, async (page) => {
+    // Confirmed-own fixture: the original mock still supplies one late member,
+    // one absent owl and five WS-present members. Only REST attendance is
+    // overridden so the success state is exercised without pretending
+    // pending == confirmed.
+    await page.route('**/api/pool-groups/*/room-state', async (route) => {
+      const response = await route.fetch()
+      const roomState = await response.json()
+      roomState.members = roomState.members.map((member) => {
+        if (member.userId === 'user-screenshot-001') {
+          return {
+            ...member,
+            attendanceStatus: 'confirmed',
+            ...(longNickname
+              ? { displayName: '爱在黄昏散步喜欢看海听现场音乐的超长昵称' }
+              : {}),
+          }
+        }
+        return member
+      })
+      roomState.confirmedCount = roomState.members.filter(
+        (member) => member.attendanceStatus === 'confirmed'
+          || member.attendanceStatus === 'late').length
+      roomState.arrivingLateCount = roomState.members.filter(
+        (member) => member.attendanceStatus === 'late').length
+      if (ended) {
+        roomState.eventPhase = 'ended'
+        roomState.eventDateTime = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+      }
+      await route.fulfill({ response, json: roomState })
+    })
+    if (forceRoomArtFailure) {
+      await page.route('**/pages/gathering-room/assets/room-composite-v2.webp', (route) => route.abort())
+    }
+
     await page.goto(
       `${H5_BASE_URL}/#/pages/gathering-room/index?groupId=group-screenshot-001&motion=reduce`,
       { waitUntil: 'domcontentloaded', timeout: 60000 }
@@ -971,75 +1010,198 @@ async function captureGatheringRoom(viewport = V17_VIEWPORT) {
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
     await page.waitForSelector('.gathering-room__action-bar', { state: 'visible', timeout: 15000 })
-    // All six seats mount — five live members at full color, the absent owl
-    // as a muted silhouette at its own seat.
-    await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__seat').length === 6,
-      undefined,
-      { timeout: 10000 }
-    )
-    await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__seat-body--absent').length === 1,
-      undefined,
-      { timeout: 10000 }
-    )
-    // WS presence applied: the floating pill carries the shared countdown
-    // clock + full attendance (header strip was removed in the 2026-08-27
-    // polish — its absence is part of the gate).
-    // Whitespace-tolerant: the count Texts use a non-breaking space.
+    await page.waitForSelector('.gathering-room__success-card', { state: 'visible', timeout: 10000 })
+    if (ended) {
+      await page.waitForSelector('.gathering-room__memory-btn', { state: 'visible', timeout: 10000 })
+      await page.waitForFunction(() => {
+        const countdown = document.querySelector('.gathering-room__countdown-chip')
+        return Boolean(countdown?.textContent?.includes('活动已结束'))
+      }, undefined, { timeout: 10000 })
+    }
     await page.waitForFunction(() => {
-      const pill = document.querySelector('.gathering-room__pill')
-      if (!pill) return false
-      if (document.querySelector('.gathering-room__header') || document.querySelector('.gathering-room__header-subtitle')) return false
-      if (!pill.querySelector('.segmented-countdown-clock__digits')) return false
-      const text = pill.textContent ?? ''
-      return /已到\s*5\/6/.test(text) && /已确认\s*2\/6/.test(text)
+      const status = document.querySelector('.gathering-room__status-stack')
+      const countdown = document.querySelector('.gathering-room__countdown-chip')
+      const arrive = document.querySelector('.gathering-room__arrive-chip')
+      if (!status || !countdown || !arrive) return false
+      if (countdown === arrive || countdown.contains(arrive) || arrive.contains(countdown)) return false
+      const text = status.textContent ?? ''
+      return /在房间\s*5\/6/.test(text)
+        && /已确认\s*3\/6/.test(text)
+        && !/已到/.test(text)
     }, undefined, { timeout: 15000 })
-    // Universal name plates: all six members render a plate, always in the
-    // seated hang below the feet (avatars — or the absent silhouette — are at
-    // every anchor). The own member's plate carries the 我 chip.
-    await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__name-card').length === 6,
-      undefined,
-      { timeout: 10000 }
-    )
-    await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__name-card--seated').length === 6,
-      undefined,
-      { timeout: 10000 }
-    )
-    await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__me-chip').length === 1,
-      undefined,
-      { timeout: 10000 }
-    )
-    // Every rendered avatar (including the absent silhouette) resolved to its
-    // approved full-starter composite.
+    await page.waitForFunction(() => {
+      const cards = document.querySelectorAll('.gathering-room-scene__name-card')
+      const placedCards = document.querySelectorAll(
+        '.gathering-room-scene__name-card--above,' +
+        '.gathering-room-scene__name-card--left,' +
+        '.gathering-room-scene__name-card--right,' +
+        '.gathering-room-scene__name-card--below')
+      return document.querySelectorAll('.gathering-room-scene__seat').length === 6
+        && cards.length === 6
+        && placedCards.length === 6
+        && document.querySelectorAll('.gathering-room-scene__seat-body--absent').length === 1
+        && document.querySelectorAll('.gathering-room-scene__me-chip').length === 1
+        && document.querySelectorAll('.gathering-room__confirm-btn').length === 0
+        && document.querySelectorAll('.gathering-room__pill').length === 0
+        && document.querySelectorAll('.gathering-room-scene__name-card--seated').length === 0
+    }, undefined, { timeout: 10000 })
     await page.waitForFunction(() => {
       const bodies = Array.from(document.querySelectorAll('.pixel-avatar-composite__body'))
       return bodies.length === 6 && bodies.every((el) =>
         /full-starter-v2\.[a-f0-9]{12}\.webp/.test(el.getAttribute('src') ?? ''))
+        && document.querySelectorAll('.pixel-avatar-composite__asset-warning').length === 0
     }, undefined, { timeout: 10000 })
-    // No avatar fell back to the error/placeholder state.
-    await page.waitForFunction(
-      () => document.querySelectorAll('.pixel-avatar-composite__asset-warning').length === 0,
-      undefined,
-      { timeout: 10000 }
-    )
-    // Give the room art + six composites time to decode via the asset proxy.
-    await page.waitForTimeout(2500)
+
+    if (forceRoomArtFailure) {
+      await page.waitForFunction(() => {
+        const fallback = document.querySelector('.gathering-room-scene__layer--fallback-room')
+        const scene = document.querySelector('.gathering-room-scene')
+        return fallback && scene
+          && getComputedStyle(fallback).opacity === '1'
+          && getComputedStyle(scene).visibility === 'visible'
+      }, undefined, { timeout: 10000 })
+    } else {
+      // A SPA-fallback HTML response is not art: require a decoded bitmap and
+      // the visible composite layer, not merely a 200 response or an <img> node.
+      await page.waitForFunction(() => {
+        const visibleDecoded = (selector) => {
+          const layer = document.querySelector(selector)
+          if (!layer || getComputedStyle(layer).opacity !== '1') return false
+          const image = layer.tagName === 'IMG'
+            ? layer
+            : layer.querySelector('img') ?? layer.shadowRoot?.querySelector('img')
+          return Boolean(image?.complete && image.naturalWidth > 0)
+        }
+        return visibleDecoded('.gathering-room-scene__layer--composite')
+          && visibleDecoded('.gathering-room-scene__layer--table-overlay')
+      }, undefined, { timeout: 15000 })
+    }
+
+    await page.waitForTimeout(1200)
+    const geometry = await page.evaluate((expectTableOverlay) => {
+      const toRect = (element) => {
+        const rect = element.getBoundingClientRect()
+        return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height }
+      }
+      const overlapArea = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+        * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+      const viewportClip = (rect) => Math.max(0, -rect.left) + Math.max(0, -rect.top)
+        + Math.max(0, rect.right - innerWidth) + Math.max(0, rect.bottom - innerHeight)
+      const scene = document.querySelector('.gathering-room-scene')
+      const status = document.querySelector('.gathering-room__status-stack')
+      const cards = Array.from(document.querySelectorAll('.gathering-room-scene__name-card')).map(toRect)
+      const cardPairs = []
+      for (let i = 0; i < cards.length; i += 1) {
+        for (let j = i + 1; j < cards.length; j += 1) {
+          const area = overlapArea(cards[i], cards[j])
+          if (area !== 0) cardPairs.push({ i, j, area })
+        }
+      }
+      const sceneRect = toRect(scene)
+      const statusRect = toRect(status)
+      const sceneScale = sceneRect.width / 750
+      const cardEdgeRpx = cards.map((rect) => Math.min(
+        rect.left - sceneRect.left,
+        sceneRect.right - rect.right,
+        rect.top - sceneRect.top,
+        sceneRect.bottom - rect.bottom
+      ) / sceneScale)
+      const overlay = expectTableOverlay
+        ? document.querySelector('.gathering-room-scene__layer--table-overlay')
+        : null
+      const overlayRect = overlay ? toRect(overlay) : null
+      const seat0 = document.querySelector('.gathering-room-scene__seat')
+      const seat0Body = seat0.querySelector('.gathering-room-scene__seat-body')
+      const seat0BodyRect = toRect(seat0Body)
+      const cardLayer = document.querySelector('.gathering-room-scene__name-card-layer')
+      return {
+        sceneRatio: sceneRect.width / sceneRect.height,
+        expectedRatio: 750 / 960,
+        ratioError: Math.abs(sceneRect.width / sceneRect.height - 750 / 960),
+        cardPairs,
+        clippedCards: cards.map((rect, index) => ({ index, pixels: viewportClip(rect) })).filter((item) => item.pixels !== 0),
+        statusOverlaps: cards.map((rect, index) => ({ index, area: overlapArea(statusRect, rect) })).filter((item) => item.area !== 0),
+        minCardEdgeRpx: Math.min(...cardEdgeRpx),
+        tableOverlayZ: overlay ? Number(getComputedStyle(overlay).zIndex) : null,
+        seat0Z: Number(getComputedStyle(seat0).zIndex),
+        cardLayerZ: Number(getComputedStyle(cardLayer).zIndex),
+        seat0BodyBottomPx: seat0BodyRect.bottom,
+        tableOverlayTopPx: overlayRect?.top ?? null,
+        seat0TableOverlapPx: overlayRect
+          ? Math.max(0, seat0BodyRect.bottom - Math.max(seat0BodyRect.top, overlayRect.top))
+          : null,
+        sceneVisibility: getComputedStyle(scene).visibility,
+      }
+    }, !forceRoomArtFailure)
+    if (geometry.ratioError > 0.002 || geometry.cardPairs.length > 0
+      || geometry.clippedCards.length > 0 || geometry.statusOverlaps.length > 0
+      || geometry.minCardEdgeRpx < 15.5
+      || geometry.seat0Z !== 49 || geometry.cardLayerZ !== 90
+      || geometry.sceneVisibility !== 'visible'
+      || (!forceRoomArtFailure && (
+        geometry.tableOverlayZ !== 52 || geometry.seat0TableOverlapPx <= 0
+      ))) {
+      throw new Error(`Gathering-room rendered geometry failed: ${JSON.stringify(geometry)}`)
+    }
 
     return screenshotViewport(page)
   })
 }
 
-register('gathering-room', captureGatheringRoom)
+async function captureGatheringRoomMemory(viewport = V17_VIEWPORT) {
+  return withBrowserPage(viewport, async (page) => {
+    await page.route('**/api/pool-groups/*/room-state', async (route) => {
+      const response = await route.fetch()
+      const roomState = await response.json()
+      roomState.eventPhase = 'ended'
+      roomState.eventDateTime = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+      await route.fulfill({ response, json: roomState })
+    })
 
-// Compact-device variant (360×640) — verifies seat anchors hold on short
-// viewports (scene is 960rpx max-height with %-anchored seats).
+    await page.goto(
+      `${H5_BASE_URL}/#/pages/gathering-room/memory/index?groupId=group-screenshot-001&motion=reduce`,
+      { waitUntil: 'domcontentloaded', timeout: 60000 }
+    )
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await page.waitForSelector('.gathering-room-memory', { state: 'visible', timeout: 15000 })
+    await page.waitForSelector('.gathering-room-memory__share', { state: 'visible', timeout: 10000 })
+    await page.waitForFunction(() => {
+      const root = document.querySelector('.gathering-room-memory')
+      const note = document.querySelector('.gathering-room-memory__note')
+      const share = document.querySelector('.gathering-room-memory__share')
+      const members = document.querySelectorAll('.gathering-room-memory__member')
+      const fallbackHeads = document.querySelectorAll(
+        '.gathering-room-memory__member-avatar--empty .archetype-head'
+      )
+      const text = root?.textContent ?? ''
+      return Boolean(note && note.textContent?.includes('没有奖励'))
+        && Boolean(share) && !share.hasAttribute('disabled')
+        && members.length === 6
+        && fallbackHeads.length === 6
+        && text.includes('当前造型')
+    }, undefined, { timeout: 10000 })
+    await page.waitForTimeout(600)
+    return screenshotViewport(page)
+  })
+}
+
+register('gathering-room', captureGatheringRoom)
+register('gathering-room-ended', () => captureGatheringRoom(V17_VIEWPORT, { ended: true }))
+register('gathering-room-memory', captureGatheringRoomMemory)
 register('gathering-room-compact', () => captureGatheringRoom({
   ...V17_VIEWPORT,
   viewport: { width: 360, height: 640 },
+}))
+register('gathering-room-long-name', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 320, height: 568 },
+}, {
+  longNickname: true,
+}))
+register('gathering-room-art-fallback', () => captureGatheringRoom(V17_VIEWPORT, {
+  forceRoomArtFailure: true,
 }))
 register('profile-review-ceremony', captureProfileReviewCeremony)
 register('onboarding-essential-step1', () => captureEssentialData())

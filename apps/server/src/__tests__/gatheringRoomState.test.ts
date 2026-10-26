@@ -243,9 +243,13 @@ describe("GET /api/pool-groups/:groupId/room-state", () => {
       expect(res.status).toBe(200);
       const body: any = await res.json();
       expect(body.groupId).toBe("group-1");
+      expect(body.poolId).toBe("pool-1");
       expect(body.blindBoxEventId).toBe("bbe-1");
+      expect(body.eventPhase).toBe("upcoming");
       expect(body.totalParticipants).toBe(2);
       expect(body.confirmedCount).toBe(1);
+      expect(body.arrivingLateCount).toBe(0);
+      expect(body.venue).toBeNull();
       expect(body.members).toHaveLength(2);
 
       // Visible age → ageLabel populated; hidden industry → niche label null
@@ -291,6 +295,63 @@ describe("GET /api/pool-groups/:groupId/room-state", () => {
       expect(body.confirmedCount).toBe(0);
       expect(body.members.every((m: any) => m.attendanceStatus === "pending")).toBe(true);
       expect(mockGetAttendanceStatuses).not.toHaveBeenCalled();
+    });
+  });
+
+  it("counts late as confirmed, reports arrivingLateCount and the assigned venue", async () => {
+    mockFindGroup.mockResolvedValue({
+      ...GROUP,
+      finalDateTime: new Date(Date.now() + 60 * 60 * 1000),
+      venueName: "弥所",
+      venueAddress: "南山区科苑路 1 号",
+      venueAssignmentStatus: "assigned",
+    });
+    selectQueue = [MEMBER_ROWS];
+    mockGetAttendanceStatuses.mockResolvedValue([
+      { userId: "user-1", status: "late" },
+      { userId: "user-2", status: "confirmed" },
+    ]);
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/room-state`);
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.confirmedCount).toBe(2);
+      expect(body.arrivingLateCount).toBe(1);
+      expect(body.eventPhase).toBe("upcoming");
+      expect(body.venue).toEqual({
+        name: "弥所",
+        address: "南山区科苑路 1 号",
+        status: "assigned",
+      });
+      expect(body.members[0].attendanceStatus).toBe("late");
+    });
+  });
+
+  it("marks a completed pool as ended", async () => {
+    mockFindPool.mockResolvedValue({ ...POOL, status: "completed" });
+    selectQueue = [MEMBER_ROWS];
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/room-state`);
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.eventPhase).toBe("ended");
+      expect(body.poolId).toBe("pool-1");
+    });
+  });
+
+  it("does not let the legacy confirm button downgrade an explicit late RSVP", async () => {
+    const { storage: storageMock } = await import("../storage");
+    mockFindGroup.mockResolvedValue({ id: "group-1", blindBoxEventId: "bbe-1" });
+    (storageMock.getAttendanceStatus as any).mockResolvedValue({ status: "late" });
+
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/confirm-attendance`, {
+        method: "POST",
+      });
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.attendanceStatus).toBe("late");
+      expect(storageMock.updateAttendanceStatus).not.toHaveBeenCalled();
     });
   });
 

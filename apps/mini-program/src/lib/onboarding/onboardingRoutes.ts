@@ -31,6 +31,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   squadUnboxing: 'pages/squad-unboxing/index',
   poolGroupDetail: 'pages/pool-group-detail/index',
   gatheringRoom: 'pages/gathering-room/index',
+  gatheringRoomMemory: 'pages/gathering-room/memory/index',
   centerTabEmpty: 'pages/center-tab-empty/index',
   icebreakerSession: 'pages/icebreaker-session/index',
   tierSelector: 'pages/icebreaker-session/tier-selector/index',
@@ -83,6 +84,7 @@ export const MINI_PROGRAM_ROUTES = {
   squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
   poolGroupDetail: `/${MINI_PROGRAM_PAGE_PATHS.poolGroupDetail}`,
   gatheringRoom: `/${MINI_PROGRAM_PAGE_PATHS.gatheringRoom}`,
+  gatheringRoomMemory: `/${MINI_PROGRAM_PAGE_PATHS.gatheringRoomMemory}`,
   centerTabEmpty: `/${MINI_PROGRAM_PAGE_PATHS.centerTabEmpty}`,
   icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
   tierSelector: `/${MINI_PROGRAM_PAGE_PATHS.tierSelector}`,
@@ -244,6 +246,7 @@ export const MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT = 'pages/gathering-room
 
 export const MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_PAGES = [
   'index',
+  'memory/index',
 ] as const
 
 export const MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT = 'pages/payments' as const

@@ -1,0 +1,158 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+// Rendered inside pages/gathering-room — keep component styles in the page
+// WXSS so Taro cannot chunk them into a subpackage file this route never loads.
+@use '../../../components/profile/PixelAvatarComposite';
+@use '../../../components/mascot/ArchetypeHead';
+@use '../../../components/ui/Button';
+
+.gathering-room-memory {
+  @include viewport-min-height;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: calc(env(safe-area-inset-top) + 40rpx) 32rpx
+    calc(env(safe-area-inset-bottom) + 40rpx);
+  background: $color-bg-warm-to;
+
+  &--state {
+    justify-content: center;
+  }
+
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12rpx;
+    padding: 32rpx 24rpx 24rpx;
+    border-radius: 40rpx;
+    background: $color-surface;
+    box-shadow: 0 16rpx 48rpx rgba($color-text-primary, 0.06);
+  }
+
+  &__eyebrow {
+    font-size: $font-size-xs;
+    letter-spacing: 4rpx;
+    color: $color-text-tertiary;
+  }
+
+  &__title {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__venue {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: $font-size-sm;
+    color: $color-primary-dark;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__avatar {
+    width: 280rpx;
+    height: 420rpx;
+    margin-top: 12rpx;
+  }
+
+  &__avatar-image {
+    width: 168rpx;
+    height: 168rpx;
+    margin-top: 12rpx;
+    border-radius: 50%;
+  }
+
+  &__caption {
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary;
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+    padding: 28rpx;
+    border-radius: 32rpx;
+    background: $color-surface;
+  }
+
+  &__card-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__members {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20rpx 12rpx;
+  }
+
+  &__member {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__member-avatar {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    background: $color-bg-warm-mid;
+
+    &--empty {
+      border: 1rpx dashed rgba($color-text-tertiary, 0.45);
+    }
+  }
+
+  &__member-name {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__note {
+    font-size: $font-size-2xs;
+    line-height: 1.6;
+    color: $color-text-tertiary;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+    margin-top: auto;
+  }
+
+  &__share {
+    width: 100%;
+    min-height: 88rpx;
+    border: 0;
+    border-radius: 999rpx;
+    background: $color-primary;
+    color: $color-surface;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+
+    &[disabled] {
+      background: rgba($color-primary, 0.18);
+      color: rgba($color-surface, 0.75);
+    }
+  }
+
+  &__hint {
+    font-size: $font-size-2xs;
+    line-height: 1.6;
+    text-align: center;
+    color: $color-text-tertiary;
+  }
+}

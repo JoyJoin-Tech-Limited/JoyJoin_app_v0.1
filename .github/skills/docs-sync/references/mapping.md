@@ -7,7 +7,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 **Priority rule:** Always update canonical docs first. Canonical order:
 1. `DEVELOPER_QUICK_REFERENCE.md`
 2. `docs/architecture/current-state.md`
-3. `docs/` top-level files (e.g. `onboarding-flow.md`, `MATCHING_ALGORITHM_REFERENCE.md`, `observability.md`)
+3. `docs/` domain files (e.g. `systems/onboarding-flow.md`, `systems/MATCHING_ALGORITHM_REFERENCE.md`, `systems/observability.md`)
 4. `.github/skills/` SKILL.md files
 5. Workspace-level READMEs (`apps/server/src/README.md`, `packages/shared/src/README.md`, etc.)
 6. Agent memory (via MCP `agentMemory`) — last, after docs are authoritative
@@ -34,7 +34,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 | `packages/shared/src/README.md` | — | Add/update entry for the new or changed component — include export path, purpose, and intended use |
 | `.github/skills/design-system-governance/SKILL.md` | — | Update the token/variant/component reference if a new CVA variant or design token was added |
 | `.github/skills/frontend-component-architecture/SKILL.md` | — | Update shared primitive listing if a new primitive was added |
-| `docs/button-design.md` | — | If the change involves the `Button` primitive or `buttonVariants.ts` — add variant rationale |
+| `docs/design/button-design.md` | — | If the change involves the `Button` primitive or `buttonVariants.ts` — add variant rationale |
 | `apps/admin-client/src/components/ui/button.tsx` comments | — | Confirm re-export wrapper still documents the correct shared source |
 
 **When to skip:** Purely internal implementation change (e.g. adding a className helper function used only inside the file) with no change to exported API.
@@ -85,10 +85,10 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 | Doc | Agent memory | What to update |
 |-----|-------------|---------------|
 | `PRODUCT_REQUIREMENTS.md` | — | Mini-Program screen families table: add new page, update flow description, or mark feature as shipped |
-| `docs/mini-program-product-reference.md` | — | Page inventory, user flow description, AI features note, platform-parity table |
-| `docs/PLATFORM_COORDINATION.md` | Update if cross-platform auth/payment flow facts were cached | Cross-platform auth and payment table; mini-program file map |
-| `docs/PERSONALITY_TEST_SYSTEM.md` | — | Client surfaces table (web vs mini-program) if assessment UI or storage changes |
-| `docs/onboarding-flow.md` | Update if onboarding route list was memorized | Mini Program path mirror table if routes or auth endpoints change |
+| `docs/mini-program/mini-program-product-reference.md` | — | Page inventory, user flow description, AI features note, platform-parity table |
+| `docs/reference/PLATFORM_COORDINATION.md` | Update if cross-platform auth/payment flow facts were cached | Cross-platform auth and payment table; mini-program file map |
+| `docs/systems/PERSONALITY_TEST_SYSTEM.md` | — | Client surfaces table (web vs mini-program) if assessment UI or storage changes |
+| `docs/systems/onboarding-flow.md` | Update if onboarding route list was memorized | Mini Program path mirror table if routes or auth endpoints change |
 | `docs/architecture/current-state.md` | — | Mini-program onboarding / payment / matching / icebreaker bullets |
 | `DEVELOPER_QUICK_REFERENCE.md` | — | Taro mini-program table |
 | `apps/mini-program/README.md` | — | Source-of-truth bullets |
@@ -134,7 +134,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 | Doc | Agent memory | What to update |
 |-----|-------------|---------------|
 | `PRODUCT_REQUIREMENTS.md` | — | Onboarding screen family: update step sequence, completion flags, or new entry/exit points |
-| `docs/onboarding-flow.md` | Update if step sequence was memorized | Update step sequence, completion flags, and authority chain diagram if any step was added, removed, or reordered |
+| `docs/systems/onboarding-flow.md` | Update if step sequence was memorized | Update step sequence, completion flags, and authority chain diagram if any step was added, removed, or reordered |
 | `DEVELOPER_QUICK_REFERENCE.md` | — | Update the active onboarding steps list; add/remove banned legacy identifiers if a column was added or deprecated |
 | `.github/skills/onboarding-state-architecture/SKILL.md` | Update if step authority chain was cached | Update active onboarding steps table, authority chain, and legacy quarantine list |
 | `docs/architecture/current-state.md` | — | If overall auth architecture or route gating changed |
@@ -158,7 +158,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 | Doc | Agent memory | What to update |
 |-----|-------------|---------------|
 | `PRODUCT_REQUIREMENTS.md` | — | Matching-State screen family: update data flow, reveal patterns, user stories, or acceptance criteria |
-| `docs/MATCHING_ALGORITHM_REFERENCE.md` | — | Update dimension descriptions or threshold ranges if scoring logic changed; do not expose raw numeric weights |
+| `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` | — | Update dimension descriptions or threshold ranges if scoring logic changed; do not expose raw numeric weights |
 | `docs/architecture/connection-points-system.md` | — | Update data flow, component inventory, or platform parity table if connection-points / spark-prediction UI changed |
 | `.github/skills/matching-domain/SKILL.md` | Update if scoring rules or signal boundaries were cached | Update signal boundary table, execution safety notes, or AI explanation separation rules |
 | `DEVELOPER_QUICK_REFERENCE.md` | — | If a new legacy constraint was added (e.g. a banned signal type) |
@@ -180,7 +180,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 | Doc | Agent memory | What to update |
 |-----|-------------|---------------|
 | `.github/skills/social-icebreaker-domain/SKILL.md` | Update if phase list or host authority rules were cached | Update phase list, host/player authority table, secrecy boundary rules, or rejoin semantics if any changed |
-| `docs/icebreaker-system.md` (if present) | — | Update phase lifecycle and action descriptions |
+| `docs/icebreaker/icebreaker-system.md` | — | Update phase lifecycle and action descriptions |
 | `DEVELOPER_QUICK_REFERENCE.md` | — | If a new icebreaker route was added or a route was removed |
 
 **Secrecy guardrail:** Never document the server-side truth data (e.g. `isLie` in lie-detective) in client-visible documentation. Only document sanitized state fields.
@@ -199,7 +199,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 
 | Doc | Agent memory | What to update |
 |-----|-------------|---------------|
-| `docs/observability.md` | — | Update metric names, log field list, or health endpoint description |
+| `docs/systems/observability.md` | — | Update metric names, log field list, or health endpoint description |
 | `.github/skills/platform-observability-and-ops/SKILL.md` | — | Update the structured logging field table or metrics reference |
 | `docs/runbooks/` | — | If a new alert or health check was added, add/update the relevant runbook |
 

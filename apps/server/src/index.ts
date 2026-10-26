@@ -17,6 +17,7 @@ import { startPoolMatchingWatchdog } from "./lib/poolMatchingWatchdog";
 import { startVenueTbdRetryScheduler } from "./lib/venueTbdRetryScheduler";
 import { startSubscribeReminderScheduler } from "./lib/subscribeReminderScheduler";
 import { startPoolCompletionSweepScheduler } from "./lib/poolCompletionSweep";
+import { startSocialAgentEventsRetentionScheduler } from "./lib/socialAgentEventsRetention";
 import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
@@ -194,6 +195,9 @@ app.use((req, res, next) => {
       // to completed at event start +3h — "event ended" no longer depends on
       // manual admin PATCH.
       startPoolCompletionSweepScheduler();
+      // M1 episode retention: independent daily, bounded, fail-open cleanup.
+      // It never shares the 5-minute social-session TTL sweep semantics.
+      startSocialAgentEventsRetentionScheduler();
     });
   } catch (error) {
     logger.error("Failed to start server", { error: String(error) });

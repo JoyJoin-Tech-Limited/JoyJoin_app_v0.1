@@ -22,21 +22,21 @@
   // live activity ticker, all centred under the nav bar. Replaces the old
   // single cramped pill (units-under-digits, three data clusters in one row).
   &__status-stack {
-    position: absolute;
-    top: calc(env(safe-area-inset-top) + 24rpx);
-    left: 50%;
+    position: relative;
     z-index: 10;
-    transform: translateX(-50%);
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12rpx;
-    max-width: calc(100vw - 48rpx);
+    box-sizing: border-box;
+    width: 100%;
+    padding: calc(env(safe-area-inset-top) + 24rpx) 24rpx 8rpx;
   }
 
   &__countdown-chip {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6rpx;
     padding: 14rpx 28rpx;
     border-radius: 999rpx;
@@ -46,11 +46,19 @@
     white-space: nowrap;
   }
 
+  &__countdown-pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 2rpx;
+  }
+
   &__countdown-num {
+    min-width: 2ch;
     font-family: $font-mono;
     font-size: 32rpx;
     font-weight: $font-weight-bold;
     line-height: 1.1;
+    text-align: center;
     color: $color-text-primary-warm;
   }
 
@@ -131,6 +139,7 @@
   &__way-caption {
     font-size: $font-size-2xs;
     color: $color-text-tertiary;
+    white-space: nowrap;
   }
 
   // Live activity ticker ("清风 推门进来了" / "清风 锁定了座位 · 还差 2 人").
@@ -227,12 +236,17 @@
     width: 100%;
   }
 
+  &__memory-btn {
+    width: 100%;
+    margin-bottom: 12rpx;
+  }
+
   // Confirmed success card — the locked-seat state is the win moment, not a
   // disabled dead end. Purple seal + gold ring + soft glow pulse.
   &__success-card {
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 20rpx;
     width: 100%;
     box-sizing: border-box;
@@ -281,6 +295,7 @@
 
   &__success-copy {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: 6rpx;
     min-width: 0;
@@ -295,9 +310,59 @@
     text-overflow: ellipsis;
   }
 
+  &__arrival-prep {
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+    margin-top: 8rpx;
+    padding-top: 12rpx;
+    border-top: 1rpx solid rgba($color-border, 0.6);
+  }
+
+  &__arrival-time {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+  }
+
+  &__arrival-venue {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-primary-dark;
+  }
+
+  &__arrival-address,
+  &__arrival-route {
+    font-size: $font-size-2xs;
+    line-height: 1.45;
+    color: $color-text-tertiary;
+  }
+
   &__success-sub {
     font-size: $font-size-xs;
     color: $color-text-tertiary;
+  }
+
+  &__late-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    min-height: 88rpx;
+    padding: 0 24rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.06);
+    color: $color-primary-dark;
+  }
+
+  &__late-link--done {
+    background: transparent;
+    color: $color-text-tertiary;
+  }
+
+  &__late-link-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
   }
 
   &__detail-btn {

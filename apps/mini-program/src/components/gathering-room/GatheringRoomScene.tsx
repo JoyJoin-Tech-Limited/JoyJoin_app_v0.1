@@ -5,6 +5,10 @@ import { ROOM_POKE_EMOJIS } from '@shared/wsEvents'
 import type { EquipmentItemView, EquipmentOutfitView } from '@joyjoin/shared/schema'
 import { localAsset } from '../../lib/utils/cdnAssets'
 import { logWarn } from '../../lib/utils/logger'
+import {
+  ROOM_TABLE_OVERLAY,
+  ROOM_TABLE_OVERLAY_STYLE,
+} from './roomTableOverlay'
 import PixelAvatarComposite from '../profile/PixelAvatarComposite'
 import ArchetypeHead from '../mascot/ArchetypeHead'
 import './GatheringRoomScene.scss'
@@ -57,12 +61,12 @@ const ROOM_COMPOSITE_PATH = '/pages/gathering-room/assets/room-composite-v2.webp
  *  Two extra standing spots along the side walls handle 7–8 member groups
  *  (feet on the floor line, clear of the console and the plant). */
 const SEAT_ANCHORS = [
-  { x: 50, y: 36 }, // 0 back
-  { x: 35, y: 45 }, // 1 mid-left
-  { x: 65, y: 45 }, // 2 mid-right
-  { x: 33, y: 58 }, // 3 front-left
-  { x: 50, y: 68.5 }, // 4 front
-  { x: 67, y: 59 }, // 5 front-right
+  { x: 48.8, y: 38.8 }, // 0 back
+  { x: 34.3, y: 44.4 }, // 1 mid-left
+  { x: 65.3, y: 44.4 }, // 2 mid-right
+  { x: 32.5, y: 57.4 }, // 3 front-left
+  { x: 50.1, y: 71.3 }, // 4 front
+  { x: 67.1, y: 57.4 }, // 5 front-right
 ] as const
 
 const EXTRA_SEAT_ANCHORS = [
@@ -114,9 +118,9 @@ const SEATED_OFFSETS: Record<number, { dx: number; dy: number }> = {
   0: { dx: 0, dy: 18 },
   1: { dx: 16, dy: 8 },
   2: { dx: -16, dy: 8 },
-  3: { dx: 14, dy: -14 },
-  4: { dx: 0, dy: -18 },
-  5: { dx: -14, dy: -14 },
+  3: { dx: 10, dy: 0 },
+  4: { dx: 0, dy: 0 },
+  5: { dx: -10, dy: 0 },
 }
 
 /** Scene box in rpx — the composite art is 750×960 and the scene box mirrors
@@ -176,6 +180,8 @@ export interface GatheringRoomSceneProps {
   onQuickPokeProfile?: (member: GatheringRoomMemberProfile) => void
   onDismissQuickPoke?: () => void
   reducedMotion: boolean
+  /** Uniformly fitted design-space geometry; null until the wrapper is measured. */
+  layout: { width: number; height: number; scale: number } | null
   /** Pause all loops when the page is hidden (WeChat page-stack). */
   pageVisible: boolean
   onAvatarTap?: (member: GatheringRoomMemberProfile) => void
@@ -229,6 +235,7 @@ interface GatheringRoomSeatProps {
   playOwnDoorEntry: boolean
   pokeBadge: GatheringRoomPokeBadge | null
   reducedMotion: boolean
+  pxPerRpx: number
   onAvatarTap?: (member: GatheringRoomMemberProfile) => void
 }
 
@@ -241,10 +248,14 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
   playOwnDoorEntry,
   pokeBadge,
   reducedMotion,
+  pxPerRpx,
   onAvatarTap,
 }: GatheringRoomSeatProps) {
   const anchor = ALL_SEAT_ANCHORS[seatIndex]
   const seatedOffset = SEATED_OFFSETS[seatIndex]
+  // Inline rpx is dropped by Taro's H5 style serializer; use concrete px so
+  // confirmation offsets and door arrivals survive on every renderer.
+  const toPx = (value: number) => `${value * pxPerRpx}px`
 
   // Confirmation beat: hop once when this member's attendance flips to
   // confirmed (pairs with the CTA haptic + the 480ms seated slide).
@@ -314,10 +325,10 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     animationDelay: arrival ? '0ms' : `${150 + seatIndex * 70}ms`,
     ...(arrival === 'door'
       ? {
-          transform: `translate(-50%, -88%) translate(${(doorPoint.x - anchor.x) / 100 * SCENE_WIDTH_RPX}rpx, ${(doorPoint.y - anchor.y) / 100 * SCENE_HEIGHT_RPX}rpx)`,
+          transform: `translate(-50%, -88%) translate(${toPx((doorPoint.x - anchor.x) / 100 * SCENE_WIDTH_RPX)}, ${toPx((doorPoint.y - anchor.y) / 100 * SCENE_HEIGHT_RPX)})`,
         }
       : presence === 'confirmed' && seatedOffset
-        ? { transform: `translate(-50%, -88%) translate(${seatedOffset.dx}rpx, ${seatedOffset.dy}rpx)` }
+        ? { transform: `translate(-50%, -88%) translate(${toPx(seatedOffset.dx)}, ${toPx(seatedOffset.dy)})` }
         : {}),
   }
 
@@ -335,13 +346,6 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     () => new Map((profile.equippedItems ?? []).map((item) => [item.id, item])),
     [profile.equippedItems],
   )
-
-  const cardPlacement = NAME_CARD_PLACEMENT[seatIndex] ?? 'below'
-  const nameCardClass = [
-    'gathering-room-scene__name-card',
-    `gathering-room-scene__name-card--${cardPlacement}`,
-    `gathering-room-scene__name-card--${presence}`,
-  ].join(' ')
 
   return (
     <View
@@ -387,33 +391,77 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
             </Text>
           </View>
         ) : null}
-        {/* Name plate — absolutely hung off the seat body so it rides every
-            animation (breathe / hop / seated shift) with its avatar and can
-            never drift onto the legs. Placement per seat: mid-rows hang it on
-            the outer side (below would collide with the front row). */}
-        <View className={nameCardClass}>
-          <ArchetypeHead
-            archetype={profile.archetype}
-            size={30}
-            variant='grid'
-            fallback='none'
-            className='gathering-room-scene__name-card-head'
-          />
-          <Text className='gathering-room-scene__name-card-text'>{name}</Text>
-          {presence === 'absent' ? (
-            <View className='gathering-room-scene__name-card-dot' aria-hidden='true' />
-          ) : null}
-          {presence === 'confirmed' ? (
-            <View className='gathering-room-scene__name-card-check' aria-hidden='true'>
-              <View className='gathering-room-scene__name-card-check-mark' />
-            </View>
-          ) : null}
-          {isOwn ? (
-            <View className='gathering-room-scene__me-chip'>
-              <Text className='gathering-room-scene__me-chip-text'>我</Text>
-            </View>
-          ) : null}
-        </View>
+      </View>
+    </View>
+  )
+})
+
+interface GatheringRoomNameCardProps {
+  profile: GatheringRoomMemberProfile
+  presence: GatheringRoomPresence
+  anchor: { x: number; y: number }
+  seatIndex: number
+  isOwn: boolean
+  pxPerRpx: number
+}
+
+/**
+ * Name plates live in their own scene-level layer. They must stay above the
+ * table overlay even when the seat body behind them is occluded by it, so
+ * they cannot remain children of the seat (the seat's z-index creates a
+ * stacking context that would trap them below the table).
+ */
+const GatheringRoomNameCard = memo(function GatheringRoomNameCard({
+  profile,
+  presence,
+  anchor,
+  seatIndex,
+  isOwn,
+  pxPerRpx,
+}: GatheringRoomNameCardProps) {
+  const name = profile.displayName || '队友'
+  const cardPlacement = NAME_CARD_PLACEMENT[seatIndex] ?? 'below'
+  const seatedOffset = presence === 'confirmed'
+    ? SEATED_OFFSETS[seatIndex] ?? { dx: 0, dy: 0 }
+    : { dx: 0, dy: 0 }
+  const nameCardClass = [
+    'gathering-room-scene__name-card',
+    `gathering-room-scene__name-card--${cardPlacement}`,
+    `gathering-room-scene__name-card--${presence}`,
+  ].join(' ')
+
+  return (
+    <View
+      className='gathering-room-scene__name-card-slot'
+      style={{
+        left: `${anchor.x}%`,
+        top: `${anchor.y}%`,
+        transform:
+          `translate(-50%, -88%) translate(${seatedOffset.dx * pxPerRpx}px, ${seatedOffset.dy * pxPerRpx}px)`,
+      }}
+    >
+      <View className={nameCardClass}>
+        <ArchetypeHead
+          archetype={profile.archetype}
+          size={30}
+          variant='grid'
+          fallback='none'
+          className='gathering-room-scene__name-card-head'
+        />
+        <Text className='gathering-room-scene__name-card-text'>{name}</Text>
+        {presence === 'absent' ? (
+          <View className='gathering-room-scene__name-card-dot' aria-hidden='true' />
+        ) : null}
+        {presence === 'confirmed' ? (
+          <View className='gathering-room-scene__name-card-check' aria-hidden='true'>
+            <View className='gathering-room-scene__name-card-check-mark' />
+          </View>
+        ) : null}
+        {isOwn ? (
+          <View className='gathering-room-scene__me-chip'>
+            <Text className='gathering-room-scene__me-chip-text'>我</Text>
+          </View>
+        ) : null}
       </View>
     </View>
   )
@@ -433,6 +481,7 @@ export function GatheringRoomScene({
   onQuickPokeProfile,
   onDismissQuickPoke,
   reducedMotion,
+  layout,
   pageVisible,
   onAvatarTap,
 }: GatheringRoomSceneProps) {
@@ -444,6 +493,13 @@ export function GatheringRoomScene({
     .join(' ')
 
   const ownUserIdResolved = ownUserId ?? ''
+  const pxPerRpx = (layout?.width ?? 375) / SCENE_WIDTH_RPX
+  const sceneStyle: CSSProperties = {
+    width: layout?.width ?? 375,
+    height: layout?.height ?? 480,
+    transform: `translate(-50%, -50%) scale(${layout?.scale ?? 1})`,
+    visibility: layout ? 'visible' : 'hidden',
+  }
 
   // Bundled local art (packOptions force-included) — no CDN attempt at all.
   // Fade in on decode so the art never pops into the scene. The designed CSS
@@ -532,7 +588,7 @@ export function GatheringRoomScene({
   }, [quickPokeMember, memberProfiles])
 
   return (
-    <View className={sceneClass} data-testid='gathering-room-scene'>
+    <View className={sceneClass} data-testid='gathering-room-scene' style={sceneStyle}>
       {/* Designed CSS room (素胚房) — the loading AND failure state under the
           composite art. Wall / wainscot / floor / window glow / low table /
           six cushion platforms: even with zero art the scene reads as a room. */}
@@ -561,7 +617,7 @@ export function GatheringRoomScene({
         aria-hidden='true'
         onLoad={handleRoomArtLoad}
         onError={handleRoomArtError}
-        style={{ opacity: roomArtLoaded ? 1 : 0, transition: 'opacity 320ms ease-out' }}
+        style={{ opacity: roomArtLoaded ? 1 : 0, transition: reducedMotion ? 'none' : 'opacity 320ms ease-out' }}
       />
 
       {/* Lamp glow breathing — only over the real art (the CSS room carries
@@ -593,11 +649,48 @@ export function GatheringRoomScene({
                 playOwnDoorEntry={isOwn && playOwnDoorEntry}
                 pokeBadge={isOwn ? pokeBadge ?? null : null}
                 reducedMotion={reducedMotion}
+                pxPerRpx={pxPerRpx}
                 onAvatarTap={onAvatarTap}
               />
             )
           })
         : null}
+
+      {/* The table is a real foreground plane, not part of the flat backdrop.
+          This transparent cut-out sits above the back-row body (z49) and below
+          the mid/front seats (z54/67/81), so the back member reads as seated
+          behind the table instead of standing on top of it. */}
+      {roomArtLoaded ? (
+        <Image
+          className='gathering-room-scene__layer gathering-room-scene__layer--table-overlay'
+          src={localAsset(ROOM_TABLE_OVERLAY.path)}
+          mode='scaleToFill'
+          aria-hidden='true'
+          style={ROOM_TABLE_OVERLAY_STYLE}
+        />
+      ) : null}
+
+      {/* Name plates are a separate, top-most layer: the table overlay must be
+          able to occlude a back-row body without ever dimming or clipping the
+          plate that identifies that member. */}
+      {entranceArmed ? (
+        <View className='gathering-room-scene__name-card-layer'>
+          {memberProfiles.map((profile, index) => {
+            const seatIndex = seatIndexFor(index, memberProfiles.length)
+            return (
+              <GatheringRoomNameCard
+                key={profile.userId}
+                profile={profile}
+                presence={presenceByUserId.get(profile.userId) ?? 'absent'}
+                anchor={ALL_SEAT_ANCHORS[seatIndex]}
+                seatIndex={seatIndex}
+                isOwn={profile.userId === ownUserIdResolved}
+                pxPerRpx={pxPerRpx}
+              />
+            )
+          })}
+        </View>
+      ) : null}
 
       {/* Quick-poke bubble — one-tap 挥手/击掌/干杯 anchored above a present
           tablemate's seat (the detail sheet used to be the only path). The

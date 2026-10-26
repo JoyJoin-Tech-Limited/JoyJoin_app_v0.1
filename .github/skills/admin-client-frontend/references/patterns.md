@@ -86,9 +86,43 @@ const mutation = useMutation({
 - Invalidate related queries after mutations
 - Use `useToast()` for success/error feedback
 
+## Console truth contract
+
+Server side (read-only, all behind `requireAdmin`):
+
+| Surface | Route | Source |
+|---|---|---|
+| KPIs | `GET /api/admin/kpi` | `lib/adminMetrics.ts` (single SQL source) |
+| Action queue | `GET /api/admin/action-queue` | same counters as destination lists |
+| Nav badges | `GET /api/admin/nav-badges` | same functions as destination lists |
+| Funnel / events | `GET /api/admin/analytics/funnel`, `/api/admin/analytics/events` | `lib/adminAnalytics.ts` over `discover_analytics_events` |
+
+`GET /api/admin/stats` and `/api/admin/ops-dashboard` delegate to these; adding a page-local
+aggregation reintroduces the drift that produced five separate wrong numbers on 2026-10-22.
+
+Client expectations:
+
+- `KpiCard` renders a named baseline window + delta + drill-down. No baseline → 基线不足.
+  Sampled metrics render `isSampled` / `sampleSize` / `totalUsers`.
+- `ActionQueue` renders seven fixed rows including cleared ones (0, not hidden). Every row must
+  navigate to a view that can resolve it.
+- Revenue is two separate figures: 单场票实收/场 (a rate) and 预付递延 · 已收未交付 (a liability).
+  Never sum them into a per-event figure.
+- `AdminDashboardV2` has no charts by design; charts belong on analysis pages once a series is correct.
+- Rollback: `/admin/dashboard?v=1` (URL switch), not a flag.
+- `AdminWorkspaceTabs` is mounted once in the layout; 16 nav entries across ten workspaces.
+- One `h1` per page whose text equals the nav label. Sticky `thead` requires the table wrapper to
+  apply overflow-x only when the head is not sticky.
+- Role denial → `AdminForbidden` (role + attempted path), never toast + redirect.
+- Nav badges invalidate on mutations and poll every 30s; a failed fetch yields `{}` and never blocks nav.
+- Exports: filename carries scope (全部N人 / 前N人-共M人) and uses `fmtCsvDate`.
+- Feature flags page: 86 switches, 14 sections, Chinese names + plain-language descriptions, search;
+  `featureFlagCopyContract` locks the copy.
+
 ## Recharts Dashboard Patterns
 
-Wrap charts in `<ResponsiveContainer width="100%" height={300}>`.
+Charts belong on dedicated analysis pages, never on the decision dashboard until each series has a
+correct source. Wrap charts in `<ResponsiveContainer width="100%" height={300}>`.
 
 ```tsx
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";

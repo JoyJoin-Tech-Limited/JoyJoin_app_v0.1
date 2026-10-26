@@ -1,0 +1,214 @@
+@use '../../../styles/variables' as *;
+
+// Shell-anchored, non-modal Ask. At the page's 40rpx inset the shell is
+// 670rpx wide; 32rpx left/right anchors therefore produce the specified
+// 606rpx card without a fixed-width calculation or layout push.
+.xiaoyue-agent-ask {
+  position: absolute;
+  top: 100%;
+  left: 32rpx;
+  right: 32rpx;
+  z-index: $z-modal;
+  margin-top: 8rpx;
+  pointer-events: auto;
+
+  &__card {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 24rpx;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-text-primary, 0.08);
+    border-radius: 24rpx;
+    box-shadow: 0 8rpx 32rpx rgba($color-text-primary, 0.1);
+    animation: xiaoyue-agent-ask-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &--static &__card {
+    animation: none;
+  }
+
+  &--exiting &__card {
+    animation: xiaoyue-agent-ask-out 120ms ease-out both;
+  }
+
+  &__kicker {
+    display: block;
+    font-size: $font-size-xs;
+    line-height: 1.45;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__question {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin-top: 8rpx;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: 1.5;
+    color: $color-text-primary;
+  }
+
+  &__status-row {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    min-height: 40rpx;
+    margin-top: 8rpx;
+  }
+
+  &__status {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+    white-space: nowrap;
+  }
+
+  &__success-icon {
+    flex-shrink: 0;
+    width: 24rpx;
+    height: 24rpx;
+  }
+
+  &__primary.joy-button {
+    width: 100%;
+    height: 88rpx;
+    min-height: 88rpx;
+    margin-top: 16rpx;
+    padding: 0 24rpx;
+    border-radius: 16rpx;
+    background: $color-primary;
+    color: $color-text-white;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+  }
+
+  // WeChat and H5 both inject disabled colours with higher specificity than
+  // a single class. Re-assert readable colours from the owning card instead.
+  &__card &__primary[disabled] {
+    background: $color-border;
+    box-shadow: none;
+    color: $color-text-secondary-on-light;
+    opacity: 1;
+  }
+
+  &__card &__primary[aria-busy='true'][disabled] {
+    background: $color-primary;
+    color: $color-text-white;
+  }
+
+  &__primary--pressed {
+    opacity: 0.88;
+  }
+
+  &__secondary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+  }
+
+  &__secondary {
+    flex: 1;
+    min-width: 88rpx;
+    min-height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8rpx;
+    transition: opacity 120ms ease;
+  }
+
+  &__secondary-text {
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    color: $color-primary-dark;
+    text-align: center;
+  }
+
+  &__secondary--quiet .xiaoyue-agent-ask__secondary-text {
+    color: $color-text-secondary-on-light;
+  }
+
+  &__secondary--pressed {
+    opacity: 0.56;
+  }
+
+  &__secondary--disabled {
+    opacity: 0.42;
+  }
+
+  &__aigc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    min-height: 40rpx;
+    margin-top: 8rpx;
+    white-space: nowrap;
+  }
+
+  &__aigc-text,
+  &__aigc-sep {
+    font-size: $font-size-sm;
+    line-height: 1.4;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__aigc-report {
+    .aigc-report-button {
+      min-width: 88rpx;
+      min-height: 88rpx;
+      margin: -24rpx -16rpx;
+      padding: 0 16rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .aigc-report-button__text {
+      font-size: $font-size-sm;
+      line-height: 1.4;
+      color: $color-text-secondary-on-light;
+      text-decoration: underline;
+      text-underline-offset: 4rpx;
+    }
+  }
+}
+
+@keyframes xiaoyue-agent-ask-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes xiaoyue-agent-ask-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4rpx);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xiaoyue-agent-ask__card,
+  .xiaoyue-agent-ask--exiting .xiaoyue-agent-ask__card {
+    animation: none;
+  }
+
+  .xiaoyue-agent-ask__secondary {
+    transition: none;
+  }
+}

@@ -86,6 +86,13 @@ type EventType =
   // report flow completion. Metadata carries {phase, kind} ONLY — the reported
   // content text never rides analytics (server snapshots it into reports).
   | 'ugc_report_submitted'
+  // M1 bounded copilot (sprint icebreaker-agent-m1). Ask/Action facts only —
+  // no participant identity, no message text. Server whitelist parity lives in
+  // routes/domains/analytics.ts SOCIAL_ICEBREAKER_EVENT_TYPES.
+  | 'agent_ask_shown'
+  | 'agent_ask_decision'
+  | 'agent_action_result'
+  | 'agent_policy_changed'
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker. The server gates

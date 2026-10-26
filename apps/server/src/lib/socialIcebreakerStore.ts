@@ -244,6 +244,7 @@ export type UpdateSessionAtomicResult =
 export async function updateSessionAtomic(
   socialSessionId: string,
   mutator: (state: SocialSessionState) => boolean | void,
+  afterWrite?: (state: SocialSessionState, tx: any) => Promise<void> | void,
 ): Promise<UpdateSessionAtomicResult> {
   return db.transaction(async (tx: any) => {
     const [row] = await tx
@@ -272,6 +273,10 @@ export async function updateSessionAtomic(
         updatedAt: new Date(),
       })
       .where(eq(socialIcebreakerSessions.id, socialSessionId));
+
+    // Optional same-transaction side facts (e.g. M1 agent_commit episode).
+    // Kept inside the row lock so state and episode can never diverge.
+    if (afterWrite) await afterWrite(state, tx);
 
     return { outcome: 'updated', state };
   });

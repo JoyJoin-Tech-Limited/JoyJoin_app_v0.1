@@ -106,3 +106,58 @@ export const ICE_PHASE_ONE_LINE_RULE_PREFIX = '一句话规则：'
 export function getIcePhaseOneLineRule(phase: string): string | null {
   return ICE_PHASE_ONE_LINE_RULE_BY_PHASE[phase] ?? null
 }
+
+// ─── 悦仔破冰副驾 Ask（M1，纯策展文案，零运行时 LLM）──────────────────────
+// 四条模板覆盖 default / phase_overrun / topic_stall / pulse_low。措辞是
+// 假设式、可选择式，绝不描述监视证据，也不宣称理解现实情绪。
+// 微信审核姿态：无 AI / 匹配 / 社交 / 灵魂 / 撮合 / 冷场检测等可见词。
+
+export type XiaoyueAgentAskCopyReason = 'default' | 'phase_overrun' | 'topic_stall' | 'pulse_low'
+
+export interface XiaoyueAgentAskCopyTemplate {
+  kicker: string
+  question: string
+  hint: string
+  cta: string
+}
+
+const XIAOYUE_AGENT_ASK_KICKER = '悦仔想确认一下'
+const XIAOYUE_AGENT_ASK_HINT = '你确认后，全桌一起换新'
+const XIAOYUE_AGENT_ASK_CTA = '换一组话题卡'
+
+export const XIAOYUE_AGENT_ASK_COPY_BY_REASON: Record<
+  XiaoyueAgentAskCopyReason,
+  XiaoyueAgentAskCopyTemplate
+> = {
+  default: {
+    kicker: XIAOYUE_AGENT_ASK_KICKER,
+    question: '这组话题不太好接吗？可以换一组。',
+    hint: XIAOYUE_AGENT_ASK_HINT,
+    cta: XIAOYUE_AGENT_ASK_CTA,
+  },
+  phase_overrun: {
+    kicker: XIAOYUE_AGENT_ASK_KICKER,
+    question: '想换个话题继续吗？我可以换一组。',
+    hint: XIAOYUE_AGENT_ASK_HINT,
+    cta: XIAOYUE_AGENT_ASK_CTA,
+  },
+  topic_stall: {
+    kicker: XIAOYUE_AGENT_ASK_KICKER,
+    question: '这组先聊到这里吗？换一组新话题就好。',
+    hint: XIAOYUE_AGENT_ASK_HINT,
+    cta: XIAOYUE_AGENT_ASK_CTA,
+  },
+  pulse_low: {
+    kicker: XIAOYUE_AGENT_ASK_KICKER,
+    question: '刚才感觉不太顺，要换一组话题吗？',
+    hint: XIAOYUE_AGENT_ASK_HINT,
+    cta: XIAOYUE_AGENT_ASK_CTA,
+  },
+}
+
+export function getXiaoyueAgentAskCopy(
+  reason?: XiaoyueAgentAskCopyReason | null,
+): XiaoyueAgentAskCopyTemplate {
+  if (!reason) return { ...XIAOYUE_AGENT_ASK_COPY_BY_REASON.default }
+  return { ...(XIAOYUE_AGENT_ASK_COPY_BY_REASON[reason] ?? XIAOYUE_AGENT_ASK_COPY_BY_REASON.default) }
+}

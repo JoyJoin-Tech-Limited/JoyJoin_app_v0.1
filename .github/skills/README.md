@@ -30,7 +30,7 @@ Core structure, ownership, and placement rules. Start here if you are new to the
 | [`monorepo-workspace-governance`](./monorepo-workspace-governance/SKILL.md) | Root orchestration-only principle, workspace dependency ownership, tsconfig/script normalization, env/secret/legacy guardrails |
 | [`api-contract-versioning`](./api-contract-versioning/SKILL.md) | Zod schemas, shared DTOs in `packages/shared/src/api.ts`, cross-platform type consumption, and the `/api/v1/*` versioning rewrite |
 | [`platform-coordination-protocol`](./platform-coordination-protocol/SKILL.md) | PRIMARY/SECONDARY/SHARED ownership, sibling-platform review, shared API contract boundaries, impact-check workflow |
-| [`admin-client-frontend`](./admin-client-frontend/SKILL.md) | Admin portal UI in `apps/admin-client` — Recharts dashboards, shadcn/ui tables/forms, RBAC gating, pool admin, auth patterns |
+| [`admin-client-frontend`](./admin-client-frontend/SKILL.md) | Admin portal UI in `apps/admin-client` — console truth contract (single metric source, KPI baseline/delta/drill-down, honest action queue), Recharts analysis pages, shadcn/ui tables/forms, RBAC gating + `AdminForbidden`, nav badges, pool admin, auth patterns |
 | [`viewport-zero-scroll`](./viewport-zero-scroll/SKILL.md) | Zero-scroll viewport policy (`100dvh`), no-scroll containers, `ResponsiveSpacer`, `ScrollSentinel`, `FormStepper` density caps |
 | [`caching-strategy`](./caching-strategy/SKILL.md) | Backend selection, TTL design, key naming, invalidation contracts, rate limiting, horizontal-scaling guardrails |
 | [`lane-selection-governance`](./lane-selection-governance/SKILL.md) | Deterministic 4-gate heuristic for choosing the correct delivery lane (HRC / DM / Kickoff / Direct) before implementation begins |
