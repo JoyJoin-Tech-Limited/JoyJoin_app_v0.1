@@ -246,8 +246,11 @@ Primary files:
 Pool-scoped duo invites reuse the `invitations` / `invitation_uses` track (`invitations.poolId` + `invitationType='duo'`, expiry = pool `preference_lock_at` fallback `date_time`). At matching time a bound duo is a hard atomic unit (2 seats, unit score = mean of both members, MAX 1 duo per group, duo-internal pair excluded from group quality metrics); an unplaceable duo stays unmatched together (variant A 整组顺延 → existing auto-refund pipeline).
 
 Primary files:
-- `apps/server/src/routes/domains/duo.ts` — `POST /api/pools/:id/duo-invites` (idempotent), `GET /api/pools/:id/duo-status`, `GET /api/duo-invites/:code` (public, rate-limited)
+- `apps/server/src/routes/domains/duo.ts` — `POST /api/pools/:id/duo-invites` (idempotent), `GET /api/pools/:id/duo-status` (role/pending-side fields), `GET /api/duo-invites/:code` (public, rate-limited; boolean-only inviter registration/binding signals)
 - `apps/server/src/lib/duoInvites.ts` — expiry/share-path/state-machine helpers
+- `apps/server/src/lib/eventPoolRegistration.ts` + `apps/server/src/repositories/duoBindingRepo.ts` — shared free/paid attribution guard; one valid partner per user per pool, both-side registration checks, non-blocking `duoBinding` response
+- `apps/server/src/matching/duoPairResolution.ts` — order-independent overlap removal + `duo_conflict` warning before duo atomic-unit grouping
+- `apps/server/src/repositories/adminReferralsRepo.ts` — admin duo list, pool-scoped conflict recomputation, seating/reward outcomes, and independent KPI summary aggregation
 - `apps/server/src/poolMatchingService.ts` — duo atomic-unit grouping (`[DUO]` guards + fallback decision site comment)
 
 ### Gathering room (集结房间, 2026-08-10)

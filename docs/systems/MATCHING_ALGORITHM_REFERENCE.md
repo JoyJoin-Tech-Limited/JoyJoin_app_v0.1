@@ -615,6 +615,8 @@ A bound duo (two users linked by a `duo` invitation in the same pool) is treated
 - **Internal pair excluded:** the pair score between the two duo members is **not** counted in `avgPairScore` or other group-quality metrics.
 - **R1 per member:** when `magnetismGroupRulesEnabled` is active, R1 (no isolate with a ≥60 strong tie) is checked for each member independently.
 - **Variant A fallback:** if a bound duo cannot be placed into any group, the entire duo stays unmatched together and enters the existing 场次未成行 auto-refund pipeline. Duos are never split to fill groups.
+- **One partner per pool (2026-10-24):** a valid binding requires active registrations from both users in the same pool. Registration rejects additional duo bindings without blocking the registration or payment itself; if only one partner survives the hard-constraint filter, both are stranded together.
+- **Overlap fail-safe:** before group formation, users appearing in multiple candidate duo pairs are removed from the pair set together with all their partners, and a structured `duo_conflict` warning is logged. This prevents map overwrite order from silently choosing a partner. Zero-duo pools retain identical matching behavior.
 
 ### 4.3 Pool Configuration Parameters
 

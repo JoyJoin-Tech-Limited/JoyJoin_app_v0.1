@@ -565,6 +565,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - Invitation badges: Purple "已邀请" for inviters, Blue "[name] 邀请的" for invitees
 - Database tracking: `user_coupons` and `invitation_uses` tables
 - **Duo invite wiring (2026-10-12):** the invite page (`pages/profile-linked/invite`) shares the pool-scoped Duo code (`POST /api/pools/:id/duo-invites`, idempotent) when the user has an active pool registration — only that path can promise the same-table pairing + INVITE_REWARD reward; otherwise it shares the permanent referral code (attribution only). INVITE_REWARD is seeded by migration `0098` (fixed ¥50; above the ¥20 anchor-safety cap, so it never rides the 单场局票 anchor).
+- **Duo integrity and honest outcomes (2026-10-24):** each user may hold at most one valid duo binding per pool, and a binding is valid only while both sides hold registrations in that pool. A rejected duo request never blocks registration or payment; the outcome is explained in the success ceremony on the free/entitlement path. Invitees keep a distinct guest role, while an inviter who is already bound shows the honest 「这局已经有同行了」 variant instead of promising another seat. Admin `/admin/duo-invites` exposes conflicts, accepted/seated/reward outcomes, and pool-scoped KPI summaries; accepted means at least one invitation-use record and is distinct from both a currently valid two-sided binding and a seated outcome.
 
 **5. Event Pool User Flow** 🎭
 - Complete two-stage matching model UI
