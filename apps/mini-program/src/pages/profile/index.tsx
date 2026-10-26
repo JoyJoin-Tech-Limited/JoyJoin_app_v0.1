@@ -557,6 +557,12 @@ export default function ProfilePage() {
   // unlock batch clears so the NEXT batch celebrates again.
   const badgeAutoExpandRef = useRef(false)
   const [posterGlow, setPosterGlow] = useState(false)
+  /**
+   * Pre-ship F-8 (2026-10-26): the badge art is CDN-only, so a miss used to
+   * render an empty cell. Track failures per key and fall back to the CSS
+   * medallion (locked: dashed + lock glyph; unlocked: solid gold).
+   */
+  const [failedBadgeKeys, setFailedBadgeKeys] = useState<string[]>([])
   useEffect(() => {
     if (justUnlockedKeys.length > 0 && !badgeAutoExpandRef.current) {
       badgeAutoExpandRef.current = true
@@ -585,9 +591,20 @@ export default function ProfilePage() {
     haptics('success')
     setJustUnlockedKeys(fresh)
     writeSeenBadges(authUser.id, [...seen, ...fresh])
+  }, [authUser?.id, isLoadingStats, unlockedMilestones])
+
+  // Pre-ship C2/C3 (2026-10-26): the celebration clear used to live inside the
+  // ledger effect above, so any dependency change (e.g. isLoadingStats flipping
+  // after a refetch) ran the cleanup and dropped the 1000ms timer while the
+  // effect body returned early on `fresh.length === 0` — leaving the unlock
+  // ring stranded and badgeAutoExpandRef latched for the session. Owning the
+  // timer in its own effect keyed on the state makes the one-shot fire exactly
+  // once regardless of data refreshes.
+  useEffect(() => {
+    if (justUnlockedKeys.length === 0) return
     const timer = setTimeout(() => setJustUnlockedKeys([]), 1000)
     return () => clearTimeout(timer)
-  }, [authUser?.id, isLoadingStats, unlockedMilestones])
+  }, [justUnlockedKeys])
 
   const archetypeTagline = useMemo(() => {
     if (!archetype || !(archetype in archetypeRegistry)) return null
@@ -1040,7 +1057,7 @@ export default function ProfilePage() {
                 className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}${avatarBouncing ? ' profile-page__partner-visual--tapped' : ''}`}
               >
                 <View
-                  className={`profile-page__partner-platform${deviceTier.isDegradation ? ' profile-page__partner-platform--no-pulse' : ''}`}
+                  className={`profile-page__partner-platform${deviceTier.isDegradation || !pageVisible ? ' profile-page__partner-platform--no-pulse' : ''}`}
                   aria-hidden='true'
                 />
               <View
@@ -1052,7 +1069,7 @@ export default function ProfilePage() {
               >
                 <View className='profile-page__partner-halo' aria-hidden='true' />
               <View
-                className={`profile-page__partner-breath${deviceTier.isDegradation ? ' profile-page__partner-breath--no-breath' : ''}`}
+                className={`profile-page__partner-breath${deviceTier.isDegradation || !pageVisible ? ' profile-page__partner-breath--no-breath' : ''}`}
                 data-testid='profile-partner-breath'
               >
                 <ProfilePartnerVisual
@@ -1123,7 +1140,7 @@ export default function ProfilePage() {
                       // returns inside my-image and after claiming.
                       <View className='profile-page__equipment-claim-signal' role='presentation'>
                         <View
-                          className='profile-page__equipment-wait-dot'
+                          className={`profile-page__equipment-wait-dot${deviceTier.isDegradation || !pageVisible ? ' profile-page__equipment-wait-dot--static' : ''}`}
                           aria-hidden='true'
                           data-testid='profile-equipment-wait-dot'
                         />
@@ -1461,12 +1478,19 @@ export default function ProfilePage() {
                       data-testid={`profile-milestone-${milestone.key}`}
                     >
                       <View className='profile-page__milestone-badge-wrap'>
-                        {milestone.badge ? (
+                        {milestone.badge && !failedBadgeKeys.includes(milestone.key) ? (
                           <Image
                             className={`profile-page__milestone-img${unlocked ? '' : ' profile-page__milestone-img--locked'}`}
                             mode='aspectFit'
                             src={milestone.badge}
                             lazyLoad
+                            onError={() => {
+                              // Pre-ship F-8: CDN miss → CSS medallion, never a
+                              // blank cell. One failure is enough; no retry loop.
+                              setFailedBadgeKeys((prev) => (
+                                prev.includes(milestone.key) ? prev : [...prev, milestone.key]
+                              ))
+                            }}
                           />
                         ) : (
                           // Batch-D2 art pending → CSS medallion (locked:

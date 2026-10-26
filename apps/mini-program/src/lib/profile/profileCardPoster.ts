@@ -10,7 +10,7 @@ import type { EquipmentItem, EquipmentOutfit } from './equipmentApi'
 import {
   getPixelAvatarApprovedStarterLookUrl,
   getPixelAvatarBodyUrl,
-  getPixelEquipmentLayerUrl,
+  getPixelEquipmentAsset,
   normalizePixelArchetypeId,
   PIXEL_AVATAR_EQUIPMENT_SLOTS,
 } from './pixelAvatarAssets'
@@ -24,10 +24,13 @@ import {
  * (copy-only band when undefined), temp-file unlink by the caller hook.
  *
  * Privacy contract: `ProfileCardPosterInput` structurally EXCLUDES city,
- * age, interests, bio, referral codes, and real-name fields — no field on
- * this type can carry them into any canvas primitive. No incentive wording
- * anywhere on the poster (WeChat 诱导分享 ban). No LLM content → no AIGC
- * label (fail-closed rule not triggered).
+ * age, interests, bio, real-name fields, and any referral/invitation CODE as
+ * a rendered text field — no field on this type can carry them into a canvas
+ * primitive. The QR is the ONE deliberate exception (pre-ship C7): it encodes
+ * the share deep link, which may itself carry attribution, but no code is
+ * ever drawn as readable copy. No incentive wording anywhere on the poster
+ * (WeChat 诱导分享 ban). No LLM content → no AIGC label (fail-closed rule not
+ * triggered).
  */
 
 export const PROFILE_CARD_CANVAS_ID = 'profile-card-poster-canvas'
@@ -71,14 +74,24 @@ const LEFT_EDGE = 96
 const RIGHT_EDGE = PROFILE_CARD_WIDTH - 96
 
 const CHROME_Y = 88
+// Pre-ship B2 (2026-10-26): the pixel body canvas is 512×768 (2:3). The old
+// square 320×320 well squashed every portrait 33% vertically — the exported
+// card showed a visibly flattened character. The portrait well is now 2:3 and
+// the whole mid-card stack moved down to keep the same breathing rhythm.
 const PORTRAIT_Y = 150
-const PORTRAIT_SIZE = 320
-const NAME_Y = 560
-const FAMILY_Y = 640
-const GROWTH_Y = 730
+const PORTRAIT_WIDTH = 320
+const PORTRAIT_HEIGHT = 480
+const PORTRAIT_X = CENTER_X - PORTRAIT_WIDTH / 2
+const PORTRAIT_ASSET_WIDTH = 512
+const PORTRAIT_ASSET_HEIGHT = 768
+// Archetype fallback art is ~1:1 (694×663), so it stays square inside the well.
+const ARCHETYPE_ART_SIZE = 320
+const NAME_Y = 716
+const FAMILY_Y = 798
+const GROWTH_Y = 880
 // P2-3 audit C4: tagline fills the mid-card; QR band moved up 150px so the
 // bottom third reads anchored, not empty.
-const TAGLINE_Y = 850
+const TAGLINE_Y = 966
 const QR_BAND_Y = 1180
 const QR_SIZE = 160
 const FOOTER_Y = 1500
@@ -106,6 +119,111 @@ export function fitCanvasTextToWidth(
 }
 
 /**
+ * One drawn portrait layer: an already-resolved image with its own on-canvas
+ * rectangle. The pixel composite is a layered paper doll — body plus one
+ * placement-positioned overlay per equipped slot — so a shared destination
+ * rect is structurally wrong (pre-ship C1).
+ */
+export interface ProfileCardPortraitLayer {
+  url: string
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+function getOutfitItemId(
+  outfit: EquipmentOutfit,
+  slot: (typeof PIXEL_AVATAR_EQUIPMENT_SLOTS)[number],
+): string | null {
+  return (outfit[`${slot}ItemId` as keyof EquipmentOutfit] as string | null | undefined) ?? null
+}
+
+/**
+ * Mirrors `PixelAvatarComposite`'s `usesApprovedStarterLook`: the approved
+ * starter look is a flattened composite of the DEFAULT starter set, so it may
+ * only stand in for the body when every slot still holds that archetype's
+ * starter piece. Any real equipped item needs body + placement layers.
+ */
+function isStarterOutfitEquipped(
+  pixelArchetypeId: string,
+  outfit: EquipmentOutfit,
+  itemsById: Map<string, EquipmentItem>,
+): boolean {
+  return PIXEL_AVATAR_EQUIPMENT_SLOTS.every((slot) => {
+    const itemId = getOutfitItemId(outfit, slot)
+    const item = itemId ? itemsById.get(itemId) : undefined
+    return Boolean(
+      item
+      && item.slot === slot
+      && item.assetKey === `equipment/starter/${pixelArchetypeId}/${slot}/v1`,
+    )
+  })
+}
+
+/**
+ * Plan the portrait stack without touching the canvas runtime (pure — unit
+ * testable). Priority: pixel composite (starter look or body + equipped
+ * layers) → archetype full-body art → nothing. A missing outfit payload keeps
+ * the starter look, because that is a better default than a bare base body.
+ */
+export function planPortraitLayers(input: ProfileCardPosterInput): ProfileCardPortraitLayer[] {
+  // The caller passes `pixelArchetypeId: pixelAvatarEnabled ? archetype : null`,
+  // so a missing id means "this account has no pixel avatar". normalize…
+  // defaults to 'cat', which used to paint another archetype's look — gate on
+  // the raw id and fall through to the square archetype artwork instead.
+  const pixelId = input.pixelArchetypeId ? normalizePixelArchetypeId(input.pixelArchetypeId) : null
+  if (pixelId) {
+    const layers: ProfileCardPortraitLayer[] = []
+    const starterLookUrl = getPixelAvatarApprovedStarterLookUrl(pixelId)
+    const outfit = input.outfit ?? null
+    const itemsById = input.itemsById ?? null
+    const usesStarterLook = starterLookUrl !== null
+      && (outfit && itemsById ? isStarterOutfitEquipped(pixelId, outfit, itemsById) : true)
+    const bodyUrl = usesStarterLook ? starterLookUrl : getPixelAvatarBodyUrl(pixelId)
+    if (bodyUrl) {
+      layers.push({
+        url: bodyUrl,
+        left: PORTRAIT_X,
+        top: PORTRAIT_Y,
+        width: PORTRAIT_WIDTH,
+        height: PORTRAIT_HEIGHT,
+      })
+    }
+    // Pre-ship B1/C1: equipped gear must reach the exported card, at the same
+    // 512×768-anchored placement rects the on-screen composite uses.
+    if (bodyUrl && !usesStarterLook && outfit && itemsById) {
+      for (const slot of PIXEL_AVATAR_EQUIPMENT_SLOTS) {
+        const itemId = getOutfitItemId(outfit, slot)
+        const item = itemId ? itemsById.get(itemId) : undefined
+        if (!item || item.slot !== slot) continue
+        const asset = getPixelEquipmentAsset(item.assetKey, pixelId)
+        if (!asset) continue
+        layers.push({
+          url: asset.url,
+          left: PORTRAIT_X + (asset.placement.left / PORTRAIT_ASSET_WIDTH) * PORTRAIT_WIDTH,
+          top: PORTRAIT_Y + (asset.placement.top / PORTRAIT_ASSET_HEIGHT) * PORTRAIT_HEIGHT,
+          width: (asset.placement.width / PORTRAIT_ASSET_WIDTH) * PORTRAIT_WIDTH,
+          height: (asset.placement.height / PORTRAIT_ASSET_HEIGHT) * PORTRAIT_HEIGHT,
+        })
+      }
+    }
+    if (layers.length > 0) return layers
+  }
+
+  if (input.archetypeAsset) {
+    return [{
+      url: input.archetypeAsset,
+      left: CENTER_X - ARCHETYPE_ART_SIZE / 2,
+      top: PORTRAIT_Y + (PORTRAIT_HEIGHT - ARCHETYPE_ART_SIZE) / 2,
+      width: ARCHETYPE_ART_SIZE,
+      height: ARCHETYPE_ART_SIZE,
+    }]
+  }
+  return []
+}
+
+/**
  * Draw the card onto a canvas context. Exported separately from the export
  * pipeline so layout/privacy tests can spy on canvas primitives without
  * touching Taro's canvas runtime.
@@ -113,7 +231,7 @@ export function fitCanvasTextToWidth(
 export function drawProfileCardPosterContent(
   ctx: Taro.CanvasContext,
   input: ProfileCardPosterInput,
-  portraitImagePaths: string[],
+  portraitLayers: ProfileCardPortraitLayer[],
 ): void {
   // ── Background + card shell ──
   ctx.save()
@@ -130,11 +248,10 @@ export function drawProfileCardPosterContent(
   ctx.fillText(CHROME_LABEL, LEFT_EDGE, CHROME_Y)
   ctx.restore()
 
-  // ── Portrait stack (pixel composite = body + equipped layers, slot order) ──
-  const portraitX = CENTER_X - PORTRAIT_SIZE / 2
-  for (const imagePath of portraitImagePaths) {
-    if (!imagePath) continue
-    ctx.drawImage(imagePath, portraitX, PORTRAIT_Y, PORTRAIT_SIZE, PORTRAIT_SIZE)
+  // ── Portrait stack (2:3 well; each layer owns its placement rect) ──
+  for (const layer of portraitLayers) {
+    if (!layer.url) continue
+    ctx.drawImage(layer.url, layer.left, layer.top, layer.width, layer.height)
   }
 
   // ── Display name ──
@@ -219,49 +336,24 @@ const DRAW_TIMEOUT_MS = 15_000
  * otherwise the archetype full-body art. Every layer is fail-open —
  * a layer that cannot resolve is simply skipped.
  */
-async function resolvePortraitStack(input: ProfileCardPosterInput): Promise<string[]> {
-  const pixelId = normalizePixelArchetypeId(input.pixelArchetypeId)
-  if (pixelId) {
-    const paths: string[] = []
+/**
+ * Resolve the planned portrait stack into drawable local paths. Every layer is
+ * fail-open — a layer that cannot resolve is simply skipped.
+ */
+async function resolvePortraitStack(
+  input: ProfileCardPosterInput,
+): Promise<ProfileCardPortraitLayer[]> {
+  const resolved: ProfileCardPortraitLayer[] = []
+  for (const layer of planPortraitLayers(input)) {
+    if (!layer.url) continue
     try {
-      const starterLook = getPixelAvatarApprovedStarterLookUrl(pixelId)
-      const bodyUrl = starterLook ?? getPixelAvatarBodyUrl(pixelId)
-      if (bodyUrl) {
-        const resolved = await resolveImagePath(bodyUrl)
-        if (resolved) paths.push(resolved)
-      }
-      // Approved starter look already includes the starter outfit — only draw
-      // layers when a custom outfit replaces it.
-      if (!starterLook && input.outfit && input.itemsById) {
-        for (const slot of PIXEL_AVATAR_EQUIPMENT_SLOTS) {
-          const itemId = input.outfit[`${slot}ItemId` as keyof EquipmentOutfit] as string | null | undefined
-          const item = itemId ? input.itemsById.get(itemId) : undefined
-          if (!item || item.slot !== slot) continue
-          const layerUrl = getPixelEquipmentLayerUrl(item.assetKey, pixelId)
-          if (!layerUrl) continue
-          try {
-            const resolved = await resolveImagePath(layerUrl)
-            if (resolved) paths.push(resolved)
-          } catch {
-            // skip the layer
-          }
-        }
-      }
-      if (paths.length > 0) return paths
+      const path = await resolveImagePath(layer.url)
+      if (path) resolved.push({ ...layer, url: path })
     } catch {
-      // fall through to archetype art
+      // skip the layer
     }
   }
-
-  if (input.archetypeAsset) {
-    try {
-      const resolved = await resolveImagePath(input.archetypeAsset)
-      return resolved ? [resolved] : []
-    } catch {
-      return []
-    }
-  }
-  return []
+  return resolved
 }
 
 /**
@@ -270,10 +362,10 @@ async function resolvePortraitStack(input: ProfileCardPosterInput): Promise<stri
  * generation per call — callers must never reuse a previous temp file.
  */
 export async function generateProfileCardPoster(input: ProfileCardPosterInput): Promise<string> {
-  const portraitImagePaths = await resolvePortraitStack(input)
+  const portraitLayers = await resolvePortraitStack(input)
 
   const ctx = Taro.createCanvasContext(PROFILE_CARD_CANVAS_ID)
-  drawProfileCardPosterContent(ctx, input, portraitImagePaths)
+  drawProfileCardPosterContent(ctx, input, portraitLayers)
 
   return await new Promise<string>((resolve, reject) => {
     let settled = false
@@ -299,7 +391,7 @@ export async function generateProfileCardPoster(input: ProfileCardPosterInput): 
         } catch {
           // best-effort
         }
-        logInfo('[ProfileCardPoster] generated', { layers: portraitImagePaths.length })
+        logInfo('[ProfileCardPoster] generated', { layers: portraitLayers.length })
         resolve(tempFilePath)
       } catch (error) {
         settled = true

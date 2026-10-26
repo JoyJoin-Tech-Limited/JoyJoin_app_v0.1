@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   drawProfileCardPosterContent,
   fitCanvasTextToWidth,
+  planPortraitLayers,
   PROFILE_CARD_NO_QR_COPY,
   PROFILE_CARD_QR_COPY,
   type ProfileCardPosterInput,
 } from '../profileCardPoster'
+import type { EquipmentItem, EquipmentOutfit } from '../equipmentApi'
 
 // P2-3 (PM memo §8): the rebuilt card poster must never bake privacy fields
 // (city/age/interests/bio/referral) or incentive wording. The input type
@@ -42,10 +44,14 @@ const BASE_INPUT: ProfileCardPosterInput = {
   qrCodeImagePath: '/tmp/qr.png',
 }
 
+// B2 (pre-ship 2026-10-26): the portrait is a 2:3 well (320×480 at x 380/y 150),
+// and every layer carries its own rect instead of one shared square.
+const BODY_LAYER = { url: '/tmp/body.webp', left: 380, top: 150, width: 320, height: 480 }
+
 describe('drawProfileCardPosterContent (P2-3)', () => {
   it('renders identity + family + 潮流值 + the locked QR caption', () => {
     const ctx = makeCtxSpy()
-    drawProfileCardPosterContent(ctx as never, BASE_INPUT, ['/tmp/body.webp'])
+    drawProfileCardPosterContent(ctx as never, BASE_INPUT, [BODY_LAYER])
 
     const texts = ctx.fillText.mock.calls.map((call) => String(call[0]))
     expect(texts).toContain('小悦')
@@ -71,7 +77,7 @@ describe('drawProfileCardPosterContent (P2-3)', () => {
 
   it('never draws privacy or incentive strings', () => {
     const ctx = makeCtxSpy()
-    drawProfileCardPosterContent(ctx as never, BASE_INPUT, ['/tmp/body.webp'])
+    drawProfileCardPosterContent(ctx as never, BASE_INPUT, [BODY_LAYER])
 
     const allText = ctx.fillText.mock.calls.map((call) => String(call[0])).join('\n')
     // Banned on the card: privacy fields, referral hooks, incentive wording.
@@ -138,5 +144,86 @@ describe('drawProfileCardPosterContent name fitting (R2)', () => {
     const texts = ctx.fillText.mock.calls.map((call) => String(call[0]))
     expect(texts).not.toContain(longName)
     expect(texts.some((text) => text.endsWith('…'))).toBe(true)
+  })
+})
+
+// Pre-ship step 5 (2026-10-26) B1/B2/C1: the exported card must mirror the
+// on-screen PixelAvatarComposite — fullStarter only for the exact default
+// outfit, otherwise body + placement-positioned layers inside a 2:3 well.
+const SLOTS = ['top', 'bottom', 'shoes', 'accessory'] as const
+
+function item(slot: (typeof SLOTS)[number], assetKey: string): EquipmentItem {
+  return { id: `${slot}:${assetKey}`, slot, assetKey, name: slot, rarity: 'common' } as unknown as EquipmentItem
+}
+
+function outfitWith(top: string | null, bottom: string | null, shoes: string | null, accessory: string | null): EquipmentOutfit {
+  return {
+    topItemId: top,
+    bottomItemId: bottom,
+    shoesItemId: shoes,
+    accessoryItemId: accessory,
+    version: 1,
+  } as unknown as EquipmentOutfit
+}
+
+function bundle(items: EquipmentItem[]): Map<string, EquipmentItem> {
+  return new Map(items.map((entry) => [entry.id, entry]))
+}
+
+const STARTER = (slot: (typeof SLOTS)[number]) => `equipment/starter/corgi/${slot}/v1`
+
+describe('planPortraitLayers (pre-ship B1/B2/C1)', () => {
+  it('keeps the starter full-look for the exact default outfit (one full-bleed layer)', () => {
+    const items = SLOTS.map((slot) => item(slot, STARTER(slot)))
+    const outfit = outfitWith(...(SLOTS.map((slot) => items.find((entry) => entry.slot === slot)!.id) as [string, string, string, string]))
+
+    const layers = planPortraitLayers({ ...BASE_INPUT, outfit, itemsById: bundle(items) })
+
+    expect(layers).toHaveLength(1)
+    expect(layers[0].url).toContain('full-starter')
+    expect(layers[0]).toMatchObject({ left: 380, top: 150, width: 320, height: 480 })
+  })
+
+  it('draws the base body plus placement rects once a non-starter item is equipped', () => {
+    // One real starter garment + three catalogue items with no bundled art:
+    // enough to leave the starter look, and enough to resolve one layer.
+    const top = item('top', STARTER('top'))
+    const outfit = outfitWith(top.id, 'pool-bottom', 'pool-shoes', 'pool-accessory')
+    const items = bundle([top])
+
+    const layers = planPortraitLayers({ ...BASE_INPUT, outfit, itemsById: items })
+
+    expect(layers.length).toBeGreaterThan(1)
+    expect(layers[0].url).toContain('body-front')
+    // B2: the body fills the 2:3 well, never the old 320×320 square.
+    expect(layers[0]).toMatchObject({ left: 380, top: 150, width: 320, height: 480 })
+
+    for (const layer of layers.slice(1)) {
+      // C1: layers sit on their authored placement rect, inside the well.
+      expect(layer.left).toBeGreaterThanOrEqual(380)
+      expect(layer.top).toBeGreaterThanOrEqual(150)
+      expect(layer.left + layer.width).toBeLessThanOrEqual(700)
+      expect(layer.top + layer.height).toBeLessThanOrEqual(630)
+      expect(layer.width).toBeLessThan(320)
+      expect(layer.height).toBeLessThan(480)
+    }
+  })
+
+  it('falls back to the starter look when no outfit payload is available', () => {
+    const layers = planPortraitLayers(BASE_INPUT)
+
+    expect(layers).toHaveLength(1)
+    expect(layers[0].url).toContain('full-starter')
+  })
+
+  it('centres the square archetype artwork when pixel avatars are unavailable', () => {
+    const layers = planPortraitLayers({ displayName: '小悦', archetypeAsset: '/tmp/corgi.webp' })
+
+    expect(layers).toHaveLength(1)
+    expect(layers[0]).toMatchObject({ url: '/tmp/corgi.webp', left: 380, top: 230, width: 320, height: 320 })
+  })
+
+  it('returns no layers when there is nothing to draw', () => {
+    expect(planPortraitLayers({ displayName: '小悦' })).toEqual([])
   })
 })
