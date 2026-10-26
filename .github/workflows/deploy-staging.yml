@@ -15,6 +15,14 @@ on:
       - 'LICENSE*'
       - '.opencode/**'
   workflow_dispatch:
+    inputs:
+      allow_stale:
+        description: >-
+          Deploy this commit even if main advances while the image transfer is in
+          flight. Staging-only escape hatch for verifying a build during a busy
+          push window; production keeps the hard freshness guard.
+        type: boolean
+        default: false
 
 # 2026-10-22 (staging latency, Phase 1): the workflow-level
 # `joyjoin-staging-${{ github.ref }}` group with cancel-in-progress:false made
@@ -48,7 +56,13 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
-          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
+          if ! node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"; then
+            if [ "${{ inputs.allow_stale }}" = "true" ]; then
+              echo "::warning::Deploying a commit that is behind origin/main because allow_stale=true (staging verification only)."
+            else
+              exit 1
+            fi
+          fi
 
   quality-gates:
     needs: [deploy-preflight]
@@ -77,7 +91,13 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
-          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
+          if ! node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"; then
+            if [ "${{ inputs.allow_stale }}" = "true" ]; then
+              echo "::warning::Deploying a commit that is behind origin/main because allow_stale=true (staging verification only)."
+            else
+              exit 1
+            fi
+          fi
 
       # BuildKit runs on the GitHub runner, never on the shared production CVM.
       # The CVM pulls completed images from a registry and switches containers.
@@ -244,7 +264,13 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
-          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
+          if ! node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"; then
+            if [ "${{ inputs.allow_stale }}" = "true" ]; then
+              echo "::warning::Deploying a commit that is behind origin/main because allow_stale=true (staging verification only)."
+            else
+              exit 1
+            fi
+          fi
 
       - name: Resolve deployment client host fingerprint
         id: cvm-host-key
@@ -684,8 +710,12 @@ jobs:
               done
               upload_pids=()
               if [ -f "$STALE_FLAG" ]; then
-                echo "::error::Stale staging candidate detected during image transfer; aborting upload"
-                exit 1
+                if [ "${{ inputs.allow_stale }}" = "true" ]; then
+                  echo "::warning::Main advanced during the image transfer; continuing because allow_stale=true. The deployed SHA will lag origin/main."
+                else
+                  echo "::error::Stale staging candidate detected during image transfer; aborting upload"
+                  exit 1
+                fi
               fi
               if (( upload_failed != 0 )); then
                 break
@@ -699,8 +729,12 @@ jobs:
           done
           upload_pids=()
           if [ -f "$STALE_FLAG" ]; then
-            echo "::error::Stale staging candidate detected during image transfer; aborting upload"
-            exit 1
+            if [ "${{ inputs.allow_stale }}" = "true" ]; then
+              echo "::warning::Main advanced during the image transfer; continuing because allow_stale=true. The deployed SHA will lag origin/main."
+            else
+              echo "::error::Stale staging candidate detected during image transfer; aborting upload"
+              exit 1
+            fi
           fi
           if (( upload_failed != 0 )); then
             echo "::error::One or more staging image chunks failed to upload"
@@ -786,7 +820,13 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
-          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
+          if ! node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"; then
+            if [ "${{ inputs.allow_stale }}" = "true" ]; then
+              echo "::warning::Deploying a commit that is behind origin/main because allow_stale=true (staging verification only)."
+            else
+              exit 1
+            fi
+          fi
 
       - name: Require staging Tencent Maps WebService key
         env:
