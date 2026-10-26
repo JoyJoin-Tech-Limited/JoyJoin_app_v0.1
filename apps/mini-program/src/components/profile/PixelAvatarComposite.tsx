@@ -7,6 +7,7 @@ import {
   getPixelAvatarApprovedStarterLookUrl,
   getPixelAvatarBodyUrl,
   getPixelEquipmentAsset,
+  isApprovedStarterOutfit,
   normalizePixelArchetypeId,
   type PixelEquipmentAsset,
   type PixelEquipmentPlacement,
@@ -97,10 +98,7 @@ export function PixelAvatarComposite({
   const approvedStarterLookUrl = getPixelAvatarApprovedStarterLookUrl(safeArchetypeId)
   const usesApprovedStarterLook = approvedStarterLookUrl !== null
     && failedLayerIds.size === 0
-    && PIXEL_AVATAR_EQUIPMENT_SLOTS.every((slot) => requestedItems.some((item) => (
-      item.slot === slot
-      && item.assetKey === `equipment/starter/${safeArchetypeId}/${slot}/v1`
-    )))
+    && isApprovedStarterOutfit(safeArchetypeId, requestedItems)
   const bodyUrl = usesApprovedStarterLook
     ? approvedStarterLookUrl
     : getPixelAvatarBodyUrl(safeArchetypeId)

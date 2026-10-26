@@ -186,6 +186,28 @@ export function getPixelAvatarApprovedStarterLookUrl(
   return fullStarterPath ? cdnAsset(`/${fullStarterPath}`) : null
 }
 
+/**
+ * True when every equipment slot still holds THIS archetype's default starter
+ * piece (`equipment/starter/<id>/<slot>/v1`).
+ *
+ * The approved starter look is a flattened composite of exactly that set, so
+ * it may only stand in for the body while the set is intact. Shared by
+ * `PixelAvatarComposite` (screen) and `profileCardPoster` (export): the two
+ * used to restate this predicate, and a drift between them is exactly what
+ * made the exported card show the default outfit regardless of what the user
+ * was actually wearing.
+ */
+export function isApprovedStarterOutfit(
+  archetypeId: string,
+  items: ReadonlyArray<{ slot: string; assetKey: string }>,
+): boolean {
+  const safeId = normalizePixelArchetypeId(archetypeId)
+  return PIXEL_AVATAR_EQUIPMENT_SLOTS.every((slot) => (
+    items.some((item) => item.slot === slot
+      && item.assetKey === `equipment/starter/${safeId}/${slot}/v1`)
+  ))
+}
+
 export function normalizePixelEquipmentAssetKey(assetKey: string): string {
   const safeSegments = assetKey
     .split('/')
