@@ -31,18 +31,18 @@ import { useToast } from "@/hooks/ui/use-toast";
 
 interface PricingSetting {
   id: string;
-  plan_type: string;
-  display_name: string;
-  display_name_en: string | null;
+  planType: string;
+  displayName: string;
+  displayNameEn: string | null;
   description: string | null;
-  price_in_cents: number;
-  original_price_in_cents: number | null;
-  duration_days: number | null;
-  sort_order: number | null;
-  is_active: boolean;
-  is_featured: boolean;
-  created_at: string;
-  updated_at: string;
+  priceInCents: number;
+  originalPriceInCents: number | null;
+  durationDays: number | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  isFeatured: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function AdminPricingPage() {
@@ -100,15 +100,15 @@ export default function AdminPricingPage() {
   const handleEdit = (setting: PricingSetting) => {
     setSelectedSetting(setting);
     setFormData({
-      displayName: setting.display_name || "",
-      displayNameEn: setting.display_name_en || "",
+      displayName: setting.displayName || "",
+      displayNameEn: setting.displayNameEn || "",
       description: setting.description || "",
-      priceInCents: setting.price_in_cents?.toString() || "",
-      originalPriceInCents: setting.original_price_in_cents?.toString() || "",
-      durationDays: setting.duration_days?.toString() || "",
-      sortOrder: setting.sort_order?.toString() || "",
-      isActive: setting.is_active,
-      isFeatured: setting.is_featured,
+      priceInCents: setting.priceInCents?.toString() || "",
+      originalPriceInCents: setting.originalPriceInCents?.toString() || "",
+      durationDays: setting.durationDays?.toString() || "",
+      sortOrder: setting.sortOrder?.toString() || "",
+      isActive: setting.isActive,
+      isFeatured: setting.isFeatured,
     });
     setShowEditDialog(true);
   };
@@ -143,7 +143,7 @@ export default function AdminPricingPage() {
     return `¥${(cents / 100).toFixed(2)}`;
   };
 
-  const getPlanTypeLabel = (planType: string) => {
+  const getPlanTypeLabel = (planType?: string | null) => {
     const labels: Record<string, string> = {
       monthly: "悦聚月卡",
       quarterly: "悦聚季卡",
@@ -151,12 +151,13 @@ export default function AdminPricingPage() {
       pack_3: "三连局包",
       pack_6: "六连局包",
     };
+    if (!planType) return "未分类";
     return labels[planType] || planType;
   };
 
-  const getPlanIcon = (planType: string) => {
+  const getPlanIcon = (planType?: string | null) => {
     if (planType === "monthly" || planType === "quarterly") return Star;
-    if (planType.includes("pack")) return Package;
+    if (planType?.includes("pack")) return Package;
     return DollarSign;
   };
 
@@ -194,7 +195,7 @@ export default function AdminPricingPage() {
     <div className="space-y-6" data-testid="admin-pricing-page">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">定价管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">定价管理</h1>
           <p className="text-muted-foreground">管理套餐价格和优惠设置</p>
         </div>
       </div>
@@ -208,21 +209,21 @@ export default function AdminPricingPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {pricingSettings.map((setting) => {
-          const Icon = getPlanIcon(setting.plan_type);
-          const savings = setting.original_price_in_cents && setting.price_in_cents 
-            ? setting.original_price_in_cents - setting.price_in_cents 
+          const Icon = getPlanIcon(setting.planType);
+          const savings = setting.originalPriceInCents && setting.priceInCents 
+            ? setting.originalPriceInCents - setting.priceInCents 
             : 0;
-          const discountPercent = setting.original_price_in_cents 
-            ? Math.round((1 - setting.price_in_cents / setting.original_price_in_cents) * 100)
+          const discountPercent = setting.originalPriceInCents 
+            ? Math.round((1 - setting.priceInCents / setting.originalPriceInCents) * 100)
             : 0;
 
           return (
             <Card 
               key={setting.id} 
-              className={`relative ${!setting.is_active ? 'opacity-60' : ''}`}
+              className={`relative ${!setting.isActive ? 'opacity-60' : ''}`}
               data-testid={`card-pricing-${setting.id}`}
             >
-              {setting.is_featured && (
+              {setting.isFeatured && (
                 <div className="absolute -top-2 -right-2">
                   <Badge className="bg-yellow-500 text-white" data-testid={`badge-featured-${setting.id}`}>
                     <Star className="w-3 h-3 mr-1" />
@@ -238,10 +239,10 @@ export default function AdminPricingPage() {
                     </div>
                     <div>
                       <CardTitle className="text-lg" data-testid={`text-plan-name-${setting.id}`}>
-                        {setting.display_name}
+                        {setting.displayName}
                       </CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        {getPlanTypeLabel(setting.plan_type)}
+                        {getPlanTypeLabel(setting.planType)}
                       </p>
                     </div>
                   </div>
@@ -259,11 +260,11 @@ export default function AdminPricingPage() {
                 <div className="space-y-1">
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-bold text-primary" data-testid={`text-price-${setting.id}`}>
-                      {formatPrice(setting.price_in_cents)}
+                      {formatPrice(setting.priceInCents)}
                     </span>
-                    {setting.original_price_in_cents && (
+                    {setting.originalPriceInCents && (
                       <span className="text-sm text-muted-foreground line-through">
-                        {formatPrice(setting.original_price_in_cents)}
+                        {formatPrice(setting.originalPriceInCents)}
                       </span>
                     )}
                   </div>
@@ -281,14 +282,14 @@ export default function AdminPricingPage() {
                 )}
 
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  {setting.duration_days && (
+                  {setting.durationDays && (
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      <span>{setting.duration_days}天</span>
+                      <span>{setting.durationDays}天</span>
                     </div>
                   )}
-                  <Badge variant={setting.is_active ? "default" : "secondary"}>
-                    {setting.is_active ? "启用" : "停用"}
+                  <Badge variant={setting.isActive ? "default" : "secondary"}>
+                    {setting.isActive ? "启用" : "停用"}
                   </Badge>
                 </div>
               </CardContent>
@@ -303,7 +304,7 @@ export default function AdminPricingPage() {
           <DialogHeader>
             <DialogTitle>编辑定价设置</DialogTitle>
             <DialogDescription>
-              修改 {selectedSetting?.display_name} 的价格和设置
+              修改 {selectedSetting?.displayName} 的价格和设置
             </DialogDescription>
           </DialogHeader>
           
@@ -456,8 +457,8 @@ export default function AdminPricingPage() {
             <AlertDialogDescription>
               {selectedSetting && isPriceValid ? (
                 <>
-                  「{selectedSetting.display_name}」价格将从{" "}
-                  <strong>{formatPrice(selectedSetting.price_in_cents)}</strong> 改为{" "}
+                  「{selectedSetting.displayName}」价格将从{" "}
+                  <strong>{formatPrice(selectedSetting.priceInCents)}</strong> 改为{" "}
                   <strong>{formatPrice(parsedPriceInCents)}</strong>，立即对所有用户生效。
                 </>
               ) : (

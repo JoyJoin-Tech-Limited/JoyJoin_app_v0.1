@@ -44,7 +44,7 @@ interface Payment {
   amount: number;
   payment_type: "subscription" | "event" | "event_bundle" | "event_pack";
   status: "completed" | "pending" | "failed" | "refunded" | "refund_pending";
-  payment_method: string;
+  payment_method: string | null;
   created_at: string;
   user_first_name: string | null;
   user_last_name: string | null;
@@ -472,7 +472,7 @@ export default function AdminFinancePage() {
                       `¥${(p.amount / 100).toFixed(2)}`,
                       p.event_title || p.subscription_plan || '',
                       p.status,
-                      p.payment_method,
+                      p.payment_method === "wechat_pay" ? "微信支付" : (p.payment_method || ""),
                       fmtDateTimeShort(p.created_at),
                     ]);
                     downloadCsv({ filename: `payments-${safeFormat(new Date(), "yyyyMMdd")}.csv`, headers, rows });
@@ -559,7 +559,9 @@ export default function AdminFinancePage() {
                             </Badge>
                           </TableCell>
                           <TableCell data-testid={`text-payment-method-${payment.id}`}>
-                            {payment.payment_method === "wechat_pay" ? "微信支付" : payment.payment_method}
+                            {payment.payment_method === "wechat_pay"
+                              ? "微信支付"
+                              : payment.payment_method || "—"}
                           </TableCell>
                           <TableCell className="text-sm" data-testid={`text-created-at-${payment.id}`}>
                             {formatDateTime(payment.created_at)}

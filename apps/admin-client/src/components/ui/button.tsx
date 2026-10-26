@@ -27,8 +27,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading || undefined}
         {...props}
       >
-        {loading && <Loader2 className="animate-spin" aria-hidden="true" />}
-        {children}
+        {/* Radix Slot requires exactly one element child. Rendering the loader
+            alongside `children` gave Slot two children (`[false, <Link/>]`
+            when idle), and React.Children.only threw — unmounting the whole
+            root and blanking the console. With `asChild` the caller owns the
+            element, so it must pass through untouched. */}
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {loading && <Loader2 className="animate-spin" aria-hidden="true" />}
+            {children}
+          </>
+        )}
       </Comp>
     )
   },

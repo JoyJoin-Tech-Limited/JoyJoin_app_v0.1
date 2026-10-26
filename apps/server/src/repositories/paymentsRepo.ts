@@ -346,7 +346,11 @@ export const paymentsRepo: PaymentsRepository = {
   async getAllPayments(): Promise<any[]> {
     const result = await db.execute(sql`
       SELECT 
-        p.id, p.user_id, p.payment_type, p.related_id, p.status, p.payment_method,
+        p.id, p.user_id, p.payment_type, p.related_id, p.status,
+        -- No payment_method column exists (never in schema or migrations);
+        -- selecting it 500'd every payments query. Derive the channel from
+        -- the WeChat transaction id that we do record.
+        CASE WHEN p.wechat_transaction_id IS NOT NULL THEN 'wechat_pay' END AS payment_method,
         p.original_amount, p.discount_amount, p.final_amount as amount,
         p.coupon_id, p.wechat_transaction_id, p.wechat_order_id, p.wechat_prepay_id,
         p.paid_at, p.created_at,
@@ -381,7 +385,11 @@ export const paymentsRepo: PaymentsRepository = {
   async getPaymentsByType(paymentType: string): Promise<any[]> {
     const result = await db.execute(sql`
       SELECT 
-        p.id, p.user_id, p.payment_type, p.related_id, p.status, p.payment_method,
+        p.id, p.user_id, p.payment_type, p.related_id, p.status,
+        -- No payment_method column exists (never in schema or migrations);
+        -- selecting it 500'd every payments query. Derive the channel from
+        -- the WeChat transaction id that we do record.
+        CASE WHEN p.wechat_transaction_id IS NOT NULL THEN 'wechat_pay' END AS payment_method,
         p.original_amount, p.discount_amount, p.final_amount as amount,
         p.coupon_id, p.wechat_transaction_id, p.wechat_order_id, p.wechat_prepay_id,
         p.paid_at, p.created_at,
@@ -421,7 +429,11 @@ export const paymentsRepo: PaymentsRepository = {
 
     const rowsResult = await db.execute(sql`
       SELECT 
-        p.id, p.user_id, p.payment_type, p.related_id, p.status, p.payment_method,
+        p.id, p.user_id, p.payment_type, p.related_id, p.status,
+        -- No payment_method column exists (never in schema or migrations);
+        -- selecting it 500'd every payments query. Derive the channel from
+        -- the WeChat transaction id that we do record.
+        CASE WHEN p.wechat_transaction_id IS NOT NULL THEN 'wechat_pay' END AS payment_method,
         p.original_amount, p.discount_amount, p.final_amount as amount,
         p.coupon_id, p.wechat_transaction_id, p.wechat_order_id, p.wechat_prepay_id,
         p.paid_at, p.created_at,
