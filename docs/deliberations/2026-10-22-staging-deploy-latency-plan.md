@@ -251,3 +251,23 @@ Phase 1 上线后需连续观察 **3 次**真实 push 的 staging run，全部�
 3. 读 `Deployment timing summary`（job summary）记录分段基线，写入本节。
 4. 反向验证：连续 push 两次，确认旧 run 的 gates 被 cancel、deploy job 不被 cancel。
 5. 回滚：`git revert` 单个 commit 即可（所有改动都是 workflow/脚本层）。
+
+### 9.3 三层镜像与 stale 逃逸门（2026-10-26）
+
+Phase 2（TCR）被否定后，改用「让每次部署传输量正比于改动量」的路线（架构裁决见记忆 `mem_1793003963467_dtbi6okkn`）。
+
+**提交**：`c683201dd`（Dockerfile 三层 + `publish-api-base.yml` + staging 接 registry `cache-from`）、`73251a231`（发布工作流改用内置 `GITHUB_TOKEN`，PAT 报 `denied: ... does not match expected scopes`）、`36d5c14ad`（zod 4 迁移，解除 `Dependency Audit` 阻塞）、`27fa851c5`（`adminMetrics.ts` 模块级 `sql.join` 改惰性 getter，解除 `Server Tests` 阻塞）、`ed126a344`（builder 补 `ENV NODE_ENV=development`）、`6d6b5d018`（`allow_stale` dispatch 输入）。
+
+**Dockerfile 结构**：`base`（alpine + font-noto-cjk/ffmpeg + 运行时 ENV）→ `deps`（三个 manifest + `npm ci` + `npm prune --omit=dev` + `mkdir -p` 两个 workspace 的 `node_modules`）→ `builder`（源码 + `npm run build`）→ `runner`（`FROM deps`，只拷 `dist` / `apps/server/package.json` / `apps/server/data` / `packages/shared/{package.json,src}`）。
+
+**已修的三个构建/运行事故**：
+
+1. `builder` 继承 `base` 的 `NODE_ENV=production` → `npm ci` 跳过 devDependencies → `Cannot find package 'esbuild' imported from /app/apps/server/build.mjs`。修法：`builder` 内 `ENV NODE_ENV=development`。
+2. `runner` 未拷 `apps/server/node_modules` → 容器启动即 `ERR_MODULE_NOT_FOUND: Cannot find package 'drizzle-orm'`（2026-10-22 的 drizzle 升级后该包不再 hoist 到根 `node_modules`）。
+3. 发布工作流误用 `GHCR_TOKEN`（PAT 无 `write:packages`）→ 改用内置 `GITHUB_TOKEN` + `permissions: packages: write`。
+
+**stale 上传的结构性冲突**：bundle 路径需 ~25 分钟（36 个 8 MiB 分片、6 条 SSH 连接），协作高峰期 main 每 10–20 分钟被 push 一次，导致 mid-upload stale 守卫反复中止（`40304453463`、`40308249109` 都是只传完一半）。新增 `workflow_dispatch` 输入 `allow_stale`（默认 `false`；为 `true` 时 4 处 freshness 守卫与 2 处 mid-upload 中止点降级为 warning），用于手动部署一个已构建的 commit 到 staging；push 触发与生产均保持严格。
+
+**验证状态（2026-10-26）**：`Build Staging Images` 已连续两次 success（三层构建成立，run `40304453463` / `40308249109`）；15 个 quality gate 全绿。**运行时验证（API 启动 + `/api/readyz` 200）仍待完成** —— 前两次都因 mid-upload stale 中止而未进入 `Staging Deployment`，现由 `allow_stale=true` 的 run `40310778102` 承担。
+
+**尚未做**：base/deps 镜像按当前 lock hash 重新发布（消除 `joyjoin-api-deps:sha256-...: not found` 的 cache importer 告警）；开 `STAGING_GHCR_ENABLED` 实测 `pull_seconds` / `new_bytes`（首次仍需跨太平洋拉 base+deps 层）；`deploy-production.yml` 接同样的 `cache-from`；`deployment/.release.json` 记录 last-known-good digest。
