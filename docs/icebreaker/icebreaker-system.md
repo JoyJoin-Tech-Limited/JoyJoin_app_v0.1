@@ -28,14 +28,11 @@
 |  5 rounds × 20 min, DB-persisted                               |
 +─────────────────────────────────────────────────────────────────+
 
-> ⚠️ **LEGACY PATH (do not use as primary CTA):**
-> [IcebreakerToolkit] — pre-event game browser, 13 curated games from `packages/shared/src/icebreakerGames.ts`
-> (retained for backward compatibility only; **deprecated 2026-04-27**)
->
-> ⚠️ **DEPRECATED — `icebreakerGames.ts`:**
-> The 13 static party games in `packages/shared/src/icebreakerGames.ts` are **not** connected to the
-> Social Icebreaker phase system. They power the legacy `IcebreakerToolkit` UI only.
-> New mechanics must ship as `SocialIcebreakerPhase` values, not as entries in this catalog.
+> ⚠️ **REMOVED — IcebreakerToolkit (2026-04-27, deleted):**
+> The pre-event game browser and its 13-game static catalog (`packages/shared/src/icebreakerGames.ts`)
+> no longer exist. They were never connected to the Social Icebreaker phase system.
+> New mechanics must ship as `SocialIcebreakerPhase` values; the only pre-event surface is the
+> mini-program tier selector + compiled run plan.
 
 > ✅ **REMOVED — IcebreakerCardsSheet:**
 > Pre-event topic preview sheet (GET /api/icebreakers/curated/:eventId) has been deleted.
@@ -61,8 +58,8 @@
 **Resolution:** Surface A deleted. The pre-event 小悦 button in `BlindBoxEventDetailPage` (both user and admin clients) now renders a non-interactive static teaser card ("AI破冰环节已就绪 / 到场签到后，小悦将为你们定制专属破冰体验") when the event has not yet started. When the event starts, the button navigates directly to `IcebreakerSessionPage` as before — in both the user client and the admin client.
 
 **Files deleted:**
-- `apps/user-client/src/components/IcebreakerCardsSheet.tsx`
-- `apps/admin-client/src/components/IcebreakerCardsSheet.tsx`
+- `archived/workspaces/user-client/src/components/IcebreakerCardsSheet.tsx` (deleted; the archived tree no longer carries the file either)
+- `apps/admin-client/src/components/IcebreakerCardsSheet.tsx` (deleted)
 
 **Endpoint removed:**
 - `GET /api/icebreakers/curated/:eventId`
@@ -413,14 +410,16 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `POST` | `/api/social-icebreaker/:socialSessionId/early-end` | host | Jump to recap early without counting the current phase as completed; routes through `transitionPhase()` |
 | `POST` | `/api/social-icebreaker/:socialSessionId/end-session` | host | End a custom-mode session early |
 | `POST` | `/api/social-icebreaker/:socialSessionId/select-phase` | host | Select the next phase in custom mode (`phase_selection`) |
+| `POST` | `/api/social-icebreaker/:socialSessionId/nudge-incomplete` | host | One-tap 「还差 N 人」 nudge to players who have not acted in the current phase. State-free: emits `SOCIAL_GROUP_BEAT` over WS for a haptic/视觉 beat and does not touch session state. Rate-limited to ≤1 per host per session per 30s |
+| `POST` | `/api/social-icebreaker/:socialSessionId/report-content` | any | UGC 举报 (E9, 2026-10-22). Body carries a `contentRef` locator (six content kinds: warmup topic, micro-challenge, lie-detective statement, mini-script script/clue, quip, recap line) + optional note. Server snapshots the original text **before** any cleanup, so already-purged content still returns 201 with the snapshot the reporter saw. Only the reporter's note passes `validateContentSafeAsync` — the snapshot itself must never be content-filtered (self-harm evidence would disappear). Rate-limited to 3 reports per session-hour; no schema change |
 
 The mini-script family above (bonus + generate + actions) is mounted in `apps/server/src/routes/domains/miniscript.ts` at top-level `/api/miniscript/*` (wired via `registerIcebreakerRoutes` in `routes/domains/icebreaker.ts`), with `socialSessionId` read from the request body. These routes intentionally do NOT use the `/api/social-icebreaker/:id/...` prefix; the mini-program client must post to `/api/miniscript/*` (regression-guarded by `miniscriptClientPathContract.test.ts`, 2026-08-06).
 
 ### Frontend Surfaces
 
 **Files (mini-program first):**
-- `apps/mini-program/src/pages/icebreaker-session/index.tsx` — Taro session page (primary in-field client)
-- `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` — barrel that now exports hero views exclusively (PH3 PR3: all 9 non-warmup phases), `PhaseHeroCard` shared premium frame with per-phase foil accent, 4 zones (header rail → hero → status → action), abandoned `--paused` rollback
+- `apps/mini-program/src/pages/icebreaker-session/index.tsx` — Taro session page (primary in-field client); the phase-dispatch JSX lives in `SessionPhaseViews.tsx` and the action layer in `hooks/useSocialActions.ts`, which keeps `index.tsx` under the harness gate's 1800-line limit
+- `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` — barrel that exports hero views exclusively (PH3 PR3: all 9 non-warmup phases); the dispatch component itself is `SessionPhaseViews.tsx`, `PhaseHeroCard` is the shared premium frame with per-phase foil accent, 4 zones (header rail → hero → status → action), abandoned `--paused` rollback
 - `apps/mini-program/src/pages/icebreaker-session/components/PhaseHeroCard.tsx` — shared premium card frame used by all hero views; per-phase foil border/shadow via `getPhaseFoilStyle()`, `artUrl` Lovart band (≤40%, widthFix)
 - `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` — host-facing tier selector: 3 opinionated preset cards (`轻松破冰`, `深度畅聊`, `游戏狂欢`) + a `自由局` custom card whose game picker is expanded by a browse-only 「先看看有哪些游戏」 toggle (picking a game joins 自由局 in tap order); a bottom 今晚流程预览 card renders the real run-plan itinerary (two-column numbered rows, 开场/收尾 markers, energy dots) with a `mini_script` 加映 row gated on `features.socialIcebreakerMiniScriptEnabled`; feature-flagged via `features.runPlanTemplatesEnabled` and `features.socialIcebreakerCustomModeEnabled`
 - `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` — Warmup phase (4-band zero-scroll layout: welcome band, hero card slot, chrome-less presence strip, white action bar). Host band replaced permanent XiaoyueChatBubble with 40rpx expression avatar + single toneLine. Host tools consolidated in `⋯` menu. Warmup hero card state machine: mood pick → generating shimmer → deal-flip to topic. `深聊` collapse expander. Ready CTA morphs `我准备好了` → `已准备 ✓`.
@@ -431,32 +430,28 @@ The mini-script family above (bonus + generate + actions) is mounted in `apps/se
 - `apps/mini-program/src/pages/icebreaker-session/phaseAccents.ts` — Per-phase foil accent tokens (`getPhaseFoilStyle()`), locked by `phaseAccents.test.ts` (≥4.5:1 deep-on-tint contrast)
 - `apps/mini-program/src/styles/_phase-hero-card.scss` — PhaseHeroCard shared styles + `_phase-motion.scss` shared motion vocabulary
 - `packages/shared/src/socialIcebreakerYuezaiCopy.ts` — Centralised 悦仔 copy: tier copy, permission lines (`YUEZAI_PERMISSION_LINES` keyed by `SocialTopicDepthLevel`), `getYuezaiCopyForTier()`
-- `apps/user-client/src/pages/IcebreakerSessionPage.tsx` — web session page (parity)
-- `apps/user-client/src/hooks/useSocialIcebreaker.ts` — web hook (parity)
+- `apps/mini-program/src/pages/icebreaker-session/hooks/` — session hooks: `useSocialActions.ts` (every phase action via `performSocialAction`, warmup-topics retry/backoff cluster, tier switch), `useUgcReport.ts` (E9 long-press report + ActionSheet/confirm modal), `useMiniScriptGeneration.ts`, `useRecapSharePoster.ts`, `useSessionSensoryEvents.ts`, `useRejoinCatchUp.ts`, `useKeepScreenOn.ts`, `useIdlePollBackoff.ts`, `useWarmupReadiness.ts`, `useIcebreakerDraft.ts`
+- `apps/mini-program/src/pages/icebreaker-session/viewModels/` — pure derivations per phase (including `groupBeatModel.ts` for the S6 `SOCIAL_GROUP_BEAT` haptic dispatch) and `components/` for the shared phase surfaces
+- The archived web client (`archived/workspaces/user-client/src/pages/IcebreakerSessionPage.tsx` + `hooks/useSocialIcebreaker.ts`) is reference-only history; the former `apps/user-client/...` paths no longer exist.
 
 The mini-program surface consumes the same `SocialSessionState` contract and prefers `joinedParticipants` when the server provides it.
 
-**Hook:** `apps/user-client/src/hooks/useSocialIcebreaker.ts`
+**Sensory + pacing layer (2026-10-20 → 2026-10-22):**
 
-```typescript
-const {
-  state,             // SocialSessionState | null
-  isLoading,
-  isHost,            // true if userId === state.hostUserId
-  socialSessionId,
-  startSession,      // POST /start
-  fetchTopics,       // (mood) → SocialTopic[]
-  advancePhase,      // POST /advance
-  submitPulseCheck,  // (vibe: 1|2|3) → { averageVibe, voteCount, allVoted }
-  generateMyStatements, // POST /lie-detective/generate → statements[]
-  castVote,          // (targetUserId, statementIndex) → void
-  completeChallenge, // POST /micro-challenge/complete
-  isStarting,
-  isAdvancing,
-} = useSocialIcebreaker({ sessionId, userId, displayName });
-```
+- **Haptic grammar.** `apps/mini-program/src/lib/utils/haptics.ts` is the single vocabulary (confirm / success / warn / tick), locked by `socialHapticGrammar.test.ts`; phase views must call it instead of `Taro.vibrateShort` directly so intensity stays consistent across devices.
+- **Host nudge.** `POST .../nudge-incomplete` backs the host's 「还差 N 人」 action; it emits a state-free `SOCIAL_GROUP_BEAT` so stragglers feel the beat without any state write. ≤1 per host per session per 30s.
+- **Quip inspiration chips.** The quip battle offers curated chips when a player has no line yet — they seed the input, never auto-send.
+- **Phase duration expectations.** Each phase renders its expected length so players can pace themselves; the value is static copy, not a countdown.
+- **Recap share poster.** `useRecapSharePoster.ts` + `recapSharePoster.ts` render the recap share card behind `recapSharePosterEnabled` (env `RECAP_SHARE_POSTER_ENABLED`, default **off**).
+- **UGC 举报.** Long-press is the only entry (`useUgcReport.ts`): ActionSheet → confirm modal (optional ≤100-char note) → `report-content`. Mount points: phase cards, mini-script script cards, lie-detective statements, recap card. The client sends only the `contentRef` locator — the server snapshots the text.
 
-Polls via `useQuery` with `refetchInterval: 3000`.
+**Client state contract (mini-program, the only shipping client):**
+
+- `apps/mini-program/src/pages/icebreaker-session/index.tsx` polls `GET /api/social-icebreaker/:socialSessionId` every 3s (`useIdlePollBackoff.ts` widens the interval when the table is idle); the 3s poll is the **sole state truth** — WS beats (`SOCIAL_GROUP_BEAT`) are state-free hints and never carry authoritative data.
+- Every mutation goes through `performSocialAction` in `hooks/useSocialActions.ts`, which owns per-action in-flight guards, error toasts, and the optimistic-then-reconcile pattern.
+- Host-only affordances are derived from `state.hostUserId === currentUserId`; never trust a client-side flag for authority, the server re-checks every host route.
+- `SocialSessionState` is the shared contract (`packages/shared`), and the client prefers `joinedParticipants` when the server provides it.
+- Re-entry is handled by `useRejoinCatchUp.ts` (rejoin both sides) rather than assuming a fresh mount.
 
 ### Pre-event run plan lifecycle (post-match → start time → in-event execution)
 
@@ -487,11 +482,9 @@ Later async updates (venue assignment, refreshed theme highlights, cached pair e
 
 #### Shipped phase templates (web registry + mini-program phase views)
 
-**Web:** phase UI is registered in **`apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx`** (`SOCIAL_ICEBREAKER_PHASE_REGISTRY`); the orchestrator uses **`renderSocialIcebreakerPhasePanel`**.
+**Web (archived reference only):** the phase UI registry lives at **`archived/workspaces/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx`** (`SOCIAL_ICEBREAKER_PHASE_REGISTRY`, orchestrator `renderSocialIcebreakerPhasePanel`). That client was archived in 2026-05 and is historical reference — do not treat it as a parity surface.
 
-**Mini-program (primary):** the same phase set is implemented in **`apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx`** (and composed from `index.tsx`). New or changed phases must land **here first**, then the web registry is updated for parity.
-
-Any compiled plan must only reference phases that exist in **both** surfaces **unless** a release-track **Game Development Agent** change explicitly adds a phase (with mini-program delivered first).
+**Mini-program (primary, only shipping surface):** the same phase set is implemented in **`apps/mini-program/src/pages/icebreaker-session/`** — dispatch in `SessionPhaseViews.tsx`, hero views in `phaseViews.tsx`, action layer in `hooks/useSocialActions.ts`, all composed from `index.tsx`. New or changed phases land **here only**.
 
 #### Production automation: Game Design Agent and Game Dev Agent
 
@@ -548,37 +541,25 @@ When `RUN_PLAN_TEMPLATES_ENABLED=true`, the server uses a template-driven compil
 
 > **Note:** This section was previously titled "IcebreakerToolkit (Pre-Event Browser — Supporting Layer)". It has been renamed to make clear that the Toolkit is a **legacy** component and must not be treated as the recommended icebreaking path.
 
-> ⚠️ **LEGACY:** The IcebreakerToolkit is a legacy pre-event game browser. It is no longer the recommended icebreaking path. New development should NOT use or extend this toolkit as the primary icebreaking experience. It is retained for backward compatibility.
+> ⚠️ **REMOVED:** The IcebreakerToolkit and its client hosts were deleted; the mini-program tier selector + compiled run plan replaced this pre-event browsing surface. This section is retained as historical context only — do not build against these paths.
 
 ### Overview
-The Toolkit is a **pre-session browsing and host preparation tool**. A host explores curated games, gets AI recommendations, then launches a Social Icebreaker session.
+The Toolkit was a **pre-session browsing and host preparation tool**: a host explored curated games, got AI recommendations, then launched a Social Icebreaker session. Current equivalent: `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` (three presets + 自由局 custom picker, gated on `features.runPlanTemplatesEnabled` / `features.socialIcebreakerCustomModeEnabled`).
 
-### Files
-- `apps/user-client/src/components/icebreaker/IcebreakerToolkit.tsx`
-- `apps/admin-client/src/components/icebreaker/IcebreakerToolkit.tsx`
-- Sub-components: `ActivitySpotlight`, `GameDetailView`, `KingGameController`
+### Files (deleted — historical)
+- `archived/workspaces/user-client/src/components/icebreaker/IcebreakerToolkit.tsx` (deleted)
+- `apps/admin-client/src/components/icebreaker/IcebreakerToolkit.tsx` (deleted)
+- Sub-components: `ActivitySpotlight`, `GameDetailView`, `KingGameController` (deleted with the toolkit)
 
-### Data Source
-**File:** `shared/icebreakerGames.ts` (also `packages/shared/src/icebreakerGames.ts`)
-
-**13 curated games** across categories:
-
-| Category | Games |
-|----------|-------|
-| `quick` | 两真一假, 你会选择, 谐音梗接龙, 最xxx的人, 数字炸弹, 心有灵犀 |
-| `creative` | 故事接龙, 如果我是 |
-| `deep` | 小众观点, 高光与低谷 |
-| `active` | 我说你猜, 谁是卧底, 国王游戏 |
-
-**Scene filter:** `dinner` | `bar` | `both`
+### Data Source (removed)
+The former `shared/icebreakerGames.ts` catalog (13 curated games across `quick`/`creative`/`deep`/`active`, `dinner`/`bar`/`both` scene filter) was deleted together with the Toolkit; no code references it. The mini-program tier selector reads presets from `apps/mini-program/src/pages/icebreaker-session/tierPresets.ts` instead.
 
 ### AI Game Recommendation (Admin)
 **File:** `apps/admin-client/src/icebreakerAIService.ts`
 Function: `generateGameRecommendation()` using `GAME_RECOMMENDATION_PROMPT`
 
 ### Relationship to Social Icebreaker
-The Toolkit is the **host preparation layer**, helping hosts browse and choose suitable games/topics before running an event.
-At present, the Social Icebreaker `micro_challenge` phase is always populated server-side via `generateMicroChallenges(...)` and does **not** consume Toolkit game selections directly; wiring Toolkit selection into `micro_challenge` is an aspirational/future integration, not yet implemented.
+The Toolkit was the **host preparation layer** for browsing games/topics before an event. Current behaviour (as of 2026-10-26): the Social Icebreaker `micro_challenge` phase is always populated server-side via `generateMicroChallenges(...)`; no client game selection feeds it.
 
 ### Server-Driven Phase Flags
 Social Icebreaker v2 phase availability is now owned by the server. Each `SocialSessionState` carries an `enabledPhases` array, and `/api/social-icebreaker/:socialSessionId/advance` advances using that server-owned list rather than any client-provided phase order.
@@ -598,10 +579,10 @@ If a configured phase does not meet `PHASE_CONFIG[phase].minPlayersRequired`, th
 ### Overview
 An **AI-personalized card game** that serves as an **optional deep-dive supporting layer** accessible from within or after the Social Icebreaker warmup phase. It is **not** a standalone primary in-event experience — the primary flow is always the Social Icebreaker (`/icebreaker/:sessionId`). Cards are DB-persisted and personalized using 6-dimension personality scores.
 
-### Files
-- `apps/user-client/src/components/icebreaker/IcebreakerCardGame.tsx`
-- `apps/user-client/src/pages/IcebreakerGamePage.tsx`
-- `apps/user-client/src/hooks/useIcebreakerGame.ts`
+### Files (archived reference only)
+- `archived/workspaces/user-client/src/components/icebreaker/IcebreakerCardGame.tsx`
+- `archived/workspaces/user-client/src/pages/IcebreakerGamePage.tsx`
+- `archived/workspaces/user-client/src/hooks/useIcebreakerGame.ts`
 - `apps/server/src/icebreakerCardGenerationService.ts`
 
 ### Database Tables
@@ -643,9 +624,9 @@ The Card Game is an **optional deep-dive** that complements the Social Icebreake
 ### Overview
 A **simple question widget** shown on the Discover/Home page. Surfaces a random warmup question as a teaser, then funnels users into a full Social Icebreaker session. This component is an **entry-point only** — it is not a complete icebreaking flow.
 
-### Files
-- `apps/user-client/src/components/IcebreakerTool.tsx`
-- `apps/admin-client/src/components/IcebreakerTool.tsx`
+### Files (deleted — historical)
+- `archived/workspaces/user-client/src/components/IcebreakerTool.tsx` (deleted)
+- `apps/admin-client/src/components/IcebreakerTool.tsx` (deleted)
 
 ### API
 `GET /api/icebreakers/random` → `{ question, category, categoryColor }`
@@ -737,21 +718,16 @@ const CLIENT_TO_API_VIBE = {
 | `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` | Warmup phase with vibe-aware depth badges + 3-tier prompt reveal |
 | `apps/mini-program/src/hooks/useTierReveal.ts` | Staggered tier-prompt reveal hook |
 | `apps/mini-program/src/lib/vibeMapping.ts` | Client ↔ API bidirectional vibe mapping |
-| `apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx` | Phase id → shipped UI template registry (`renderSocialIcebreakerPhasePanel`) |
-| `apps/user-client/src/hooks/useSocialIcebreaker.ts` | React hook: session management, polling, all actions |
+| `archived/workspaces/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx` | Archived web phase registry (`renderSocialIcebreakerPhasePanel`) — reference only, no shipping surface |
+| `apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts` | Client action layer: `performSocialAction`, warmup-topic retry/backoff, tier switch, every phase handler |
 | `.github/skills/game-design-icebreaker-compilation/SKILL.md` | Game Design compile skill + modular safety/mechanics/handoff references |
 | `.github/agents/game-design-agent.agent.md` | Game Design Agent (plan compilation handoff) |
 | `.github/agents/game-development-agent.agent.md` | Game Development Agent (registry + server implementation) |
-| `packages/shared/src/icebreakerGames.ts` | **DEPRECATED** — 13 static games for legacy `IcebreakerToolkit`. Not part of Social Icebreaker. Do not extend. |
-| `apps/user-client/src/components/icebreaker/IcebreakerToolkit.tsx` | Pre-event game browser (user-facing) |
-| `apps/admin-client/src/components/icebreaker/IcebreakerToolkit.tsx` | Pre-event game browser (admin-facing) |
-| `apps/user-client/src/components/icebreaker/IcebreakerCardGame.tsx` | In-session AI card game component |
-| `apps/user-client/src/pages/IcebreakerGamePage.tsx` | Card game page (`/icebreaker-game`) |
+| `archived/workspaces/user-client/src/components/icebreaker/IcebreakerCardGame.tsx` | In-session AI card game component (archived web client, reference only) |
+| `archived/workspaces/user-client/src/pages/IcebreakerGamePage.tsx` | Card game page (archived web client, reference only) |
 | `apps/server/src/icebreakerCardGenerationService.ts` | Card generation service (DB-persisted) |
-| `apps/user-client/src/components/IcebreakerTool.tsx` | Lightweight random question widget |
 | `packages/shared/src/icebreakerRunPlan.ts` | Zod contract for pre-compiled per-match `IcebreakerRunPlan` (post-match automation) |
 | `docs/superpowers/plans/2026-04-21-icebreaker-compilation-implementation-plan.md` | Implementation plan: persist plan on disk, hook match, wire Social Icebreaker |
-| `docs/icebreaker-ux-report.md` | UX analysis and design decisions |
 
 ---
 

@@ -7,6 +7,7 @@ primary_ownership: >
 
 use_when:
   - adding or modifying an admin portal page, component, or route
+  - adding or changing a console KPI, action-queue row, or nav badge
   - building dashboards with Recharts (BarChart, LineChart, PieChart)
   - working with admin tables, forms, dialogs, or filtering UIs
   - gating UI by admin RBAC role (super_admin, operator, viewer)
@@ -15,7 +16,7 @@ use_when:
   - admin auth/session handling (login, logout, useAuth bootstrap)
 
 do_not_use_when:
-  - task is about backend admin API routes or audit logging
+  - task is about backend admin API routes, metric SQL, or audit logging
   - task is purely about shared UI primitives in packages/shared
   - task is about the user-facing web app or WeChat mini-program
   - task is about generic CSS tokens or design-system variants
@@ -29,6 +30,17 @@ strong_triggers:
   - AdminLoginPage
   - AdminEventPoolsPage
   - AdminAccountsPage
+  - AdminDashboardV2
+  - AdminWorkspaceTabs
+  - AdminForbidden
+  - KpiCard
+  - ActionQueue
+  - console truth contract
+  - admin console
+  - KPI card
+  - action queue
+  - nav badge
+  - feature flags page
   - admin dashboard
   - add an admin page
   - Recharts chart
@@ -48,6 +60,7 @@ owned_files:
   - apps/admin-client/src/components/admin/**
   - apps/admin-client/src/hooks/useAuth.ts
   - apps/admin-client/src/lib/queryClient.ts
+  - apps/admin-client/src/components/admin/**
 
 owned_paths:
   - /admin
@@ -70,6 +83,12 @@ owned_symbols:
   - queryClient
   - adminRole
   - isSuperAdmin
+  - AdminDashboardV2
+  - AdminDashboardSwitch
+  - AdminWorkspaceTabs
+  - AdminForbidden
+  - KpiCard
+  - ActionQueue
 
 related_skills:
   - skill: server-domain-architecture
