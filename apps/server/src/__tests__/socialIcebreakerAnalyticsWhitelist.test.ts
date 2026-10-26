@@ -50,4 +50,15 @@ describe("social icebreaker analytics whitelist parity", () => {
     expect(serverWhitelist).toContain("recap_leave_tap");
     expect(serverWhitelist).toContain("icebreaker_band_image_error");
   });
+
+  it("includes the M1 agent funnel events needed for askId joins", () => {
+    expect(serverWhitelist).toEqual(
+      expect.arrayContaining([
+        "agent_ask_shown",
+        "agent_ask_decision",
+        "agent_action_result",
+        "agent_policy_changed",
+      ]),
+    );
+  });
 });

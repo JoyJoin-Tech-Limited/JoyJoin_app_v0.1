@@ -6,6 +6,7 @@ import {
   varchar,
   timestamp,
   boolean,
+  check,
   integer,
   text,
   uniqueIndex,
@@ -35,6 +36,95 @@ export const socialIcebreakerSessions = pgTable("social_icebreaker_sessions", {
 ]);
 
 export type SocialIcebreakerSessionRow = typeof socialIcebreakerSessions.$inferSelect;
+
+export const SOCIAL_AGENT_EVENT_KINDS = [
+  'signal_snapshot',
+  'ask_created',
+  'ask_decision',
+  'action_commit',
+  'action_failed',
+  'policy_changed',
+] as const;
+
+export type SocialAgentEventKind = typeof SOCIAL_AGENT_EVENT_KINDS[number];
+
+/**
+ * Server-only, machine-readable episode metadata. Free-form prompt, roster and
+ * profile content is intentionally absent; the repository validates this shape.
+ */
+export interface SocialAgentEventPayload {
+  idempotencyKey?: string;
+  reason?: string;
+  decision?: string;
+  result?: string;
+  status?: string;
+  errorCode?: string;
+  askKind?: string;
+  promptVersion?: string;
+  provider?: string | null;
+  model?: string;
+  aiCorrelationId?: string;
+  fallbackUsed?: boolean;
+  fromCache?: boolean;
+  aiGenerated?: boolean;
+  latencyMs?: number;
+  llmCallCount?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  reasoningTokens?: number;
+  estimatedCostYuan?: number;
+  baseTopicSetRevision?: number;
+  resultRevision?: number;
+  proactiveEnabled?: boolean;
+  ignoredStreak?: number;
+  snapshotScope?: 'action_recovery' | 'micro_challenge_observation';
+  snapshotKey?: string;
+  recoveryOffsetSeconds?: 60 | 180;
+  phaseStartedAt?: number;
+  observationWindowStart?: number;
+}
+
+/**
+ * Bounded, server-only facts for the Xiaoyue agent. This is deliberately not a
+ * cross-session memory store. Rows outlive the short-lived session tombstone so
+ * the independent 90-day retention job remains meaningful; therefore there is
+ * no session/user FK or cascade delete on this append-only log. createdAt is
+ * the only timestamp by design: facts are never updated to rewrite history.
+ */
+export const socialAgentEvents = pgTable("social_agent_events", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  socialSessionId: varchar("social_session_id", { length: 80 }).notNull(),
+  phase: varchar("phase", { length: 40 }).notNull(),
+  kind: varchar("kind", { length: 32 }).notNull().$type<SocialAgentEventKind>(),
+  askId: varchar("ask_id", { length: 80 }),
+  // Only action_commit claims this column. Decision/failure keys live in payload.
+  idempotencyKey: varchar("idempotency_key", { length: 80 }),
+  // Host actor only; participant-level behaviour is never recorded here.
+  actorUserId: varchar("actor_user_id", { length: 128 }),
+  signals: jsonb("signals").$type<Record<string, number | boolean>>(),
+  payload: jsonb("payload").notNull().default(sql`'{}'::jsonb`).$type<SocialAgentEventPayload>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_social_agent_events_session_created").on(table.socialSessionId, table.createdAt),
+  index("idx_social_agent_events_ask").on(table.askId),
+  index("idx_social_agent_events_retention").on(table.createdAt),
+  uniqueIndex("idx_social_agent_events_action_commit_idempotency")
+    .on(table.socialSessionId, table.idempotencyKey)
+    .where(sql`${table.idempotencyKey} IS NOT NULL`),
+  check("ck_social_agent_events_kind", sql`${table.kind} in (
+    'signal_snapshot', 'ask_created', 'ask_decision',
+    'action_commit', 'action_failed', 'policy_changed'
+  )`),
+  check("ck_social_agent_events_idempotency_claim", sql`(
+    (${table.kind} = 'action_commit' AND ${table.idempotencyKey} IS NOT NULL)
+    OR (${table.kind} <> 'action_commit' AND ${table.idempotencyKey} IS NULL)
+  )`),
+]);
+
+export type SocialAgentEventRow = typeof socialAgentEvents.$inferSelect;
 
 /**
  * Per-session participant roster with live presence tracking.

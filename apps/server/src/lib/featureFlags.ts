@@ -278,6 +278,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  field test passes (playbook §10 ruling 6 flag-on precondition).
    *  Env fallback: ICEBREAKER_GROUP_BEATS_ENABLED (default: false). */
   icebreakerGroupBeatsEnabled: "ICEBREAKER_GROUP_BEATS_ENABLED",
+  /** M1 bounded Xiaoyue facilitation copilot: deterministic observation,
+   *  host-gated Ask and one warmup topic-rotation action. ON by default
+   *  (product decision 2026-10-26); the flag remains the kill switch.
+   *  Env fallback: ICEBREAKER_AGENT_COPILOT_ENABLED (default: true). */
+  icebreakerAgentCopilotEnabled: "ICEBREAKER_AGENT_COPILOT_ENABLED",
   /** W5 (gm-debrief): feed matched-roster signals (archetype composition,
    *  shared interests, mood, energy arc) into run-plan compilation and the
    *  warmup / micro-challenge / mini-script generators. When false the whole
@@ -599,6 +604,9 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   icebreakerGlanceStackEnabled: false,
   /** Group beats ship dark until the venue WS field test passes (ruling 6). */
   icebreakerGroupBeatsEnabled: false,
+  /** M1 copilot is ON by default (2026-10-26 product decision); flag is the
+   *  kill switch. Off restores byte-identical legacy warmup behaviour. */
+  icebreakerAgentCopilotEnabled: true,
   /** W5 matching-aware personalization ships dark — flip to true (or set
    *  ICEBREAKER_MATCHING_AWARE_ENABLED=true) to enable. */
   icebreakerMatchingAwareEnabled: false,

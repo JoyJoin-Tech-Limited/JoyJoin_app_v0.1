@@ -23,7 +23,7 @@ export const HOST_MENU_COACHMARK_STORAGE_KEY = 'jj_ib_host_menu_coachmark_seen_v
 export const MINISCRIPT_EVIDENCE_HINT_STORAGE_KEY = 'jj_ms_evidence_hint_seen_v1'
 export const MINISCRIPT_MOTIVE_HINT_STORAGE_KEY = 'jj_ms_motive_hint_seen_v1'
 
-export type HostMenuItemId = 'change-tier' | 'suggestion' | 'early-end'
+export type HostMenuItemId = 'change-tier' | 'suggestion' | 'agent-reopen' | 'early-end'
 
 export interface HostMenuItem {
   id: HostMenuItemId
@@ -90,6 +90,8 @@ export interface ResolveHostMenuItemsInput {
   isHost: boolean
   tier?: TierMachineId
   vibe?: VibeId
+  /** M1: host closed proactive suggestions this session; offer reopen. */
+  agentProactiveDisabled?: boolean
 }
 
 /**
@@ -107,6 +109,9 @@ export function resolveHostMenuItems(input: ResolveHostMenuItemsInput): HostMenu
   }
   if (!SUGGESTION_HIDDEN_PHASES.has(input.phase)) {
     items.push({ id: 'suggestion', label: `${DEFAULT_MASCOT_DISPLAY_NAME}，给点建议？` })
+  }
+  if (input.phase === 'warmup' && input.agentProactiveDisabled) {
+    items.push({ id: 'agent-reopen', label: '重新开启主动提示' })
   }
   if (EARLY_END_PHASES.has(input.phase)) {
     items.push({ id: 'early-end', label: '提前进入总结' })

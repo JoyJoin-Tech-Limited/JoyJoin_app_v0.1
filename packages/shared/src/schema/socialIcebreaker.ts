@@ -5,6 +5,8 @@ export {
 
 export {
   socialIcebreakerSessions,
+  socialAgentEvents,
+  SOCIAL_AGENT_EVENT_KINDS,
   socialIcebreakerParticipants,
   socialIcebreakerLieTruths,
   socialIcebreakerAiFeedback,
@@ -16,6 +18,9 @@ export {
 
 export type {
   SocialIcebreakerSessionRow,
+  SocialAgentEventRow,
+  SocialAgentEventKind,
+  SocialAgentEventPayload,
   SocialIcebreakerParticipantRow,
   SocialIcebreakerPhasePulseCheckRow,
   SocialIcebreakerPhaseMetricRow,

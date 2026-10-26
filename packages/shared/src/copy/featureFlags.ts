@@ -115,6 +115,7 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
   icebreakerMoodFieldEnabled: 'icebreaker-core',
   icebreakerGlanceStackEnabled: 'icebreaker-core',
   icebreakerGroupBeatsEnabled: 'icebreaker-core',
+  icebreakerAgentCopilotEnabled: 'icebreaker-core',
   icebreakerAudioEnabled: 'icebreaker-core',
   icebreakerMatchingAwareEnabled: 'icebreaker-core',
 
@@ -225,6 +226,7 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
   icebreakerMoodFieldEnabled: '冰局氛围色场',
   icebreakerGlanceStackEnabled: '冰局速览层级',
   icebreakerGroupBeatsEnabled: '冰局全员同步节拍',
+  icebreakerAgentCopilotEnabled: '悦仔破冰副驾',
   icebreakerAudioEnabled: '冰局轻音效',
   icebreakerMatchingAwareEnabled: '冰局匹配感知生成',
 
@@ -384,6 +386,8 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
     '默认关闭，待现场验证。开启后，暖场与微挑战环节把信息分三层展示，用户扫一眼就能掌握全局，减少低头看屏时间。',
   icebreakerGroupBeatsEnabled:
     '默认关闭。开启后，冰局的关键时刻（轮到谁、揭晓、庆祝等）全桌手机会同时震动一下，增强同桌同频感。依赖现场网络稳定性，需实地测试通过后再开启。',
+  icebreakerAgentCopilotEnabled:
+    '默认开启（2026-10-26 产品决定），此开关作为 kill switch：关闭后悦仔在暖场环节不会主动观察或询问，无任何 Agent 行为或界面变化，原手动建议保持不变。开启时，悦仔根据确定性互动信号先询问主持人，获确认后才换一组话题卡，并记录本场事实用于效果复盘；微挑战只观察，不提供假闭环动作。微信生成式 AI 备案与重新提审仍是独立发布前置，不由本开关代替。',
   icebreakerAudioEnabled: '默认关闭，待触感语法现场验证后启用：开启后，冰局在触感反馈同时播放轻量短音效（一秒以内）。',
   icebreakerMatchingAwareEnabled:
     '默认关闭。开启后，冰局各环节的内容生成会参考本桌成员的匹配信息（人格构成、共同兴趣等），让内容更贴合这一桌人；关闭时生成内容与旧版完全一致。【2026-10-22 停放】服务端 6 处已接线（含 W5 定向测试），但无 owner：开启前需人工抽检生成文案不泄露匹配评分，并评估每次生成的上下文成本。',

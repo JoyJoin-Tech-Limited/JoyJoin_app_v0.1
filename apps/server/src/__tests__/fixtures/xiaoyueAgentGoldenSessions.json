@@ -1,0 +1,1075 @@
+{
+  "version": 1,
+  "timeUnit": "seconds",
+  "tickIntervalSeconds": 15,
+  "scenarios": [
+    {
+      "id": "stuck_01_run_plan_overrun_already_exceeded",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 300,
+      "initialState": {
+        "phaseStartedAt": -1500,
+        "sessionStartedAt": -1500,
+        "warmupTopicSetUpdatedAt": 0,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 6
+      },
+      "events": [],
+      "expected": {
+        "ask": {
+          "byT": 60,
+          "reason": "phase_overrun"
+        },
+        "maxAsks": 1
+      }
+    },
+    {
+      "id": "stuck_02_topic_stalled_at_observation_start",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 300,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -900,
+        "warmupTopicSetUpdatedAt": -180,
+        "warmupTopicAdvancedAt": -180,
+        "activePlayerCount": 5
+      },
+      "events": [],
+      "expected": {
+        "ask": {
+          "byT": 60,
+          "reason": "topic_stall"
+        },
+        "maxAsks": 1
+      }
+    },
+    {
+      "id": "stuck_03_latest_pulse_low",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 240,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -600,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 4,
+        "pulseChecks": [
+          {
+            "userId": "host",
+            "vibe": 1,
+            "createdAt": -1
+          }
+        ]
+      },
+      "events": [],
+      "expected": {
+        "ask": {
+          "byT": 30,
+          "reason": "pulse_low"
+        },
+        "maxAsks": 1
+      }
+    },
+    {
+      "id": "stuck_04_recent_average_pulse_low_with_latest_neutral",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 240,
+      "initialState": {
+        "phaseStartedAt": -420,
+        "sessionStartedAt": -700,
+        "warmupTopicAdvancedAt": -20,
+        "activePlayerCount": 3,
+        "pulseChecks": [
+          {
+            "userId": "host",
+            "vibe": 1,
+            "createdAt": -10
+          },
+          {
+            "userId": "p2",
+            "vibe": 2,
+            "createdAt": -5
+          }
+        ]
+      },
+      "events": [],
+      "expected": {
+        "ask": {
+          "byT": 30,
+          "reason": "pulse_low"
+        },
+        "maxAsks": 1
+      }
+    },
+    {
+      "id": "stuck_05_pulse_has_priority_over_overrun_then_ignored",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 300,
+      "initialState": {
+        "phaseStartedAt": -1500,
+        "sessionStartedAt": -1500,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 0,
+        "pulseChecks": [
+          {
+            "userId": "host",
+            "vibe": 1,
+            "createdAt": -5
+          }
+        ]
+      },
+      "events": [
+        {
+          "t": 60,
+          "type": "ask_decision",
+          "payload": {
+            "decision": "ignored"
+          }
+        },
+        {
+          "t": 120,
+          "type": "network_retry",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 30,
+          "reason": "pulse_low"
+        },
+        "maxAsks": 1,
+        "finalAskStatus": "ignored",
+        "finalIgnoredStreak": 1,
+        "minimumCooldownMs": 600000
+      }
+    },
+    {
+      "id": "stuck_06_topic_becomes_stalled_during_replay",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 600,
+      "initialState": {
+        "phaseStartedAt": 0,
+        "sessionStartedAt": 0,
+        "warmupTopicSetUpdatedAt": 0,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 6,
+        "warmupReadyUserIds": [
+          "host",
+          "p2"
+        ]
+      },
+      "events": [
+        {
+          "t": 90,
+          "type": "ready",
+          "payload": {
+            "userIds": [
+              "host",
+              "p2",
+              "p3"
+            ]
+          }
+        },
+        {
+          "t": 210,
+          "type": "active_rate",
+          "payload": {
+            "activePlayerCount": 2
+          }
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 240,
+          "reason": "topic_stall"
+        },
+        "maxAsks": 1
+      }
+    },
+    {
+      "id": "stuck_07_phase_crosses_run_plan_ratio_with_normal_topic_progress",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 1200,
+      "initialState": {
+        "phaseStartedAt": 0,
+        "sessionStartedAt": 0,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 6,
+        "runPlan": {
+          "version": 2,
+          "segments": [
+            {
+              "phase": "warmup",
+              "allocatedMinutes": 10,
+              "energyWeight": 1
+            },
+            {
+              "phase": "micro_challenge",
+              "allocatedMinutes": 10,
+              "energyWeight": 2
+            }
+          ],
+          "totalMinutes": 20,
+          "compiledAt": "2026-10-26T00:00:00.000Z",
+          "compilerId": "golden-overrun"
+        }
+      },
+      "events": [
+        {
+          "t": 120,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 240,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 360,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 480,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 600,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 600,
+          "type": "active_rate",
+          "payload": {
+            "activePlayerCount": 0
+          }
+        },
+        {
+          "t": 720,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 840,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 960,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1080,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1200,
+          "type": "topic_advanced",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 810,
+          "reason": "phase_overrun"
+        },
+        "maxAsks": 1
+      }
+    },
+    {
+      "id": "stuck_08_pulse_recovers_then_low_evidence_returns",
+      "category": "stuck",
+      "healthyQuiet": false,
+      "durationSeconds": 600,
+      "initialState": {
+        "phaseStartedAt": 0,
+        "sessionStartedAt": 0,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 5,
+        "pulseChecks": [
+          {
+            "userId": "host",
+            "vibe": 1,
+            "createdAt": -1
+          }
+        ]
+      },
+      "events": [
+        {
+          "t": 15,
+          "type": "pulse",
+          "payload": {
+            "userId": "host",
+            "vibe": 3
+          }
+        },
+        {
+          "t": 120,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 240,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "pulse",
+          "payload": {
+            "userId": "host",
+            "vibe": 1
+          }
+        },
+        {
+          "t": 360,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 480,
+          "type": "topic_advanced",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 330,
+          "reason": "pulse_low"
+        },
+        "maxAsks": 1
+      }
+    },
+    {
+      "id": "control_01_healthy_quiet_active_rate_drop_only",
+      "category": "control",
+      "healthyQuiet": true,
+      "durationSeconds": 1200,
+      "initialState": {
+        "phaseStartedAt": 0,
+        "sessionStartedAt": 0,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 6,
+        "runPlan": {
+          "version": 2,
+          "segments": [
+            {
+              "phase": "warmup",
+              "allocatedMinutes": 60,
+              "energyWeight": 1
+            }
+          ],
+          "totalMinutes": 60,
+          "compiledAt": "2026-10-26T00:00:00.000Z",
+          "compilerId": "golden-healthy-quiet"
+        }
+      },
+      "events": [
+        {
+          "t": 120,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 240,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "active_rate",
+          "payload": {
+            "activePlayerCount": 0
+          }
+        },
+        {
+          "t": 360,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 480,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 600,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 720,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 840,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 960,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1080,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1200,
+          "type": "topic_advanced",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0
+      }
+    },
+    {
+      "id": "control_02_healthy_quiet_zero_presence_with_steady_cards",
+      "category": "control",
+      "healthyQuiet": true,
+      "durationSeconds": 1200,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -300,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 0,
+        "runPlan": {
+          "version": 2,
+          "segments": [
+            {
+              "phase": "warmup",
+              "allocatedMinutes": 90,
+              "energyWeight": 1
+            }
+          ],
+          "totalMinutes": 90,
+          "compiledAt": "2026-10-26T00:00:00.000Z",
+          "compilerId": "golden-zero-presence"
+        }
+      },
+      "events": [
+        {
+          "t": 150,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 450,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 600,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 750,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 900,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1050,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1200,
+          "type": "topic_advanced",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0
+      }
+    },
+    {
+      "id": "control_03_healthy_quiet_positive_pulses_and_normal_progress",
+      "category": "control",
+      "healthyQuiet": true,
+      "durationSeconds": 1200,
+      "initialState": {
+        "phaseStartedAt": -600,
+        "sessionStartedAt": -600,
+        "warmupTopicAdvancedAt": -30,
+        "activePlayerCount": 1,
+        "pulseChecks": [
+          {
+            "userId": "host",
+            "vibe": 3,
+            "createdAt": -20
+          }
+        ],
+        "runPlan": {
+          "version": 2,
+          "segments": [
+            {
+              "phase": "warmup",
+              "allocatedMinutes": 75,
+              "energyWeight": 1
+            }
+          ],
+          "totalMinutes": 75,
+          "compiledAt": "2026-10-26T00:00:00.000Z",
+          "compilerId": "golden-positive-pulse"
+        }
+      },
+      "events": [
+        {
+          "t": 150,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "pulse",
+          "payload": {
+            "userId": "host",
+            "vibe": 3
+          }
+        },
+        {
+          "t": 450,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 600,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 600,
+          "type": "pulse",
+          "payload": {
+            "userId": "host",
+            "vibe": 2
+          }
+        },
+        {
+          "t": 750,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 900,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 900,
+          "type": "pulse",
+          "payload": {
+            "userId": "host",
+            "vibe": 3
+          }
+        },
+        {
+          "t": 1050,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1200,
+          "type": "topic_advanced",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0
+      }
+    },
+    {
+      "id": "control_04_healthy_quiet_low_ready_rate_is_not_a_trigger",
+      "category": "control",
+      "healthyQuiet": true,
+      "durationSeconds": 1200,
+      "initialState": {
+        "phaseStartedAt": -120,
+        "sessionStartedAt": -120,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 2,
+        "warmupReadyUserIds": [],
+        "runPlan": {
+          "version": 2,
+          "segments": [
+            {
+              "phase": "warmup",
+              "allocatedMinutes": 90,
+              "energyWeight": 1
+            }
+          ],
+          "totalMinutes": 90,
+          "compiledAt": "2026-10-26T00:00:00.000Z",
+          "compilerId": "golden-ready-rate"
+        }
+      },
+      "events": [
+        {
+          "t": 165,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 330,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 495,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 660,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 825,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 990,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1185,
+          "type": "topic_advanced",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0
+      }
+    },
+    {
+      "id": "control_05_micro_challenge_overrun_is_observation_only",
+      "category": "control",
+      "healthyQuiet": false,
+      "durationSeconds": 1200,
+      "initialState": {
+        "currentPhase": "micro_challenge",
+        "phaseStartedAt": -1000,
+        "sessionStartedAt": -1500,
+        "warmupTopicAdvancedAt": -1000,
+        "activePlayerCount": 0,
+        "challengeCompletedBy": [],
+        "pulseChecks": [
+          {
+            "userId": "host",
+            "vibe": 1,
+            "createdAt": -5
+          }
+        ]
+      },
+      "events": [
+        {
+          "t": 300,
+          "type": "complete",
+          "payload": {
+            "userIds": [
+              "host"
+            ]
+          }
+        },
+        {
+          "t": 600,
+          "type": "active_rate",
+          "payload": {
+            "activePlayerCount": 1
+          }
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0,
+        "finalPhase": "micro_challenge"
+      }
+    },
+    {
+      "id": "control_06_generating_then_fresh_topic_never_asks",
+      "category": "control",
+      "healthyQuiet": false,
+      "durationSeconds": 1200,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -300,
+        "warmupTopicAdvancedAt": -180,
+        "warmupTopicsStatus": "generating",
+        "warmupTopicsGeneratingAt": -5,
+        "activePlayerCount": 4
+      },
+      "events": [
+        {
+          "t": 300,
+          "type": "topics_ready",
+          "payload": {}
+        },
+        {
+          "t": 480,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 660,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 840,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1020,
+          "type": "topic_advanced",
+          "payload": {}
+        },
+        {
+          "t": 1200,
+          "type": "topic_advanced",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0
+      }
+    },
+    {
+      "id": "control_07_prior_ignore_cooldown_covers_full_ten_minutes",
+      "category": "control",
+      "healthyQuiet": false,
+      "durationSeconds": 600,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -300,
+        "warmupTopicAdvancedAt": -180,
+        "activePlayerCount": 3,
+        "xiaoyueAgent": {
+          "policy": {
+            "proactiveDisabled": false,
+            "ignoredStreak": 1,
+            "cooldownUntilByKind": {
+              "warmup_rotate_topics": 600
+            },
+            "lastAskAt": 0,
+            "askCount": 1,
+            "askCountByPhase": {}
+          },
+          "agentLlmCallCount": 1,
+          "agentEstimatedCostYuan": 0.0104
+        }
+      },
+      "events": [
+        {
+          "t": 300,
+          "type": "network_retry",
+          "payload": {}
+        },
+        {
+          "t": 600,
+          "type": "network_retry",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0
+      }
+    },
+    {
+      "id": "control_08_cost_cap_stops_new_proactive_work",
+      "category": "control",
+      "healthyQuiet": false,
+      "durationSeconds": 1200,
+      "initialState": {
+        "phaseStartedAt": -1500,
+        "sessionStartedAt": -1500,
+        "warmupTopicAdvancedAt": -180,
+        "activePlayerCount": 0,
+        "xiaoyueAgent": {
+          "policy": {
+            "proactiveDisabled": false,
+            "ignoredStreak": 0,
+            "cooldownUntilByKind": {},
+            "askCount": 1,
+            "askCountByPhase": {}
+          },
+          "agentLlmCallCount": 18,
+          "agentEstimatedCostYuan": 0.2
+        }
+      },
+      "events": [
+        {
+          "t": 300,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        },
+        {
+          "t": 600,
+          "type": "network_retry",
+          "payload": {}
+        }
+      ],
+      "expected": {
+        "ask": "never",
+        "maxAsks": 0
+      }
+    },
+    {
+      "id": "boundary_01_weak_network_failure_dismiss_is_not_ignore",
+      "category": "boundary",
+      "healthyQuiet": false,
+      "durationSeconds": 600,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -300,
+        "warmupTopicAdvancedAt": -180,
+        "activePlayerCount": 2
+      },
+      "events": [
+        {
+          "t": 45,
+          "type": "network_retry",
+          "payload": {}
+        },
+        {
+          "t": 60,
+          "type": "network_retry",
+          "payload": {}
+        },
+        {
+          "t": 75,
+          "type": "ask_decision",
+          "payload": {
+            "decision": "action_failed_dismissed"
+          }
+        },
+        {
+          "t": 90,
+          "type": "network_retry",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 60,
+          "reason": "topic_stall"
+        },
+        "maxAsks": 1,
+        "finalAskStatus": "action_failed_dismissed",
+        "finalIgnoredStreak": 0,
+        "finalProactiveDisabled": false,
+        "expectNoKindCooldown": true
+      }
+    },
+    {
+      "id": "boundary_02_rejoin_pending_never_duplicates_or_times_out",
+      "category": "boundary",
+      "healthyQuiet": false,
+      "durationSeconds": 600,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -300,
+        "warmupTopicAdvancedAt": 0,
+        "activePlayerCount": 4,
+        "pulseChecks": [
+          {
+            "userId": "host",
+            "vibe": 1,
+            "createdAt": -1
+          }
+        ]
+      },
+      "events": [
+        {
+          "t": 45,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        },
+        {
+          "t": 60,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        },
+        {
+          "t": 75,
+          "type": "network_retry",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        },
+        {
+          "t": 600,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 30,
+          "reason": "pulse_low"
+        },
+        "maxAsks": 1,
+        "finalAskStatus": "pending",
+        "finalIgnoredStreak": 0
+      }
+    },
+    {
+      "id": "boundary_03_phase_change_expires_pending_without_penalty",
+      "category": "boundary",
+      "healthyQuiet": false,
+      "durationSeconds": 600,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -300,
+        "warmupTopicAdvancedAt": -180,
+        "activePlayerCount": 5
+      },
+      "events": [
+        {
+          "t": 75,
+          "type": "phase_changed",
+          "payload": {
+            "phase": "micro_challenge"
+          }
+        },
+        {
+          "t": 90,
+          "type": "network_retry",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 60,
+          "reason": "topic_stall"
+        },
+        "maxAsks": 1,
+        "finalAskStatus": "expired",
+        "finalIgnoredStreak": 0,
+        "finalProactiveDisabled": false,
+        "expectNoKindCooldown": true,
+        "finalPhase": "micro_challenge"
+      }
+    },
+    {
+      "id": "boundary_04_single_test_close_never_auto_advances",
+      "category": "boundary",
+      "healthyQuiet": false,
+      "durationSeconds": 600,
+      "initialState": {
+        "phaseStartedAt": -300,
+        "sessionStartedAt": -300,
+        "warmupTopicAdvancedAt": -180,
+        "activePlayerCount": 1,
+        "singleTest": {
+          "version": 2,
+          "groupId": "golden-single-test",
+          "isTestModeSkip": true,
+          "runBots": false,
+          "bots": [],
+          "botPersonas": []
+        }
+      },
+      "events": [
+        {
+          "t": 75,
+          "type": "ask_decision",
+          "payload": {
+            "decision": "closed_session"
+          }
+        },
+        {
+          "t": 90,
+          "type": "network_retry",
+          "payload": {}
+        },
+        {
+          "t": 300,
+          "type": "rejoin",
+          "payload": {
+            "viewerIsHost": true
+          }
+        }
+      ],
+      "expected": {
+        "ask": {
+          "byT": 60,
+          "reason": "topic_stall"
+        },
+        "maxAsks": 1,
+        "finalAskStatus": "closed_session",
+        "finalIgnoredStreak": 0,
+        "finalProactiveDisabled": true,
+        "expectNoKindCooldown": true,
+        "finalPhase": "warmup"
+      }
+    }
+  ]
+}

@@ -195,4 +195,123 @@ describe('logAITrace', () => {
     // All 10 should have different IDs
     expect(ids.size).toBe(10);
   });
+
+  it('forwards only whitelisted finite-number and boolean extra telemetry', () => {
+    logAITrace({
+      domain: 'social-icebreaker',
+      feature: 'executeWarmupTopicRotation',
+      provider: 'deepseek',
+      latencyMs: 88,
+      success: true,
+      fallbackUsed: false,
+      fromCache: false,
+      extra: {
+        latencyMs: 87,
+        llmCallCount: 1,
+        inputTokens: 120,
+        outputTokens: 45,
+        totalTokens: 165,
+        promptTokens: 120,
+        completionTokens: 45,
+        estimatedCostYuan: 0.0123,
+        fallbackUsed: false,
+        fromCache: false,
+        highlightsInjected: true,
+        diversityScore: 0.42,
+        rosterSize: 6,
+        totalChars: 300,
+        quality_fun: 8,
+        judge_evaluated: 1,
+      },
+    });
+
+    const record = captureTraceRecord();
+    expect(record.extra).toEqual({
+      latencyMs: 87,
+      llmCallCount: 1,
+      inputTokens: 120,
+      outputTokens: 45,
+      totalTokens: 165,
+      promptTokens: 120,
+      completionTokens: 45,
+      estimatedCostYuan: 0.0123,
+      fallbackUsed: false,
+      fromCache: false,
+      highlightsInjected: true,
+      diversityScore: 0.42,
+      rosterSize: 6,
+      totalChars: 300,
+      quality_fun: 8,
+      judge_evaluated: 1,
+    });
+  });
+
+  it('never emits text, prompts, roster, archetypes, or other non-whitelisted extras', () => {
+    logAITrace({
+      domain: 'social-icebreaker',
+      feature: 'executeWarmupTopicRotation',
+      provider: 'deepseek',
+      latencyMs: 88,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      extra: {
+        mixText: '私密画像混排文本',
+        blockedWord: '敏感词原文',
+        roster: [{ displayName: '参与者姓名' }],
+        archetype: '开心柯基',
+        archetypeMix: '完整原型画像',
+        sessionContext: '本场个人画像',
+        prompt: '完整系统提示词',
+        field: 'question',
+        matchedKeywords: ['敏感词原文'],
+        sections: ['quip'],
+        userId: 123456,
+      },
+    });
+
+    const [line] = consoleSpy.mock.calls[0] as [string];
+    const record = captureTraceRecord();
+    expect('extra' in record).toBe(false);
+    for (const forbidden of [
+      'mixText',
+      'blockedWord',
+      'roster',
+      'archetype',
+      'archetypeMix',
+      'sessionContext',
+      'prompt"',
+      'matchedKeywords',
+      'sections',
+      'userId',
+      '私密画像混排文本',
+      '敏感词原文',
+      '参与者姓名',
+      '完整系统提示词',
+    ]) {
+      expect(line).not.toContain(forbidden);
+    }
+  });
+
+  it('drops unsafe value types and non-finite numbers even for whitelisted keys', () => {
+    logAITrace({
+      domain: 'social-icebreaker',
+      feature: 'executeWarmupTopicRotation',
+      provider: 'deepseek',
+      latencyMs: 88,
+      success: true,
+      fallbackUsed: false,
+      fromCache: false,
+      extra: {
+        inputTokens: '120',
+        estimatedCostYuan: Number.NaN,
+        totalTokens: Number.POSITIVE_INFINITY,
+        fallbackUsed: 'false',
+        llmCallCount: 0,
+      },
+    });
+
+    const record = captureTraceRecord();
+    expect(record.extra).toEqual({ llmCallCount: 0 });
+  });
 });

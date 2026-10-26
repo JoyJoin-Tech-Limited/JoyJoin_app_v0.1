@@ -284,6 +284,10 @@ const REQUIREMENTS = [
       'warmup-action',
       'warmup-presence__',
       'warmup-welcome__',
+      // M1 bounded copilot Ask (2026-10-26): component SCSS is @use'd by the
+      // page; this guard catches a future sub-common stranding that would
+      // silently render an unstyled host card on device.
+      'xiaoyue-agent-ask{',
       'icebreaker__recap-hero{',
       'icebreaker__recap-connect-btn{',
       // Wave 4 Session Glow (2026-09-18, contract AC-16): the 「今晚的高光」

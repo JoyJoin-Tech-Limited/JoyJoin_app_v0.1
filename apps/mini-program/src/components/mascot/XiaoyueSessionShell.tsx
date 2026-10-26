@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ICE_AIGC_REASON_OPENING_PACK, ICE_HOST_MENU_PILL_LABEL, ICE_PHASE_MAP_ARROW } from '@shared/copy/icebreakerSession'
@@ -37,6 +37,12 @@ export interface XiaoyueSessionShellProps {
   sessionPack?: SocialSessionState['xiaoyueSessionPack'];
   /** Adaptive suggestion to surface as an overlay card (host-only; page gates visibility). */
   adaptiveSuggestion?: XiaoyueAdaptiveSuggestion;
+  /**
+   * M1 bounded copilot Ask (host-only). Rendered by the page in its own
+   * component and slotted BELOW the band. Never shares the 8s adaptive
+   * suggestion timer — the two surfaces are mutually exclusive.
+   */
+  agentAsk?: ReactNode;
   isHost: boolean;
   /** Calm-by-default sync-loss: grey dot on the band's right side when polling fails. */
   syncLost?: boolean;
@@ -129,6 +135,7 @@ export default function XiaoyueSessionShell({
   phase,
   sessionPack,
   adaptiveSuggestion,
+  agentAsk,
   isHost,
   syncLost = false,
   showHostMenu = false,
@@ -221,6 +228,9 @@ export default function XiaoyueSessionShell({
           </View>
         )}
       </View>
+
+      {/* M1 Ask slot — non-modal, floats below the band; page owns all state. */}
+      {agentAsk}
 
       {/* Wave 2 orientation row (AC-01/02/03): ONE row, exactly one tenant —
           the entry phase map on waiting/warmup first frames, the resident

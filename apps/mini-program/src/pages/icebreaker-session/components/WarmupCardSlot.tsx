@@ -38,6 +38,11 @@ interface WarmupCardSlotProps {
   state: WarmupCardState
   topics: SocialTopic[]
   currentIndex: number
+  /**
+   * M1: monotonic whole-deck revision from the server. A replacement may
+   * legitimately start at index 0, so index change alone cannot detect it.
+   */
+  topicSetRevision?: number
   selectedMood?: AtmosphereMood
   vibe?: VibeId
   isFlipped: boolean
@@ -180,6 +185,7 @@ export function WarmupCardSlot({
   state,
   topics,
   currentIndex,
+  topicSetRevision,
   selectedMood,
   vibe,
   isFlipped,
@@ -346,6 +352,7 @@ export function WarmupCardSlot({
   const hasEnteredTopicCardRef = useRef(false)
   const hasSheenPlayedRef = useRef(false)
   const prevTopicIndexRef = useRef(currentIndex)
+  const prevTopicSetRevisionRef = useRef(topicSetRevision)
   const dealHapticTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const dealSettleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const sheenStartTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -383,6 +390,7 @@ export function WarmupCardSlot({
     if (!hasEnteredTopicCardRef.current) {
       hasEnteredTopicCardRef.current = true
       prevTopicIndexRef.current = currentIndex
+      prevTopicSetRevisionRef.current = topicSetRevision
       if (motionReduced) {
         setDealPhase('settled')
         return
@@ -393,8 +401,13 @@ export function WarmupCardSlot({
       return
     }
 
-    if (currentIndex !== prevTopicIndexRef.current) {
+    const revisionChanged =
+      topicSetRevision !== undefined &&
+      prevTopicSetRevisionRef.current !== undefined &&
+      topicSetRevision > prevTopicSetRevisionRef.current
+    if (currentIndex !== prevTopicIndexRef.current || revisionChanged) {
       prevTopicIndexRef.current = currentIndex
+      prevTopicSetRevisionRef.current = topicSetRevision
       if (!motionReduced) {
         setQuestionSwitching(true)
         if (questionSwitchTimerRef.current) clearTimeout(questionSwitchTimerRef.current)
@@ -404,7 +417,7 @@ export function WarmupCardSlot({
         )
       }
     }
-  }, [state, currentIndex, motionReduced])
+  }, [state, currentIndex, motionReduced, topicSetRevision])
 
   // Single sheen pass, 120ms after the flip completes (C2). Gated to the
   // first flip — quiet topic changes and re-entry never re-sheen (C4 / C5).

@@ -158,6 +158,8 @@ export interface SocialSessionParticipantSummary {
 export interface PulseCheckResult {
   userId: string;
   vibe: 1 | 2 | 3; // 1=cold, 2=warm, 3=fire
+  /** Epoch ms when the pulse was submitted. Optional for legacy sessions. */
+  createdAt?: number;
 }
 
 export interface LieDetectiveReveal {
@@ -616,6 +618,89 @@ export type SocialContentStatus = 'idle' | 'generating' | 'ready' | 'failed';
  */
 export const GENERATING_STALL_SUPPRESS_MS = 30_000;
 
+// ── Xiaoyue Agent M1 (bounded icebreaker copilot, dark by default) ──────────
+// Server-owned, host-only state. The four legal runtime decisions are the
+// complete action space: observe → (ask) → execute → stop. There is no free
+// autonomy, no phase advance, and no participant-facing projection.
+
+export const XIAOYUE_AGENT_LEGAL_DECISIONS = ['observe', 'ask', 'execute', 'stop'] as const;
+export type XiaoyueAgentLegalDecision = (typeof XIAOYUE_AGENT_LEGAL_DECISIONS)[number];
+
+export type XiaoyueAgentReason = 'default' | 'phase_overrun' | 'topic_stall' | 'pulse_low';
+export type XiaoyueAgentAskKind = 'warmup_rotate_topics';
+export type XiaoyueAgentAskStatus =
+  | 'pending'
+  | 'accepted'
+  | 'executing'
+  | 'succeeded'
+  | 'failed'
+  | 'unknown'
+  | 'ignored'
+  | 'expired'
+  | 'closed_session'
+  | 'action_failed_dismissed';
+
+export interface XiaoyueAgentAskCopy {
+  kicker: string;
+  question: string;
+  hint: string;
+  cta: string;
+}
+
+export interface XiaoyueAgentActionState {
+  askId: string;
+  idempotencyKey: string;
+  status: 'executing' | 'succeeded' | 'failed' | 'unknown';
+  startedAt: number;
+  finishedAt?: number;
+  baseTopicSetRevision?: number;
+  resultRevision?: number;
+  errorCode?: string;
+  fallbackUsed?: boolean;
+  /**
+   * Recovery observation offsets (seconds after `finishedAt`) already written
+   * as `signal_snapshot` episode facts. Max two entries (60, 180); this is the
+   * idempotency marker that stops a 3s poll from duplicating a snapshot.
+   */
+  recoverySnapshotOffsets?: number[];
+}
+
+export interface XiaoyueAgentAsk {
+  id: string;
+  kind: XiaoyueAgentAskKind;
+  phase: SocialIcebreakerPhase;
+  reason: XiaoyueAgentReason;
+  createdAt: number;
+  baseTopicSetRevision: number;
+  copy: XiaoyueAgentAskCopy;
+  meta: AIResponseMeta;
+  status: XiaoyueAgentAskStatus;
+  decisionAt?: number;
+  action?: {
+    idempotencyKey: string;
+    startedAt: number;
+  };
+}
+
+export interface XiaoyueAgentPolicyState {
+  proactiveDisabled: boolean;
+  ignoredStreak: number;
+  cooldownUntilByKind: Partial<Record<XiaoyueAgentAskKind, number>>;
+  lastAskAt?: number;
+  askCount: number;
+  askCountByPhase: Partial<Record<SocialIcebreakerPhase, number>>;
+}
+
+export interface XiaoyueAgentState {
+  policy: XiaoyueAgentPolicyState;
+  ask?: XiaoyueAgentAsk;
+  candidate?: { key: string; since: number };
+  lastAction?: XiaoyueAgentActionState;
+  /** Hard per-session LLM budget counters (host-only projection). */
+  agentLlmCallCount: number;
+  agentEstimatedCostYuan: number;
+}
+
 export interface SocialSessionState {
   socialSessionId: string;
   icebreakerSessionId: string;
@@ -696,6 +781,22 @@ export interface SocialSessionState {
   warmupTopicsGeneratingAt?: number;
   currentTopicIndex?: number;
   warmupReadyUserIds?: string[];
+  /**
+   * Monotonic revision of the warmup topic SET (not the index). Increments on
+   * every whole-deck replacement — precompile, host /topics, or the agent's
+   * rotate action — so clients never mistake a new deck that starts at index 0
+   * for "no change". Absent on legacy sessions.
+   */
+  warmupTopicSetRevision?: number;
+  warmupTopicSetUpdatedAt?: number;
+  /** Last time the current topic card advanced (next-topic tap). */
+  warmupTopicAdvancedAt?: number;
+  warmupTopicSetProvenance?: 'precompile' | 'host_manual' | 'agent' | 'legacy';
+  /**
+   * Bounded Xiaoyue copilot state (M1, host-only). Stripped for every
+   * non-host projection by sanitizeStateForClient.
+   */
+  xiaoyueAgent?: XiaoyueAgentState;
   /** Current warmup speaker. Used for turn-based card reveal and timeout flow. */
   warmupTurnUserId?: string;
   /** Timestamp (ms) when the current warmup turn started. */

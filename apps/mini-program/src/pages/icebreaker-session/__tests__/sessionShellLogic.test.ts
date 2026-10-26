@@ -56,6 +56,18 @@ describe('resolveHostMenuItems', () => {
     expect(items[1].label).toBe('悦仔，给点建议？')
   })
 
+  it('warmup: offers a quiet reopen only after the host closed proactive Ask', () => {
+    const items = resolveHostMenuItems({
+      phase: 'warmup',
+      isHost: true,
+      tier: 'glow',
+      vibe: 'deep_chat',
+      agentProactiveDisabled: true,
+    })
+    expect(items.map((i) => i.id)).toEqual(['change-tier', 'suggestion', 'agent-reopen'])
+    expect(items[2].label).toBe('重新开启主动提示')
+  })
+
   it('mid-session playable phases: suggestion first, early-end last', () => {
     for (const phase of ['micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'speed_friending', 'mini_script'] as const) {
       const items = resolveHostMenuItems({ phase, isHost: true, tier: 'glow', vibe: 'deep_chat' })
