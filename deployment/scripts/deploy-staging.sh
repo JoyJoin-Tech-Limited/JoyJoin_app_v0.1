@@ -336,6 +336,7 @@ RUNTIME_API_BASE="${RUNTIME_API_BASE:-joyjoin-api-runtime-base:api}"
 RUNTIME_ADMIN_BASE="${RUNTIME_ADMIN_BASE:-joyjoin-admin-runtime-base:admin}"
 USED_DELTA_DELIVERY=false
 USED_BUNDLE_DELIVERY=false
+DELTA_WORK_DIR=""
 API_IMAGE_REF="joyjoin-api-staging:candidate"
 ADMIN_IMAGE_REF="joyjoin-admin-staging:candidate"
 
@@ -358,6 +359,9 @@ cleanup_deploy_files() {
     fi
     rm -f -- "$STAGING_IMAGE_BUNDLE"
     rm -f -- "$STAGING_DELTA_PAYLOAD"
+    if [[ -n "$DELTA_WORK_DIR" ]]; then
+        rm -rf -- "$DELTA_WORK_DIR"
+    fi
     if [[ "$ROLLBACK_FAILED" != "true" ]]; then
         if [[ -n "$ENV_CANDIDATE" ]]; then
             rm -f -- "$ENV_CANDIDATE"
@@ -569,6 +573,7 @@ elif [[ "${STAGING_DELIVERY_MODE:-bundle}" == "delta" ]]; then
     fi
 
     delta_dir="$(mktemp -d)"
+    DELTA_WORK_DIR="$delta_dir"
     if ! tar -xzf "$STAGING_DELTA_PAYLOAD" -C "$delta_dir"; then
         echo "❌ Failed to extract the staging delta payload."
         exit 1

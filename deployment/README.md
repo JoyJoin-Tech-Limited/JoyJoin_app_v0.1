@@ -218,7 +218,7 @@ cp deployment/.env.production.example deployment/.env.production
 
 > **2026-10-26 修正（上面那条「修复」已被实测推翻）：** 打开 `STAGING_GHCR_ENABLED` 并不能解决慢——GHCR 在美西，CVM 拉 515 MB API 镜像时最大层 8 分钟拉不完，3 次重试耗尽后 `deploy-staging.sh` 直接失败（2026-10-22 两次 run 均如此），而且 **GHCR 失败不会回落 bundle**（只有 TCR 失败回落 GHCR）。所以 staging 现在稳定走 bundle（两个 registry 旗标均为 `false`）。真正缩短交付的是下面「三层镜像构建」；首次拉取 base/deps 层仍需跨太平洋，只有在这些层已驻留 CVM 之后 registry 才有意义。GHCR pull 失败（token 失效）时 `deploy-staging.sh` 会 `restore_previous_release` 安全回滚旧镜像，无停机。
 
-> **2026-10-26 复测（结论：GHCR 仍不可用）：** 在 CVM 上实测——自家 staging 镜像 6 秒「拉完」是假象（所有层早已由 bundle `docker load` 驻留，只拉到了 manifest）；冷层对照组 `ghcr.io/actions/actions-runner:latest`（公开包、无共同层）打满 600 秒上限、5 轮 `Retrying` 仍未完成。同日的三层镜像部署实测：构建 **2m09s**、`Staging Deployment` **50m26s**（其中 bundle 分块上传 **48m34s**）。即瓶颈已完全是跨太平洋传输体积，不是构建。若日后要真正缩短，方向是同地域对象存储（腾讯云 COS）承载 bundle，而不是镜像仓库。
+> **2026-10-26 复测（结论：GHCR 仍不可用）：** 在 CVM 上实测——自家 staging 镜像 6 秒「拉完」是假象（所有层早已由 bundle `docker load` 驻留，只拉到了 manifest）；冷层对照组 `ghcr.io/actions/actions-runner:latest`（公开包、无共同层）打满 600 秒上限、5 轮 `Retrying` 仍未完成。同日的三层镜像部署实测：构建 **2m09s**、`Staging Deployment` **50m26s**（其中 bundle 分块上传 **48m34s**）。即瓶颈已完全是跨太平洋传输体积，不是构建。真正缩短传输的方向不是镜像仓库，而是**减少传输体积**——见下一节「增量交付：只传 app 层」（2026-10-26 已落地）。
 
 #### 三层镜像构建（2026-10-26）
 
@@ -237,6 +237,24 @@ cp deployment/.env.production.example deployment/.env.production
 - `deploy-staging.yml` 的 API build 把 `joyjoin-api-deps:sha256-<lock12>` 作为 `cache-from: type=registry`，并把 GHA cache scope 统一为 `joyjoin-api`（此前 staging/production 各一个 scope，同一 Dockerfile 被建成两份缓存）。deps 镜像缺失只会让构建变慢，不会失败。
 - **`builder` 必须 `ENV NODE_ENV=development`**：`base` 为运行时设了 `production`，被 `builder` 继承后 `npm ci` 会跳过 devDependencies，`esbuild` 缺失，`npm run build` 直接失败（`Cannot find package 'esbuild' imported from /app/apps/server/build.mjs`）。`deps`/`runner` 保持 production。
 - **`runner` 必须拷 `apps/server/node_modules`**：2026-10-22 的 drizzle 升级后 `drizzle-orm` 不再 hoist 到根 `node_modules`，只拷根目录会让容器启动即 `ERR_MODULE_NOT_FOUND: Cannot find package 'drizzle-orm'`。`deps` 阶段因此显式 `mkdir -p` 两个 workspace 的 `node_modules`，保证 COPY 路径恒定存在。
+
+#### 增量交付：只传 app 层（2026-10-26）
+
+三层镜像解决了「构建重复」，但**传输**仍在重发整包：API 镜像 576 MB 里，每次部署真正变化的只有 `apps/server/dist`（6.11 MB）、`apps/server/data`（1.51 MB）、`packages/shared/src`（2.22 MB）和两个 `package.json`；其余 551 MB 是 alpine 基础（122 MB）、`apk add font-noto-cjk/ffmpeg`（223 MB）与 `npm ci`（206 MB），跨部署不变。
+
+现在新增 **delta 交付路径**（仅在宿主已持有与本 lockfile 匹配的运行时底座时启用）：
+
+| 环节 | 行为 |
+|---|---|
+| Build job | `Export staging app delta` 用 `docker create` + `docker cp` 把 dist / data / shared src / manifests 导出成 ~13 MiB tar（超过 64 MiB 直接失败——说明「只差 app 层」的前提被破坏） |
+| Deploy job | 在既有 SSH 控制连接上读 `~/JoyJoin/deployment/.staging-runtime-base.json`，lock 与本地 `package-lock.json` 前 12 位一致 → `STAGING_DELIVERY_MODE=delta`，否则回落 bundle（决策在**上传前**完成，远端不猜） |
+| 远端脚本 | `docker build --network=none`：`FROM` 固定底座 + `RUN rm -rf` + `COPY`，无 npm、无编译器、无网络；CMD/ENTRYPOINT/ENV 全部继承（实测 API 2.4s、Admin 0.7s、镜像 +9.8 MB） |
+| 底座钉定 | 一次成功的 bundle 部署后把当次镜像 `docker tag` 成 `joyjoin-api-runtime-base:api` / `joyjoin-admin-runtime-base:admin` 并写入 marker（含 lock hash） |
+| 防误删 | 底座被一个**从不启动**的 keepalive 容器引用，因此按年龄过滤的 `docker image prune`（为并行生产部署保留）删不掉它 |
+
+**关键安全性质**：lock hash 不匹配时底座不可用 → 自动回落 bundle。所以 lockfile 变更（如 zod 4 升级）仍会走一次 48 分钟全量，之后所有部署恢复分钟级。回滚逻辑、readiness 门、GHCR/TCR 路径均未改动。
+
+实测 payload：13 MB（对照：整包压缩后约 290 MB）。按 0.1 MB/s 的跨境链路估算，上传从 ~48 分钟降到 ~2 分钟。
 
 #### bundle 上传与 main 前进的竞争（`allow_stale`）
 
