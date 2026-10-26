@@ -615,7 +615,7 @@ export default function AdminVenuesPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">场地管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">场地管理</h1>
           <p className="text-muted-foreground mt-1">管理活动场地和合作商户</p>
         </div>
         {canMutate && (

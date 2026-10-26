@@ -325,7 +325,7 @@ export default function AdminNotificationsPage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Bell className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">通知推送管理</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">通知推送管理</h1>
       </div>
 
       <Tabs defaultValue="send" className="w-full">

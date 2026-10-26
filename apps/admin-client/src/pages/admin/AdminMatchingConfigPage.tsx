@@ -103,7 +103,7 @@ export default function AdminMatchingConfigPage() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">实时匹配配置</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">实时匹配配置</h1>
           <p className="text-muted-foreground">
             调整匹配阈值和时间衰减参数，优化盲盒活动的匹配效果
           </p>
@@ -120,7 +120,7 @@ export default function AdminMatchingConfigPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">实时匹配配置</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">实时匹配配置</h1>
         <p className="text-muted-foreground">
           调整匹配阈值和时间衰减参数，优化盲盒活动的匹配效果
         </p>

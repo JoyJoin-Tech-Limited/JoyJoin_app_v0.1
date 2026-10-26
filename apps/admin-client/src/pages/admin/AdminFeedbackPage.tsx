@@ -212,7 +212,7 @@ export default function AdminFeedbackPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="heading-feedback-management">反馈管理</h1>
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="heading-feedback-management">反馈管理</h1>
         <p className="text-muted-foreground">查看和分析用户活动反馈</p>
       </div>
 

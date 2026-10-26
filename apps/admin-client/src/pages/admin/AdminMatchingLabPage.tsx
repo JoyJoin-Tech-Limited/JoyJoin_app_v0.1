@@ -281,7 +281,7 @@ export default function AdminMatchingLabPage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">匹配实验室</h1>
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">匹配实验室</h1>
         <p className="text-muted-foreground mt-1">调整AI匹配算法参数和测试场景</p>
       </div>
 

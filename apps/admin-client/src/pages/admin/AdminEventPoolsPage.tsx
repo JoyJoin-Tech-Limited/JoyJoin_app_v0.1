@@ -690,7 +690,7 @@ export default function AdminEventPoolsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-1">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">活动池管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">活动池管理</h1>
           <p className="text-muted-foreground text-sm">
             按城市 / 区 / 活动类型划分的「常驻池」，用于集中招募用户，方便后续从池子里“捞人”成局。
           </p>

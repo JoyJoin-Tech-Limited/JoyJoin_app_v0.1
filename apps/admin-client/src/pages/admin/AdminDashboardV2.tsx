@@ -134,7 +134,7 @@ export default function AdminDashboardV2() {
     <div className="p-6 space-y-5" data-testid="admin-dashboard-v2">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">运营指挥台</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">运营指挥台</h1>
           <p className="mt-1 text-xs text-muted-foreground">
             {kpiQuery.data?.range.description ?? "加载中"}
             {asOf ? ` · 数据截至 ${safeFormat(asOf, "MM-dd HH:mm")}` : ""}

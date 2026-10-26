@@ -389,7 +389,7 @@ export default function AdminUsersPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">用户管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">用户管理</h1>
           <p className="text-muted-foreground mt-1">查看和管理所有用户账户</p>
         </div>
         <Button

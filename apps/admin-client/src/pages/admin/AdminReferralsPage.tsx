@@ -73,7 +73,7 @@ export default function AdminReferralsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">邀请裂变</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">邀请裂变</h1>
         <p className="text-muted-foreground mt-1">邀请链接与推荐码的转化漏斗及达人排行</p>
       </div>
 

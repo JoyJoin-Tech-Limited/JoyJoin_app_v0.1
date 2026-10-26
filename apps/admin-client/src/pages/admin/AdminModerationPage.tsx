@@ -90,7 +90,7 @@ export default function AdminModerationPage({
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold">安全中心</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">安全中心</h1>
         <p className="text-muted-foreground mt-1">统一处理用户举报、聊天举报与 AI 内容举报</p>
       </div>
 

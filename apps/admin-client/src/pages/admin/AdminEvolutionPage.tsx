@@ -377,7 +377,7 @@ export default function AdminEvolutionPage() {
     <div className="p-6 space-y-6" data-testid="admin-evolution-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             <Brain className="h-6 w-6 text-primary" />
             悦仔进化系统
           </h1>

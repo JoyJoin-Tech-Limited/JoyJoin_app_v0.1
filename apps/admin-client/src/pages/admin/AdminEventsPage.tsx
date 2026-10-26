@@ -449,7 +449,7 @@ export default function AdminEventsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-1">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">盲盒活动管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">盲盒活动管理</h1>
           <p className="text-muted-foreground text-sm">
             从活动池里“捞人”成局后，对应的一桌桌盲盒活动会出现在这里，你可以查看
             / 创建桌子、调整状态。
