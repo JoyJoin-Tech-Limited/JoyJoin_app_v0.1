@@ -54,6 +54,8 @@ GitHub Actions
 
 ## 服务器准备
 
+> 规格选择与迁机（含换 IP 后必须同步的 CI pin、微信上传白名单、DNS 步骤）见 [`MIGRATION-lighthouse-20261023.md`](./MIGRATION-lighthouse-20261023.md)。当前生产规格：腾讯云轻量应用服务器 4C8G（180GB SSD / 12Mbps / 2000GB 月流量），¥245/月，月付。
+
 远程服务器需要具备：
 
 - Docker Engine
@@ -212,9 +214,37 @@ cp deployment/.env.production.example deployment/.env.production
 >
 > 2026-08-13：CVM→GHCR 跨太平洋拉取不稳定（多次 3×5 分钟超时）后，拉取改为并行 + 8 分钟/次，并实现了同地域 TCR 交付模式（见下节）。
 >
-> **2026-10-22 交付模式排查（load-bearing）**：`STAGING_API_IMAGE`/`STAGING_ADMIN_IMAGE` **不是**需要手工维护的 secret——它们由 Build job 的 `delivery-mode` step 每次动态输出。真正决定模式的是两个 **Variables**：`STAGING_TCR_ENABLED` 与 `STAGING_GHCR_ENABLED`。二者任一缺失或为 `false` 时判定链静默掉进 `bundle`（~48min 分块 rsync），即使 `GHCR_TOKEN` secret 存在也没用——这正是 8-13 到 10-22 之间 staging 一直慢且被 stale 守卫反复中止的根因（TCR 预备期把 `STAGING_GHCR_ENABLED` 翻成 false，而 TCR secrets 从未 provisioning）。排查第一步：看 Build job 日志的 `Registry delivery mode:` 行。修复：`gh variable set STAGING_GHCR_ENABLED --body true`。GHCR pull 失败（token 失效）时 `deploy-staging.sh` 会 `restore_previous_release` 安全回滚旧镜像，无停机。
+> **2026-10-22 交付模式排查（load-bearing）**：`STAGING_API_IMAGE`/`STAGING_ADMIN_IMAGE` **不是**需要手工维护的 secret——它们由 Build job 的 `delivery-mode` step 每次动态输出。真正决定模式的是两个 **Variables**：`STAGING_TCR_ENABLED` 与 `STAGING_GHCR_ENABLED`。二者任一缺失或为 `false` 时判定链静默掉进 `bundle`（~48min 分块 rsync），即使 `GHCR_TOKEN` secret 存在也没用——这正是 8-13 到 10-22 之间 staging 一直慢且被 stale 守卫反复中止的根因（TCR 预备期把 `STAGING_GHCR_ENABLED` 翻成 false，而 TCR secrets 从未 provisioning）。排查第一步：看 Build job 日志的 `Registry delivery mode:` 行。
 
-#### TCR 同地域镜像仓库（推荐启用）
+> **2026-10-26 修正（上面那条「修复」已被实测推翻）：** 打开 `STAGING_GHCR_ENABLED` 并不能解决慢——GHCR 在美西，CVM 拉 515 MB API 镜像时最大层 8 分钟拉不完，3 次重试耗尽后 `deploy-staging.sh` 直接失败（2026-10-22 两次 run 均如此），而且 **GHCR 失败不会回落 bundle**（只有 TCR 失败回落 GHCR）。所以 staging 现在稳定走 bundle（两个 registry 旗标均为 `false`）。真正缩短交付的是下面「三层镜像构建」；首次拉取 base/deps 层仍需跨太平洋，只有在这些层已驻留 CVM 之后 registry 才有意义。GHCR pull 失败（token 失效）时 `deploy-staging.sh` 会 `restore_previous_release` 安全回滚旧镜像，无停机。
+
+#### 三层镜像构建（2026-10-26）
+
+> 目标：让每次部署的传输量正比于「改动量」而不是镜像大小，且不在共享 CVM 上构建。
+
+`apps/server/Dockerfile` 是单文件多阶段，stage 用字面引用（不用 `FROM ${ARG}`，本机无 docker 无法验证那种写法）：
+
+| stage | 内容 | 用途 |
+|---|---|---|
+| `base` | `node:20-alpine` + `apk add font-noto-cjk ffmpeg` + `NODE_ENV=production` / `PORT=5000` | 可发布为 `joyjoin-api-base:<tag>`；只在 base 输入变化时重建 |
+| `deps` | base + 三个 `package.json` + `npm ci` + `npm prune --omit=dev` + `mkdir -p apps/server/node_modules packages/shared/node_modules` | 可发布为 `joyjoin-api-deps:sha256-<package-lock 前 12 位>`；只在 lockfile 变化时重建 |
+| `builder` | base + 源码 + `npm run build`（**必须 `ENV NODE_ENV=development`**） | 产出 `apps/server/dist` |
+| `runner` | `FROM deps` + 只拷 `apps/server/dist`、`apps/server/package.json`、`apps/server/data`、`packages/shared/{package.json,src}` | 运行时镜像；base+deps 层与已发布镜像同 digest，部署只新增 app 层 |
+
+- 发布工作流：`.github/workflows/publish-api-base.yml`（`workflow_dispatch`，输入 `build_base` 默认 `false`、`base_tag` 默认 `node20`），用**内置 `GITHUB_TOKEN`**（`permissions: packages: write`）登录 ghcr.io；用 PAT 会报 `denied: ... does not match expected scopes`。
+- `deploy-staging.yml` 的 API build 把 `joyjoin-api-deps:sha256-<lock12>` 作为 `cache-from: type=registry`，并把 GHA cache scope 统一为 `joyjoin-api`（此前 staging/production 各一个 scope，同一 Dockerfile 被建成两份缓存）。deps 镜像缺失只会让构建变慢，不会失败。
+- **`builder` 必须 `ENV NODE_ENV=development`**：`base` 为运行时设了 `production`，被 `builder` 继承后 `npm ci` 会跳过 devDependencies，`esbuild` 缺失，`npm run build` 直接失败（`Cannot find package 'esbuild' imported from /app/apps/server/build.mjs`）。`deps`/`runner` 保持 production。
+- **`runner` 必须拷 `apps/server/node_modules`**：2026-10-22 的 drizzle 升级后 `drizzle-orm` 不再 hoist 到根 `node_modules`，只拷根目录会让容器启动即 `ERR_MODULE_NOT_FOUND: Cannot find package 'drizzle-orm'`。`deps` 阶段因此显式 `mkdir -p` 两个 workspace 的 `node_modules`，保证 COPY 路径恒定存在。
+
+#### bundle 上传与 main 前进的竞争（`allow_stale`）
+
+bundle 路径把两个镜像拆成 36 个 8 MiB 分片、用 6 条 SSH 连接跨太平洋上传，实测约 25 分钟。协作高峰期 main 每 10–20 分钟就有新 push，上传途中的 stale 守卫会主动中止（`Stale staging candidate detected during image transfer`），于是一个都部署不成。
+
+`deploy-staging.yml` 因此新增 **`workflow_dispatch` 输入 `allow_stale`（默认 `false`）**：为 `true` 时，4 处 freshness 守卫与 2 处 mid-upload 中止点只打 `::warning::` 继续，用于**手动**把某个已构建的 commit 部署到 staging 做验证。push 触发（`inputs` 为空）保持严格失败；生产工作流不读这个输入，硬门不变。
+
+#### TCR 同地域镜像仓库（已停用，开通步骤仅备查）
+
+> **2026-10-26 现状：TCR 停用。** 项目使用腾讯云企业账号，无法使用免费个人版；企业版实例不在项目凭据（UIN `200045577248`）可见的 10 个地域扫描结果中，无法复用。三个 secret（`TCR_REGISTRY`/`TCR_USERNAME`/`TCR_TOKEN`）、`TCR_NAMESPACE` 变量与本地生成的密码文件已于 2026-10-26 全部删除，`STAGING_TCR_ENABLED=false`。因为 TCR 分支要求三个 secret 全非空，即使误置 `STAGING_TCR_ENABLED=true` 也只会安全回退到 GHCR/bundle。若日后重新开通，按下面步骤重新 provision。
 
 GHCR 跨太平洋拉取不稳定时，把 staging 镜像同时推送到腾讯云同地域容器镜像服务（TCR），CVM 首选 TCR 拉取、失败自动回退 GHCR。
 
