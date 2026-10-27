@@ -85,6 +85,11 @@ PostgreSQL 仅绑定宿主机回环地址，并通过 `pgdata` volume 持久化�
 - 数据保存在 `pgdata` volume，宿主机端口仅绑定 `127.0.0.1:5432`
 - staging 使用独立的 `postgres-staging`、`joyjoin_staging` 和 `pgdata_staging`
 - 生产与 staging 的 DDL 都不由常规部署自动执行；先人工应用迁移，再发布应用
+  > ⚠️ **2026-10-26 事故（staging 502 约 13 小时）**：M1 小悦 copilot 的 `0099_social_agent_events.sql` 没先应用到 `joyjoin_staging`，而代码已带上对该表的查询。服务启动时的 `validateDbSchema()` 是 fail-fast 的 —— `Failed query: select ... from "social_agent_events"` → 进程退出 → 容器崩溃循环 **754 次** → nginx 502，期间无人察觉（即「宕机告警」仍是缺口）。
+  > **恢复步骤**（幂等，`CREATE TABLE/INDEX IF NOT EXISTS`）：
+  > `docker exec -i postgres-staging psql -U joyjoin -d joyjoin_staging -v ON_ERROR_STOP=1 < apps/server/migrations/0099_social_agent_events.sql`
+  > 之后 `docker restart joyjoin-api-staging`，再用 `https://staging.joyjoinapp.com/api/readyz` 确认 200。
+  > **规则**：凡是带新表/新列的迁移，必须在推工作流之前应用到目标库；推完才发现就等同一场 502。staging 没有 drizzle journal 表（`__drizzle_migrations` 不存在），所以「已应用哪些迁移」只能靠人核对 `migrations/*.sql`。
 
 ---
 
@@ -254,7 +259,9 @@ cp deployment/.env.production.example deployment/.env.production
 
 **关键安全性质**：lock hash 不匹配时底座不可用 → 自动回落 bundle。所以 lockfile 变更（如 zod 4 升级）仍会走一次 48 分钟全量，之后所有部署恢复分钟级。回滚逻辑、readiness 门、GHCR/TCR 路径均未改动。
 
-实测 payload：13 MB（对照：整包压缩后约 290 MB）。按 0.1 MB/s 的跨境链路估算，上传从 ~48 分钟降到 ~2 分钟。
+**实测（CI artifact，run `40339605632`，head `f1502566d`）**：`joyjoin-staging-delta` = **2,738,875 B（2.6 MiB）**，`joyjoin-staging-images`（整包）= **276,929,422 B（264 MiB）**，即 **小 101 倍**，且远低于 64 MiB 护栏。本地 13 MB 是 `du` 未压缩口径，gzip 后 2.6 MiB 合理。按实测 ~0.1 MB/s 跨境带宽，上传从 ~44 分钟降到 **~30 秒**。
+
+**同一跑的另一个事实**：该 run 的 `Staging Deployment` 从 14:35:03 起上传整包，到 **15:50:23 被 75 分钟 job 超时取消（75m20s）** —— 即 bundle 路径这次连 75 分钟预算都不够，不是「48 分钟」的乐观估计可以覆盖。这是增量交付的第二个动机：它同时也是唯一能让部署在 job 超时内确定完成的方式。
 
 #### bundle 上传与 main 前进的竞争（`allow_stale`）
 

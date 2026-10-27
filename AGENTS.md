@@ -130,6 +130,23 @@ npm run test -w mini-program          # limited coverage
 # Local-only quirk: a full local server run may fail to resolve bare `@shared/personality/*` specifiers
 # (e.g. archetypeCompatibility from apps/server/src/archetypeChemistry.ts). CI resolves them fine —
 # confirm against CI before treating such a failure as a regression.
+# Running server tests inside a git worktree (where node_modules is absent, and
+# `drizzle-orm` is no longer hoisted to the root since the 2026-10-22 upgrade):
+#   ln -sfn <main-repo>/node_modules ./node_modules
+#   ln -sfn <main-repo>/apps/server/node_modules ./apps/server/node_modules
+#   ln -sfn <main-repo>/packages/shared/node_modules ./packages/shared/node_modules
+#   cd apps/server && npx vitest run     # full suite: 376 files / 4370 tests
+# All THREE links are required. Remove them (`rm -f`) before committing.
+# Known local-only failure: `orchestrationKickoff.test.ts` (ENOTDIR lstat
+# '.git/.orchestration/context.json') because `.git` is a file in a worktree.
+# CI Node split: `.github/workflows/quality-gates.yml` runs the two jsdom suites
+# (`Admin Client Tests`, `Mini Program Tests`) on **Node 22**, everything else
+# (incl. Server Tests) on Node 20 to match the production `node:20-alpine`.
+# Reason (2026-10-26): dependabot bumped jsdom 24.1.3 -> 30.1.3, which hoists
+# undici 8 to the root; undici 8 declares engines.node >= 22.19.0, so on Node 20
+# every vitest forks worker died with `Cannot read properties of undefined
+# (reading 'bind')` in undici/lib/interceptor/decompress.js. Local node is 24,
+# which is why it only broke in CI.
 
 # Validation
 npm run guardrails                    # env, secrets, legacy identifiers, import boundaries
@@ -259,6 +276,16 @@ npm run simulate:gate                 # CI gate: generate + run centroids
     Schema changes must be applied separately before deploy.
   > ℹ️ Database is a PostgreSQL 16 Docker container on the CVM (`postgres` service).
     DATABASE_URL format: `postgres://joyjoin:<password>@postgres:5432/joyjoin`
+  > 🚨 **Staging crash-loop recurrence lock (2026-10-26):** staging never auto-runs
+    migrations, and server startup calls `validateDbSchema()` fail-fast, so shipping
+    code that touches an unmigrated table does **not** degrade — it 502s. That
+    happened with `0099_social_agent_events.sql` (M1 Xiaoyue copilot): the container
+    restarted **754 times** and staging served nginx 502 for ~13 hours before anyone
+    looked. Apply the `.sql` to `joyjoin_staging` **before** pushing the deploy:
+    `docker exec -i postgres-staging psql -U joyjoin -d joyjoin_staging -v ON_ERROR_STOP=1 < apps/server/migrations/<file>.sql`
+    There is no `drizzle.__drizzle_migrations` table on staging, so "which migrations
+    are applied" can only be checked by hand. Recovery runbook:
+    `deployment/README.md` §数据库现状.
 
 **Same-server staging for 体验版 test pricing (2026-06-17):**
 - Use `deployment/docker-compose.staging.yml` to run an isolated staging API + Postgres + admin portal on the production host (API port `5001`, admin port `3002`).

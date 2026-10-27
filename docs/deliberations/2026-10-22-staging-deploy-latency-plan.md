@@ -298,4 +298,8 @@ Phase 2（TCR）被否定后，改用「让每次部署传输量正比于改动�
 
 新增路径：build job 导出 ~13 MiB delta tarball（超过 64 MiB 直接失败）→ deploy job 在既有 SSH 控制连接上读 `.staging-runtime-base.json`、比对 lock 前 12 位**先决定**走 delta 还是 bundle → 远端用 `docker build --network=none`（`FROM` 固定底座 + `RUN rm -rf` + `COPY`）组装，无 npm/编译器/网络，CMD/ENV 继承。实测：13 MB payload、API 组装 2.4s、Admin 0.7s、镜像 +9.8 MB。一次成功的 bundle 部署把当次镜像钉成 `joyjoin-api-runtime-base:{api,admin}` 并写入含 lock 的 marker；底座被一个从不启动的 keepalive 容器引用，避免被按年龄过滤的 `docker image prune` 清掉。lockfile 变更时底座失效 → 自动回落 bundle（zod 4 这类升级仍会走一次全量）。
 
-**尚未做**：`deploy-production.yml` 接同样的 `cache-from`；`deployment/.release.json` 记录 last-known-good digest；bundle 路径本身的替代方案（同地域对象存储 COS 上传/下载，可把 48 分钟压到分钟级，但需要新凭据与成本确认）。
+**CI 实测（run `40339605632`，head `f1502566d`）**：artifact 尺寸 —— `joyjoin-staging-delta` = **2,738,875 B（2.6 MiB）**，`joyjoin-staging-images`（整包）= **276,929,422 B（264 MiB）** → **小 101 倍**，远低于 64 MiB 护栏。按 ~0.1 MB/s 跨境带宽，上传 ~30 秒。**同一跑也给出了 bundle 路径的新证据：`Staging Deployment` 14:35:03 → 15:50:23 被 75m job 超时取消（75m20s）**，即「48 分钟」已是乐观值，bundle 路径会周期性撞上自己的超时预算。该跑在被取消前已把底座钉住（marker `{"lock":"f9af13d61fb6","sha":"f1502566d…"}`，两个 keepalive 容器 `joyjoin-runtime-base-keepalive-{api,admin}` 均为 Created），所以**下一次部署具备走 delta 的全部条件**。
+
+**同一时段的事故（与交付路径正交，但发生在这次取消之后）**：被取消的切换留下了运行新代码的 staging 容器，而 M1 的 `0099_social_agent_events.sql` 从未应用到 `joyjoin_staging` → 启动自检 fail-fast → 崩溃循环 754 次 → staging 502 约 13 小时。人工应用 0099（+0100 删 banner 表）后恢复，`/api/readyz` 200。教训已回写 `deployment/README.md` 与 `AGENTS.md`：迁移先于代码，且「部署成功」不等于「服务可用」。
+
+**尚未做**：`deploy-production.yml` 接同样的 `cache-from`；`deployment/.release.json` 记录 last-known-good digest；delta 路径的**首次真机计时**（等下一次部署）；宕机告警（`/api/readyz` 探针 + 企业微信）——本次 13 小时无人察觉就是它的直接代价。
