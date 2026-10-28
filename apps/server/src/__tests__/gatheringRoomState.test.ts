@@ -327,6 +327,23 @@ describe("GET /api/pool-groups/:groupId/room-state", () => {
     });
   });
 
+  it.each([
+    { hoursAgo: 1, expectedPhase: "live" },
+    { hoursAgo: 4, expectedPhase: "ended" },
+  ])("derives $expectedPhase from the event start and completion buffer", async ({ hoursAgo, expectedPhase }) => {
+    mockFindGroup.mockResolvedValue({
+      ...GROUP,
+      finalDateTime: new Date(Date.now() - hoursAgo * 60 * 60 * 1000),
+    });
+    selectQueue = [MEMBER_ROWS];
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/room-state`);
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.eventPhase).toBe(expectedPhase);
+    });
+  });
+
   it("marks a completed pool as ended", async () => {
     mockFindPool.mockResolvedValue({ ...POOL, status: "completed" });
     selectQueue = [MEMBER_ROWS];
