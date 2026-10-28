@@ -664,16 +664,18 @@ export async function getParticipantLastSeenAt(
   return rows[0]?.lastSeenAt ?? null;
 }
 
-/** Max interest labels carried per member into AI prompt context. */
-const ROSTER_INTEREST_LABEL_LIMIT = 5;
+/** Cap for untrusted interest JSON; effectively the full taxonomy (60 labels). */
+const ROSTER_INTEREST_LABEL_LIMIT = 64;
 
 /**
- * Extract the top N interest labels from a `user_interests` row. Prefers the
- * user's level-3 `topPriorities`, then fills from `selections` ordered by heat
- * (deterministic tie-break on label) — mirrors the interest pipeline used by
- * `generateIceBreakers` in matchExplanationService.
+ * Extract all declared interest labels from a `user_interests` row. Prefers
+ * the user's level-3 `topPriorities`, then fills from `selections` ordered by
+ * heat (deterministic tie-break on label). The previous limit of 5 truncated
+ * *before* the group intersection, so a broadly shared low-heat label could
+ * be lost behind one member's private ranking. Intersection/selection now
+ * happens at the deck layer (`icebreakerRosterSignals`), not in this read.
  */
-function extractTopInterestLabels(
+export function extractRosterInterestLabels(
   selections: unknown,
   topPriorities: unknown,
   limit = ROSTER_INTEREST_LABEL_LIMIT,
@@ -730,7 +732,7 @@ export async function preloadRosterInterestLabels(
     .where(inArray(userInterests.userId, userIds));
 
   for (const row of rows) {
-    const labels = extractTopInterestLabels(row.selections, row.topPriorities);
+    const labels = extractRosterInterestLabels(row.selections, row.topPriorities);
     if (labels.length > 0) cache.set(row.userId, labels);
   }
   return cache;
@@ -766,7 +768,7 @@ export async function listParticipants(
   // Flag off → no extra query and the participant projection is unchanged.
   let interestLabelsByUser = new Map<string, string[]>();
   if (rows.length > 0) {
-    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
     if (matchingAware) {
       interestLabelsByUser = await preloadRosterInterestLabels(
         rows.map((r: (typeof rows)[number]) => r.userId),
@@ -797,10 +799,26 @@ export async function listParticipants(
         isActive: participant.lastSeenAt.getTime() >= cutoff,
         archetype: participant.archetype ?? undefined,
         primaryArchetype: participant.primaryArchetype ?? undefined,
-        profile: participant.archetype ? buildParticipantProfile(participant) : null,
+        profile: hasParticipantProfileSignal(participant) ? buildParticipantProfile(participant) : null,
         ...(interests ? { interests } : {}),
       };
     });
+}
+
+export function hasParticipantProfileSignal(row: Record<string, unknown>): boolean {
+  return Boolean(
+    row.archetype ||
+      row.primaryArchetype ||
+      row.industryNicheLabel ||
+      row.birthdate ||
+      row.currentCity ||
+      row.vibeVector ||
+      row.gender ||
+      row.educationLevel ||
+      row.lifeStage ||
+      row.bio ||
+      row.tableVibePreference,
+  );
 }
 
 function buildParticipantProfile(row: Record<string, unknown>): NonNullable<SocialSessionParticipantSummary['profile']> {

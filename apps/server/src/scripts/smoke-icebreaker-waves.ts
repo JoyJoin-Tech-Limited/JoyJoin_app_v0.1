@@ -383,7 +383,6 @@ async function main(): Promise<void> {
   const mirrorResult = await generateGroupMirrorQuestions({
     eventType: "饭局",
     participantCount: 6,
-    participantNames: rosterForGenerators.map((p) => p.displayName),
     roster: rosterForGenerators,
   });
   const mirrorQuestions = mirrorResult.data ?? [];

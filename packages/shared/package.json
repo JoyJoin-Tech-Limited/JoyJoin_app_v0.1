@@ -16,6 +16,7 @@
     "./wsEvents": "./src/wsEvents.ts",
     "./icebreakerGames": "./src/icebreakerGames.ts",
     "./microChallengeTemplates": "./src/microChallengeTemplates.ts",
+    "./tableRhythm": "./src/tableRhythm.ts",
     "./socialIcebreaker": "./src/socialIcebreaker.ts",
     "./socialIcebreakerAuctionFallback": "./src/socialIcebreakerAuctionFallback.ts",
     "./occupations": "./src/occupations.ts",

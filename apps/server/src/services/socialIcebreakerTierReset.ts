@@ -123,7 +123,7 @@ export async function resetSocialIcebreakerTier(
     // W5: recompile against the live roster so a shy-heavy table gets the
     // lower-pressure arc. Flag off → no extra read and no roster is passed
     // (compileForSession stays byte-identical).
-    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
     const roster = matchingAware
       ? await listParticipants(state.socialSessionId).catch(() => [])
       : undefined;

@@ -37,12 +37,13 @@ function makeState(overrides: Partial<SocialSessionState> = {}): SocialSessionSt
 }
 
 describe('warmup topic set revision — AC-04 single source of truth', () => {
-  it('keeps revision 1 for precompilation of the first deck', () => {
+  it('keeps revision 1 and records the served first deck for precompilation', () => {
     const state = makeState({ warmupTopicSetRevision: undefined });
     stampPrecompiledTopicSet(state, NOW + 1_000);
     expect(state.warmupTopicSetRevision).toBe(1);
     expect(state.warmupTopicSetUpdatedAt).toBe(NOW + 1_000);
     expect(state.warmupTopicSetProvenance).toBe('precompile');
+    expect(state.servedTopicKeys).toEqual(expect.arrayContaining(['id:t1', 'q:Q1']));
   });
 
   it('increments old + 1 and resets index on a whole-deck replacement', () => {
@@ -72,11 +73,15 @@ describe('warmup topic set revision — AC-04 single source of truth', () => {
     expect(state.warmupTopicSetRevision).toBe(1);
   });
 
-  it('advancing to the next card does not bump revision or updatedAt', () => {
-    const state = makeState({ currentTopicIndex: 0 });
+  it('advancing to the next card does not bump revision, updatedAt, or served keys', () => {
+    const state = makeState({
+      currentTopicIndex: 0,
+      servedTopicKeys: ['id:t1', 'q:Q1'],
+    });
     markTopicAdvanced(state, NOW + 9_000);
     expect(state.warmupTopicSetRevision).toBe(1);
     expect(state.warmupTopicSetUpdatedAt).toBe(NOW);
     expect(state.warmupTopicAdvancedAt).toBe(NOW + 9_000);
+    expect(state.servedTopicKeys).toEqual(['id:t1', 'q:Q1']);
   });
 });

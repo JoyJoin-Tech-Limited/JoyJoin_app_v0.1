@@ -70,6 +70,7 @@ export * from './aiModels';
 export * from './socialIcebreakerTierManifest';
 export * from './socialIcebreakerRunPlans';
 export * from './runPlanCompiler';
+export * from './tableRhythm';
 export * from './socialIcebreakerYuezaiCopy';
 export * from './mascotConfig';
 export * from './lieDetectiveFallback';

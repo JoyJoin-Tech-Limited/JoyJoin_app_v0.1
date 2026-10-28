@@ -230,3 +230,103 @@ describe('compileForSession — feature flag integration', () => {
     }
   });
 });
+
+// ─── M2: table-rhythm duration calibration ───────────────────────────────────
+
+describe('compileForSession — M2 table rhythm integration', () => {
+  const DEEP = '深度交流';
+  const LIGHT = '轻松聊天';
+
+  function appetiteRoster(value: string, count = 6) {
+    return Array.from({ length: count }, () => ({ profile: { tableVibePreference: value } }));
+  }
+
+  function minutesDelta(
+    plan: { segments: Array<{ allocatedMinutes: number }> },
+    baseline: { segments: Array<{ allocatedMinutes: number }> },
+  ): number[] {
+    return plan.segments.map((segment, index) => segment.allocatedMinutes - baseline.segments[index].allocatedMinutes);
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(runPlanTemplatesRepo, 'getTemplateByVibeAndTier').mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('flag on + deep roster moves 5 minutes into warmup, phases and total unchanged', async () => {
+    vi.spyOn(featureFlags, 'getFeatureFlag').mockImplementation(
+      async (key) => key === 'runPlanTemplatesEnabled' || key === 'icebreakerMatchingAwareEnabled',
+    );
+
+    const state = makeState('blaze', 'balanced', 6);
+    const baseline = await compileForSession(state, 'blaze');
+    const adjusted = await compileForSession(state, 'blaze', appetiteRoster(DEEP));
+
+    expect(adjusted.segments.map((s) => s.phase)).toEqual(baseline.segments.map((s) => s.phase));
+    expect(adjusted.totalMinutes).toBe(baseline.totalMinutes);
+
+    const deltas = minutesDelta(adjusted, baseline);
+    expect(deltas.filter((delta) => delta === 5)).toHaveLength(1);
+    expect(deltas.filter((delta) => delta === -5)).toHaveLength(1);
+    const warmupIndex = adjusted.segments.findIndex((s) => s.phase === 'warmup');
+    expect(deltas[warmupIndex]).toBe(5);
+  });
+
+  it('flag on + light roster moves 5 minutes out of warmup, phases and total unchanged', async () => {
+    vi.spyOn(featureFlags, 'getFeatureFlag').mockImplementation(
+      async (key) => key === 'runPlanTemplatesEnabled' || key === 'icebreakerMatchingAwareEnabled',
+    );
+
+    const state = makeState('blaze', 'chat', 6);
+    const baseline = await compileForSession(state, 'blaze');
+    const adjusted = await compileForSession(state, 'blaze', appetiteRoster(LIGHT));
+
+    expect(adjusted.segments.map((s) => s.phase)).toEqual(baseline.segments.map((s) => s.phase));
+    expect(adjusted.totalMinutes).toBe(baseline.totalMinutes);
+
+    const deltas = minutesDelta(adjusted, baseline);
+    expect(deltas.filter((delta) => delta === -5)).toHaveLength(1);
+    expect(deltas.filter((delta) => delta === 5)).toHaveLength(1);
+    const warmupIndex = adjusted.segments.findIndex((s) => s.phase === 'warmup');
+    expect(deltas[warmupIndex]).toBe(-5);
+  });
+
+  it('flag off + deep roster is byte-identical to the no-roster plan', async () => {
+    vi.spyOn(featureFlags, 'getFeatureFlag').mockImplementation(
+      async (key) => key === 'runPlanTemplatesEnabled',
+    );
+
+    const state = makeState('blaze', 'balanced', 6);
+    const withRoster = await compileForSession(state, 'blaze', appetiteRoster(DEEP));
+    const withoutRoster = await compileForSession(state, 'blaze');
+
+    expect(withRoster.segments).toEqual(withoutRoster.segments);
+    expect(withRoster.totalMinutes).toBe(withoutRoster.totalMinutes);
+  });
+
+  it('flag on + roster without tableVibePreference is byte-identical to the no-roster plan', async () => {
+    vi.spyOn(featureFlags, 'getFeatureFlag').mockResolvedValue(true);
+
+    const state = makeState('blaze', 'balanced', 6);
+    const roster = Array.from({ length: 6 }, () => ({ archetype: null, profile: null }));
+    const withRoster = await compileForSession(state, 'blaze', roster);
+    const withoutRoster = await compileForSession(state, 'blaze');
+
+    expect(withRoster.segments).toEqual(withoutRoster.segments);
+    expect(withRoster.totalMinutes).toBe(withoutRoster.totalMinutes);
+  });
+
+  it('legacy deep_talk values produce the same plan as the Chinese deep value', async () => {
+    vi.spyOn(featureFlags, 'getFeatureFlag').mockResolvedValue(true);
+
+    const state = makeState('glow', 'balanced', 6);
+    const chinese = await compileForSession(state, 'glow', appetiteRoster(DEEP));
+    const legacy = await compileForSession(state, 'glow', appetiteRoster('deep_talk'));
+
+    expect(legacy.segments).toEqual(chinese.segments);
+  });
+});

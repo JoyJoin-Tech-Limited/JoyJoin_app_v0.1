@@ -589,6 +589,46 @@ describe.sequential('social icebreaker routes', () => {
     });
   });
 
+  it('passes legacy current-deck aliases and caller avoids to manual topic generation', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'topics-served-host');
+      const sessionId = `session-topics-served-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+      const existingState = await getSession(socialSessionId) as any;
+      existingState.warmupTopics = [{
+        id: 'Legacy-ID',
+        question: '  Same   Question？ ',
+        mood: 'relaxed',
+        emoji: '',
+      }];
+      existingState.servedTopicKeys = undefined;
+      await updateSession(socialSessionId, existingState);
+      vi.mocked(generateWarmupTopics).mockClear();
+
+      const topicsResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ mood: 'relaxed', avoidTopics: ['Caller Question'] }),
+      });
+      expect(topicsResponse.status).toBe(200);
+
+      const generationInput = vi.mocked(generateWarmupTopics).mock.calls.at(-1)?.[0] as any;
+      expect(generationInput.avoidTopics).toEqual(expect.arrayContaining([
+        'Caller Question',
+        'id:Legacy-ID',
+        'id:legacyid',
+        'q:  Same   Question？ ',
+        'q:samequestion',
+      ]));
+    });
+  });
+
   it('requires shared warmup readiness before changing topics or advancing, and tracks common ground', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'warmup-host');

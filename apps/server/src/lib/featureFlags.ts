@@ -288,7 +288,7 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  warmup / micro-challenge / mini-script generators. When false the whole
    *  pipeline is byte-identical to pre-W5 behavior (no extra reads, no prompt
    *  or phase-selection change). Ships dark. Env fallback:
-   *  ICEBREAKER_MATCHING_AWARE_ENABLED (default: false). */
+   *  ICEBREAKER_MATCHING_AWARE_ENABLED (default: true). */
   icebreakerMatchingAwareEnabled: "ICEBREAKER_MATCHING_AWARE_ENABLED",
   /** S9 audio seasoning: delicate sub-1s ticks mirroring the S1 haptic
    *  grammar, fired alongside the haptic only. Ships dark until S1's grammar
@@ -607,9 +607,10 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   /** M1 copilot is ON by default (2026-10-26 product decision); flag is the
    *  kill switch. Off restores byte-identical legacy warmup behaviour. */
   icebreakerAgentCopilotEnabled: true,
-  /** W5 matching-aware personalization ships dark — flip to true (or set
-   *  ICEBREAKER_MATCHING_AWARE_ENABLED=true) to enable. */
-  icebreakerMatchingAwareEnabled: false,
+  /** W5 matching-aware personalization is ON by default (2026-10-28 product
+   *  decision; user accepted the parked-feature risk). The flag is the kill
+   *  switch: setting it false restores byte-identical pre-W5 behaviour. */
+  icebreakerMatchingAwareEnabled: true,
   /** Audio seasoning ships dark until S1's grammar is field-validated. */
   icebreakerAudioEnabled: false,
   equipmentRewardsEnabled: false,

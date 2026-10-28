@@ -1,6 +1,10 @@
 // Run Plan Service — Server-side wrapper for compileAgentRunPlan() and template compiler
 
-import type { SocialSessionState, SocialIcebreakerPhase } from '@shared/socialIcebreaker';
+import type {
+  SocialSessionState,
+  SocialIcebreakerPhase,
+  SocialSessionParticipantProfile,
+} from '@shared/socialIcebreaker';
 import { PHASE_ORDER } from '@shared/socialIcebreaker';
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest';
 import type { IcebreakerRunPlan, PhaseSegment } from '@shared/phaseModule';
@@ -17,6 +21,7 @@ import {
   NON_CORE_FLOOR_MINUTES,
 } from '@shared/runPlanCompiler';
 import { getPhaseModule } from '@shared/phaseRegistry';
+import { applyTableRhythm, deriveTableRhythmAppetite } from '@shared/tableRhythm';
 import type {
   TemplateVibeId,
   RunPlanTemplate,
@@ -310,7 +315,12 @@ function dbRowToTemplate(row: RunPlanTemplateRow): RunPlanTemplate | null {
 export async function compileForSession(
   state: SocialSessionState,
   tier: TierMachineId,
-  roster?: ReadonlyArray<{ archetype?: string | null }>,
+  roster?: ReadonlyArray<{
+    archetype?: string | null;
+    primaryArchetype?: string | null;
+    /** Server-only roster profile — source of `tableVibePreference` (M2). */
+    profile?: SocialSessionParticipantProfile | null;
+  }>,
 ): Promise<IcebreakerRunPlan> {
   const basePhases = state.enabledPhases ?? getServerEnabledPhases();
   const enabledPhases: SocialIcebreakerPhase[] = basePhases.includes('recap') ? basePhases : [...basePhases, 'recap'];
@@ -319,7 +329,7 @@ export async function compileForSession(
   // W5 (gm-debrief): feed the matched roster into compilation, behind the
   // `icebreakerMatchingAwareEnabled` kill switch. Flag off (or no roster)
   // leaves `composition` null and the compiled plan byte-identical to pre-W5.
-  const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+  const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
   const archetypeMix =
     matchingAware && roster && roster.length > 0 ? buildArchetypeMix(roster) : undefined;
   const composition = deriveArchetypeComposition(archetypeMix);
@@ -347,12 +357,34 @@ export async function compileForSession(
   // source (compiler, template, static fallback), then fund the feature-flagged
   // mini_script bonus from the non-core budget (AC-W9.2/W9.3/W9.4).
   const normalized = normalizeRunPlanTiming(plan, playerCount);
-  return appendMiniScriptBonusSegment(
+  const funded = appendMiniScriptBonusSegment(
     normalized,
     enabledPhases,
     playerCount,
     getBudgetForTier(tier),
   );
+
+  // M2 (W2 flow calibration, v1): shift ±5 minutes between warmup and one
+  // interactive phase from the roster's aggregated table-vibe appetite.
+  // Flag off / no roster / missing profile data => `funded` is returned
+  // byte-identical. Duration-only: phase selection and order stay owned by the
+  // compiler. Runs after W9 normalization + mini_script funding so neither pass
+  // overwrites the other, and adds no DB reads (the caller already loaded the
+  // roster).
+  if (!matchingAware || !roster || roster.length === 0) return funded;
+
+  const tableRhythmAppetite = deriveTableRhythmAppetite(roster);
+  const rhythmPlan = applyTableRhythm(funded, tableRhythmAppetite);
+  if (tableRhythmAppetite !== 'mixed') {
+    logger.info('Run plan table rhythm', {
+      socialSessionId: state.socialSessionId,
+      tier,
+      appetite: tableRhythmAppetite,
+      applied: rhythmPlan !== funded,
+      totalMinutes: rhythmPlan.totalMinutes,
+    });
+  }
+  return rhythmPlan;
 }
 
 async function compileForSessionWithinBudget(

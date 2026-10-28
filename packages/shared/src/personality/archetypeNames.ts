@@ -175,3 +175,24 @@ export function resolveArchetype(identifier: string): ArchetypeDefinition | null
 
   return null
 }
+
+/**
+ * Resolve a roster participant's archetype with canonical V4 data first.
+ *
+ * `users.primary_archetype` is the canonical id written by the V4 assessment;
+ * `users.archetype` is the legacy Chinese display-name column. Reading only the
+ * legacy column silently drops every V4-only user from group context.
+ */
+export function resolveRosterArchetype(
+  primaryArchetype?: string | null,
+  legacyArchetype?: string | null,
+): string | undefined {
+  for (const identifier of [primaryArchetype, legacyArchetype]) {
+    if (typeof identifier !== 'string') continue
+    const trimmed = identifier.trim()
+    if (!trimmed) continue
+    const resolved = resolveArchetype(trimmed)
+    if (resolved) return resolved.id
+  }
+  return undefined
+}

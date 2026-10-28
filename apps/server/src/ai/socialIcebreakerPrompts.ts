@@ -14,12 +14,12 @@
 
 import { z } from 'zod';
 import type { AtmosphereMood } from '@shared/socialIcebreaker';
-import type { SessionArchetypeContext } from '../lib/contextInjector';
+import { buildArchetypeContext, type SessionArchetypeContext } from '../lib/contextInjector';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
 import { buildRosterTraitLines } from '../lib/icebreakerRosterSignals';
 
-export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v2';
+export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v3';
 // v4 (2026-07-17, campfire-vault-card-pr1): brave-but-safe question guarantee —
 // every generated set must include ≥1 emotionally vulnerable question marked
 // safety:"reflective", never death/abuse/self-harm/explicit. Chat variant keeps
@@ -346,7 +346,11 @@ export function buildXiaoYueCommentPrompt(params: {
   event: string;
   context?: string;
   playerCount?: number;
-  participants?: Array<{ displayName: string; archetype?: string | null; profile?: { archetype?: string | null; industryLabel?: string | null; age?: number | null; city?: string | null; stateLabel?: string | null; gender?: string | null; educationLevel?: string | null; lifeStage?: string | null; bio?: string | null } | null }>;
+  /**
+   * Aggregate archetype inputs ONLY. Names, profile fields, individual traits,
+   * bios and per-person history are never accepted here (W3 boundary).
+   */
+  participants?: Array<{ archetype?: string | null; primaryArchetype?: string | null }>;
 }): string {
   const sizeHint = params.playerCount
     ? params.playerCount <= 4
@@ -356,24 +360,10 @@ export function buildXiaoYueCommentPrompt(params: {
 
   let participantHint = '';
   if (params.participants && params.participants.length > 0) {
-    const lines: string[] = [];
-    for (const p of params.participants) {
-      const pf = p.profile;
-      const parts: string[] = [p.displayName];
-      if (p.archetype) parts.push(p.archetype);
-      if (pf) {
-        if (pf.industryLabel) parts.push(pf.industryLabel);
-        if (pf.age) parts.push(`${pf.age}岁`);
-        if (pf.city) parts.push(pf.city);
-        if (pf.stateLabel) parts.push(pf.stateLabel);
-        if (pf.gender && pf.gender !== '不透露') parts.push(pf.gender);
-        if (pf.educationLevel) parts.push(pf.educationLevel);
-        if (pf.lifeStage) parts.push(pf.lifeStage);
-        if (pf.bio) parts.push(`"${pf.bio}"`);
-      }
-      lines.push(parts.join('，'));
+    const sessionContext = buildArchetypeContext(params.participants);
+    if (sessionContext.mixText) {
+      participantHint = `\n本桌构成：${sessionContext.mixText}（仅用于调整语气与节奏；不要点名，也不要描述任何个人）`;
     }
-    participantHint = `\n本局参与者快照（你对他们已知的了解——仅来自他们的自述档案，不是实时看到的）：\n${lines.map(l => `- ${l}`).join('\n')}\n\n数据真实性原则：你只能引用他们档案里写的东西，以及本局的游戏状态数据。你无法实时看到或听到他们。不要把档案里的特征假装成你正在观察的行为——说"你的资料显示你笑点低"而不是"我看见你笑了"。`;
   }
 
   return `你是JoyJoin的社交破冰主持人。请为以下场景生成一句简短的主持评语（20-30字）：
@@ -830,18 +820,70 @@ ${params.sessionContext?.mixText ? `\n【本组画像】${params.sessionContext.
 
 // ─── Group Mirror Prompts ────────────────────────────────────────────────────
 
-export const GROUP_MIRROR_PROMPT_VERSION = 'social-group-mirror-v1';
+export const GROUP_MIRROR_PROMPT_VERSION = 'social-group-mirror-v2';
+/**
+ * M3: anchored variant, emitted only when at least one shared-interest anchor
+ * actually reaches the prompt. The unanchored prompt stays v2 and stays
+ * byte-identical apart from the M1.2b privacy fix that removed roster names.
+ */
+export const GROUP_MIRROR_ANCHORED_PROMPT_VERSION = 'social-group-mirror-v3-anchors';
+
+/** M3 budget: two anchors per generation, never more. */
+export const GROUP_MIRROR_MAX_TABLE_ANCHORS = 2;
+
+/**
+ * Trim/dedupe the candidate anchors and keep at most
+ * `GROUP_MIRROR_MAX_TABLE_ANCHORS`. Exported so the AI service can pick the
+ * matching promptVersion from the same rule the prompt builder applies.
+ */
+export function selectGroupMirrorPromptAnchors(
+  anchors?: ReadonlyArray<string> | null,
+): string[] {
+  if (!anchors || anchors.length === 0) return [];
+  const selected: string[] = [];
+  for (const raw of anchors) {
+    if (typeof raw !== 'string') continue;
+    const label = raw.trim();
+    if (!label || selected.includes(label)) continue;
+    selected.push(label);
+    if (selected.length >= GROUP_MIRROR_MAX_TABLE_ANCHORS) break;
+  }
+  return selected;
+}
+
+/** `...-v2-anchors` iff anchors are actually used, else the v1 version string. */
+export function resolveGroupMirrorPromptVersion(
+  anchors?: ReadonlyArray<string> | null,
+): string {
+  return selectGroupMirrorPromptAnchors(anchors).length > 0
+    ? GROUP_MIRROR_ANCHORED_PROMPT_VERSION
+    : GROUP_MIRROR_PROMPT_VERSION;
+}
 
 export function buildGroupMirrorPrompt(params: {
   participantCount: number;
   eventType?: string;
-  participantNames: string[];
   sessionContext?: SessionArchetypeContext;
+  /**
+   * M3: shared-interest anchor *labels* from `deriveTablePersona`. Server-only,
+   * aggregate — see the W3 boundary in `lib/tablePersona.ts`. At most two are
+   * used, and an empty list leaves the prompt byte-identical to v2.
+   */
+  tableAnchors?: string[];
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '线下聚会';
-  const names = params.participantNames.join('、');
+  const anchors = selectGroupMirrorPromptAnchors(params.tableAnchors);
+  const anchorBlock = anchors.length > 0 ? `
 
-  return `你是JoyJoin的社交观察家。为一场${eventLabel}（${params.participantCount}人，参与者：${names}）生成5个"群像镜像"问题。
+【本桌共同话题】${anchors.join('、')}
+这些话题只用来启发提问角度，补充要求：
+- 最多2个问题可以借共同话题起意，其余问题继续用通用角度
+- 必须是欣赏式提问，不得评价性格、能力、外貌或价值
+- 不得点名谁喜欢这些话题，不得暗示有几人有共同点、谁更热衷
+- 不得引用任何个人资料（职业、年龄、城市、经历等）
+- 写不出自然的问题就直接跳过该话题，不要硬凑，也不要把它变成人物标签` : '';
+
+  return `你是JoyJoin的社交观察家。为一场${eventLabel}（${params.participantCount}人）生成5个"群像镜像"问题。
 
 （你是纯数字助手，不身处现场——生成的问题通过应用界面完成匿名投票。）
 
@@ -856,7 +898,7 @@ export function buildGroupMirrorPrompt(params: {
 - 问题类型覆盖：观察（谁最像...）、预测（谁最可能...）、记忆（谁给人的第一印象最...）
 - 每个问题20-40字
 - 禁止使用敏感话题（政治、宗教、种族、性、疾病、外貌攻击、收入）
-- 语气像朋友间的好奇打量，不要像心理测试
+- 语气像朋友间的好奇打量，不要像心理测试${anchorBlock}
 
 请以JSON数组返回：
 [{"id":"gm_1","questionText":"谁最有可能在聚会结束后第一个提议续摊？","category":"perception"},{"id":"gm_2","questionText":"...","category":"..."}]

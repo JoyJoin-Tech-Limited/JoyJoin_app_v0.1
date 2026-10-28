@@ -13,14 +13,17 @@
 
 import type { SocialSessionState, SocialTopic } from '@shared/socialIcebreaker';
 import type { AIResponseMeta } from '@shared/types/aiMeta';
+import {
+  appendWarmupServedTopicKeys,
+  resolveWarmupServedTopicKeys,
+  selectWarmupTopicDeck,
+} from './warmupServedTopics';
 
 export type WarmupTopicSetProvenance = NonNullable<SocialSessionState['warmupTopicSetProvenance']>;
 
-export function stampNewSessionTopicSet(state: SocialSessionState, now: number): void {
-  if (state.warmupTopicSetRevision === undefined) state.warmupTopicSetRevision = 1;
-  if (state.warmupTopicSetUpdatedAt === undefined) state.warmupTopicSetUpdatedAt = now;
-  if (state.warmupTopicAdvancedAt === undefined) state.warmupTopicAdvancedAt = now;
-  if (state.warmupTopicSetProvenance === undefined) state.warmupTopicSetProvenance = 'precompile';
+function targetTopicCount(state: SocialSessionState, candidateCount: number): number {
+  const vibeMaximum = state.vibe === 'chat' ? 6 : state.vibe === 'game' ? 4 : 5;
+  return Math.min(candidateCount > 0 ? candidateCount : vibeMaximum, vibeMaximum);
 }
 
 /**
@@ -28,7 +31,19 @@ export function stampNewSessionTopicSet(state: SocialSessionState, now: number):
  * (already stamped at /start) instead of double-incrementing; a session that
  * was created before this field existed is upgraded to 1 atomically here.
  */
-export function stampPrecompiledTopicSet(state: SocialSessionState, now: number): void {
+export function stampPrecompiledTopicSet(
+  state: SocialSessionState,
+  now: number,
+  curatedFallbackCandidates: readonly SocialTopic[] = [],
+): void {
+  const firstDeck = selectWarmupTopicDeck({
+    topics: state.warmupTopics ?? [],
+    curatedFallbackCandidates,
+    servedTopicKeys: [],
+    targetCount: targetTopicCount(state, state.warmupTopics?.length ?? 0),
+  });
+  state.warmupTopics = firstDeck.topics;
+  state.servedTopicKeys = appendWarmupServedTopicKeys([], firstDeck.topics);
   if (state.warmupTopicSetRevision === undefined) {
     state.warmupTopicSetRevision = 1;
   }
@@ -41,13 +56,25 @@ export function commitWholeTopicSet(
   state: SocialSessionState,
   input: {
     topics: SocialTopic[];
+    curatedFallbackCandidates?: readonly SocialTopic[];
     meta: AIResponseMeta;
     provenance: WarmupTopicSetProvenance;
     now: number;
   },
-): void {
+): { dedupeRelaxed: boolean } {
   const previous = state.warmupTopicSetRevision ?? 0;
-  state.warmupTopics = input.topics;
+  const currentTopics = state.warmupTopics ?? [];
+  const servedTopicKeys = resolveWarmupServedTopicKeys(state.servedTopicKeys, currentTopics);
+  const selected = selectWarmupTopicDeck({
+    topics: input.topics,
+    curatedFallbackCandidates: input.curatedFallbackCandidates,
+    servedTopicKeys,
+    currentTopics,
+    targetCount: targetTopicCount(state, input.topics.length),
+  });
+
+  state.warmupTopics = selected.topics;
+  state.servedTopicKeys = appendWarmupServedTopicKeys(servedTopicKeys, selected.topics);
   state.warmupTopicsMeta = input.meta;
   state.warmupTopicsStatus = 'ready';
   state.warmupTopicsGeneratingAt = undefined;
@@ -56,6 +83,7 @@ export function commitWholeTopicSet(
   state.warmupTopicSetUpdatedAt = input.now;
   state.warmupTopicAdvancedAt = input.now;
   state.warmupTopicSetProvenance = input.provenance;
+  return { dedupeRelaxed: selected.dedupeRelaxed };
 }
 
 export function markTopicAdvanced(state: SocialSessionState, now: number): void {

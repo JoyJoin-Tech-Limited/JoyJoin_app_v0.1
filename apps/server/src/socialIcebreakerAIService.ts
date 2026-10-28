@@ -43,7 +43,8 @@ import {
   SESSION_PACK_PROMPT_VERSION,
   XIAOYUE_COMMENT_PROMPT_VERSION,
   UNDERCOVER_WORD_PROMPT_VERSION,
-  GROUP_MIRROR_PROMPT_VERSION,
+  resolveGroupMirrorPromptVersion,
+  selectGroupMirrorPromptAnchors,
 } from './ai/socialIcebreakerPrompts';
 import { getRandomQuipBattlePrompts, type QuipBattlePrompt } from '@shared/quipBattle';
 import { getFallbackUndercoverPair, type UndercoverWordPair } from '@shared/undercoverWord';
@@ -591,7 +592,7 @@ export async function generateXiaoYueComment(params: {
   event: string;
   context?: string;
   playerCount?: number;
-  participants?: Array<{ displayName: string; archetype?: string | null; profile?: { archetype?: string | null; industryLabel?: string | null; age?: number | null; city?: string | null; stateLabel?: string | null; gender?: string | null; educationLevel?: string | null; lifeStage?: string | null; bio?: string | null } | null }>;
+  participants?: Array<{ archetype?: string | null; primaryArchetype?: string | null }>;
 }): Promise<AIServiceResult<string>> {
   const defaultComments: Record<string, Record<string, string>> = {
     warmup: {
@@ -1302,17 +1303,25 @@ function isGroupMirrorLlmEnabled(): boolean {
 export async function generateGroupMirrorQuestions(params: {
   eventType?: string;
   participantCount: number;
-  participantNames: string[];
   roster?: Array<{ userId: string; displayName: string; archetype?: string }>;
+  /**
+   * M3: shared-interest anchor labels (aggregate, server-only). Fail-open —
+   * absent/empty means the unanchored v2 prompt, unchanged behaviour.
+   */
+  tableAnchors?: string[];
   _refinementHint?: string;
 }): Promise<AIServiceResult<GroupMirrorQuestion[]>> {
   const aiCorrelationId = createAiCorrelationId();
 
   const fallback = getFallbackGroupMirrorQuestions(5);
 
+  // M3: same rule the prompt builder applies, so trace + prompt agree.
+  const promptVersion = resolveGroupMirrorPromptVersion(params.tableAnchors);
+  const usedAnchors = selectGroupMirrorPromptAnchors(params.tableAnchors);
+
   // If AI is disabled, return curated fallback immediately
   if (!isGroupMirrorLlmEnabled()) {
-    const meta = buildFallbackAIMeta('disabled', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+    const meta = buildFallbackAIMeta('disabled', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return attachAIGC({ data: fallback, meta });
   }
@@ -1324,6 +1333,10 @@ export async function generateGroupMirrorQuestions(params: {
     const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
     if (sessionContext?.mixText) {
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+    }
+    if (usedAnchors.length > 0) {
+      // Aggregate only: labels + count, never coverage or identities.
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'tableAnchors', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion, extra: { anchorCount: usedAnchors.length } });
     }
     const prompt = buildGroupMirrorPrompt({ ...params, sessionContext });
     const response = await raceWithTimeout(
@@ -1338,7 +1351,7 @@ export async function generateGroupMirrorQuestions(params: {
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
-      const meta = buildFallbackAIMeta('empty_response', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+      const meta = buildFallbackAIMeta('empty_response', promptVersion, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
       return attachAIGC({ data: fallback, meta });
     }
@@ -1347,13 +1360,13 @@ export async function generateGroupMirrorQuestions(params: {
     try {
       parsed = JSON.parse(extractJsonPayloadForParse(content));
     } catch {
-      const meta = buildFallbackAIMeta('parse_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+      const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
       return attachAIGC({ data: fallback, meta });
     }
 
     if (Array.isArray(parsed) && parsed.length >= 3) {
-      const meta = buildLiveAIMeta(provider, GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+      const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'group_mirror', params.eventType);
       const liveQuestions: GroupMirrorQuestion[] = parsed.slice(0, 5).map((q: GroupMirrorQuestion, i: number) => ({
@@ -1376,13 +1389,13 @@ export async function generateGroupMirrorQuestions(params: {
       );
     }
 
-    const meta = buildFallbackAIMeta('parse_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+    const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return attachAIGC({ data: fallback, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateGroupMirrorQuestions error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
-    const meta = buildFallbackAIMeta('llm_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+    const meta = buildFallbackAIMeta('llm_error', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return attachAIGC({ data: fallback, meta });
   }

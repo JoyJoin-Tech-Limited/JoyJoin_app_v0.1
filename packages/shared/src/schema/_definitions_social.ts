@@ -78,6 +78,7 @@ export interface SocialAgentEventPayload {
   estimatedCostYuan?: number;
   baseTopicSetRevision?: number;
   resultRevision?: number;
+  dedupeRelaxed?: boolean;
   proactiveEnabled?: boolean;
   ignoredStreak?: number;
   snapshotScope?: 'action_recovery' | 'micro_challenge_observation';

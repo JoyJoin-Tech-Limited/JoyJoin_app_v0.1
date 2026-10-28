@@ -21,6 +21,7 @@ import {
   AUCTION_STARTING_COINS,
 } from '@shared/socialIcebreaker';
 import { getArchetypeHSL } from '@shared/archetypeColors';
+import { resolveRosterArchetype } from '@shared/personality/archetypeNames';
 import type { UndercoverWordPair } from '@shared/undercoverWord';
 import {
   generateWarmupTopics,
@@ -38,11 +39,13 @@ import {
   validateLieDetectiveV2Tags,
   getDynamicDifficulty,
 } from '../socialIcebreakerAIService';
+import { FALLBACK_WARMUP_TOPICS } from '../socialIcebreakerAI/warmupTopics';
 import {
   commitWholeTopicSet,
   markTopicAdvanced,
   stampPrecompiledTopicSet,
 } from '../lib/warmupTopicSetRevision';
+import { resolveWarmupServedTopicKeys } from '../lib/warmupServedTopics';
 import { runXiaoyueAgentTick } from '../lib/xiaoyueAgentRuntime';
 import { buildCachedAIMeta, buildFallbackAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
@@ -53,6 +56,7 @@ import {
 import { DEFAULT_STANDARD_RUN_PLAN } from '@shared/phaseRegistry';
 import { getRunPlanForTier } from '@shared/socialIcebreakerRunPlans';
 import { compileForSession } from '../services/runPlanService';
+import { buildRunPlanShapeKey } from '../lib/runPlanShape';
 import {
   buildCustomRunPlan,
   CUSTOM_GAME_PHASES,
@@ -235,7 +239,8 @@ function scheduleStartBackgroundGeneration(params: {
           participants: roster.map((p) => ({
             userId: p.userId,
             displayName: p.displayName,
-            archetype: p.archetype,
+            archetype:
+              resolveRosterArchetype(p.primaryArchetype, p.archetype) ?? p.archetype,
             interests: p.interests,
           })),
         },
@@ -259,10 +264,13 @@ function scheduleStartBackgroundGeneration(params: {
           mood: vibeMoodMap[state.vibe ?? 'balanced'] ?? 'relaxed',
           eventType: state.eventType || eventType || '活动',
           participantCount: roster.length || 1,
-          roster: roster.map((p) => ({ archetype: p.archetype, interests: p.interests })),
+          roster: roster.map((p) => ({
+            archetype:
+              resolveRosterArchetype(p.primaryArchetype, p.archetype) ?? p.archetype,
+            interests: p.interests,
+          })),
           vibe: state.vibe,
-          // W7.4: dedupe warmup topics per pool/group across sessions.
-          dedupeKey: state.icebreakerSessionId,
+          // Precompile is the first deck: no prior served history is invented.
           // wave3 (AC-07): thread session highlights (vacuous on a brand-new
           // session — verifier N1 — but required on warmup re-entry).
           highlights: state.highlights,
@@ -289,7 +297,7 @@ function scheduleStartBackgroundGeneration(params: {
 
         latestState.warmupTopics = topicResult.data;
         latestState.warmupTopicsMeta = topicResult.meta;
-        stampPrecompiledTopicSet(latestState, Date.now());
+        stampPrecompiledTopicSet(latestState, Date.now(), FALLBACK_WARMUP_TOPICS);
         await updateSession(socialSessionId, latestState);
         logger.info('Warmup topics pre-compiled after session start', {
           socialSessionId,
@@ -492,14 +500,14 @@ router.post('/start', async (req: any, res) => {
         // W5: the roster just grew — recompile with the live archetype mix so
         // composition rules see the real table. Flag off → no extra read and
         // no roster is passed (compileForSession stays byte-identical).
-        const matchingAwareForPlan = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+        const matchingAwareForPlan = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
         const rosterForPlan = matchingAwareForPlan
           ? await listParticipants(existing.socialSessionId).catch(() => [])
           : undefined;
         const newRunPlan = await compileForSession(state, state.eventTier, rosterForPlan);
-        const oldPhases = state.runPlan?.segments?.map((s) => s.phase).join(',') ?? '';
-        const newPhases = newRunPlan.segments.map((s) => s.phase).join(',');
-        if (oldPhases !== newPhases) {
+        // M2 changes durations, not the phase set. Comparing phase names alone
+        // silently discards the calibrated plan, so compare the full shape.
+        if (buildRunPlanShapeKey(state.runPlan) !== buildRunPlanShapeKey(newRunPlan)) {
           state.runPlan = newRunPlan;
           shouldPersist = true;
         }
@@ -937,17 +945,25 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     return [];
   });
 
+  const generationAvoidTopics = [...new Set([
+    ...resolveWarmupServedTopicKeys(state.servedTopicKeys, state.warmupTopics ?? []),
+    ...(Array.isArray(avoidTopics) ? avoidTopics : []),
+  ])];
+
   let topicResult: { data: SocialSessionState['warmupTopics']; meta: AIResponseMeta };
   try {
     topicResult = await generateWarmupTopics({
       mood,
       eventType,
       participantCount: state.playerCount || participantCount,
-      avoidTopics,
-      roster: participants || [],
+      avoidTopics: generationAvoidTopics,
+      roster: participants.map((participant) => ({
+        archetype:
+          resolveRosterArchetype(participant.primaryArchetype, participant.archetype) ??
+          participant.archetype,
+        interests: participant.interests,
+      })),
       vibe: state.vibe,
-      // W7.4: dedupe warmup topics per pool/group across sessions.
-      dedupeKey: state.icebreakerSessionId,
       // wave3 (AC-07): thread session highlights (typically empty during the
       // first warmup run — verifier N1 — live on warmup re-entry).
       highlights: state.highlights,
@@ -959,7 +975,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     });
     topicResult = {
       data: getCuratedWarmupTopics(mood, state.vibe, {
-        dedupeKey: state.icebreakerSessionId,
+        avoidKeys: generationAvoidTopics,
       }),
       meta: buildFallbackAIMeta('route_generation_error', 'social-warmup-topics-route-fallback'),
     };
@@ -983,15 +999,24 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   }
 
   stateToPersist.selectedMood = mood;
-  commitWholeTopicSet(stateToPersist, {
+  const { dedupeRelaxed } = commitWholeTopicSet(stateToPersist, {
     topics: topicResult.data as NonNullable<SocialSessionState['warmupTopics']>,
+    curatedFallbackCandidates: FALLBACK_WARMUP_TOPICS,
     meta: topicResult.meta,
     provenance: 'host_manual',
     now: Date.now(),
   });
+  if (dedupeRelaxed) {
+    logger.info('[SocialIcebreaker] warmup topic dedupe relaxed after pool exhaustion', {
+      socialSessionId,
+      provenance: 'host_manual',
+      revision: stateToPersist.warmupTopicSetRevision,
+    });
+  }
   stateToPersist.warmupReadyUserIds = [];
   // Single-test bot attendees default to ready on the fresh topic set.
   seedSingleTestBotsWarmupReady(stateToPersist);
+  const responseTopics = stateToPersist.warmupTopics ?? [];
   try {
     await updateSession(socialSessionId, stateToPersist);
   } catch (error) {
@@ -1000,7 +1025,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
       error: error instanceof Error ? error.message : String(error),
     });
     return res.json({
-      topics: topicResult.data,
+      topics: responseTopics,
       meta: {
         ...topicResult.meta,
         fallbackUsed: true,
@@ -1011,7 +1036,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     });
   }
 
-  return res.json({ topics: topicResult.data, meta: topicResult.meta, state: await buildClientState(stateToPersist, userId) });
+  return res.json({ topics: responseTopics, meta: topicResult.meta, state: await buildClientState(stateToPersist, userId) });
 });
 
 // ---------------------------------------------------------------------------
@@ -1043,8 +1068,12 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
     state.selectedMood = healingMood;
     commitWholeTopicSet(state, {
       topics: getCuratedWarmupTopics(healingMood, state.vibe, {
-        dedupeKey: state.icebreakerSessionId,
+        avoidKeys: resolveWarmupServedTopicKeys(
+          state.servedTopicKeys,
+          state.warmupTopics ?? [],
+        ),
       }),
+      curatedFallbackCandidates: FALLBACK_WARMUP_TOPICS,
       meta: buildFallbackAIMeta('ready_route_missing_topics', 'social-warmup-topics-ready-heal'),
       provenance: 'host_manual',
       now: Date.now(),
@@ -1109,8 +1138,12 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
     state.selectedMood = healingMood;
     commitWholeTopicSet(state, {
       topics: getCuratedWarmupTopics(healingMood, state.vibe, {
-        dedupeKey: state.icebreakerSessionId,
+        avoidKeys: resolveWarmupServedTopicKeys(
+          state.servedTopicKeys,
+          state.warmupTopics ?? [],
+        ),
       }),
+      curatedFallbackCandidates: FALLBACK_WARMUP_TOPICS,
       meta: buildFallbackAIMeta('next_topic_route_missing_topics', 'social-warmup-topics-next-heal'),
       provenance: 'host_manual',
       now: Date.now(),

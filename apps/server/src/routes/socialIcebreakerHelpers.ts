@@ -23,6 +23,7 @@ import {
 import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
+import { buildHostTableBrief } from '../lib/hostTableBrief';
 import { inferMicroChallengeEnergyArc } from '../lib/icebreakerRosterSignals';
 import { isCustomMode, computeSelectablePhases, generatePhaseSelectionId } from '../services/customModeService';
 import { mapBotUserIdsToBotIds, buildBotIdByUserId } from '../lib/socialIcebreakerClientIdMapper';
@@ -95,6 +96,8 @@ export function sanitizeStateForClient(
   options?: SanitizeStateOptions,
 ): SocialSessionState {
   const sanitized = { ...state };
+  // Per-viewer brief: only buildClientState may reattach it for the current host.
+  delete (sanitized as Partial<SocialSessionState>).hostTableBrief;
   delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
   delete (sanitized as Partial<SocialSessionState>).xiaoyueSessionPackMeta;
   // M1 (AC-03/SEC-01): the bounded copilot state is host-only. The entire
@@ -102,6 +105,8 @@ export function sanitizeStateForClient(
   // is removed for every non-host projection; only the monotonic warmup topic
   // revision fields below remain visible to participants.
   delete (sanitized as Partial<SocialSessionState>).xiaoyueAgent;
+  // M1.1: historical served-topic keys are dedupe state, never a client DTO.
+  delete (sanitized as Partial<SocialSessionState>).servedTopicKeys;
   if (
     requestingUserId &&
     state.hostUserId === requestingUserId &&
@@ -365,7 +370,12 @@ export async function buildClientState(
     });
     return [];
   });
-  const archetypeCtx = buildArchetypeContext(joinedParticipants.map((p) => ({ archetype: p.archetype })));
+  const archetypeCtx = buildArchetypeContext(
+    joinedParticipants.map((p) => ({
+      archetype: p.archetype,
+      primaryArchetype: p.primaryArchetype,
+    })),
+  );
   // Wave 3 (icebreaker-uiux-wave3, contract AC-02): resolve the projection
   // flag once per poll (5s flag LRU — no additional per-poll DB cost) and
   // pass it into the sanitizer. Flag OFF = byte-identical pre-Wave-3 payload.
@@ -391,6 +401,17 @@ export async function buildClientState(
     requestingUserId,
     { exposeWave3ContentStatus },
   );
+
+  if (requestingUserId === state.hostUserId && state.currentPhase === 'warmup') {
+    const icebreakerMatchingAwareEnabled = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
+    if (icebreakerMatchingAwareEnabled) {
+      const hostTableBrief = buildHostTableBrief({
+        joinedParticipants,
+        phaseStartedAt: state.phaseStartedAt,
+      });
+      if (hostTableBrief) clientState.hostTableBrief = hostTableBrief;
+    }
+  }
 
   // Wave 3 (icebreaker-uiux-wave3, contract AC-04② + SCA-01): derive the
   // host-activity signal from the roster ALREADY loaded above (sanitize
@@ -1816,7 +1837,7 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
     // W5 (gm-debrief): feed the matched roster + host mood + energy arc into
     // selector scoring, behind the matching-aware kill switch. Flag off → the
     // call args are byte-identical to pre-W5.
-    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+    const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
     const microRoster = matchingAware
       ? await listParticipants(socialSessionId).catch(() => [])
       : [];
