@@ -1,11 +1,13 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { localAsset } from '../../../lib/utils/cdnAssets'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { DEFAULT_EVENT_GROUP_SIZE } from '@shared/constants'
 import type { VibeId } from '../../../lib/vibeMapping'
-import { ICE_PHASE_MAP_ARROW, ICE_WAITING_FOR_HOST_LINE } from '@shared/copy/icebreakerSession'
+import { ICE_WAITING_FOR_HOST_LINE } from '@shared/copy/icebreakerSession'
+import { buildSessionActivityGuide } from '@shared/copy/eventActivityGuide'
+import { getPhaseLabel } from '../phaseUtils'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
@@ -13,7 +15,6 @@ import MissingArchetypePlaceholder from '../../../components/mascot/MissingArche
 import IcebreakerTierSelector from './IcebreakerTierSelector'
 import WaitingBeat from './WaitingBeat'
 import { GLANCE_L1_WORD_WAITING } from '../viewModels/glanceStackModel'
-import { getApproxPhaseDurationLabel } from '../viewModels/phaseDurationModel'
 import type { SessionParticipant } from '../phaseUtils'
 
 export interface WaitingPhaseProps {
@@ -100,6 +101,16 @@ export default function WaitingPhase({
     )
   }
 
+  const activityGuideItems = useMemo(
+    () =>
+      buildSessionActivityGuide({
+        currentPhase: 'waiting',
+        orderedPhases: (phaseMapItems ?? []).map((item) => item.key),
+        planState: currentTier === 'custom' ? 'custom' : 'planned',
+      }),
+    [currentTier, phaseMapItems],
+  )
+
   return (
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
@@ -154,35 +165,46 @@ export default function WaitingPhase({
             P2 #4 (2026-10-20): each phase name carries its 「约N分钟」
             expectation (compiled runPlan first, static sources as fallback;
             always approximate — never a countdown). */}
-        {phaseMapItems && phaseMapItems.length > 0 && (
+        {activityGuideItems && (
           <View className='icebreaker__waiting-phases' aria-label='今晚的环节顺序'>
             <Text className='icebreaker__waiting-phases-title'>今晚的环节</Text>
             <View className='icebreaker__waiting-phases-chain'>
-              {phaseMapItems.map((item, index) => {
-                // Snapshot-first (compiled runPlan); the tier prop is the
-                // static fallback for standalone renders / pre-poll frames.
-                const durationLabel = getApproxPhaseDurationLabel(item.key, {
-                  eventTier: currentTier,
-                })
-                return (
-                  <Text
-                    key={item.key}
-                    className={`icebreaker__waiting-phase${
-                      item.current ? ' icebreaker__waiting-phase--current' : ''
-                    }`}
-                  >
-                    {index > 0 ? (
-                      <Text className='icebreaker__waiting-phase-arrow' aria-hidden='true'>
-                        {` ${ICE_PHASE_MAP_ARROW} `}
+              {activityGuideItems?.kind === 'planned'
+                ? activityGuideItems.items.map((item, index) => {
+                    const role = item.role
+                    const roleLabel =
+                      role === 'current'
+                        ? '现在开始'
+                        : role === 'next'
+                          ? '下一环'
+                          : role === 'final'
+                            ? '最后'
+                            : null
+                    return (
+                      <Text
+                        key={item.phase}
+                        className={`icebreaker__waiting-phase${
+                          role === 'current' ? ' icebreaker__waiting-phase--current' : ''
+                        }`}
+                      >
+                        {index > 0 ? (
+                          <Text className='icebreaker__waiting-phase-arrow' aria-hidden='true'>
+                            {' → '}
+                          </Text>
+                        ) : null}
+                        {roleLabel ? (
+                          <Text className='icebreaker__waiting-phase-min'>{`${roleLabel} · `}</Text>
+                        ) : null}
+                        {item.phase === 'waiting' ? null : getPhaseLabel(item.phase as Parameters<typeof getPhaseLabel>[0])}
                       </Text>
-                    ) : null}
-                    {item.label}
-                    {durationLabel ? (
-                      <Text className='icebreaker__waiting-phase-min'>{` ${durationLabel}`}</Text>
-                    ) : null}
-                  </Text>
-                )
-              })}
+                    )
+                  })
+                : activityGuideItems?.kind === 'generic' && activityGuideItems.fallbackLine ? (
+                    <Text className='icebreaker__waiting-phase'>
+                      {activityGuideItems.fallbackLine}
+                    </Text>
+                  )
+                  : null}
             </View>
           </View>
         )}

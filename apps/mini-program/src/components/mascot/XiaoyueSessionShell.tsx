@@ -43,6 +43,16 @@ export interface XiaoyueSessionShellProps {
    * suggestion timer — the two surfaces are mutually exclusive.
    */
   agentAsk?: ReactNode;
+  /**
+   * Quiet Concierge: replace the shell's single guidance line, never add a
+   * second coaching row. Empty/blank falls back to the existing phase line.
+   */
+  guidanceLine?: string | null;
+  /** Optional host table-brief popover; page owns visibility and arbitration. */
+  hostBrief?: ReactNode;
+  /** When true, the guidance line itself becomes the quiet brief trigger. */
+  hostBriefAvailable?: boolean;
+  onOpenHostBrief?: () => void;
   isHost: boolean;
   /** Calm-by-default sync-loss: grey dot on the band's right side when polling fails. */
   syncLost?: boolean;
@@ -136,6 +146,10 @@ export default function XiaoyueSessionShell({
   sessionPack,
   adaptiveSuggestion,
   agentAsk,
+  guidanceLine,
+  hostBrief,
+  hostBriefAvailable = false,
+  onOpenHostBrief,
   isHost,
   syncLost = false,
   showHostMenu = false,
@@ -148,6 +162,9 @@ export default function XiaoyueSessionShell({
 }: XiaoyueSessionShellProps) {
   const expressionId = ICEBREAKER_XIAOYUE_EXPRESSION[phase] ?? 'coachGuide'
   const { main, hint } = getPhaseCoachingLine(phase, sessionPack, isHost)
+  const hasGuidanceOverride = typeof guidanceLine === 'string' && guidanceLine.trim().length > 0
+  const guidance = hasGuidanceOverride ? guidanceLine!.trim() : main
+  const guidanceHint = hasGuidanceOverride ? undefined : hint
   const aigcEnabled = useAIGCLabelsEnabled()
 
   // 200ms opacity crossfade between phase expressions. One-shot only —
@@ -203,9 +220,23 @@ export default function XiaoyueSessionShell({
         </View>
 
         <View className='xiaoyue-session-shell__text'>
-          <Text className='xiaoyue-session-shell__tone'>{main}</Text>
+          {hostBriefAvailable && onOpenHostBrief ? (
+            <View
+              className='xiaoyue-session-shell__tone-button'
+              onClick={onOpenHostBrief}
+              hoverClass='xiaoyue-session-shell__tone-button--pressed'
+              hoverStartTime={0}
+              role='button'
+              aria-label='展开桌边小提示'
+            >
+              <Text className='xiaoyue-session-shell__tone'>{guidance}</Text>
+              <Text className='xiaoyue-session-shell__tone-chevron' aria-hidden='true'>›</Text>
+            </View>
+          ) : (
+            <Text className='xiaoyue-session-shell__tone'>{guidance}</Text>
+          )}
           {/* hostHint: kept as a second muted line (simpler than folding into the ⋯ menu). */}
-          {hint && <Text className='xiaoyue-session-shell__hint'>{hint}</Text>}
+          {guidanceHint && <Text className='xiaoyue-session-shell__hint'>{guidanceHint}</Text>}
         </View>
 
         {syncLost && (
@@ -231,6 +262,9 @@ export default function XiaoyueSessionShell({
 
       {/* M1 Ask slot — non-modal, floats below the band; page owns all state. */}
       {agentAsk}
+      {/* Quiet Concierge host table brief; page ensures it never co-renders
+          with the M1 Ask, adaptive suggestion, or coachmark. */}
+      {hostBrief}
 
       {/* Wave 2 orientation row (AC-01/02/03): ONE row, exactly one tenant —
           the entry phase map on waiting/warmup first frames, the resident

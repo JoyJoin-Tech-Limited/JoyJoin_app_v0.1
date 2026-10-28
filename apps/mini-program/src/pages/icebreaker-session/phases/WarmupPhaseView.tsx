@@ -34,6 +34,8 @@ interface WarmupPhaseViewProps {
   currentIndex: number
   /** M1 monotonic whole-deck revision; absent on legacy sessions. */
   topicSetRevision?: number
+  /** Quiet Concierge: permission whisper is replaced by the shell hint. */
+  suppressPermissionLine?: boolean
   readyUserIds: string[]
   participants: SessionParticipant[]
   currentUserId: string
@@ -66,6 +68,9 @@ interface WarmupPhaseViewProps {
   /** S8: fired once when the host's ritual tap ends the opening — the page
    *  fires the first Nudge (S1 grammar) alongside. */
   onRitualStart?: () => void
+  /** Quiet Concierge: report whether a ritual/celebration overlay is active,
+   *  so HostBrief can close instead of stacking beneath it. */
+  onOverlayVisibilityChange?: (visible: boolean) => void
   /**
    * Readiness cluster owned by the page (useWarmupReadiness): card state,
    * optimistic self-ready, mirrored count, CTA state. The page renders the
@@ -78,6 +83,7 @@ export function WarmupPhaseView({
   topics,
   currentIndex,
   topicSetRevision,
+  suppressPermissionLine = false,
   readyUserIds,
   participants,
   currentUserId,
@@ -101,6 +107,7 @@ export function WarmupPhaseView({
   advancePrompt,
   glanceStackEnabled = false,
   onRitualStart,
+  onOverlayVisibilityChange,
   readiness,
 }: WarmupPhaseViewProps) {
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
@@ -326,6 +333,18 @@ export function WarmupPhaseView({
       topicsError,
       selectedMood,
     })
+
+  // Keep the latest callback in a ref so an inline parent prop cannot make the
+  // visibility effect clean up (false) and re-fire (true) on every render.
+  const overlayCallbackRef = useRef(onOverlayVisibilityChange)
+  useEffect(() => {
+    overlayCallbackRef.current = onOverlayVisibilityChange
+  }, [onOverlayVisibilityChange])
+  useEffect(() => {
+    overlayCallbackRef.current?.(ritualGateOpen || showCelebration)
+    return () => overlayCallbackRef.current?.(false)
+  }, [ritualGateOpen, showCelebration])
+
   const handleRitualStart = useCallback(() => {
     setRitualDoneLocal(true)
     onRitualStart?.()
@@ -377,6 +396,7 @@ export function WarmupPhaseView({
             onToggleDeepPrompt={handleToggleDeepPrompt}
             onFeedbackTap={handleAigcFeedback}
             warmupTopicsMeta={warmupTopicsMeta}
+            suppressPermissionLine={suppressPermissionLine}
             participants={participants}
             readyUserIds={readyUserIds}
             currentUserId={currentUserId}

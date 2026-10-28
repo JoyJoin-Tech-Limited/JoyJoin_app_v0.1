@@ -56,12 +56,15 @@ export function PhaseIntroOverlay({
   visible,
   mode = 'overlay',
   isHost = false,
+  suppressGuidance = false,
   onAutoHide,
 }: {
   phase: SessionPhase
   visible: boolean
   mode?: 'overlay' | 'field'
   isHost?: boolean
+  /** Quiet Concierge: keep phase label/duration, but do not repeat shell teaching. */
+  suppressGuidance?: boolean
   /** Fired once the overlay has fully hidden itself — the parent uses it to
    *  reset the trigger so the NEXT ritual phase can show again. */
   onAutoHide?: () => void
@@ -87,7 +90,7 @@ export function PhaseIntroOverlay({
     // P0 补4: first attendance at this phase appends the one-line rule —
     // once. Marked seen as it renders so a mid-show kill cannot repeat it.
     const rule = getIcePhaseOneLineRule(phase)
-    const due = rule !== null && !readPhaseRuleSeen(phase)
+    const due = !suppressGuidance && rule !== null && !readPhaseRuleSeen(phase)
     setRuleDue(due)
     if (due) persistPhaseRuleSeen(phase)
 
@@ -134,12 +137,12 @@ export function PhaseIntroOverlay({
         {durationLabel ? (
           <Text className='phase-intro-overlay__duration'>{durationLabel}</Text>
         ) : null}
-        {hostPrompt ? (
+        {!suppressGuidance && hostPrompt ? (
           <Text className='phase-intro-overlay__host-prompt'>
             {ICE_HOST_PHASE_PROMPT_PREFIX}{hostPrompt}
           </Text>
         ) : null}
-        {oneLineRule ? (
+        {!suppressGuidance && oneLineRule ? (
           <Text className='phase-intro-overlay__rule'>
             {ICE_PHASE_ONE_LINE_RULE_PREFIX}{oneLineRule}
           </Text>

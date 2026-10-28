@@ -29,6 +29,7 @@ const COMPONENT_STYLES = [
   './components/IcebreakerTierSheet',
   './components/PhaseHeroCard',
   './components/PhaseOptOutControl',
+  './components/HostTableBriefPopover',
   './components/WarmupActionBar',
   './components/WarmupCardSlot',
   './components/WarmupCelebrationOverlay',

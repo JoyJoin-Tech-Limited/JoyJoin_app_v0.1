@@ -1,0 +1,93 @@
+@use '../../../styles/variables' as *;
+
+// Same shell-anchored, non-modal geometry as the M1 Ask: the card floats over
+// content and never pushes the warmup CTA or creates document scroll.
+.host-table-brief {
+  position: absolute;
+  top: 100%;
+  left: 32rpx;
+  right: 32rpx;
+  z-index: $z-modal;
+  margin-top: 8rpx;
+  pointer-events: auto;
+
+  &__card {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 24rpx;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-text-primary, 0.08);
+    border-radius: 24rpx;
+    box-shadow: 0 8rpx 32rpx rgba($color-text-primary, 0.1);
+    animation: host-table-brief-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    margin-bottom: 8rpx;
+  }
+
+  &__title {
+    font-size: $font-size-xs;
+    line-height: 1.45;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 88rpx;
+    min-height: 88rpx;
+    margin: -16rpx -16rpx -16rpx 0;
+  }
+
+  &__close--pressed {
+    opacity: 0.65;
+  }
+
+  &__close-text {
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__line {
+    display: block;
+    margin-top: 8rpx;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-primary;
+  }
+
+  &__line--pace {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: 1.5;
+  }
+
+  &__line--quiet {
+    color: $color-text-secondary-on-light;
+  }
+}
+
+@keyframes host-table-brief-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .host-table-brief__card {
+    animation: none;
+  }
+}

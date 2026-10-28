@@ -94,6 +94,50 @@ export interface ResolveHostMenuItemsInput {
   agentProactiveDisabled?: boolean
 }
 
+/** Quiet Concierge: one current-phase line, never a second tutorial. */
+export function resolveSessionGuidanceLine(input: {
+  phase: SessionPhase
+  isHost: boolean
+  paceShort?: string | null
+}): string | null {
+  if (input.phase === 'warmup') {
+    if (input.isHost && input.paceShort?.trim()) {
+      return `话题卡 · ${input.paceShort.trim()}`
+    }
+    return '先聊具体小事，不想答就跳过'
+  }
+  const lines: Partial<Record<SessionPhase, string>> = {
+    micro_challenge: '跟着卡面来，不想做就跳过',
+    lie_detective: '先听完，再猜哪句是假的',
+    mini_script: '跟着角色卡走，不用背台词',
+    recap: '一起回顾，不用急着发言',
+  }
+  return lines[input.phase] ?? null
+}
+
+/** Host brief is optional and must yield to every higher-priority surface. */
+export function canShowHostTableBrief(input: {
+  phase: SessionPhase
+  isHost: boolean
+  hasBrief: boolean
+  agentAskVisible: boolean
+  adaptiveSuggestionVisible: boolean
+  tierSheetOpen: boolean
+  ritualOverlayVisible: boolean
+  hostMenuOpen?: boolean
+}): boolean {
+  return (
+    input.phase === 'warmup' &&
+    input.isHost &&
+    input.hasBrief &&
+    !input.agentAskVisible &&
+    !input.adaptiveSuggestionVisible &&
+    !input.tierSheetOpen &&
+    !input.ritualOverlayVisible &&
+    !input.hostMenuOpen
+  )
+}
+
 /**
  * Contextual ⋯ menu items per phase. Host-only. Ordering is stable
  * (tier first, suggestion second, early-end last) so ActionSheet indices
