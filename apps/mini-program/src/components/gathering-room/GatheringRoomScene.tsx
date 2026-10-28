@@ -1,5 +1,6 @@
-import { Image, Text, View } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { Fragment, memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import type { GatheringRoomMember } from '@shared/api'
 import type { RoomPokeEmoji } from '@shared/wsEvents'
 import { ROOM_POKE_EMOJIS } from '@shared/wsEvents'
 import type { EquipmentItemView, EquipmentOutfitView } from '@joyjoin/shared/schema'
@@ -8,7 +9,8 @@ import { logWarn } from '../../lib/utils/logger'
 import {
   ROOM_TABLE_OVERLAY,
   ROOM_TABLE_OVERLAY_STYLE,
-} from './roomTableOverlay'
+} from './room-table-overlay.meta'
+import { resolveGatheringRoomMemberState } from '../../pages/gathering-room/gatheringRoomPresence'
 import PixelAvatarComposite from '../profile/PixelAvatarComposite'
 import ArchetypeHead from '../mascot/ArchetypeHead'
 import './GatheringRoomScene.scss'
@@ -16,33 +18,26 @@ import './GatheringRoomScene.scss'
 /**
  * GatheringRoomScene — 集结房间 pixel-scene stage.
  *
- * Full-viewport zero-scroll room: 4–6 matched members wait for the offline
- * event as their existing V2 pixel avatars (with equipped outfits). Three
- * presence states (PRD §3): 未现身 (seat-anchored warm silhouette + held-place
- * name card — 占位剪影, narratively "正在路上"), 在场 (walks in from the door on
- * live arrival, idle breathing), 已确认出席 (seated pose + brand seal).
+ * Full-viewport zero-scroll room: matched members wait for the offline event
+ * as their existing V2 pixel avatars. Durable attendance and ephemeral WS
+ * presence stay independent: the member-state helper owns every spoken label
+ * and poke-eligibility decision; neither axis claims physical arrival.
  *
- * Layers: designed CSS room (素胚房) renders underneath as the loading AND
- * failure state; the bundled composite art (`ROOM_COMPOSITE_PATH`) fades in
- * over it on decode (onError + a 2.5s decode-timeout both log — a failed art
- * load must never be silent). Character layer: every member's avatar sits at
- * their own seat; name plates hang OFF the seat body (placement per seat,
- * collision-audited) so they ride the avatar's animations and never cover a
- * body; per-row perspective scale + painter's z give the stack depth.
+ * Layers: the designed CSS room renders underneath as the loading/failure
+ * state; bundled composite art fades in on decode. Every avatar stays at its
+ * measured seat anchor, the transparent table plane occludes bodies only, and
+ * scene-level name plates remain readable above that plane.
  *
- * Interaction: tapping a present tablemate opens the one-tap quick-poke
- * bubble (挥手/击掌/干杯 + 看看TA) anchored above their seat; self/absent taps
- * open the detail sheet. A live activity ticker ("X 推门进来了") is owned by
- * the page controller.
+ * Interaction: an ordinary tap ALWAYS opens member details (the primary poke
+ * path lives in that sheet). Long-press is only a shortcut for an eligible,
+ * non-self tablemate. Compact screens replace scaled labels with an unscaled
+ * three-column roster; 7–8 members scroll inside that roster, never the page.
  *
- * Performance note: member profiles (identity + equipment) are kept stable and
- * split from transient presence state. Each seat is memoized so a presence
- * update for one member does not re-render the other PixelAvatarComposite
- * instances.
- *
- * Motion rules: transform/opacity only; entrance curve
- * cubic-bezier(0.22, 1, 0.36, 1); loops pause when the page hides; reduced
- * motion renders everything static at the final state.
+ * Motion rules: transform/opacity only. Real arrivals keep their one-shot
+ * response; only the viewer's real confirmation success can arm the 480ms seat
+ * and 320ms seal pulse. No decorative perpetual glow/pulse survives. Offline
+ * and ended rooms disable live feedback; reduced motion and ended rooms render
+ * equivalent static states.
  */
 
 /** Single composite background image path — subpackage-local, package-direct.
@@ -56,11 +51,11 @@ const ROOM_COMPOSITE_PATH = '/pages/gathering-room/assets/room-composite-v2.webp
 /** Seat anchors in scene-% (x right, y down), origin = scene top-left.
  *  Measured against room-composite-v2.webp's six zabuton cushions (feet land
  *  on the cushion, so the avatar reads as seated at the table):
- *  back (50,35.5) / top-left (34.6,44) / top-right (65.4,44) /
- *  mid-left (32.7,58) / mid-right (67.3,58) / front (50,68.5).
+ *  back (48.8,38.8) / mid-left (34.3,44.4) / mid-right (65.3,44.4) /
+ *  front-left (32.5,57.4) / front-right (67.1,57.4) / front (50.1,71.3).
  *  Two extra standing spots along the side walls handle 7–8 member groups
  *  (feet on the floor line, clear of the console and the plant). */
-const SEAT_ANCHORS = [
+export const SEAT_ANCHORS = [
   { x: 48.8, y: 38.8 }, // 0 back
   { x: 34.3, y: 44.4 }, // 1 mid-left
   { x: 65.3, y: 44.4 }, // 2 mid-right
@@ -114,10 +109,10 @@ const SEAT_INDEX_BY_COUNT: Record<number, readonly number[]> = {
 /** Seated-pose offset per seat (confirmed members shift closer to the table).
  *  Hand-authored transform offsets — transform-only, no layout measurement.
  *  Extra standing seats (6,7) have no offset; they remain standing. */
-const SEATED_OFFSETS: Record<number, { dx: number; dy: number }> = {
-  0: { dx: 0, dy: 18 },
-  1: { dx: 16, dy: 8 },
-  2: { dx: -16, dy: 8 },
+export const SEATED_OFFSETS: Record<number, { dx: number; dy: number }> = {
+  0: { dx: 0, dy: 0 },
+  1: { dx: 16, dy: 0 },
+  2: { dx: -16, dy: 0 },
   3: { dx: 10, dy: 0 },
   4: { dx: 0, dy: 0 },
   5: { dx: -10, dy: 0 },
@@ -127,6 +122,10 @@ const SEATED_OFFSETS: Record<number, { dx: number; dy: number }> = {
  *  it exactly (full width × 960rpx), so seat-% → rpx math stays exact. */
 const SCENE_WIDTH_RPX = 750
 const SCENE_HEIGHT_RPX = 960
+const QUICK_POKE_BUBBLE_WIDTH_RPX = 420
+const SCENE_SAFE_MARGIN_RPX = 16
+const QUICK_POKE_MIN_X = ((QUICK_POKE_BUBBLE_WIDTH_RPX / 2 + SCENE_SAFE_MARGIN_RPX) / SCENE_WIDTH_RPX) * 100
+const QUICK_POKE_MAX_X = 100 - QUICK_POKE_MIN_X
 
 /** Door zone (%) — a live arrival materializes here for one beat, then the
  *  wrapper transition walks the avatar to its seat. Anchored on the actual
@@ -147,6 +146,8 @@ export interface GatheringRoomMemberProfile {
   userId: string
   displayName?: string | null
   archetype?: string | null
+  /** Durable server attendance; required for the attendance × presence truth matrix. */
+  attendanceStatus: GatheringRoomMember['attendanceStatus']
   /** Existing avatar-system outfit + resolved items so equipment shows in-room. */
   outfit?: EquipmentOutfitView | null
   equippedItems?: EquipmentItemView[]
@@ -172,9 +173,17 @@ export interface GatheringRoomSceneProps {
   pokeBadge?: GatheringRoomPokeBadge | null
   /** First-arriver banner copy; null hides the banner. */
   firstArriverText?: string | null
-  /** Celebration overlay copy; null hides the overlay. */
+  /** Authoritative all-confirmed trigger; null hides the non-modal table card. */
   celebrationText?: string | null
-  /** Member whose quick-poke bubble is open (anchored above their seat). */
+  /** Initial/late-join presentation: static copy, no animation or Scene haptic. */
+  celebrationStatic: boolean
+  /** Raw WS presence; durable attendance stays on each member profile. */
+  presentUserIds: ReadonlySet<string>
+  wsConnected: boolean
+  eventPhase: 'upcoming' | 'live' | 'ended'
+  /** Success-only, viewer-only pulse signal; never derived from a refetch. */
+  ownConfirmationPulse: boolean
+  /** Eligible member whose secondary quick-poke surface is open. */
   quickPokeMember?: GatheringRoomMemberProfile | null
   onQuickPoke?: (userId: string, emoji: RoomPokeEmoji) => void
   onQuickPokeProfile?: (member: GatheringRoomMemberProfile) => void
@@ -185,6 +194,7 @@ export interface GatheringRoomSceneProps {
   /** Pause all loops when the page is hidden (WeChat page-stack). */
   pageVisible: boolean
   onAvatarTap?: (member: GatheringRoomMemberProfile) => void
+  onAvatarLongPress?: (member: GatheringRoomMemberProfile) => void
 }
 
 /** Short labels for poke badges — CSS/text badges only, no emoji glyphs. */
@@ -210,15 +220,14 @@ const EMPTY_OUTFIT: EquipmentOutfitView = {
   version: 1,
 }
 
-const CELEBRATION_SPARKLES = [
-  { left: '18%', top: '30%', delayMs: 0 },
-  { left: '32%', top: '18%', delayMs: 200 },
-  { left: '50%', top: '26%', delayMs: 400 },
-  { left: '68%', top: '16%', delayMs: 100 },
-  { left: '82%', top: '30%', delayMs: 300 },
-  { left: '24%', top: '44%', delayMs: 500 },
-  { left: '76%', top: '44%', delayMs: 250 },
-] as const
+const OWN_CONFIRMATION_PULSE_MS = 480
+const CELEBRATION_ENTER_MS = 360
+const CELEBRATION_HOLD_MS = 1400
+const CELEBRATION_EXIT_MS = 240
+const CELEBRATION_TOTAL_MS = CELEBRATION_ENTER_MS + CELEBRATION_HOLD_MS + CELEBRATION_EXIT_MS
+const CELEBRATION_TITLE = '这桌齐了'
+const CELEBRATION_SUBTITLE = '悦仔先偷笑一下，现场见'
+const CELEBRATION_ARIA_LABEL = '全员已确认出席'
 
 export function seatIndexFor(memberIndex: number, count: number): number {
   const normalizedCount = Math.min(Math.max(count, 3), MAX_SEAT_COUNT)
@@ -226,30 +235,51 @@ export function seatIndexFor(memberIndex: number, count: number): number {
   return map[memberIndex] ?? map[map.length - 1] ?? 0
 }
 
+export function resolveQuickPokeAnchor(seatIndex: number) {
+  const anchor = ALL_SEAT_ANCHORS[seatIndex] ?? ALL_SEAT_ANCHORS[0]
+  return {
+    x: Math.min(Math.max(anchor.x, QUICK_POKE_MIN_X), QUICK_POKE_MAX_X),
+    y: anchor.y,
+    placement: NAME_CARD_PLACEMENT[seatIndex] === 'above' ? 'below' : 'above',
+  } as const
+}
+
 interface GatheringRoomSeatProps {
   profile: GatheringRoomMemberProfile
   presence: GatheringRoomPresence
+  presentUserIds: ReadonlySet<string>
+  wsConnected: boolean
+  eventPhase: GatheringRoomSceneProps['eventPhase']
+  pageVisible: boolean
   seatIndex: number
   isOwn: boolean
   isEntering: boolean
   playOwnDoorEntry: boolean
+  ownConfirmationPulse: boolean
   pokeBadge: GatheringRoomPokeBadge | null
   reducedMotion: boolean
   pxPerRpx: number
   onAvatarTap?: (member: GatheringRoomMemberProfile) => void
+  onAvatarLongPress?: (member: GatheringRoomMemberProfile) => void
 }
 
 const GatheringRoomSeat = memo(function GatheringRoomSeat({
   profile,
   presence,
+  presentUserIds,
+  wsConnected,
+  eventPhase,
+  pageVisible,
   seatIndex,
   isOwn,
   isEntering,
   playOwnDoorEntry,
+  ownConfirmationPulse,
   pokeBadge,
   reducedMotion,
   pxPerRpx,
   onAvatarTap,
+  onAvatarLongPress,
 }: GatheringRoomSeatProps) {
   const anchor = ALL_SEAT_ANCHORS[seatIndex]
   const seatedOffset = SEATED_OFFSETS[seatIndex]
@@ -257,71 +287,87 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
   // confirmation offsets and door arrivals survive on every renderer.
   const toPx = (value: number) => `${value * pxPerRpx}px`
 
-  // Confirmation beat: hop once when this member's attendance flips to
-  // confirmed (pairs with the CTA haptic + the 480ms seated slide).
+  const memberState = resolveGatheringRoomMemberState({
+    attendanceStatus: profile.attendanceStatus,
+    isPresent: presentUserIds.has(profile.userId),
+    wsConnected,
+    eventPhase,
+  })
+  const realtimeConnectionEnabled = wsConnected && eventPhase !== 'ended'
+  const realtimeMotionEnabled = realtimeConnectionEnabled && pageVisible && !reducedMotion
+
+  // Live arrival is observed only after first paint. A disconnect, page hide,
+  // ended event or RM preference settles the current walk without replaying it.
   const prevPresenceRef = useRef(presence)
   const hasMountedRef = useRef(false)
-  const [justConfirmed, setJustConfirmed] = useState(false)
-  // Live-arrival walk: 'door' renders the avatar at the door point for one
-  // beat, then 'walking' flips the wrapper transform to the seat so the
-  // 640ms transition reads as a walk. Only for absent→present/confirmed
-  // flips after first paint — first-paint members fade in at their seats.
   const [arrival, setArrival] = useState<'door' | 'walking' | null>(null)
   useEffect(() => {
     const prev = prevPresenceRef.current
     prevPresenceRef.current = presence
     const isLiveArrival = hasMountedRef.current && prev === 'absent' && presence !== 'absent'
     hasMountedRef.current = true
-    if (isLiveArrival && !reducedMotion) {
-      setArrival('door')
-      const walkId = setTimeout(() => setArrival('walking'), 60)
-      const doneId = setTimeout(() => setArrival(null), 780)
-      return () => {
-        clearTimeout(walkId)
-        clearTimeout(doneId)
-      }
+    if (!realtimeMotionEnabled) {
+      setArrival(null)
+      return
     }
-    if (presence === 'confirmed' && prev !== 'confirmed' && !reducedMotion) {
-      setJustConfirmed(true)
-      const id = setTimeout(() => setJustConfirmed(false), 420)
-      return () => clearTimeout(id)
+    if (!isLiveArrival) return
+    setArrival('door')
+    const walkId = setTimeout(() => setArrival('walking'), 60)
+    const doneId = setTimeout(() => setArrival(null), 780)
+    return () => {
+      clearTimeout(walkId)
+      clearTimeout(doneId)
     }
-  }, [presence, reducedMotion])
+  }, [presence, realtimeMotionEnabled])
 
+  // The controller's success-only signal arms this pulse; presence must also
+  // be confirmed so there is no optimistic seat/check. A per-mount consumption
+  // ref blocks first-paint, refetch, reconnect and swipe-back replays.
+  const ownPulseConsumedRef = useRef(false)
+  const [ownPulseActive, setOwnPulseActive] = useState(false)
+  useEffect(() => {
+    if (!ownConfirmationPulse || ownPulseConsumedRef.current || presence !== 'confirmed') return
+    ownPulseConsumedRef.current = true
+    if (realtimeConnectionEnabled && !reducedMotion) setOwnPulseActive(true)
+  }, [ownConfirmationPulse, presence, realtimeConnectionEnabled, reducedMotion])
+  useEffect(() => {
+    if (!ownPulseActive) return
+    if (presence !== 'confirmed' || !realtimeConnectionEnabled || reducedMotion) {
+      setOwnPulseActive(false)
+      return
+    }
+    const id = setTimeout(() => setOwnPulseActive(false), OWN_CONFIRMATION_PULSE_MS)
+    return () => clearTimeout(id)
+  }, [ownPulseActive, presence, realtimeConnectionEnabled, reducedMotion])
+
+  const showOwnConfirmationPulse =
+    ownPulseActive && presence === 'confirmed' && realtimeConnectionEnabled && !reducedMotion
+  const showBreathing =
+    presence === 'present' && realtimeMotionEnabled && !isEntering && !playOwnDoorEntry && !arrival
   const bodyClass = [
     'gathering-room-scene__seat-body',
     `gathering-room-scene__seat-body--${presence}`,
-    !reducedMotion && isEntering ? 'gathering-room-scene__seat-body--entering' : '',
-    !reducedMotion && playOwnDoorEntry ? 'gathering-room-scene__seat-body--door-entry' : '',
-    justConfirmed ? 'gathering-room-scene__seat-body--just-confirmed' : '',
+    showBreathing ? 'gathering-room-scene__seat-body--breathing' : '',
+    realtimeMotionEnabled && isEntering ? 'gathering-room-scene__seat-body--entering' : '',
+    realtimeMotionEnabled && playOwnDoorEntry ? 'gathering-room-scene__seat-body--door-entry' : '',
+    showOwnConfirmationPulse ? 'gathering-room-scene__seat-body--own-confirmation-pulse' : '',
   ]
     .filter(Boolean)
     .join(' ')
 
-  // Every member renders their avatar at their own seat — including absent
-  // ones, who show as a muted seat-anchored silhouette (占位剪影, PRD §3
-  // 名牌/剪影 placeholder). Rendering nothing for absent members left bare
-  // floor + a floating name card on every seat whose owner hadn't explicitly
-  // confirmed or wasn't concurrently online — on device that is almost every
-  // tablemate, so the room looked broken ("only my own avatar renders").
-  // The 2026-08-17 lesson still holds: never pile dimmed avatars at the DOOR;
-  // a silhouette anchored AT THE SEAT with its name card reads as a held
-  // place, and a live arrival swaps it for the real avatar walking in.
+  // Every member renders at their own seat. Absent members keep a muted,
+  // static silhouette and a held-place name card; a real arrival may walk in,
+  // but no halo/dot/pulse is needed to explain the state.
   //
-  // The seated (confirmed) offset lives on the seat WRAPPER so pose keyframes
-  // and the press state on the body never fight it — an animation on the same
-  // element would override an inline transform mid-run and snap the avatar
-  // back to the standing spot. A live arrival mounts at the door point and
-  // the wrapper's 640ms transition walks the avatar to its seat.
+  // The seated offset lives on the WRAPPER so pose keyframes and press state
+  // never fight the inline transform. Its 480ms transition covers confirmation;
+  // a live arrival uses the same transform-only door→seat path.
   const doorPoint = doorQueuePoint(seatIndex)
   const seatStyle: CSSProperties = {
     left: `${anchor.x}%`,
     top: `${anchor.y}%`,
-    // Painter's algorithm: front rows occlude back rows (and their cards).
     zIndex: seatZIndex(anchor.y),
-    // First-paint stagger (see &__seat animation in the stylesheet); the base
-    // 150ms lets the room art finish fading in before anyone walks in. Live
-    // arrivals skip the stagger — they fade in at the door instead.
+    // Live arrivals skip first-paint stagger and fade in at the door instead.
     animationDelay: arrival ? '0ms' : `${150 + seatIndex * 70}ms`,
     ...(arrival === 'door'
       ? {
@@ -332,13 +378,11 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
         : {}),
   }
 
-  // Desync the shared breathing loop per seat so members don't bob in
-  // lockstep (chorus-line robot effect). Only while idle-present: a negative
-  // delay on the entry keyframes would skip them.
-  const bodyStyle: CSSProperties =
-    presence === 'present' && !isEntering && !playOwnDoorEntry
-      ? { animationDelay: `-${seatIndex * 900}ms` }
-      : {}
+  // Only connected, upcoming/live idle-present seats breathe. The negative
+  // delay desyncs the loop; entry keyframes never inherit it.
+  const bodyStyle: CSSProperties = showBreathing
+    ? { animationDelay: `-${seatIndex * 900}ms` }
+    : {}
 
   const name = profile.displayName || '队友'
 
@@ -346,6 +390,11 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     () => new Map((profile.equippedItems ?? []).map((item) => [item.id, item])),
     [profile.equippedItems],
   )
+
+  const canLongPressPoke = memberState.canPoke && !isOwn && realtimeConnectionEnabled
+  const seatAriaLabel =
+    `${name}${isOwn ? '（我）' : ''}，${memberState.statusLabel}，点按查看详情` +
+    (canLongPressPoke ? '，长按可打招呼' : '')
 
   return (
     <View
@@ -357,15 +406,11 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
         className={bodyClass}
         style={bodyStyle}
         hoverClass='gathering-room-scene__seat-body--pressed'
-        aria-label={`${name} 的座位`}
+        aria-label={seatAriaLabel}
         role='button'
         onClick={() => onAvatarTap?.(profile)}
+        onLongPress={canLongPressPoke ? () => onAvatarLongPress?.(profile) : undefined}
       >
-        {/* Warm halo behind absent silhouettes — a held place glows softly
-            instead of reading as a ghost on bare floor. */}
-        {presence === 'absent' ? (
-          <View className='gathering-room-scene__seat-halo' aria-hidden='true' />
-        ) : null}
         <View
           className='gathering-room-scene__avatar-frame'
           style={{ transform: `scale(${rowPerspectiveScale(anchor.y)})` }}
@@ -380,11 +425,14 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
           />
         </View>
         {presence === 'confirmed' ? (
-          <View className='gathering-room-scene__confirmed-seal'>
+          <View
+            className={`gathering-room-scene__confirmed-seal${showOwnConfirmationPulse ? ' gathering-room-scene__confirmed-seal--own-pulse' : ''}`}
+            aria-hidden='true'
+          >
             <View className='gathering-room-scene__confirmed-seal-check' aria-hidden='true' />
           </View>
         ) : null}
-        {pokeBadge ? (
+        {pokeBadge && realtimeConnectionEnabled ? (
           <View className='gathering-room-scene__poke-badge' key={pokeBadge.ts}>
             <Text className='gathering-room-scene__poke-badge-text'>
               {`${pokeBadge.fromName} ${POKE_BADGE_LABELS[pokeBadge.emoji]}`}
@@ -449,9 +497,6 @@ const GatheringRoomNameCard = memo(function GatheringRoomNameCard({
           className='gathering-room-scene__name-card-head'
         />
         <Text className='gathering-room-scene__name-card-text'>{name}</Text>
-        {presence === 'absent' ? (
-          <View className='gathering-room-scene__name-card-dot' aria-hidden='true' />
-        ) : null}
         {presence === 'confirmed' ? (
           <View className='gathering-room-scene__name-card-check' aria-hidden='true'>
             <View className='gathering-room-scene__name-card-check-mark' />
@@ -476,6 +521,11 @@ export function GatheringRoomScene({
   pokeBadge,
   firstArriverText,
   celebrationText,
+  celebrationStatic,
+  presentUserIds,
+  wsConnected,
+  eventPhase,
+  ownConfirmationPulse,
   quickPokeMember,
   onQuickPoke,
   onQuickPokeProfile,
@@ -484,10 +534,14 @@ export function GatheringRoomScene({
   layout,
   pageVisible,
   onAvatarTap,
+  onAvatarLongPress,
 }: GatheringRoomSceneProps) {
+  const staticMotion = reducedMotion || eventPhase === 'ended'
+  const realtimeConnectionEnabled = wsConnected && eventPhase !== 'ended'
   const sceneClass = [
     'gathering-room-scene',
     pageVisible ? '' : 'gathering-room-scene--paused',
+    staticMotion ? 'gathering-room-scene--static' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -532,38 +586,53 @@ export function GatheringRoomScene({
     })
   }
 
-  // Entrance choreography: seats mount only once the room art has decoded
-  // (900ms fallback so a slow/failed art load never blocks the room), then
-  // stagger in per seat — the room "lights up" before anyone walks in.
+  // Motion-free states show their final content immediately. Otherwise seats
+  // wait for art decode (900ms fallback) before the one-time entrance stagger.
   const [entranceArmed, setEntranceArmed] = useState(false)
   useEffect(() => {
     if (entranceArmed) return
+    if (staticMotion) {
+      setEntranceArmed(true)
+      return
+    }
     if (roomArtLoaded) {
       const id = setTimeout(() => setEntranceArmed(true), 150)
       return () => clearTimeout(id)
     }
     const id = setTimeout(() => setEntranceArmed(true), 900)
     return () => clearTimeout(id)
-  }, [roomArtLoaded, entranceArmed])
+  }, [roomArtLoaded, entranceArmed, staticMotion])
 
-  // Celebration exit choreography: when the controller clears the text, keep
-  // the overlay mounted for a 320ms fade-out instead of unmounting mid-beat.
-  const [celebrationShown, setCelebrationShown] = useState<string | null>(null)
+  // The controller owns the factual trigger and haptics; the scene owns only
+  // the 360ms enter / 1400ms hold / 240ms exit presentation. Initial/static and
+  // RM cards render the same copy without motion and never replay on refetch.
+  const celebrationIsStatic = celebrationStatic || reducedMotion
+  const [celebrationVisible, setCelebrationVisible] = useState(false)
   const [celebrationLeaving, setCelebrationLeaving] = useState(false)
   useEffect(() => {
-    if (celebrationText) {
-      setCelebrationShown(celebrationText)
-      setCelebrationLeaving(false)
+    setCelebrationLeaving(false)
+    if (!celebrationText || eventPhase === 'ended' || (!celebrationIsStatic && !wsConnected)) {
+      setCelebrationVisible(false)
       return
     }
-    if (!celebrationShown) return
-    setCelebrationLeaving(true)
-    const id = setTimeout(() => {
-      setCelebrationShown(null)
+    setCelebrationVisible(true)
+    if (celebrationIsStatic) {
+      const id = setTimeout(() => setCelebrationVisible(false), CELEBRATION_TOTAL_MS)
+      return () => clearTimeout(id)
+    }
+    const leaveId = setTimeout(
+      () => setCelebrationLeaving(true),
+      CELEBRATION_ENTER_MS + CELEBRATION_HOLD_MS,
+    )
+    const doneId = setTimeout(() => {
+      setCelebrationVisible(false)
       setCelebrationLeaving(false)
-    }, 320)
-    return () => clearTimeout(id)
-  }, [celebrationText, celebrationShown])
+    }, CELEBRATION_TOTAL_MS)
+    return () => {
+      clearTimeout(leaveId)
+      clearTimeout(doneId)
+    }
+  }, [celebrationText, celebrationIsStatic, eventPhase, wsConnected])
 
   // Defensive: groups larger than the art's seat map render, but warn so we
   // know the layout is degrading rather than silently dropping members.
@@ -576,19 +645,80 @@ export function GatheringRoomScene({
     }
   }, [memberProfiles.length])
 
-  // Quick-poke bubble anchor — resolve the target member's seat so the bubble
-  // floats above their head. Horizontal clamp keeps it on-screen for the
-  // outer standing seats.
+  // Quick-poke bubble anchor — clamp the measured 420rpx bubble inside the
+  // scene with a 16rpx gutter. Rear seat 0 already owns an above-head name
+  // card, so its bubble opens below instead of covering that card.
   const quickPokeAnchor = useMemo(() => {
     if (!quickPokeMember) return null
     const index = memberProfiles.findIndex((p) => p.userId === quickPokeMember.userId)
     if (index < 0) return null
-    const anchor = ALL_SEAT_ANCHORS[seatIndexFor(index, memberProfiles.length)]
-    return { x: Math.min(Math.max(anchor.x, 28), 72), y: anchor.y }
+    const seatIndex = seatIndexFor(index, memberProfiles.length)
+    return resolveQuickPokeAnchor(seatIndex)
   }, [quickPokeMember, memberProfiles])
 
+  const compactInteractions = Boolean(layout && layout.scale < 0.75)
+  const quickPokeMemberState = quickPokeMember
+    ? resolveGatheringRoomMemberState({
+        attendanceStatus: quickPokeMember.attendanceStatus,
+        isPresent: presentUserIds.has(quickPokeMember.userId),
+        wsConnected,
+        eventPhase,
+      })
+    : null
+  const quickPokeVisible = Boolean(
+    quickPokeMember &&
+    quickPokeAnchor &&
+    quickPokeMember.userId !== ownUserIdResolved &&
+    quickPokeMemberState?.canPoke &&
+    realtimeConnectionEnabled
+  )
+
+  // Compact labels never ride the scene scale. The helper's full dual-axis
+  // label is both visible and spoken; only eligible non-self members expose
+  // the long-press shortcut, while every cell keeps its ordinary detail tap.
+  const renderCompactRosterGrid = () => (
+    <View className='gathering-room-scene__compact-roster-grid'>
+      {memberProfiles.map((profile) => {
+        const isOwn = profile.userId === ownUserIdResolved
+        const name = profile.displayName || '桌友'
+        const memberState = resolveGatheringRoomMemberState({
+          attendanceStatus: profile.attendanceStatus,
+          isPresent: presentUserIds.has(profile.userId),
+          wsConnected,
+          eventPhase,
+        })
+        const canLongPressPoke = memberState.canPoke && !isOwn && realtimeConnectionEnabled
+        const ariaLabel =
+          `${name}${isOwn ? '（我）' : ''}，${memberState.statusLabel}，点按查看详情` +
+          (canLongPressPoke ? '，长按可打招呼' : '')
+        return (
+          <View
+            key={profile.userId}
+            className='gathering-room-scene__compact-roster-item'
+            hoverClass='gathering-room-scene__compact-roster-item--pressed'
+            role='button'
+            aria-label={ariaLabel}
+            onClick={() => onAvatarTap?.(profile)}
+            onLongPress={canLongPressPoke ? () => onAvatarLongPress?.(profile) : undefined}
+          >
+            <View className='gathering-room-scene__compact-roster-name-row'>
+              <Text className='gathering-room-scene__compact-roster-name'>{name}</Text>
+              {isOwn ? (
+                <Text className='gathering-room-scene__compact-roster-own' aria-hidden='true'>我</Text>
+              ) : null}
+            </View>
+            <Text className='gathering-room-scene__compact-roster-status'>
+              {memberState.statusLabel}
+            </Text>
+          </View>
+        )
+      })}
+    </View>
+  )
+
   return (
-    <View className={sceneClass} data-testid='gathering-room-scene' style={sceneStyle}>
+    <Fragment>
+      <View className={sceneClass} data-testid='gathering-room-scene' style={sceneStyle}>
       {/* Designed CSS room (素胚房) — the loading AND failure state under the
           composite art. Wall / wainscot / floor / window glow / low table /
           six cushion platforms: even with zero art the scene reads as a room. */}
@@ -617,22 +747,13 @@ export function GatheringRoomScene({
         aria-hidden='true'
         onLoad={handleRoomArtLoad}
         onError={handleRoomArtError}
-        style={{ opacity: roomArtLoaded ? 1 : 0, transition: reducedMotion ? 'none' : 'opacity 320ms ease-out' }}
+        style={{ opacity: roomArtLoaded ? 1 : 0, transition: staticMotion ? 'none' : 'opacity 320ms ease-out' }}
       />
 
-      {/* Lamp glow breathing — only over the real art (the CSS room carries
-          its own glow; a floating pulse over bare space exposes the void). */}
-      {roomArtLoaded ? (
-        <View className='gathering-room-scene__layer gathering-room-scene__layer--lamp-breathe' aria-hidden='true' />
-      ) : null}
-
-      {/* Character layer — above the art and lamp-breathe overlay. Each seat
-          is memoized so presence changes only re-render the seat whose state
-          actually changed. Every member's avatar stays at their own seat:
-          absent members render as a muted silhouette (占位剪影) behind their
-          held-place name card; the real avatar walks in from the door on
-          arrival and the silhouette crossfades to full color. The name plate
-          lives inside each seat body so it rides the avatar's animations. */}
+      {/* Character layer — static room material underneath, measured seats and
+          the transparent table plane above. Absent silhouettes stay muted;
+          only real arrivals and the viewer's success pulse add motion. Name
+          plates render separately below so the table never hides identity. */}
       {entranceArmed
         ? memberProfiles.map((profile, index) => {
             const seatIndex = seatIndexFor(index, memberProfiles.length)
@@ -643,14 +764,20 @@ export function GatheringRoomScene({
                 key={profile.userId}
                 profile={profile}
                 presence={presence}
+                presentUserIds={presentUserIds}
+                wsConnected={wsConnected}
+                eventPhase={eventPhase}
+                pageVisible={pageVisible}
                 seatIndex={seatIndex}
                 isOwn={isOwn}
                 isEntering={enteringUserIds.has(profile.userId)}
                 playOwnDoorEntry={isOwn && playOwnDoorEntry}
-                pokeBadge={isOwn ? pokeBadge ?? null : null}
+                ownConfirmationPulse={isOwn && ownConfirmationPulse}
+                pokeBadge={realtimeConnectionEnabled && isOwn ? pokeBadge ?? null : null}
                 reducedMotion={reducedMotion}
                 pxPerRpx={pxPerRpx}
                 onAvatarTap={onAvatarTap}
+                onAvatarLongPress={onAvatarLongPress}
               />
             )
           })
@@ -673,8 +800,8 @@ export function GatheringRoomScene({
       {/* Name plates are a separate, top-most layer: the table overlay must be
           able to occlude a back-row body without ever dimming or clipping the
           plate that identifies that member. */}
-      {entranceArmed ? (
-        <View className='gathering-room-scene__name-card-layer'>
+      {!compactInteractions && entranceArmed ? (
+        <View className='gathering-room-scene__name-card-layer' aria-hidden='true'>
           {memberProfiles.map((profile, index) => {
             const seatIndex = seatIndexFor(index, memberProfiles.length)
             return (
@@ -692,18 +819,17 @@ export function GatheringRoomScene({
         </View>
       ) : null}
 
-      {/* Quick-poke bubble — one-tap 挥手/击掌/干杯 anchored above a present
-          tablemate's seat (the detail sheet used to be the only path). The
-          catcher sits BELOW seat z-indexes: tapping empty room dismisses,
-          tapping another seat retargets. */}
-      {quickPokeMember && quickPokeAnchor ? (
+      {/* Quick-poke bubble — a secondary long-press action; a normal avatar
+          tap always opens the member sheet first. The catcher sits BELOW seat
+          z-indexes: tapping empty room dismisses, another seat retargets. */}
+      {quickPokeMember && quickPokeAnchor && quickPokeVisible && !compactInteractions ? (
         <Fragment>
           <View
             className='gathering-room-scene__poke-catcher'
             onClick={() => onDismissQuickPoke?.()}
           />
           <View
-            className='gathering-room-scene__quick-poke'
+            className={`gathering-room-scene__quick-poke gathering-room-scene__quick-poke--${quickPokeAnchor.placement}`}
             style={{ left: `${quickPokeAnchor.x}%`, top: `${quickPokeAnchor.y}%` }}
           >
             {ROOM_POKE_EMOJIS.map((emoji) => (
@@ -711,6 +837,8 @@ export function GatheringRoomScene({
                 key={emoji}
                 className='gathering-room-scene__quick-poke-chip'
                 hoverClass='gathering-room-scene__quick-poke-chip--pressed'
+                role='button'
+                aria-label={`向${quickPokeMember.displayName || '桌友'}${QUICK_POKE_LABELS[emoji]}`}
                 onClick={() => onQuickPoke?.(quickPokeMember.userId, emoji)}
               >
                 <Text className='gathering-room-scene__quick-poke-chip-text'>
@@ -722,6 +850,8 @@ export function GatheringRoomScene({
             <View
               className='gathering-room-scene__quick-poke-chip gathering-room-scene__quick-poke-chip--profile'
               hoverClass='gathering-room-scene__quick-poke-chip--pressed'
+              role='button'
+              aria-label={`查看${quickPokeMember.displayName || '桌友'}的详情`}
               onClick={() => onQuickPokeProfile?.(quickPokeMember)}
             >
               <Text className='gathering-room-scene__quick-poke-chip-text'>看看TA</Text>
@@ -730,39 +860,100 @@ export function GatheringRoomScene({
         </Fragment>
       ) : null}
 
-      {firstArriverText ? (
+      {firstArriverText && realtimeConnectionEnabled ? (
         <View className='gathering-room-scene__first-arriver'>
           <Text className='gathering-room-scene__first-arriver-text'>{firstArriverText}</Text>
         </View>
       ) : null}
+      </View>
 
-      {celebrationShown ? (
+      {celebrationVisible ? (
         <View
-          className={`gathering-room-scene__celebration${celebrationLeaving ? ' gathering-room-scene__celebration--leaving' : ''}`}
+          className={[
+            'gathering-room-scene__celebration',
+            celebrationLeaving ? 'gathering-room-scene__celebration--leaving' : '',
+            celebrationIsStatic ? 'gathering-room-scene__celebration--static' : '',
+          ].filter(Boolean).join(' ')}
           role='status'
           aria-live='polite'
+          aria-label={CELEBRATION_ARIA_LABEL}
         >
-          <View className='gathering-room-scene__celebration-glow' aria-hidden='true' />
-          {!reducedMotion
-            ? CELEBRATION_SPARKLES.map((spec, index) => (
-                <View
-                  key={index}
-                  className='gathering-room-scene__celebration-sparkle'
-                  aria-hidden='true'
-                  style={{
-                    left: spec.left,
-                    top: spec.top,
-                    animationDelay: `${spec.delayMs}ms`,
-                  }}
-                />
-              ))
-            : null}
           <View className='gathering-room-scene__celebration-card'>
-            <Text className='gathering-room-scene__celebration-text'>{celebrationShown}</Text>
+            <Text className='gathering-room-scene__celebration-title'>{CELEBRATION_TITLE}</Text>
+            <Text className='gathering-room-scene__celebration-subtitle'>{CELEBRATION_SUBTITLE}</Text>
           </View>
         </View>
       ) : null}
-    </View>
+
+      {compactInteractions ? (
+        <View className='gathering-room-scene__compact-layer'>
+          {quickPokeMember && quickPokeVisible ? (
+            <Fragment>
+              <View
+                className='gathering-room-scene__compact-scrim'
+                aria-hidden='true'
+                onClick={() => onDismissQuickPoke?.()}
+              />
+              <View className='gathering-room-scene__compact-poke-panel'>
+                <Text className='gathering-room-scene__compact-poke-title'>
+                  和 {quickPokeMember.displayName || '桌友'} 打个招呼
+                </Text>
+                <View className='gathering-room-scene__compact-poke-grid'>
+                  {ROOM_POKE_EMOJIS.map((emoji) => (
+                    <View
+                      key={emoji}
+                      className='gathering-room-scene__compact-poke-action'
+                      hoverClass='gathering-room-scene__compact-poke-action--pressed'
+                      role='button'
+                      aria-label={`向${quickPokeMember.displayName || '桌友'}${QUICK_POKE_LABELS[emoji]}`}
+                      onClick={() => onQuickPoke?.(quickPokeMember.userId, emoji)}
+                    >
+                      <Text className='gathering-room-scene__compact-poke-action-text'>
+                        {QUICK_POKE_LABELS[emoji]}
+                      </Text>
+                    </View>
+                  ))}
+                  <View
+                    className='gathering-room-scene__compact-poke-action'
+                    hoverClass='gathering-room-scene__compact-poke-action--pressed'
+                    role='button'
+                    aria-label={`查看${quickPokeMember.displayName || '桌友'}的详情`}
+                    onClick={() => onQuickPokeProfile?.(quickPokeMember)}
+                  >
+                    <Text className='gathering-room-scene__compact-poke-action-text'>看看TA</Text>
+                  </View>
+                </View>
+                <View
+                  className='gathering-room-scene__compact-poke-close'
+                  role='button'
+                  aria-label='收起打招呼面板'
+                  onClick={() => onDismissQuickPoke?.()}
+                >
+                  <Text className='gathering-room-scene__compact-poke-close-text'>收起</Text>
+                </View>
+              </View>
+            </Fragment>
+          ) : (
+            <View className='gathering-room-scene__compact-roster-panel'>
+              <Text className='gathering-room-scene__compact-roster-hint'>
+                {realtimeConnectionEnabled ? '点名字认识桌友 · 详情里可打招呼' : '点名字认识桌友'}
+              </Text>
+              {/* 7–8-person roster is the only compact scroll port. */}
+              {memberProfiles.length > 6 ? (
+                <ScrollView
+                  scrollY
+                  enhanced
+                  showScrollbar={false}
+                  className='gathering-room-scene__compact-roster-scroll'
+                >
+                  {renderCompactRosterGrid()}
+                </ScrollView>
+              ) : renderCompactRosterGrid()}
+            </View>
+          )}
+        </View>
+      ) : null}
+    </Fragment>
   )
 }
 

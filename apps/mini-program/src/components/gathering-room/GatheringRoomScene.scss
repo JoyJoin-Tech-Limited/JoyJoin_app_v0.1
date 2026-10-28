@@ -3,16 +3,15 @@
 
 // GatheringRoomScene — 集结房间 stage styles.
 //
-// Layer order (bottom → top): CSS room 素胚房 (z0, loading + failure state) →
-// bundled composite art (fades in on decode) → lamp-breathe (art only) →
-// seats (z 10+anchor.y, painter's order) with their hung name plates → poke
-// catcher (z40) → quick-poke bubble (z80). All motion is transform/opacity;
-// loops pause under --paused (page hidden).
+// Layer order: CSS fallback/art (z0) → measured seats (painter's z) → table
+// overlay (z52) → name plates (z90). Compact controls live outside scene scale.
+// Material is static: no lamp/halo/name-dot/celebration glow or particles.
+// Only real arrivals, eligible presence breathing and success-only one-shots
+// animate, using transform/opacity; --static and RM settle every final state.
 
 $room-wall-line: $color-bg-warm-mid;
 $room-floor: color.mix($flow-accent-human, $color-bg-warm-mid, 35%);
 $room-coral: $flow-accent-human;
-$room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
 .gathering-room-scene {
   position: absolute;
@@ -43,21 +42,6 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     &--table-overlay {
       inset: auto;
       z-index: 52;
-    }
-
-    // Warm breathing pulse over the composite art's lamp zone — keeps the
-    // static art feeling awake. Sits below the character layer (z-index 3 on
-    // __seat).
-    &--lamp-breathe {
-      inset: auto;
-      z-index: 2;
-      left: 50%;
-      top: 4%;
-      width: 320rpx;
-      height: 320rpx;
-      transform: translateX(-50%);
-      background: radial-gradient(closest-side, $room-lamp-glow 0%, rgba($color-glow-gold-hot, 0) 70%);
-      animation: gathering-room-lamp-breathe 4500ms ease-in-out infinite;
     }
 
     // 素胚房 — the designed CSS room shown while the composite art loads and
@@ -153,12 +137,9 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     display: flex;
     flex-direction: column;
     align-items: center;
-    // Wrapper slides: seated (confirmed) offset AND the door→seat walk when an
-    // absent member arrives — 640ms reads as a walk, not a teleport.
-    transition: transform 640ms cubic-bezier(0.22, 1, 0.36, 1);
-    // First-paint stagger: each seat fades in slightly after the previous one
-    // (delay set inline per seat). Opacity-only keyframes so the wrapper
-    // transforms above are never overridden mid-run.
+    // Confirmation and live door→seat arrival share a 480ms transform-only path.
+    transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+    // Opacity-only first-paint stagger never overrides the wrapper transform.
     animation: gathering-room-seat-in 420ms ease-out both;
   }
 
@@ -171,6 +152,9 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
     &--present {
       opacity: 1;
+    }
+
+    &--breathing {
       animation: gathering-room-breathe 5600ms ease-in-out infinite;
     }
 
@@ -178,12 +162,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       opacity: 1;
     }
 
-    // 未现身 placeholder silhouette (占位剪影, PRD §3): the member's own V2
-    // avatar stays at their seat, muted to read as "held place, 正在路上"
-    // rather than a live presence. Static treatment (no breathing loop); the
-    // 360ms opacity transition on the base class crossfades to full color
-    // when the member actually arrives. Declared before --pressed/--entering
-    // so interaction and arrival states override the dim.
+    // Static held-place silhouette; no halo, dot or infinite absent animation.
     &--absent {
       opacity: 1;
 
@@ -194,11 +173,6 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       }
     }
 
-    // One-hop celebration when a member's attendance flips to confirmed.
-    &--just-confirmed {
-      animation: gathering-room-hop 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
     &--entering {
       animation: gathering-room-look-up 700ms ease-out both;
     }
@@ -207,9 +181,14 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       animation: gathering-room-door-entry 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
+    // Declared after arrival modifiers so the viewer's real success wins if
+    // both signals coincide. It can never be triggered by presence alone.
+    &--own-confirmation-pulse {
+      animation: gathering-room-own-confirmation 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
     &--pressed {
       opacity: 0.7;
-      // Scale only the avatar — the name card / badges / poke bubble stay put.
       .gathering-room-scene__avatar {
         transform: scale(0.94);
       }
@@ -238,21 +217,6 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     pointer-events: none;
   }
 
-  // Warm halo behind absent silhouettes — a held place glows softly instead
-  // of reading as a ghost on bare floor.
-  &__seat-halo {
-    position: absolute;
-    left: 50%;
-    top: 76rpx;
-    width: 210rpx;
-    height: 210rpx;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: radial-gradient(closest-side, rgba($flow-accent-human, 0.2) 0%, rgba($flow-accent-human, 0) 70%);
-    animation: gathering-room-halo-pulse 3200ms ease-in-out infinite;
-    pointer-events: none;
-  }
-
   &__avatar {
     // V2 pixel avatar is a 2:3 paper doll; keep the same visual footprint as
     // the previous 96rpx square SD sprite by sizing the wrapper explicitly.
@@ -263,9 +227,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     transition: transform 120ms ease-out;
   }
 
-  // 已确认 seal — a brand-purple stamp with a gold ring, replacing the old
-  // system-green toast pill (off-brand on the pastel scene). Stamps in with
-  // a single 320ms beat when attendance flips to confirmed.
+  // Static brand-purple confirmation seal: no gold ring, glow or mount replay.
   &__confirmed-seal {
     position: absolute;
     top: -16rpx;
@@ -274,12 +236,15 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     height: 48rpx;
     border-radius: $radius-circle;
     background: $color-primary;
-    border: 3rpx solid $color-brand-gold;
-    box-shadow: 0 6rpx 16rpx rgba($color-primary, 0.35);
+    border: 2rpx solid $color-surface;
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: gathering-room-seal-stamp 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  // Only the viewer's real API-success pulse gets this single 320ms stamp.
+  &__confirmed-seal--own-pulse {
+    animation: gathering-room-seal-stamp 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   // Pure-CSS white check — crisp at any density, zero asset dependency.
@@ -313,16 +278,16 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     text-overflow: ellipsis;
   }
 
-  // Held-place name plate — hangs off the seat body (never in flow, so the
-  // wrapper's -88% lift math stays avatar-only) and rides every body
-  // animation. Placement per seat: below the feet for back/front seats; on
-  // the OUTER side for mid-row seats, whose column collides with the front
-  // row below (row pitch 125rpx < avatar 144rpx — the 2026-10-14 overlap).
+  // Held-place name plate — positioned from a scene-level seat slot so the
+  // table can occlude bodies without ever hiding identity. Placement per
+  // seat: below the feet for the front seat; on the OUTER side for mid-row
+  // seats, whose column collides with the front row below.
   &__name-card {
     position: absolute;
     display: flex;
     align-items: center;
     gap: 8rpx;
+    box-sizing: border-box;
     padding: 6rpx 16rpx 6rpx 8rpx;
     border-radius: $radius-pill;
     background: rgba($color-surface, 0.95);
@@ -333,7 +298,9 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     &--below {
       left: 50%;
       top: 100%;
-      transform: translate(-50%, 10rpx);
+      // Keep the front-centre plate inside the 16rpx scene gutter after the
+      // seated feet were lowered onto the cushion (dy=0).
+      transform: translate(-50%, 4rpx);
     }
 
     // Back-centre seat only: the below-band collides with the mid row's
@@ -346,13 +313,13 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     }
 
     &--left {
-      right: calc(100% + 12rpx);
+      right: calc(100% + 8rpx);
       top: 50%;
       transform: translateY(-50%);
     }
 
     &--right {
-      left: calc(100% + 12rpx);
+      left: calc(100% + 8rpx);
       top: 50%;
       transform: translateY(-50%);
     }
@@ -370,8 +337,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       }
     }
 
-    // Absent: warm memo-card treatment — dashed gold border + soft halo
-    // behind the silhouette reads as "seat held, 正在路上", not a ghost.
+    // Absent is a static held-place treatment; full status is spoken by the seat.
     &--absent {
       background: rgba($color-bg-warm-to, 0.94);
       border: 1rpx dashed rgba($color-brand-gold, 0.6);
@@ -401,16 +367,6 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  // "On the way" gold pulse — no words needed to read the card as held.
-  &__name-card-dot {
-    flex: 0 0 auto;
-    width: 10rpx;
-    height: 10rpx;
-    border-radius: $radius-circle;
-    background: $color-brand-gold;
-    animation: gathering-room-dot-pulse 1600ms ease-in-out infinite;
   }
 
   // Confirmed mini check disc inside the plate.
@@ -468,6 +424,9 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     transform: translate(-50%, -140rpx) translateY(-100%);
     display: flex;
     align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 420rpx;
     gap: 8rpx;
     padding: 10rpx 12rpx;
     border-radius: 32rpx;
@@ -476,6 +435,10 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     box-shadow: 0 16rpx 36rpx rgba($color-text-primary-warm, 0.18);
     white-space: nowrap;
     animation: gathering-room-quick-poke-pop 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--below {
+      transform: translate(-50%, 24rpx);
+    }
   }
 
   &__quick-poke-chip {
@@ -537,100 +500,109 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     text-overflow: ellipsis;
   }
 
-  // ── All-confirmed celebration ──────────────────────────────────────────
+  // ── All-confirmed non-modal table card: no scrim, glow or particles ──────
   &__celebration {
     position: absolute;
     inset: 0;
+    z-index: 100;
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    // 320ms fade-out when the overlay leaves (driven by --leaving).
-    transition: opacity 300ms ease-in;
 
-    &--leaving {
-      opacity: 0;
+    &--leaving .gathering-room-scene__celebration-card {
+      animation: gathering-room-celebration-exit 240ms ease-in both;
     }
-  }
 
-  &__celebration-glow {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 900rpx;
-    height: 900rpx;
-    transform: translate(-50%, -50%);
-    border-radius: $radius-circle;
-    background: radial-gradient(closest-side, rgba($color-glow-gold-hot, 0.45) 0%, rgba($color-glow-gold-hot, 0) 70%);
-    // Gentle pulse for the overlay's full lifetime — the old one-shot fade
-    // left ~2.8s of static card after the glow died.
-    animation: gathering-room-celebration-glow 2200ms ease-in-out infinite;
-  }
-
-  &__celebration-sparkle {
-    position: absolute;
-    width: 14rpx;
-    height: 14rpx;
-    border-radius: $radius-circle;
-    background: $room-coral;
-    box-shadow: 0 0 12rpx rgba($room-coral, 0.8);
-    // Two waves per sparkle so the celebration doesn't go static after 1.4s.
-    animation: gathering-room-sparkle 1400ms ease-out 2 both;
+    &--static .gathering-room-scene__celebration-card {
+      animation: none;
+    }
   }
 
   &__celebration-card {
     position: relative;
-    padding: 20rpx 48rpx;
-    border-radius: $radius-pill;
-    background: rgba($color-surface, 0.95);
-    border: 2rpx solid $room-coral;
-    box-shadow: 0 16rpx 40rpx rgba($color-text-primary-warm, 0.2);
-    animation: gathering-room-celebration-pop 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24rpx 40rpx;
+    border-radius: 24rpx;
+    background: rgba($color-surface, 0.96);
+    border: 1rpx solid rgba($room-coral, 0.56);
+    box-shadow: 0 8rpx 24rpx rgba($color-text-primary-warm, 0.12);
+    animation: gathering-room-celebration-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &__celebration-text {
+  &__celebration-title,
+  &__celebration-subtitle {
+    display: block;
     max-width: 480rpx;
-    font-size: $font-size-md;
-    color: $color-text-primary;
     text-align: center;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  }
+
+  &__celebration-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+    color: $color-text-primary;
+  }
+
+  &__celebration-subtitle {
+    margin-top: 8rpx;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    color: $color-text-secondary;
   }
 
   // ── Pause switch (page hidden) ─────────────────────────────────────────
   &--paused {
-    .gathering-room-scene__layer--lamp-breathe,
+    .gathering-room-scene__seat,
     .gathering-room-scene__seat-body,
-    .gathering-room-scene__seat-halo,
-    .gathering-room-scene__name-card-dot,
-    .gathering-room-scene__celebration-glow,
-    .gathering-room-scene__celebration-sparkle,
+    .gathering-room-scene__confirmed-seal,
+    .gathering-room-scene__quick-poke,
+    .gathering-room-scene__first-arriver,
+    .gathering-room-scene__celebration-card,
     .gathering-room-scene__poke-badge {
       animation-play-state: paused;
+    }
+  }
+
+  // Ended rooms and explicit RM use final, motionless materials immediately.
+  &--static {
+    animation: none;
+
+    .gathering-room-scene__layer--fallback-room,
+    .gathering-room-scene__seat,
+    .gathering-room-scene__seat-body,
+    .gathering-room-scene__avatar,
+    .gathering-room-scene__avatar-frame,
+    .gathering-room-scene__confirmed-seal,
+    .gathering-room-scene__quick-poke,
+    .gathering-room-scene__first-arriver,
+    .gathering-room-scene__celebration-card,
+    .gathering-room-scene__poke-badge {
+      animation: none;
+      transition: none;
     }
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gathering-room-scene,
-  .gathering-room-scene__layer--lamp-breathe,
-  .gathering-room-scene__seat,
-  .gathering-room-scene__seat-body,
-  .gathering-room-scene__seat-halo,
-  .gathering-room-scene__confirmed-seal,
-  .gathering-room-scene__name-card,
-  .gathering-room-scene__name-card-dot,
-  .gathering-room-scene__quick-poke,
-  .gathering-room-scene__first-arriver,
-  .gathering-room-scene__celebration-glow,
-  .gathering-room-scene__celebration-card,
-  .gathering-room-scene__celebration-sparkle,
-  .gathering-room-scene__poke-badge {
+  .gathering-room-scene {
     animation: none;
   }
 
-  .gathering-room-scene__seat {
+  .gathering-room-scene__layer--fallback-room,
+  .gathering-room-scene__seat,
+  .gathering-room-scene__seat-body,
+  .gathering-room-scene__avatar,
+  .gathering-room-scene__avatar-frame,
+  .gathering-room-scene__confirmed-seal,
+  .gathering-room-scene__quick-poke,
+  .gathering-room-scene__first-arriver,
+  .gathering-room-scene__celebration-card,
+  .gathering-room-scene__poke-badge {
+    animation: none;
     transition: none;
   }
 }
@@ -645,21 +617,10 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
   to { opacity: 1; }
 }
 
-@keyframes gathering-room-lamp-breathe {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.8; }
-}
-
-@keyframes gathering-room-dot-pulse {
-  0%, 100% { opacity: 0.45; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes gathering-room-hop {
-  0% { transform: translateY(0); }
-  35% { transform: translateY(-16rpx); }
-  70% { transform: translateY(2rpx); }
-  100% { transform: translateY(0); }
+@keyframes gathering-room-own-confirmation {
+  0% { opacity: 0.72; transform: translateY(0) scale(0.96); }
+  55% { opacity: 1; transform: translateY(-12rpx) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes gathering-room-breathe {
@@ -689,16 +650,6 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
   100% { transform: translateX(-50%) translateY(-40rpx); opacity: 0; }
 }
 
-@keyframes gathering-room-celebration-glow {
-  0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.92); }
-  50% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.05); }
-}
-
-@keyframes gathering-room-halo-pulse {
-  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.94); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
-}
-
 @keyframes gathering-room-seal-stamp {
   0% { opacity: 0; transform: scale(1.9) rotate(-16deg); }
   55% { opacity: 1; transform: scale(0.92) rotate(3deg); }
@@ -715,13 +666,170 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
   100% { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-@keyframes gathering-room-celebration-pop {
-  0% { opacity: 0; transform: translateY(24rpx) scale(0.9); }
+@keyframes gathering-room-celebration-enter {
+  0% { opacity: 0; transform: translateY(16rpx) scale(0.96); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@keyframes gathering-room-sparkle {
-  0% { opacity: 0; transform: translateY(16rpx) scale(0.4); }
-  35% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-60rpx) scale(0.6); }
+@keyframes gathering-room-celebration-exit {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-8rpx) scale(0.98); }
+}
+
+// Compact screens keep the room as a spatial illustration, but move member
+// recognition and poke actions into an unscaled, reliable touch surface.
+.gathering-room-scene__compact-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.gathering-room-scene__compact-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba($color-text-primary, 0.18);
+  pointer-events: auto;
+}
+
+.gathering-room-scene__compact-roster-panel,
+.gathering-room-scene__compact-poke-panel {
+  position: relative;
+  box-sizing: border-box;
+  width: calc(100% - 32rpx);
+  margin-bottom: 16rpx;
+  padding: 12rpx;
+  border: 1rpx solid rgba($color-primary, 0.18);
+  border-radius: 24rpx;
+  background: rgba($color-surface, 0.98);
+  box-shadow: 0 12rpx 32rpx rgba($color-text-primary, 0.12);
+  pointer-events: auto;
+}
+
+.gathering-room-scene__compact-roster-hint,
+.gathering-room-scene__compact-poke-title {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  line-height: 1.4;
+  text-align: center;
+  color: $color-text-secondary;
+}
+
+.gathering-room-scene__compact-roster-grid,
+.gathering-room-scene__compact-poke-grid {
+  display: grid;
+  gap: 8rpx;
+}
+
+.gathering-room-scene__compact-roster-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+// Two full rows stay visible while the third row of a 7–8-person roster scrolls.
+.gathering-room-scene__compact-roster-scroll {
+  height: 256rpx;
+}
+
+.gathering-room-scene__compact-roster-item {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx; // Optical rhythm between the locked 32rpx name and 24rpx status lines.
+  min-width: 0;
+  min-height: 112rpx;
+  padding: 8rpx;
+  border: 1rpx solid rgba($color-border, 0.72);
+  border-radius: 16rpx;
+  background: rgba($color-bg-warm-to, 0.82);
+}
+
+.gathering-room-scene__compact-roster-item--pressed,
+.gathering-room-scene__compact-poke-action--pressed {
+  background: rgba($color-primary, 0.12);
+}
+
+.gathering-room-scene__compact-roster-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx; // Keeps the own marker optically attached without shrinking the name.
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gathering-room-scene__compact-roster-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 32rpx;
+  line-height: 1.25;
+  color: $color-text-primary-warm;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gathering-room-scene__compact-roster-own {
+  flex: 0 0 auto;
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: $radius-circle;
+  background: $color-primary;
+  font-size: $font-size-xs;
+  line-height: 32rpx;
+  text-align: center;
+  color: $color-text-white;
+}
+
+.gathering-room-scene__compact-roster-status {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 24rpx;
+  line-height: 1.25;
+  text-align: center;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gathering-room-scene__compact-poke-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gathering-room-scene__compact-poke-action,
+.gathering-room-scene__compact-poke-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 104rpx;
+  border-radius: 16rpx;
+}
+
+.gathering-room-scene__compact-poke-action {
+  border: 1rpx solid rgba($color-primary, 0.22);
+  background: rgba($color-primary, 0.08);
+}
+
+.gathering-room-scene__compact-poke-action-text {
+  font-size: 32rpx; // Do not shrink critical poke actions with the room scene.
+  font-weight: $font-weight-semibold;
+  color: $color-primary-dark;
+}
+
+.gathering-room-scene__compact-poke-close {
+  min-height: 88rpx;
+  margin-top: 8rpx;
+}
+
+.gathering-room-scene__compact-poke-close-text {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
 }

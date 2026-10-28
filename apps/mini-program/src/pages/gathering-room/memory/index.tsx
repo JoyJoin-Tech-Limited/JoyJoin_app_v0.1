@@ -1,11 +1,12 @@
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { Image, Text, View } from '@tarojs/components'
+import { Canvas, Image, Text, View } from '@tarojs/components'
 import { getPoolGroupRoomState } from '@shared/api'
 import { apiRequest } from '../../../lib/api/api'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useProfileCardShare } from '../../../lib/profile/useProfileCardShare'
+import { PROFILE_CARD_CANVAS_ID } from '../../../lib/profile/profileCardPoster'
 import JoyJoinLoadingScreen from '../../../components/loading/JoyJoinLoadingScreen'
 import StatusCard from '../../../components/ui/StatusCard'
 import Button from '../../../components/ui/Button'
@@ -48,13 +49,20 @@ export default function GatheringRoomMemoryPage() {
   const venueName = roomState?.venue?.name ?? '地点待定'
 
   const profileCardShare = useProfileCardShare({
-    enabled: Boolean(self?.archetype && self?.outfit),
+    enabled: Boolean(self?.archetype),
     card: {
       displayName: self?.displayName ?? user?.displayName ?? '桌友',
       tagline: dateLabel,
       pixelArchetypeId: self?.archetype ?? null,
       outfit: self?.outfit ?? null,
       itemsById,
+    },
+    // No QR and no equipment lookups: this smaller poster remains shareable
+    // when a layer or the full-outfit path fails, and still carries the date.
+    fallbackCard: {
+      displayName: self?.displayName ?? user?.displayName ?? '桌友',
+      tagline: dateLabel,
+      pixelArchetypeId: self?.archetype ?? null,
     },
   })
 
@@ -90,6 +98,11 @@ export default function GatheringRoomMemoryPage() {
 
   return (
     <View className='gathering-room-memory'>
+      <Canvas
+        canvasId={PROFILE_CARD_CANVAS_ID}
+        className='gathering-room-memory__poster-canvas'
+        style={{ width: '1080px', height: '1560px' }}
+      />
       <View className='gathering-room-memory__hero'>
         <Text className='gathering-room-memory__eyebrow'>那天的我们</Text>
         <Text className='gathering-room-memory__title'>{dateLabel}</Text>

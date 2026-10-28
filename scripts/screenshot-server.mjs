@@ -965,9 +965,43 @@ async function captureWelcomeBack() {
 // CDN-intercept in withBrowserPage (served from apps/mini-program/src/assets).
 async function captureGatheringRoom(
   viewport = V17_VIEWPORT,
-  { forceRoomArtFailure = false, longNickname = false, ended = false } = {}
+  {
+    forceRoomArtFailure = false,
+    longNickname = false,
+    ended = false,
+    openRearPoke = false,
+    disconnectPoke = false,
+    timing = 'default',
+    ownStatus = 'confirmed',
+    timeTbd = false,
+    venueTbd = false,
+    disconnectRoom = false,
+    allConfirmed = false,
+  } = {}
 ) {
   return withBrowserPage(viewport, async (page) => {
+    let compactInteractions = false
+    const disconnectedPokeEvents = []
+    if (disconnectPoke || disconnectRoom) {
+      await page.addInitScript(() => {
+        const NativeWebSocket = window.WebSocket
+        window.__gatheringRoomSockets = []
+        window.__gatheringRoomDisconnect = false
+        window.WebSocket = class extends NativeWebSocket {
+          constructor(...args) {
+            if (window.__gatheringRoomDisconnect) throw new Error('Screenshot-forced disconnect')
+            super(...args)
+            window.__gatheringRoomSockets.push(this)
+          }
+        }
+      })
+      page.on('request', (request) => {
+        if (request.url().includes('/api/analytics/gathering-room')
+          && request.postData()?.includes('"room_poke"')) {
+          disconnectedPokeEvents.push(request.postData())
+        }
+      })
+    }
     // Confirmed-own fixture: the original mock still supplies one late member,
     // one absent owl and five WS-present members. Only REST attendance is
     // overridden so the success state is exercised without pretending
@@ -979,7 +1013,7 @@ async function captureGatheringRoom(
         if (member.userId === 'user-screenshot-001') {
           return {
             ...member,
-            attendanceStatus: 'confirmed',
+            attendanceStatus: ownStatus,
             ...(longNickname
               ? { displayName: '爱在黄昏散步喜欢看海听现场音乐的超长昵称' }
               : {}),
@@ -987,15 +1021,37 @@ async function captureGatheringRoom(
         }
         return member
       })
+      if (allConfirmed) {
+        roomState.members = roomState.members.map((member) => ({
+          ...member,
+          attendanceStatus: member.attendanceStatus === 'late' ? 'late' : 'confirmed',
+        }))
+      }
+      if (openRearPoke && roomState.members.length >= 2) {
+        // Put a present tablemate on the rear seat so its below-bubble path
+        // can be exercised without long-pressing the viewer's own avatar.
+        ;[roomState.members[0], roomState.members[1]] = [roomState.members[1], roomState.members[0]]
+      }
       roomState.confirmedCount = roomState.members.filter(
         (member) => member.attendanceStatus === 'confirmed'
           || member.attendanceStatus === 'late').length
       roomState.arrivingLateCount = roomState.members.filter(
         (member) => member.attendanceStatus === 'late').length
-      if (ended) {
+      if (ended || timing === 'ended') {
         roomState.eventPhase = 'ended'
         roomState.eventDateTime = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+      } else if (timing === 'live') {
+        roomState.eventPhase = 'live'
+        roomState.eventDateTime = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      } else if (timing === 'today') {
+        roomState.eventPhase = 'upcoming'
+        roomState.eventDateTime = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
       }
+      if (timeTbd) {
+        roomState.eventPhase = 'upcoming'
+        roomState.eventDateTime = null
+      }
+      if (venueTbd) roomState.venue = null
       await route.fulfill({ response, json: roomState })
     })
     if (forceRoomArtFailure) {
@@ -1008,43 +1064,120 @@ async function captureGatheringRoom(
     )
     await clearAndSeedStorage(page)
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    if (disconnectRoom) {
+      await page.waitForFunction(() => (window.__gatheringRoomSockets?.length ?? 0) > 0, undefined, { timeout: 10000 })
+      // Cache the first real presence snapshot before cutting the socket.
+      await page.waitForFunction(
+        () => document.querySelector('.gathering-room__room-summary')?.textContent?.includes('5 人在房间'),
+        undefined,
+        { timeout: 10000 }
+      )
+      const closed = await page.evaluate(() => {
+        const sockets = window.__gatheringRoomSockets ?? []
+        window.__gatheringRoomDisconnect = true
+        sockets.forEach((socket) => { try { socket.close() } catch { /* already closed */ } })
+        return sockets.length
+      })
+      if (!closed) throw new Error('Disconnected-room fixture did not capture a real WebSocket')
+      await page.waitForTimeout(300)
+    }
+    const expectedConfirmedCount = ended
+      ? 3
+      : allConfirmed
+        ? 6
+        : ownStatus === 'confirmed' || ownStatus === 'late' ? 3 : 2
+    const expectedAbsentCount = allConfirmed ? 0 : 1
+    const expectedOwnStatusLabel = ended
+      ? '已确认出席'
+      : ownStatus === 'pending'
+        ? '待确认'
+        : ownStatus === 'late'
+          ? '已登记会晚到'
+          : ownStatus === 'absent' ? '已告知无法出席' : '已确认出席'
 
     await page.waitForSelector('.gathering-room__action-bar', { state: 'visible', timeout: 15000 })
-    await page.waitForSelector('.gathering-room__success-card', { state: 'visible', timeout: 10000 })
-    if (ended) {
+    await page.waitForSelector('.gathering-room__appointment-status', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector(
+      '.gathering-room-scene__name-card, .gathering-room-scene__compact-roster-item',
+      { state: 'visible', timeout: 10000 }
+    )
+    compactInteractions = await page.locator('.gathering-room-scene__compact-layer').count() > 0
+    if (ended || timing === 'ended') {
       await page.waitForSelector('.gathering-room__memory-btn', { state: 'visible', timeout: 10000 })
       await page.waitForFunction(() => {
-        const countdown = document.querySelector('.gathering-room__countdown-chip')
-        return Boolean(countdown?.textContent?.includes('活动已结束'))
+        const summary = document.querySelector('.gathering-room__room-summary')
+        const status = document.querySelector('.gathering-room__appointment-status')
+        return Boolean(summary?.textContent?.includes('活动已结束 · 这一桌已定格'))
+          && Boolean(status?.textContent?.includes('已确认出席'))
+          && !document.querySelector('.gathering-room__fact-meta')?.textContent?.includes('还有')
       }, undefined, { timeout: 10000 })
+    } else if (timing === 'today' || timing === 'live') {
+      const expected = timing === 'today' ? '还有' : '活动进行中'
+      await page.waitForFunction((copy) =>
+        document.querySelector('.gathering-room__fact-meta')?.textContent?.includes(copy),
+      expected, { timeout: 10000 })
     }
-    await page.waitForFunction(() => {
-      const status = document.querySelector('.gathering-room__status-stack')
-      const countdown = document.querySelector('.gathering-room__countdown-chip')
-      const arrive = document.querySelector('.gathering-room__arrive-chip')
-      if (!status || !countdown || !arrive) return false
-      if (countdown === arrive || countdown.contains(arrive) || arrive.contains(countdown)) return false
-      const text = status.textContent ?? ''
-      return /在房间\s*5\/6/.test(text)
-        && /已确认\s*3\/6/.test(text)
+    await page.waitForFunction(({ confirmedCount, disconnected, ended }) => {
+      const summary = document.querySelector('.gathering-room__room-summary')
+      if (!summary) return false
+      const text = summary.textContent ?? ''
+      if (ended) {
+        return text.includes('活动已结束 · 这一桌已定格')
+          && !/5\s*人在房间/.test(text)
+          && !/已到/.test(text)
+          && !/周三见/.test(text)
+      }
+      return text.includes(`这桌已确认 ${confirmedCount}/6`)
+        && (disconnected ? text.includes('房间连接已断开') && !/5\s*人在房间/.test(text) : /5\s*人在房间/.test(text))
         && !/已到/.test(text)
-    }, undefined, { timeout: 15000 })
-    await page.waitForFunction(() => {
-      const cards = document.querySelectorAll('.gathering-room-scene__name-card')
+        && !/周三见/.test(text)
+    }, {
+      confirmedCount: expectedConfirmedCount,
+      disconnected: disconnectRoom,
+      ended: ended || timing === 'ended',
+    }, { timeout: 15000 })
+    await page.waitForFunction((expected) => {
+      const compact = expected.compact
+      const cards = document.querySelectorAll(compact
+        ? '.gathering-room-scene__compact-roster-item'
+        : '.gathering-room-scene__name-card')
       const placedCards = document.querySelectorAll(
         '.gathering-room-scene__name-card--above,' +
         '.gathering-room-scene__name-card--left,' +
         '.gathering-room-scene__name-card--right,' +
         '.gathering-room-scene__name-card--below')
+      const ownMarkerCount = compact
+        ? document.querySelectorAll('.gathering-room-scene__compact-roster-own').length
+        : document.querySelectorAll('.gathering-room-scene__me-chip').length
+      const ownStatusText = document.querySelector('.gathering-room__appointment-status')?.textContent ?? ''
+      const timeText = document.querySelector('.gathering-room__fact-time')?.textContent ?? ''
+      const timeMetaText = document.querySelector('.gathering-room__fact-meta')?.textContent ?? ''
+      const venueText = document.querySelector('.gathering-room__fact-venue')?.textContent ?? ''
+      const addressText = document.querySelector('.gathering-room__fact-address')?.textContent ?? ''
+      const actionText = document.querySelector('.gathering-room__appointment-actions')?.textContent ?? ''
+      const celebrationText = document.querySelector('.gathering-room-scene__celebration')?.textContent ?? ''
       return document.querySelectorAll('.gathering-room-scene__seat').length === 6
         && cards.length === 6
-        && placedCards.length === 6
-        && document.querySelectorAll('.gathering-room-scene__seat-body--absent').length === 1
-        && document.querySelectorAll('.gathering-room-scene__me-chip').length === 1
-        && document.querySelectorAll('.gathering-room__confirm-btn').length === 0
+        && (compact || placedCards.length === 6)
+        && document.querySelectorAll('.gathering-room-scene__seat-body--absent').length === expected.absentCount
+        && ownMarkerCount === 1
+        && document.querySelectorAll('.gathering-room__confirm-btn').length === expected.confirmCtaCount
+        && ownStatusText.includes(expected.ownStatusLabel)
+        && (!expected.timeTbd || (timeText.includes('时间待定') && timeMetaText.includes('时间确定后在这里更新')))
+        && (!expected.venueTbd || (venueText.includes('地点待定')
+          && addressText.includes('地点确定后在这里更新') && !actionText.includes('复制地址')))
+        && (!expected.allConfirmed || celebrationText.includes('这桌齐了'))
         && document.querySelectorAll('.gathering-room__pill').length === 0
         && document.querySelectorAll('.gathering-room-scene__name-card--seated').length === 0
-    }, undefined, { timeout: 10000 })
+    }, {
+      compact: compactInteractions,
+      absentCount: expectedAbsentCount,
+      confirmCtaCount: ownStatus === 'pending' && !ended ? 1 : 0,
+      ownStatusLabel: expectedOwnStatusLabel,
+      timeTbd,
+      venueTbd,
+      allConfirmed,
+    }, { timeout: 10000 })
     await page.waitForFunction(() => {
       const bodies = Array.from(document.querySelectorAll('.pixel-avatar-composite__body'))
       return bodies.length === 6 && bodies.every((el) =>
@@ -1078,7 +1211,7 @@ async function captureGatheringRoom(
     }
 
     await page.waitForTimeout(1200)
-    const geometry = await page.evaluate((expectTableOverlay) => {
+    const geometry = await page.evaluate(({ expectTableOverlay, compactInteractions, expectCompactRoster }) => {
       const toRect = (element) => {
         const rect = element.getBoundingClientRect()
         return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height }
@@ -1089,7 +1222,12 @@ async function captureGatheringRoom(
         + Math.max(0, rect.right - innerWidth) + Math.max(0, rect.bottom - innerHeight)
       const scene = document.querySelector('.gathering-room-scene')
       const status = document.querySelector('.gathering-room__status-stack')
-      const cards = Array.from(document.querySelectorAll('.gathering-room-scene__name-card')).map(toRect)
+      const cards = compactInteractions
+        ? []
+        : Array.from(document.querySelectorAll('.gathering-room-scene__name-card')).map(toRect)
+      const rosterItems = expectCompactRoster
+        ? Array.from(document.querySelectorAll('.gathering-room-scene__compact-roster-item'))
+        : []
       const cardPairs = []
       for (let i = 0; i < cards.length; i += 1) {
         for (let j = i + 1; j < cards.length; j += 1) {
@@ -1100,16 +1238,63 @@ async function captureGatheringRoom(
       const sceneRect = toRect(scene)
       const statusRect = toRect(status)
       const sceneScale = sceneRect.width / 750
-      const cardEdgeRpx = cards.map((rect) => Math.min(
-        rect.left - sceneRect.left,
-        sceneRect.right - rect.right,
-        rect.top - sceneRect.top,
-        sceneRect.bottom - rect.bottom
-      ) / sceneScale)
+      const factTime = document.querySelector('.gathering-room__fact-time')
+      const factTimeFontRpx = factTime
+        ? parseFloat(getComputedStyle(factTime).fontSize) / (innerWidth / 750)
+        : 0
+      const cardEdges = cards.map((rect) => ({
+        left: (rect.left - sceneRect.left) / sceneScale,
+        right: (sceneRect.right - rect.right) / sceneScale,
+        top: (rect.top - sceneRect.top) / sceneScale,
+        bottom: (sceneRect.bottom - rect.bottom) / sceneScale,
+      }))
+      const cardEdgeRpx = cardEdges.map((edges) => Math.min(edges.left, edges.right, edges.top, edges.bottom))
+      const rpxScale = innerWidth / 750
+      const compactRoster = {
+        count: rosterItems.length,
+        minTargetHeightRpx: Math.min(Infinity, ...rosterItems.map((item) => item.getBoundingClientRect().height / rpxScale)),
+        minNameFontRpx: Math.min(Infinity, ...rosterItems.map((item) => {
+          const name = item.querySelector('.gathering-room-scene__compact-roster-name')
+          return name ? parseFloat(getComputedStyle(name).fontSize) / rpxScale : 0
+        })),
+        clipped: rosterItems.map((item, index) => ({ index, pixels: viewportClip(item.getBoundingClientRect()) }))
+          .filter((item) => item.pixels !== 0),
+      }
       const overlay = expectTableOverlay
         ? document.querySelector('.gathering-room-scene__layer--table-overlay')
         : null
       const overlayRect = overlay ? toRect(overlay) : null
+      const nameCardOpaqueTableOverlaps = []
+      const overlayImage = overlay
+        ? (overlay.tagName === 'IMG'
+          ? overlay
+          : overlay.querySelector('img') ?? overlay.shadowRoot?.querySelector('img'))
+        : null
+      if (overlayImage && overlayRect && cards.length > 0) {
+        const canvas = document.createElement('canvas')
+        canvas.width = overlayImage.naturalWidth
+        canvas.height = overlayImage.naturalHeight
+        const context = canvas.getContext('2d', { willReadFrequently: true })
+        context.drawImage(overlayImage, 0, 0)
+        cards.forEach((card, index) => {
+          const left = Math.max(card.left, overlayRect.left)
+          const top = Math.max(card.top, overlayRect.top)
+          const right = Math.min(card.right, overlayRect.right)
+          const bottom = Math.min(card.bottom, overlayRect.bottom)
+          if (right <= left || bottom <= top) return
+          const x = Math.max(0, Math.floor((left - overlayRect.left) * canvas.width / overlayRect.width))
+          const y = Math.max(0, Math.floor((top - overlayRect.top) * canvas.height / overlayRect.height))
+          const width = Math.min(canvas.width - x, Math.ceil((right - left) * canvas.width / overlayRect.width))
+          const height = Math.min(canvas.height - y, Math.ceil((bottom - top) * canvas.height / overlayRect.height))
+          if (width <= 0 || height <= 0) return
+          const pixels = context.getImageData(x, y, width, height).data
+          let opaquePixels = 0
+          for (let offset = 3; offset < pixels.length; offset += 4) {
+            if (pixels[offset] > 0) opaquePixels += 1
+          }
+          if (opaquePixels > 0) nameCardOpaqueTableOverlaps.push({ index, opaquePixels })
+        })
+      }
       const seat0 = document.querySelector('.gathering-room-scene__seat')
       const seat0Body = seat0.querySelector('.gathering-room-scene__seat-body')
       const seat0BodyRect = toRect(seat0Body)
@@ -1122,9 +1307,17 @@ async function captureGatheringRoom(
         clippedCards: cards.map((rect, index) => ({ index, pixels: viewportClip(rect) })).filter((item) => item.pixels !== 0),
         statusOverlaps: cards.map((rect, index) => ({ index, area: overlapArea(statusRect, rect) })).filter((item) => item.area !== 0),
         minCardEdgeRpx: Math.min(...cardEdgeRpx),
+        factTimeFontRpx,
+        cardEdgeRpx,
+        cardEdges,
+        compactRoster,
+        nameCardOpaqueTableOverlaps,
         tableOverlayZ: overlay ? Number(getComputedStyle(overlay).zIndex) : null,
         seat0Z: Number(getComputedStyle(seat0).zIndex),
-        cardLayerZ: Number(getComputedStyle(cardLayer).zIndex),
+        cardLayerZ: cardLayer ? Number(getComputedStyle(cardLayer).zIndex) : null,
+        compactLayerZ: compactInteractions
+          ? Number(getComputedStyle(document.querySelector('.gathering-room-scene__compact-layer')).zIndex)
+          : null,
         seat0BodyBottomPx: seat0BodyRect.bottom,
         tableOverlayTopPx: overlayRect?.top ?? null,
         seat0TableOverlapPx: overlayRect
@@ -1132,11 +1325,23 @@ async function captureGatheringRoom(
           : null,
         sceneVisibility: getComputedStyle(scene).visibility,
       }
-    }, !forceRoomArtFailure)
+    }, {
+      expectTableOverlay: !forceRoomArtFailure,
+      compactInteractions,
+      expectCompactRoster: compactInteractions && !openRearPoke,
+    })
     if (geometry.ratioError > 0.002 || geometry.cardPairs.length > 0
       || geometry.clippedCards.length > 0 || geometry.statusOverlaps.length > 0
-      || geometry.minCardEdgeRpx < 15.5
-      || geometry.seat0Z !== 49 || geometry.cardLayerZ !== 90
+      || geometry.nameCardOpaqueTableOverlaps.length > 0
+      || geometry.factTimeFontRpx < 35.5 || geometry.seat0Z !== 49
+      || (!compactInteractions && (geometry.minCardEdgeRpx < 15.5 || geometry.cardLayerZ !== 90))
+      || (compactInteractions && geometry.compactLayerZ !== 95)
+      || (compactInteractions && !openRearPoke && (
+        geometry.compactRoster.count !== 6
+        || geometry.compactRoster.minTargetHeightRpx < 100
+        || geometry.compactRoster.minNameFontRpx < 30
+        || geometry.compactRoster.clipped.length > 0
+      ))
       || geometry.sceneVisibility !== 'visible'
       || (!forceRoomArtFailure && (
         geometry.tableOverlayZ !== 52 || geometry.seat0TableOverlapPx <= 0
@@ -1144,7 +1349,251 @@ async function captureGatheringRoom(
       throw new Error(`Gathering-room rendered geometry failed: ${JSON.stringify(geometry)}`)
     }
 
+    if (openRearPoke) {
+      const rearInteraction = compactInteractions
+        ? page.locator('.gathering-room-scene__compact-roster-item').first()
+        : page.locator('.gathering-room-scene__seat').first()
+          .locator('.gathering-room-scene__seat-body')
+      const rect = await rearInteraction.boundingBox()
+      if (!rect) throw new Error('Rear interaction target has no rendered bounds')
+      await rearInteraction.evaluate((element) => {
+        element.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true }))
+      })
+      try {
+        await page.waitForSelector(
+          compactInteractions
+            ? '.gathering-room-scene__compact-poke-panel'
+            : '.gathering-room-scene__quick-poke',
+          { state: 'visible', timeout: 5000 }
+        )
+        if (compactInteractions) {
+          await page.waitForFunction(() => {
+            const actions = Array.from(document.querySelectorAll('.gathering-room-scene__compact-poke-action'))
+            const scale = innerWidth / 750
+            return actions.length === 4 && !document.querySelector('.tablemate-sheet')
+              && actions.every((action) => {
+                const text = action.querySelector('.gathering-room-scene__compact-poke-action-text')
+                return action.getBoundingClientRect().height / scale >= 100
+                  && text && parseFloat(getComputedStyle(text).fontSize) / scale >= 30
+              })
+          }, undefined, { timeout: 5000 })
+        } else {
+          const bubbleClass = await page.locator('.gathering-room-scene__quick-poke').getAttribute('class')
+          if (!bubbleClass?.includes('gathering-room-scene__quick-poke--below')) {
+            throw new Error(`Rear quick-poke opened with wrong placement: ${bubbleClass ?? 'none'}`)
+          }
+        }
+        if (!compactInteractions) await page.waitForFunction(() => {
+          const bubble = document.querySelector('.gathering-room-scene__quick-poke--below')
+          const scene = document.querySelector('.gathering-room-scene')
+          if (!bubble || !scene || document.querySelector('.tablemate-sheet')) return false
+          const bubbleRect = bubble.getBoundingClientRect()
+          const sceneRect = scene.getBoundingClientRect()
+          const scale = sceneRect.width / 750
+          const marginRpx = Math.min(
+            bubbleRect.left - sceneRect.left,
+            sceneRect.right - bubbleRect.right,
+            bubbleRect.top - sceneRect.top,
+            sceneRect.bottom - bubbleRect.bottom,
+          ) / scale
+          return marginRpx >= 15.5
+        }, undefined, { timeout: 5000 })
+        if (disconnectPoke) {
+          const closedSockets = await page.evaluate(() => {
+            const sockets = window.__gatheringRoomSockets ?? []
+            window.__gatheringRoomDisconnect = true
+            sockets.forEach((socket) => socket.close())
+            return sockets.length
+          })
+          if (closedSockets === 0) throw new Error('No real room WebSocket was captured for disconnect test')
+          await page.waitForFunction(() =>
+            document.body.textContent?.includes('房间连接已断开'), undefined, { timeout: 5000 })
+          const remainingActionCount = await page.locator(
+            compactInteractions
+              ? '.gathering-room-scene__compact-poke-action'
+              : '.gathering-room-scene__quick-poke-chip'
+          ).count()
+          const successCopy = await page.locator('body').evaluate((body) =>
+            (body.textContent?.includes('招呼已发出') ?? false)
+            || (body.textContent?.includes('招呼已经发出啦') ?? false))
+          if (remainingActionCount !== 0) {
+            throw new Error(`Disconnected poke left ${remainingActionCount} live actions visible`)
+          }
+          if (successCopy || disconnectedPokeEvents.length !== 0) {
+            throw new Error(`Disconnected poke produced fake success: ${JSON.stringify({
+              successCopy,
+              roomPokeEvents: disconnectedPokeEvents.length,
+            })}`)
+          }
+        }
+        return await screenshotViewport(page)
+      } finally {
+        await rearInteraction.evaluate((element) => {
+          element.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true }))
+        })
+      }
+    }
+
     return screenshotViewport(page)
+  })
+}
+
+async function captureGatheringRoomConfirmInteraction(viewport = V17_VIEWPORT) {
+  return withBrowserPage({ ...viewport, reducedMotion: 'no-preference' }, async (page) => {
+    let confirmSucceeded = false
+    await page.route('**/api/pool-groups/*/confirm-attendance', async (route) => {
+      confirmSucceeded = true
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, status: 'confirmed' }),
+      })
+    })
+    await page.route('**/api/pool-groups/*/room-state', async (route) => {
+      let roomState
+      try {
+        const response = await route.fetch()
+        roomState = await response.json()
+      } catch (error) {
+        console.warn('[screenshot-server] room-state fixture passthrough:', error.message)
+        await route.continue()
+        return
+      }
+      roomState.members = roomState.members.map((member) => {
+        if (member.userId !== 'user-screenshot-001') return member
+        return { ...member, attendanceStatus: confirmSucceeded ? 'confirmed' : 'pending' }
+      })
+      roomState.confirmedCount = roomState.members.filter(
+        (member) => member.attendanceStatus === 'confirmed' || member.attendanceStatus === 'late'
+      ).length
+      await route.fulfill({ response, json: roomState })
+    })
+
+    await page.goto(
+      `${H5_BASE_URL}/#/pages/gathering-room/index?groupId=group-screenshot-001&motion=full`,
+      { waitUntil: 'domcontentloaded', timeout: 60000 }
+    )
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForSelector('.gathering-room__confirm-btn', { state: 'visible', timeout: 15000 })
+    await page.locator('.gathering-room__confirm-btn').click()
+    // The seat pulse is a 480ms flourish layered on the seat body; Playwright's
+    // visibility check can race the keyframe (sub-pixel/transform box), so wait
+    // for attachment (proof the success signal fired) and let the seat settle.
+    await page.waitForSelector(
+      '.gathering-room-scene__seat-body--own-confirmation-pulse',
+      { state: 'attached', timeout: 6000 }
+    )
+    await page.waitForFunction(() => {
+      const seal = document.querySelector('.gathering-room-scene__confirmed-seal--own-pulse')
+      const status = document.querySelector('.gathering-room__appointment-status')
+      return Boolean(seal && status?.textContent?.includes('已确认出席'))
+        && !document.querySelector('.gathering-room__confirm-btn')
+    }, undefined, { timeout: 5000 })
+    await page.waitForTimeout(600)
+    return screenshotViewport(page)
+  })
+}
+
+async function captureGatheringRoomAllConfirmedInteraction(viewport = V17_VIEWPORT) {
+  return withBrowserPage({ ...viewport, reducedMotion: 'no-preference' }, async (page) => {
+    let allConfirmedPersisted = false
+    await page.addInitScript(() => {
+      const NativeWebSocket = window.WebSocket
+      window.__gatheringRoomSockets = []
+      window.WebSocket = function (url, protocols) {
+        const socket = protocols
+          ? new NativeWebSocket(url, protocols)
+          : new NativeWebSocket(url)
+        window.__gatheringRoomSockets.push(socket)
+        return socket
+      }
+      window.WebSocket.CONNECTING = NativeWebSocket.CONNECTING
+      window.WebSocket.OPEN = NativeWebSocket.OPEN
+      window.WebSocket.CLOSING = NativeWebSocket.CLOSING
+      window.WebSocket.CLOSED = NativeWebSocket.CLOSED
+      const nativeSetTimeout = window.setTimeout
+      window.setTimeout = (handler, timeout, ...args) =>
+        nativeSetTimeout(handler, timeout === 1760 ? 60000 : timeout, ...args)
+    })
+    await page.route('**/api/pool-groups/*/room-state', async (route) => {
+      let roomState
+      try {
+        const response = await route.fetch()
+        roomState = await response.json()
+      } catch (error) {
+        console.warn('[screenshot-server] room-state fixture passthrough:', error.message)
+        await route.continue()
+        return
+      }
+      roomState.members = roomState.members.map((member) => ({
+        ...member,
+        attendanceStatus: member.userId === 'user-screenshot-006'
+          ? 'pending'
+          : member.userId === 'user-screenshot-003' ? 'late' : 'confirmed',
+      }))
+      roomState.confirmedCount = allConfirmedPersisted ? 6 : 5
+      roomState.arrivingLateCount = 1
+      if (allConfirmedPersisted) {
+        roomState.members = roomState.members.map((member) =>
+          member.userId === 'user-screenshot-006'
+            ? { ...member, attendanceStatus: 'confirmed' }
+            : member
+        )
+      }
+      await route.fulfill({ response, json: roomState })
+    })
+
+    await page.goto(
+      `${H5_BASE_URL}/#/pages/gathering-room/index?groupId=group-screenshot-001&motion=full`,
+      { waitUntil: 'domcontentloaded', timeout: 60000 }
+    )
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForSelector('.gathering-room__action-bar', { state: 'visible', timeout: 15000 })
+    await page.waitForFunction(() => {
+      const summary = document.querySelector('.gathering-room__room-summary')
+      return summary?.textContent?.includes('这桌已确认 5/6')
+        && (window.__gatheringRoomSockets?.length ?? 0) > 0
+    }, undefined, { timeout: 10000 })
+    await page.waitForTimeout(750)
+    const sent = await page.evaluate(() => {
+      const socket = window.__gatheringRoomSockets?.find((candidate) => candidate.readyState === 1)
+      if (!socket) return false
+      socket.send(JSON.stringify({
+        type: 'MOCK_ROOM_ALL_CONFIRMED',
+        eventId: 'blindbox-event-screenshot-001',
+        userId: 'user-screenshot-006',
+        displayName: '小禾',
+        data: {},
+      }))
+      return true
+    })
+    if (!sent) throw new Error('No live mock room socket for the all-confirmed interaction')
+    allConfirmedPersisted = true
+    await page.waitForFunction(() => {
+      const celebration = document.querySelector('.gathering-room-scene__celebration')
+      if (!celebration) return false
+      const className = celebration.className || ''
+      const card = celebration.querySelector('.gathering-room-scene__celebration-card') ?? celebration
+      const style = getComputedStyle(card)
+      return celebration.textContent?.includes('这桌齐了')
+        && celebration.textContent?.includes('悦仔先偷笑一下，现场见')
+        && !className.includes('--static')
+        && !className.includes('--leaving')
+        && style.animationName !== 'none'
+        && Number(style.opacity) >= 0.95
+    }, undefined, { timeout: 5000 }).catch((error) => {
+      throw new Error(`Live all-confirmed celebration did not animate: ${error.message}`)
+    })
+    const celebrationImage = await screenshotViewport(page)
+    await page.waitForFunction(() => (
+      document.querySelector('.gathering-room__room-summary')?.textContent
+        ?.includes('这桌已确认 6/6')
+    ), undefined, { timeout: 5000 }).catch((error) => {
+      throw new Error(`All-confirmed summary did not persist at 6/6: ${error.message}`)
+    })
+    return celebrationImage
   })
 }
 
@@ -1171,6 +1620,10 @@ async function captureGatheringRoomMemory(viewport = V17_VIEWPORT) {
       const root = document.querySelector('.gathering-room-memory')
       const note = document.querySelector('.gathering-room-memory__note')
       const share = document.querySelector('.gathering-room-memory__share')
+      const posterCanvas = document.querySelector('.gathering-room-memory__poster-canvas')
+      const canvasNode = posterCanvas?.tagName === 'CANVAS'
+        ? posterCanvas
+        : posterCanvas?.querySelector('canvas')
       const members = document.querySelectorAll('.gathering-room-memory__member')
       const fallbackHeads = document.querySelectorAll(
         '.gathering-room-memory__member-avatar--empty .archetype-head'
@@ -1178,6 +1631,7 @@ async function captureGatheringRoomMemory(viewport = V17_VIEWPORT) {
       const text = root?.textContent ?? ''
       return Boolean(note && note.textContent?.includes('没有奖励'))
         && Boolean(share) && !share.hasAttribute('disabled')
+        && Boolean(canvasNode)
         && members.length === 6
         && fallbackHeads.length === 6
         && text.includes('当前造型')
@@ -1190,6 +1644,8 @@ async function captureGatheringRoomMemory(viewport = V17_VIEWPORT) {
 register('gathering-room', captureGatheringRoom)
 register('gathering-room-ended', () => captureGatheringRoom(V17_VIEWPORT, { ended: true }))
 register('gathering-room-memory', captureGatheringRoomMemory)
+register('gathering-room-confirm-interaction', captureGatheringRoomConfirmInteraction)
+register('gathering-room-all-confirmed-interaction', captureGatheringRoomAllConfirmedInteraction)
 register('gathering-room-compact', () => captureGatheringRoom({
   ...V17_VIEWPORT,
   viewport: { width: 360, height: 640 },
@@ -1200,9 +1656,47 @@ register('gathering-room-long-name', () => captureGatheringRoom({
 }, {
   longNickname: true,
 }))
+register('gathering-room-long-name-360', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 360, height: 640 },
+}, {
+  longNickname: true,
+}))
+register('gathering-room-long-name-390', () => captureGatheringRoom(V17_VIEWPORT, {
+  longNickname: true,
+}))
 register('gathering-room-art-fallback', () => captureGatheringRoom(V17_VIEWPORT, {
   forceRoomArtFailure: true,
 }))
+register('gathering-room-poke', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 320, height: 568 },
+}, {
+  openRearPoke: true,
+}))
+register('gathering-room-disconnected-poke', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 320, height: 568 },
+}, {
+  openRearPoke: true,
+  disconnectPoke: true,
+}))
+register('gathering-room-today', () => captureGatheringRoom(V17_VIEWPORT, { timing: 'today' }))
+register('gathering-room-live', () => captureGatheringRoom(V17_VIEWPORT, { timing: 'live' }))
+register('gathering-room-pending', () => captureGatheringRoom(V17_VIEWPORT, { ownStatus: 'pending' }))
+register('gathering-room-late', () => captureGatheringRoom(V17_VIEWPORT, { ownStatus: 'late' }))
+register('gathering-room-absent', () => captureGatheringRoom(V17_VIEWPORT, { ownStatus: 'absent' }))
+register('gathering-room-tbd', () => captureGatheringRoom(V17_VIEWPORT, {
+  ownStatus: 'pending', timeTbd: true, venueTbd: true,
+}))
+register('gathering-room-disconnected', () => captureGatheringRoom(V17_VIEWPORT, {
+  ownStatus: 'pending', disconnectRoom: true,
+}))
+register('gathering-room-all-confirmed', () => captureGatheringRoom(V17_VIEWPORT, { allConfirmed: true }))
+register('gathering-room-pending-compact', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 320, height: 568 },
+}, { ownStatus: 'pending' }))
 register('profile-review-ceremony', captureProfileReviewCeremony)
 register('onboarding-essential-step1', () => captureEssentialData())
 register('onboarding-essential-exit', () => captureEssentialData({ captureExitFrame: true }))

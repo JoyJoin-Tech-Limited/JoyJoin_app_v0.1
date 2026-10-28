@@ -21,6 +21,14 @@
     justify-content: center;
   }
 
+  &__poster-canvas {
+    position: fixed;
+    left: -9999rpx;
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   &__hero {
     display: flex;
     flex-direction: column;
