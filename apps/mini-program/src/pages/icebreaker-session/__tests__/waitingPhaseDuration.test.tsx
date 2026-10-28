@@ -1,15 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import WaitingPhase from '../components/WaitingPhase'
-import {
-  clearPhaseDurationSource,
-  syncPhaseDurationSource,
-} from '../viewModels/phaseDurationModel'
 
-// ── P2 #4 环节时长预期 (2026-10-20) — waiting 环节链条「约N分钟」render ──
-// Mirrors waitingPhaseContract.test.tsx's harness; duration source priority:
-// compiled runPlan snapshot → static tier plan (the currentTier prop) →
-// CUSTOM_GAME_OPTIONS. Always 「约」 — never a countdown.
+// Quiet Concierge: waiting 只展示 current / next / final，不再渲染完整
+// phase 链或逐项分钟预期。未知/custom 走一条诚实的通用提示。
 
 vi.mock('@tarojs/components', () => ({
   Image: (props: Record<string, unknown>) => <img {...props} />,
@@ -72,62 +66,23 @@ const baseProps = {
   phaseMapItems: GLOW_PHASE_MAP,
 }
 
-afterEach(() => {
-  clearPhaseDurationSource()
-})
-
-describe('WaitingPhase P2 #4 约N分钟 chain', () => {
-  it('suffixes each phase name with the static tier-plan expectation while no snapshot exists', () => {
-    render(<WaitingPhase {...baseProps} />)
-    // glow plan: warmup 8 / lie_detective 15 / recap 5
-    expect(screen.getByText('约8分钟', { exact: false })).toBeTruthy()
-    expect(screen.getByText('约15分钟', { exact: false })).toBeTruthy()
-    expect(screen.getByText('约5分钟', { exact: false })).toBeTruthy()
-  })
-
-  it('prefers the compiled runPlan snapshot over the static tier plan', () => {
-    syncPhaseDurationSource({
-      eventTier: 'glow',
-      runPlan: {
-        segments: [
-          { phase: 'warmup', allocatedMinutes: 9 },
-          { phase: 'lie_detective', allocatedMinutes: 18 },
-          { phase: 'recap', allocatedMinutes: 5 },
-        ],
-      },
-    })
-    render(<WaitingPhase {...baseProps} />)
-    expect(screen.getByText('约9分钟', { exact: false })).toBeTruthy()
-    expect(screen.getByText('约18分钟', { exact: false })).toBeTruthy()
-    expect(screen.queryByText('约8分钟', { exact: false })).toBeNull()
-  })
-
-  it('falls back to CUSTOM_GAME_OPTIONS minutes for phases outside the tier plan', () => {
-    render(
-      <WaitingPhase
-        {...baseProps}
-        phaseMapItems={[{ key: 'speed_friending', label: '轮桌畅聊', current: false }]}
-      />,
-    )
-    expect(screen.getByText('约20分钟', { exact: false })).toBeTruthy()
-  })
-
-  it('omits the suffix when no source can price the phase (never fabricates)', () => {
-    // Custom-tier sessions have no static tier plan, and warmup/recap are
-    // absent from CUSTOM_GAME_OPTIONS → label only, no minutes.
-    render(
-      <WaitingPhase
-        {...baseProps}
-        currentTier={'custom' as never}
-        phaseMapItems={[
-          { key: 'warmup', label: '话题卡', current: false },
-          { key: 'auction', label: '拍卖', current: false },
-        ]}
-      />,
-    )
+describe('WaitingPhase Quiet Concierge guide window', () => {
+  it('shows only current / next / final instead of the full phase chain', () => {
+    const { container } = render(<WaitingPhase {...baseProps} />)
+    expect(container.querySelectorAll('.icebreaker__waiting-phase')).toHaveLength(3)
+    expect(screen.getByText(/现在开始/)).toBeTruthy()
+    expect(screen.getByText(/下一环/)).toBeTruthy()
+    expect(screen.getByText(/最后/)).toBeTruthy()
     expect(screen.getByText('话题卡', { exact: false })).toBeTruthy()
-    expect(screen.queryByText('约8分钟', { exact: false })).toBeNull()
-    // auction prices from CUSTOM_GAME_OPTIONS (20) even on the custom tier.
-    expect(screen.getByText('约20分钟', { exact: false })).toBeTruthy()
+    expect(screen.getByText('回顾', { exact: false })).toBeTruthy()
+    expect(screen.queryByText(/谎言侦探/)).toBeNull()
+    expect(screen.queryByText(/约\d+分钟/)).toBeNull()
+  })
+
+  it('custom tier falls back to one honest line instead of inventing a sequence', () => {
+    render(<WaitingPhase {...baseProps} currentTier={'custom' as never} />)
+    expect(screen.getByText(/跟着卡面走就好，不用提前准备/)).toBeTruthy()
+    expect(screen.queryByText('下一环')).toBeNull()
+    expect(screen.queryByText('最后')).toBeNull()
   })
 })

@@ -8,7 +8,7 @@
  * are responsible for AITrace logging when the context is actually injected.
  */
 
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames';
+import { ARCHETYPE_BY_ID, resolveRosterArchetype } from '@shared/personality/archetypeNames';
 
 export interface SessionArchetypeContext {
   /** e.g. "社牛柯基×2、小太阳鸡×1" */
@@ -30,7 +30,7 @@ export interface SessionArchetypeContext {
  * - diversityScore = unique archetypes / roster length (capped at 1.0)
  */
 export function buildArchetypeContext(
-  roster: Array<{ archetype?: string }>,
+  roster: Array<{ archetype?: string | null; primaryArchetype?: string | null }>,
 ): SessionArchetypeContext {
   if (!roster || roster.length === 0) {
     return { mixText: '', diversityScore: 0 };
@@ -38,7 +38,14 @@ export function buildArchetypeContext(
 
   const counts = new Map<string, number>();
   for (const entry of roster) {
-    const id = entry.archetype;
+    // V4 writes only `primary_archetype`; legacy Chinese names still live in
+    // `users.archetype`. Normalize both to the canonical id before counting —
+    // otherwise a table of V4 users has an empty mixText (and the run-plan
+    // `shyHeavy` rule silently loses its composition input).
+    const id =
+      resolveRosterArchetype(entry.primaryArchetype, entry.archetype) ??
+      entry.primaryArchetype?.trim() ??
+      entry.archetype?.trim();
     if (!id) continue;
     counts.set(id, (counts.get(id) ?? 0) + 1);
   }

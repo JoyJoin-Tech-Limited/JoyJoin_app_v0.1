@@ -8,7 +8,7 @@
  * instead of floating above it.
  *
  * The numbers are design-space (750 x 960) facts copied from the generated
- * asset. `roomTableOverlay.test.ts` keeps them inside the scene and catches an
+ * asset. `GatheringRoomScene.test.ts` keeps them inside the scene and catches an
  * accidental replacement with a full-scene rectangle.
  */
 export const ROOM_TABLE_OVERLAY = {
@@ -16,7 +16,7 @@ export const ROOM_TABLE_OVERLAY = {
   designBox: { x: 60, y: 330, width: 530, height: 360 },
   scene: { width: 750, height: 960 },
   /** Share of pixels with alpha > 0. Partial alpha counts once. */
-  alphaCoverage: 0.72990566,
+  alphaCoverage: 0.27698637,
 } as const
 
 const toPercent = (value: number, total: number): string =>

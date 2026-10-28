@@ -1,5 +1,5 @@
 import express from 'express';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 import { withServerForApp as withServer } from '../test-utils/withServer';
 
@@ -8,6 +8,9 @@ const h = vi.hoisted(() => ({
   authorized: true,
   actionOutcome: null as any,
   action: vi.fn(),
+  resolveSession: vi.fn(),
+  isHostAuthorized: vi.fn(),
+  buildClientState: vi.fn(),
   append: vi.fn(),
 }));
 
@@ -23,9 +26,9 @@ vi.mock('../lib/requestAuth', () => ({
 }));
 
 vi.mock('../routes/socialIcebreakerHelpers', () => ({
-  resolveSession: vi.fn(async () => h.state),
-  isHostAuthorized: vi.fn(async () => h.authorized),
-  buildClientState: vi.fn(async (state: SocialSessionState) => state),
+  resolveSession: (...args: unknown[]) => h.resolveSession(...args),
+  isHostAuthorized: (...args: unknown[]) => h.isHostAuthorized(...args),
+  buildClientState: (...args: unknown[]) => h.buildClientState(...args),
 }));
 
 vi.mock('../lib/socialIcebreakerStore', () => ({
@@ -40,9 +43,13 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
   }),
 }));
 
-vi.mock('../lib/xiaoyueAgentActions', () => ({
-  executeWarmupTopicRotation: (...args: unknown[]) => h.action(...args),
-}));
+vi.mock('../lib/xiaoyueAgentActions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/xiaoyueAgentActions')>();
+  return {
+    ...actual,
+    executeWarmupTopicRotation: (...args: unknown[]) => h.action(...args),
+  };
+});
 
 vi.mock('../repositories/socialAgentEventsRepo', () => ({
   appendSocialAgentEvent: (...args: unknown[]) => h.append(...args),
@@ -124,12 +131,19 @@ function post(path: string, body: unknown, user = 'host') {
 }
 
 describe('POST /xiaoyue/agent/decision — authority and contracts', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     h.state = makeState();
     h.authorized = true;
     h.actionOutcome = { status: 'succeeded', state: makeState(), topicSetRevision: 3 };
     h.action.mockImplementation(async () => h.actionOutcome);
+    h.resolveSession.mockImplementation(async () => h.state);
+    h.isHostAuthorized.mockImplementation(async () => h.authorized);
+    h.buildClientState.mockImplementation(async (state: SocialSessionState) => state);
     h.append.mockResolvedValue({ event: {}, replayed: false });
   });
 
@@ -177,8 +191,70 @@ describe('POST /xiaoyue/agent/decision — authority and contracts', () => {
         topicSetRevision: 3,
       });
       expect(h.action).toHaveBeenCalledWith(
-        expect.objectContaining({ askId: 'ask_route', idempotencyKey: 'idem_route_1' }),
+        expect.objectContaining({
+          askId: 'ask_route',
+          idempotencyKey: 'idem_route_1',
+          deadlineAtMs: expect.any(Number),
+        }),
       );
+    });
+  });
+
+  it('returns unknown instead of starting the action when accepted session reads consume the deadline', async () => {
+    await withServer(buildApp(), async (_base, request) => {
+      vi.useFakeTimers();
+      try {
+        h.resolveSession.mockImplementation(async () => {
+          vi.setSystemTime(Date.now() + 6_001);
+          return h.state;
+        });
+        const response = await request(
+          '/social_routes/xiaoyue/agent/decision',
+          post('/social_routes/xiaoyue/agent/decision', {
+            askId: 'ask_route',
+            decision: 'accepted',
+            idempotencyKey: 'idem_route_deadline',
+          }),
+        );
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+          status: 'unknown',
+          code: 'AGENT_ACTION_DEADLINE_EXCEEDED',
+        });
+        expect(h.action).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  it('does not return a late succeeded response when terminal client projection consumes the deadline', async () => {
+    await withServer(buildApp(), async (_base, request) => {
+      vi.useFakeTimers();
+      try {
+        h.buildClientState.mockImplementation(async (state: SocialSessionState) => {
+          vi.setSystemTime(Date.now() + 6_001);
+          return state;
+        });
+        const response = await request(
+          '/social_routes/xiaoyue/agent/decision',
+          post('/social_routes/xiaoyue/agent/decision', {
+            askId: 'ask_route',
+            decision: 'accepted',
+            idempotencyKey: 'idem_route_projection_deadline',
+          }),
+        );
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+          status: 'unknown',
+          code: 'AGENT_ACTION_DEADLINE_EXCEEDED',
+        });
+        expect(h.action).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

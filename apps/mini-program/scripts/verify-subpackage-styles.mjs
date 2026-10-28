@@ -237,7 +237,8 @@ const REQUIREMENTS = [
       'gathering-room-scene__quick-poke{',
       'gathering-room__action-bar{',
       'gathering-room__status-stack{',
-      'gathering-room__success-card{',
+      'gathering-room__appointment-status{',
+      'gathering-room__fact-time{',
       'gathering-room__poke{',
       'tablemate-sheet{',
     ],
@@ -288,6 +289,7 @@ const REQUIREMENTS = [
       // page; this guard catches a future sub-common stranding that would
       // silently render an unstyled host card on device.
       'xiaoyue-agent-ask{',
+      'host-table-brief{',
       'icebreaker__recap-hero{',
       'icebreaker__recap-connect-btn{',
       // Wave 4 Session Glow (2026-09-18, contract AC-16): the 「今晚的高光」

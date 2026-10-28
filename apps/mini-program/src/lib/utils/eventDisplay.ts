@@ -26,6 +26,29 @@ export function getJoinedEventDisplayDateTime(event: { status?: string | null; d
   return event.dateTime ?? undefined
 }
 
+const EVENT_WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
+
+/**
+ * Formats an absolute event fact without relative labels such as 今天/明天.
+ * Parsing and calendar fields follow this file's existing local-timezone
+ * convention; `now` only determines whether the year needs to be shown.
+ */
+export function formatEventFactDateTime(value: string | Date | null | undefined, now?: Date): string {
+  if (value == null || value === '') return '时间待定'
+
+  const parsed = value instanceof Date ? new Date(value.getTime()) : new Date(value)
+  if (Number.isNaN(parsed.getTime())) return '时间待定'
+
+  const reference = now ?? new Date()
+  const year = parsed.getFullYear() !== reference.getFullYear() ? `${parsed.getFullYear()}年` : ''
+  const monthDay = `${parsed.getMonth() + 1}月${parsed.getDate()}日`
+  const weekday = EVENT_WEEKDAY_LABELS[parsed.getDay()]
+  const hour = String(parsed.getHours()).padStart(2, '0')
+  const minute = String(parsed.getMinutes()).padStart(2, '0')
+
+  return `${year}${monthDay} ${weekday} ${hour}:${minute}`
+}
+
 export function formatEventDateTime(dateTime?: string | null): string {
   if (!dateTime) return '时间待定'
   const parsed = new Date(dateTime)

@@ -11,6 +11,7 @@ export { GATHERING_ROOM_ANALYTICS_EVENT_TYPES }
 
 export interface GatheringRoomAnalyticsEvent {
   eventType: GatheringRoomEventType
+  poolId?: string
   metadata?: Record<string, unknown>
   timestamp: number
 }
@@ -20,10 +21,14 @@ class GatheringRoomAnalytics {
     eventType: GatheringRoomEventType,
     metadata?: Record<string, unknown>,
   ): void {
+    const { poolId, ...eventMetadata } = metadata ?? {}
     const event: GatheringRoomAnalyticsEvent = {
       eventType,
+      // The server persists only the top-level poolId. Keep groupId in metadata;
+      // never leave the real pool identity buried where it becomes NULL in SQL.
+      ...(typeof poolId === 'string' && poolId.length > 0 ? { poolId } : {}),
       metadata: {
-        ...metadata,
+        ...eventMetadata,
         appSurface: 'mini-program',
         runtime: 'taro',
       },

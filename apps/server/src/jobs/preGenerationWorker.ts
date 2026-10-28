@@ -41,6 +41,7 @@ import { selectAuctionFallbackLots } from '@shared/socialIcebreakerAuctionFallba
 import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge, GroupMirrorQuestion, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker';
 import { selectPermissionLineForTopic } from '@shared/socialIcebreakerYuezaiCopy';
 import { logger } from '../lib/logger';
+import { deriveTablePersona, resolveTableAnchorsForPrompt } from '../lib/tablePersona';
 
 // ---------------------------------------------------------------------------
 // Worker state
@@ -351,12 +352,28 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
   },
 
   group_mirror: async (_sessionId, payload) => {
-    const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string }>) || [];
+    const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string; interests?: string[] }>) || [];
+    // M3: the enqueue payload already carries roster archetypes + interest
+    // labels, so the pre-generated deck can use the same shared-interest
+    // anchors as the on-demand path — no extra query, and no anchors when the
+    // matching-aware flag was off at enqueue time (interests simply absent).
+    let tableAnchors: string[] | undefined;
+    try {
+      const anchors = resolveTableAnchorsForPrompt(
+        deriveTablePersona({ roster: participants }),
+      );
+      if (anchors.length > 0) tableAnchors = anchors;
+    } catch (personaError) {
+      logger.warn('Group mirror pre-generation persona derivation failed; continuing without anchors', {
+        error: personaError instanceof Error ? personaError.message : String(personaError),
+      });
+      tableAnchors = undefined;
+    }
     const result = await generateGroupMirrorQuestions({
       eventType: (payload.eventType as string) || '活动',
       participantCount: participants.length,
-      participantNames: participants.map((p) => p.displayName).filter(Boolean) as string[],
       roster: participants,
+      ...(tableAnchors ? { tableAnchors } : {}),
       _refinementHint: payload._refinementHint as string | undefined,
     });
     return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };

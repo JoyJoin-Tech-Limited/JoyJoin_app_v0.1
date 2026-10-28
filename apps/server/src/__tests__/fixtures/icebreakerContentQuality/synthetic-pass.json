@@ -1,0 +1,329 @@
+{
+  "schemaVersion": "icebreaker-content-quality-v1",
+  "evaluationId": "synthetic-dqs-unit-fixture-v1",
+  "dataOrigin": "synthetic_unit_test",
+  "evidenceStartedAt": "2026-10-21T00:00:00.000Z",
+  "preregistration": {
+    "registrationId": "synthetic-preregistration-v1",
+    "registeredAt": "2026-10-20T00:00:00.000Z",
+    "lockedBeforeEvidence": true,
+    "alpha": 0.05,
+    "power": 0.8,
+    "minimumDetectableEffect": 0.4,
+    "assumedPairedDeltaSd": 0.1,
+    "baseContextsRequired": 1,
+    "basePairwiseComparisonsRequired": 4,
+    "contextDesignEffect": 1,
+    "raterDesignEffect": 1,
+    "contextIds": ["ctx-coffee", "ctx-boardgames"],
+    "requiredRatersPerDeck": 3,
+    "requiredPairwiseComparisons": 4,
+    "requiredCalibrationDecks": 20,
+    "bootstrap": {
+      "seed": 20261026,
+      "resamples": 2000,
+      "confidenceLevel": 0.95
+    },
+    "stoppingRules": {
+      "maxContexts": 2,
+      "maxPairwiseComparisons": 6,
+      "rules": [
+        "Analyze once after every preregistered context and reading is complete; no optional stopping or threshold edits."
+      ]
+    }
+  },
+  "variants": [
+    {
+      "variantId": "current-v1",
+      "role": "current",
+      "promptVersion": "synthetic-warmup-current-v1"
+    },
+    {
+      "variantId": "candidate-v2",
+      "role": "candidate",
+      "promptVersion": "synthetic-warmup-candidate-v2"
+    }
+  ],
+  "contexts": [
+    {
+      "contextId": "ctx-coffee",
+      "vibe": "quiet-curiosity",
+      "rotationReason": "scheduled_rotation",
+      "rosterSize": 6,
+      "rosterArchetypeCounts": {
+        "synthetic_anchor": 3,
+        "synthetic_explorer": 3
+      },
+      "sharedInterests": ["coffee", "city-walks"],
+      "tier": "breeze"
+    },
+    {
+      "contextId": "ctx-boardgames",
+      "vibe": "playful-competitive",
+      "rotationReason": "host_requested",
+      "rosterSize": 6,
+      "rosterArchetypeCounts": {
+        "synthetic_anchor": 2,
+        "synthetic_explorer": 4
+      },
+      "sharedInterests": ["board-games"],
+      "tier": "glow"
+    }
+  ],
+  "raters": [
+    { "raterId": "rater-1", "calibrationDecksCompleted": 20 },
+    { "raterId": "rater-2", "calibrationDecksCompleted": 20 },
+    { "raterId": "rater-3", "calibrationDecksCompleted": 20 },
+    { "raterId": "rater-4", "calibrationDecksCompleted": 20 }
+  ],
+  "decks": [
+    {
+      "deckId": "deck-current-coffee",
+      "contextId": "ctx-coffee",
+      "variantId": "current-v1",
+      "promptVersion": "synthetic-warmup-current-v1",
+      "rawOutput": {
+        "cards": [
+          { "id": "synthetic-current-coffee-1", "question": "Synthetic current coffee opener" }
+        ]
+      },
+      "hardGates": {
+        "contentSafety": true,
+        "schemaPlayability": true,
+        "arcConstraints": true,
+        "withinSessionDedupe": true,
+        "metadataTraceability": true
+      },
+      "engineeringGates": {
+        "acceptToTerminalWithin6s": true,
+        "revisionAtomicity": true,
+        "readyAndIdempotent": true,
+        "costWithinBudget": true,
+        "safeCuratedFallback": true,
+        "moderationAndAigcIntegrity": true
+      },
+      "invalidReasons": [],
+      "fallbackUsed": false,
+      "dedupeRelaxed": false,
+      "acceptToTerminalLatencyMs": 1800,
+      "generationCostUsd": 0.01,
+      "aiCorrelationId": "synthetic-ai-current-coffee"
+    },
+    {
+      "deckId": "deck-candidate-coffee",
+      "contextId": "ctx-coffee",
+      "variantId": "candidate-v2",
+      "promptVersion": "synthetic-warmup-candidate-v2",
+      "rawOutput": {
+        "cards": [
+          { "id": "synthetic-candidate-coffee-1", "question": "Synthetic candidate coffee opener" }
+        ]
+      },
+      "hardGates": {
+        "contentSafety": true,
+        "schemaPlayability": true,
+        "arcConstraints": true,
+        "withinSessionDedupe": true,
+        "metadataTraceability": true
+      },
+      "engineeringGates": {
+        "acceptToTerminalWithin6s": true,
+        "revisionAtomicity": true,
+        "readyAndIdempotent": true,
+        "costWithinBudget": true,
+        "safeCuratedFallback": true,
+        "moderationAndAigcIntegrity": true
+      },
+      "invalidReasons": [],
+      "fallbackUsed": false,
+      "dedupeRelaxed": false,
+      "acceptToTerminalLatencyMs": 1700,
+      "generationCostUsd": 0.01,
+      "aiCorrelationId": "synthetic-ai-candidate-coffee"
+    },
+    {
+      "deckId": "deck-current-boardgames",
+      "contextId": "ctx-boardgames",
+      "variantId": "current-v1",
+      "promptVersion": "synthetic-warmup-current-v1",
+      "rawOutput": {
+        "cards": [
+          { "id": "synthetic-current-boardgames-1", "question": "Synthetic current board-game opener" }
+        ]
+      },
+      "hardGates": {
+        "contentSafety": true,
+        "schemaPlayability": true,
+        "arcConstraints": true,
+        "withinSessionDedupe": true,
+        "metadataTraceability": true
+      },
+      "engineeringGates": {
+        "acceptToTerminalWithin6s": true,
+        "revisionAtomicity": true,
+        "readyAndIdempotent": true,
+        "costWithinBudget": true,
+        "safeCuratedFallback": true,
+        "moderationAndAigcIntegrity": true
+      },
+      "invalidReasons": [],
+      "fallbackUsed": false,
+      "dedupeRelaxed": true,
+      "acceptToTerminalLatencyMs": 1900,
+      "generationCostUsd": 0.01,
+      "aiCorrelationId": "synthetic-ai-current-boardgames"
+    },
+    {
+      "deckId": "deck-candidate-boardgames",
+      "contextId": "ctx-boardgames",
+      "variantId": "candidate-v2",
+      "promptVersion": "synthetic-warmup-candidate-v2",
+      "rawOutput": {
+        "cards": [
+          { "id": "synthetic-candidate-boardgames-1", "question": "Synthetic candidate board-game opener" }
+        ]
+      },
+      "hardGates": {
+        "contentSafety": true,
+        "schemaPlayability": true,
+        "arcConstraints": true,
+        "withinSessionDedupe": true,
+        "metadataTraceability": true
+      },
+      "engineeringGates": {
+        "acceptToTerminalWithin6s": true,
+        "revisionAtomicity": true,
+        "readyAndIdempotent": true,
+        "costWithinBudget": true,
+        "safeCuratedFallback": true,
+        "moderationAndAigcIntegrity": true
+      },
+      "invalidReasons": [],
+      "fallbackUsed": false,
+      "dedupeRelaxed": true,
+      "acceptToTerminalLatencyMs": 1800,
+      "generationCostUsd": 0.01,
+      "aiCorrelationId": "synthetic-ai-candidate-boardgames"
+    }
+  ],
+  "ratings": [
+    {
+      "deckId": "deck-current-coffee",
+      "raterId": "rater-1",
+      "scores": { "answerability": 4, "contextFit": 4, "specificity": 4, "arc": 4, "freshness": 4 }
+    },
+    {
+      "deckId": "deck-current-coffee",
+      "raterId": "rater-2",
+      "scores": { "answerability": 2, "contextFit": 4, "specificity": 4, "arc": 4, "freshness": 4 }
+    },
+    {
+      "deckId": "deck-current-coffee",
+      "raterId": "rater-3",
+      "scores": { "answerability": 4, "contextFit": 4, "specificity": 4, "arc": 4, "freshness": 4 }
+    },
+    {
+      "deckId": "deck-candidate-coffee",
+      "raterId": "rater-1",
+      "scores": { "answerability": 5, "contextFit": 5, "specificity": 4, "arc": 5, "freshness": 5 }
+    },
+    {
+      "deckId": "deck-candidate-coffee",
+      "raterId": "rater-2",
+      "scores": { "answerability": 5, "contextFit": 5, "specificity": 4, "arc": 5, "freshness": 5 }
+    },
+    {
+      "deckId": "deck-candidate-coffee",
+      "raterId": "rater-3",
+      "scores": { "answerability": 5, "contextFit": 5, "specificity": 4, "arc": 5, "freshness": 5 }
+    },
+    {
+      "deckId": "deck-current-boardgames",
+      "raterId": "rater-1",
+      "scores": { "answerability": 3, "contextFit": 4, "specificity": 3, "arc": 4, "freshness": 3 }
+    },
+    {
+      "deckId": "deck-current-boardgames",
+      "raterId": "rater-2",
+      "scores": { "answerability": 3, "contextFit": 4, "specificity": 3, "arc": 4, "freshness": 3 }
+    },
+    {
+      "deckId": "deck-current-boardgames",
+      "raterId": "rater-3",
+      "scores": { "answerability": 3, "contextFit": 4, "specificity": 3, "arc": 4, "freshness": 3 }
+    },
+    {
+      "deckId": "deck-candidate-boardgames",
+      "raterId": "rater-1",
+      "scores": { "answerability": 5, "contextFit": 4, "specificity": 4, "arc": 5, "freshness": 4 }
+    },
+    {
+      "deckId": "deck-candidate-boardgames",
+      "raterId": "rater-2",
+      "scores": { "answerability": 5, "contextFit": 4, "specificity": 4, "arc": 5, "freshness": 4 }
+    },
+    {
+      "deckId": "deck-candidate-boardgames",
+      "raterId": "rater-3",
+      "scores": { "answerability": 5, "contextFit": 4, "specificity": 4, "arc": 5, "freshness": 4 }
+    }
+  ],
+  "adjudications": [
+    {
+      "deckId": "deck-current-coffee",
+      "dimension": "answerability",
+      "adjudicatorRaterId": "rater-4",
+      "score": 4
+    }
+  ],
+  "preferences": [
+    {
+      "contextId": "ctx-coffee",
+      "raterId": "rater-1",
+      "leftDeckId": "deck-candidate-coffee",
+      "rightDeckId": "deck-current-coffee",
+      "choice": "left",
+      "leftRightRandomized": true
+    },
+    {
+      "contextId": "ctx-coffee",
+      "raterId": "rater-2",
+      "leftDeckId": "deck-current-coffee",
+      "rightDeckId": "deck-candidate-coffee",
+      "choice": "right",
+      "leftRightRandomized": true
+    },
+    {
+      "contextId": "ctx-coffee",
+      "raterId": "rater-3",
+      "leftDeckId": "deck-candidate-coffee",
+      "rightDeckId": "deck-current-coffee",
+      "choice": "left",
+      "leftRightRandomized": true
+    },
+    {
+      "contextId": "ctx-boardgames",
+      "raterId": "rater-1",
+      "leftDeckId": "deck-current-boardgames",
+      "rightDeckId": "deck-candidate-boardgames",
+      "choice": "right",
+      "leftRightRandomized": true
+    },
+    {
+      "contextId": "ctx-boardgames",
+      "raterId": "rater-2",
+      "leftDeckId": "deck-candidate-boardgames",
+      "rightDeckId": "deck-current-boardgames",
+      "choice": "left",
+      "leftRightRandomized": true
+    },
+    {
+      "contextId": "ctx-boardgames",
+      "raterId": "rater-3",
+      "leftDeckId": "deck-current-boardgames",
+      "rightDeckId": "deck-candidate-boardgames",
+      "choice": "right",
+      "leftRightRandomized": true
+    }
+  ]
+}

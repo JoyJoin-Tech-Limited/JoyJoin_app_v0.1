@@ -830,7 +830,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   const config = getGameModeConfig(params.genres);
   // W5: roster trait weaving is kill-switched. Flag off → pass1Generate omits
   // the roster block and the prompt is byte-identical to pre-W5.
-  const includeRosterTraits = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+  const includeRosterTraits = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
   // W5: pass the same gate into the failure fallback so a roster is only woven
   // when the flag is on (flag-off stays byte-identical to pre-W5).
   const fallbackParams = { ...params, includeRosterTraits };

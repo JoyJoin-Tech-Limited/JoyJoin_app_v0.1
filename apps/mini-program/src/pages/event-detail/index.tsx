@@ -15,9 +15,10 @@ import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import EventFlowStrip from '../../components/event-detail/EventFlowStrip'
+import EventActivityGuide from '../../components/event-detail/EventActivityGuide'
 import EventFaqAccordion from '../../components/event-detail/EventFaqAccordion'
 import { loadEventDetail } from './eventDetailData'
-import { formatEventDateTime, getEventPoolStatusLabel } from '../../lib/utils/eventDisplay'
+import { formatEventFactDateTime, getEventPoolStatusLabel } from '../../lib/utils/eventDisplay'
 import { isWithinPoolIcebreakerWindow } from '../../lib/utils/eventLiveWindow'
 import './index.scss'
 
@@ -198,19 +199,17 @@ export default function EventDetailPage() {
             </View>
             <Text>时间</Text>
           </View>
-          <Text className='event-detail__info-value'>{formatEventDateTime(event.dateTime)}</Text>
+          <Text className='event-detail__info-value'>{formatEventFactDateTime(event.dateTime)}</Text>
         </View>
-        {event.location ? (
-          <View className='event-detail__info-row'>
-            <View className='event-detail__info-label'>
-              <View className='event-detail__icon-slot'>
-                <JoyJoinIcon emoji='📍' size={24} />
-              </View>
-              <Text>地点</Text>
+        <View className='event-detail__info-row'>
+          <View className='event-detail__info-label'>
+            <View className='event-detail__icon-slot'>
+              <JoyJoinIcon emoji='📍' size={24} />
             </View>
-            <Text className='event-detail__info-value'>{event.location}</Text>
+            <Text>地点</Text>
           </View>
-        ) : null}
+          <Text className='event-detail__info-value'>{event.location || '地点待定'}</Text>
+        </View>
         {event.attendeeCount ? (
           <View className='event-detail__info-row'>
             <View className='event-detail__info-label'>
@@ -243,6 +242,7 @@ export default function EventDetailPage() {
       {isPoolEvent ? (
         <View className='event-detail__card event-detail__flow-card'>
           <EventFlowStrip />
+          <EventActivityGuide />
         </View>
       ) : null}
 

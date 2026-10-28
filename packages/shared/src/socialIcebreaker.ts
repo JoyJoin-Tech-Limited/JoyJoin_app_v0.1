@@ -657,6 +657,8 @@ export interface XiaoyueAgentActionState {
   resultRevision?: number;
   errorCode?: string;
   fallbackUsed?: boolean;
+  /** True only when the committed replacement exhausted unserved candidates. */
+  dedupeRelaxed?: boolean;
   /**
    * Recovery observation offsets (seconds after `finishedAt`) already written
    * as `signal_snapshot` episode facts. Max two entries (60, 180); this is the
@@ -701,6 +703,13 @@ export interface XiaoyueAgentState {
   agentEstimatedCostYuan: number;
 }
 
+export interface HostTableBrief {
+  paceShort: string;
+  anchorLabel?: string;
+  avoidDomain?: string;
+  phaseKey: string;
+}
+
 export interface SocialSessionState {
   socialSessionId: string;
   icebreakerSessionId: string;
@@ -735,6 +744,8 @@ export interface SocialSessionState {
   phaseSilentCompletedUserIds?: string[];
   /** Joined roster with presence metadata for client-side participant rendering. */
   joinedParticipants?: SocialSessionParticipantSummary[];
+  /** Host-only warmup projection, attached after sanitizing the persisted state. */
+  hostTableBrief?: HostTableBrief;
   phaseStartedAt: number; // timestamp of current phase start
   sessionStartedAt: number; // timestamp of session creation
   /** ISO timestamp when the session expires; undefined for in-memory legacy sessions. */
@@ -792,6 +803,12 @@ export interface SocialSessionState {
   /** Last time the current topic card advanced (next-topic tap). */
   warmupTopicAdvancedAt?: number;
   warmupTopicSetProvenance?: 'precompile' | 'host_manual' | 'agent' | 'legacy';
+  /**
+   * Server-only, bounded (240) exact + normalized ID/question keys for decks
+   * atomically committed in THIS session. Served is not discussed: the whole
+   * deck is recorded on commit; next-card advance never appends keys.
+   */
+  servedTopicKeys?: string[];
   /**
    * Bounded Xiaoyue copilot state (M1, host-only). Stripped for every
    * non-host projection by sanitizeStateForClient.

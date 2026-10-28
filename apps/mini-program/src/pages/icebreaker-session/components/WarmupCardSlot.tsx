@@ -43,6 +43,8 @@ interface WarmupCardSlotProps {
    * legitimately start at index 0, so index change alone cannot detect it.
    */
   topicSetRevision?: number
+  /** Quiet Concierge: shell owns the single skip-permission line. */
+  suppressPermissionLine?: boolean
   selectedMood?: AtmosphereMood
   vibe?: VibeId
   isFlipped: boolean
@@ -186,6 +188,7 @@ export function WarmupCardSlot({
   topics,
   currentIndex,
   topicSetRevision,
+  suppressPermissionLine = false,
   selectedMood,
   vibe,
   isFlipped,
@@ -251,7 +254,7 @@ export function WarmupCardSlot({
     [currentTopic?.depthLevel],
   )
   const moodReveal = useMemo(() => getMoodRevealCopy(selectedMood), [selectedMood])
-  const showPermissionLine = shouldShowPermissionLine(currentTopic, currentIndex)
+  const showPermissionLine = !suppressPermissionLine && shouldShowPermissionLine(currentTopic, currentIndex)
 
   // Bottom-chrome presence (whisper / counter / deep expander) decides the
   // teaching hint's anchor — it must never cover the persistent bottom slot.

@@ -14,44 +14,125 @@ import {
   buildArchetypeMix,
   deriveArchetypeComposition,
 } from '@shared/runPlanCompiler';
+import { INTEREST_TAXONOMY, type InterestDefinition } from '@shared/interests';
 
 export interface RosterSignalMember {
   displayName?: string;
   archetype?: string | null;
+  /** Canonical V4 archetype id; preferred over the legacy display-name column. */
+  primaryArchetype?: string | null;
   interests?: string[];
 }
 
+export interface SharedInterestAnchor {
+  label: string;
+  coverage: number;
+  macroCategory: InterestDefinition['macroCategory'];
+  /** Generic politeness labels are de-prioritised but never discarded. */
+  generic: boolean;
+}
+
+/** Labels that almost everyone can claim; they make weak social anchors. */
+const GENERIC_INTEREST_LABELS = new Set([
+  '咖啡',
+  '旅行',
+  '电影',
+  '美食',
+  '健身',
+]);
+
+const INTEREST_BY_ALIAS = new Map<string, InterestDefinition>();
+for (const definition of INTEREST_TAXONOMY) {
+  for (const alias of [definition.label, ...(definition.synonyms ?? [])]) {
+    const key = alias.trim().toLowerCase();
+    if (key) INTEREST_BY_ALIAS.set(key, definition);
+  }
+}
+
+function resolveInterestDefinition(raw: string): InterestDefinition | undefined {
+  return INTEREST_BY_ALIAS.get(raw.trim().toLowerCase());
+}
+
 /**
- * Shared interest hooks: labels declared by at least `minMembers` distinct
- * members, ordered by how many members share them then by label for
- * determinism. Mirrors the `generateIceBreakers` common-interest pipeline
- * (`matchExplanationService.ts`).
+ * Shared-interest anchors: canonical labels declared by at least `minMembers`
+ * distinct members. Selection is coverage-aware, taxonomy-normalised, and
+ * category-diverse:
+ *
+ * 1. synonyms/aliases collapse to one canonical label (咖啡 vs 咖啡馆);
+ * 2. generic politeness labels (咖啡/旅行/电影/美食/健身) sort after specific
+ *    labels even when their raw coverage is higher;
+ * 3. the first pass takes at most one label per macroCategory, then fills the
+ *    remaining slots by coverage. This keeps a three-anchor prompt from
+ *    becoming three food labels.
+ *
+ * Coverage is returned for safety checks but is never shown to participants.
+ * Pure and deterministic; no per-member identity escapes this function.
  */
+export function buildSharedInterestAnchors(
+  roster: ReadonlyArray<RosterSignalMember>,
+  options: { minMembers?: number; limit?: number } = {},
+): SharedInterestAnchor[] {
+  const minMembers = options.minMembers ?? 2;
+  const limit = options.limit ?? 3;
+  if (!roster || roster.length === 0 || limit <= 0) return [];
+
+  const countByLabel = new Map<string, { definition?: InterestDefinition; members: Set<number> }>();
+  roster.forEach((member, memberIndex) => {
+    const seen = new Set<string>();
+    for (const raw of member.interests ?? []) {
+      if (typeof raw !== 'string') continue;
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      const definition = resolveInterestDefinition(trimmed);
+      const label = definition?.label ?? trimmed;
+      const key = label.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const existing = countByLabel.get(key) ?? { definition, members: new Set<number>() };
+      existing.members.add(memberIndex);
+      countByLabel.set(key, existing);
+    }
+  });
+
+  const anchors: SharedInterestAnchor[] = Array.from(countByLabel.entries())
+    .filter(([, value]) => value.members.size >= minMembers)
+    .map(([key, value]) => {
+      const label = value.definition?.label ?? key;
+      return {
+        label,
+        coverage: value.members.size,
+        macroCategory: value.definition?.macroCategory ?? 'life',
+        generic: GENERIC_INTEREST_LABELS.has(label),
+      };
+    })
+    .sort((a, b) => {
+      if (a.generic !== b.generic) return a.generic ? 1 : -1;
+      if (b.coverage !== a.coverage) return b.coverage - a.coverage;
+      if (a.macroCategory !== b.macroCategory) return a.macroCategory.localeCompare(b.macroCategory);
+      return a.label.localeCompare(b.label);
+    });
+
+  const selected: SharedInterestAnchor[] = [];
+  const usedCategories = new Set<string>();
+  for (const anchor of anchors) {
+    if (selected.length >= limit) break;
+    if (usedCategories.has(anchor.macroCategory)) continue;
+    selected.push(anchor);
+    usedCategories.add(anchor.macroCategory);
+  }
+  for (const anchor of anchors) {
+    if (selected.length >= limit) break;
+    if (!selected.some((item) => item.label === anchor.label)) selected.push(anchor);
+  }
+  return selected;
+}
+
+/** Prompt-facing labels only; coverage stays server-side. */
 export function buildSharedInterestHooks(
   roster: ReadonlyArray<RosterSignalMember>,
   options: { minMembers?: number; limit?: number } = {},
 ): string[] {
-  const minMembers = options.minMembers ?? 2;
-  const limit = options.limit ?? 3;
-  if (!roster || roster.length === 0) return [];
-
-  // Count distinct members per label (a member listing a label twice counts once).
-  const countByLabel = new Map<string, number>();
-  for (const member of roster) {
-    const seen = new Set<string>();
-    for (const raw of member.interests ?? []) {
-      const label = typeof raw === 'string' ? raw.trim() : '';
-      if (!label || seen.has(label)) continue;
-      seen.add(label);
-      countByLabel.set(label, (countByLabel.get(label) ?? 0) + 1);
-    }
-  }
-
-  return Array.from(countByLabel.entries())
-    .filter(([, count]) => count >= minMembers)
-    .sort((a, b) => (b[1] !== a[1] ? b[1] - a[1] : a[0].localeCompare(b[0])))
-    .map(([label]) => label)
-    .slice(0, limit);
+  return buildSharedInterestAnchors(roster, options).map((anchor) => anchor.label);
 }
 
 export type MicroChallengeEnergyArc = 'start' | 'build' | 'peak' | 'winddown';

@@ -146,8 +146,8 @@ export default function RegistrationConfirmModal({
             variant='flat'
             showPerforation={false}
             meta={[
-              { key: 'venue', label: '地点', value: area || '待定' },
-              { key: 'time', label: '时间', value: dateTimeLabel || '待定', align: 'right' },
+              { key: 'venue', label: '地点', value: area || '地点待定' },
+              { key: 'time', label: '时间', value: dateTimeLabel || '时间待定', align: 'right' },
             ]}
           >
             {highlightChips.length > 0 ? (

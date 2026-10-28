@@ -4,7 +4,7 @@
  * Why not reuse POST /topics: that route broadcasts warmupTopicsStatus =
  * 'generating', clears warmupReadyUserIds, and has no idempotency key — it is a
  * host-initiated regenerate, not a bounded agent action. This action instead:
- * - generates OUTSIDE the transaction (6s hard bound inside the generator),
+ * - generates OUTSIDE the transaction (one shared 6s accept→terminal deadline),
  * - commits in ONE row-locked transaction,
  * - increments warmupTopicSetRevision exactly once,
  * - preserves ready state and never broadcasts a global "generating",
@@ -13,11 +13,18 @@
 
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 import type { AIResponseMeta } from '@shared/types/aiMeta';
-import { getCuratedWarmupTopics, generateWarmupTopics } from '../socialIcebreakerAIService';
+import { resolveRosterArchetype } from '@shared/personality/archetypeNames';
+import {
+  getCuratedWarmupTopics,
+  generateWarmupTopics,
+} from '../socialIcebreakerAIService';
+import { FALLBACK_WARMUP_TOPICS } from '../socialIcebreakerAI/warmupTopics';
+import { LLMCallTimeoutError, raceWithTimeout } from '../socialIcebreakerAICore';
 import { canUseAgentLlm } from './xiaoyueAgentPolicy';
-import { updateSessionAtomic } from './socialIcebreakerStore';
+import { listParticipants, updateSessionAtomic } from './socialIcebreakerStore';
 import { appendSocialAgentEvent, findSocialAgentActionCommitByIdempotencyKey } from '../repositories/socialAgentEventsRepo';
 import { commitWholeTopicSet } from './warmupTopicSetRevision';
+import { getWarmupTopicServedKeys } from './warmupServedTopics';
 import { logger } from './logger';
 import type { AtmosphereMood } from '@shared/socialIcebreaker';
 
@@ -27,6 +34,7 @@ export interface XiaoyueAgentActionOutcome {
   status: XiaoyueAgentActionStatus;
   state: SocialSessionState;
   topicSetRevision?: number;
+  dedupeRelaxed?: boolean;
   errorCode?: string;
 }
 
@@ -35,12 +43,49 @@ const agentActionsInFlight = new Set<string>();
 
 const AGENT_TOPIC_CALL_ESTIMATE_YUAN = 0.0104;
 
-function moodForState(state: SocialSessionState): AtmosphereMood {
-  return state.selectedMood ?? 'relaxed';
+export const AGENT_ACTION_DEADLINE_MS = 6_000;
+export const AGENT_ACTION_DEADLINE_EXCEEDED = 'AGENT_ACTION_DEADLINE_EXCEEDED';
+
+class AgentActionDeadlineError extends Error {
+  constructor(readonly deadlineAtMs: number) {
+    super(`Accepted agent action exceeded its shared deadline at ${deadlineAtMs}`);
+    this.name = 'AgentActionDeadlineError';
+  }
 }
 
-function errorCodeForReason(reason: string): string {
-  return reason.toUpperCase();
+export function isAgentActionDeadlineError(error: unknown): boolean {
+  return error instanceof AgentActionDeadlineError;
+}
+
+/**
+ * Run one stage inside the remaining slice of a single accepted-action budget.
+ * The factory is not invoked after expiry, so a timed-out earlier stage can
+ * never start generation or a commit with a fresh timeout of its own.
+ */
+export async function runWithAgentActionDeadline<T>(
+  deadlineAtMs: number,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const remainingMs = deadlineAtMs - Date.now();
+  if (remainingMs <= 0) throw new AgentActionDeadlineError(deadlineAtMs);
+
+  let result: T;
+  try {
+    result = await raceWithTimeout(operation(), remainingMs);
+  } catch (error) {
+    if (error instanceof LLMCallTimeoutError) {
+      throw new AgentActionDeadlineError(deadlineAtMs);
+    }
+    throw error;
+  }
+  // Promise settlement and timer callbacks can race at the exact boundary.
+  // The wall-clock deadline is authoritative in either ordering.
+  if (Date.now() >= deadlineAtMs) throw new AgentActionDeadlineError(deadlineAtMs);
+  return result;
+}
+
+function moodForState(state: SocialSessionState): AtmosphereMood {
+  return state.selectedMood ?? 'relaxed';
 }
 
 export async function executeWarmupTopicRotation(input: {
@@ -50,13 +95,45 @@ export async function executeWarmupTopicRotation(input: {
   askId: string;
   idempotencyKey: string;
   now?: number;
+  /** Absolute wall-clock deadline shared with the accepted route. */
+  deadlineAtMs?: number;
 }): Promise<XiaoyueAgentActionOutcome> {
   const { socialSessionId, userId, askId, idempotencyKey } = input;
   const startedAt = input.now ?? Date.now();
+  const deadlineAtMs = input.deadlineAtMs ?? Date.now() + AGENT_ACTION_DEADLINE_MS;
+  const deadlineUnknown = (): XiaoyueAgentActionOutcome => {
+    logger.warn('[XiaoyueAgent] warmup topic rotation exceeded the shared action deadline', {
+      socialSessionId,
+      askId,
+      deadlineAtMs,
+    });
+    // Terminal evidence is best-effort after the deadline; awaiting a hung
+    // episode write would extend the very response bound it records.
+    void appendSocialAgentEvent({
+      socialSessionId,
+      phase: input.state.currentPhase,
+      kind: 'action_failed',
+      askId,
+      actorUserId: userId,
+      payload: {
+        idempotencyKey,
+        status: 'unknown',
+        errorCode: AGENT_ACTION_DEADLINE_EXCEEDED,
+      },
+    }).catch(() => undefined);
+    return {
+      status: 'unknown',
+      state: input.state,
+      errorCode: AGENT_ACTION_DEADLINE_EXCEEDED,
+    };
+  };
 
   // Idempotent replay: a committed claim is the result, never a second deck.
   try {
-    const committed = await findSocialAgentActionCommitByIdempotencyKey(socialSessionId, idempotencyKey);
+    const committed = await runWithAgentActionDeadline(
+      deadlineAtMs,
+      () => findSocialAgentActionCommitByIdempotencyKey(socialSessionId, idempotencyKey),
+    );
     if (committed) {
       const resultRevision = committed.payload?.resultRevision;
       return {
@@ -66,11 +143,13 @@ export async function executeWarmupTopicRotation(input: {
       };
     }
   } catch (error) {
+    if (isAgentActionDeadlineError(error)) return deadlineUnknown();
     logger.warn('[XiaoyueAgent] action claim lookup failed; continuing', {
       socialSessionId,
       error: error instanceof Error ? error.message : String(error),
     });
   }
+  if (Date.now() >= deadlineAtMs) return deadlineUnknown();
 
   if (agentActionsInFlight.has(askId)) {
     return { status: 'unknown', state: input.state, errorCode: 'AGENT_ACTION_IN_FLIGHT' };
@@ -95,27 +174,54 @@ export async function executeWarmupTopicRotation(input: {
     let meta: AIResponseMeta;
     let usedLlm = false;
 
+    // Match manual /topics enrichment, but project only the two aggregate-input
+    // fields the existing generator consumes. Failure keeps the no-roster path.
+    const participants = await runWithAgentActionDeadline(
+      deadlineAtMs,
+      () => listParticipants(socialSessionId).catch((error) => {
+        logger.warn('[XiaoyueAgent] topic roster enrichment unavailable; continuing without roster context', {
+          socialSessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return [];
+      }),
+    );
+    const roster = participants.map((participant) => ({
+      archetype:
+        resolveRosterArchetype(participant.primaryArchetype, participant.archetype) ??
+        participant.archetype,
+      interests: participant.interests,
+    }));
+    const avoidKeys = [...new Set([
+      ...(baseState.servedTopicKeys ?? []),
+      ...(baseState.warmupTopics ?? []).flatMap(getWarmupTopicServedKeys),
+    ])];
+
     if (allowLlm) {
       try {
-        const generated = await generateWarmupTopics({
-          mood: moodForState(baseState),
-          eventType: baseState.eventType || '活动',
-          participantCount: Math.max(1, baseState.playerCount),
-          avoidTopics: (baseState.warmupTopics ?? []).map((topic) => topic.question),
-          vibe: baseState.vibe,
-          dedupeKey: baseState.icebreakerSessionId,
-          highlights: baseState.highlights,
-        });
+        const generated = await runWithAgentActionDeadline(
+          deadlineAtMs,
+          () => generateWarmupTopics({
+            mood: moodForState(baseState),
+            eventType: baseState.eventType || '活动',
+            participantCount: Math.max(1, baseState.playerCount),
+            roster,
+            avoidTopics: avoidKeys,
+            vibe: baseState.vibe,
+            highlights: baseState.highlights,
+          }),
+        );
         topics = generated.data;
         meta = generated.meta;
         usedLlm = !generated.meta.fallbackUsed;
       } catch (error) {
+        if (isAgentActionDeadlineError(error)) throw error;
         logger.warn('[XiaoyueAgent] topic generation failed; using curated fallback', {
           socialSessionId,
           error: error instanceof Error ? error.message : String(error),
         });
         topics = getCuratedWarmupTopics(moodForState(baseState), baseState.vibe, {
-          dedupeKey: baseState.icebreakerSessionId,
+          avoidKeys,
         });
         meta = {
           generatedAt: new Date().toISOString(),
@@ -128,7 +234,7 @@ export async function executeWarmupTopicRotation(input: {
       }
     } else {
       topics = getCuratedWarmupTopics(moodForState(baseState), baseState.vibe, {
-        dedupeKey: baseState.icebreakerSessionId,
+        avoidKeys,
       });
       meta = {
         generatedAt: new Date().toISOString(),
@@ -141,9 +247,14 @@ export async function executeWarmupTopicRotation(input: {
     }
 
     let outcome: XiaoyueAgentActionOutcome | undefined;
+    let commitDedupeRelaxed: boolean | undefined;
     const committedAt = Date.now();
-    const atomic = await updateSessionAtomic(
-      socialSessionId,
+    // If the DB settles after the race, that unavoidable commit is reconciled
+    // by resync; this request still returns deadline-unknown, never late success.
+    const atomic = await runWithAgentActionDeadline(
+      deadlineAtMs,
+      () => updateSessionAtomic(
+        socialSessionId,
       (latest) => {
         const latestAsk = latest.xiaoyueAgent?.ask;
         if (!latestAsk || latestAsk.id !== askId) {
@@ -161,12 +272,14 @@ export async function executeWarmupTopicRotation(input: {
           return false;
         }
 
-        commitWholeTopicSet(latest, {
+        const committedDeck = commitWholeTopicSet(latest, {
           topics: topics as NonNullable<SocialSessionState['warmupTopics']>,
+          curatedFallbackCandidates: FALLBACK_WARMUP_TOPICS,
           meta,
           provenance: 'agent',
           now: committedAt,
         });
+        commitDedupeRelaxed = committedDeck.dedupeRelaxed;
         latestAsk.status = 'succeeded';
         latestAsk.decisionAt = committedAt;
         latest.xiaoyueAgent = {
@@ -181,6 +294,7 @@ export async function executeWarmupTopicRotation(input: {
             baseTopicSetRevision: ask.baseTopicSetRevision,
             resultRevision: latest.warmupTopicSetRevision,
             fallbackUsed: meta.fallbackUsed,
+            dedupeRelaxed: commitDedupeRelaxed,
           },
           agentLlmCallCount: (latest.xiaoyueAgent?.agentLlmCallCount ?? 0) + (usedLlm ? 1 : 0),
           agentEstimatedCostYuan:
@@ -191,6 +305,7 @@ export async function executeWarmupTopicRotation(input: {
           status: 'succeeded',
           state: latest,
           topicSetRevision: latest.warmupTopicSetRevision,
+          dedupeRelaxed: commitDedupeRelaxed,
         };
         return true;
       },
@@ -206,6 +321,7 @@ export async function executeWarmupTopicRotation(input: {
               decision: 'accepted',
               idempotencyKey,
               askKind: ask.kind,
+              reason: ask.reason,
             },
           },
           tx,
@@ -225,6 +341,8 @@ export async function executeWarmupTopicRotation(input: {
               baseTopicSetRevision: ask.baseTopicSetRevision,
               resultRevision: latest.warmupTopicSetRevision,
               fallbackUsed: meta.fallbackUsed,
+              reason: ask.reason,
+              dedupeRelaxed: commitDedupeRelaxed,
               aiGenerated: meta.aigc?.aiGenerated === true,
               llmCallCount: usedLlm ? 1 : 0,
               estimatedCostYuan: usedLlm ? AGENT_TOPIC_CALL_ESTIMATE_YUAN : 0,
@@ -233,7 +351,7 @@ export async function executeWarmupTopicRotation(input: {
           tx,
         );
       },
-    );
+    ));
 
     if (atomic.outcome === 'updated' && outcome) return outcome;
     if (atomic.outcome === 'not_found') {
@@ -241,7 +359,7 @@ export async function executeWarmupTopicRotation(input: {
     }
     if (outcome) {
       const failed = outcome;
-      await appendSocialAgentEvent({
+      void appendSocialAgentEvent({
         socialSessionId,
         phase: failed.state.currentPhase,
         kind: 'action_failed',
@@ -258,12 +376,13 @@ export async function executeWarmupTopicRotation(input: {
     }
     return { status: 'unknown', state: atomic.state, errorCode: 'AGENT_ACTION_UNKNOWN' };
   } catch (error) {
+    if (isAgentActionDeadlineError(error)) return deadlineUnknown();
     logger.error('[XiaoyueAgent] warmup topic rotation failed', {
       socialSessionId,
       askId,
       error: error instanceof Error ? error.message : String(error),
     });
-    await appendSocialAgentEvent({
+    void appendSocialAgentEvent({
       socialSessionId,
       phase: input.state.currentPhase,
       kind: 'action_failed',
@@ -279,10 +398,4 @@ export async function executeWarmupTopicRotation(input: {
   } finally {
     agentActionsInFlight.delete(askId);
   }
-}
-
-// Exported for route-level error mapping tests.
-export function agentErrorCode(status: XiaoyueAgentActionStatus, code?: string): string {
-  if (code) return code;
-  return `AGENT_ACTION_${errorCodeForReason(status)}`;
 }

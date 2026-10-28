@@ -87,6 +87,7 @@ const payloadSchema = z.object({
   estimatedCostYuan: finiteNonNegativeNumber.optional(),
   baseTopicSetRevision: finiteNonNegativeInteger.optional(),
   resultRevision: finiteNonNegativeInteger.optional(),
+  dedupeRelaxed: z.boolean().optional(),
   proactiveEnabled: z.boolean().optional(),
   ignoredStreak: finiteNonNegativeInteger.optional(),
   snapshotScope: z.enum(["action_recovery", "micro_challenge_observation"]).optional(),

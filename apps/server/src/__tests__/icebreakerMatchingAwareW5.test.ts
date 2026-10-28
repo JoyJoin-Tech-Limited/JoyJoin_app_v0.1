@@ -153,13 +153,13 @@ beforeEach(() => {
 // ─── AC-W5.2 helpers ─────────────────────────────────────────────────────────
 
 describe('W5 roster signals — shared-interest hooks', () => {
-  it('returns labels shared by ≥2 members (heat-ordered), deduped', () => {
+  it('returns shared labels with generic politeness anchors de-prioritised', () => {
     const hooks = buildSharedInterestHooks([
       { displayName: 'A', interests: ['咖啡', '徒步'] },
       { displayName: 'B', interests: ['咖啡', '摄影'] },
       { displayName: 'C', interests: ['咖啡', '徒步'] },
     ]);
-    expect(hooks).toEqual(['咖啡', '徒步']);
+    expect(hooks).toEqual(['徒步', '咖啡']);
   });
 
   it('honours minMembers and returns [] without shared labels', () => {

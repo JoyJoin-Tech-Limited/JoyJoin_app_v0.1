@@ -6,7 +6,7 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { haptics } from '../../../lib/utils/haptics'
-import { formatDateTime } from '../../../lib/matching/groupDisplay'
+import { formatEventFactDateTime } from '../../../lib/utils/eventDisplay'
 import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
@@ -92,7 +92,7 @@ function PoolRegistrationSuccessCeremony({
   }
 
   const areaLabel = pool.district?.trim() || pool.city?.trim() || ''
-  const dateLabel = formatDateTime(pool.dateTime)
+  const dateLabel = formatEventFactDateTime(pool.dateTime)
   const seatOrdinal = pool.registrationCount ?? pool.currentParticipants
 
   const showPills = highlights.length > 0 || (duo && !duo.bound)
@@ -117,13 +117,13 @@ function PoolRegistrationSuccessCeremony({
             {
               key: 'venue',
               label: '地点',
-              value: areaLabel || '待定',
+              value: areaLabel || '地点待定',
               hint: areaLabel ? undefined : '排桌完成后 24 小时内公布',
             },
             {
               key: 'time',
               label: '时间',
-              value: dateLabel || '待定',
+              value: dateLabel || '时间待定',
               hint: dateLabel ? undefined : '确认后推送具体时段',
               align: 'right',
             },

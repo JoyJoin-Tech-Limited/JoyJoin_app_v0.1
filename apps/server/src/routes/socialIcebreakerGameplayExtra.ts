@@ -25,6 +25,7 @@ import {
   generateGroupMirrorQuestions,
   generateMomentHighlights,
 } from '../socialIcebreakerAIService';
+import { GROUP_MIRROR_PROMPT_VERSION } from '../ai/socialIcebreakerPrompts';
 import type { MomentHighlightsPanel } from '@shared/socialIcebreaker';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
@@ -81,6 +82,15 @@ import {
   logContentStatusTransition,
 } from './socialIcebreakerHelpers';
 import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
+import { getFeatureFlag } from '../lib/featureFlags';
+import {
+  deriveTablePersona,
+  resolveTableAnchorsForPrompt,
+} from '../lib/tablePersona';
+import {
+  getLatestRoleResultsForUsers,
+  type LatestRoleTraitScores,
+} from '../repositories/assessmentRepo';
 
 const router = Router();
 
@@ -676,7 +686,7 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
   // Idempotent retry: if questions already exist, return them instead of regenerating
   if ((state.groupMirrorQuestions || []).length > 0) {
     const cachedMeta = state.groupMirrorQuestionsMeta
-      ?? buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-group-mirror-v1');
+      ?? buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, GROUP_MIRROR_PROMPT_VERSION);
     return res.json({ questions: state.groupMirrorQuestions, meta: cachedMeta });
   }
 
@@ -692,7 +702,7 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
       const result = await getPreGenerationResult(socialSessionId, 'group_mirror');
       if (result) {
         const questions = result.contentJson as unknown as Array<Record<string, unknown>>;
-        const questionsMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-group-mirror-v1');
+        const questionsMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, GROUP_MIRROR_PROMPT_VERSION);
         // W9 (AC-W9.1): the phase is the closing act — strip any passive
         // judgment framing and backfill with appreciation superlatives.
         const sanitizedQuestions = sanitizeGroupMirrorQuestions(
@@ -728,11 +738,51 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
 
   try {
     const roster = await listParticipants(socialSessionId);
+    // M1.2b/M3: derive the table persona ONCE from the roster already loaded
+    // above, and only when matching-aware enrichment is on (the same kill
+    // switch that populates roster interests). The persona is aggregate-only
+    // and server-only; every failure path drops anchors rather than blocking
+    // generation.
+    let tableAnchors: string[] | undefined;
+    try {
+      if (roster.length > 0 && (await getFeatureFlag('icebreakerMatchingAwareEnabled', true))) {
+        const roleResultsByUser = await getLatestRoleResultsForUsers(
+          roster.map((p) => p.userId),
+        ).catch((error) => {
+          logger.warn('[SocialIcebreaker] group mirror role-results lookup failed; continuing without ACOEXP', {
+            socialSessionId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return new Map<string, LatestRoleTraitScores>();
+        });
+        const persona = deriveTablePersona({ roster, roleResults: roleResultsByUser });
+        const anchors = resolveTableAnchorsForPrompt(persona);
+        if (anchors.length > 0) tableAnchors = anchors;
+        logger.info('Group mirror table persona derived', {
+          socialSessionId,
+          energy: persona.energy,
+          depthAppetite: persona.depthAppetite,
+          rosterSize: persona.diversity.rosterSize,
+          archetypeBuckets: persona.diversity.archetypeBuckets,
+          industryBuckets: persona.diversity.industryBuckets,
+          lifeStageBuckets: persona.diversity.lifeStageBuckets,
+          anchorCount: anchors.length,
+          acoexpSamples: roleResultsByUser.size,
+        });
+      }
+    } catch (personaError) {
+      logger.warn('[SocialIcebreaker] table persona derivation failed; continuing without anchors', {
+        socialSessionId,
+        error: personaError instanceof Error ? personaError.message : String(personaError),
+      });
+      tableAnchors = undefined;
+    }
+
     const result = await generateGroupMirrorQuestions({
       eventType: state.eventType || '活动',
       participantCount: roster.length,
-      participantNames: roster.map((p) => p.displayName).filter(Boolean) as string[],
       roster,
+      ...(tableAnchors ? { tableAnchors } : {}),
     });
 
     // W9 (AC-W9.1): appreciation-only closing act.

@@ -67,6 +67,10 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`architecture/current-state.md`](./architecture/current-state.md)
 - [`architecture/skill-routing.md`](./architecture/skill-routing.md)
 - [`agent-context/`](./agent-context/) — domain briefs for agent onboarding (canonical source for `AGENTS.md` §6)
+- [`design/icebreaker-guidance-quiet-concierge-20261027.md`](./design/icebreaker-guidance-quiet-concierge-20261027.md) — Quiet Concierge 三类说明书 UI/UX 规格与实现状态
+- [`design/icebreaker-w1-w3-implementation-plan-20261027.md`](./design/icebreaker-w1-w3-implementation-plan-20261027.md) — W1–W3 画像驱动破冰实施计划
+- [`design/icebreaker-content-quality-evaluation-20261026.md`](./design/icebreaker-content-quality-evaluation-20261026.md) — DQS 离线内容质量评级与 PASS/FAIL/INCONCLUSIVE 门槛
+- [`runbooks/icebreaker-agent-m1-release-checklist.md`](./runbooks/icebreaker-agent-m1-release-checklist.md) — M1/Quiet Concierge 发布前置与回滚清单
 
 ### Onboarding and auth
 

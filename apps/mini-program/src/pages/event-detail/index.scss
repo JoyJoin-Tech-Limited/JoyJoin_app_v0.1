@@ -3,6 +3,7 @@
 // Component SCSS @use'd (no TSX side-effect import) so EventFlowStrip rules
 // compile into this page's WXSS — subpackage style-splitting guard (AGENTS §7).
 @use '../../components/event-detail/EventFlowStrip.scss' as *;
+@use '../../components/event-detail/EventActivityGuide.scss' as *;
 @use '../../components/event-detail/EventFaqAccordion.scss' as *;
 
 .event-detail {

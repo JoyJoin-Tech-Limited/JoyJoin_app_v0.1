@@ -30,7 +30,10 @@ import { TOAST_SHORT_MS, TOAST_MEDIUM_MS } from '../../lib/utils/uiConstants'
 import { gatheringRoomAnalytics } from '../../lib/analytics/gatheringRoomAnalytics'
 import type { GatheringRoomMemberProfile, GatheringRoomPokeBadge } from '../../components/gathering-room/GatheringRoomScene'
 import { buildPairKeyMemberMap } from '../../lib/utils/pairChemistry'
-import { resolveGatheringRoomPresence } from './gatheringRoomPresence'
+import {
+  applyGatheringRoomUserConfirmed,
+  resolveGatheringRoomPresence,
+} from './gatheringRoomPresence'
 
 /**
  * useGatheringRoomController — view-model for the 集结房间 page.
@@ -47,7 +50,7 @@ import { resolveGatheringRoomPresence } from './gatheringRoomPresence'
 /** How long the look-up bounce / poke badge / celebration stay on screen. */
 const ENTERING_BOUNCE_MS = 1200
 const POKE_BADGE_MS = 2200
-const CELEBRATION_MS = 4200
+const CELEBRATION_MS = 1760
 const OWN_DOOR_ENTRY_MS = 1100
 
 const ROOM_WS_EVENT_TYPES = [
@@ -125,9 +128,12 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     enabled: !!groupId && gatheringRoomEnabled && !authLoading,
     // Gentle poll only while the page is visible and there is no WS room to join
     // (event row not yet created) — with WS live, presence/confirmation arrive over
-    // the socket. WeChat has no document.hidden, so gate on our page-visible flag.
+    // the socket. WeChat has no document.hidden, so gate on our page-visible flag;
+    // ended rooms are static keepsakes and do not need another polling timer.
     refetchInterval: (query) =>
-      !pageVisible || query.state.data?.blindBoxEventId ? false : 30_000,
+      !pageVisible || query.state.data?.blindBoxEventId || query.state.data?.eventPhase === 'ended'
+        ? false
+        : 30_000,
   })
 
   const blindBoxEventId = roomState?.blindBoxEventId ?? null
@@ -152,8 +158,11 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
   const [playOwnDoorEntry, setPlayOwnDoorEntry] = useState(false)
   const [firstArriver, setFirstArriver] = useState(false)
   const [celebrationText, setCelebrationText] = useState<string | null>(null)
+  const [celebrationStatic, setCelebrationStatic] = useState(false)
+  const [ownConfirmationPulse, setOwnConfirmationPulse] = useState(false)
+  const lastOwnConfirmationAtRef = useRef(0)
   const celebratedRef = useRef(false)
-  // Live activity ticker ("清风 推门进来了" / "清风 锁定了座位 · 还差 2 人").
+  // Live activity ticker ("清风 推门进来了" / "清风 确认了出席").
   // Derived purely from live WS events — the REST snapshot never fires it, so
   // reopening the room doesn't replay stale arrivals.
   const [activityLine, setActivityLine] = useState<{ text: string; ts: number } | null>(null)
@@ -270,32 +279,36 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         case 'USER_CONFIRMED': {
           const data = message.data as UserConfirmedData
           if (!data) return
-          // All-confirmed moment (PRD): celebrate once per session per user.
+          queryClient.setQueryData<GatheringRoomStateResponse>(
+            ['mini-program', 'gathering-room-state', groupId],
+            (old) => applyGatheringRoomUserConfirmed(old, data)
+          )
+          // All-confirmed is a factual table moment, never an arrival claim.
           if (
             data.totalParticipants > 0 &&
             data.confirmedCount >= data.totalParticipants &&
+            roomState?.eventPhase !== 'ended' &&
+            !roomState?.members.some((member) => member.attendanceStatus === 'absent') &&
             !celebratedRef.current
           ) {
             celebratedRef.current = true
-            setCelebrationText(`大家都确认出席啦，${formatMeetDayLabel(roomState?.eventDateTime)}～`)
-            haptics('success')
+            setCelebrationStatic(false)
+            setCelebrationText('这桌齐了')
+            if (Date.now() - lastOwnConfirmationAtRef.current > 1500) haptics('success')
             gatheringRoomAnalytics.track('room_all_present', {
               poolId: roomState?.poolId,
               groupId,
               screen: 'gathering-room',
               totalParticipants: data.totalParticipants,
+              eventPhase: roomState?.eventPhase,
             })
             setManagedTimeout('celebration', () => {
               setCelebrationText(null)
+              setCelebrationStatic(false)
             }, CELEBRATION_MS)
           } else if (data.userId !== currentUserId) {
-            // Momentum line for a single confirmation — the all-confirmed
-            // moment is owned by the celebration overlay above.
-            const remaining = Math.max(data.totalParticipants - data.confirmedCount, 0)
             const name = data.displayName || '队友'
-            pushActivityLine(
-              remaining > 0 ? `${name} 确认了出席 · 还差 ${remaining} 人` : `${name} 确认了出席`,
-            )
+            pushActivityLine(`${name} 确认了出席`)
           }
           // Keep the confirmed counts fresh for the header strip.
           queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })
@@ -304,7 +317,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         default:
       }
     },
-    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, roomState?.poolId, markEntering, setManagedTimeout, pushActivityLine],
+    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, roomState?.poolId, roomState?.eventPhase, markEntering, setManagedTimeout, pushActivityLine],
   )
 
   const { send, state: wsState } = useWebSocket({
@@ -336,6 +349,29 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     })
   }, [roomState, currentUserId, groupId])
 
+  // A late joiner sees the same factual table card, but statically: no replayed
+  // motion or success haptic for a transition that happened before they entered.
+  useEffect(() => {
+    if (!roomState || celebratedRef.current || roomState.eventPhase === 'ended') return
+    const total = roomState.totalParticipants
+    if (total <= 0 || roomState.confirmedCount < total) return
+    if (roomState.members.some((member) => member.attendanceStatus === 'absent')) return
+    celebratedRef.current = true
+    setCelebrationStatic(true)
+    setCelebrationText('这桌齐了')
+    gatheringRoomAnalytics.track('room_all_present', {
+      poolId: roomState.poolId,
+      groupId,
+      screen: 'gathering-room',
+      totalParticipants: total,
+      eventPhase: roomState.eventPhase,
+    })
+    setManagedTimeout('celebration', () => {
+      setCelebrationText(null)
+      setCelebrationStatic(false)
+    }, CELEBRATION_MS)
+  }, [roomState, groupId, setManagedTimeout])
+
   // ── Derived view model ───────────────────────────────────────────────────
   // Keep member profiles stable (identity + equipment) and presence transient
   // so the scene's PixelAvatarComposite instances don't re-render on every
@@ -356,6 +392,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     const list = members.map((member: GatheringRoomMember) => {
       const signature = JSON.stringify([
         member.displayName,
+        member.attendanceStatus,
         member.archetype,
         member.outfit,
         member.equippedItems,
@@ -368,6 +405,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
           : {
               userId: member.userId,
               displayName: member.displayName,
+              attendanceStatus: member.attendanceStatus,
               archetype: member.archetype,
               outfit: member.outfit ?? null,
               equippedItems: member.equippedItems ?? [],
@@ -379,7 +417,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     return list
   }, [roomState?.members])
 
-  const presenceByUserId = useMemo(
+  const livePresenceByUserId = useMemo(
     () =>
       new Map(
         (roomState?.members ?? []).map((member: GatheringRoomMember) => [
@@ -389,6 +427,15 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
       ),
     [roomState?.members, presentUserIds],
   )
+  const lastLivePresenceRef = useRef<Map<string, ReturnType<typeof resolveGatheringRoomPresence>> | null>(null)
+  useEffect(() => {
+    if (wsConnected) lastLivePresenceRef.current = livePresenceByUserId
+  }, [livePresenceByUserId, wsConnected])
+  // A dropped socket means "live state unknown", not "everyone left". Keep the
+  // last composition as a static room while raw presence/canPoke go offline.
+  const presenceByUserId = wsConnected
+    ? livePresenceByUserId
+    : lastLivePresenceRef.current ?? livePresenceByUserId
 
   const ownMember = useMemo(
     () => roomState?.members.find((member) => member.userId === currentUserId) ?? null,
@@ -474,16 +521,18 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         screen: 'gathering-room',
         targetUserId,
         emoji,
+        eventPhase: roomState?.eventPhase,
       })
       haptics('light')
       setSelectedUserId(null)
-      Taro.showToast({ title: '招呼已经发出啦', icon: 'none', duration: TOAST_SHORT_MS })
+      Taro.showToast({ title: '招呼已发出', icon: 'none', duration: TOAST_SHORT_MS })
     },
-    [blindBoxEventId, currentUserId, groupId, roomState?.poolId, send, wsConnected],
+    [blindBoxEventId, currentUserId, groupId, roomState?.poolId, roomState?.eventPhase, send, wsConnected],
   )
 
   // ── Confirm attendance ───────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
 
   const confirmAttendanceMutation = useMutation({
     mutationFn: () => confirmPoolGroupAttendance(apiRequest, groupId),
@@ -497,18 +546,24 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         groupId,
         screen: 'gathering-room',
         blindBoxEventId: response.blindBoxEventId,
+        eventPhase: roomState?.eventPhase,
       })
+      setConfirmError(null)
+      lastOwnConfirmationAtRef.current = Date.now()
+      if (!reducedMotion) {
+        setOwnConfirmationPulse(true)
+        setManagedTimeout('own-confirmation', () => setOwnConfirmationPulse(false), 480)
+      }
       haptics('success')
-      Taro.showToast({ title: `已确认出席，${formatMeetDayLabel(roomState?.eventDateTime)}`, icon: 'none', duration: TOAST_SHORT_MS })
-      // Seated animation: the refetched snapshot flips presence to confirmed
-      // and the CSS transition on the seat body animates the shift.
+      // The refetched snapshot flips presence to confirmed; only this real
+      // success may produce the one-time nameplate/seat response.
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })
       setIsSubmitting(false)
     },
     onError: (mutationError) => {
       const message = mutationError instanceof Error ? mutationError.message : '确认出席没成功'
       logWarn('[GatheringRoom] Attendance confirmation failed', { groupId, message })
-      Taro.showToast({ title: message, icon: 'none', duration: TOAST_MEDIUM_MS })
+      setConfirmError('没确认成功，再试一次')
       setIsSubmitting(false)
     },
   })
@@ -516,6 +571,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
   const handleConfirmAttendance = useCallback(() => {
     if (isSubmitting || confirmAttendanceMutation.isPending || ownConfirmed) return
     haptics('medium')
+    setConfirmError(null)
     setIsSubmitting(true)
     confirmAttendanceMutation.mutate()
   }, [confirmAttendanceMutation, isSubmitting, ownConfirmed])
@@ -539,9 +595,10 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         blindBoxEventId,
         attendanceStatus: 'late',
         estimatedLateMinutes,
+        eventPhase: roomState?.eventPhase,
       })
       haptics('success')
-      Taro.showToast({ title: '已经告诉大家你会晚到', icon: 'none', duration: TOAST_SHORT_MS })
+      Taro.showToast({ title: '晚到已登记，路上注意安全', icon: 'none', duration: TOAST_SHORT_MS })
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })
     },
     onError: (mutationError) => {
@@ -590,11 +647,14 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     pokeBadge,
     firstArriverText: firstArriver ? '你先来啦～悦仔陪你等大家推门进来' : null,
     celebrationText,
+    celebrationStatic,
+    ownConfirmationPulse,
     activityLine,
     reducedMotion,
     pageVisible,
     selectedMember,
     isSubmitting,
+    confirmError,
     isReportingLate: lateMutation.isPending,
     confirmPending: confirmAttendanceMutation.isPending,
     canReportLate,

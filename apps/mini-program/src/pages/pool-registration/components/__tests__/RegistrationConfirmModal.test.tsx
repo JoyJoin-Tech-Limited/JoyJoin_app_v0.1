@@ -52,6 +52,13 @@ describe('RegistrationConfirmModal', () => {
     expect(screen.getByText('确认无误，锁定席位')).toBeInTheDocument()
   })
 
+  it('uses explicit pending fact labels when time or area is empty', () => {
+    render(<RegistrationConfirmModal {...baseProps} dateTimeLabel='' area='' />)
+
+    expect(screen.getByText('时间待定')).toBeInTheDocument()
+    expect(screen.getByText('地点待定')).toBeInTheDocument()
+  })
+
   it('drops the system-serving match row (Phase 3)', () => {
     render(<RegistrationConfirmModal {...baseProps} />)
 

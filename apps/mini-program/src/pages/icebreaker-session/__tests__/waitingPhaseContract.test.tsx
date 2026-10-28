@@ -91,12 +91,16 @@ describe('WaitingPhase AC-13 render contract', () => {
     expect(screen.getAllByTestId('missing-archetype')).toHaveLength(1)
   })
 
-  it('renders the phase sequence preview from phaseMapItems (dead-prop guard)', () => {
-    render(<WaitingPhase {...baseProps} />)
+  it('renders only current / next / final guide items from phaseMapItems', () => {
+    const { container } = render(<WaitingPhase {...baseProps} />)
     expect(screen.getByText('今晚的环节')).toBeTruthy()
+    expect(container.querySelectorAll('.icebreaker__waiting-phase')).toHaveLength(3)
+    expect(screen.getByText(/现在开始/)).toBeTruthy()
+    expect(screen.getByText(/下一环/)).toBeTruthy()
+    expect(screen.getByText(/最后/)).toBeTruthy()
     expect(screen.getByText('话题卡', { exact: false })).toBeTruthy()
-    expect(screen.getByText(/谎言侦探/)).toBeTruthy()
     expect(screen.getByText(/回顾/)).toBeTruthy()
+    expect(screen.queryByText(/谎言侦探/)).toBeNull()
   })
 
   it('shows the explicit 等主持人开场 hint for players only', () => {
@@ -134,6 +138,8 @@ describe('WaitingPhase AC-13 render contract', () => {
   it('renders safely with empty roster and no phase map (fallback states)', () => {
     render(<WaitingPhase {...baseProps} participants={[]} phaseMapItems={null} />)
     expect(screen.getByText('等待更多玩家加入…')).toBeTruthy()
-    expect(screen.queryByText('今晚的环节')).toBeNull()
+    // AC-02 — empty/missing plan still shows the shared honest fallback.
+    expect(screen.getByText('今晚的环节')).toBeTruthy()
+    expect(screen.getByText(/跟着卡面走就好，不用提前准备/)).toBeTruthy()
   })
 })

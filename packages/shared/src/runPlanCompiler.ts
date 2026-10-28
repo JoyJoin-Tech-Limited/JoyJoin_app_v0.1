@@ -6,7 +6,7 @@ import type { IcebreakerRunPlan, PhaseSegment, PhaseModule } from './phaseModule
 import { createRunPlan } from './phaseModule.js';
 import { getPhaseModule } from './phaseRegistry.js';
 import { archetypeEnergyLevels } from './atmospherePrediction.js';
-import { ARCHETYPE_BY_ID } from './personality/archetypeNames.js';
+import { ARCHETYPE_BY_ID, resolveRosterArchetype } from './personality/archetypeNames.js';
 
 export interface CompilationContext {
   tier: TierMachineId;
@@ -65,12 +65,17 @@ function resolveArchetypeEnergy(key: string): number {
 
 /** Build a `{ archetype: count }` mix from a matched roster. */
 export function buildArchetypeMix(
-  roster: ReadonlyArray<{ archetype?: string | null }>,
+  roster: ReadonlyArray<{ archetype?: string | null; primaryArchetype?: string | null }>,
 ): Record<string, number> | undefined {
   if (!roster || roster.length === 0) return undefined;
   const mix: Record<string, number> = {};
   for (const member of roster) {
-    const key = member.archetype?.trim();
+    // V4 writes canonical ids to primary_archetype; legacy sessions only have
+    // a Chinese display name in `archetype`. Normalize both before counting so
+    // old Chinese names no longer fall through to the neutral energy score.
+    const key =
+      resolveRosterArchetype(member.primaryArchetype, member.archetype) ??
+      member.archetype?.trim();
     if (!key) continue;
     mix[key] = (mix[key] ?? 0) + 1;
   }

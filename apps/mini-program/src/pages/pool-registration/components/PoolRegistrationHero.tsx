@@ -1,7 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useCallback, useState } from 'react'
-import { cdnAsset, useCdnFirstSrc } from '../../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import type { PoolEventType } from '../flowConfig'
 
 // Primary source: CDN (fast once Tencent Cloud CDN is enabled).
@@ -44,8 +45,6 @@ export default function PoolRegistrationHero({
   newRegistrantDelta,
   visible,
 }: PoolRegistrationHeroProps) {
-  const calendarIcon = useCdnFirstSrc('/assets/icons/ui/icon-calendar.webp')
-  const locationIcon = useCdnFirstSrc('/assets/icons/ui/icon-location.webp')
   const deviceTier = useDeviceTier()
   // Attempt index: 0 = CDN, 1 = subpackage local, 2+ = failed
   const [imageAttempt, setImageAttempt] = useState(0)
@@ -109,23 +108,13 @@ export default function PoolRegistrationHero({
         <View className='pool-registration-hero__meta-band'>
           {dateTimeLabel ? (
             <View className='pool-registration-hero__meta-pill' aria-label={`时间：${dateTimeLabel}`}>
-              <Image
-                className='pool-registration-hero__meta-icon'
-                src={calendarIcon.src}
-                mode='aspectFit'
-                onError={calendarIcon.onError}
-              />
+              <JoyJoinIcon emoji='📅' size={32} className='pool-registration-hero__meta-icon' />
               <Text className='pool-registration-hero__meta-text'>{dateTimeLabel}</Text>
             </View>
           ) : null}
           {area ? (
             <View className='pool-registration-hero__meta-pill' aria-label={`地区：${area}`}>
-              <Image
-                className='pool-registration-hero__meta-icon'
-                src={locationIcon.src}
-                mode='aspectFit'
-                onError={locationIcon.onError}
-              />
+              <JoyJoinIcon emoji='📍' size={32} className='pool-registration-hero__meta-icon' />
               <Text className='pool-registration-hero__meta-text'>{area}</Text>
             </View>
           ) : null}

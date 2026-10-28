@@ -27,6 +27,10 @@ import { buildArchetypeContext } from '../lib/contextInjector';
 import { buildSharedInterestHooks } from '../lib/icebreakerRosterSignals';
 import { logger } from '../lib/logger';
 import {
+  getWarmupTopicServedKeys,
+  normalizeWarmupTopicKeyPart,
+} from '../lib/warmupServedTopics';
+import {
   fireAndForgetQualityGate,
   isLLMTimeoutError,
   raceWithTimeout,
@@ -125,12 +129,11 @@ function ensureBraveTopic(
   const presentQuestions = new Set(topics.map((t) => t.question));
   const isFresh = (t: SocialTopic) =>
     !presentQuestions.has(t.question)
-    && !excludedKeys?.has(`id:${t.id}`)
-    && !excludedKeys?.has(`q:${t.question}`);
+    && (!excludedKeys || !isWarmupTopicAvoided(t, excludedKeys));
   const candidate = FALLBACK_WARMUP_TOPICS.find(
     (t) => t.mood === mood && t.safety === 'reflective' && isFresh(t),
   ) ?? FALLBACK_WARMUP_TOPICS.find((t) => t.safety === 'reflective' && isFresh(t))
-    // Window exhausted every brave card → keep the guarantee even if it repeats.
+    // Avoid history exhausted every brave card → keep the guarantee even if it repeats.
     ?? FALLBACK_WARMUP_TOPICS.find(
       (t) => t.mood === mood && t.safety === 'reflective' && !presentQuestions.has(t.question),
     )
@@ -195,7 +198,7 @@ function getTargetTopicCount(vibe?: 'chat' | 'balanced' | 'game'): number {
   }
 }
 
-// ─── W7.3/W7.4: curated fallback selection ──────────────────────────────────
+// ─── W7.3/M1.1: curated fallback selection ──────────────────────────────────
 
 /** Depth bands each vibe prefers (W7.3). `game` stays light, `chat` goes deep. */
 function getVibeDepthPreference(vibe?: 'chat' | 'balanced' | 'game'): SocialTopicDepthLevel[] {
@@ -207,47 +210,36 @@ function getVibeDepthPreference(vibe?: 'chat' | 'balanced' | 'game'): SocialTopi
 }
 
 /**
- * Recently-served warmup-topic window, keyed by a caller-supplied pool/group
- * key (W7.4). Process-local and bounded: an in-memory dedup window is the
- * deliberate trade-off (no schema/migration in this sprint), and it never
- * blocks output — when the window would exhaust the curated bank the selection
- * widens back to the full pool instead of serving nothing.
+ * Compatibility no-op for older tests/imports. Serving history lives only in
+ * per-session `servedTopicKeys`; generation has no process-global memory.
  */
-const WARMUP_DEDUPE_WINDOW_SESSIONS = 3;
-const recentlyServedWarmupTopics = new Map<string, string[]>();
-
-/** Test seam + operational reset for the process-local dedup window. */
 export function resetWarmupTopicDedupe(): void {
-  recentlyServedWarmupTopics.clear();
+  // Intentionally empty.
 }
 
-function warmupTopicKeys(topic: SocialTopic): string[] {
-  const keys = [`id:${topic.id}`];
-  if (topic.question) keys.push(`q:${topic.question}`);
-  return keys;
-}
+/** Accept served keys, question text, and their exact/normalized aliases. */
+function getWarmupAvoidKeys(avoidKeys: readonly string[] = []): Set<string> {
+  const excluded = new Set<string>();
+  for (const raw of avoidKeys) {
+    if (typeof raw !== 'string' || raw.trim().length === 0) continue;
+    const prefix = raw.startsWith('id:') ? 'id' : raw.startsWith('q:') ? 'q' : undefined;
+    const value = prefix ? raw.slice(prefix.length + 1) : raw;
+    const normalized = normalizeWarmupTopicKeyPart(value);
 
-function getRecentlyServedKeys(dedupeKey?: string, avoidKeys?: string[]): Set<string> {
-  const excluded = new Set<string>(dedupeKey ? (recentlyServedWarmupTopics.get(dedupeKey) ?? []) : []);
-  for (const key of avoidKeys ?? []) {
-    excluded.add(key);
-    // Callers (and the legacy `avoidTopics` body field) pass question text —
-    // normalize to the same `q:` namespace used by the dedup window.
-    if (!key.startsWith('id:') && !key.startsWith('q:')) excluded.add(`q:${key}`);
+    if (prefix) {
+      excluded.add(raw);
+      if (normalized) excluded.add(`${prefix}:${normalized}`);
+    } else {
+      // Legacy `avoidTopics` entries are question text rather than IDs.
+      excluded.add(`q:${raw}`);
+      if (normalized) excluded.add(`q:${normalized}`);
+    }
   }
   return excluded;
 }
 
-function recordRecentlyServedTopics(dedupeKey: string | undefined, topics: SocialTopic[]): void {
-  if (!dedupeKey || topics.length === 0) return;
-  const windowSize = getTargetTopicCount('balanced') * WARMUP_DEDUPE_WINDOW_SESSIONS;
-  const merged = [...(recentlyServedWarmupTopics.get(dedupeKey) ?? [])];
-  for (const topic of topics) {
-    for (const key of warmupTopicKeys(topic)) {
-      if (!merged.includes(key)) merged.push(key);
-    }
-  }
-  recentlyServedWarmupTopics.set(dedupeKey, merged.slice(-windowSize));
+function isWarmupTopicAvoided(topic: SocialTopic, excluded: ReadonlySet<string>): boolean {
+  return getWarmupTopicServedKeys(topic).some((key) => excluded.has(key));
 }
 
 /**
@@ -276,14 +268,13 @@ export interface WarmupFallbackOptions {
   sharedInterests?: string[];
   /** Additional exclusion keys (`id:…`/`q:…`) from the caller's avoid list. */
   avoidKeys?: string[];
-  /** Pool/group identity for the recently-served dedup window (W7.4). */
+  /** @deprecated Ignored compatibility field; never used as serving memory. */
   dedupeKey?: string;
 }
 
 /**
  * Pure curated fallback selection — mood-first, vibe-depth-aware, shared-interest
- * specific, and dedup-aware. Does NOT mutate the dedup window (callers record
- * only what they actually serve).
+ * specific, and avoid-aware. Only the authoritative deck commit records served keys.
  */
 function selectFallbackTopics(
   mood: AtmosphereMood,
@@ -298,21 +289,19 @@ function selectFallbackTopics(
   };
 
   // Mood register first, then vibe-appropriate depth. Deterministic ordering
-  // (no shuffle) so the dedup window is meaningful across sessions.
+  // (no shuffle) keeps caller-owned avoid filtering stable across retries.
   const ordered = [
     ...FALLBACK_WARMUP_TOPICS.filter((t) => t.mood === mood),
     ...FALLBACK_WARMUP_TOPICS.filter((t) => t.mood !== mood),
   ].sort((a, b) => depthRank(a) - depthRank(b));
 
-  const excluded = getRecentlyServedKeys(options.dedupeKey, options.avoidKeys);
-  const available = ordered.filter(
-    (t) => !excluded.has(`id:${t.id}`) && !excluded.has(`q:${t.question}`),
-  );
-  // Window exhausted the bank → widen rather than serve an empty table.
+  const excluded = getWarmupAvoidKeys(options.avoidKeys);
+  const available = ordered.filter((topic) => !isWarmupTopicAvoided(topic, excluded));
+  // Avoid keys exhausted the bank → widen rather than serve an empty table.
   const pool = available.length >= targetCount ? available : ordered;
-  if (available.length < targetCount && options.dedupeKey) {
-    logger.info('[SocialIcebreakerAI] warmup dedup window widened to avoid starving the topic pool', {
-      dedupeKey: options.dedupeKey,
+  if (available.length < targetCount && excluded.size > 0) {
+    logger.info('[SocialIcebreakerAI] warmup avoid filter widened to avoid starving the topic pool', {
+      avoidKeyCount: excluded.size,
       available: available.length,
       targetCount,
     });
@@ -320,12 +309,13 @@ function selectFallbackTopics(
 
   let topics = pool.slice(0, targetCount).map((topic, index) => normalizeSocialTopic(topic, mood, index));
 
-  // W7.3: when the roster shares an interest, guarantee ≥1 card names it.
-  const sharedInterest = (options.sharedInterests ?? []).find(
-    (interest) => typeof interest === 'string' && interest.trim().length > 0 && !findReviewBlockedVocab(interest),
-  );
-  if (sharedInterest) {
-    topics = [buildSharedInterestTopic(sharedInterest.trim(), mood, 0), ...topics.slice(1)];
+  // W7.3: when the roster shares an interest, guarantee ≥1 fresh card names it.
+  const sharedInterestTopic = (options.sharedInterests ?? [])
+    .filter((interest) => typeof interest === 'string' && interest.trim().length > 0 && !findReviewBlockedVocab(interest))
+    .map((interest) => buildSharedInterestTopic(interest.trim(), mood, 0))
+    .find((topic) => !isWarmupTopicAvoided(topic, excluded));
+  if (sharedInterestTopic) {
+    topics = [sharedInterestTopic, ...topics.slice(1)];
   }
 
   return ensureBraveTopic(topics, mood, undefined, excluded);
@@ -362,10 +352,7 @@ export async function generateWarmupTopics(params: {
   roster?: Array<{ archetype?: string; interests?: string[] }>;
   /** Vibe drives card count, depth curve, and tier generation. */
   vibe?: 'chat' | 'balanced' | 'game';
-  /**
-   * W7.4: stable pool/group identity for the recently-served dedup window.
-   * Omit to disable cross-session dedup (test/one-off callers).
-   */
+  /** @deprecated Ignored compatibility field; pass per-session keys in avoidTopics. */
   dedupeKey?: string;
   /** Wave 3 (contract AC-07): aggregate session highlights body (state.highlights).
    *  Threaded into the prompt as a 【本场高光】 block when non-empty; also drives
@@ -382,7 +369,6 @@ export async function generateWarmupTopics(params: {
   const sharedInterests = buildSharedInterestHooks(params.roster ?? []);
   const fallbackOptions: WarmupFallbackOptions = {
     sharedInterests,
-    dedupeKey: params.dedupeKey,
     avoidKeys: params.avoidTopics,
   };
 
@@ -481,16 +467,15 @@ export async function generateWarmupTopics(params: {
       // Brave-but-safe guarantee: repair before moderation so the checked and
       // persisted set always contains ≥1 brave question (contract A1/A4).
       const braveRepairedTopics = ensureBraveTopic(normalizedTopics, params.mood, aiCorrelationId);
-      // W7.4: drop recently-served cards and top up from curated so this pool
-      // never hears the same question across its recent sessions.
+      // Filter caller-owned session history before moderation. Recording is
+      // deliberately deferred to the authoritative whole-deck commit.
       const liveTopics = dedupeLiveWarmupTopics(
         braveRepairedTopics,
         params.mood,
         params.vibe,
-        params.dedupeKey,
+        params.avoidTopics,
         sharedInterests,
       );
-      recordRecentlyServedTopics(params.dedupeKey, liveTopics);
       return moderateAndAttachAIGC(
         { data: liveTopics, meta },
         {
@@ -500,8 +485,7 @@ export async function generateWarmupTopics(params: {
           promptVersion: meta.promptVersion,
           aiCorrelationId,
           feature: 'generateWarmupTopics',
-          // Pure selection (no dedup mutation) — only recorded if moderation
-          // actually degrades to it.
+          // Side-effect-free curated candidate used only if moderation degrades.
           fallbackData: selectFallbackTopics(params.mood, params.vibe, fallbackOptions),
           checks: warmupTopicsChecks(liveTopics),
         },
@@ -525,26 +509,23 @@ export async function generateWarmupTopics(params: {
 }
 
 /**
- * W7.4: drop recently-served cards from a live set and top up from the curated
- * pool so the target count and the brave guarantee are preserved. No-op when no
- * dedupe key is supplied.
+ * Drop caller-avoided cards from a live set and top up from curated content so
+ * the target count and brave guarantee are preserved. No serving state is written.
  */
 function dedupeLiveWarmupTopics(
   topics: SocialTopic[],
   mood: AtmosphereMood,
   vibe: 'chat' | 'balanced' | 'game' | undefined,
-  dedupeKey: string | undefined,
+  avoidKeys: string[] | undefined,
   sharedInterests: string[],
 ): SocialTopic[] {
-  if (!dedupeKey) return topics;
-  const excluded = getRecentlyServedKeys(dedupeKey);
-  const kept = topics.filter(
-    (t) => !excluded.has(`id:${t.id}`) && !excluded.has(`q:${t.question}`),
-  );
+  const excluded = getWarmupAvoidKeys(avoidKeys);
+  if (excluded.size === 0) return topics;
+  const kept = topics.filter((topic) => !isWarmupTopicAvoided(topic, excluded));
   if (kept.length === topics.length) return topics;
 
   const targetCount = getTargetTopicCount(vibe);
-  const topUp = selectFallbackTopics(mood, vibe, { dedupeKey, sharedInterests });
+  const topUp = selectFallbackTopics(mood, vibe, { avoidKeys, sharedInterests });
   const merged = [...kept];
   for (const topic of topUp) {
     if (merged.length >= targetCount) break;
@@ -553,18 +534,13 @@ function dedupeLiveWarmupTopics(
   return ensureBraveTopic(merged, mood, undefined, excluded);
 }
 
-/**
- * Served curated fallback (records the dedup window). Prefer `selectFallbackTopics`
- * when the result may not actually be served.
- */
+/** Curated selection is side-effect-free until the authoritative deck commit. */
 function getFallbackTopics(
   mood: AtmosphereMood,
   vibe?: 'chat' | 'balanced' | 'game',
   options: WarmupFallbackOptions = {},
 ): SocialTopic[] {
-  const topics = selectFallbackTopics(mood, vibe, options);
-  recordRecentlyServedTopics(options.dedupeKey, topics);
-  return topics;
+  return selectFallbackTopics(mood, vibe, options);
 }
 
 export function getCuratedWarmupTopics(

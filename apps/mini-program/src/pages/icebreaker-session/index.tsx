@@ -75,10 +75,13 @@ import {
 import {
   HOST_MENU_COACHMARK_STORAGE_KEY,
   buildTierModeCaption,
+  canShowHostTableBrief,
   resolveHostMenuItems,
+  resolveSessionGuidanceLine,
   resolveSyncLossVisible,
   shouldNudgeHostForSuggestion,
 } from './sessionShellLogic'
+import { HostTableBriefPopover } from './components/HostTableBriefPopover'
 import {
   resolvePhaseChipPayload,
   resolvePhaseMapPayload,
@@ -137,6 +140,9 @@ export default function IcebreakerSessionPage() {
   // PR1 壳层 transient flags — covered by useResetOnShow for swipe-back safety.
   const [coachmarkShown, setCoachmarkShown] = useState(false)
   const [suggestionOverlayOpen, setSuggestionOverlayOpen] = useState(false)
+  const [hostBriefOpen, setHostBriefOpen] = useState(false)
+  const [hostMenuOpen, setHostMenuOpen] = useState(false)
+  const [warmupRitualActive, setWarmupRitualActive] = useState(false)
   // W3 honest opt-out: transient, code-specific failure copy + the late-joiner
   // observer flag. Both are reset on re-show (swipe-back) and phase change.
   const [optOutNotice, setOptOutNotice] = useState<PhaseActionNotice | null>(null)
@@ -151,6 +157,9 @@ export default function IcebreakerSessionPage() {
   useResetOnShow(
     setCoachmarkShown,
     setSuggestionOverlayOpen,
+    setHostBriefOpen,
+    setHostMenuOpen,
+    setWarmupRitualActive,
     () => setOptOutNotice(null),
     setLieRosterLocked,
   )
@@ -434,21 +443,8 @@ export default function IcebreakerSessionPage() {
 
   // Xiaoyue phase-transition toast — gated by the broadcast weight table
   // (AC-14): light/medium phases get the toast; ritual phases are absorbed
-  // by the intro overlay, so overlay + toast never co-fire.
-  useEffect(() => {
-    if (
-      phase &&
-      phase !== 'warmup' &&
-      phase !== 'phase_selection' &&
-      prevPhaseRef.current !== 'waiting' &&
-      getPhaseBroadcastWeight(phase) !== 'ritual'
-    ) {
-      const toastText = getPhaseToastText(phase)
-      setPhaseToast({ visible: true, text: toastText })
-      const timer = setTimeout(() => setPhaseToast({ visible: false, text: '' }), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [phase])
+  // by the intro overlay. Quiet Concierge: the shell guidance line owns the
+  // current teaching, so a phase toast never duplicates it.
   const hostUserId = session?.hostUserId ?? ''
   const isHost = !!currentUserId && currentUserId === hostUserId
   const participants = useMemo(
@@ -483,6 +479,80 @@ export default function IcebreakerSessionPage() {
         onAigcFeedbackTap={xiaoyueAgentAsk.onAigcFeedbackTap}
       />
     ) : undefined
+
+  // Quiet Concierge: one current guidance line + an optional host-only brief.
+  // No pre-read, no second teaching layer, and no new participant action.
+  const hostTableBrief = isHost && phase === 'warmup' ? session?.hostTableBrief : undefined
+  const sessionGuidanceLine = resolveSessionGuidanceLine({
+    phase,
+    isHost,
+    paceShort: hostTableBrief?.paceShort,
+  })
+
+  // Xiaoyue phase-transition toast — gated by the broadcast weight table
+  // (AC-14): light/medium phases get the toast; ritual phases are absorbed
+  // by the intro overlay. Quiet Concierge: the shell guidance line owns the
+  // current teaching, so a phase toast never duplicates it.
+  useEffect(() => {
+    if (sessionGuidanceLine) {
+      setPhaseToast({ visible: false, text: '' })
+      return
+    }
+    if (
+      phase &&
+      phase !== 'warmup' &&
+      phase !== 'phase_selection' &&
+      prevPhaseRef.current !== 'waiting' &&
+      getPhaseBroadcastWeight(phase) !== 'ritual'
+    ) {
+      const toastText = getPhaseToastText(phase)
+      setPhaseToast({ visible: true, text: toastText })
+      const timer = setTimeout(() => setPhaseToast({ visible: false, text: '' }), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [phase, sessionGuidanceLine])
+
+  const adaptiveOverlayVisible =
+    suggestionOverlayOpen && !!adaptiveSuggestion && !xiaoyueAgentAsk.visible
+  const hostBriefVisible = canShowHostTableBrief({
+    isHost,
+    phase,
+    hasBrief: !!hostTableBrief,
+    agentAskVisible: xiaoyueAgentAsk.visible,
+    adaptiveSuggestionVisible: adaptiveOverlayVisible,
+    tierSheetOpen: isTierSheetOpen,
+    ritualOverlayVisible: showPhaseIntro || warmupRitualActive,
+    hostMenuOpen,
+  })
+  const hostBriefNode =
+    hostBriefVisible && hostBriefOpen && hostTableBrief ? (
+      <HostTableBriefPopover
+        paceShort={hostTableBrief.paceShort}
+        anchorLabel={hostTableBrief.anchorLabel}
+        avoidDomain={hostTableBrief.avoidDomain}
+        onClose={() => setHostBriefOpen(false)}
+      />
+    ) : undefined
+  const handleOpenHostBrief = useCallback(() => {
+    haptics('light')
+    setHostBriefOpen(true)
+  }, [])
+
+  // A brief is contextual, never persistent. Any higher-priority surface,
+  // role/phase change, or new brief revision closes it without a toast.
+  useEffect(() => {
+    setHostBriefOpen(false)
+  }, [
+    phase,
+    isHost,
+    hostTableBrief?.phaseKey,
+    xiaoyueAgentAsk.visible,
+    adaptiveOverlayVisible,
+    isTierSheetOpen,
+    showPhaseIntro,
+    hostMenuOpen,
+    warmupRitualActive,
+  ])
 
   // W3 (AC-W3.4): stable callback so `handleGenerateStatements` does not churn
   // its identity every poll tick.
@@ -883,6 +953,9 @@ export default function IcebreakerSessionPage() {
       return
     }
     haptics('light')
+    // Native ActionSheet is a higher-priority surface than the host brief.
+    setHostBriefOpen(false)
+    setHostMenuOpen(true)
     // Host discovered the menu on their own — the coachmark has served its
     // purpose (Wave 2 AC-03: first real use dismisses it permanently).
     persistCoachmarkSeen()
@@ -953,6 +1026,8 @@ export default function IcebreakerSessionPage() {
       }
     } catch {
       // User cancelled the action sheet
+    } finally {
+      setHostMenuOpen(false)
     }
   }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion, performSocialAction, playerCount, persistCoachmarkSeen, xiaoyueAgentAsk.reopenPolicy])
 
@@ -1144,6 +1219,12 @@ export default function IcebreakerSessionPage() {
     )
   }
 
+  // Keep this callback above `phaseHeader` so the page's hook order stays
+  // before the render/jSX boundary (hostActionFlowContract).
+  const handleWarmupOverlayVisibilityChange = useCallback((visible: boolean) => {
+    setWarmupRitualActive(visible)
+  }, [])
+
   const phaseHeader = (
     <XiaoyueSessionShell
       phase={phase}
@@ -1152,6 +1233,10 @@ export default function IcebreakerSessionPage() {
         suggestionOverlayOpen && !xiaoyueAgentAsk.visible ? adaptiveSuggestion : undefined
       }
       agentAsk={xiaoyueAgentAskNode}
+      guidanceLine={sessionGuidanceLine}
+      hostBrief={hostBriefVisible && hostBriefOpen ? hostBriefNode : undefined}
+      hostBriefAvailable={hostBriefVisible}
+      onOpenHostBrief={hostBriefVisible ? handleOpenHostBrief : undefined}
       isHost={isHost}
       syncLost={syncLost}
       showHostMenu={hostMenuItems.length > 0}
@@ -1228,6 +1313,8 @@ export default function IcebreakerSessionPage() {
     topicsError,
     topicsRecovery,
     warmupReadiness,
+    suppressWarmupPermissionLine: !!sessionGuidanceLine,
+    onWarmupOverlayVisibilityChange: handleWarmupOverlayVisibilityChange,
     myVoteIndex,
     hasGeneratedStatements,
     canMoveToNextPlayer,
@@ -1352,7 +1439,7 @@ export default function IcebreakerSessionPage() {
             edge, points up at the trigger, never covers the CTA area.
             Suppressed while the adaptive suggestion card is open: both anchor
             to top:100% of this header band at $z-modal and would stack. */}
-        {coachmarkShown && !suggestionOverlayOpen && (
+        {coachmarkShown && !adaptiveOverlayVisible && !hostBriefVisible && (
           <View
             className='icebreaker__coachmark'
             onClick={handleDismissCoachmark}
@@ -1405,6 +1492,7 @@ export default function IcebreakerSessionPage() {
         visible={showPhaseIntro}
         mode={glanceStackEnabled && (phase === 'warmup' || phase === 'micro_challenge') ? 'field' : 'overlay'}
         isHost={isHost}
+        suppressGuidance={!!sessionGuidanceLine}
         onAutoHide={() => setShowPhaseIntro(false)}
       />
 

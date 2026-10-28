@@ -311,14 +311,13 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   const effectiveNextPhase = result.nextPhase;
 
   // Fetch participant roster with profiles for personalised 悦仔 commentary
-  let xyParticipants: Array<{ displayName: string; archetype?: string | null; profile?: import('@shared/socialIcebreaker').SocialSessionParticipantProfile | null }> | undefined;
+  let xyParticipants: Array<{ archetype?: string | null; primaryArchetype?: string | null }> | undefined;
   try {
     const roster = await listParticipants(socialSessionId);
     if (roster.length > 0) {
       xyParticipants = roster.map(p => ({
-        displayName: p.displayName,
         archetype: p.archetype ?? null,
-        profile: p.profile ?? undefined,
+        primaryArchetype: p.primaryArchetype ?? null,
       }));
     }
   } catch {

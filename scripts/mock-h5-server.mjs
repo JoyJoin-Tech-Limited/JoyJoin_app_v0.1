@@ -15,7 +15,7 @@ const GATHERING_ROOM_ASSET_DIR = path.resolve(__dirname, '../apps/mini-program/s
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control, Pragma')
   if (req.method === 'OPTIONS') {
     res.status(204).end()
     return
@@ -1556,6 +1556,30 @@ wss.on('connection', (socket) => {
       for (const client of wss.clients) {
         if (client.readyState === client.OPEN) {
           client.send(entered)
+        }
+      }
+      return
+    }
+
+    // Screenshot-only trigger: exercise the real WS all-confirmed transition
+    // after a 5/6 fixture. This is never reachable from production UI.
+    if (message.type === 'MOCK_ROOM_ALL_CONFIRMED' && message.eventId) {
+      const timestamp = new Date().toISOString()
+      const confirmed = JSON.stringify({
+        type: 'USER_CONFIRMED',
+        eventId: message.eventId,
+        data: {
+          eventId: message.eventId,
+          userId: message.userId || 'user-screenshot-006',
+          displayName: message.displayName || '小禾',
+          confirmedCount: 6,
+          totalParticipants: 6,
+        },
+        timestamp,
+      })
+      for (const client of wss.clients) {
+        if (client.readyState === client.OPEN) {
+          client.send(confirmed)
         }
       }
     }

@@ -2,6 +2,7 @@ import type { JoinedEventSummary } from '@shared/api'
 import { describe, expect, it } from 'vitest'
 import {
   formatEventDateTime,
+  formatEventFactDateTime,
   getEventPoolStatusLabel,
   getJoinedEventDisplayDateTime,
   getJoinedEventStatusLabel,
@@ -111,6 +112,27 @@ describe('eventDisplay', () => {
       expect(formatted).not.toMatch(/^(今天|明天|后天) /)
       expect(formatted).not.toContain(String(future.getFullYear()))
     })
+  })
+
+  describe('formatEventFactDateTime', () => {
+    const now = new Date(2026, 9, 27, 12, 0)
+
+    it('formats a same-year UTC instant with local calendar fields and no year', () => {
+      const value = new Date(2026, 9, 28, 19, 0).toISOString()
+      expect(formatEventFactDateTime(value, now)).toBe('10月28日 周三 19:00')
+    })
+
+    it('includes the year for a cross-year Date value', () => {
+      const value = new Date(2027, 0, 2, 19, 0)
+      expect(formatEventFactDateTime(value, now)).toBe('2027年1月2日 周六 19:00')
+    })
+
+    it.each([undefined, null, '', 'not-a-date', new Date(Number.NaN)])(
+      'returns 时间待定 for empty or invalid input: %s',
+      (value) => {
+        expect(formatEventFactDateTime(value, now)).toBe('时间待定')
+      },
+    )
   })
 
   describe('getJoinedEventStatusLabel', () => {

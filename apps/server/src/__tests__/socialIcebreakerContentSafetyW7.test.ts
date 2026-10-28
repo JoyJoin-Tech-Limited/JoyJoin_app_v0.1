@@ -6,8 +6,8 @@
  *   strings, degrade-to-curated on hit, structured non-PII trace.
  * - AC-W7.3: fallbacks are vibe-aware and specific (name a shared interest when
  *   available); pair-explanation fallback is no longer horoscope-only.
- * - AC-W7.4: no cross-session duplicate warmup topics per pool (recently-served
- *   dedup window).
+ * - M1.1: the retired W7.4 process-global window cannot leak serving memory;
+ *   caller-owned exact/normalized avoid keys drive live and curated dedupe.
  * - AC-W7.5: dead `FALLBACK_MICRO_CHALLENGES` symbol removed.
  */
 
@@ -236,49 +236,118 @@ describe('W7.3 — specific, vibe-aware fallbacks', () => {
   });
 });
 
-// ─── AC-W7.4 ────────────────────────────────────────────────────────────────
+// ─── M1.1 / retired AC-W7.4 process-memory behavior ─────────────────────────
 
-describe('W7.4 — recently-served warmup dedup per pool', () => {
+describe('M1.1 — caller-owned warmup dedupe without process-global serving memory', () => {
   beforeEach(() => {
     mockCreate.mockReset();
     resetWarmupTopicDedupe();
     mockCreate.mockRejectedValue(new Error('LLM service unavailable'));
   });
 
-  it('serving twice for the same pool never repeats a topic id or question', async () => {
+  it('two sessions with the same legacy dedupeKey do not influence each other', async () => {
     const first = await generateWarmupTopics({
       mood: 'relaxed',
       eventType: '活动',
       participantCount: 4,
       vibe: 'balanced',
-      dedupeKey: 'group-1',
+      dedupeKey: 'shared-legacy-key',
     });
     const second = await generateWarmupTopics({
       mood: 'relaxed',
       eventType: '活动',
       participantCount: 4,
       vibe: 'balanced',
-      dedupeKey: 'group-1',
+      dedupeKey: 'shared-legacy-key',
     });
 
-    const firstIds = new Set(first.data.map((t) => t.id));
-    const firstQuestions = new Set(first.data.map((t) => t.question));
-    expect(second.data.some((t) => firstIds.has(t.id) || firstQuestions.has(t.question))).toBe(false);
-    // Both serves keep the brave guarantee and full count.
+    expect(second.data.map((topic) => [topic.id, topic.question])).toEqual(
+      first.data.map((topic) => [topic.id, topic.question]),
+    );
     expect(first.data).toHaveLength(5);
-    expect(second.data).toHaveLength(5);
     expect(hasBraveTopic(first.data)).toBe(true);
     expect(hasBraveTopic(second.data)).toBe(true);
   });
 
-  it('different pools have independent windows', async () => {
-    const a = await generateWarmupTopics({
-      mood: 'relaxed', eventType: '活动', participantCount: 4, vibe: 'balanced', dedupeKey: 'group-a',
+  it('a generated but uncommitted deck leaves no trace in later curated selection', async () => {
+    const baseline = getCuratedWarmupTopics('relaxed', 'balanced');
+    mockLlmTopics(baseline.map((topic, index) => ({
+      ...topic,
+      id: `uncommitted-${index}`,
+    })));
+
+    const generated = await generateWarmupTopics({
+      mood: 'relaxed',
+      eventType: '活动',
+      participantCount: 4,
+      vibe: 'balanced',
+      dedupeKey: 'shared-legacy-key',
     });
-    const b = await generateWarmupTopics({
-      mood: 'relaxed', eventType: '活动', participantCount: 4, vibe: 'balanced', dedupeKey: 'group-b',
+    expect(generated.meta.fallbackUsed).toBe(false);
+    // Deliberately no commitWholeTopicSet here: this candidate may be abandoned
+    // by a revision conflict and must not become serving history.
+
+    mockCreate.mockRejectedValue(new Error('LLM service unavailable'));
+    const later = await generateWarmupTopics({
+      mood: 'relaxed',
+      eventType: '活动',
+      participantCount: 4,
+      vibe: 'balanced',
+      dedupeKey: 'shared-legacy-key',
     });
-    expect(a.data.map((t) => t.id)).toEqual(b.data.map((t) => t.id));
+
+    expect(later.data.map((topic) => [topic.id, topic.question])).toEqual(
+      baseline.map((topic) => [topic.id, topic.question]),
+    );
+  });
+
+  it('curated fallback honors exact and normalized avoid ID/question aliases without a dedupeKey', () => {
+    const result = getCuratedWarmupTopics('relaxed', 'balanced', {
+      avoidKeys: [
+        'id:w21',
+        'id:W6',
+        '描述一下你理想的周末，越具体越好',
+        '  明天要是突然不用上班, 第一件事做什么?  ',
+        'q:你一般怎么给自己充电',
+      ],
+    });
+
+    expect(result.map((topic) => topic.id)).not.toContain('w21');
+    expect(result.map((topic) => topic.id)).not.toContain('w6');
+    expect(result.map((topic) => topic.question)).not.toContain('描述一下你理想的周末，越具体越好');
+    expect(result.map((topic) => topic.question)).not.toContain('明天要是突然不用上班，第一件事做什么？');
+    expect(result.map((topic) => topic.question)).not.toContain('你一般怎么给自己"充电"？');
+  });
+
+  it('live generation filters exact and normalized avoidTopics aliases without a dedupeKey', async () => {
+    mockLlmTopics([
+      { id: 'exact-id', question: '全新的精确编号问题', mood: 'relaxed', depthLevel: 1 },
+      { id: 'fresh-exact-q', question: '精确问题文本', mood: 'relaxed', depthLevel: 1 },
+      { id: 'Legacy-ID', question: '全新的归一编号问题', mood: 'relaxed', depthLevel: 1 },
+      { id: 'fresh-normalized-q', question: '相同问题文本', mood: 'relaxed', depthLevel: 2 },
+      { id: 'fresh-brave', question: '最近有没有觉得累，却不好意思说出来的时刻？', mood: 'relaxed', depthLevel: 2, safety: 'reflective' },
+      { id: 'fresh-final', question: '周末有什么新的安排', mood: 'relaxed', depthLevel: 2 },
+    ]);
+
+    const result = await generateWarmupTopics({
+      mood: 'relaxed',
+      eventType: '活动',
+      participantCount: 4,
+      vibe: 'balanced',
+      avoidTopics: [
+        'id:exact-id',
+        '精确问题文本',
+        'id:legacy-id',
+        ' 相同, 问题文本？ ',
+      ],
+    });
+
+    expect(result.meta.fallbackUsed).toBe(false);
+    expect(result.data).toHaveLength(5);
+    expect(result.data.map((topic) => topic.id)).not.toContain('exact-id');
+    expect(result.data.map((topic) => topic.id)).not.toContain('Legacy-ID');
+    expect(result.data.map((topic) => topic.question)).not.toContain('精确问题文本');
+    expect(result.data.map((topic) => topic.question)).not.toContain('相同问题文本');
   });
 });
 

@@ -36,6 +36,9 @@ import { deriveAwayMemberNames } from './viewModels/rejoinCatchUpModel'
  * value and callback arrives via props; no hooks live here.
  */
 export interface SessionPhaseViewsProps {
+  /** Quiet Concierge: the shell owns the global skip-permission line. */
+  suppressWarmupPermissionLine?: boolean
+  onWarmupOverlayVisibilityChange?: (visible: boolean) => void
   phase: SessionPhase
   session: SocialSessionState | null
   participants: SessionParticipant[]
@@ -312,6 +315,8 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           isTestMode={session.isTestModeSkip ?? false}
           runBots={session.runBots ?? false}
           warmupTopicsMeta={session.warmupTopicsMeta}
+          suppressPermissionLine={props.suppressWarmupPermissionLine}
+          onOverlayVisibilityChange={props.onWarmupOverlayVisibilityChange}
           socialSessionId={socialSessionId ?? undefined}
           icebreakerSessionId={session.icebreakerSessionId}
           onAigcFeedbackTap={onAigcFeedbackTap}

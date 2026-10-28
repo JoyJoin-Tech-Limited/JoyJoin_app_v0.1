@@ -14,6 +14,7 @@ import {
   AUCTION_STARTING_COINS,
 } from '@shared/socialIcebreaker';
 import { getArchetypeHSL } from '@shared/archetypeColors';
+import { resolveRosterArchetype } from '@shared/personality/archetypeNames';
 import {
   generateMicroChallenges,
   generateLieDetectiveStatements,
@@ -253,11 +254,14 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
   const roster = await listParticipants(socialSessionId);
   // W5: only enrich with mood/energy/interest hooks when matching-aware is on,
   // so the flag-off call is byte-identical to pre-W5.
-  const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', false);
+  const matchingAware = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
   const result = await generateMicroChallenges({
     participantCount: roster.length || state.playerCount || 1,
     eventType: state.eventType || '活动',
-    roster: roster.map((p) => ({ archetype: p.archetype, interests: p.interests })),
+    roster: roster.map((p) => ({
+      archetype: resolveRosterArchetype(p.primaryArchetype, p.archetype) ?? p.archetype,
+      interests: p.interests,
+    })),
     // wave3 (AC-07): thread aggregate session highlights into the prompt.
     highlights: state.highlights,
     ...(matchingAware
