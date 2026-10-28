@@ -577,7 +577,8 @@ describe('archetype composition rules (W5)', () => {
         { archetype: '社牛柯基' },
         { archetype: '慢热龟' },
       ]),
-    ).toEqual({ 社牛柯基: 2, 慢热龟: 1 });
+      // Legacy Chinese display names normalise to canonical V4 ids (W1–W3).
+    ).toEqual({ corgi: 2, turtle: 1 });
     expect(buildArchetypeMix([{}, { archetype: '  ' }])).toBeUndefined();
   });
 
