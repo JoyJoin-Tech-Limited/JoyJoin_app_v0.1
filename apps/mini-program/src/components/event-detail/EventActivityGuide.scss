@@ -1,0 +1,151 @@
+@use '../../styles/variables' as *;
+
+// Quiet Concierge event guide — one optional summary row inside the existing
+// flow card. Body copy stays ≥24rpx and uses $color-text-secondary (4.5:1+ on
+// the card surface); the action uses primary-dark for the same contrast floor.
+// Motion is opacity/transform only: 250ms enter, 150ms exit, static under RM.
+.event-activity-guide {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+
+  &--rm {
+    .event-activity-guide__summary,
+    .event-activity-guide__chevron,
+    .event-activity-guide__steps {
+      animation: none;
+      transition: none;
+    }
+  }
+
+  &__title {
+    display: block;
+    margin-bottom: $spacing-xs;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-snug;
+  }
+
+  &__summary {
+    display: flex;
+    align-items: center;
+    min-height: 88rpx;
+    padding: $spacing-xs 0;
+    border-radius: 12rpx;
+    transition: background 0.12s ease;
+  }
+
+  &__summary--pressed {
+    background: rgba($color-primary, 0.06);
+  }
+
+  &__summary-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
+  &__action {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: $spacing-xs;
+    margin-left: $spacing-sm;
+  }
+
+  &__action-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-primary-dark;
+    line-height: $line-height-normal;
+  }
+
+  &__chevron {
+    flex-shrink: 0;
+    width: 16rpx;
+    height: 16rpx;
+    border-right: 3rpx solid $color-primary-dark;
+    border-bottom: 3rpx solid $color-primary-dark;
+    transform: rotate(45deg);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &--expanded {
+    .event-activity-guide__chevron {
+      transform: rotate(225deg);
+    }
+  }
+
+  &__steps {
+    padding-top: $spacing-xs;
+    animation: event-activity-guide-enter 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--exit {
+      animation: event-activity-guide-exit 0.15s ease-out both;
+    }
+  }
+
+  &__step {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-xs 0;
+  }
+
+  &__step-dot {
+    flex-shrink: 0;
+    width: 8rpx;
+    height: 8rpx;
+    margin-top: $spacing-sm;
+    border-radius: $radius-circle;
+    background: $color-primary;
+  }
+
+  &__step-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: $line-height-relaxed;
+  }
+
+  &__note {
+    display: block;
+    padding-top: $spacing-sm;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-activity-guide__summary,
+  .event-activity-guide__chevron,
+  .event-activity-guide__steps {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes event-activity-guide-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8rpx, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes event-activity-guide-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
