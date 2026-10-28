@@ -20,10 +20,29 @@ import type {
   SocialSessionState,
   XiaoyueAgentAsk,
   XiaoyueAgentReason,
+  XiaoyueAgentState,
 } from '@shared/socialIcebreaker';
 import { getXiaoyueAgentAskCopy } from '@shared/copy/icebreakerSession';
 
 const MINUTE_MS = 60_000;
+
+/**
+ * Fresh per-session agent ledger. Centralised so the poll runtime's candidate
+ * and Ask branches cannot drift when the state shape grows.
+ */
+export function createEmptyXiaoyueAgentState(): XiaoyueAgentState {
+  return {
+    policy: {
+      proactiveDisabled: false,
+      ignoredStreak: 0,
+      cooldownUntilByKind: {},
+      askCount: 0,
+      askCountByPhase: {},
+    },
+    agentLlmCallCount: 0,
+    agentEstimatedCostYuan: 0,
+  };
+}
 
 export const XIAOYUE_AGENT_DEFAULT_CONFIG = {
   sameKindCooldownMs: 10 * MINUTE_MS,

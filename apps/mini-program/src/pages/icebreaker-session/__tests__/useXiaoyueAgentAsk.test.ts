@@ -130,6 +130,48 @@ describe('useXiaoyueAgentAsk — presentation state machine', () => {
     expect(result.current.view?.hint).toContain('当前话题保留')
   })
 
+  it('keeps unknown when a succeeded response arrives late and never applies that late snapshot', async () => {
+    vi.useFakeTimers()
+    let resolveRequest!: (value: any) => void
+    api.request.mockImplementation(() => new Promise((resolve) => {
+      resolveRequest = resolve
+    }))
+    const applySessionState = vi.fn()
+    const { result } = renderHook((props) => useXiaoyueAgentAsk(props), {
+      initialProps: { ...baseProps, applySessionState },
+    })
+    act(() => {
+      void result.current.accept()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(6_001)
+    })
+    expect(result.current.view?.stage).toBe('unknown')
+
+    const agent = makeSession().xiaoyueAgent!
+    const committed = makeSession({
+      warmupTopicSetRevision: 2,
+      xiaoyueAgent: {
+        ...agent,
+        ask: { ...agent.ask!, status: 'succeeded' as const },
+      },
+    })
+    await act(async () => {
+      resolveRequest({ status: 'succeeded', topicSetRevision: 2, state: committed })
+      await Promise.resolve()
+    })
+
+    expect(applySessionState).not.toHaveBeenCalled()
+    expect(result.current.view?.stage).toBe('unknown')
+    expect(result.current.visible).toBe(true)
+    expect(api.request.mock.calls[0][0]).toMatchObject({ timeout: 6_500 })
+    await act(async () => {
+      vi.advanceTimersByTime(1_000)
+    })
+    expect(result.current.view?.stage).toBe('unknown')
+    expect(result.current.visible).toBe(true)
+  })
+
   it('renders success only from a server-confirmed response and applies its state', async () => {
     const next = makeSession({ warmupTopicSetRevision: 2 })
     api.request.mockResolvedValue({ status: 'succeeded', topicSetRevision: 2, state: next })

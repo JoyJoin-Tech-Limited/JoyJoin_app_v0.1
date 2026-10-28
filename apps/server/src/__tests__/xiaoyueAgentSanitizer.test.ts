@@ -83,6 +83,7 @@ function makeState(agent: XiaoyueAgentState | undefined = makeAgent()): SocialSe
     warmupTopicSetUpdatedAt: NOW - 20_000,
     warmupTopicAdvancedAt: NOW - 10_000,
     warmupTopicSetProvenance: 'host_manual',
+    servedTopicKeys: ['id:t1', 'q:Q1', 'q:Historical server-only question'],
     xiaoyueAgent: agent,
   };
 }
@@ -138,6 +139,15 @@ describe('sanitizeStateForClient — Xiaoyue Agent host boundary (AC-03/SEC-01)'
     expect(original.xiaoyueAgent?.ask?.id).toBe('ask_sensitive');
   });
 
+  it.each(['host', 'participant', undefined])('servedTopicKeys stay server-only for %s', (requester) => {
+    const original = makeState();
+    const projected = sanitizeStateForClient(original, requester);
+
+    expect(projected).not.toHaveProperty('servedTopicKeys');
+    expect(JSON.stringify(projected)).not.toContain('Historical server-only question');
+    expect(original.servedTopicKeys).toContain('q:Historical server-only question');
+  });
+
   it('legacy state with no agent or revision metadata remains safe and backward compatible', () => {
     const legacy = makeState(undefined);
     legacy.warmupTopicSetRevision = undefined;
@@ -162,7 +172,9 @@ describe('sanitizeStateForClient — Xiaoyue Agent host boundary (AC-03/SEC-01)'
 
     expect(host.xiaoyueAgent?.ask?.status).toBe('pending');
     expect(host.xiaoyueAgent?.agentEstimatedCostYuan).toBe(0.199);
+    expect(host).not.toHaveProperty('servedTopicKeys');
     expect(participant).not.toHaveProperty('xiaoyueAgent');
+    expect(participant).not.toHaveProperty('servedTopicKeys');
     expectRevisionFields(participant);
     expect(JSON.stringify(participant)).not.toContain('agentLlmCallCount');
   });

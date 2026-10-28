@@ -16,9 +16,16 @@ import {
   generateXiaoyueSessionPack,
 } from '../socialIcebreakerAIService';
 import { generateXiaoyueAdaptiveSuggestion } from '../xiaoyueAdaptiveEngine';
-import { PHASE_CONFIG } from '@shared/socialIcebreaker';
+import { PHASE_CONFIG, type SocialSessionState } from '@shared/socialIcebreaker';
+import { resolveRosterArchetype } from '@shared/personality/archetypeNames';
 import { applyXiaoyueAgentAskDecision } from '../lib/xiaoyueAgentPolicy';
-import { executeWarmupTopicRotation } from '../lib/xiaoyueAgentActions';
+import {
+  AGENT_ACTION_DEADLINE_EXCEEDED,
+  AGENT_ACTION_DEADLINE_MS,
+  executeWarmupTopicRotation,
+  isAgentActionDeadlineError,
+  runWithAgentActionDeadline,
+} from '../lib/xiaoyueAgentActions';
 import { updateSessionAtomic } from '../lib/socialIcebreakerStore';
 import { appendSocialAgentEvent } from '../repositories/socialAgentEventsRepo';
 import { logger } from '../lib/logger';
@@ -73,7 +80,7 @@ router.post('/:socialSessionId/xiaoyue/session-pack', async (req: Request, res: 
       participants: roster.map((p) => ({
         userId: p.userId,
         displayName: p.displayName,
-        archetype: p.archetype ?? undefined,
+        archetype: resolveRosterArchetype(p.primaryArchetype, p.archetype) ?? undefined,
       })),
       eventType: state.eventType,
       playerCount: Math.max(state.playerCount, roster.length || 1),
@@ -165,6 +172,12 @@ function agentError(res: Response, status: number, code: string) {
   return res.status(status).json({ code, error: code });
 }
 
+function agentDeadlineUnknown(res: Response) {
+  // No replacement snapshot is fabricated when route reads themselves timed
+  // out. The client keeps its old deck and explicitly resyncs committed state.
+  return res.json({ status: 'unknown', code: AGENT_ACTION_DEADLINE_EXCEEDED });
+}
+
 router.post('/:socialSessionId/xiaoyue/agent/decision', icebreakerAgentLimiter, async (req: Request, res: Response) => {
   const paramsParse = socialSessionIdParamSchema.safeParse(req.params);
   if (!paramsParse.success) return agentError(res, 400, 'INVALID_SOCIAL_SESSION_ID');
@@ -180,12 +193,43 @@ router.post('/:socialSessionId/xiaoyue/agent/decision', icebreakerAgentLimiter, 
     return agentError(res, 400, 'IDEMPOTENCY_KEY_REQUIRED');
   }
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return agentError(res, 403, 'AGENT_NOT_HOST');
+  // Accepted actions share one absolute budget with every route read and the
+  // domain action. Other decision branches retain their existing behavior.
+  const acceptedDeadlineAtMs = decision === 'accepted'
+    ? Date.now() + AGENT_ACTION_DEADLINE_MS
+    : undefined;
+  let state: SocialSessionState | null;
+  let hostAuthorized = false;
+  try {
+    state = acceptedDeadlineAtMs
+      ? await runWithAgentActionDeadline(
+          acceptedDeadlineAtMs,
+          () => resolveSession(socialSessionId, res),
+        )
+      : await resolveSession(socialSessionId, res);
+    if (state) {
+      const resolvedState = state;
+      hostAuthorized = acceptedDeadlineAtMs
+        ? await runWithAgentActionDeadline(
+            acceptedDeadlineAtMs,
+            () => isHostAuthorized(resolvedState, userId, socialSessionId),
+          )
+        : await isHostAuthorized(resolvedState, userId, socialSessionId);
+    }
+  } catch (error) {
+    if (decision === 'accepted' && isAgentActionDeadlineError(error)) {
+      logger.warn('[XiaoyueAgent] accepted route reads exceeded the shared action deadline', {
+        socialSessionId,
+        askId,
+        deadlineAtMs: acceptedDeadlineAtMs,
+      });
+      if (res.headersSent) return;
+      return agentDeadlineUnknown(res);
+    }
+    throw error;
   }
+  if (!state) return;
+  if (!hostAuthorized) return agentError(res, 403, 'AGENT_NOT_HOST');
 
   const ask = state.xiaoyueAgent?.ask;
   if (!ask || ask.id !== askId) return agentError(res, 400, 'AGENT_ASK_NOT_FOUND');
@@ -197,21 +241,38 @@ router.post('/:socialSessionId/xiaoyue/agent/decision', icebreakerAgentLimiter, 
   }
 
   if (decision === 'accepted') {
-    const outcome = await executeWarmupTopicRotation({
-      state,
-      socialSessionId,
-      userId,
-      askId,
-      idempotencyKey: idempotencyKey!,
-    });
-    return res.json({
-      status: outcome.status,
-      ...(outcome.topicSetRevision !== undefined
-        ? { topicSetRevision: outcome.topicSetRevision }
-        : {}),
-      ...(outcome.errorCode ? { code: outcome.errorCode } : {}),
-      state: await buildClientState(outcome.state, userId),
-    });
+    try {
+      const outcome = await executeWarmupTopicRotation({
+        state,
+        socialSessionId,
+        userId,
+        askId,
+        idempotencyKey: idempotencyKey!,
+        deadlineAtMs: acceptedDeadlineAtMs!,
+      });
+      const clientState = await runWithAgentActionDeadline(
+        acceptedDeadlineAtMs!,
+        () => buildClientState(outcome.state, userId),
+      );
+      return res.json({
+        status: outcome.status,
+        ...(outcome.topicSetRevision !== undefined
+          ? { topicSetRevision: outcome.topicSetRevision }
+          : {}),
+        ...(outcome.errorCode ? { code: outcome.errorCode } : {}),
+        state: clientState,
+      });
+    } catch (error) {
+      if (isAgentActionDeadlineError(error)) {
+        logger.warn('[XiaoyueAgent] accepted route projection exceeded the shared action deadline', {
+          socialSessionId,
+          askId,
+          deadlineAtMs: acceptedDeadlineAtMs,
+        });
+        return agentDeadlineUnknown(res);
+      }
+      throw error;
+    }
   }
 
   let applied = false;

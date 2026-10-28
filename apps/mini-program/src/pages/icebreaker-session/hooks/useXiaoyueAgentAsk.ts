@@ -22,6 +22,7 @@ const shownAskIds = new Set<string>()
 
 const SLOW_HINT_MS = 4_000
 const UNKNOWN_AT_MS = 6_000
+const ACCEPT_REQUEST_TIMEOUT_MS = 6_500
 const SUCCESS_DWELL_MS = 240
 const SUCCESS_EXIT_MS = 120
 
@@ -185,9 +186,13 @@ export function useXiaoyueAgentAsk({
         path: `/api/social-icebreaker/${socialSessionId}/xiaoyue/agent/decision`,
         method: 'POST',
         data: { askId: ask.id, decision: 'accepted', idempotencyKey },
-        timeout: 12_000,
+        timeout: ACCEPT_REQUEST_TIMEOUT_MS,
       })
-      if (response.state) applySessionState?.(response.state)
+      // The 6s unknown state is terminal for this request. A late response may
+      // describe a real commit, but only an explicit resync/poll may reconcile
+      // it; never flip this card to success or apply its stale snapshot here.
+      const responseIsLate = stageRef.current === 'unknown' || Date.now() - startedAt >= UNKNOWN_AT_MS
+      if (!responseIsLate && response.state) applySessionState?.(response.state)
       socialIcebreakerAnalytics.track(
         'agent_action_result',
         socialSessionId,
@@ -203,7 +208,9 @@ export function useXiaoyueAgentAsk({
         },
       )
 
-      if (response.status === 'succeeded') {
+      if (responseIsLate) {
+        setStageSafe('unknown')
+      } else if (response.status === 'succeeded') {
         setStageSafe('success')
         const dwell = setTimeout(() => {
           setExiting(true)

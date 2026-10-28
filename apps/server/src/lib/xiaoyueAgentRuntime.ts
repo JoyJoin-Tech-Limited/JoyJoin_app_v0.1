@@ -10,7 +10,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
-import { applyXiaoyueAgentAskDecision, decideAgentTick } from './xiaoyueAgentPolicy';
+import { applyXiaoyueAgentAskDecision, createEmptyXiaoyueAgentState, decideAgentTick } from './xiaoyueAgentPolicy';
 import { updateSessionAtomic } from './socialIcebreakerStore';
 import { appendSocialAgentEvent } from '../repositories/socialAgentEventsRepo';
 import { appendDueRecoverySnapshots } from './xiaoyueAgentRecovery';
@@ -48,17 +48,7 @@ export async function runXiaoyueAgentTick(input: {
     if (decision.type === 'mark_candidate') {
       const atomic = await updateSessionAtomic(socialSessionId, (latest) => {
         if (latest.currentPhase !== 'warmup' || latest.xiaoyueAgent?.ask) return false;
-        const agent = latest.xiaoyueAgent ?? {
-          policy: {
-            proactiveDisabled: false,
-            ignoredStreak: 0,
-            cooldownUntilByKind: {},
-            askCount: 0,
-            askCountByPhase: {},
-          },
-          agentLlmCallCount: 0,
-          agentEstimatedCostYuan: 0,
-        };
+        const agent = latest.xiaoyueAgent ?? createEmptyXiaoyueAgentState();
         latest.xiaoyueAgent = {
           ...agent,
           candidate: { key: decision.key, since: decision.since },
@@ -127,17 +117,7 @@ export async function runXiaoyueAgentTick(input: {
         (latest) => {
           if (latest.currentPhase !== 'warmup') return false;
           if (latest.xiaoyueAgent?.ask) return false;
-          const agent = latest.xiaoyueAgent ?? {
-            policy: {
-              proactiveDisabled: false,
-              ignoredStreak: 0,
-              cooldownUntilByKind: {},
-              askCount: 0,
-              askCountByPhase: {},
-            },
-            agentLlmCallCount: 0,
-            agentEstimatedCostYuan: 0,
-          };
+          const agent = latest.xiaoyueAgent ?? createEmptyXiaoyueAgentState();
           const ask = {
             ...decision.draft,
             id: askId,
