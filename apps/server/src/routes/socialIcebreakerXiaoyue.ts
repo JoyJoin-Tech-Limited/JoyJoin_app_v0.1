@@ -178,6 +178,11 @@ function agentDeadlineUnknown(res: Response) {
   return res.json({ status: 'unknown', code: AGENT_ACTION_DEADLINE_EXCEEDED });
 }
 
+// Throttled by icebreakerAgentLimiter (20 requests per minute per user, see
+// rateLimiter.ts). CodeQL's js/missing-rate-limiting only models
+// express-rate-limit-shaped middleware, cannot see this custom limiter, and
+// ignores inline suppression comments here, so the finding is dismissed as a
+// false positive on GitHub instead.
 router.post('/:socialSessionId/xiaoyue/agent/decision', icebreakerAgentLimiter, async (req: Request, res: Response) => {
   const paramsParse = socialSessionIdParamSchema.safeParse(req.params);
   if (!paramsParse.success) return agentError(res, 400, 'INVALID_SOCIAL_SESSION_ID');
