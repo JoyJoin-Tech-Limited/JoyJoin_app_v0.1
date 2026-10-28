@@ -41,7 +41,7 @@ import {
   writeGroupSeatBaseline,
 } from '../../lib/matching/groupSeatVacancy'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
-import { formatDateTime } from '../../lib/matching/groupDisplay'
+import { formatEventFactDateTime } from '../../lib/utils/eventDisplay'
 import {
   generateGroupRevealPoster,
   GROUP_REVEAL_CANVAS_ID,
@@ -257,7 +257,7 @@ export default function PoolGroupDetailPage() {
         groupNumber: group.groupNumber ?? undefined,
         eventType: pool.eventType || '悦聚活动',
         venueName: group.venueName || undefined,
-        dateTimeText: formatDateTime(group.finalDateTime ?? pool.dateTime),
+        dateTimeText: formatEventFactDateTime(group.finalDateTime ?? pool.dateTime),
         members: members.map((m) => ({
           displayName: getMemberName(m),
           archetype: m.archetype || undefined,
@@ -309,9 +309,12 @@ export default function PoolGroupDetailPage() {
   }
 
   const { group, pool } = poolGroup
-  const locationText = [group.venueName, group.venueAddress].filter(Boolean).join(' ')
+  const isVenuePending = group.venueAssignmentStatus === 'unassigned'
+  const venueName = group.venueName?.trim() ?? ''
+  const venueAddress = group.venueAddress?.trim() ?? ''
+  const locationText = isVenuePending ? '' : [venueName, venueAddress].filter(Boolean).join(' ')
 
-  const handleCopyAddressForNavigation = () => {
+  const handleCopyAddress = () => {
     if (!locationText) {
       return
     }
@@ -320,7 +323,10 @@ export default function PoolGroupDetailPage() {
     Taro.setClipboardData({
       data: locationText,
       success: () => {
-        Taro.showToast({ title: '地址已复制，请到地图应用导航', icon: 'none', duration: TOAST_MEDIUM_MS })
+        Taro.showToast({ title: '地址已复制，去地图粘贴搜索', icon: 'none', duration: TOAST_MEDIUM_MS })
+      },
+      fail: () => {
+        Taro.showToast({ title: '复制失败，请稍后再试', icon: 'none', duration: TOAST_MEDIUM_MS })
       },
     })
   }
@@ -391,7 +397,7 @@ export default function PoolGroupDetailPage() {
             <Text className='pool-group-detail__info-label'>时间</Text>
           </View>
           <Text className='pool-group-detail__info-value'>
-            {formatDateTime(group.finalDateTime ?? pool.dateTime)}
+            {formatEventFactDateTime(group.finalDateTime ?? pool.dateTime)}
           </Text>
         </View>
         <View className='pool-group-detail__info-row'>
@@ -400,7 +406,7 @@ export default function PoolGroupDetailPage() {
             <Text className='pool-group-detail__info-label'>地点</Text>
           </View>
           <Text className='pool-group-detail__info-value'>
-            {group.venueName || (group.venueAssignmentStatus === 'unassigned' ? '地点待定' : [pool.city, pool.district].filter(Boolean).join(' · ') || '待公布')}
+            {isVenuePending ? '地点待定' : venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
           </Text>
         </View>
         <View className='pool-group-detail__info-row'>
@@ -426,14 +432,13 @@ export default function PoolGroupDetailPage() {
         </Card>
       ) : null}
 
-      {group.venueName ? (
+      {locationText ? (
         <Card className='pool-group-detail__card' aria-label='场地信息'>
           <Text className='pool-group-detail__card-title'>地点信息</Text>
           <View className='pool-group-detail__info-row'>
             <Text className='pool-group-detail__info-label'><JoyJoinIcon emoji='🏠' size={24} /> 地址</Text>
             <Text className='pool-group-detail__info-value'>
-              {group.venueName}
-              {group.venueAddress ? `\n${group.venueAddress}` : ''}
+              {[venueName, venueAddress].filter(Boolean).join('\n')}
             </Text>
           </View>
           {pool.city ? (
@@ -445,10 +450,10 @@ export default function PoolGroupDetailPage() {
             </View>
           ) : null}
           <View className='pool-group-detail__map-actions'>
-            <Button onClick={handleCopyAddressForNavigation}><JoyJoinIcon emoji='🗺️' size={24} /> 复制地址去导航</Button>
+            <Button onClick={handleCopyAddress}><JoyJoinIcon emoji='🗺️' size={24} /> 复制地址</Button>
           </View>
         </Card>
-      ) : group.venueAssignmentStatus === 'unassigned' ? (
+      ) : isVenuePending ? (
         <Card className='pool-group-detail__card pool-group-detail__card--tbd'>
           <View className='pool-group-detail__tbd-header'>
             <Image

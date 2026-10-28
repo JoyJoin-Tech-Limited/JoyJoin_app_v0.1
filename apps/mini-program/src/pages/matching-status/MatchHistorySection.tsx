@@ -4,7 +4,7 @@ import type { PoolRegistrationSummary } from '@shared/api'
 import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import { formatDateTime } from '../../lib/matching/groupDisplay'
+import { formatEventFactDateTime } from '../../lib/utils/eventDisplay'
 
 interface MatchHistorySectionProps {
   matches: PoolRegistrationSummary[]
@@ -57,11 +57,9 @@ export default function MatchHistorySection({
                 <Text className='matching-status__history-card-title'>
                   {match.poolTitle ?? match.poolEventType ?? '活动'}
                 </Text>
-                {dateLabel ? (
-                  <Text className='matching-status__history-card-date'>
-                    {formatDateTime(dateLabel)}
-                  </Text>
-                ) : null}
+                <Text className='matching-status__history-card-date'>
+                  {formatEventFactDateTime(dateLabel)}
+                </Text>
                 {match.poolEventType || match.poolCity ? (
                   <Text className='matching-status__history-card-meta'>
                     {[match.poolEventType, match.poolCity].filter(Boolean).join(' · ')}

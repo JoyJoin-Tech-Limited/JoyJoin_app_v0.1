@@ -19,7 +19,7 @@ import {
 } from './MatchingStatusSections'
 import { MatchCompassShell } from './MatchCompassSections'
 import { haptics } from '../../lib/utils/haptics'
-import { formatDateTime } from '../../lib/matching/groupDisplay'
+import { formatEventFactDateTime } from '../../lib/utils/eventDisplay'
 import { useAuth } from '../../hooks/useAuth'
 import {
   MATCHING_NO_MATCH_HERO_SRC,
@@ -259,7 +259,7 @@ export default function MatchingStatusPage() {
                     {pool.district ? ` ${pool.district}` : ''}
                   </Text>
                   <Text className='matching-status__similar-meta'>
-                    {formatDateTime(pool.dateTime)}
+                    {formatEventFactDateTime(pool.dateTime)}
                     {typeof pool.registrationCount === 'number'
                       ? ` · 已有 ${pool.registrationCount} 人入座`
                       : ''}

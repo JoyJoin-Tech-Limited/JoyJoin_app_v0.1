@@ -34,7 +34,7 @@ vi.mock('../../../lib/analytics/discoverAnalytics', () => ({
   discoverAnalytics: { track: vi.fn() },
 }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
-vi.mock('../../../lib/matching/groupDisplay', () => ({ formatDateTime: () => '10月24日 19:30' }))
+vi.mock('../../../lib/utils/eventDisplay', () => ({ formatEventFactDateTime: () => '10月24日 周六 19:30' }))
 
 const pool = {
   id: 'pool-1',

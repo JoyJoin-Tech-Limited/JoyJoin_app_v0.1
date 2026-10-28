@@ -551,7 +551,7 @@ export function MatchingStatusLiveOverlay({
               </ScrollView>
 
               <Button className='matching-status__overlay-button' onClick={onContinueFromMembers}>
-                {persistedThemeSummary ? '看看今晚主题' : '前往完整详情'}
+                {persistedThemeSummary ? '看看今晚主题' : '查看活动详情'}
               </Button>
             </>
           )}
@@ -593,7 +593,7 @@ export function MatchingStatusLiveOverlay({
             主题已经落定，下一页继续看完整时间、地点和这桌的出席安排。
           </Text>
           <Button className='matching-status__overlay-button' onClick={onFinishLiveJourney}>
-            {resolvedGroupId ? '查看完整活动详情' : '继续前往下一步'}
+            {resolvedGroupId ? '查看活动详情' : '继续前往下一步'}
           </Button>
         </View>
       ) : null}

@@ -61,3 +61,27 @@ describe('pool-group-detail deck strip composition', () => {
     expect(scssSource).toContain('@keyframes pgd-deck-hint-pulse')
   })
 })
+
+describe('pool-group-detail event facts', () => {
+  it('uses the shared absolute formatter for the visible time and poster', () => {
+    expect(pageSource).toContain("import { formatEventFactDateTime } from '../../lib/utils/eventDisplay'")
+    expect(pageSource).toContain('formatEventFactDateTime(group.finalDateTime ?? pool.dateTime)')
+    expect(pageSource).not.toContain("from '../../lib/matching/groupDisplay'")
+  })
+
+  it('copies the available venue facts with honest success and failure feedback', () => {
+    expect(pageSource).toContain("[venueName, venueAddress].filter(Boolean).join(' ')")
+    expect(pageSource).toContain("title: '地址已复制，去地图粘贴搜索'")
+    expect(pageSource).toContain("title: '复制失败，请稍后再试'")
+    expect(pageSource).toContain('<Button onClick={handleCopyAddress}>')
+    expect(pageSource).toContain('复制地址</Button>')
+    expect(pageSource).not.toContain('复制地址去导航')
+  })
+
+  it('suppresses the copy surface while the venue is pending', () => {
+    expect(pageSource).toContain("const isVenuePending = group.venueAssignmentStatus === 'unassigned'")
+    expect(pageSource).toContain("const locationText = isVenuePending ? '' :")
+    expect(pageSource).toContain('{locationText ? (')
+    expect(pageSource).toContain(') : isVenuePending ? (')
+  })
+})

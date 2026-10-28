@@ -17,7 +17,6 @@ import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { interactionLatency } from '../../lib/analytics/interactionLatency'
 import { useOptimisticRegistration, getEntitlementCode, isAlreadyRegisteredError, describeSubmitError, resolveMessage } from '../../hooks/useOptimisticRegistration'
-import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
   buildPoolRegistrationPaymentReturnContext,
   type MiniProgramPoolRegistrationReturnContext,
@@ -41,7 +40,7 @@ import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
 import { shouldShowFlow } from '../../components/flow-animation/FlowStorage'
-import { formatEventDateTime } from '../../lib/utils/eventDisplay'
+import { formatEventFactDateTime } from '../../lib/utils/eventDisplay'
 
 import {
   buildFallbackBrief,
@@ -381,7 +380,7 @@ export default function PoolRegistrationPage() {
   }, [pool?.city, pool?.district])
 
   const poolDateTimeLabel = useMemo(
-    () => formatDateTime(pool?.dateTime),
+    () => formatEventFactDateTime(pool?.dateTime),
     [pool?.dateTime],
   )
 
@@ -1080,7 +1079,7 @@ export default function PoolRegistrationPage() {
         userId={user?.id}
         facts={{
           title: pool.title,
-          dateLabel: formatEventDateTime(pool.dateTime),
+          dateLabel: formatEventFactDateTime(pool.dateTime),
           district: poolArea,
           typeLabel: eventType,
         }}
