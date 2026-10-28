@@ -6,9 +6,9 @@ import { fetchShareQrCodeImage } from '../referral/shareQrCode'
 import { haptics } from '../utils/haptics'
 import { logError } from '../utils/logger'
 import {
-  generateProfileCardPoster,
-  type ProfileCardPosterInput,
-} from '../profile/profileCardPoster'
+  generateProfileCardWithFallback,
+  type ShareableProfileCard,
+} from './profileCardShareFallback'
 
 /**
  * Profile card share action layer (P2-3, 2026-10-22 — PM memo §8).
@@ -22,7 +22,9 @@ import {
 export interface UseProfileCardShareInput {
   /** Entry hidden/disabled → taps are ignored. */
   enabled: boolean
-  card: Omit<ProfileCardPosterInput, 'qrCodeImagePath'>
+  card: ShareableProfileCard
+  /** Optional simpler poster used when the fully equipped card cannot render. */
+  fallbackCard?: ShareableProfileCard
 }
 
 export interface UseProfileCardShareResult {
@@ -35,7 +37,7 @@ type TaroWithShareImageMenu = typeof Taro & {
 }
 
 export function useProfileCardShare(input: UseProfileCardShareInput): UseProfileCardShareResult {
-  const { enabled, card } = input
+  const { enabled, card, fallbackCard } = input
   const [isGenerating, setIsGenerating] = useState(false)
   const isGeneratingRef = useRef(false)
   // Leave-page race guard: generation may settle while the page is hidden
@@ -141,10 +143,10 @@ export function useProfileCardShare(input: UseProfileCardShareInput): UseProfile
       setIsGenerating(true)
 
       qrCodeImagePath = await fetchShareQrCodeImage()
-      const filePath = await generateProfileCardPoster({
+      const { filePath } = await generateProfileCardWithFallback({
         ...card,
         qrCodeImagePath,
-      })
+      }, fallbackCard)
       profileAnalytics.track('profile_share_card_generated', {
         hasQr: Boolean(qrCodeImagePath),
         source,
@@ -173,7 +175,7 @@ export function useProfileCardShare(input: UseProfileCardShareInput): UseProfile
         }
       }
     }
-  }, [enabled, card, presentShareOptions])
+  }, [enabled, card, fallbackCard, presentShareOptions])
 
   return { isGenerating, handleShare }
 }
