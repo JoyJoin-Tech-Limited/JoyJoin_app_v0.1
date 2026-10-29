@@ -1229,7 +1229,7 @@ export default function PoolRegistrationPage() {
       {resumeContext ? (
         <PoolRegistrationResumeCard
           context={resumeContext}
-          selectedBudget={selectedBudget}
+          selectedBudget={selectedBudgetLabel}
           intentCount={formState.eventIntent.length}
           eventType={eventType}
         />

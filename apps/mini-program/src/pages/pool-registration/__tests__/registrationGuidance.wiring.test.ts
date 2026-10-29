@@ -32,4 +32,12 @@ describe('pool-registration Xiaoyue guidance wiring', () => {
     expect(stepEffect).not.toContain('budgetReactionShownRef.current = false')
     expect(stepEffect).not.toContain('intentReactionShownRef.current = false')
   })
+
+  it('passes the human-readable budget label to the recovery card', () => {
+    const resumeCard = source.indexOf('<PoolRegistrationResumeCard')
+    expect(resumeCard).toBeGreaterThan(-1)
+    const props = source.slice(resumeCard, resumeCard + 400)
+    expect(props).toContain('selectedBudget={selectedBudgetLabel}')
+    expect(props).not.toContain('selectedBudget={selectedBudget}')
+  })
 })
