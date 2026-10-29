@@ -5,6 +5,10 @@ import { describe, expect, it } from 'vitest'
 const sourceRoot = resolve(process.cwd(), 'src')
 const appRoot = resolve(process.cwd())
 const repoRoot = resolve(appRoot, '../..')
+// 2026-10-29 main-package split: the story rules moved out of `flash.scss` into
+// `flash-story.scss` (see docs/package-size/main-package-css-split-plan.md), and
+// the dialogue page's runtime asset imports moved into the CSS-free
+// `FlashDialoguePage.tsx` page module. These contracts follow the rules.
 const arrivalAssetNames = [
   'flash-atuan-park-clean-v3.jpg',
   'flash-atuan-character-lowpoly-v3.png',
@@ -21,7 +25,7 @@ describe('Atuan first-arrival asset ownership', () => {
   })
 
   it('loads the scene and both highlight layers from the Alang dialogue subpackage', () => {
-    const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
+    const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/FlashDialoguePage.tsx'), 'utf8')
 
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-park-clean-v3.jpg")
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-lowpoly-v3.png")
@@ -51,7 +55,7 @@ describe('Atuan first-arrival asset ownership', () => {
   })
 
   it('gives the all-absolute Atuan arrival stage a viewport-height fallback chain', () => {
-    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash-story.scss'), 'utf8')
     const storyShell = flashStyles.match(/\.flash-dialogue--story\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
     const storyStage = flashStyles.match(/\.flash-dialogue__story-stage\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
 
@@ -63,7 +67,7 @@ describe('Atuan first-arrival asset ownership', () => {
   })
 
   it('keeps Atuan human-scaled and the conversation copy readable on a phone', () => {
-    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash-story.scss'), 'utf8')
     const conversationScene = flashStyles.slice(
       flashStyles.indexOf('.atuan-conversation-scene {'),
       flashStyles.indexOf('.flash-dialogue__story-stage--atuan-first', flashStyles.indexOf('.atuan-conversation-scene {')),
@@ -86,7 +90,7 @@ describe('Atuan first-arrival asset ownership', () => {
   })
 
   it('uses dark copy tokens for the Atuan result panel on its light surface', () => {
-    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash-story.scss'), 'utf8')
 
     expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-season\s*\{\s*color:\s*\$color-primary-dark;/)
     expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-title\s*\{\s*color:\s*\$color-text-primary-warm;/)
@@ -94,7 +98,7 @@ describe('Atuan first-arrival asset ownership', () => {
   })
 
   it('keeps every settled-story exit visible without a native result scroller', () => {
-    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash-story.scss'), 'utf8')
 
     expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result\s*\{[^}]*bottom:\s*calc\(112rpx \+ env\(safe-area-inset-bottom\)\);[^}]*height:\s*auto;[^}]*overflow:\s*hidden;/s)
     expect(flashStyles).not.toMatch(/\.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-scroll\s*\{/)
@@ -107,7 +111,7 @@ describe('Atuan first-arrival asset ownership', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
     const packageSizeScript = readFileSync(resolve(appRoot, 'scripts/check-package-size.mjs'), 'utf8')
-    const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
+    const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/FlashDialoguePage.tsx'), 'utf8')
     const laterActPage = readFileSync(resolve(sourceRoot, 'pages/alang-story/dialogue/index.tsx'), 'utf8')
     const buildConfig = readFileSync(resolve(appRoot, 'config/index.ts'), 'utf8')
     const buildWorkflow = readFileSync(resolve(repoRoot, '.github/workflows/taro-weapp-build.yml'), 'utf8')

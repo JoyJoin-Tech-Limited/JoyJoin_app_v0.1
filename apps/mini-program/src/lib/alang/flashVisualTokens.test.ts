@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest'
 
 const sourceRoot = resolve(process.cwd(), 'src')
 const variablesSource = readFileSync(resolve(sourceRoot, 'styles/_variables.scss'), 'utf8')
-const flashScssSource = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+const flashScssSource = [
+  // The Flash stylesheets were split on 2026-10-29 to shrink the WeChat main
+  // package (`flash.scss` shell + `flash-story.scss` story rules), so the token
+  // hygiene contract has to read both or it silently stops covering half the
+  // surface. See docs/package-size/main-package-css-split-plan.md.
+  readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8'),
+  readFileSync(resolve(sourceRoot, 'pages/alang/flash-story.scss'), 'utf8'),
+].join('\n')
 
 function readHexToken(name: string): string {
   const match = variablesSource.match(new RegExp(`\\$${name}:\\s*(#[0-9A-Fa-f]{6})`))
@@ -79,7 +86,7 @@ describe('Flash readable color tokens', () => {
     ].join('\n')
     const badgeConsumers = [
       readFileSync(resolve(sourceRoot, 'components/alang/FlashUi.tsx'), 'utf8'),
-      readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8'),
+      readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/FlashDialoguePage.tsx'), 'utf8'),
       companionSource,
     ].join('\n')
 
