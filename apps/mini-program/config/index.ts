@@ -356,11 +356,13 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         },
         // Squad-unboxing composed-hero fallback — bundled locally (~19KB) so the
         // ready-state Xiaoyue host never paints a blank skeleton when the CDN is
-        // unreachable. The CDN-primary hero (squad-host-xiaoyue.webp) stays
-        // CDN-only and is wiped by the clean:cdn-assets step.
+        // unreachable. Lives in the squad-unboxing subpackage (2026-10-29): it is
+        // the only surface that renders it, and the main package is at its
+        // WeChat source-size ceiling. The CDN-primary hero (squad-host-xiaoyue.webp)
+        // stays CDN-only and is wiped by the clean:cdn-assets step.
         {
-          from: 'src/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
-          to: 'dist/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
+          from: 'src/pages/squad-unboxing/assets',
+          to: 'dist/pages/squad-unboxing/assets',
         },
         // Gathering-room composite art — ships with the gathering-room
         // subpackage (~175KB for both composites) so the room scene NEVER

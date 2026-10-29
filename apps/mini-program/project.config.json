@@ -152,6 +152,10 @@
       },
       {
         "type": "regexp",
+        "value": "pages/squad-unboxing/assets/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
         "value": "assets/qr/.*\\.(webp|png)$"
       },
       {

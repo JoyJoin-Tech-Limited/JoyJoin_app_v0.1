@@ -4,7 +4,9 @@ import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 
 const CDN_PATH = '/assets/lovart/squad/squad-host-xiaoyue.webp'
-const FALLBACK_PATH = '/assets/lovart/squad/squad-host-xiaoyue-fallback.webp'
+// Ships with the squad-unboxing subpackage: this is the only surface that
+// renders it, so keeping it in the main package bought nothing (2026-10-29).
+const FALLBACK_PATH = '/pages/squad-unboxing/assets/squad-host-xiaoyue-fallback.webp'
 
 type SrcStage = 'cdn' | 'local' | 'skeleton'
 
