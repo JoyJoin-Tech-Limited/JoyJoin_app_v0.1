@@ -133,6 +133,34 @@
     margin-bottom: $spacing-md;
   }
 
+  &__decision-note {
+    margin-bottom: $spacing-md;
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: rgba($color-primary, 0.05);
+    border: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__decision-benefit {
+    display: block;
+    @include type-label;
+    color: $color-text-primary;
+    line-height: $line-height-relaxed;
+  }
+
+  &__decision-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+  }
+
+  &__decision-fact {
+    @include type-caption;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
   &__reasons {
     display: flex;
     flex-wrap: wrap;

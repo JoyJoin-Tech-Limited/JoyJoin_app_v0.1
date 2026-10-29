@@ -122,9 +122,7 @@ export function canShowHostTableBrief(input: {
   hasBrief: boolean
   agentAskVisible: boolean
   adaptiveSuggestionVisible: boolean
-  tierSheetOpen: boolean
-  ritualOverlayVisible: boolean
-  hostMenuOpen?: boolean
+  highPriorityOverlayVisible: boolean
 }): boolean {
   return (
     input.phase === 'warmup' &&
@@ -132,9 +130,7 @@ export function canShowHostTableBrief(input: {
     input.hasBrief &&
     !input.agentAskVisible &&
     !input.adaptiveSuggestionVisible &&
-    !input.tierSheetOpen &&
-    !input.ritualOverlayVisible &&
-    !input.hostMenuOpen
+    !input.highPriorityOverlayVisible
   )
 }
 

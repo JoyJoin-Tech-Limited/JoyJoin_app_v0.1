@@ -32,6 +32,11 @@ import StatusCard from '../../../components/ui/StatusCard'
 import ReservationTicket from '../../../components/reservation/ReservationTicket'
 import RegistrationSuccessCeremony from '../../../components/reservation/RegistrationSuccessCeremony'
 import TicketPlanSelection, { type SelectedPlan } from './components/TicketPlanSelection'
+import XiaoyuePaymentReceipt, {
+  captureSameOrderReceipt,
+  type ConfirmedOrderReceiptSource,
+  type XiaoyuePaymentReceiptSnapshot,
+} from './components/XiaoyuePaymentReceipt'
 import RefundGuaranteeLine from './components/RefundGuaranteeLine'
 import DuoEntryLink from './components/DuoEntryLink'
 import IcebreakerInclusionSheet from '../../../components/event-ticket-payment/IcebreakerInclusionSheet'
@@ -105,6 +110,9 @@ export default function EventTicketPaymentPage() {
   const [poolId, setPoolId] = useState<string>('')
   const [returnContext, setReturnContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
   const [payment, setPayment] = useState<PaymentState>({ status: 'idle' })
+  // Same-order receipt snapshot: status-only confirmations carry no monetary
+  // provenance, so amount/plan/savings remain omitted by design.
+  const [successReceipt, setSuccessReceipt] = useState<XiaoyuePaymentReceiptSnapshot | null>(null)
   // Cancel-retention (Wave 1, 2026-08-05): first cancel shows a soft inline
   // note; the second cancel surfaces the retention sheet. Anti-nag — the
   // sheet dismisses once and stays dismissed for the session, and the counter
@@ -580,7 +588,14 @@ export default function EventTicketPaymentPage() {
       }
     }
 
-    const completeSuccess = (via: 'poll' | 'reconcile') => {
+    const completeSuccess = (
+      via: 'poll' | 'reconcile',
+      confirmedOrder: ConfirmedOrderReceiptSource,
+    ) => {
+      // Capture only what this confirmed order response proves. This state is
+      // not visible until the existing success gate (including VIP booking).
+      setSuccessReceipt(captureSameOrderReceipt(orderId, confirmedOrder))
+
       // D2 悦聚月卡: payment confirmed → activate-then-register orchestration.
       // The card is already active; booking the seat completes the promise.
       if (planAtPay === 'vip_monthly') {
@@ -631,7 +646,7 @@ export default function EventTicketPaymentPage() {
         })
 
         if (reconcileResp.status === 'completed') {
-          completeSuccess('reconcile')
+          completeSuccess('reconcile', reconcileResp)
           return
         }
       } catch (reconcileErr) {
@@ -668,7 +683,7 @@ export default function EventTicketPaymentPage() {
           })
 
           if (statusResp.status === 'completed') {
-            completeSuccess('poll')
+            completeSuccess('poll', statusResp)
             return
           }
 
@@ -718,6 +733,7 @@ export default function EventTicketPaymentPage() {
 
     try {
       haptics('medium')
+      setSuccessReceipt(null)
       setPayment({ status: 'creating' })
       discoverAnalytics.track('pay_start', undefined, {
         poolId,
@@ -1084,7 +1100,11 @@ export default function EventTicketPaymentPage() {
             onCtaClick={handleBackToEvents}
             ctaDisabled={isNavigating}
           >
-            <Text className='registration-ceremony__text'>{successSubtitle}</Text>
+            <XiaoyuePaymentReceipt
+              mode='paid'
+              receipt={successReceipt}
+              guidance={successSubtitle}
+            />
           </RegistrationSuccessCeremony>
         </ScrollView>
       </View>
@@ -1379,6 +1399,7 @@ export default function EventTicketPaymentPage() {
             discountAmount={discountAmount}
             finalPrice={finalPrice}
             bestCoupon={bestCoupon}
+            effectiveCouponCode={effectiveCouponCode}
             poolId={poolId}
             showWelcomeCouponHint={showWelcomeCouponHint}
             vipMonthlyPlan={vipMonthlyPlanView}

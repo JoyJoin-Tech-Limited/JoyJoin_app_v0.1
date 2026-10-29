@@ -24,6 +24,7 @@ import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import { buildHostTableBrief } from '../lib/hostTableBrief';
+import { getHostBriefRoleResults } from '../lib/hostBriefRoleResultsMemo';
 import { inferMicroChallengeEnergyArc } from '../lib/icebreakerRosterSignals';
 import { isCustomMode, computeSelectablePhases, generatePhaseSelectionId } from '../services/customModeService';
 import { mapBotUserIdsToBotIds, buildBotIdByUserId } from '../lib/socialIcebreakerClientIdMapper';
@@ -402,12 +403,36 @@ export async function buildClientState(
     { exposeWave3ContentStatus },
   );
 
+  // M1 kill switch: suppression is projection-only. Persisted agent state is
+  // left intact so re-enabling the flag restores the pending Ask exactly.
+  if (requestingUserId === state.hostUserId && clientState.xiaoyueAgent) {
+    const agentEnabled = await getFeatureFlag('icebreakerAgentCopilotEnabled', true).catch((error) => {
+      logger.warn('[XiaoyueAgent] copilot flag lookup failed; failing open to default projection', {
+        socialSessionId: state.socialSessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return true;
+    });
+    if (!agentEnabled) delete clientState.xiaoyueAgent;
+  }
+
   if (requestingUserId === state.hostUserId && state.currentPhase === 'warmup') {
     const icebreakerMatchingAwareEnabled = await getFeatureFlag('icebreakerMatchingAwareEnabled', true);
     if (icebreakerMatchingAwareEnabled) {
-      const hostTableBrief = buildHostTableBrief({
+      const hostTableBrief = await buildHostTableBrief({
         joinedParticipants,
         phaseStartedAt: state.phaseStartedAt,
+        // FU-02: ACOEXP gets a real consumer without touching the 3s poll.
+        // This thunk only runs when a shared-interest anchor already exists
+        // (i.e. a brief is actually being built) and it is memoized per
+        // session (one `role_results` read per 5 min, host+warmup+flag only,
+        // fail-open to the archetype energy band). A cache hit issues no
+        // query; a flag-off / non-host / non-warmup poll never reaches here.
+        resolveRoleResults: () =>
+          getHostBriefRoleResults(
+            state.socialSessionId,
+            joinedParticipants.map((participant) => participant.userId),
+          ),
       });
       if (hostTableBrief) clientState.hostTableBrief = hostTableBrief;
     }

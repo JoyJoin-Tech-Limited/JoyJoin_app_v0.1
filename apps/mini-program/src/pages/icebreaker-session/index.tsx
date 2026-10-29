@@ -465,8 +465,18 @@ export default function IcebreakerSessionPage() {
       void socialSessionQuery.refetch()
     },
   })
+  // Presentation-only arbitration: a higher-priority surface temporarily hides
+  // the cards without settling or clearing their underlying Ask/suggestion state.
+  const highPriorityOverlayVisible =
+    showPhaseIntro ||
+    warmupRitualActive ||
+    isTierSheetOpen ||
+    hostMenuOpen ||
+    !!pendingTierSwitch
+  const agentAskOverlayVisible =
+    xiaoyueAgentAsk.visible && !!xiaoyueAgentAsk.view && !highPriorityOverlayVisible
   const xiaoyueAgentAskNode =
-    xiaoyueAgentAsk.visible && xiaoyueAgentAsk.view ? (
+    agentAskOverlayVisible && xiaoyueAgentAsk.view ? (
       <XiaoyueAgentAsk
         view={xiaoyueAgentAsk.view}
         onAccept={xiaoyueAgentAsk.accept}
@@ -513,17 +523,27 @@ export default function IcebreakerSessionPage() {
   }, [phase, sessionGuidanceLine])
 
   const adaptiveOverlayVisible =
-    suggestionOverlayOpen && !!adaptiveSuggestion && !xiaoyueAgentAsk.visible
+    suggestionOverlayOpen &&
+    !!adaptiveSuggestion &&
+    !highPriorityOverlayVisible &&
+    !agentAskOverlayVisible
   const hostBriefVisible = canShowHostTableBrief({
     isHost,
     phase,
     hasBrief: !!hostTableBrief,
-    agentAskVisible: xiaoyueAgentAsk.visible,
+    agentAskVisible: agentAskOverlayVisible,
     adaptiveSuggestionVisible: adaptiveOverlayVisible,
-    tierSheetOpen: isTierSheetOpen,
-    ritualOverlayVisible: showPhaseIntro || warmupRitualActive,
-    hostMenuOpen,
+    highPriorityOverlayVisible,
   })
+  const coachmarkVisible =
+    phase === 'warmup' &&
+    isHost &&
+    coachmarkShown &&
+    !highPriorityOverlayVisible &&
+    !agentAskOverlayVisible &&
+    !adaptiveOverlayVisible &&
+    !hostBriefVisible &&
+    !sessionGuidanceLine
   const hostBriefNode =
     hostBriefVisible && hostBriefOpen && hostTableBrief ? (
       <HostTableBriefPopover
@@ -546,12 +566,9 @@ export default function IcebreakerSessionPage() {
     phase,
     isHost,
     hostTableBrief?.phaseKey,
-    xiaoyueAgentAsk.visible,
+    agentAskOverlayVisible,
     adaptiveOverlayVisible,
-    isTierSheetOpen,
-    showPhaseIntro,
-    hostMenuOpen,
-    warmupRitualActive,
+    highPriorityOverlayVisible,
   ])
 
   // W3 (AC-W3.4): stable callback so `handleGenerateStatements` does not churn
@@ -1051,7 +1068,7 @@ export default function IcebreakerSessionPage() {
   // menu OR tapping the coachmark itself both persist the seen flag; from
   // then on it never renders again.
   useEffect(() => {
-    if (phase !== 'warmup' || !isHost || coachmarkShown) {
+    if (phase !== 'warmup' || !isHost || coachmarkShown || sessionGuidanceLine) {
       return
     }
     let seen = false
@@ -1064,7 +1081,7 @@ export default function IcebreakerSessionPage() {
       return
     }
     setCoachmarkShown(true)
-  }, [phase, isHost, coachmarkShown])
+  }, [phase, isHost, coachmarkShown, sessionGuidanceLine])
 
   const handleDismissCoachmark = useCallback(() => {
     haptics('light')
@@ -1229,9 +1246,7 @@ export default function IcebreakerSessionPage() {
     <XiaoyueSessionShell
       phase={phase}
       sessionPack={session?.xiaoyueSessionPack}
-      adaptiveSuggestion={
-        suggestionOverlayOpen && !xiaoyueAgentAsk.visible ? adaptiveSuggestion : undefined
-      }
+      adaptiveSuggestion={adaptiveOverlayVisible ? adaptiveSuggestion : undefined}
       agentAsk={xiaoyueAgentAskNode}
       guidanceLine={sessionGuidanceLine}
       hostBrief={hostBriefVisible && hostBriefOpen ? hostBriefNode : undefined}
@@ -1436,10 +1451,9 @@ export default function IcebreakerSessionPage() {
         {phaseHeader}
 
         {/* PR1 壳层: one-time host ⋯ coachmark — floats below the band's right
-            edge, points up at the trigger, never covers the CTA area.
-            Suppressed while the adaptive suggestion card is open: both anchor
-            to top:100% of this header band at $z-modal and would stack. */}
-        {coachmarkShown && !adaptiveOverlayVisible && !hostBriefVisible && (
+            edge, points up at the trigger, never covers the CTA area. The
+            shared predicate keeps it below every other teaching surface. */}
+        {coachmarkVisible && (
           <View
             className='icebreaker__coachmark'
             onClick={handleDismissCoachmark}

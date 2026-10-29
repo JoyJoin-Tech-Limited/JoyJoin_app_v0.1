@@ -8,6 +8,7 @@ import { localAsset } from '../../../lib/utils/cdnAssets'
 import MatchPromiseChip from './MatchPromiseChip'
 import PoolTeaserStrip from './PoolTeaserStrip'
 import { stripEmojis } from '../../../lib/utils/emojiGuard'
+import type { RegistrationDecisionNote } from '../registrationGuidance'
 import './XiaoyueLetterCard.scss'
 
 interface XiaoyueLetterCardProps {
@@ -15,6 +16,8 @@ interface XiaoyueLetterCardProps {
   matchingPromise: string
   reasons: string[]
   trustLabel: string
+  /** Deterministic decision note; available facts only, never a second brief. */
+  decisionNote?: RegistrationDecisionNote
   userName?: string
   userSocialTag?: string
   userArchetype?: string
@@ -29,6 +32,7 @@ export default function XiaoyueLetterCard({
   matchingPromise,
   reasons,
   trustLabel,
+  decisionNote,
   userName,
   userSocialTag,
   userArchetype,
@@ -61,6 +65,12 @@ export default function XiaoyueLetterCard({
   const cleanInsight = stripEmojis(insight)
   const cleanPromise = stripEmojis(matchingPromise)
   const cleanReasons = reasons.map(stripEmojis).filter(Boolean)
+  const cleanDecisionBenefit = decisionNote ? stripEmojis(decisionNote.benefit).trim() : ''
+  const cleanDecisionFacts = (decisionNote?.facts ?? [])
+    .map((fact) => stripEmojis(fact).trim())
+    .filter(Boolean)
+    .slice(0, 2)
+  const showDecisionNote = Boolean(cleanDecisionBenefit || cleanDecisionFacts.length > 0)
 
   const rootClasses = [
     'xiaoyue-letter-card',
@@ -120,6 +130,23 @@ export default function XiaoyueLetterCard({
         <Text className='xiaoyue-letter-card__insight'>{cleanInsight}</Text>
 
         <Text className='xiaoyue-letter-card__promise'>{cleanPromise}</Text>
+
+        {showDecisionNote ? (
+          <View className='xiaoyue-letter-card__decision-note'>
+            {cleanDecisionBenefit ? (
+              <Text className='xiaoyue-letter-card__decision-benefit'>{cleanDecisionBenefit}</Text>
+            ) : null}
+            {cleanDecisionFacts.length > 0 ? (
+              <View className='xiaoyue-letter-card__decision-facts'>
+                {cleanDecisionFacts.map((fact, index) => (
+                  <Text key={`decision-fact-${index}-${fact}`} className='xiaoyue-letter-card__decision-fact'>
+                    {fact}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {cleanReasons.length > 0 ? (
           <View className='xiaoyue-letter-card__reasons'>

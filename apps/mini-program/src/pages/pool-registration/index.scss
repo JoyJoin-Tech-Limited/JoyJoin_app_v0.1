@@ -44,6 +44,74 @@
 // page WXSS (subpackage style-splitting gate — no TSX-side import).
 @use './components/PoolRegistrationInclusions.scss' as *;
 
+// P2 free/entitlement success receipt: mascot-free and structurally without
+// monetary rows (the shared component enforces the same boundary in TSX).
+.xiaoyue-payment-receipt {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16rpx 24rpx;
+  border-radius: $card-radius-sm;
+  background: rgba($color-primary, 0.04);
+  border: 2rpx solid rgba($color-primary, 0.08);
+  text-align: left;
+
+  &__title {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+  }
+
+  &__guidance {
+    display: block;
+    margin-top: 8rpx;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
+  &__details {
+    margin-top: 16rpx;
+    padding-top: 16rpx;
+    border-top: 1rpx dashed $color-border;
+  }
+
+  &__row {
+    display: flex;
+    // Mixed-size label/value pairs must not baseline-align (WXSS L2).
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+  }
+
+  &__row + &__row {
+    margin-top: 8rpx;
+  }
+
+  &__label {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__value {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: right;
+
+    &--savings {
+      color: $color-secondary;
+    }
+  }
+}
+
 .pool-reg {
   @include page-gradient-bg;
   // Flex column shell: ScrollView takes the remaining space, footer is a

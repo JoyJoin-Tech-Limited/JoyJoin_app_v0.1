@@ -266,6 +266,32 @@ export function buildMiniScriptGenerationPrompt(
     ? `\n【主持人已选标签】${params.selectedLabel}\n`
     : '';
 
+  // ── Accepted exception (FU-07, reviewed 2026-10-29): participant display
+  // names DO reach this prompt, deliberately.
+  //
+  // Why names are here: W5 (AC-W5.4) asks the model to write each character
+  // from a real player's archetype/interest so the player recognises themselves
+  // ("这写的就是我"). The curated fallback twin `buildRosterCharacterTraits`
+  // (lib/icebreakerRosterSignals.ts) sets `roleLabel` to the player's display
+  // name, so a prompt without names would make the live and fallback paths
+  // disagree about what a character is called.
+  //
+  // Why a 玩家1…玩家N substitution was NOT adopted: role mapping never depends on
+  // the name — `POST /miniscript/assign-roles` assigns roles round-robin by join
+  // order and the model only emits slotIndexed characters, so neutral labels
+  // would buy no mapping benefit while weakening the shipped recognition
+  // feature. Per-player archetype/interests are still sent per slot regardless,
+  // so a label swap would be cosmetic minimisation, not a boundary change.
+  // Sibling icebreaker prompts (lie detective, micro-challenges) also pass
+  // display names, so this is the layer's established posture.
+  //
+  // HARD CONSTRAINT: this prompt text must never be persisted, logged, or
+  // traced — no session state, no AITrace payload, no logger field. Only
+  // `promptVersion` + provider/model metadata may leave this function
+  // (docs/ai/AI_MODEL_ROUTING_STRATEGY.md: "traces remain non-PII: no prompt
+  // text, no user text, no user identifiers"). Gated by
+  // `icebreakerMatchingAwareEnabled` (default on, kill switch).
+  //
   // W5: real-player roster block. Weaves at least one real trait per character
   // and forbids 来客A-style placeholders when the roster is known.
   const rosterLines = params.roster?.length ? buildRosterTraitLines(params.roster) : [];

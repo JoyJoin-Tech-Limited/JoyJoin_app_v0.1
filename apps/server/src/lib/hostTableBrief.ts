@@ -4,6 +4,7 @@ import {
   deriveTablePersona,
   type TableDepthAppetite,
   type TableEnergy,
+  type TablePersonaRoleResults,
   type TablePersonaRosterMember,
 } from './tablePersona';
 
@@ -35,11 +36,19 @@ export function selectHostTableBriefPace(energy: TableEnergy, depth: TableDepthA
   return HOST_TABLE_BRIEF_PACE_BY_PERSONA[depth][energy];
 }
 
-export function buildHostTableBrief(params: {
+export async function buildHostTableBrief(params: {
   joinedParticipants: ReadonlyArray<TablePersonaRosterMember>;
   phaseStartedAt: number;
-}): HostTableBrief | null {
-  const { joinedParticipants, phaseStartedAt } = params;
+  /**
+   * FU-02: optional lazy ACOEXP lookup. Deliberately a thunk, not a value — it
+   * is invoked only after a shared-interest anchor exists, so a table that
+   * would receive no brief at all never pays for the `role_results` read.
+   * The caller owns the host/warmup/flag guard and the memoization
+   * (`hostBriefRoleResultsMemo`).
+   */
+  resolveRoleResults?: () => Promise<TablePersonaRoleResults>;
+}): Promise<HostTableBrief | null> {
+  const { joinedParticipants, phaseStartedAt, resolveRoleResults } = params;
   const rosterSize = joinedParticipants.length;
   const anchorLabel = buildSharedInterestHooks(joinedParticipants, {
     minMembers: Math.max(2, Math.ceil(rosterSize / 2)),
@@ -47,10 +56,14 @@ export function buildHostTableBrief(params: {
   })[0];
   if (!anchorLabel) return null;
 
-  // TablePersona is aggregate-only and in-memory. No role_results read here:
-  // energy falls back to the archetype composition; depth reads the approved
-  // tableVibePreference field already in the loaded roster.
-  const persona = deriveTablePersona({ roster: joinedParticipants });
+  // TablePersona is aggregate-only and in-memory. When the host/warmup/flag
+  // guard held, `roleResults` is the memoized roster ACOEXP slice and the
+  // energy band comes from the real roster average; otherwise (or when the
+  // slice is thin) `deriveTablePersona` falls back to the archetype
+  // composition. Depth always reads the approved tableVibePreference field
+  // already in the loaded roster.
+  const roleResults = resolveRoleResults ? await resolveRoleResults() : undefined;
+  const persona = deriveTablePersona({ roster: joinedParticipants, roleResults });
   const paceShort = selectHostTableBriefPace(persona.energy, persona.depthAppetite);
   const phaseKey = `warmup:${phaseStartedAt}:${persona.energy}:${persona.depthAppetite}`;
   return {

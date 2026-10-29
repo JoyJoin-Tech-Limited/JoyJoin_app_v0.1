@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "protocol": "docs/testing/icebreaker-host-zero-training-smoke.md",
+  "status": "OPEN_UNEXECUTED",
+  "execution": {
+    "date": null,
+    "facilitator": null,
+    "evidenceDirectory": null
+  },
+  "build": {
+    "sha": null,
+    "developmentVersion": null,
+    "deviceModel": null
+  },
+  "hosts": [
+    {
+      "hostId": "H1",
+      "config": null,
+      "actionCount": null,
+      "longestStuckSeconds": null,
+      "firstUsableCardSeconds": null,
+      "completed": null,
+      "invalidReason": null,
+      "confusionMoments": [],
+      "flagPosture": {
+        "before": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        },
+        "after": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        }
+      },
+      "session": {
+        "poolId": null,
+        "socialSessionId": null,
+        "icebreakerSessionId": null,
+        "startedAt": null
+      },
+      "resetChecklistComplete": null,
+      "facilitatorIntervention": null,
+      "participantInput": {
+        "newInputCount": null,
+        "privacyP0Observed": null
+      },
+      "evidence": {
+        "recording": null,
+        "observationSheet": null
+      }
+    },
+    {
+      "hostId": "H2",
+      "config": null,
+      "actionCount": null,
+      "longestStuckSeconds": null,
+      "firstUsableCardSeconds": null,
+      "completed": null,
+      "invalidReason": null,
+      "confusionMoments": [],
+      "flagPosture": {
+        "before": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        },
+        "after": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        }
+      },
+      "session": {
+        "poolId": null,
+        "socialSessionId": null,
+        "icebreakerSessionId": null,
+        "startedAt": null
+      },
+      "resetChecklistComplete": null,
+      "facilitatorIntervention": null,
+      "participantInput": {
+        "newInputCount": null,
+        "privacyP0Observed": null
+      },
+      "evidence": {
+        "recording": null,
+        "observationSheet": null
+      }
+    },
+    {
+      "hostId": "H3",
+      "config": null,
+      "actionCount": null,
+      "longestStuckSeconds": null,
+      "firstUsableCardSeconds": null,
+      "completed": null,
+      "invalidReason": null,
+      "confusionMoments": [],
+      "flagPosture": {
+        "before": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        },
+        "after": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        }
+      },
+      "session": {
+        "poolId": null,
+        "socialSessionId": null,
+        "icebreakerSessionId": null,
+        "startedAt": null
+      },
+      "resetChecklistComplete": null,
+      "facilitatorIntervention": null,
+      "participantInput": {
+        "newInputCount": null,
+        "privacyP0Observed": null
+      },
+      "evidence": {
+        "recording": null,
+        "observationSheet": null
+      }
+    },
+    {
+      "hostId": "H4",
+      "config": null,
+      "actionCount": null,
+      "longestStuckSeconds": null,
+      "firstUsableCardSeconds": null,
+      "completed": null,
+      "invalidReason": null,
+      "confusionMoments": [],
+      "flagPosture": {
+        "before": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        },
+        "after": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        }
+      },
+      "session": {
+        "poolId": null,
+        "socialSessionId": null,
+        "icebreakerSessionId": null,
+        "startedAt": null
+      },
+      "resetChecklistComplete": null,
+      "facilitatorIntervention": null,
+      "participantInput": {
+        "newInputCount": null,
+        "privacyP0Observed": null
+      },
+      "evidence": {
+        "recording": null,
+        "observationSheet": null
+      }
+    },
+    {
+      "hostId": "H5",
+      "config": null,
+      "actionCount": null,
+      "longestStuckSeconds": null,
+      "firstUsableCardSeconds": null,
+      "completed": null,
+      "invalidReason": null,
+      "confusionMoments": [],
+      "flagPosture": {
+        "before": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        },
+        "after": {
+          "icebreakerAgentCopilotEnabled": null,
+          "icebreakerMatchingAwareEnabled": null,
+          "checkedAt": null
+        }
+      },
+      "session": {
+        "poolId": null,
+        "socialSessionId": null,
+        "icebreakerSessionId": null,
+        "startedAt": null
+      },
+      "resetChecklistComplete": null,
+      "facilitatorIntervention": null,
+      "participantInput": {
+        "newInputCount": null,
+        "privacyP0Observed": null
+      },
+      "evidence": {
+        "recording": null,
+        "observationSheet": null
+      }
+    }
+  ],
+  "verdict": {}
+}

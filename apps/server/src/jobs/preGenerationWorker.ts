@@ -18,6 +18,7 @@ import {
   storePreGenerationResult,
   isPreGenerationJobRunning,
   deletePreGenerationResultById,
+  recoverStalePreGenerationJobs,
 } from '../lib/socialIcebreakerStore';
 import {
   generateWarmupTopics,
@@ -41,7 +42,7 @@ import { selectAuctionFallbackLots } from '@shared/socialIcebreakerAuctionFallba
 import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge, GroupMirrorQuestion, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker';
 import { selectPermissionLineForTopic } from '@shared/socialIcebreakerYuezaiCopy';
 import { logger } from '../lib/logger';
-import { deriveTablePersona, resolveTableAnchorsForPrompt } from '../lib/tablePersona';
+import { deriveTableAnchorsForGeneration } from '../lib/tableAnchorsForGeneration';
 
 // ---------------------------------------------------------------------------
 // Worker state
@@ -49,9 +50,13 @@ import { deriveTablePersona, resolveTableAnchorsForPrompt } from '../lib/tablePe
 
 let workerInterval: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
+let isProcessing = false;
+let tickCount = 0;
 
 const POLL_INTERVAL_MS = 5000; // 5 seconds
 const JOB_TIMEOUT_MS = 60000; // 60 seconds per job (quality gate may retry)
+const STALE_RUNNING_THRESHOLD_MS = 10 * 60 * 1000; // comfortably beyond JOB_TIMEOUT_MS
+const RECOVERY_EVERY_N_TICKS = 12; // startup, then once per minute of active polling
 
 // ---------------------------------------------------------------------------
 // Phase-to-feature-type mapping for quality gate
@@ -259,7 +264,11 @@ type GeneratorFn = (socialSessionId: string, payload: Record<string, unknown>) =
 // Session highlights (state.highlights) only exist after real transitions;
 // any future pregen consumption of the highlights-injector feature must stay
 // silent-by-design (the in-session on-demand paths re-ask with state anyway).
-const PHASE_GENERATORS: Record<string, GeneratorFn> = {
+// FU-03: exported so the W1–W3 parity contract test can drive the real
+// `group_mirror` generator with the same roster the HTTP route sees and assert
+// both reach `generateGroupMirrorQuestions` with identical `tableAnchors`.
+// Nothing in production imports this map; the worker owns its lifecycle.
+export const PHASE_GENERATORS: Record<string, GeneratorFn> = {
   warmup: async (_sessionId, payload) => {
     const result = await generateWarmupTopics({
       mood: (payload.mood as any) || 'funny',
@@ -357,18 +366,19 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
     // labels, so the pre-generated deck can use the same shared-interest
     // anchors as the on-demand path — no extra query, and no anchors when the
     // matching-aware flag was off at enqueue time (interests simply absent).
-    let tableAnchors: string[] | undefined;
-    try {
-      const anchors = resolveTableAnchorsForPrompt(
-        deriveTablePersona({ roster: participants }),
-      );
-      if (anchors.length > 0) tableAnchors = anchors;
-    } catch (personaError) {
+    //
+    // FU-03: this is the SAME helper the on-demand route calls
+    // (`deriveTableAnchorsForGeneration`), not a copy. The route additionally
+    // passes ACOEXP rows; the worker cannot (traits are not in the enqueue
+    // payload), and `deriveTablePersona` degrades to the archetype energy band
+    // exactly as it does for an unscored roster. Anchors therefore match.
+    const resolution = deriveTableAnchorsForGeneration({ roster: participants });
+    if (resolution.error) {
       logger.warn('Group mirror pre-generation persona derivation failed; continuing without anchors', {
-        error: personaError instanceof Error ? personaError.message : String(personaError),
+        error: resolution.error.message,
       });
-      tableAnchors = undefined;
     }
+    const tableAnchors = resolution.anchors.length > 0 ? resolution.anchors : undefined;
     const result = await generateGroupMirrorQuestions({
       eventType: (payload.eventType as string) || '活动',
       participantCount: participants.length,
@@ -502,21 +512,69 @@ async function processOneJob(): Promise<void> {
 // Worker lifecycle
 // ---------------------------------------------------------------------------
 
+async function runStaleJobRecovery(): Promise<void> {
+  const staleBefore = new Date(Date.now() - STALE_RUNNING_THRESHOLD_MS);
+  try {
+    const recoveredCount = await recoverStalePreGenerationJobs(staleBefore);
+    if (recoveredCount > 0) {
+      logger.warn('Pre-generation worker recovered stale running jobs', {
+        recoveredCount,
+        staleBefore: staleBefore.toISOString(),
+        staleThresholdMs: STALE_RUNNING_THRESHOLD_MS,
+      });
+    }
+  } catch (error) {
+    // Recovery is best-effort: a database error must not stop job polling.
+    logger.error('Pre-generation stale-job recovery failed; continuing polling', {
+      error: error instanceof Error ? error.message : String(error),
+      staleBefore: staleBefore.toISOString(),
+    });
+  }
+}
+
+async function tick(): Promise<void> {
+  if (isProcessing) return;
+  isProcessing = true;
+  const activeTick = tickCount++;
+  try {
+    if (activeTick % RECOVERY_EVERY_N_TICKS === 0) {
+      await runStaleJobRecovery();
+    }
+    await processOneJob();
+  } catch (error) {
+    // Dequeue and failure-bookkeeping errors must not become unhandled
+    // interval rejections. The next poll retries after dependencies recover.
+    logger.error('Pre-generation worker poll failed; will retry next interval', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    isProcessing = false;
+  }
+}
+
 export function startPreGenerationWorker(): void {
+  // Env-only kill switch, read on process start; no DB flag or code deploy needed.
+  if ((process.env.PRE_GENERATION_WORKER_ENABLED ?? 'true').toLowerCase() === 'false') {
+    logger.info('Pre-generation worker disabled by PRE_GENERATION_WORKER_ENABLED');
+    return;
+  }
+
   if (isRunning) {
     logger.warn('Pre-generation worker already running');
     return;
   }
 
   isRunning = true;
+  tickCount = 0;
   logger.info('Pre-generation worker started', { pollIntervalMs: POLL_INTERVAL_MS });
 
-  // Process immediately, then on interval
-  void processOneJob();
+  // Recover once on startup, process immediately, then poll. Ticks are fail-open.
+  void tick();
 
   workerInterval = setInterval(() => {
-    void processOneJob();
+    void tick();
   }, POLL_INTERVAL_MS);
+  workerInterval.unref?.();
 }
 
 export function stopPreGenerationWorker(): void {

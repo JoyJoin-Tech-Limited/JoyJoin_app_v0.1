@@ -13,6 +13,7 @@ import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import Button from '../../../components/ui/Button'
 import ChemistryMiniGrid from '../../../components/discover/ChemistryMiniGrid'
 import RegistrationSuccessCeremony from '../../../components/reservation/RegistrationSuccessCeremony'
+import XiaoyuePaymentReceipt from '../../payments/event-ticket-payment/components/XiaoyuePaymentReceipt'
 import type { PoolEventType } from '../flowConfig'
 
 interface PoolRegistrationSuccessCeremonyProps {
@@ -142,9 +143,10 @@ function PoolRegistrationSuccessCeremony({
               已和 {duo.partnerName} 组成双人，悦仔会安排同桌。
             </Text>
           ) : null}
-          <Text className='registration-ceremony__text'>
-            我们会按照你刚刚填写的预算、活动期待和偏好完成排桌，有结果会第一时间通知你。
-          </Text>
+          <XiaoyuePaymentReceipt
+            mode='entitlement'
+            guidance='我们会按照你刚刚填写的预算、活动期待和偏好完成排桌，有结果会第一时间通知你。'
+          />
           <Text className='registration-ceremony__hint'>
             {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你排桌完成、活动当天和回顾生成时收到微信提醒？点一下授权（可在微信授权弹窗中勾选「总是保持以上选择」）。`}
           </Text>

@@ -48,7 +48,6 @@ import {
   getBudgetOptions,
   getFlowStepLabels,
   getMascotStepIntro,
-  getStepReactionLine,
   INTENT_FLOW_OPTIONS,
   LANGUAGE_OPTIONS,
   resolvePoolEventType,
@@ -67,6 +66,12 @@ import {
   type RegistrationFormState,
   type RegistrationStep,
 } from './poolRegistrationForm'
+import {
+  buildBudgetSelectionEcho,
+  buildIntentSelectionEcho,
+  buildRegistrationDecisionNote,
+  shouldShowFirstSelectionEcho,
+} from './registrationGuidance'
 import PoolRegistrationDetailsFields from './components/PoolRegistrationDetailsFields'
 import PoolRegistrationDetailsExpander from './components/PoolRegistrationDetailsExpander'
 import ChoiceCard from './components/ChoiceCard'
@@ -393,6 +398,13 @@ export default function PoolRegistrationPage() {
     () => buildFallbackBrief({ eventType, area: poolArea }),
     [eventType, poolArea],
   )
+  const stepZeroDecisionNote = useMemo(
+    () => buildRegistrationDecisionNote({
+      dateTimeLabel: poolDateTimeLabel,
+      area: poolArea,
+    }),
+    [poolDateTimeLabel, poolArea],
+  )
 
   // Pre-warm bundled intent icons and the error-state mascot so they render
   // instantly when needed.
@@ -612,36 +624,26 @@ export default function PoolRegistrationPage() {
     if (step === STEP_INTENT) return 'curious'
     return 'listening'
   }, [step])
-  const mascotReactionLine = useMemo(
-    () => getStepReactionLine(step, { selectedBudget, intents: formState.eventIntent }),
-    [step, selectedBudget, formState.eventIntent],
-  )
+  const mascotReactionLine = useMemo(() => {
+    if (step === STEP_BUDGET) return buildBudgetSelectionEcho(selectedBudgetLabel)
+    if (step === STEP_INTENT) {
+      return buildIntentSelectionEcho(findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS))
+    }
+    return ''
+  }, [step, selectedBudgetLabel, formState.eventIntent])
 
-  // Reset per-step reaction gates (and any in-flight nod) on step entry.
+  // A different pool is a new visit. Step back-navigation and payment rejoin
+  // deliberately do NOT reset these one-shot gates.
+  useEffect(() => {
+    budgetReactionShownRef.current = false
+    intentReactionShownRef.current = false
+  }, [poolId])
+
+  // Clear any in-flight reaction on step entry; restored drafts never trigger
+  // an echo because the gates are advanced only by explicit selection handlers.
   useEffect(() => {
     setReacting(false)
-    if (step === STEP_BUDGET) {
-      budgetReactionShownRef.current = false
-    }
-    if (step === STEP_INTENT) {
-      intentReactionShownRef.current = false
-    }
   }, [step])
-
-  // Brief celebratory Xiaoyue reaction when the user makes their first intent selection
-  useEffect(() => {
-    if (!hasIntentSelection) {
-      setReacting(false)
-      return
-    }
-    if (intentReactionShownRef.current) return
-    intentReactionShownRef.current = true
-    setReacting(true)
-    discoverAnalytics.track('registration_step_reaction_shown', poolId, {
-      step: 'intent',
-      count: formState.eventIntent.length,
-    })
-  }, [hasIntentSelection, poolId, formState.eventIntent.length])
 
   // Reward haptic when the form becomes submittable for the first time.
   useEffect(() => {
@@ -724,7 +726,10 @@ export default function PoolRegistrationPage() {
         setReacting(false)
         return
       }
-      if (!budgetReactionShownRef.current) {
+      if (shouldShowFirstSelectionEcho({
+        hasShown: budgetReactionShownRef.current,
+        selectionCount: 1,
+      })) {
         budgetReactionShownRef.current = true
         setReacting(true)
         discoverAnalytics.track('registration_step_reaction_shown', poolId, {
@@ -737,25 +742,38 @@ export default function PoolRegistrationPage() {
   )
 
   const handleIntentToggle = useCallback((value: string) => {
-    setFormState((currentState) => {
-      // No selection cap: every explicit intent is selectable; picking them
-      // all auto-collapses to 随缘 (toggleIntentValue contract).
-      const nextIntent = toggleIntentValue(currentState.eventIntent, value)
-      if (!nextIntent) {
-        return currentState
-      }
+    const currentIntent = formState.eventIntent
+    // No selection cap: every explicit intent is selectable; picking them
+    // all auto-collapses to 随缘 (toggleIntentValue contract).
+    const nextIntent = toggleIntentValue(currentIntent, value)
+    if (!nextIntent) return
 
-      discoverAnalytics.track('registration_intent_toggled', poolId, {
-        value,
-        flexible: value === INTENT_FLEXIBLE_OPTION.value,
-        action: currentState.eventIntent.includes(value) ? 'deselect' : 'select',
-      })
-      return {
-        ...currentState,
-        eventIntent: nextIntent,
-      }
+    discoverAnalytics.track('registration_intent_toggled', poolId, {
+      value,
+      flexible: value === INTENT_FLEXIBLE_OPTION.value,
+      action: currentIntent.includes(value) ? 'deselect' : 'select',
     })
-  }, [poolId])
+    setFormState((currentState) => ({
+      ...currentState,
+      eventIntent: nextIntent,
+    }))
+
+    if (nextIntent.length === 0) {
+      setReacting(false)
+      return
+    }
+    if (shouldShowFirstSelectionEcho({
+      hasShown: intentReactionShownRef.current,
+      selectionCount: nextIntent.length,
+    })) {
+      intentReactionShownRef.current = true
+      setReacting(true)
+      discoverAnalytics.track('registration_step_reaction_shown', poolId, {
+        step: 'intent',
+        count: nextIntent.length,
+      })
+    }
+  }, [formState.eventIntent, poolId])
 
   const handleLanguageToggle = useCallback((value: string) => {
     setFormState((currentState) => ({
@@ -1155,6 +1173,7 @@ export default function PoolRegistrationPage() {
             matchingPromise={brief.matchingPromise}
             reasons={brief.reasons.slice(0, 3)}
             trustLabel='排桌后再揭晓桌友'
+            decisionNote={stepZeroDecisionNote}
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}

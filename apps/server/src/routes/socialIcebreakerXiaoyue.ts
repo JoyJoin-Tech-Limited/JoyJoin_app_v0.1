@@ -29,6 +29,7 @@ import {
 import { updateSessionAtomic } from '../lib/socialIcebreakerStore';
 import { appendSocialAgentEvent } from '../repositories/socialAgentEventsRepo';
 import { logger } from '../lib/logger';
+import { getFeatureFlag } from '../lib/featureFlags';
 import { icebreakerAgentLimiter } from '../rateLimiter';
 
 const router = Router();
@@ -172,6 +173,18 @@ function agentError(res: Response, status: number, code: string) {
   return res.status(status).json({ code, error: code });
 }
 
+async function isAgentCopilotEnabled(socialSessionId: string): Promise<boolean> {
+  try {
+    return await getFeatureFlag('icebreakerAgentCopilotEnabled', true);
+  } catch (error) {
+    logger.warn('[XiaoyueAgent] copilot flag lookup failed; failing open to default route behaviour', {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return true;
+  }
+}
+
 function agentDeadlineUnknown(res: Response) {
   // No replacement snapshot is fabricated when route reads themselves timed
   // out. The client keeps its old deck and explicitly resyncs committed state.
@@ -190,6 +203,10 @@ router.post('/:socialSessionId/xiaoyue/agent/decision', icebreakerAgentLimiter, 
 
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
+
+  if (!(await isAgentCopilotEnabled(socialSessionId))) {
+    return agentError(res, 503, 'AGENT_DISABLED');
+  }
 
   const parsed = agentDecisionSchema.safeParse(req.body);
   if (!parsed.success) return agentError(res, 400, 'INVALID_AGENT_DECISION');
@@ -342,6 +359,10 @@ router.post('/:socialSessionId/xiaoyue/agent/policy', icebreakerAgentLimiter, as
 
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
+
+  if (!(await isAgentCopilotEnabled(socialSessionId))) {
+    return agentError(res, 503, 'AGENT_DISABLED');
+  }
 
   const parsed = agentPolicySchema.safeParse(req.body);
   if (!parsed.success) return agentError(res, 400, 'INVALID_AGENT_POLICY');

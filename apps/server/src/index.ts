@@ -13,6 +13,7 @@ import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
 import { startPoolCardCopyWorker } from "./ai/workers/poolCardCopyWorker";
 import { startPersonalStoryWorker } from "./jobs/personalStoryWorker";
+import { startPreGenerationWorker } from "./jobs/preGenerationWorker";
 import { startPoolMatchingWatchdog } from "./lib/poolMatchingWatchdog";
 import { startVenueTbdRetryScheduler } from "./lib/venueTbdRetryScheduler";
 import { startSubscribeReminderScheduler } from "./lib/subscribeReminderScheduler";
@@ -184,6 +185,15 @@ app.use((req, res, next) => {
       // Start pool card AI copy worker (catch-up cron every 5 min)
       startPoolCardCopyWorker(5);
       startPersonalStoryWorker();
+      // Social icebreaker pre-generation is asynchronous and fail-open; a
+      // worker setup failure must never prevent the HTTP server from booting.
+      try {
+        startPreGenerationWorker();
+      } catch (error) {
+        logger.warn('[Startup] Pre-generation worker failed to start (non-fatal)', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       // W8 (AC-W8.4): recover pools stranded in `matching` by a crashed run.
       startPoolMatchingWatchdog();
       // W8 (AC-W8.5): retry TBD venue assignment + escalate before T-2h.

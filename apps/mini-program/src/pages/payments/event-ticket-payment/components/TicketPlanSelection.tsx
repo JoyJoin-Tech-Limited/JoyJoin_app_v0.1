@@ -4,6 +4,7 @@ import type { UserCouponSummary } from '@shared/api'
 import { haptics } from '../../../../lib/utils/haptics'
 import { discoverAnalytics } from '../../../../lib/analytics/discoverAnalytics'
 import { formatPrice, type SelectedPlan } from '../ticketHelpers'
+import XiaoyueCheckoutGuidance from './XiaoyueCheckoutGuidance'
 
 export type { SelectedPlan } from '../ticketHelpers'
 
@@ -30,6 +31,8 @@ interface TicketPlanSelectionProps {
   discountAmount: number
   finalPrice: number
   bestCoupon: UserCouponSummary | null
+  /** Existing checkout authority: only a positive, chargeable coupon reaches here. */
+  effectiveCouponCode?: string
   poolId: string
   /**
    * Audit F4-b: true when a 见面礼 welcome coupon exists but is ineligible
@@ -54,6 +57,7 @@ export default function TicketPlanSelection({
   discountAmount,
   finalPrice,
   bestCoupon,
+  effectiveCouponCode,
   poolId,
   showWelcomeCouponHint = false,
   vipMonthlyPlan = null,
@@ -206,6 +210,14 @@ export default function TicketPlanSelection({
           <Text className='ticket-price-summary__value ticket-price-summary__value--total'>{formatPrice(finalPrice)}</Text>
         </View>
       </View>
+
+      <XiaoyueCheckoutGuidance
+        selectedPlan={selectedPlan}
+        bestCoupon={bestCoupon}
+        effectiveCouponCode={effectiveCouponCode}
+        discountAmount={discountAmount}
+        finalPrice={finalPrice}
+      />
     </>
   )
 }

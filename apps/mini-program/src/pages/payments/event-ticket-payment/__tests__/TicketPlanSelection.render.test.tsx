@@ -147,3 +147,37 @@ describe('TicketPlanSelection — 见面礼 hint truthfulness (D2 item g)', () =
     expect(screen.queryByText(/见面礼可用于/)).not.toBeInTheDocument()
   })
 })
+
+describe('TicketPlanSelection — P0 Xiaoyue checkout clarity wiring', () => {
+  it('passes the existing effective coupon and final-price fields through without changing plan controls', () => {
+    const onSelectPlan = vi.fn()
+    const { container } = render(
+      <TicketPlanSelection
+        selectedPlan='single'
+        onSelectPlan={onSelectPlan}
+        singlePrice={8800}
+        pack3Price={21100}
+        pack6Price={37000}
+        currentPrice={8800}
+        discountAmount={2000}
+        finalPrice={6800}
+        bestCoupon={{
+          id: 'coupon-1',
+          code: 'WELCOME20',
+          discountType: 'fixed_amount',
+          discountValue: 2000,
+          isUsed: false,
+          status: 'available',
+        }}
+        effectiveCouponCode='WELCOME20'
+        poolId='pool-1'
+      />,
+    )
+
+    expect(screen.getByText('你选的是「单场局票」，本次实付 ¥68。')).toBeInTheDocument()
+    expect(screen.getByText('见面礼券已计入，优惠 ¥20。')).toBeInTheDocument()
+    expect(container.querySelectorAll('.ticket-plan-card')).toHaveLength(3)
+    fireEvent.click(screen.getByText('三连局包'))
+    expect(onSelectPlan).toHaveBeenCalledWith('pack_3')
+  })
+})

@@ -632,6 +632,11 @@ async function pass1Generate(params: {
 }> {
   const t0 = Date.now();
   const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
+  // NOTE (FU-07): when `includeRosterTraits` is on, `prompt.user` carries
+  // participant display names. Treat it as PII: never log it, never store it in
+  // session state or AITrace, never forward it to moderation payloads. See the
+  // accepted-exception block in `buildMiniScriptGenerationPrompt`
+  // (ai/miniscriptPrompts.ts).
   const prompt = buildMiniScriptGenerationPrompt({
     playerCount: params.playerCount,
     style: params.style,

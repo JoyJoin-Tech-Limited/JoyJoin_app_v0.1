@@ -1434,6 +1434,20 @@ export async function failPreGenerationJob(jobId: string, errorCode: string): Pr
     .where(and(eq(preGenerationJobs.id, jobId), eq(preGenerationJobs.status, 'running')));
 }
 
+/**
+ * Terminally fail claims whose last running transition is older than staleBefore.
+ * Re-queueing could repeat provider work accepted just before a crash; the status
+ * predicate makes concurrent replica sweeps idempotent and suppresses late writes.
+ */
+export async function recoverStalePreGenerationJobs(staleBefore: Date): Promise<number> {
+  const recovered = await db
+    .update(preGenerationJobs)
+    .set({ status: 'failed', errorCode: 'stale_running', updatedAt: new Date() })
+    .where(and(eq(preGenerationJobs.status, 'running'), lt(preGenerationJobs.updatedAt, staleBefore)))
+    .returning({ id: preGenerationJobs.id });
+  return recovered.length;
+}
+
 /** Used when a result row was written but the job row was superseded before completion. */
 export async function deletePreGenerationResultById(resultId: string): Promise<void> {
   await db.delete(preGenerationResults).where(eq(preGenerationResults.id, resultId));

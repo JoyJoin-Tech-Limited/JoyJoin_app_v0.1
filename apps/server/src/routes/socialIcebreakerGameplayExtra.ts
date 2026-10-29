@@ -83,10 +83,7 @@ import {
 } from './socialIcebreakerHelpers';
 import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { getFeatureFlag } from '../lib/featureFlags';
-import {
-  deriveTablePersona,
-  resolveTableAnchorsForPrompt,
-} from '../lib/tablePersona';
+import { deriveTableAnchorsForGeneration } from '../lib/tableAnchorsForGeneration';
 import {
   getLatestRoleResultsForUsers,
   type LatestRoleTraitScores,
@@ -742,7 +739,9 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
     // above, and only when matching-aware enrichment is on (the same kill
     // switch that populates roster interests). The persona is aggregate-only
     // and server-only; every failure path drops anchors rather than blocking
-    // generation.
+    // generation. FU-03: the anchor derivation itself lives in
+    // `deriveTableAnchorsForGeneration` so the pre-generation worker produces
+    // byte-identical anchors from the same roster.
     let tableAnchors: string[] | undefined;
     try {
       if (roster.length > 0 && (await getFeatureFlag('icebreakerMatchingAwareEnabled', true))) {
@@ -755,20 +754,30 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
           });
           return new Map<string, LatestRoleTraitScores>();
         });
-        const persona = deriveTablePersona({ roster, roleResults: roleResultsByUser });
-        const anchors = resolveTableAnchorsForPrompt(persona);
-        if (anchors.length > 0) tableAnchors = anchors;
-        logger.info('Group mirror table persona derived', {
-          socialSessionId,
-          energy: persona.energy,
-          depthAppetite: persona.depthAppetite,
-          rosterSize: persona.diversity.rosterSize,
-          archetypeBuckets: persona.diversity.archetypeBuckets,
-          industryBuckets: persona.diversity.industryBuckets,
-          lifeStageBuckets: persona.diversity.lifeStageBuckets,
-          anchorCount: anchors.length,
-          acoexpSamples: roleResultsByUser.size,
+        const resolution = deriveTableAnchorsForGeneration({
+          roster,
+          roleResults: roleResultsByUser,
         });
+        if (resolution.anchors.length > 0) tableAnchors = resolution.anchors;
+        if (resolution.error) {
+          logger.warn('[SocialIcebreaker] table persona derivation failed; continuing without anchors', {
+            socialSessionId,
+            error: resolution.error.message,
+          });
+        } else if (resolution.persona) {
+          const persona = resolution.persona;
+          logger.info('Group mirror table persona derived', {
+            socialSessionId,
+            energy: persona.energy,
+            depthAppetite: persona.depthAppetite,
+            rosterSize: persona.diversity.rosterSize,
+            archetypeBuckets: persona.diversity.archetypeBuckets,
+            industryBuckets: persona.diversity.industryBuckets,
+            lifeStageBuckets: persona.diversity.lifeStageBuckets,
+            anchorCount: resolution.anchors.length,
+            acoexpSamples: roleResultsByUser.size,
+          });
+        }
       }
     } catch (personaError) {
       logger.warn('[SocialIcebreaker] table persona derivation failed; continuing without anchors', {

@@ -38,4 +38,19 @@ describe('event-ticket-payment page structure source-lock', () => {
       ).toBe(false)
     }
   })
+
+  it('captures receipt provenance only from confirmed order responses', () => {
+    expect(source).toContain('setSuccessReceipt(captureSameOrderReceipt(orderId, confirmedOrder))')
+    expect(source).toContain("completeSuccess('poll', statusResp)")
+    expect(source).toContain("completeSuccess('reconcile', reconcileResp)")
+
+    const successStart = source.indexOf("if (payment.status === 'success')")
+    const successEnd = source.indexOf('// Verifying state', successStart)
+    expect(successStart).toBeGreaterThan(-1)
+    expect(successEnd).toBeGreaterThan(successStart)
+    const successSurface = source.slice(successStart, successEnd)
+    expect(successSurface).toContain('receipt={successReceipt}')
+    expect(successSurface).not.toContain('finalAmount={finalPrice}')
+    expect(successSurface).not.toContain('finalAmount: finalPrice')
+  })
 })

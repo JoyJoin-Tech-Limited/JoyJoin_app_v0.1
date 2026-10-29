@@ -66,7 +66,10 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 
 - [`architecture/current-state.md`](./architecture/current-state.md)
 - [`architecture/skill-routing.md`](./architecture/skill-routing.md)
+- [`architecture/xiaoyue-agent-architecture.md`](./architecture/xiaoyue-agent-architecture.md) — 悦仔 Agent 端到端架构（三层：群体画像 → 有界决策内核 → 三个安静引导面），含权威边界、flag、已证明/未证明
+- [`architecture/icebreaker-lane-selection.md`](./architecture/icebreaker-lane-selection.md) — 改破冰代码该走哪条交付道（HRC / DM / Direct）
 - [`agent-context/`](./agent-context/) — domain briefs for agent onboarding (canonical source for `AGENTS.md` §6)
+- [`design/icebreaker-agent-m1-tech-spec-20261026.md`](./design/icebreaker-agent-m1-tech-spec-20261026.md) — M1 运行时契约规范源（信号、决策、动作、episode facts）
 - [`design/icebreaker-guidance-quiet-concierge-20261027.md`](./design/icebreaker-guidance-quiet-concierge-20261027.md) — Quiet Concierge 三类说明书 UI/UX 规格与实现状态
 - [`design/icebreaker-w1-w3-implementation-plan-20261027.md`](./design/icebreaker-w1-w3-implementation-plan-20261027.md) — W1–W3 画像驱动破冰实施计划
 - [`design/icebreaker-content-quality-evaluation-20261026.md`](./design/icebreaker-content-quality-evaluation-20261026.md) — DQS 离线内容质量评级与 PASS/FAIL/INCONCLUSIVE 门槛

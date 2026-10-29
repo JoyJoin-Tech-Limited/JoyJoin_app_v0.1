@@ -6,14 +6,16 @@
 
 - [x] M1 闭环代码与测试完成，flag 默认 ON。
 - [x] `apps/server/migrations/0099_social_agent_events.sql` 已在本地 dev DB **连续执行两次**，`to_regclass('public.social_agent_events')` 返回 `social_agent_events`。
-- [ ] staging / production 未由本清单代为执行；必须按部署流程单独应用并记录。
+- [x] **staging 已有该表**（2026-10-27 故障恢复时应用）：10 列、pkey + 4 索引（含部分唯一 `(social_session_id, idempotency_key) WHERE idempotency_key IS NOT NULL`）、两个 CHECK 约束均存在。
+- [x] **production 已于 2026-10-28 应用**：SQL 全部 `IF NOT EXISTS`，重复执行安全；执行后确认 5 个索引存在。生产代码仍落后于 main，暂无读取方，属纯加表。
 - [ ] 真机、微信备案/提审、Stage A、DQS 真人盲评尚未形成发布证据。
 
 ## 1. 数据库与配置
 
-- [ ] staging 执行 `0099_social_agent_events.sql` 两次并确认表、部分唯一索引、CHECK 约束存在。
-- [ ] production 在部署前手动执行同一 SQL；CI/CD 不会自动跑 DDL。
-- [ ] 核对生产 `feature_flags`：`icebreakerAgentCopilotEnabled` 与「默认 ON」发布决定一致；DB 行优先于代码默认值。
+- [x] staging `0099_social_agent_events.sql` 已应用并核验（表 / 部分唯一索引 / CHECK 约束）。
+- [x] production 已手动执行同一 SQL（2026-10-28，`docker exec -i postgres psql -U joyjoin -d joyjoin`）；CI/CD 不会自动跑 DDL。
+- [ ] **画像审计无法出证据**：staging 与 production 的 `social_icebreaker_sessions` / 参与者 / `social_agent_events` 均为 **0 行**，`audit:icebreaker-profile-context` 返回 `INSUFFICIENT_DATA`。该门只能在首个真实 session 产生后关闭，不得以空数据宣称通过。
+- [x] 已核对 `feature_flags`（2026-10-29）：staging 与 production 对 `icebreakerAgentCopilotEnabled` / `icebreakerMatchingAwareEnabled` **均为 0 行**，`joyjoin-api-staging` / `joyjoin-api` 容器 env 也无对应变量，因此不存在任何 OFF 覆盖，代码默认 `true` 生效。注意 DB 行优先于代码默认值：日后在 admin 手动建行即成为真实开关。
 - [ ] 明确 kill switch 操作人：异常时将 DB flag 置 false；确认 participant 无 `xiaoyueAgent`、host 回到旧手动建议路径。
 - [ ] 确认 retention scheduler 已启动，90 天删除任务有日志；无跨 session episode 读取路由。
 
@@ -38,6 +40,7 @@
 
 ## 4. 证据门（按顺序）
 
+0. **可用性前置门 — 5 名首次 host 零培训 15 分钟 smoke**（当前 **OPEN**，0 名 host 已跑）：执行规格与空白记录表见 `docs/testing/icebreaker-host-zero-training-smoke.md`。判定：中位 host 主动动作 ≤3、P90 ≤4，且任一 host 卡住 >60s 无可见下一步即 FAIL。这是混淆消除门，不证明内容质量；**不得靠调阈值关闭**。本门不通过时，后面的 Gate A/B/C 都没有意义（内容再好，host 不会用）。
 1. **Gate A — M1 timing**：桌级 agent on/off，同 generator/prompt；A/A 或 shadow 先校验分配与曝光日志。有效性采用 power-aware 桌数/曝光预算（α=.05、power=.80、ICC/设计效应），不使用固定 100 Ask 门槛。
 2. **离线 DQS**：`docs/design/icebreaker-content-quality-evaluation-20261026.md` 全部硬门槛、preregistration、≥3 raters、α/ICC≥.60、DQS/偏好 CI 与工程护栏同时通过；否则 FAIL 或 INCONCLUSIVE。
 3. **Gate B — 离线内容消融**：current N=1 → context-enriched N=1 → same-context N=2；后一级必须打败前一级，才允许 live。

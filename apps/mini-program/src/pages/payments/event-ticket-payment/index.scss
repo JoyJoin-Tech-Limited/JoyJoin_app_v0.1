@@ -856,6 +856,101 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   }
 }
 
+// P0 checkout clarity + P2 success receipt: quiet, mascot-free notes so the
+// existing trust-row mascot and the single ceremony remain the only focal art.
+.xiaoyue-checkout-guidance {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin: 16rpx 32rpx 0;
+  padding: 16rpx 24rpx;
+  border-radius: $card-radius-sm;
+  background: rgba($color-primary, 0.04);
+  border: 2rpx solid rgba($color-primary, 0.08);
+
+  &__label {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+  }
+
+  &__line {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $ticket-text-subtle;
+    line-height: $line-height-relaxed;
+  }
+}
+
+.xiaoyue-payment-receipt {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16rpx 24rpx;
+  border-radius: $card-radius-sm;
+  background: rgba($color-primary, 0.04);
+  border: 2rpx solid rgba($color-primary, 0.08);
+  text-align: left;
+
+  &__title {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+  }
+
+  &__guidance {
+    display: block;
+    margin-top: 8rpx;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $ticket-text-subtle;
+    line-height: $line-height-relaxed;
+  }
+
+  &__details {
+    margin-top: 16rpx;
+    padding-top: 16rpx;
+    border-top: 1rpx dashed $color-border;
+  }
+
+  &__row {
+    display: flex;
+    // Mixed-size label/value pairs must not baseline-align (WXSS L2).
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+  }
+
+  &__row + &__row {
+    margin-top: 8rpx;
+  }
+
+  &__label {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $ticket-text-muted;
+  }
+
+  &__value {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $ticket-text;
+    text-align: right;
+
+    &--savings {
+      color: $color-secondary;
+    }
+  }
+}
+
 // ── Tier-M order-creation skeleton (M1) ──
 // Branded wait while the payment order is created: opacity-pulse shapes
 // mirroring the real plan cards + price summary, honest staged copy.

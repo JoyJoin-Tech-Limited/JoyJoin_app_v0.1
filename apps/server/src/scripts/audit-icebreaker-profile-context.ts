@@ -21,6 +21,7 @@ import { buildArchetypeContext } from '../lib/contextInjector';
 import { buildSharedInterestAnchors } from '../lib/icebreakerRosterSignals';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { logger } from '../lib/logger';
+import { TABLE_PERSONA_ANCHOR_LIMIT, TABLE_PERSONA_LARGE_ROSTER } from '../lib/tablePersona';
 
 interface SessionAudit {
   mixTextPresent: boolean;
@@ -44,6 +45,22 @@ function rate(numerator: number, denominator: number): number {
   return denominator > 0 ? numerator / denominator : 0;
 }
 
+/**
+ * FU-05: mirror the anchor threshold `deriveTablePersona` uses (see
+ * `lib/tablePersona.ts:217-220` — a larger table needs a third of the table,
+ * minimum 3 members, behind an anchor; a small table needs 2).
+ *
+ * The audit previously hardcoded `minMembers: 2`, so it overstated "potential
+ * anchors" for 6+ member tables — the exact tables where the live prompt
+ * requires 3. Importing `TABLE_PERSONA_LARGE_ROSTER` keeps this on the shared
+ * constant instead of a second copy of `6`, and
+ * `__tests__/auditIcebreakerProfileContext.test.ts` asserts parity with
+ * `deriveTablePersona` so a future rule change fails loudly here.
+ */
+export function resolveAuditAnchorMinMembers(rosterSize: number): number {
+  return rosterSize >= TABLE_PERSONA_LARGE_ROSTER ? 3 : 2;
+}
+
 async function auditSession(socialSessionId: string, matchingAware: boolean): Promise<SessionAudit> {
   const participants = await listParticipants(socialSessionId);
   const roster = participants.map((participant) => ({
@@ -53,7 +70,13 @@ async function auditSession(socialSessionId: string, matchingAware: boolean): Pr
   }));
 
   // Effective = what the live prompt would receive with today's flag posture.
-  const effectiveAnchors = buildSharedInterestAnchors(roster, { minMembers: 2, limit: 3 });
+  // Threshold + limit come from the shared table-persona rule (FU-05), not a
+  // local copy of the numbers.
+  const anchorOptions = {
+    minMembers: resolveAuditAnchorMinMembers(roster.length),
+    limit: TABLE_PERSONA_ANCHOR_LIMIT,
+  };
+  const effectiveAnchors = buildSharedInterestAnchors(roster, anchorOptions);
 
   // Potential = what the same table would produce if matching-aware enrichment
   // were on. This distinguishes "flag off" from "data missing".
@@ -65,7 +88,7 @@ async function auditSession(socialSessionId: string, matchingAware: boolean): Pr
         ...member,
         interests: labelsByUser.get(participants[index].userId) ?? member.interests,
       })),
-      { minMembers: 2, limit: 3 },
+      anchorOptions,
     );
   }
 
@@ -164,11 +187,16 @@ async function main(): Promise<void> {
   }
 }
 
-main()
-  .catch((error) => {
-    console.error('[AuditProfileContext] failed', error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await pool.end().catch(() => undefined);
-  });
+// Guarded so tests can import `resolveAuditAnchorMinMembers` without running the
+// audit (which opens a DB pool and calls `pool.end()`). Same pattern as
+// `backfill-legacy-event-credits.ts` / `backfillLifeStage.ts`.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main()
+    .catch((error) => {
+      console.error('[AuditProfileContext] failed', error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await pool.end().catch(() => undefined);
+    });
+}

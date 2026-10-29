@@ -9,6 +9,8 @@ import { listParticipants } from '../lib/socialIcebreakerStore';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { HOST_TABLE_BRIEF_PACE_BY_PERSONA, HOST_TABLE_BRIEF_PACE_SHORT } from '../lib/hostTableBrief';
+import { getLatestRoleResultsForUsers } from '../repositories/assessmentRepo';
+import { resetHostBriefRoleResultsMemo } from '../lib/hostBriefRoleResultsMemo';
 
 vi.mock('../lib/socialIcebreakerStore', () => ({
   listParticipants: vi.fn(),
@@ -20,6 +22,13 @@ vi.mock('../lib/featureFlags', () => ({
 
 vi.mock('../lib/isSingleTestMode', () => ({
   isSingleTestMode: vi.fn(() => false),
+}));
+
+// FU-02: the host brief now reads ACOEXP through the per-session memo. Mocking
+// the repository keeps these projections tests database-free AND gives the
+// FU-04③ guards a call counter to assert against.
+vi.mock('../repositories/assessmentRepo', () => ({
+  getLatestRoleResultsForUsers: vi.fn(async () => new Map()),
 }));
 
 const PHASE_STARTED_AT = 1_700_000_060_000;
@@ -69,11 +78,13 @@ function existingBrief(): HostTableBrief {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetHostBriefRoleResultsMemo();
   vi.mocked(isSingleTestMode).mockReturnValue(false);
   vi.mocked(getFeatureFlag).mockImplementation(
     async (key) => key === 'icebreakerMatchingAwareEnabled',
   );
   vi.mocked(listParticipants).mockResolvedValue(validRoster());
+  vi.mocked(getLatestRoleResultsForUsers).mockResolvedValue(new Map());
 });
 
 afterEach(() => {
@@ -228,5 +239,116 @@ describe('HostTableBrief sanitizer boundary', () => {
 
     expect(sanitized).not.toHaveProperty('hostTableBrief');
     expect(state.hostTableBrief).toEqual(existingBrief());
+  });
+});
+
+// ─── FU-02: ACOEXP is a real consumer (energy band from roster traits) ──────
+
+describe('HostTableBrief ACOEXP energy (FU-02)', () => {
+  function traits(extraversion: number, affinity = 60) {
+    return { extraversion, affinity, emotionalStability: 60 };
+  }
+
+  it('uses roster-average ACOEXP extraversion over the archetype composition', async () => {
+    // Archetype composition alone says `high` (all corgi); ACOEXP says `low`.
+    vi.mocked(getLatestRoleResultsForUsers).mockResolvedValue(
+      new Map([
+        ['host-user', traits(20)],
+        ['participant-1', traits(25)],
+        ['participant-2', traits(30)],
+      ]),
+    );
+
+    const result = await buildClientState(makeState(), 'host-user');
+
+    expect(result.hostTableBrief).toMatchObject({
+      paceShort: HOST_TABLE_BRIEF_PACE_BY_PERSONA.mixed.low,
+      anchorLabel: '咖啡',
+      phaseKey: `warmup:${PHASE_STARTED_AT}:low:mixed`,
+    });
+    expect(getLatestRoleResultsForUsers).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the archetype band when ACOEXP coverage is too thin', async () => {
+    vi.mocked(getLatestRoleResultsForUsers).mockResolvedValue(
+      new Map([
+        ['host-user', traits(20)],
+        ['participant-1', traits(20)],
+      ]),
+    );
+
+    const result = await buildClientState(makeState(), 'host-user');
+
+    expect(result.hostTableBrief).toMatchObject({
+      paceShort: HOST_TABLE_BRIEF_PACE_BY_PERSONA.mixed.high,
+      phaseKey: `warmup:${PHASE_STARTED_AT}:high:mixed`,
+    });
+  });
+
+  it('keeps the visible DTO at three fields with no score or user id', async () => {
+    vi.mocked(getLatestRoleResultsForUsers).mockResolvedValue(
+      new Map([
+        ['host-user', traits(23)],
+        ['participant-1', traits(24)],
+        ['participant-2', traits(26)],
+      ]),
+    );
+
+    const result = await buildClientState(makeState(), 'host-user');
+    const serialized = JSON.stringify(result.hostTableBrief);
+
+    expect(Object.keys(result.hostTableBrief ?? {})).toHaveLength(3);
+    expect(serialized).not.toContain('host-user');
+    expect(serialized).not.toContain('participant-1');
+    expect(serialized).not.toContain('23');
+    expect(serialized).not.toContain('extraversion');
+  });
+
+  it('issues one role_results query for repeated polls (memoized per session)', async () => {
+    const first = await buildClientState(makeState(), 'host-user');
+    const second = await buildClientState(makeState(), 'host-user');
+
+    expect(first.hostTableBrief).toEqual(second.hostTableBrief);
+    expect(getLatestRoleResultsForUsers).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── FU-04③: the memo guard — no query outside host + warmup + flag ─────────
+
+describe('HostTableBrief role_results query guards (FU-04③)', () => {
+  it('does not query when the matching-aware flag is off', async () => {
+    vi.mocked(getFeatureFlag).mockResolvedValue(false);
+
+    await buildClientState(makeState(), 'host-user');
+
+    expect(getLatestRoleResultsForUsers).not.toHaveBeenCalled();
+  });
+
+  it('does not query for a non-host participant', async () => {
+    await buildClientState(makeState(), 'participant-1');
+
+    expect(getLatestRoleResultsForUsers).not.toHaveBeenCalled();
+  });
+
+  it('does not query for an anonymous projection', async () => {
+    await buildClientState(makeState());
+
+    expect(getLatestRoleResultsForUsers).not.toHaveBeenCalled();
+  });
+
+  it('does not query outside warmup', async () => {
+    await buildClientState(makeState({ currentPhase: 'micro_challenge' }), 'host-user');
+
+    expect(getLatestRoleResultsForUsers).not.toHaveBeenCalled();
+  });
+
+  it('does not query when the table has no shared-interest anchor', async () => {
+    vi.mocked(listParticipants).mockResolvedValue(
+      validRoster().map(({ interests: _interests, ...participant }) => participant),
+    );
+
+    await buildClientState(makeState(), 'host-user');
+
+    expect(getLatestRoleResultsForUsers).not.toHaveBeenCalled();
   });
 });
