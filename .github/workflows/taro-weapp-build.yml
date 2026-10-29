@@ -19,7 +19,9 @@ on:
       - 'package-lock.json'
       - '.github/workflows/taro-weapp-build.yml'
   # Publish only after the matching staging commit is healthy. A push still
-  # gets an early compile/package check above; this event performs the release.
+  # gets an early compile/package check above (and its dist artifact is what the
+  # release run reuses, so the package is built once per commit); this event
+  # performs the release.
   workflow_run:
     workflows: ['Deploy Staging']
     types: [completed]
@@ -46,8 +48,15 @@ permissions:
 
 # Never interrupt an in-flight upload, but collapse multiple waiting runs to the
 # newest commit so push bursts cannot queue repeated builds/CVM uploads.
+#
+# 2026-10-29: two lanes. Push builds and release (workflow_run) runs used to
+# share one group, which was harmless only because push builds never actually
+# ran. Now that they do (see the check-mini-program-changes note below), a newer
+# push build could replace a still-PENDING release run and silently drop that
+# commit's 开发版 upload. Builds collapse per branch, releases collapse per branch,
+# and the WeChat upload stays serialized by the `joyjoin-weapp-upload` group.
 concurrency:
-  group: taro-weapp-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  group: taro-weapp-${{ github.event_name == 'workflow_run' && 'release' || 'build' }}-${{ github.event.workflow_run.head_branch || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -61,8 +70,16 @@ jobs:
   # silently skipped the dev-version upload).
   # Fail-safe: if the compare/commit API call fails, treat as changed so the
   # dev-version upload is never silently skipped.
+  #
+  # 2026-10-29: this job used to be gated to workflow_run/workflow_dispatch only.
+  # `build-weapp` declares `needs: check-mini-program-changes`, and a SKIPPED
+  # dependency skips the dependent job regardless of its own `if:`, so every
+  # push-triggered run was fully skipped: the early compile/package check never
+  # ran, `push_build_exists` was never true, and each release rebuilt from
+  # scratch in the workflow_run. The job now runs on every event; push and
+  # pull_request short-circuit to changed=true because the `paths:` filter above
+  # already decided they touch mini-program files.
   check-mini-program-changes:
-    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.check.outputs.changed }}
@@ -75,9 +92,14 @@ jobs:
         run: |
           set -euo pipefail
           # Manual dispatch is an explicit intent to upload — never skip it.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # push/pull_request reach this workflow only because the `paths:`
+          # filter already matched, so they are changed=true by construction and
+          # must not be re-derived from the commit range.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
+             [ "${{ github.event_name }}" = "push" ] || \
+             [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch; proceeding with rebuild/upload."
+            echo "${{ github.event_name }}: path filter already matched; proceeding with build."
             exit 0
           fi
           # Prefer the full push range: previous successful main deploy → HEAD.

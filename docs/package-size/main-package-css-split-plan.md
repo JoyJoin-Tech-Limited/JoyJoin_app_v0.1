@@ -222,6 +222,34 @@ npm run guardrails                             # 0 errors / 12 pre-existing warn
 
 Then push and read `[compiled-package-size] main source …` from the `build-weapp` log.
 
+### CI result (2026-10-29, authoritative)
+
+`a727ca953` → `Deploy Staging` run `40830575293` success (incl. `Mini Program Tests`) →
+`Build Taro WeChat Mini-Program` run `40831578266` success (`build-weapp` + `upload-weapp`).
+
+```
+[compiled-package-size] main source 1865.2 KiB
+  (WeChat-equivalent 2025.2 KiB incl. 160.0 KiB accounting overhead); WeChat headroom 22.8 KiB
+```
+
+The 80200 rejection (WeChat reported 2182 KB) is cleared, and the 开发版 uploaded:
+`version 1.0.20261029.0653`, `desc Auto-deploy (staging): a727ca9`, upload zip 6,512,804 B,
+`✅ WeChat upload complete (synchronous, output verified)`.
+
+Two things this leaves open:
+
+- **Headroom is thin.** 22.8 KiB under WeChat's real 2048 KiB ceiling, and the internal rail
+  (`JOYJOIN_MAIN_PACKAGE_SAFETY_LIMIT_BYTES` = 1856 KiB) now only *warns* — it is exceeded by
+  9.2 KiB. Any new main-package JS/WXSS re-breaks 80200. With `common.wxss` down to 105,106 B
+  (~103 KiB of the 1865.2 KiB main source) the bulk of what remains is JS — the upload log
+  already shows `common.js` crossing Babel's 500 KB deopt threshold — so the next reduction has
+  to come from JS; do not expect another CSS split to buy room.
+- **`pages/alang` is now the tightest subpackage**: 1806.5 KiB raw / 1966.5 KiB
+  WeChat-equivalent / 81.5 KiB headroom, because `pages/alang/preferences/index.scss` still
+  `@import`s `../flash` alongside its `flash-preferences` partial (~33.7 KiB duplicate). Not
+  touched here because it was outside the 80200 fix; `pages/alang-story` sits at 370.7 KiB
+  headroom so the split has room to absorb a follow-up.
+
 ## Risk
 
 Subpackage style-splitting has blanked UI on device three times

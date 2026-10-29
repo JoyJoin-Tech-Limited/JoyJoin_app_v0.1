@@ -168,8 +168,11 @@ npm run simulate:expert-packet        # generate human-readable review packet
 npm run simulate:gate                 # CI gate: generate + run centroids
 
 # WeChat Mini-Program upload (开发版)
-# CI: a push to main first deploys the same commit to staging. Only after that
-#   workflow passes does taro-weapp-build.yml rebuild and upload the 开发版.
+# CI: a push to main starts the mini-program build immediately (same workflow,
+#   push trigger) and deploys the same commit to staging. Only after that
+#   staging deploy passes does taro-weapp-build.yml upload the 开发版, reusing
+#   the push build's dist artifact instead of rebuilding (it rebuilds only when
+#   no successful push build exists for that commit).
 #   Automatic uploads target https://staging.joyjoinapp.com; production builds
 #   require explicit workflow input api_target=production.
 # Manual upload (--appid is required; won't auto-read from project.config.json):
