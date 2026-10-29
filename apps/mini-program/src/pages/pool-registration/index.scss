@@ -16,6 +16,10 @@
 // the pool-registration subpackage page WXSS (subpackage style-splitting gate).
 @use './components/PoolRegistrationDuoCard.scss' as *;
 @use './components/DuoInfoSheet.scss' as *;
+// Subpackage WXSS guard: IntentCard renders inside PoolRegistrationIntentGrid.
+// The component no longer side-effect-imports its SCSS — a module reached by
+// two page entries is hoisted into the main-package common.wxss.
+@use '../../components/intent/IntentCard.scss' as *;
 @use './components/PoolRegistrationDuoBanner.scss' as *;
 // S2 (2026-10-23): the invitee solo-confirm dialog SCSS is @use'd into the
 // page SCSS so its rules compile into the page WXSS — same subpackage

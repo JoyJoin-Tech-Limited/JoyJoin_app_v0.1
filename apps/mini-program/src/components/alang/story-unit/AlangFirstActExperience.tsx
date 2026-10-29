@@ -3,7 +3,6 @@ import {
   FirstActAtuanTemplateExperience,
   type FirstActAtuanTemplateConfig,
 } from './FirstActAtuanTemplateExperience'
-import './AlangFirstActExperience.scss'
 
 export type AlangApproachIndex = 0 | 1
 type HighlightId = 'alang' | 'lifebuoy' | 'routeMap' | 'windowChairs'

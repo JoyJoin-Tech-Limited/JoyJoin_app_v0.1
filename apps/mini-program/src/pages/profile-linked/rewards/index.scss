@@ -1,5 +1,9 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): XiaoyueChatBubble renders on this page.
+// The component no longer side-effect-imports its SCSS — a module reached by
+// two page entries is hoisted into the main-package common.wxss.
+@use '../../../components/mascot/XiaoyueChatBubble.scss' as *;
 
 .rewards-page {
   @include page-gradient-bg;

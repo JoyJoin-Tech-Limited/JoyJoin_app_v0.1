@@ -12,6 +12,12 @@
 // PR-8: XiaoyueInlineError renders in this page's error surface — co-compile
 // its rules into this page's WXSS.
 @use '../../../components/mascot/XiaoyueInlineError.scss' as *;
+// Subpackage WXSS guard: XiaoyueChatBubble + OnboardingLoadingShell render on
+// this page. Neither component side-effect-imports its SCSS any more — a
+// module reached by two page entries is hoisted into the main-package
+// common.wxss and charged against WeChat's 2 MB main-package budget.
+@use '../../../components/mascot/XiaoyueChatBubble.scss' as *;
+@use '../../../components/loading/OnboardingLoadingShell.scss' as *;
 
 .profile-review {
   display: flex;

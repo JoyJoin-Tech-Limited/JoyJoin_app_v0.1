@@ -1,0 +1,5 @@
+// OnboardingEntryPage renders OnboardingLoadingShell while it resolves the
+// server-driven nextStep. The component no longer side-effect-imports its SCSS
+// (a module reached by two page entries is hoisted into the main-package
+// common.wxss), so the rules must be co-compiled into THIS page's WXSS.
+@use '../../../components/loading/OnboardingLoadingShell.scss' as *;

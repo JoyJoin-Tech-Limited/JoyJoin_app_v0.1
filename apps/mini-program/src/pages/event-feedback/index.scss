@@ -1,5 +1,9 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): Chip renders in WrapupStep. The component
+// no longer side-effect-imports its SCSS — a module reached by two page entries
+// is hoisted into the main-package common.wxss.
+@use '../../components/ui/Chip.scss' as *;
 
 .event-feedback {
   // vh fallback before dvh (2026-08-07 audit G7): older WKWebView/X5 runtimes

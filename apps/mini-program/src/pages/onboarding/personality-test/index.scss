@@ -6,6 +6,10 @@
 // PR-8: XiaoyueInlineError renders on this page (question row + intro
 // footer) — co-compile its rules into this page's WXSS.
 @use '../../../components/mascot/XiaoyueInlineError.scss' as *;
+// Subpackage WXSS guard: OnboardingLoadingShell renders on this page. The
+// component no longer side-effect-imports its SCSS — a module reached by two
+// page entries is hoisted into the main-package common.wxss.
+@use '../../../components/loading/OnboardingLoadingShell.scss' as *;
 
 @keyframes mascot-breathe {
   0%, 100% {

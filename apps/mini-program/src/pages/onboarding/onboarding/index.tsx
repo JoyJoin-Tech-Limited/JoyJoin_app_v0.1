@@ -5,6 +5,7 @@ import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadin
 import { useAuth } from '../../../hooks/useAuth'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import './index.scss'
 
 /**
  * OnboardingEntryPage — server-driven redirect hub.

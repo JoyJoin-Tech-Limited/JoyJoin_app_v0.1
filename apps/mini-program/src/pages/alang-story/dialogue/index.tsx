@@ -1,4 +1,12 @@
-import { FlashDialoguePage, type CustomLaterActAssets } from '../../alang/dialogue'
+import { FlashDialoguePage, type CustomLaterActAssets } from '../../alang/dialogue/FlashDialoguePage'
+// The shared Alang chrome (flash.scss) is deliberately reached from BOTH Alang
+// subpackages: a CSS module used by two packages lands in root `common.wxss`
+// (main package), whereas a module used only inside `pages/alang` would be
+// emitted as `pages/alang/sub-common.wxss`, which no stylesheet imports and
+// which therefore never loads on device. The story-specific rules stay
+// page-local via the generated `./story.scss` below.
+import '../../alang/flash.scss'
+import './story.scss'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import alangSecond from '../assets/flash-alang-second-act-return-shelter-v2.jpg'
 import alangThird from '../assets/flash-alang-third-act-return-cabinet-v2.jpg'

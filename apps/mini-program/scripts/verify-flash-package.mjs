@@ -268,14 +268,30 @@ if (existsSync(commonStylesPath)) {
   if (!commonStyles.includes('.flash-page')) {
     failures.push('dist/common.wxss does not contain the shared Flash page styles')
   }
-  if (!/\.flash-dialogue--story\{[^}]*min-height:100vh;[^}]*height:100dvh;[^}]*\}/.test(commonStyles)) {
+}
+
+// The story-episode styles live in each dialogue page's own WXSS (subpackage)
+// instead of the root common.wxss, so they stop counting against WeChat's 2 MB
+// main-package source ceiling. Both live routes render the same
+// FlashDialoguePage, so BOTH page stylesheets must carry the viewport chain.
+for (const storyPageStyles of [
+  'pages/alang/dialogue/index.wxss',
+  'pages/alang-story/dialogue/index.wxss',
+]) {
+  const storyStylesPath = resolve(distRoot, storyPageStyles)
+  if (!existsSync(storyStylesPath) || statSync(storyStylesPath).size === 0) {
+    failures.push(`dist/${storyPageStyles} is missing or empty`)
+    continue
+  }
+  const storyStyles = readFileSync(storyStylesPath, 'utf8')
+  if (!/\.flash-dialogue--story\{[^}]*min-height:100vh;[^}]*height:100dvh;[^}]*\}/.test(storyStyles)) {
     failures.push(
-      'dist/common.wxss does not preserve the non-collapsing Flash story viewport height chain',
+      `dist/${storyPageStyles} does not preserve the non-collapsing Flash story viewport height chain`,
     )
   }
-  if (!/\.flash-dialogue__story-stage\{[^}]*position:absolute;[^}]*inset:0;[^}]*\}/.test(commonStyles)) {
+  if (!/\.flash-dialogue__story-stage\{[^}]*position:absolute;[^}]*inset:0;[^}]*\}/.test(storyStyles)) {
     failures.push(
-      'dist/common.wxss does not anchor the Flash story stage to the viewport shell',
+      `dist/${storyPageStyles} does not anchor the Flash story stage to the viewport shell`,
     )
   }
 }

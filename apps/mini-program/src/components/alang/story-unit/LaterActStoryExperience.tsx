@@ -8,7 +8,6 @@ import {
   resolveLaterActSkeletonStep,
 } from './FlashStoryExperienceSkeleton'
 import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
-import './LaterActStoryExperience.scss'
 
 export type LaterActExperienceStage = 'approach' | 'explore' | 'object' | 'followup' | 'game' | 'ending'
 

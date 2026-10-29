@@ -1,0 +1,20 @@
+@import '../../styles/variables';
+
+.flash-preferences {
+  &__panel { overflow: hidden; border-radius: $card-radius-lg; background: $color-surface; box-shadow: $shadow-sm; }
+  &__master,
+  &__row { display: flex; align-items: center; justify-content: space-between; gap: 24rpx; padding: 26rpx 28rpx; }
+  &__master { background: $color-bg-tint-purple; }
+  &__row { border-top: 1rpx solid $color-divider; }
+  &__row-copy { flex: 1; min-width: 0; }
+  &__row-title { display: block; color: $color-text-primary-warm; font-size: $font-size-base; font-weight: $font-weight-bold; }
+  &__row-description { display: block; margin-top: 6rpx; color: $color-text-secondary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; }
+  &__consent { display: block; margin-top: 8rpx; color: $color-text-tertiary-on-light; font-size: $font-size-2xs; line-height: $line-height-relaxed; }
+  &__sources--disabled { opacity: 0.48; }
+  &__tags { display: flex; flex-direction: column; gap: 14rpx; }
+  &__tag { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; min-height: 92rpx; padding: 16rpx 22rpx; border-radius: $card-radius-sm; background: $color-surface; box-shadow: $shadow-sm; box-sizing: border-box; }
+  &__tag-copy { flex: 1; min-width: 0; }
+  &__tag-label { display: block; color: $color-text-primary-warm; font-size: $font-size-base; font-weight: $font-weight-bold; }
+  &__tag-source { display: block; margin-top: 4rpx; color: $color-text-tertiary-on-light; font-size: $font-size-xs; }
+  &__tag-delete { display: flex; align-items: center; justify-content: center; min-width: 88rpx; min-height: 88rpx; color: $color-error; font-size: $font-size-sm; text-align: center; }
+}

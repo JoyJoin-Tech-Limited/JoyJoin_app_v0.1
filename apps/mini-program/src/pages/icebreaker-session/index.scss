@@ -1,5 +1,12 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): these components render on this page, so
+// their rules must compile into THIS page's WXSS. None of them side-effect
+// imports its SCSS any more — a module reached by two or more page entries is
+// hoisted into the main-package common.wxss.
+@use '../../components/ui/Chip.scss' as *;
+@use '../../components/mascot/XiaoyueChatBubble.scss' as *;
+@use '../../components/loading/OnboardingLoadingShell.scss' as *;
 
 // Keep phase presentation in the page WXSS bundle. Taro does not reliably
 // propagate stylesheet side effects through the extracted SessionPhaseViews

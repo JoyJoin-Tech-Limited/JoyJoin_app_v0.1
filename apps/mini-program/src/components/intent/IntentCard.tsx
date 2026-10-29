@@ -3,7 +3,12 @@ import { useCallback } from 'react'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import CheckBadge from '../ui/CheckBadge'
 import { haptics } from '../../lib/utils/haptics'
-import './IntentCard.scss'
+// NOTE: the stylesheet is NOT imported here. IntentCard is used by two page
+// entries (pool-registration and onboarding/essential-data), and a CSS module
+// reached by more than one page entry is hoisted into the root common.wxss —
+// i.e. charged against the 2 MB MAIN package budget. Each consuming page
+// `@use`s IntentCard.scss so the rules compile into that page's own subpackage
+// WXSS.
 
 export interface IntentCardOption {
   value: string

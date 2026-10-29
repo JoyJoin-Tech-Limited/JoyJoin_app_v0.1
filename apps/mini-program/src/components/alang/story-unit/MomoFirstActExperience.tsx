@@ -1,6 +1,5 @@
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
 import { FirstActAtuanTemplateExperience, type FirstActAtuanTemplateConfig } from './FirstActAtuanTemplateExperience'
-import './MomoFirstActExperience.scss'
 
 type ApproachIndex = 0 | 1
 interface HighlightReply { label: string; response: string }

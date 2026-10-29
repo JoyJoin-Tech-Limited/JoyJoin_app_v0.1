@@ -7,7 +7,12 @@ import { localAsset } from '../../lib/utils/cdnAssets'
 import { useChoreographedWait, CHOREOGRAPHED_SKIP_DELAY_MS } from '../../hooks/useChoreographedWait'
 import Card from '../ui/Card'
 import CelebrationSparkle from '../mascot/CelebrationSparkle'
-import './OnboardingLoadingShell.scss'
+// NOTE: the stylesheet is NOT imported here. OnboardingLoadingShell is used by
+// six page entries (icebreaker-session and five onboarding pages), and a CSS
+// module reached by more than one page entry is hoisted into the root
+// common.wxss — i.e. charged against the 2 MB MAIN package budget. Each
+// consuming page `@use`s OnboardingLoadingShell.scss so the rules compile into
+// that page's own subpackage WXSS.
 
 /** Celebrate animation duration in ms. Parents should hold navigation for at
  *  least this long so the user sees the full animation before route transition. */

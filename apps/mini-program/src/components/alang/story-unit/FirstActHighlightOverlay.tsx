@@ -1,5 +1,4 @@
 import { View } from '@tarojs/components'
-import './FirstActHighlightOverlay.scss'
 
 export interface FirstActHighlightTarget {
   id: string

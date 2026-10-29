@@ -9,6 +9,17 @@
 // Subpackage WXSS guard: IntentCard's compact/strip variants must reach this
 // page's WXSS on device (verify-subpackage-styles.mjs asserts the selectors).
 @use '../../../components/intent/IntentCard.scss' as *;
+// Subpackage WXSS guard: ProfessionChatOverlay renders on this page. The
+// component no longer side-effect-imports its SCSS — a module reached by two
+// page entries is hoisted into the main-package common.wxss.
+@use '../../../components/ProfessionChatOverlay.scss' as *;
+// Subpackage WXSS guard: Chip (inside the overlay) + XiaoyueChatBubble +
+// OnboardingLoadingShell render on this page. None of these components
+// side-effect-imports its SCSS any more — a module reached by two page entries
+// is hoisted into the main-package common.wxss.
+@use '../../../components/ui/Chip.scss' as *;
+@use '../../../components/mascot/XiaoyueChatBubble.scss' as *;
+@use '../../../components/loading/OnboardingLoadingShell.scss' as *;
 
 .essential-data {
   display: flex;

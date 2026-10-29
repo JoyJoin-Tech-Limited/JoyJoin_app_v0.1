@@ -66,7 +66,12 @@ import {
   type ProfessionLadderState,
 } from '../lib/onboarding/professionLadderReducer'
 import { deriveProfessionTraitTagGroups } from '../lib/onboarding/professionTraitTags'
-import './ProfessionChatOverlay.scss'
+// NOTE: the stylesheet is NOT imported here. `ProfessionChatOverlay` is used by
+// two subpackage pages (profile-linked/edit-profile, onboarding/essential-data),
+// and a CSS module reached by more than one page entry is hoisted into the root
+// common.wxss — i.e. charged against the 2 MB MAIN package budget. Each
+// consuming page `@use`s this component's SCSS instead, so the rules compile
+// into that page's own subpackage WXSS.
 import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
 export interface ProfessionClassificationData {

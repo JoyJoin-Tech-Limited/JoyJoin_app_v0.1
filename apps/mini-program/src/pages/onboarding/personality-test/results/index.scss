@@ -8,6 +8,10 @@
 // page's WXSS (verify-subpackage-styles.mjs; the components carry no
 // TSX-side SCSS import).
 @use '../../../../components/onboarding/GuestEventPreviewCard.scss' as *;
+// Subpackage WXSS guard: XiaoyueChatBubble renders in FinalStage. The
+// component no longer side-effect-imports its SCSS — a module reached by two
+// page entries is hoisted into the main-package common.wxss.
+@use '../../../../components/mascot/XiaoyueChatBubble.scss' as *;
 
 // ─── Local semantic colors (extracted from hard-coded values) ────
 $color-holo-gold: #bf953f;

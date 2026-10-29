@@ -413,11 +413,23 @@ const REQUIREMENTS = [
   },
   {
     // 叙事动作层（sprint_20260821_3kmkkw, AC-04/MNT-03）：interaction 节点动作
-    // 舞台的样式随 pages/alang/flash.scss 编译；flash.scss 被 alang 与
-    // alang-story 两个子包共享，按既有机制进入 root common.wxss（app.wxss 链
-    // @import "common.wxss"，全页面可达）。手势区无样式会在真机上退化成不可
-    // 操作的裸文本（同 my-image/squad-unboxing 样式分裂事故）。
-    page: 'common.wxss',
+    // 舞台的样式随 dialogue 页面的 story.scss 编译进各自页面 WXSS（子包），
+    // 不再进入 root common.wxss —— 否则会被计入微信主包 2 MB 源码上限。
+    // 两个 dialogue 路由共用同一个 FlashDialoguePage，故两处都必须有。
+    // 手势区无样式会在真机上退化成不可操作的裸文本（同 my-image/squad-unboxing
+    // 样式分裂事故）。
+    page: 'pages/alang/dialogue/index.wxss',
+    selectors: [
+      'flash-interaction__goal{',
+      'flash-interaction__track{',
+      'flash-interaction__waypoint{',
+      'flash-interaction__region{',
+      'flash-interaction__confirm{',
+      'flash-interaction__hint{',
+    ],
+  },
+  {
+    page: 'pages/alang-story/dialogue/index.wxss',
     selectors: [
       'flash-interaction__goal{',
       'flash-interaction__track{',
@@ -438,13 +450,16 @@ const REQUIREMENTS = [
     ],
   },
   {
-    // Chip heat mode (2026-09-07): Chip is shared across subpackages, so its
-    // rules must land in root common.wxss. The heat palette compound
-    // selectors are consumed by edit-profile (profile-linked subpackage); if
-    // they chunk-split away, heat chips render with the generic purple
-    // escalation on device (same failure mode as the 2026-08-03/08-17
-    // subpackage style-splitting incidents).
-    page: 'common.wxss',
+    // Chip heat mode (2026-09-07): the heat palette compound selectors are
+    // consumed only by edit-profile (profile-linked subpackage). They used to
+    // ride `Chip.tsx`'s side-effect `import './Chip.scss'` into root
+    // common.wxss; since the 2026-10-29 main-package CSS split, Chip.scss is
+    // `@use`d directly by the page SCSS instead (inlined into the page WXSS,
+    // which the main package no longer pays for). The assertion follows the
+    // rules to their new owner — if they chunk-split away, heat chips render
+    // with the generic purple escalation on device (same failure mode as the
+    // 2026-08-03/08-17 subpackage style-splitting incidents).
+    page: 'pages/profile-linked/edit-profile/index.wxss',
     selectors: [
       'chip--heat.chip--level-1{',
       'chip--heat.chip--level-2{',

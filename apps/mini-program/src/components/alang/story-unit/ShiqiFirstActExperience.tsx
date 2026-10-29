@@ -1,5 +1,4 @@
 import { FirstActAtuanTemplateExperience, type FirstActAtuanTemplateConfig } from './FirstActAtuanTemplateExperience'
-import './ShiqiFirstActExperience.scss'
 
 type ApproachIndex = 0 | 1
 type HotspotId = 'shiqi' | 'outing-book' | 'exchange-box' | 'inspection-light'

@@ -4,7 +4,6 @@ import {
   type FirstActAtuanTemplateConfig,
   type FirstActTemplateMigratedProgress,
 } from './FirstActAtuanTemplateExperience'
-import './LiziFirstActExperience.scss'
 
 export type LiziFirstActApproachIndex = 0 | 1
 type HighlightId = 'lizi' | 'palette' | 'swatches' | 'cart'

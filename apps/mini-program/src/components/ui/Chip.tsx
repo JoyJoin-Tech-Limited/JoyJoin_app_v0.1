@@ -1,5 +1,10 @@
 import { View, Text } from '@tarojs/components'
-import './Chip.scss'
+// NOTE: the stylesheet is NOT imported here. Chip is used by four page entries
+// (icebreaker-session, profile-linked/edit-profile, event-feedback and, via
+// ProfessionChatOverlay, onboarding/essential-data), and a CSS module reached by
+// more than one page entry is hoisted into the root common.wxss — i.e. charged
+// against the 2 MB MAIN package budget. Each consuming page `@use`s Chip.scss so
+// the rules compile into that page's own subpackage WXSS.
 
 export interface ChipProps {
   label: string

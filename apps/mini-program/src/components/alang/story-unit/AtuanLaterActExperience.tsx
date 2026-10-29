@@ -22,7 +22,6 @@ import {
   resolveAtuanLaterActSkeletonStep,
 } from './FlashStoryExperienceSkeleton'
 import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
-import './AtuanLaterActExperience.scss'
 
 interface AtuanLaterActSceneProps {
   unitId: AtuanLaterActUnitId

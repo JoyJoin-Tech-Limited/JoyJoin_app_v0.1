@@ -11,7 +11,6 @@ import {
   FLASH_STORY_SHARED_SETTLEMENT_KIND,
   resolveFirstActTemplateSkeletonStep,
 } from './FlashStoryExperienceSkeleton'
-import './FirstActAtuanTemplateExperience.scss'
 
 export type FirstActApproachIndex = 0 | 1
 export type FirstActTemplateStage = 'scene' | 'reveal' | 'event' | 'choice' | 'object' | 'followup' | 'conversation' | 'success'
