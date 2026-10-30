@@ -35,6 +35,7 @@ const PAGE_FILES = [
     filePath: path.resolve(currentDir, 'profile-review/index.tsx'),
     exitClassToken: 'profile-review--exiting',
     guardPauseSnippet: 'suspendOnboardingRedirect: isSubmitting || isPageExiting',
+    transitionSnippet: 'useProfileReviewCompletion',
   },
 ] as const
 
@@ -50,11 +51,14 @@ describe('mini-program onboarding page transitions', () => {
   })
 
   it('wires an exit state before navigating away from onboarding steps', () => {
-    PAGE_FILES.forEach(({ filePath, exitClassToken }) => {
+    PAGE_FILES.forEach(({ filePath, exitClassToken, ...page }) => {
       const source = readFileSync(filePath, 'utf8')
+      const transitionSnippet = 'transitionSnippet' in page
+        ? page.transitionSnippet
+        : 'beforeNavigate: () => setIsPageExiting(true)'
 
       expect(source).toContain(exitClassToken)
-      expect(source).toContain('beforeNavigate: () => setIsPageExiting(true)')
+      expect(source).toContain(transitionSnippet)
     })
   })
 

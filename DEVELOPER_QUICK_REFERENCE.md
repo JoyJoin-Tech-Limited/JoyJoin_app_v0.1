@@ -500,7 +500,7 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | `personality-test` | 氛围测试 | `/personality-test` | V4 adaptive questions (8–16) → archetype assigned |
 | `essential-data` | 基本资料 | `/onboarding/setup` | displayName, gender, birthYear, currentCity, hometown, education, occupation (chat overlay), **lifeStage**, relationshipStatus, intent (up to 3) |
 | `extended-data` | 兴趣偏好 | `/onboarding/extended` | 3-tier interest selections (min 3, max 10) across 5 categories |
-| `profile-review` | 资料预览 | `/onboarding/review` | Read-only summary plus optional 1–100 character bio (content-safety checked); persisted via `POST /api/profile-review/complete` |
+| `profile-review` | 资料预览 | `/onboarding/review` | Read-only unified admission-poster summary; no bio capture on this step; persisted via `POST /api/profile-review/complete` |
 
 Note: Voice quiz is not part of the onboarding flow. Archetype is assigned during `personality-test` results, not re-collected on `essential-data`.
 

@@ -2,7 +2,7 @@
   "libVersion": "3.15.1",
   "projectname": "%E6%82%A6%E8%81%9A%20JoyJoin_Test",
   "setting": {
-    "urlCheck": true,
+    "urlCheck": false,
     "coverView": false,
     "lazyloadPlaceholderEnable": false,
     "skylineRenderEnable": false,
@@ -17,5 +17,19 @@
     "checkInvalidKey": true,
     "ignoreDevUnusedFiles": true,
     "bigPackageSizeSupport": false
+  },
+  "condition": {
+    "miniprogram": {
+      "current": 0,
+      "list": [
+        {
+          "id": 0,
+          "name": "悦仔报名QA",
+          "pathName": "pages/pool-registration/index",
+          "query": "id=pool-screenshot-001",
+          "scene": null
+        }
+      ]
+    }
   }
 }

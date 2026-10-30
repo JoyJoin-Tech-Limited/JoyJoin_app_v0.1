@@ -686,8 +686,9 @@ $color-skill-cool: #7c3aed;
     min-width: 0;
     position: relative;
     z-index: 1;
+    font-family: $font-cn-display;
     font-size: $font-size-lg;
-    font-weight: $font-weight-black;
+    font-weight: $font-weight-bold;
     color: $color-text-primary;
     text-align: left;
     line-height: 1.45;
@@ -720,7 +721,7 @@ $color-skill-cool: #7c3aed;
     }
 
     &--pink {
-      border-color: $color-burst-pink;
+      border-color: $color-burst-coral;
       animation-delay: 0.3s;
     }
 

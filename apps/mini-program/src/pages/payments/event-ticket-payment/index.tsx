@@ -22,6 +22,7 @@ import type { MiniProgramPoolRegistrationReturnContext } from '../../../lib/paym
 import { bustRegistrationCaches } from '../../../lib/api/registrationCacheBust'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { getEventTicketTailAsset } from '../../../lib/eventTicketTailAssets'
+import ChevronGlyph from '../../../components/ui/ChevronGlyph'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { useLoadingDeadline } from '../../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
@@ -1226,10 +1227,17 @@ export default function EventTicketPaymentPage() {
                   </View>
                 )}
               </View>
-              <Text className='ticket-card__coupon-stub-savings'>首单立省 {formatPrice(discountAmount)}</Text>
-              <Text className='ticket-card__coupon-stub-code'>
-                {getCouponDisplayName(bestCoupon.code)} · {showCouponDetail ? '▲' : '▼'}
-              </Text>
+              {/* slice(1) strips the ¥ from formatPrice so currency + amount render
+                  as separate nodes — hanging-¥ baseline alignment (2026-10-29 redesign). */}
+              <View className='ticket-card__coupon-stub-savings'>
+                <Text className='ticket-card__coupon-stub-savings-label'>首单立省</Text>
+                <Text className='ticket-card__coupon-stub-savings-currency'>¥</Text>
+                <Text className='ticket-card__coupon-stub-savings-amount'>{formatPrice(discountAmount).slice(1)}</Text>
+              </View>
+              <View className='ticket-card__coupon-stub-code-row'>
+                <Text className='ticket-card__coupon-stub-code'>{getCouponDisplayName(bestCoupon.code)}</Text>
+                <ChevronGlyph direction={showCouponDetail ? 'up' : 'down'} />
+              </View>
               {showCouponDetail && (
                 <View className='ticket-card__coupon-stub-detail'>
                   <Text>已自动为你使用，无需手动操作</Text>
@@ -1245,13 +1253,16 @@ export default function EventTicketPaymentPage() {
         {/* Event-type full-bleed footer vignette or barcode fallback */}
         {deviceTier.isDegradation || tailImageError || tailLoadTimedOut ? (
           <View className='ticket-card__barcode' aria-hidden='true'>
-            {Array.from({ length: 28 }).map((_, i) => (
-              <View
-                key={i}
-                className='ticket-card__barcode-line'
-                style={{ width: `${2 + (i % 3) * 2}rpx` }}
-              />
-            ))}
+            <View className='ticket-card__barcode-cluster'>
+              {Array.from({ length: 28 }).map((_, i) => (
+                <View
+                  key={i}
+                  className='ticket-card__barcode-line'
+                  style={{ width: `${2 + (i % 3) * 2}rpx` }}
+                />
+              ))}
+            </View>
+            <Text className='ticket-card__barcode-serial'>NO.{String(poolId).slice(-6).padStart(6, '0').toUpperCase()}</Text>
           </View>
         ) : (
           <View className='ticket-card__tail-wrap' aria-hidden='true'>

@@ -503,9 +503,11 @@ export function registerAuthRoutes(app: Express): void {
       // first order ¥88 → ¥68, avoiding the culturally unlucky ¥44 of the
       // legacy 50% coupon. WELCOME50/40 stay as legacy fallbacks so an
       // environment whose coupon table predates the seed still awards one.
-      const welcomeCoupon20 = await paymentsRepo.getCouponByCode("WELCOME20");
-      const welcomeCoupon50 = await paymentsRepo.getCouponByCode("WELCOME50");
-      const welcomeCoupon40 = await paymentsRepo.getCouponByCode("WELCOME40");
+      const [welcomeCoupon20, welcomeCoupon50, welcomeCoupon40] = await Promise.all([
+        paymentsRepo.getCouponByCode("WELCOME20"),
+        paymentsRepo.getCouponByCode("WELCOME50"),
+        paymentsRepo.getCouponByCode("WELCOME40"),
+      ]);
       const coupon = welcomeCoupon20 ?? welcomeCoupon50 ?? welcomeCoupon40;
 
       if (!coupon) {
@@ -526,17 +528,19 @@ export function registerAuthRoutes(app: Express): void {
           String(uc.code ?? "").toUpperCase().startsWith("WELCOME"),
         );
 
+      const serializeExistingWelcome = (held: any) => ({
+        id: String(held.id ?? held.user_coupon_id ?? ''),
+        code: held.code ?? coupon.code,
+        discountType: held.discount_type ?? held.discountType ?? coupon.discount_type ?? coupon.discountType ?? 'percentage',
+        discountValue: Number(held.discount_value ?? held.discountValue ?? coupon.discount_value ?? coupon.discountValue ?? 0),
+        source: held.source ?? 'profile_review_first_view',
+        isNewlyAwarded: false,
+        createdAt: normalizeCouponTimestamp(held.created_at ?? held.createdAt),
+        validUntil: normalizeOptionalCouponTimestamp(held.valid_until ?? held.validUntil),
+      });
+
       if (existingWelcome) {
-        return res.json({
-          id: String(existingWelcome.id ?? existingWelcome.user_coupon_id ?? ''),
-          code: existingWelcome.code ?? coupon.code,
-          discountType: existingWelcome.discount_type ?? existingWelcome.discountType ?? coupon.discount_type ?? coupon.discountType ?? 'percentage',
-          discountValue: Number(existingWelcome.discount_value ?? existingWelcome.discountValue ?? coupon.discount_value ?? coupon.discountValue ?? 0),
-          source: existingWelcome.source ?? 'profile_review_first_view',
-          isNewlyAwarded: false,
-          createdAt: normalizeCouponTimestamp(existingWelcome.created_at ?? existingWelcome.createdAt),
-          validUntil: normalizeOptionalCouponTimestamp(existingWelcome.valid_until ?? existingWelcome.validUntil ?? coupon.valid_until ?? coupon.validUntil),
-        });
+        return res.json(serializeExistingWelcome(existingWelcome));
       }
 
       let userCoupon: any;
@@ -550,18 +554,14 @@ export function registerAuthRoutes(app: Express): void {
         // Race-safe fallback: if another request created the row first, refetch it.
         if (createError?.code === '23505') {
           const refetched = await paymentsRepo.getUserCoupons(userId);
-          const raced = refetched.find((uc: any) => (uc.coupon_id ?? uc.couponId) === coupon.id);
+          const raced = refetched.find((uc: any) =>
+            (uc.coupon_id ?? uc.couponId) === coupon.id
+            || String(uc.code ?? "").toUpperCase().startsWith("WELCOME")
+          );
           if (raced) {
-            return res.json({
-              id: String(raced.id ?? raced.user_coupon_id ?? ''),
-              code: coupon.code,
-              discountType: coupon.discount_type ?? coupon.discountType ?? 'percentage',
-              discountValue: Number(coupon.discount_value ?? coupon.discountValue ?? 0),
-              source: raced.source ?? 'profile_review_first_view',
-              isNewlyAwarded: false,
-              createdAt: normalizeCouponTimestamp(raced.created_at ?? raced.createdAt),
-              validUntil: normalizeOptionalCouponTimestamp(coupon.valid_until ?? coupon.validUntil),
-            });
+            // A late commit or a concurrent legacy grant may win the race.
+            // Always describe the held family row, never canonical metadata.
+            return res.json(serializeExistingWelcome(raced));
           }
         }
         throw createError;
@@ -584,10 +584,13 @@ export function registerAuthRoutes(app: Express): void {
       });
     } catch (error) {
       logger.error("[WelcomeCoupon] Failed to claim welcome coupon", {
-        userId,
-        error: error instanceof Error ? error.message : String(error),
+        code: "WELCOME_COUPON_CLAIM_FAILED",
+        category: "http",
       });
-      res.status(500).json({ message: "Failed to claim welcome coupon" });
+      res.status(500).json({
+        code: "WELCOME_COUPON_CLAIM_FAILED",
+        message: "Failed to claim welcome coupon",
+      });
     }
   });
 

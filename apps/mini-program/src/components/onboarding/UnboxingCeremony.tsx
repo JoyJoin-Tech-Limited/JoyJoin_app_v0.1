@@ -47,10 +47,8 @@ const AUTO_ADVANCE_MS = 3200
 const TAP_GUARD_MS = 2400
 
 /**
- * Local copy of WelcomeGiftCard's discount formatter. Deliberately NOT
- * imported from WelcomeGiftCard.tsx: that module side-effect-imports
- * WelcomeGiftCard.scss, and pulling it in here would drag the gift-card WXSS
- * back into the onboarding subpackage chunk graph (sub-common.wxss trap).
+ * Local copy of WelcomeGiftCard's discount formatter. The retained ceremony
+ * component stays independent from Profile Review's compact grant-status UI.
  */
 function formatGiftDiscount(
   discountValue: number,

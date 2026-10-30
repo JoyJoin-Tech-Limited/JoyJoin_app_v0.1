@@ -30,6 +30,10 @@
 @use './phases/SpeedFriendingHeroView';
 @use './phases/UndercoverWordHeroView';
 @use './phases/WarmupPhaseView';
+// Shared pure-CSS chevron (2026-10-29): MiniScript/Recap expanders render
+// ChevronGlyph instead of text-glyph arrows (▼ ▲ ▶) — those sit on the font
+// baseline and misalign across devices.
+@use '../../components/ui/ChevronGlyph.scss' as *;
 @use './components/IcebreakerTierSelector';
 @use './components/IcebreakerTierSheet';
 @use './components/PhaseAigcRow';

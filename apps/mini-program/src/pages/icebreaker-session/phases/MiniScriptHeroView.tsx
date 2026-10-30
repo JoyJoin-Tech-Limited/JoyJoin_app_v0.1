@@ -1,5 +1,6 @@
 import { View, Text, Input, Image, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
+import ChevronGlyph from '../../../components/ui/ChevronGlyph'
 import {
   type MiniScriptPlayerResult,
   type MiniScriptPresentedEvidence,
@@ -751,7 +752,7 @@ export function MiniScriptHeroView({
               aria-label='查看完整剧本'
             >
               <Text className='miniscript-hero__section-title'>查看完整剧本</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showFullScript ? '▼' : '▶'}</Text>
+              <View className='miniscript-hero__section-toggle' aria-hidden='true'><ChevronGlyph direction={showFullScript ? 'up' : 'down'} /></View>
             </View>
             {showFullScript ? (
               <>
@@ -855,7 +856,7 @@ export function MiniScriptHeroView({
             aria-label='故事背景'
           >
             <Text className='miniscript-hero__section-title'>故事背景</Text>
-            <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showPremise ? '▼' : '▶'}</Text>
+            <View className='miniscript-hero__section-toggle' aria-hidden='true'><ChevronGlyph direction={showPremise ? 'up' : 'down'} /></View>
           </View>
           {showPremise ? <Text className='miniscript-hero__beat'>{premiseText}</Text> : null}
         </View>
@@ -954,7 +955,7 @@ export function MiniScriptHeroView({
               aria-label='全部线索'
             >
               <Text className='miniscript-hero__section-title'>全部线索（{revealedClues.length}）</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showAllClues ? '▼' : '▶'}</Text>
+              <View className='miniscript-hero__section-toggle' aria-hidden='true'><ChevronGlyph direction={showAllClues ? 'up' : 'down'} /></View>
             </View>
             {showAllClues
               ? revealedClues.map((clue, idx) => (
@@ -977,7 +978,7 @@ export function MiniScriptHeroView({
               aria-label='我的角色详情'
             >
               <Text className='miniscript-hero__section-title'>我的角色 · {myRole.roleLabel}</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{roleExpanded ? '▼' : '▶'}</Text>
+              <View className='miniscript-hero__section-toggle' aria-hidden='true'><ChevronGlyph direction={roleExpanded ? 'up' : 'down'} /></View>
             </View>
             {roleExpanded ? (
               <>
@@ -1000,7 +1001,7 @@ export function MiniScriptHeroView({
               aria-label='主持人提词'
             >
               <Text className='miniscript-hero__section-title'>主持人提词</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showBeats ? '▼' : '▶'}</Text>
+              <View className='miniscript-hero__section-toggle' aria-hidden='true'><ChevronGlyph direction={showBeats ? 'up' : 'down'} /></View>
             </View>
             {showBeats
               ? currentActData.beats.map((beat, index) => (
@@ -1020,7 +1021,7 @@ export function MiniScriptHeroView({
               aria-label='推理提示'
             >
               <Text className='miniscript-hero__section-title'>推理提示（{deductionHints.length}）</Text>
-              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showDeductionHints ? '▼' : '▶'}</Text>
+              <View className='miniscript-hero__section-toggle' aria-hidden='true'><ChevronGlyph direction={showDeductionHints ? 'up' : 'down'} /></View>
             </View>
             {showDeductionHints && deductionHints.map((hint) => (
               <Text key={hint.stepNumber} className='miniscript-hero__beat'>
@@ -1138,7 +1139,7 @@ export function MiniScriptHeroView({
                   aria-label='补充你的判断（可选）'
                 >
                   <Text className='miniscript-hero__section-title'>补充你的判断（可选）</Text>
-                  <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{voteExtrasOpen ? '▼' : '▶'}</Text>
+                  <View className='miniscript-hero__section-toggle' aria-hidden='true'><ChevronGlyph direction={voteExtrasOpen ? 'up' : 'down'} /></View>
                 </View>
                 {voteExtrasOpen ? (
                   <>

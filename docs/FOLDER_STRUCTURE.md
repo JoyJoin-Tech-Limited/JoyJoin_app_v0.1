@@ -284,7 +284,7 @@ apps/mini-program/
 │   │   ├── ui/                    # UI primitives (Button, Card, FormStepper, etc.)
 │   │   ├── loading/               # Loading states & animations
 │   │   ├── mascot/                # Archetype & Xiaoyue visuals
-│   │   ├── onboarding/            # BoxJourneySpine (装盒进度), UnboxingCeremony (completion overlay)
+│   │   ├── onboarding/            # BoxJourneySpine (装盒进度), WelcomeGiftCard (compact gift status), UnboxingCeremony (inactive reference)
 │   │   ├── ConnectionPointPill/
 │   │   ├── GroupAnalysisSourceHint/
 │   │   └── VirtualList/

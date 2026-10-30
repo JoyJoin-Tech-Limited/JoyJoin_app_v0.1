@@ -41,7 +41,7 @@
 | Tier-M branded skeleton + staged copy | `pages/payments/event-ticket-payment/index.tsx:998` (M1) — order-summary skeleton during `creating` | Tier-M reference: skeleton mirrors the real card, copy stages at ~1.6 s |
 | LLM generation shell | `components/ui/AiGenerationShell.tsx:17` (`AiGenerationShellProps`: `title`, `subtitle`, `successSubtitle`) | Tier-L: the only sanctioned LLM loader |
 | AnalyzingAnimation min-duration | `pages/onboarding/profile-review/index.tsx:592` — `minDuration={1200}` + `onComplete` gate | Pattern: animation owns reveal timing; content shows only in `onComplete` |
-| Celebration 500 ms pattern | `pages/onboarding/profile-review/index.tsx:439` — `haptics('success')` then 500 ms beat before navigation, CTA text flips (`:1009`) | Completion punctuation reference |
+| Inline admission-card completion | `pages/onboarding/profile-review/index.tsx` via `useProfileReviewCompletion.ts` — `haptics('success')` then an in-card「入场卡已生效」confirmation for **720 ms** before server-`nextStep` navigation; reduced motion removes the artificial delay | Completion punctuation reference |
 | Wait instrumentation | `lib/analytics/interactionLatency.ts` (M0) — `startInteraction` / `trackInteraction` | Measure each tiered wait to validate tier assignment |
 
 ---

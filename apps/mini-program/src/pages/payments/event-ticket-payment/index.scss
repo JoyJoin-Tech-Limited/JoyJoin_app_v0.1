@@ -13,13 +13,21 @@
 // stamp + paid 票根 tear-off) is @use'd here so its rules compile into this
 // subpackage page's WXSS (see scripts/verify-subpackage-styles.mjs).
 @use '../../../components/reservation/RegistrationSuccessCeremony.scss' as *;
+// Shared pure-CSS chevron (2026-10-29): coupon-stub disclosure + icebreaker
+// expanders all render ChevronGlyph; @use'd here so the rules compile into
+// this subpackage page's WXSS.
+@use '../../../components/ui/ChevronGlyph.scss' as *;
 
 // ── Color aliases ──
 $ticket-text: $color-text-primary;
 $ticket-text-subtle: $color-text-secondary;
 $ticket-text-muted: $color-text-tertiary;
-$ticket-coupon: $color-secondary;
-$ticket-coupon-bg: rgba($color-secondary, 0.08);
+// 2026-10-29 coupon-stub redesign (expert visual + UI consult): the stub reads
+// as a printed voucher — warm-paper ground, ink type, one deep-violet foil
+// accent — replacing the off-brand hot pink ($color-secondary #FF6B9D) wash.
+$ticket-coupon: $color-primary-dark;      // foil spot colour: hero numeral + stamp only
+$ticket-coupon-bg: $color-bg-tint-cream;  // warm paper stock against the white ticket
+$ticket-text-code: $color-text-tertiary-on-light; // small print on the cream stub
 
 .ticket-page {
   display: flex;
@@ -81,7 +89,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   &__chip {
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 18rpx;
+    padding: 8rpx 16rpx;
     border-radius: $radius-pill;
     background: rgba($color-primary, 0.06);
 
@@ -92,9 +100,10 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
       color: $color-primary-dark;
     }
 
+    // Intent chip: violet-foil family, one depth step above the default chip.
     &--intent {
-      background: rgba($color-secondary, 0.08);
-      Text { color: $color-secondary; }
+      background: rgba($color-primary-dark, 0.1);
+      Text { color: $color-primary-dark; }
     }
 
     &--language,
@@ -119,13 +128,13 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     display: flex;
     flex-wrap: wrap;
     gap: 12rpx;
-    margin-top: 28rpx;
+    margin-top: 24rpx;
   }
 
   &__terms-chip {
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 18rpx;
+    padding: 8rpx 16rpx;
     background: $color-bg-warm-mid;
     border-radius: $radius-pill;
 
@@ -133,6 +142,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
       font-family: $font-ui;
       font-size: $font-size-xs;
       color: $ticket-text-subtle;
+      letter-spacing: 1rpx;
       white-space: nowrap;
       word-break: keep-all;
     }
@@ -205,62 +215,107 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
   &__coupon-stub-body {
     flex: 1;
-    padding: 28rpx 20rpx;
+    padding: 24rpx;
   }
 
+  // R1 — eyebrow row; the 48rpx stamp drives the 48rpx row height.
   &__coupon-stub-header {
     display: flex;
     align-items: center;
-    gap: 12rpx;
+    gap: 16rpx;
     margin-bottom: 8rpx;
   }
 
   &__coupon-stub-title {
     font-family: $font-cn-display;
     font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    letter-spacing: 2rpx;
+    line-height: 36rpx;
+    color: $ticket-text;
+  }
+
+  // R2 — the single accent moment: 56rpx hero numeral with a hanging ¥ and a
+  // quiet unit label, baseline-aligned (middle alignment reads like a form).
+  &__coupon-stub-savings {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 8rpx;
+  }
+
+  &__coupon-stub-savings-label {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    line-height: 64rpx;
+    letter-spacing: 2rpx;
+    color: $ticket-text-subtle;
+    margin-right: 16rpx;
+  }
+
+  &__coupon-stub-savings-currency {
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
     font-weight: $font-weight-bold;
+    line-height: 64rpx;
+    color: $ticket-coupon;
+    margin-right: 2rpx;
+  }
+
+  &__coupon-stub-savings-amount {
+    font-family: $font-cn-display;
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-bold;
+    line-height: 64rpx;
     color: $ticket-coupon;
   }
 
-  &__coupon-stub-savings {
-    display: block;
-    font-family: $font-cn-display;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-black;
-    color: $ticket-coupon;
-    margin-bottom: 4rpx;
+  // R3 — list-cell affordance: coupon name left, pure-CSS chevron on the
+  // right rail (font-glyph ▼ sits low and misaligned across devices).
+  &__coupon-stub-code-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 40rpx;
+    // currentColor feeds the ChevronGlyph (shared component) on the right rail.
+    color: $ticket-text-code;
   }
 
   &__coupon-stub-code {
-    display: block;
     font-family: $font-ui;
     font-size: $font-size-xs;
-    color: $ticket-text-muted;
+    font-weight: $font-weight-normal;
+    line-height: 32rpx;
+    letter-spacing: 1rpx;
+    color: $ticket-text-code;
   }
 
   &__coupon-stub-detail {
-    margin-top: 12rpx;
-    padding-top: 12rpx;
-    border-top: 1rpx dashed rgba($color-secondary, 0.2);
+    margin-top: 8rpx;
+    padding-top: 8rpx;
+    border-top: 1rpx dashed rgba($color-text-primary-warm, 0.16);
 
     Text {
       font-family: $font-ui;
       font-size: $font-size-xs;
-      color: $ticket-text-subtle;
+      color: $ticket-text-code;
     }
   }
 
   // Stamp reveal (WOW element)
+  // Foil seal: 3rpx ring (2rpx renders hairline on device), tilted like a hand
+  // stamp; +2rpx top margin compensates the rotation's optical lift.
   &__stamp {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 56rpx;
-    height: 56rpx;
+    width: 48rpx;
+    height: 48rpx;
     border-radius: 50%;
     background: $color-surface;
-    border: 2rpx solid $ticket-coupon;
-    transform: scale(1);
+    border: 3rpx solid $ticket-coupon;
+    transform: rotate(-12deg);
+    margin-top: 2rpx;
 
     &--animated {
       animation: ticket-stamp-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -270,18 +325,30 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   &__stamp-text {
     font-family: $font-cn-display;
     font-size: $font-size-2xs;
-    font-weight: $font-weight-black;
+    font-weight: $font-weight-medium;
+    letter-spacing: 2rpx;
     color: $ticket-coupon;
   }
 
-  // Barcode decoration fallback (same footprint as tail vignette)
+  // Barcode: left-anchored cluster + serial — boarding-pass composition
+  // (2026-10-29). space-between spread lines read as a stretched fence;
+  // a dense left cluster with a mono serial beneath reads as print.
   &__barcode {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16rpx;
     height: 280rpx;
     padding: 0 48rpx;
     opacity: 0.18;
+  }
+
+  &__barcode-cluster {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+    height: 48rpx;
   }
 
   &__barcode-line {
@@ -289,6 +356,13 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     height: 48rpx;
     background: $color-text-primary;
     border-radius: 1rpx;
+  }
+
+  &__barcode-serial {
+    font-family: $font-mono;
+    font-size: $font-size-2xs;
+    letter-spacing: 2rpx;
+    color: $color-text-primary;
   }
 
   // Event-type full-bleed footer vignette
@@ -575,13 +649,19 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 }
 
 @keyframes ticket-stamp-pop {
-  from {
+  // Letterpress settle: press DOWN into the paper (oversize + ink-bleed
+  // opacity), micro-rebound, rest. Growing from scale(0) reads as a popup.
+  0% {
     opacity: 0;
-    transform: scale(0) rotate(-15deg);
+    transform: scale(1.6) rotate(-21deg);
   }
-  to {
+  55% {
     opacity: 1;
-    transform: scale(1) rotate(0deg);
+    transform: scale(1.06) rotate(-13.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-12deg);
   }
 }
 
@@ -613,7 +693,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   .ticket-card__stamp--animated {
     animation: none;
     opacity: 1;
-    transform: none;
+    transform: rotate(-12deg);
   }
 
   .ticket-card__tail-image {
@@ -760,14 +840,14 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
   &__badge {
     padding: 4rpx 12rpx;
-    background: rgba($color-secondary, 0.1);
+    background: rgba($color-text-secondary, 0.08);
     border-radius: $radius-pill;
 
     Text {
       font-family: $font-ui;
       font-size: $font-size-2xs;
       font-weight: $font-weight-bold;
-      color: $color-secondary;
+      color: $ticket-text-subtle;
     }
 
     &--best {
@@ -844,29 +924,54 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     }
 
     &--discount {
-      color: $color-secondary;
+      color: $color-primary-dark;
     }
+  }
 
-    &--total {
-      font-family: $font-cn-display;
-      font-size: $font-size-xl;
-      font-weight: $font-weight-black;
-      color: $color-primary;
-    }
+  // Total row: hanging-¥ hero numeral (2026-10-29). Same-family display
+  // numerals — baseline alignment is correct here (WXSS L2 governs
+  // mixed-family pairs only).
+  &__amount {
+    display: flex;
+    align-items: baseline;
+  }
+
+  &__currency {
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    margin-right: 2rpx;
+  }
+
+  &__amount-num {
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-primary;
+    line-height: 56rpx;
   }
 }
 
-// P0 checkout clarity + P2 success receipt: quiet, mascot-free notes so the
-// existing trust-row mascot and the single ceremony remain the only focal art.
-.xiaoyue-checkout-guidance {
+// P0 checkout clarity + P2 success receipt: one visual dialect for both
+// Xiaoyue notes (2026-10-29 merge). The old twin cards duplicated the same
+// chrome with a 2rpx/0.08 border that rendered as a blurry gray edge on
+// device — a 1rpx hairline at 0.16 reads as an intentional edge.
+.xiaoyue-checkout-guidance,
+.xiaoyue-payment-receipt {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
-  margin: 16rpx 32rpx 0;
   padding: 16rpx 24rpx;
   border-radius: $card-radius-sm;
   background: rgba($color-primary, 0.04);
-  border: 2rpx solid rgba($color-primary, 0.08);
+  border: 1rpx solid rgba($color-primary, 0.16);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.xiaoyue-checkout-guidance {
+  gap: 8rpx;
+  margin: 16rpx 32rpx 0;
 
   &__label {
     display: block;
@@ -886,16 +991,8 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 }
 
 .xiaoyue-payment-receipt {
-  display: flex;
-  flex-direction: column;
   align-self: stretch;
   width: 100%;
-  box-sizing: border-box;
-  padding: 16rpx 24rpx;
-  border-radius: $card-radius-sm;
-  background: rgba($color-primary, 0.04);
-  border: 2rpx solid rgba($color-primary, 0.08);
-  text-align: left;
 
   &__title {
     display: block;
@@ -946,7 +1043,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     text-align: right;
 
     &--savings {
-      color: $color-secondary;
+      color: $color-primary-dark;
     }
   }
 }

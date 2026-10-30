@@ -576,6 +576,70 @@ describe("wechat auth route hardening", () => {
       });
     });
 
+    it("returns a coded, non-sensitive 500 when the claim fails", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockRejectedValue(new Error("SQL private relation password=secret"));
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, { headers: { cookie } });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(500);
+        expect(body).toEqual({
+          code: "WELCOME_COUPON_CLAIM_FAILED",
+          message: "Failed to claim welcome coupon",
+        });
+        expect(JSON.stringify(body)).not.toContain("secret");
+      });
+    });
+
+    it("returns the actual WELCOME-family row after a unique-violation race", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue({ id: "coupon-20", code: "WELCOME20", discount_type: "fixed_amount", discount_value: 2000, valid_until: "2026-12-31T00:00:00Z" });
+      vi.mocked(paymentsRepo.getUserCoupons)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { id: "uc-legacy-race", coupon_id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50, source: "registration_complete", created_at: "2026-06-29T00:00:00Z", valid_until: null },
+        ]);
+      const duplicateError: any = new Error("duplicate key");
+      duplicateError.code = "23505";
+      vi.mocked(paymentsRepo.createUserCoupon).mockRejectedValueOnce(duplicateError);
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, { headers: { cookie } });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({
+          id: "uc-legacy-race",
+          code: "WELCOME50",
+          discountType: "percentage",
+          discountValue: 50,
+          source: "registration_complete",
+          isNewlyAwarded: false,
+          validUntil: null,
+        });
+      });
+    });
+
+    it("returns the coded 500 when a unique-violation refetch finds no family row", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue({ id: "coupon-20", code: "WELCOME20", discount_type: "fixed_amount", discount_value: 2000 });
+      vi.mocked(paymentsRepo.getUserCoupons).mockResolvedValue([]);
+      const duplicateError: any = new Error("duplicate key");
+      duplicateError.code = "23505";
+      vi.mocked(paymentsRepo.createUserCoupon).mockRejectedValueOnce(duplicateError);
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, { headers: { cookie } });
+        expect(response.status).toBe(500);
+        expect(await response.json()).toEqual({
+          code: "WELCOME_COUPON_CLAIM_FAILED",
+          message: "Failed to claim welcome coupon",
+        });
+      });
+    });
+
     it("refetches the existing coupon on unique-violation race", async () => {
       vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue({ id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50 });
       vi.mocked(paymentsRepo.getUserCoupons)

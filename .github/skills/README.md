@@ -126,6 +126,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 |-------|---------------|
 | [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` — native-quality execution, full state design, WeChat-safe polish; **pixel precision** (spec-exact or 8rpx rhythm, DevTools gate) in [`references/pixel-precision.md`](./mini-program-frontend-excellence/references/pixel-precision.md); structural Taro rules in [`references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md) |
 | [`frontend-design-audit`](./frontend-design-audit/SKILL.md) | Systematic design-quality audits on mini-program and web surfaces — scores 5 dimensions, detects AI slop / generic patterns, produces actionable fix lists |
+| [`screen-design-critique`](./screen-design-critique/SKILL.md) | Designer-seat critique of rendered screens — seven dimensions (visual hierarchy, brand consistency, composition, typography, colour, affordance, information density) with Observation → Problem → Fix evidence, P0/P1/P2 routing to owning skills, ship / fix-then-ship / no-ship verdict; review mode before merge or implementation mode for in-flight design direction |
 | [`frontend-hook-engine`](./frontend-hook-engine/SKILL.md) | Screen-level Seven Deadly Sins UI diagnosis for CTA hierarchy, state design, interaction clarity, and build-ready component/state plans |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
 | [`lovart-design-workflow`](./lovart-design-workflow/SKILL.md) | Lovart AI Design Agent prompt generation, brand-aligned visual asset briefs, and design-to-code handoff for illustrations, mockups, marketing graphics, and icons |
@@ -246,6 +247,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I keep a mini-program screen premium, on-brand, and Taro-native? | `mini-program-frontend-excellence` |
 | How do I audit a screen for pixel-level layout and spacing? | `ui-layout-audit` |
 | How do I run a complete design-quality audit on a frontend surface? | `frontend-design-audit` |
+| How do I get a designer's critique of a rendered screen (hierarchy, composition, colour, affordance)? | `screen-design-critique` |
 | How do I run a 完成度 audit with ROI-ranked gap recommendations? | `completeness-audit` (pipeline: `ui-layout-audit → frontend-design-audit → completeness-audit`) |
 | How do I audit post-implementation performance (流畅度, 速度, 设备适配)? | `performance-audit` |
 | How do I enforce zero-scroll viewport lock or `100dvh` shell? | `viewport-zero-scroll` |

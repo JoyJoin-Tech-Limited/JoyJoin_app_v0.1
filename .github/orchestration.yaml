@@ -38,7 +38,8 @@
       "Deliberation Moderator",
       "Harness Runtime Controller",
       "Visual Designer",
-      "User Satisfaction Auditor"
+      "User Satisfaction Auditor",
+      "UI/UX Design Reviewer"
     ]
   },
   "copilot_hooks": {
@@ -345,6 +346,12 @@
       "to": "User Satisfaction Auditor",
       "label": "Audit user satisfaction of UI changes",
       "prompt": "Walk the changed user-facing surface as a named persona, score the six satisfaction angles, and return a share/return/recommend/pay verdict with fix prescriptions."
+    },
+    {
+      "from": "Supervisor",
+      "to": "UI/UX Design Reviewer",
+      "label": "Critique screen design quality",
+      "prompt": "Critique the rendered screen from the designer's seat across the seven dimensions (visual hierarchy, brand consistency, composition, typography, colour, affordance, information density), return P0/P1/P2 findings routed to owning skills, and give an explicit ship / fix-then-ship / no-ship verdict."
     },
     {
       "from": "Supervisor",
@@ -1123,6 +1130,27 @@
         ]
       }
     },
+    "UI/UX Design Reviewer": {
+      "file": ".github/agents/uiux-design-reviewer.agent.md",
+      "portfolio_role": "design-critique",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Read-only screen critique plus execute for rendered-truth audit scripts (audit:visual, design:audit, screenshot generators) matches the designer-seat review scope.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add vision/screenshot capture so the critique can run against WeChat DevTools renders directly.",
+            "reason": "The critique is render-first; today the agent relies on the H5 build and audit:visual screenshots rather than native mini-program capture."
+          }
+        ]
+      }
+    },
     "Taro Mini-Program Frontend Engineer": {
       "file": ".github/agents/taro-mini-program-frontend-engineer.agent.md",
       "portfolio_role": "implementation",
@@ -1661,6 +1689,15 @@
       "first-principles-velocity",
       "user-satisfaction-audit",
       "frontend-design-audit",
+      "wow-elements"
+    ],
+    "UI/UX Design Reviewer": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "screen-design-critique",
+      "frontend-design-audit",
+      "ui-layout-audit",
+      "joyjoin-brand-guidelines",
       "wow-elements"
     ],
     "Taro Mini-Program Frontend Engineer": [

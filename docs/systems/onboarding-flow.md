@@ -303,8 +303,8 @@ await fetch('/api/auth/wechat/login-with-test', {
   - **Profile mini-cards** —家乡、关系状态、学历、职业、行业 rendered with brand-colored dot indicators.
   - **Intent chips** — top social intents labeled with `JoyJoinIcon` (`tier='intent'`) and Chinese text. Intent icons are pre-warmed by `usePreloadIntentIcons` before grids render.
   - **Interest heat map** — `InterestHeatMap` stats + `InterestChipCloud` dominant-category chips.
-- **Radar summary card** — after the welcome-coupon request settles (success or error), a display-only profile summary card (`ProfileReviewInviteCard`) appears below the gift card: full-bleed Lovart `invite-teaser.webp` banner with a "kindred radar" overlay (user archetype centered, 4 satellite archetypes popping in) and a data-filled summary line (archetype · top interest · intent). It has no tap interaction — the floating primary CTA is the only completion path. Card reveal still triggers a predictive `GET /api/shell/discover` prefetch via `PrefetchEngine` so the Discover tab renders from cache. Analytics: `profile_review_invite_impression`, `profile_review_discover_prefetch_hit` (`profile_review_invite_tap` retired 2026-08-03).
-- **Floating CTA** — pill-shaped "确认并进入发现" button anchored above the safe area; gains elevation when the page is scrolled.
+- **Unified details + gift status (2026-10-30)** — the folded profile/intent/interest details, quiet share entry, and compact read-only `WelcomeGiftCard` live inside the admission poster. The former duplicate `ProfileReviewInviteCard` radar summary is no longer rendered. Actual poster reveal triggers the same one-shot, fail-open predictive `GET /api/shell/discover` prefetch via `PrefetchEngine`; gift success/loading/error never blocks the primary CTA.
+- **Bottom confirmation CTA** — pill-shaped "确认并进入发现" button below the scroll content; safe-area padding has a single owner and the legacy 140rpx footer reserve is gone.
 - **Motion gating** — all entrance animations, shimmer, and CTA transitions respect `@media (prefers-reduced-motion: reduce)`; the JS `useMiniRevealMotion().shouldReduceMotion` flag suppresses the poster shimmer at runtime.
 
 **What is NOT included (legacy / deprecated):**
@@ -318,21 +318,11 @@ await fetch('/api/auth/wechat/login-with-test', {
 - Server field: `user.hasSeenProfileReview` (persisted to database)
 - API: `POST /api/profile-review/complete` to mark as seen
 
-**After Completion (2026-08-01):**
+**After Completion (updated 2026-10-30):**
 - `hasSeenProfileReview = true`
-- The completion moment plays the **UnboxingCeremony** overlay (halo → lid lift → 入场卡 rises with archetype headline + accentText tint; tap or 2.4s auto-advance) instead of the old toast — see `docs/agent-context/onboarding.md` for ceremony + BoxJourneySpine + voice matrix continuity details.
-- Navigate via **server-computed `nextStep`** using the route map:
-  ```ts
-  const NEXT_STEP_TO_PATH: Record<string, string> = {
-    'discover':        '/discover',
-    'profile-review':  '/onboarding/review',
-    'extended-data':   '/onboarding/extended',
-    'essential-data':  '/onboarding/setup',
-    'personality-test': '/personality-test',
-  };
-  const destination = (nextStep && NEXT_STEP_TO_PATH[nextStep]) ?? '/discover';
-  ```
-- Fallback to `/discover` if `nextStep` is absent or unrecognised.
+- The admission poster confirms「入场卡已生效」in place for **720ms** (no artificial delay under reduced motion). The separate full-screen UnboxingCeremony and its auto/tap advance are no longer part of Profile Review.
+- Navigate via **server-computed `nextStep`** using the client route map (`discover`, `profile-review`, `extended-data`, `essential-data`, `personality-test`).
+- If the complete response lacks `nextStep`, the client makes one bounded `getUserState()` refetch and uses the returned step. If the step is still unavailable, navigation stays retryable on Profile Review instead of silently defaulting to Discover.
 
 ---
 

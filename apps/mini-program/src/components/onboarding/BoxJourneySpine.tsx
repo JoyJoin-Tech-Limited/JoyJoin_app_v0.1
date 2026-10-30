@@ -30,7 +30,7 @@ interface BoxJourneySpineProps {
 const SPINE_COPY: Record<BoxJourneyStep, { status: string; fraction: string }> = {
   1: { status: '装盒中 · ', fraction: '第 1 格' },
   2: { status: '装盒中 · ', fraction: '第 2 格' },
-  3: { status: '装盒完成 · ', fraction: '准备开盒' },
+  3: { status: '装盒完成 · ', fraction: '等你确认' },
 }
 
 const DEFAULT_ACCENT = '#8B5CF6'

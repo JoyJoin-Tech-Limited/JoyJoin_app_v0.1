@@ -3,7 +3,7 @@
 // Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
 // consuming page's SCSS or Taro's chunk graph can drop it.
 @use '../../../components/onboarding/BoxJourneySpine.scss' as *;
-@use '../../../components/onboarding/UnboxingCeremony.scss' as *;
+@use '../../../components/onboarding/WelcomeGiftCard.scss' as *;
 // entry-card-insight-v2: InsightRevealCard carries no TSX-side SCSS import;
 // its rules compile into this page's WXSS via this @use.
 @use '../../../components/onboarding/InsightRevealCard.scss' as *;
@@ -33,9 +33,8 @@
 
   &__shell {
     box-sizing: border-box;
-    padding: $spacing-lg $container-padding $spacing-xl;
+    padding: $spacing-lg $container-padding $spacing-md;
     @include safe-area-inline($container-padding);
-    @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
   }
 
   &__stage {
@@ -136,7 +135,7 @@
     position: relative;
     @include card-premium;
     padding: 0;
-    margin-bottom: $spacing-lg;
+    margin-bottom: $spacing-md;
     border-radius: $card-radius-lg;
     border: 3rpx solid rgba($color-primary, 0.18);
     overflow: hidden;
@@ -145,6 +144,57 @@
     &--themed {
       box-shadow: 0 12rpx 48rpx rgba($color-primary, 0.12), 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
     }
+  }
+
+  &__completion {
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-lg;
+    background: rgba($color-surface, 0.97);
+    text-align: center;
+    animation: profile-review-completion-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__completion-mark {
+    position: relative;
+    width: 88rpx;
+    height: 88rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.18);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 28rpx;
+      left: 27rpx;
+      width: 30rpx;
+      height: 16rpx;
+      border-left: 6rpx solid $color-surface;
+      border-bottom: 6rpx solid $color-surface;
+      transform: rotate(-45deg);
+    }
+  }
+
+  &__completion-title {
+    margin-top: $spacing-md;
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-display;
+  }
+
+  &__completion-copy {
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
   }
 
   &__poster-shimmer {
@@ -327,10 +377,10 @@
   // default-folded card; 改 expands it in place.
   &__summary {
     padding: 0;
-    margin-bottom: $spacing-lg;
-    border-radius: $card-radius-lg;
+    margin: 0;
+    border-top: 2rpx dashed rgba($color-border, 0.6);
     overflow: hidden;
-    background: $color-surface;
+    background: transparent;
   }
 
   &__summary-header {
@@ -842,17 +892,17 @@
     text-align: center;
   }
 
-  // ─── Floating CTA ──────────────────────────────────────────────────────────
+  // ─── Bottom CTA: one safe-area owner, no phantom scroll reserve ───────────
   &__cta {
     position: relative;
     z-index: 10;
-    margin: 0 $container-padding $spacing-md;
+    margin: 0 $container-padding $spacing-sm;
     padding: $spacing-sm $spacing-md;
     border-radius: $radius-pill;
     background: rgba($color-surface, 0.94);
     box-shadow: $shadow-lg;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-sm);
 
     &--scrolled {
       transform: translateY(-4rpx);
@@ -873,10 +923,6 @@
     }
   }
 
-  &__footer-reserve {
-    height: 140rpx;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     animation: none;
     opacity: 1;
@@ -895,6 +941,7 @@
     }
 
     &__poster-shimmer,
+    &__completion,
     &__skeleton-line,
     &__skeleton-chip,
     &__interest-placeholder-dot,
@@ -906,6 +953,18 @@
     &__cta {
       transition: none;
     }
+  }
+}
+
+@keyframes profile-review-completion-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -948,31 +1007,31 @@
   }
 }
 
-.profile-review__gift-card {
-  margin-top: $spacing-sm;
+.profile-review__gift-region {
+  position: relative;
+  z-index: 2;
+}
+
+.profile-review__gift-card,
+.profile-review__coupon-error {
+  margin: 0 $spacing-md $spacing-md;
 }
 
 .profile-review__coupon-error {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-top: $spacing-sm;
-  padding: $spacing-md $spacing-lg;
-  border-radius: $card-radius;
-  background: rgba($color-error, 0.06);
-  border: 2rpx solid rgba($color-error, 0.12);
-  min-height: 120rpx;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $card-radius-sm;
+  background: rgba($color-primary, 0.05);
+  border: 2rpx solid rgba($color-primary, 0.12);
+  min-height: 104rpx;
   transition: transform 0.12s ease, background 0.12s ease;
 
   &--pressed {
-    background: rgba($color-error, 0.1);
+    background: rgba($color-primary, 0.1);
     transform: scale(0.98);
   }
-}
-
-.profile-review__coupon-error-icon {
-  margin-right: $spacing-md;
-  flex-shrink: 0;
 }
 
 .profile-review__coupon-error-copy {
@@ -983,28 +1042,22 @@
 }
 
 .profile-review__coupon-error-title {
-  font-size: $font-size-base;
+  font-size: $font-size-sm;
   line-height: $line-height-display;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
-  margin-bottom: $spacing-xs;
+  margin-bottom: 4rpx;
 }
 
 .profile-review__coupon-error-subtitle {
-  font-size: $font-size-sm;
+  font-size: $font-size-xs;
   line-height: $line-height-relaxed;
   color: $color-text-secondary;
 }
 
-.profile-review__invite-card {
-  // Match the gift card's rhythm so the section reads as one continuous
-  // stream instead of an isolated island.
-  margin-top: $spacing-sm;
-}
-
 // ─── Insight share poster (sprint insight-share-poster, AC-01/AC-02b) ────────
 .profile-review__insight-share-entry {
-  margin-bottom: $spacing-lg;
+  margin: 0 $spacing-md $spacing-md;
 }
 
 .profile-review__insight-poster-canvas {

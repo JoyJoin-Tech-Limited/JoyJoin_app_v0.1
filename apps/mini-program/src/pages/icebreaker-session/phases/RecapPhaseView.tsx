@@ -1,5 +1,6 @@
 import { View, Text, Image, ScrollView, RootPortal, Canvas } from '@tarojs/components'
 import Taro, { useShareAppMessage } from '@tarojs/taro'
+import ChevronGlyph from '../../../components/ui/ChevronGlyph'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
@@ -715,9 +716,9 @@ export function RecapPhaseView({
             <Text className='icebreaker__recap-data-toggle-hint'>
               {dataRecapOpen ? '收起' : dataRecapSummary}
             </Text>
-            <Text className='icebreaker__recap-data-toggle-arrow' aria-hidden='true'>
-              {dataRecapOpen ? '▲' : '▶'}
-            </Text>
+            <View className='icebreaker__recap-data-toggle-arrow' aria-hidden='true'>
+              <ChevronGlyph direction={dataRecapOpen ? 'up' : 'down'} />
+            </View>
           </View>
           {dataRecapOpen ? (
           <>
