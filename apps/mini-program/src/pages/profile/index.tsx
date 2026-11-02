@@ -1216,11 +1216,9 @@ export default function ProfilePage() {
                         })}
                       </View>
                       )
-                    ) : (
-                      <Text className={`profile-page__equipment-state-copy profile-page__equipment-state-copy--${equipmentState}`}>
-                        {equipmentState === 'error' ? '待重试' : '同步中…'}
-                      </Text>
-                    )}
+                    ) : equipmentState === 'loading' ? (
+                      <Text className='profile-page__equipment-state-copy'>同步中…</Text>
+                    ) : null}
                   </View>
                   <View className='profile-page__partner-entry-action'>
                     <Text className='profile-page__partner-entry-action-text'>我的形象</Text>
@@ -1330,16 +1328,21 @@ export default function ProfilePage() {
             role='button'
             aria-label={`已参加 ${joinedEventsCount} 场活动，去浏览足迹`}
           >
-            {isLoadingStats ? (
-              <Text className='profile-page__data-band-value'>—</Text>
-            ) : (
-              <CountUpText
-                className='profile-page__data-band-value'
-                value={joinedEventsCount}
-                {...PROFILE_COUNT_UP_OPTS}
-              />
-            )}
-            <Text className='profile-page__data-band-label'>已参加活动</Text>
+            <View className='profile-page__data-band-value-row'>
+              {isLoadingStats ? (
+                <Text className='profile-page__data-band-value'>—</Text>
+              ) : (
+                <CountUpText
+                  className='profile-page__data-band-value'
+                  value={joinedEventsCount}
+                  {...PROFILE_COUNT_UP_OPTS}
+                />
+              )}
+            </View>
+            <View className='profile-page__data-band-label-row'>
+              <Text className='profile-page__data-band-label'>已参加活动</Text>
+            </View>
+            <View className='profile-page__data-band-progress-row' aria-hidden='true' />
           </View>
           <View className='profile-page__data-band-divider' aria-hidden='true' />
           <View
@@ -1349,16 +1352,21 @@ export default function ProfilePage() {
             role='button'
             aria-label={connectionsCount == null ? '连接数正在加载' : `已有 ${connectionsCount} 个连接，去查看`}
           >
-            {profileShellQuery.isLoading || connectionsCount == null ? (
-              <Text className='profile-page__data-band-value'>—</Text>
-            ) : (
-              <CountUpText
-                className='profile-page__data-band-value'
-                value={connectionsCount}
-                {...PROFILE_COUNT_UP_OPTS}
-              />
-            )}
-            <Text className='profile-page__data-band-label'>我的连接</Text>
+            <View className='profile-page__data-band-value-row'>
+              {profileShellQuery.isLoading || connectionsCount == null ? (
+                <Text className='profile-page__data-band-value'>—</Text>
+              ) : (
+                <CountUpText
+                  className='profile-page__data-band-value'
+                  value={connectionsCount}
+                  {...PROFILE_COUNT_UP_OPTS}
+                />
+              )}
+            </View>
+            <View className='profile-page__data-band-label-row'>
+              <Text className='profile-page__data-band-label'>我的连接</Text>
+            </View>
+            <View className='profile-page__data-band-progress-row' aria-hidden='true' />
           </View>
           <View className='profile-page__data-band-divider' aria-hidden='true' />
           <View
@@ -1376,12 +1384,16 @@ export default function ProfilePage() {
               />
               <Text className='profile-page__data-band-suffix'>%</Text>
             </View>
-            <Text className='profile-page__data-band-label'>资料完成度</Text>
-            <View className='profile-page__data-band-mini-progress' aria-hidden='true'>
-              <View
-                className='profile-page__data-band-mini-progress-bar'
-                style={{ transform: `scaleX(${profileCompletion / 100})` }}
-              />
+            <View className='profile-page__data-band-label-row'>
+              <Text className='profile-page__data-band-label'>资料完成度</Text>
+            </View>
+            <View className='profile-page__data-band-progress-row' aria-hidden='true'>
+              <View className='profile-page__data-band-mini-progress'>
+                <View
+                  className='profile-page__data-band-mini-progress-bar'
+                  style={{ transform: `scaleX(${profileCompletion / 100})` }}
+                />
+              </View>
             </View>
           </View>
         </View>
