@@ -284,13 +284,23 @@ jobs:
           done
           echo "✅ Compiled output verified: Flash marker present, no scope regression, all $(( $(printf '%s' "$expected_assets" | wc -w) )) assets present"
 
+      # Artifacts exist only to hand dist to a later WeChat upload:
+      # - push (main): the workflow_run release reuses this dist.
+      # - workflow_run without a push build: this run uploads its fallback dist.
+      # - workflow_dispatch: uploads this run's dist when should_upload is true.
+      # Pull-request runs never upload, so PR checks cannot fail on the
+      # account-wide artifact quota (2026-11-02).
       - name: Upload mini-program artifact
-        if: steps.push-build-check.outputs.push_build_exists != 'true'
+        if: >-
+          steps.push-build-check.outputs.push_build_exists != 'true' &&
+          github.event_name != 'pull_request' &&
+          (github.event_name != 'workflow_dispatch' ||
+           github.event.inputs.should_upload == 'true')
         uses: actions/upload-artifact@v4.6.2
         with:
           name: taro-weapp-dist
           path: apps/mini-program/dist
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: error
 
   # CVM tunnel upload: rsync dist → SSH → miniprogram-ci on CVM (fixed IP).
