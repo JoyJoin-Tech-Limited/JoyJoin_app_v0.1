@@ -532,8 +532,9 @@ docs/deliverables/2026-11-02-uiux-subtraction/
 - 最终 8 张生成器截图全部通过硬断言；solo 三视口扫描全部 **PASS，0 blocking、0 advisory**。
 - 独立最终复测：**ui-layout 100/100；frontend-design 19/20；user-satisfaction 21/24**。UI 静态目标达成；Frontend Motion 仍待动态/真机，Satisfaction 的情绪/分享分数不应靠把私密回执改成营销或分享页来凑满。
 - 证据已更新：`docs/deliverables/2026-11-02-uiux-subtraction/render-matrix.md`、`score-baseline.md`。
-- 最终工程验证：pool-registration/events 目标测试 **16 文件 / 108 用例**通过；`typecheck -w mini-program` 通过；隔离 `build:h5`、`build:weapp` 均通过；主包 zip **1.33 MB / 2 MB**；upload-assets 与 `verify:subpackage-styles` 通过（pool-registration 29 个必需 selector）。主仓 `guardrails` 仍被 **154 个非本次改动的 icebreaker-session 新 orphan class** 阻断，本次 pool-registration 类不在违规清单中。
-- Tier-2 QA Sprint Evaluation：**PARTIAL**。AC-01/03 PASS；AC-02 PARTIAL（100/100、19/20、21/24，未达三个满分）；AC-04 PARTIAL（本次检查通过，但合同要求的主仓 guardrails 全绿仍被外部并行改动阻断）；AC-05 FAIL（iOS、Android、WeChat DevTools 未测）。不得把本增量标为 launch-complete。
+- 最终工程验证：pool-registration/events 目标测试 **16 文件 / 108 用例**通过；`typecheck -w mini-program` 通过；隔离 `build:h5`、`build:weapp` 均通过；主包 zip **1.33 MB / 2 MB**；upload-assets 与 `verify:subpackage-styles` 通过（pool-registration 29 个必需 selector）。当时主仓 `guardrails` 被 **154 个非本次改动的 icebreaker-session 新 orphan class** 阻断，本次 pool-registration 类不在违规清单中。
+- **2026-11-03 后续复核**：外部并行改动落地后，主仓 `npm run guardrails` 已 **PASS（0 error，12 个既有 warning）**，AC-04 的外部阻断已消失；AC-02 与 AC-05 仍开放。
+- Tier-2 QA Sprint Evaluation：**PARTIAL**。AC-01/03 PASS；AC-02 PARTIAL（100/100、19/20、21/24，未达三个满分）；AC-05 FAIL（iOS、Android、WeChat DevTools 未测）。不得把本增量标为 launch-complete。
 
 ### 下一步
 
