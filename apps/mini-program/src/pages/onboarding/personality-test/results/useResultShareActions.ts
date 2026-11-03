@@ -1,4 +1,4 @@
-import Taro from '@tarojs/taro'
+import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
@@ -16,6 +16,40 @@ import type { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnb
 
 type ResultPageAnalytics = ReturnType<typeof useOnboardingAnalytics>
 type PreResolvedImage = { asset: string; path: string; width?: number; height?: number } | null
+type PosterKind = 'portrait' | 'square'
+type PosterCacheEntry = { key: string; path: string; resolvedImagePath: string }
+type WorkPhase = 'idle' | 'generating' | 'retry' | 'action'
+
+type GeneratedPosterSet = {
+  portraitPath: string
+  squarePath?: string
+  portraitGenerated: boolean
+  squareGenerated: boolean
+  hasQr: boolean
+  resolvedImagePath: string
+}
+
+const POSTER_RETRY_DELAY_MS = 1500
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error && 'errMsg' in error) {
+    return String((error as { errMsg?: unknown }).errMsg ?? error)
+  }
+  return String(error)
+}
+
+function isCancellation(error: unknown): boolean {
+  return /cancel/i.test(errorMessage(error))
+}
+
+function isAlbumDenial(error: unknown): boolean {
+  return /auth|deny|denied|permission/i.test(errorMessage(error))
+}
+
+function isTransientGenerationError(error: unknown): boolean {
+  return /timeout|network|offline|abort|failed to fetch/i.test(errorMessage(error))
+}
 
 export interface ResultShareActionsDeps {
   displayArchetype: string | null
@@ -30,7 +64,7 @@ export interface ResultShareActionsDeps {
   typicalityLabel?: TypicalityLabel
   energyLevel?: number
   archetypeRank?: number
-  serialNumber: string
+  serialNumber: string | undefined
   deviceTier: { isDegradation: boolean }
   shareAnimatedClipEnabled: boolean
   analytics: ResultPageAnalytics
@@ -73,214 +107,433 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
   const [generationPhase, setGenerationPhase] = useState('')
   const [cardNickname] = useState('')
   const [selectedVariantIndex] = useState(0)
-  const posterRetryRef = useRef(false)
+
+  const posterCacheRef = useRef<Record<PosterKind, PosterCacheEntry | null>>({
+    portrait: null,
+    square: null,
+  })
+  const epochRef = useRef(0)
+  const mountedRef = useRef(true)
+  const pageHiddenRef = useRef(false)
+  const operationInFlightRef = useRef(false)
+  const workPhaseRef = useRef<WorkPhase>('idle')
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const handleGeneratePosterRef = useRef<(() => Promise<void>) | null>(null)
+  const retryCancelRef = useRef<(() => void) | null>(null)
+  const activeActionPathsRef = useRef(new Map<string, number>())
+  const deferredCleanupPathsRef = useRef(new Set<string>())
 
-  // Invalidate stale poster when user changes card personalization
-  useEffect(() => {
-    if (sharePosterPath) {
-      setSharePosterPath('')
-    }
-    if (squarePosterPath) {
-      setSquarePosterPath('')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariantIndex, cardNickname])
+  const selectedVariant = variants[selectedVariantIndex]
+  const sharedPosterKey = {
+    displayArchetype,
+    displayArchetypeName,
+    displayAsset,
+    visual,
+    selectedVariant,
+    cardNickname,
+    shareLine,
+    summary,
+    skillSet,
+    typicalityLabel,
+    energyLevel,
+    archetypeRank,
+    serialNumber,
+    user: user ? ((user as { id?: string }).id ?? 'authenticated') : 'guest',
+  }
+  const portraitCacheKey = JSON.stringify({ kind: 'portrait', ...sharedPosterKey })
+  const squareCacheKey = JSON.stringify({
+    kind: 'square',
+    ...sharedPosterKey,
+    traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
+    isDegradation: deviceTier.isDegradation,
+  })
+  const observedKeysRef = useRef({ portrait: portraitCacheKey, square: squareCacheKey })
 
-  useEffect(() => {
-    return () => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+  const isEpochCurrent = useCallback((epoch: number) => (
+    mountedRef.current && epochRef.current === epoch
+  ), [])
+  const canPresentUi = useCallback((epoch: number) => (
+    isEpochCurrent(epoch) && !pageHiddenRef.current
+  ), [isEpochCurrent])
+
+  const unlinkOwnedFile = useCallback((path: string) => {
+    if (!path) return
+    try {
+      Taro.getFileSystemManager().unlinkSync(path)
+    } catch {
+      // Best-effort: a missing/already-removed owned temp file needs no UI.
     }
   }, [])
+
+  const cleanupOwnedFile = useCallback((path: string, force = false) => {
+    if (!path) return
+    if (!force && (activeActionPathsRef.current.get(path) ?? 0) > 0) {
+      deferredCleanupPathsRef.current.add(path)
+      return
+    }
+    deferredCleanupPathsRef.current.delete(path)
+    unlinkOwnedFile(path)
+  }, [unlinkOwnedFile])
+
+  const retainActionPaths = useCallback((paths: string[]) => {
+    paths.filter(Boolean).forEach((path) => {
+      activeActionPathsRef.current.set(path, (activeActionPathsRef.current.get(path) ?? 0) + 1)
+    })
+  }, [])
+
+  const releaseActionPaths = useCallback((paths: string[]) => {
+    paths.filter(Boolean).forEach((path) => {
+      const nextCount = Math.max((activeActionPathsRef.current.get(path) ?? 1) - 1, 0)
+      if (nextCount === 0) activeActionPathsRef.current.delete(path)
+      else activeActionPathsRef.current.set(path, nextCount)
+
+      const stillCached = posterCacheRef.current.portrait?.path === path
+        || posterCacheRef.current.square?.path === path
+      if (
+        nextCount === 0
+        && deferredCleanupPathsRef.current.has(path)
+        && !stillCached
+      ) {
+        deferredCleanupPathsRef.current.delete(path)
+        unlinkOwnedFile(path)
+      }
+    })
+  }, [unlinkOwnedFile])
+
+  const discardCachedPoster = useCallback((kind: PosterKind) => {
+    const entry = posterCacheRef.current[kind]
+    posterCacheRef.current[kind] = null
+    if (entry) cleanupOwnedFile(entry.path)
+    if (kind === 'portrait') setSharePosterPath('')
+    else setSquarePosterPath('')
+  }, [cleanupOwnedFile])
+
+  const cancelRetry = useCallback(() => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+    retryTimerRef.current = null
+    const cancel = retryCancelRef.current
+    retryCancelRef.current = null
+    cancel?.()
+  }, [])
+
+  const invalidateInFlight = useCallback(() => {
+    epochRef.current += 1
+    cancelRetry()
+    operationInFlightRef.current = false
+    workPhaseRef.current = 'idle'
+    if (mountedRef.current) {
+      setIsGeneratingPoster(false)
+      setGenerationPhase('')
+    }
+  }, [cancelRetry])
 
   const clearSharePoster = useCallback(() => {
-    setSharePosterPath('')
-  }, [])
+    invalidateInFlight()
+    discardCachedPoster('portrait')
+    discardCachedPoster('square')
+    setPosterError(false)
+  }, [discardCachedPoster, invalidateInFlight])
 
-  /**
-   * Present a frictionless action sheet for sharing the generated poster.
-   * Options: save to album, share to friends, or preview.
-   */
-  const presentShareOptions = useCallback(async (posterPath: string, momentsPath?: string) => {
-    const taroWithShareImageMenu = Taro as typeof Taro & {
-      showShareImageMenu?: (options: { path: string }) => Promise<unknown>
+  const readValidPoster = useCallback((kind: PosterKind, key: string) => {
+    const entry = posterCacheRef.current[kind]
+    if (!entry) return null
+    const currentResolvedImagePath = preResolvedImageRef.current?.path ?? ''
+    if (entry.key !== key || entry.resolvedImagePath !== currentResolvedImagePath) {
+      discardCachedPoster(kind)
+      return null
     }
-    const hasNativeShareMenu = typeof taroWithShareImageMenu.showShareImageMenu === 'function'
-    const hasMoments = Boolean(momentsPath)
-
-    const itemList = [
-      '保存到相册',
-      ...(hasNativeShareMenu ? ['分享给朋友'] : []),
-      ...(hasMoments ? ['保存朋友圈卡片'] : []),
-      '预览海报',
-    ]
-
-    let tapIndex: number
     try {
-      const res = await Taro.showActionSheet({ itemList })
-      tapIndex = res.tapIndex
+      Taro.getFileSystemManager().accessSync(entry.path)
+      return entry
     } catch {
-      analytics.interaction('share_action_dismissed', { primaryArchetype: displayArchetypeName })
+      // The OS/WeChat may evict temp files independently of React state.
+      posterCacheRef.current[kind] = null
+      if (kind === 'portrait') setSharePosterPath('')
+      else setSquarePosterPath('')
+      return null
+    }
+  }, [discardCachedPoster, preResolvedImageRef])
+
+  useEffect(() => {
+    const previous = observedKeysRef.current
+    const portraitChanged = previous.portrait !== portraitCacheKey
+    const squareChanged = previous.square !== squareCacheKey
+    if (portraitChanged || squareChanged) {
+      invalidateInFlight()
+      if (portraitChanged) discardCachedPoster('portrait')
+      if (squareChanged) discardCachedPoster('square')
+      setPosterError(false)
+    }
+    observedKeysRef.current = { portrait: portraitCacheKey, square: squareCacheKey }
+  }, [discardCachedPoster, invalidateInFlight, portraitCacheKey, squareCacheKey])
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      epochRef.current += 1
+      cancelRetry()
+      operationInFlightRef.current = false
+      workPhaseRef.current = 'idle'
+      const ownedPaths = new Set([
+        posterCacheRef.current.portrait?.path,
+        posterCacheRef.current.square?.path,
+        ...deferredCleanupPathsRef.current,
+      ])
+      posterCacheRef.current = { portrait: null, square: null }
+      deferredCleanupPathsRef.current.clear()
+      ownedPaths.forEach((path) => {
+        if (path) cleanupOwnedFile(path, true)
+      })
+    }
+  }, [cancelRetry, cleanupOwnedFile])
+
+  useDidHide(() => {
+    pageHiddenRef.current = true
+    // Native preview/share/settings also hide the page. They run in `action`
+    // phase and must keep both the pending action and its poster files alive.
+    if (workPhaseRef.current === 'generating' || workPhaseRef.current === 'retry') {
+      invalidateInFlight()
+    }
+  })
+  useDidShow(() => {
+    pageHiddenRef.current = false
+  })
+
+  const requestAlbumAccess = useCallback(async (epoch: number): Promise<boolean> => {
+    if (isEpochCurrent(epoch)) {
+      analytics.interaction('share_save_permission_denied', { primaryArchetype: displayArchetypeName })
+    }
+    try {
+      const { confirm } = await Taro.showModal({
+        title: '需要相册权限',
+        content: '保存卡片到相册需要您授权访问相册。',
+        confirmText: '去设置',
+        cancelText: '取消',
+      })
+      if (!confirm || !mountedRef.current) return false
+      await Taro.openSetting()
+      if (!mountedRef.current) return false
+      // openSetting resolves after the native settings page closes. Recheck
+      // immediately and resume this exact save; never require another tap.
+      const rechecked = await Taro.getSetting()
+      return rechecked.authSetting['scope.writePhotosAlbum'] === true
+    } catch {
+      // Settings/modal cancellation is a neutral permission outcome. The
+      // already-generated poster remains cached for an understandable retry.
+      return false
+    }
+  }, [analytics, displayArchetypeName, isEpochCurrent])
+
+  const reportSaveFailure = useCallback((saveErr: unknown, label: string, epoch: number) => {
+    if (!isEpochCurrent(epoch) || isCancellation(saveErr) || isAlbumDenial(saveErr)) return
+    const error = errorMessage(saveErr)
+    logError('[PersonalityResults] Save to album failed', {
+      error,
+      option: label,
+      primaryArchetype: displayArchetypeName,
+    })
+    analytics.interaction('share_save_failed', { error, option: label, primaryArchetype: displayArchetypeName })
+    if (canPresentUi(epoch)) {
+      void Taro.showToast({
+        title: `${getMascotDisplayName(user)}没能把卡片存进相册，可能需要你授权一下~`,
+        icon: 'none',
+        duration: 2500,
+      })
+    }
+  }, [analytics, canPresentUi, displayArchetypeName, isEpochCurrent, user])
+
+  const saveToAlbum = useCallback(async (filePath: string, label: string, epoch: number) => {
+    try {
+      const settingRes = await Taro.getSetting()
+      if (!mountedRef.current) return
+      if (settingRes.authSetting['scope.writePhotosAlbum'] === false) {
+        const granted = await requestAlbumAccess(epoch)
+        if (!granted) return
+      }
+    } catch (error) {
+      reportSaveFailure(error, label, epoch)
       return
     }
 
-    // Map tapIndex back to action, accounting for dynamic itemList
-    const saveIdx = 0
-    const shareIdx = hasNativeShareMenu ? 1 : -1
-    const momentsIdx = hasMoments ? (hasNativeShareMenu ? 2 : 1) : -1
-    const previewIdx = itemList.length - 1
-
-    const saveToAlbum = async (filePath: string, label: string) => {
-      try {
-        const settingRes = await Taro.getSetting()
-        const authKey = 'scope.writePhotosAlbum' as const
-        const hasAuth = settingRes.authSetting[authKey] as boolean | undefined
-
-        if (hasAuth === false) {
-          analytics.interaction('share_save_permission_denied', { primaryArchetype: displayArchetypeName })
-          const { confirm } = await Taro.showModal({
-            title: '需要相册权限',
-            content: '保存卡片到相册需要您授权访问相册。',
-            confirmText: '去设置',
-            cancelText: '取消',
-          })
-          if (confirm) {
-            await Taro.openSetting()
+    const save = () => Taro.saveImageToPhotosAlbum({ filePath })
+    try {
+      await save()
+    } catch (error) {
+      if (isCancellation(error)) return
+      if (isAlbumDenial(error)) {
+        const granted = await requestAlbumAccess(epoch)
+        if (!granted) return
+        try {
+          // Same path, same pending user action — no regeneration or new tap.
+          await save()
+        } catch (retryError) {
+          if (!isCancellation(retryError) && !isAlbumDenial(retryError)) {
+            reportSaveFailure(retryError, label, epoch)
           }
           return
         }
-
-        await Taro.saveImageToPhotosAlbum({ filePath })
-        haptics('success')
-        analytics.interaction('share_save_success', { option: label, primaryArchetype: displayArchetypeName })
-        void Taro.showToast({ title: `${label}已保存`, icon: 'success', duration: 2000 })
-      } catch (saveErr) {
-        const error = String(saveErr)
-        logError('[PersonalityResults] Save to album failed', { error, option: label, primaryArchetype: displayArchetypeName })
-        analytics.interaction('share_save_failed', { error, option: label, primaryArchetype: displayArchetypeName })
-        void Taro.showToast({
-          title: `${getMascotDisplayName(user)}没能把卡片存进相册，可能需要你授权一下~`,
-          icon: 'none',
-          duration: 2500,
-        })
-      }
-    }
-
-    if (tapIndex === saveIdx) {
-      haptics('medium')
-      await saveToAlbum(posterPath, '氛围卡')
-    } else if (tapIndex === shareIdx) {
-      haptics('light')
-      analytics.interaction('share_action_selected', { option: 'share', primaryArchetype: displayArchetypeName })
-      await taroWithShareImageMenu.showShareImageMenu!({ path: posterPath })
-    } else if (tapIndex === momentsIdx) {
-      haptics('medium')
-      analytics.interaction('share_action_selected', { option: 'moments', primaryArchetype: displayArchetypeName })
-      await saveToAlbum(momentsPath!, '朋友圈卡片')
-    } else if (tapIndex === previewIdx) {
-      haptics('light')
-      analytics.interaction('share_action_selected', { option: 'preview', primaryArchetype: displayArchetypeName })
-      const urls = momentsPath ? [posterPath, momentsPath] : [posterPath]
-      await Taro.previewImage({ current: posterPath, urls })
-    }
-  }, [analytics, displayArchetypeName, user])
-
-  const handleGeneratePoster = useCallback(async () => {
-    if (isGeneratingPoster || !displayArchetype) {
-      return
-    }
-
-    // Offline pre-check — poster generation requires CDN images
-    try {
-      const { networkType } = await Taro.getNetworkType()
-      if (networkType === 'none') {
-        void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+      } else {
+        reportSaveFailure(error, label, epoch)
         return
       }
-    } catch {
-      // getNetworkType may fail on some devices — proceed anyway
     }
 
-    setIsGeneratingPoster(true)
-    setPosterError(false)
-    setGenerationPhase('准备素材中…')
+    if (isEpochCurrent(epoch)) {
+      haptics('success')
+      analytics.interaction('share_save_success', { option: label, primaryArchetype: displayArchetypeName })
+      if (canPresentUi(epoch)) {
+        void Taro.showToast({ title: `${label}已保存`, icon: 'success', duration: 2000 })
+      }
+    }
+  }, [analytics, canPresentUi, displayArchetypeName, isEpochCurrent, reportSaveFailure, requestAlbumAccess])
 
-    // QR temp file is baked into the poster bitmap during canvas draw, so it
-    // is safe — and required — to unlink once generation settles (success,
-    // failure, or transient-retry return path all pass through finally).
-    // Without this, every share tap would leak a ~50KB file into
-    // USER_DATA_PATH (2026-10-14 review finding).
+  /** Present actions only after generation has fully settled. */
+  const presentShareOptions = useCallback(async (
+    posterPath: string,
+    momentsPath: string | undefined,
+    epoch: number,
+  ) => {
+    const retainedPaths = [posterPath, ...(momentsPath ? [momentsPath] : [])]
+    retainActionPaths(retainedPaths)
+    try {
+      if (!canPresentUi(epoch)) return
+      const taroWithShareImageMenu = Taro as typeof Taro & {
+        showShareImageMenu?: (options: { path: string }) => Promise<unknown>
+      }
+      const hasNativeShareMenu = typeof taroWithShareImageMenu.showShareImageMenu === 'function'
+      const hasMoments = Boolean(momentsPath)
+      const itemList = [
+        '保存到相册',
+        ...(hasNativeShareMenu ? ['分享给朋友'] : []),
+        ...(hasMoments ? ['保存朋友圈卡片'] : []),
+        '预览海报',
+      ]
+
+      let tapIndex: number
+      try {
+        const res = await Taro.showActionSheet({ itemList })
+        tapIndex = res.tapIndex
+      } catch {
+        if (isEpochCurrent(epoch)) {
+          analytics.interaction('share_action_dismissed', { primaryArchetype: displayArchetypeName })
+        }
+        return
+      }
+      if (!isEpochCurrent(epoch)) return
+
+      const saveIdx = 0
+      const shareIdx = hasNativeShareMenu ? 1 : -1
+      const momentsIdx = hasMoments ? (hasNativeShareMenu ? 2 : 1) : -1
+      const previewIdx = itemList.length - 1
+
+      if (tapIndex === saveIdx) {
+        haptics('medium')
+        await saveToAlbum(posterPath, '氛围卡', epoch)
+      } else if (tapIndex === shareIdx) {
+        haptics('light')
+        analytics.interaction('share_action_selected', { option: 'share', primaryArchetype: displayArchetypeName })
+        try {
+          await taroWithShareImageMenu.showShareImageMenu!({ path: posterPath })
+        } catch {
+          // Native share dismissal is not a generation/save failure.
+        }
+      } else if (tapIndex === momentsIdx) {
+        haptics('medium')
+        analytics.interaction('share_action_selected', { option: 'moments', primaryArchetype: displayArchetypeName })
+        await saveToAlbum(momentsPath!, '朋友圈卡片', epoch)
+      } else if (tapIndex === previewIdx) {
+        haptics('light')
+        analytics.interaction('share_action_selected', { option: 'preview', primaryArchetype: displayArchetypeName })
+        const urls = momentsPath ? [posterPath, momentsPath] : [posterPath]
+        try {
+          await Taro.previewImage({ current: posterPath, urls })
+        } catch {
+          // Preview dismissal is neutral; cached files stay available.
+        }
+      }
+    } finally {
+      releaseActionPaths(retainedPaths)
+    }
+  }, [analytics, canPresentUi, displayArchetypeName, isEpochCurrent, releaseActionPaths, retainActionPaths, saveToAlbum])
+
+  const generatePosterSetOnce = useCallback(async (
+    epoch: number,
+    cachedPortrait: PosterCacheEntry | null,
+    cachedSquare: PosterCacheEntry | null,
+  ): Promise<GeneratedPosterSet | null> => {
+    if (!displayArchetype) return null
+
     let qrCodeImagePath: string | undefined
+    let qrCodePromise: Promise<string | undefined> | null = null
+    let qrAwaited = false
+    let nextPortraitPath = cachedPortrait?.path ?? ''
+    let nextSquarePath = cachedSquare?.path
+    let portraitGenerated = false
+    let squareGenerated = false
+    let succeeded = false
 
     try {
-      const selectedVariant = variants[selectedVariantIndex]
+      let offline = false
+      try {
+        const { networkType } = await Taro.getNetworkType()
+        offline = networkType === 'none'
+      } catch {
+        // Network pre-check is best-effort; local/pre-resolved art still works.
+      }
+      if (!isEpochCurrent(epoch)) return null
+
       const accentColor = selectedVariant?.accentColor ?? (visual.accent || '#8B5CF6')
       const accentSoft = selectedVariant?.accentSoft ?? visual.accentSoft
-
-      // Canvas drawImage requires a network-resolvable URL. The local
-      // subpackage path (/pages/onboarding/assets/...) works for <Image>
-      // preloading but is not guaranteed to resolve inside canvas. Prefer
-      // the CDN asset for canvas drawing; fall back to the local bundled
-      // path only when the CDN asset is missing.
-      // `displayAsset` is the subpackage local WebP; `visual.asset` is
-      // the CDN/main-package path.
       const canvasArchetypeAsset = visual.asset || displayAsset
-
-      // The reveal can transition between archetypes before the background
-      // preload finishes. Resolve the current asset at save time so both the
-      // outer poster and the centered collectible-card avatar use this exact
-      // result, never an earlier reel character.
-      // Share-QR (2026-10-14): fetch the referral-attributed mini-program code
-      // for the CTA band. Authenticated users only — guests get the copy-only
-      // band. Fail-open by design (see lib/referral/shareQrCode.ts). Kicked
-      // off BEFORE image resolution so the network round-trip overlaps with
-      // the asset resolve instead of serializing into the critical path.
-      const qrCodePromise: Promise<string | undefined> = user
-        ? fetchShareQrCodeImage()
+      qrCodePromise = !offline && user
+        ? fetchShareQrCodeImage().catch(() => undefined)
         : Promise.resolve(undefined)
 
+      // Offline generation is intentional: a cached/local asset can produce a
+      // copy-only poster. If no candidate resolves, the error remains honest.
       const resolvedArchetypeImage = await resolveCurrentCanvasImage(
         displayArchetype,
         [displayAsset, canvasArchetypeAsset, visual.assetPng],
         preResolvedImageRef.current,
         Taro.getImageInfo,
       )
+      if (!isEpochCurrent(epoch)) return null
       preResolvedImageRef.current = resolvedArchetypeImage
-
       setGenerationPhase('正在渲染全息卡面…')
       qrCodeImagePath = await qrCodePromise
+      qrAwaited = true
+      if (!isEpochCurrent(epoch)) return null
 
-      const posterInput: PersonalitySharePosterInput = {
-        archetype: displayArchetypeName,
-        tagline: visual.tagline || visual.description || summary,
-        shareLine,
-        accentColor,
-        accentSoft,
-        archetypeAsset: canvasArchetypeAsset,
-        archetypeAssetPng: visual.assetPng,
-        preResolvedImagePath: resolvedArchetypeImage.path,
-        confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
-        rarityLabel:
-          typeof visual.rarityPercentage === 'number'
-            ? `稀有度 ${Math.round(visual.rarityPercentage)}%`
-            : undefined,
-        activeSkillTitle: skillSet?.activeSkill.name ?? '瞬间点亮全场',
-        activeSkillEffect: skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。',
-        passiveSkillTitle: skillSet?.passiveSkill.name ?? '气场持续发光',
-        passiveSkillEffect: skillSet?.passiveSkill.shortEffect ?? '不用刻意用力，也会让人想靠近你。',
-        energyLevel,
-        archetypeRank,
-        serialNumber,
-        qrCodeImagePath,
+      if (!cachedPortrait) {
+        const posterInput: PersonalitySharePosterInput = {
+          archetype: displayArchetypeName,
+          tagline: visual.tagline || visual.description || summary,
+          shareLine,
+          accentColor,
+          accentSoft,
+          archetypeAsset: canvasArchetypeAsset,
+          archetypeAssetPng: visual.assetPng,
+          preResolvedImagePath: resolvedArchetypeImage.path,
+          confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
+          rarityLabel:
+            typeof visual.rarityPercentage === 'number'
+              ? `稀有度 ${Math.round(visual.rarityPercentage)}%`
+              : undefined,
+          activeSkillTitle: skillSet?.activeSkill.name ?? '',
+          activeSkillEffect: skillSet?.activeSkill.shortEffect ?? '',
+          passiveSkillTitle: skillSet?.passiveSkill.name ?? '',
+          passiveSkillEffect: skillSet?.passiveSkill.shortEffect ?? '',
+          energyLevel,
+          archetypeRank,
+          serialNumber,
+          qrCodeImagePath,
+        }
+        nextPortraitPath = await generatePersonalitySharePoster(posterInput)
+        portraitGenerated = true
       }
+      if (!isEpochCurrent(epoch)) return null
 
-      const nextPosterPath = await generatePersonalitySharePoster(posterInput)
-      setSharePosterPath(nextPosterPath)
-
-      // Generate square Moments poster (best-effort; degrades on low-end devices)
-      let nextSquarePath: string | undefined
-      if (!deviceTier.isDegradation) {
+      if (!deviceTier.isDegradation && !cachedSquare) {
         try {
           const squareInput: PersonalitySquarePosterInput = {
             archetype: displayArchetypeName,
@@ -301,93 +554,233 @@ export function useResultShareActions(deps: ResultShareActionsDeps) {
             typicalityChip: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
             qrCodeImagePath,
           }
-          setGenerationPhase('正在生成朋友圈卡片…')
+          if (isEpochCurrent(epoch)) setGenerationPhase('正在生成朋友圈卡片…')
           nextSquarePath = await generatePersonalitySquarePoster(squareInput)
-          setSquarePosterPath(nextSquarePath)
+          squareGenerated = true
         } catch (squareErr) {
-          logWarn('[PersonalityResults] Square poster generation failed, degrading to portrait-only', {
-            error: squareErr instanceof Error ? squareErr.message : String(squareErr),
-          })
+          if (isEpochCurrent(epoch)) {
+            logWarn('[PersonalityResults] Square poster generation failed, degrading to portrait-only', {
+              error: errorMessage(squareErr),
+            })
+          }
         }
       }
+      if (!isEpochCurrent(epoch)) return null
 
-      haptics('success')
-      logInfo('[PersonalityResults] Poster generated', {
-        primaryArchetype: displayArchetypeName,
-        variant: selectedVariant?.name,
-        hasMoments: Boolean(nextSquarePath),
+      succeeded = true
+      return {
+        portraitPath: nextPortraitPath,
+        squarePath: nextSquarePath,
+        portraitGenerated,
+        squareGenerated,
         hasQr: Boolean(qrCodeImagePath),
-      })
-      void Taro.showToast({ title: '氛围卡已生成', icon: 'success', duration: 1500 })
-
-      // Present frictionless sharing options
-      await presentShareOptions(nextPosterPath, nextSquarePath)
-    } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : '海报没生成成功，稍后再试'
-      const isTransientError = error instanceof Error && /timeout|network|offline|abort|failed to fetch/i.test(error.message)
-
-      // Auto-retry once on transient (network/timeout) errors before surfacing to user
-      if (isTransientError && !posterRetryRef.current) {
-        posterRetryRef.current = true
-        logWarn('[PersonalityResults] Poster generation failed with transient error, auto-retrying', {
-          message,
-          primaryArchetype: displayArchetypeName,
-        })
-        void Taro.showToast({ title: '正在重试...', icon: 'loading', duration: 1200 })
-        // Reset state so the retry callback can re-enter generation
-        setIsGeneratingPoster(false)
-        setGenerationPhase('')
-        if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
-        retryTimerRef.current = setTimeout(() => {
-          retryTimerRef.current = null
-          handleGeneratePosterRef.current?.()
-        }, 1500)
-        return
+        resolvedImagePath: resolvedArchetypeImage.path,
       }
-
-      posterRetryRef.current = false
-      haptics('warning')
-      analytics.errorOccurred('poster_generation_failed', message)
-      logError('[PersonalityResults] Failed to generate poster', {
-        message,
-        primaryArchetype: displayArchetypeName,
-      })
-      void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
-      setPosterError(true)
-    } finally {
-      setIsGeneratingPoster(false)
-      setGenerationPhase('')
-      if (qrCodeImagePath) {
-        try {
-          Taro.getFileSystemManager().unlinkSync(qrCodeImagePath)
-        } catch {
-          // Best-effort cleanup — a leftover temp file only wastes ~50KB.
+    } catch (error) {
+      if (cachedPortrait && isEpochCurrent(epoch)) {
+        // A valid portrait remains fully actionable when only the optional
+        // square regeneration cannot resolve its inputs.
+        logWarn('[PersonalityResults] Square poster regeneration failed, keeping portrait-only share', {
+          error: errorMessage(error),
+        })
+        succeeded = true
+        return {
+          portraitPath: cachedPortrait.path,
+          squarePath: undefined,
+          portraitGenerated: false,
+          squareGenerated: false,
+          hasQr: false,
+          resolvedImagePath: cachedPortrait.resolvedImagePath,
         }
+      }
+      throw error
+    } finally {
+      // A stale/unmounted generator can still finish in the background. Its
+      // late files are owned by this flow and must never enter the cache.
+      if (!succeeded) {
+        if (portraitGenerated && nextPortraitPath) unlinkOwnedFile(nextPortraitPath)
+        if (squareGenerated && nextSquarePath) unlinkOwnedFile(nextSquarePath)
+      }
+      if (qrAwaited) {
+        if (qrCodeImagePath) unlinkOwnedFile(qrCodeImagePath)
+      } else if (qrCodePromise) {
+        // Art resolution can fail before the parallel QR request settles.
+        // Attach ownership now so its late temp file cannot leak.
+        void qrCodePromise.then((path) => {
+          if (path) unlinkOwnedFile(path)
+        })
       }
     }
   }, [
-    analytics,
     archetypeRank,
     deviceTier.isDegradation,
     displayArchetype,
     displayArchetypeName,
     displayAsset,
     energyLevel,
-    isGeneratingPoster,
-    presentShareOptions,
+    isEpochCurrent,
+    preResolvedImageRef,
+    selectedVariant,
     serialNumber,
     shareLine,
     skillSet,
     summary,
     traitEntries,
     typicalityLabel,
+    unlinkOwnedFile,
     user,
-    variants,
     visual,
   ])
-  // Keep a ref to the latest handleGeneratePoster so the retry timeout
-  // can call the most recent closure (with correct isGeneratingPoster state).
-  handleGeneratePosterRef.current = handleGeneratePoster
+
+  const waitForPosterRetry = useCallback(() => new Promise<boolean>((resolve) => {
+    retryCancelRef.current = () => resolve(false)
+    retryTimerRef.current = setTimeout(() => {
+      retryTimerRef.current = null
+      retryCancelRef.current = null
+      resolve(true)
+    }, POSTER_RETRY_DELAY_MS)
+  }), [])
+
+  const handleGeneratePoster = useCallback(async () => {
+    if (operationInFlightRef.current || !displayArchetype) return
+
+    operationInFlightRef.current = true
+    const epoch = ++epochRef.current
+    workPhaseRef.current = 'generating'
+    setPosterError(false)
+
+    const cachedPortrait = readValidPoster('portrait', portraitCacheKey)
+    const cachedSquare = deviceTier.isDegradation
+      ? null
+      : readValidPoster('square', squareCacheKey)
+    const needsPortrait = !cachedPortrait
+    const needsSquare = !deviceTier.isDegradation && !cachedSquare
+
+    try {
+      if (!needsPortrait && !needsSquare && cachedPortrait) {
+        workPhaseRef.current = 'action'
+        await presentShareOptions(cachedPortrait.path, cachedSquare?.path, epoch)
+        return
+      }
+
+      setIsGeneratingPoster(true)
+      setGenerationPhase('准备素材中…')
+      let generated: GeneratedPosterSet | null = null
+      let hasRetried = false
+
+      while (isEpochCurrent(epoch)) {
+        try {
+          generated = await generatePosterSetOnce(epoch, cachedPortrait, cachedSquare)
+          break
+        } catch (error) {
+          if (!isEpochCurrent(epoch)) return
+          if (isTransientGenerationError(error) && !hasRetried) {
+            hasRetried = true
+            workPhaseRef.current = 'retry'
+            const message = errorMessage(error)
+            logWarn('[PersonalityResults] Poster generation failed with transient error, auto-retrying', {
+              message,
+              primaryArchetype: displayArchetypeName,
+            })
+            if (canPresentUi(epoch)) {
+              void Taro.showToast({ title: '正在重试...', icon: 'loading', duration: 1200 })
+            }
+            setGenerationPhase('')
+            const shouldRetry = await waitForPosterRetry()
+            if (!shouldRetry || !isEpochCurrent(epoch)) return
+            workPhaseRef.current = 'generating'
+            continue
+          }
+          throw error
+        }
+      }
+
+      if (!generated || !isEpochCurrent(epoch)) {
+        if (generated?.portraitGenerated) unlinkOwnedFile(generated.portraitPath)
+        if (generated?.squareGenerated && generated.squarePath) unlinkOwnedFile(generated.squarePath)
+        return
+      }
+      if (generated.portraitGenerated) {
+        const previous = posterCacheRef.current.portrait
+        posterCacheRef.current.portrait = {
+          key: portraitCacheKey,
+          path: generated.portraitPath,
+          resolvedImagePath: generated.resolvedImagePath,
+        }
+        if (previous && previous.path !== generated.portraitPath) cleanupOwnedFile(previous.path)
+        setSharePosterPath(generated.portraitPath)
+      }
+      if (generated.squareGenerated && generated.squarePath) {
+        const previous = posterCacheRef.current.square
+        posterCacheRef.current.square = {
+          key: squareCacheKey,
+          path: generated.squarePath,
+          resolvedImagePath: generated.resolvedImagePath,
+        }
+        if (previous && previous.path !== generated.squarePath) cleanupOwnedFile(previous.path)
+        setSquarePosterPath(generated.squarePath)
+      } else if (needsSquare && !generated.squarePath) {
+        setSquarePosterPath('')
+      }
+
+      if (generated.portraitGenerated || generated.squareGenerated) {
+        haptics('success')
+        logInfo('[PersonalityResults] Poster generated', {
+          primaryArchetype: displayArchetypeName,
+          variant: selectedVariant?.name,
+          hasMoments: Boolean(generated.squarePath),
+          hasQr: generated.hasQr,
+        })
+        if (canPresentUi(epoch)) {
+          void Taro.showToast({ title: '氛围卡已生成', icon: 'success', duration: 1500 })
+        }
+      }
+
+      workPhaseRef.current = 'action'
+      setIsGeneratingPoster(false)
+      setGenerationPhase('')
+      await presentShareOptions(generated.portraitPath, generated.squarePath, epoch)
+    } catch (error) {
+      if (!isEpochCurrent(epoch)) return
+      const rawMessage = errorMessage(error)
+      const message = rawMessage && rawMessage !== 'undefined'
+        ? rawMessage
+        : '海报没生成成功，稍后再试'
+      haptics('warning')
+      analytics.errorOccurred('poster_generation_failed', message)
+      logError('[PersonalityResults] Failed to generate poster', {
+        message,
+        primaryArchetype: displayArchetypeName,
+      })
+      if (canPresentUi(epoch)) {
+        void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
+      }
+      setPosterError(true)
+    } finally {
+      if (isEpochCurrent(epoch)) {
+        operationInFlightRef.current = false
+        workPhaseRef.current = 'idle'
+        setIsGeneratingPoster(false)
+        setGenerationPhase('')
+      }
+    }
+  }, [
+    analytics,
+    canPresentUi,
+    cleanupOwnedFile,
+    deviceTier.isDegradation,
+    displayArchetype,
+    displayArchetypeName,
+    generatePosterSetOnce,
+    isEpochCurrent,
+    portraitCacheKey,
+    presentShareOptions,
+    readValidPoster,
+    selectedVariant?.name,
+    squareCacheKey,
+    unlinkOwnedFile,
+    waitForPosterRetry,
+  ])
 
   /**
    * Phase 3 / B3 (2026-08-01): animated share clip.

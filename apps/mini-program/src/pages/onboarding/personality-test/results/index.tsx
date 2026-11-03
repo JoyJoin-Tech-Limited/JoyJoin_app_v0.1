@@ -3,8 +3,7 @@ import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/t
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
-import { ARCHETYPE_BY_ID, getArchetypeIndex } from '@shared/personality/archetypeNames'
-import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getReferralStats, type ReferralStatsResponse } from '@shared/api'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useUnload } from '../../../../hooks/useUnload'
@@ -20,7 +19,6 @@ import { apiRequest } from '../../../../lib/api/api'
 import {
   buildPersonalityResultSharePath,
   buildPersonalityResultTimelineQuery,
-  getResultShareRewardHint,
 } from '../../../../lib/referral/resultShare'
 import { logInfo, logWarn } from '../../../../lib/utils/logger'
 import { useDeviceTier } from '../../../../hooks/useDeviceTier'
@@ -40,7 +38,9 @@ import {
   PERSONALITY_SQUARE_CANVAS_ID,
 } from '../../../../lib/utils/momentsPosterFactory'
 import {
+  buildAuthUserResultState,
   buildResolvedResultState,
+  buildResultCardComposition,
   buildShareLine,
   buildShareTitle,
   buildTypicalityLabel,
@@ -48,7 +48,6 @@ import {
   resolveCurrentCanvasImage,
   type AnimationProfileName,
   type FlowStage,
-  type ResolvedResultState,
 } from './resultHelpers'
 import LoadingStage from './LoadingStage'
 import LoginHandoffOverlay from './LoginHandoffOverlay'
@@ -65,28 +64,6 @@ import { useResultsLoginHandoff } from './hooks/useResultsLoginHandoff'
 import { useSignalRetestPrompt } from './hooks/useSignalRetestPrompt'
 import './index.scss'
 import { getSystemReducedMotionCompat } from '../../../../lib/utils/systemInfo'
-
-// helper function for the personality test results page
-function buildAuthUserResultState(user: any): ResolvedResultState | null {
-  const archetype = user?.archetype ?? user?.primaryArchetype ?? null
-  if (!archetype) return null
-
-  const topMatches = [{ archetype, score: 100, confidence: 1 }]
-
-  return {
-    sessionId: `profile-${user.id ?? archetype}`,
-    completedAt: new Date().toISOString(),
-    result: {
-      primaryArchetype: archetype,
-      secondaryArchetype: user?.secondaryArchetype ?? undefined,
-      traitScores: {},
-      topMatches,
-      archetypeConfidence: 1,
-      isDecisive: true,
-    },
-    topMatches,
-  }
-}
 
 /**
  * Composition root for the personality-test results page.
@@ -268,7 +245,7 @@ export default function PersonalityTestResultsPage() {
     spriteReady,
     analytics,
     isAuthenticated: auth.isAuthenticated,
-    authUserArchetype: auth.user?.archetype ?? auth.user?.primaryArchetype ?? null,
+    authUserArchetype: authUserResult?.result.primaryArchetype ?? null,
     clearSharePosterRef,
   })
 
@@ -300,33 +277,23 @@ export default function PersonalityTestResultsPage() {
   const visual = useMemo(() => getArchetypeVisual(displayArchetype), [displayArchetype])
   const summary = useMemo(() => visual.summary, [visual.summary])
   const traitEntries = useMemo(() => getTraitEntries(resultState?.result ?? sessionSnapshot?.result), [resultState, sessionSnapshot])
-  const skillSet = useMemo(() => (displayArchetype ? getArchetypeSkills(displayArchetype) : undefined), [displayArchetype])
+  const { skillSet, archetypeRank, serialNumber } = useMemo(() => {
+    const composition = buildResultCardComposition({
+      archetype: displayArchetype,
+      sessionId: sessionSnapshot?.sessionId,
+    })
+    if (displayArchetype && composition.archetypeRank === undefined) {
+      logWarn('[PersonalityResults] Archetype not found in registry', { archetype: displayArchetype })
+    }
+    return composition
+  }, [displayArchetype, sessionSnapshot?.sessionId])
 
-  // Phase 2: card variants, energy, rank badges
+  // Phase 2: card variants and energy
   const variants = useMemo(() => (displayArchetype ? getArchetypeCardVariants(displayArchetype) : []), [displayArchetype])
   const energyLevel = useMemo(() => {
     if (!displayArchetype) return undefined
     return archetypeRegistry[displayArchetype]?.profile.energyLevel
   }, [displayArchetype])
-  const archetypeRank = useMemo(() => {
-    if (!displayArchetype) return undefined
-    const index = getArchetypeIndex(displayArchetype)
-    if (index === null) {
-      logWarn('[PersonalityResults] Archetype not found in registry', { archetype: displayArchetype })
-      return 1
-    }
-    return index
-  }, [displayArchetype])
-  const serialNumber = useMemo(() => {
-    const sessionId = sessionSnapshot?.sessionId ?? 'unknown'
-    // Deterministic pseudo-serial from sessionId hash
-    let hash = 0
-    for (let i = 0; i < sessionId.length; i++) {
-      hash = ((hash << 5) - hash + sessionId.charCodeAt(i)) | 0
-    }
-    const num = Math.abs(hash) % 90000 + 10000
-    return `#${num}`
-  }, [sessionSnapshot?.sessionId])
 
   const typicalityLabel = useMemo(
     () => buildTypicalityLabel(isDecisive, displayArchetypeName, visual.accentText),
@@ -628,7 +595,6 @@ export default function PersonalityTestResultsPage() {
             shareAnimatedClipEnabled={shareAnimatedClipEnabled}
             isGeneratingClip={isGeneratingClip}
             onGenerateClip={handleGenerateClip}
-            shareRewardHint={getResultShareRewardHint(shareReferralCode)}
             signalRetestPrompt={{
               visible: showSignalRetestPrompt,
               onRetest: handleSignalRetest,
