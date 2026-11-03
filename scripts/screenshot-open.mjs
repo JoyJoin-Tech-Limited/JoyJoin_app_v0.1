@@ -94,6 +94,10 @@ const PAGES = {
   // 转化 S5.3 checkout merge-gate captures (2026-10-21 audit car): P0d refund
   // narrative 全量拍板版 (flag off baseline / bucket 0 cohort / bucket 1 stack — 两行全量) + P1a duo
   // entry overlay, incl. the 320x568 short-phone viewport.
+  'subtraction-pool-reg-joined': {
+    url: 'http://localhost:9000/subtraction-pool-reg-joined-solo-390x844.png',
+    altPort: 9003,
+  },
   'checkout-conversion-baseline-flag-off': {
     url: 'http://localhost:9000/checkout-conversion-baseline-flag-off-375x667.png',
     altPort: 9003,

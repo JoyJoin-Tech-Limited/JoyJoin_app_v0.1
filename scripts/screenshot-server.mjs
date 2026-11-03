@@ -8,6 +8,7 @@ import { registerFlashTeaserGenerators } from './screenshot/generators-flash-tea
 import { registerEventFeedbackGenerators } from './screenshot/generators-event-feedback.mjs'
 import { registerEventDetailGenerators } from './screenshot/generators-event-detail.mjs'
 import { registerCheckoutConversionGenerators } from './screenshot/generators-checkout-conversion.mjs'
+import { registerSubtractionPoolRegistrationGenerators } from './screenshot/generators-subtraction-pool-registration.mjs'
 
 const app = express()
 const PORT = process.env.SCREENSHOT_PORT || 9000
@@ -167,6 +168,7 @@ registerFlashTeaserGenerators(generatorCtx)
 registerEventFeedbackGenerators(generatorCtx)
 registerEventDetailGenerators(generatorCtx)
 registerCheckoutConversionGenerators(generatorCtx)
+registerSubtractionPoolRegistrationGenerators(generatorCtx)
 
 // ─── Generators ──────────────────────────────────────────────────
 

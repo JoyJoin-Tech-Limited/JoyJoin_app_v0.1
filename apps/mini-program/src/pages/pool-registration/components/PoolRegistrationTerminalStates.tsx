@@ -109,27 +109,34 @@ export function PoolRegistrationAlreadyJoined({
     Taro.switchTab({ url: '/pages/events/index' })
   }
 
+  const summaryTitle = poolTitle && poolArea && poolTitle.endsWith(` · ${poolArea}`)
+    ? poolTitle.slice(0, -(` · ${poolArea}`).length)
+    : poolTitle
+
   return (
     <View className='pool-reg'>
       <ScrollView className='pool-reg__scroll' scrollY enhanced showScrollbar={false}>
         <View className='pool-reg__terminal-center'>
-          <Card className='pool-reg__already-joined'>
-            <Image
-              className='pool-reg__already-mascot'
-              mode='aspectFit'
-              src={getXiaoyueExpressionAsset('homeWelcome')}
-              ariaLabel='已报名'
-            />
-            <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
-            <Text className='pool-reg__already-text'>
-              你的预算和期待已经收到，悦仔正在帮你挑同频的桌友，有结果会第一时间通知你。
-            </Text>
-            {duoPartnerName ? (
-              <Text className='pool-reg__already-text'>你和 {duoPartnerName} 的双人成行已生效</Text>
-            ) : null}
+          <View className='pool-reg__already-joined'>
+            <View className='pool-reg__already-header'>
+              <Image
+                className='pool-reg__already-mascot'
+                mode='scaleToFill'
+                src={getXiaoyueExpressionAsset('homeWelcome')}
+                ariaLabel='已报名'
+              />
+              <Text className='pool-reg__already-title'>这一局，有你的位置了</Text>
+              {duoPartnerName ? (
+                <Text className='pool-reg__already-text'>
+                  <Text>你和 </Text>
+                  <Text className='pool-reg__already-partner'>{duoPartnerName}</Text>
+                  <Text> 的双人成行已生效</Text>
+                </Text>
+              ) : null}
+            </View>
             <EventSummaryCard
               className='pool-reg__terminal-card'
-              title={poolTitle}
+              title={summaryTitle}
               eventType={eventType}
               dateTime={poolDateTime}
               district={poolArea}
@@ -142,7 +149,7 @@ export function PoolRegistrationAlreadyJoined({
             >
               查看我的局
             </Button>
-          </Card>
+          </View>
         </View>
       </ScrollView>
     </View>
