@@ -66,3 +66,49 @@ export async function syncSocialActionResponse(
   }
 }
 
+type ApiErrorLike = {
+  statusCode?: unknown
+  data?: unknown
+}
+
+/**
+ * Host advance is a CAS on the current phase; the loser of a same-host
+ * double-tap (two devices, or a stalled retry) gets 409 `PHASE_CONFLICT`.
+ * That is not "your tap failed" — the table did move — so it must not be
+ * surfaced as an error toast.
+ */
+export function isPhaseConflictError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const { statusCode, data } = error as ApiErrorLike
+  if (statusCode !== 409 || !data || typeof data !== 'object') {
+    return false
+  }
+
+  return (data as { code?: unknown }).code === 'PHASE_CONFLICT'
+}
+
+/**
+ * Adopts the authoritative state carried by a `PHASE_CONFLICT` 409 (the
+ * server re-reads the session for exactly this purpose), then reconciles with
+ * the poll. Returns false for every other error so callers keep their existing
+ * failure path untouched.
+ */
+export async function syncPhaseConflictResponse(
+  error: unknown,
+  options: SocialActionSyncOptions,
+): Promise<boolean> {
+  if (!isPhaseConflictError(error)) {
+    return false
+  }
+
+  const conflictState = getResponseState((error as ApiErrorLike).data)
+  await syncSocialActionResponse(
+    conflictState ? { state: conflictState } : {},
+    options,
+  )
+  return true
+}
+
