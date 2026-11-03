@@ -77,7 +77,6 @@ describe('Flash readable color tokens', () => {
   })
 
   it('keeps platform control colors centralized and badge copy on its text palette', () => {
-    const preferencesSource = readFileSync(resolve(sourceRoot, 'pages/alang/preferences/index.tsx'), 'utf8')
     const companionSource = readFileSync(resolve(sourceRoot, 'pages/alang/companion/index.tsx'), 'utf8')
     const platformControlSources = [
       companionSource,
@@ -90,7 +89,6 @@ describe('Flash readable color tokens', () => {
       companionSource,
     ].join('\n')
 
-    expect(preferencesSource).not.toContain("color='#")
     expect(platformControlSources).not.toContain("confirmColor: '#")
     expect(badgeConsumers).not.toContain('color: category.accent')
     // Dialogue and task cards share FlashTaskCategoryBadge, so the centralized

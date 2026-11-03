@@ -26,13 +26,11 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   notifications: 'pages/notifications/index',
   eventFeedback: 'pages/event-feedback/index',
   poolRegistration: 'pages/pool-registration/index',
-  eventCoordination: 'pages/event-coordination/index',
   matchingStatus: 'pages/matching-status/index',
   squadUnboxing: 'pages/squad-unboxing/index',
   poolGroupDetail: 'pages/pool-group-detail/index',
   gatheringRoom: 'pages/gathering-room/index',
   gatheringRoomMemory: 'pages/gathering-room/memory/index',
-  centerTabEmpty: 'pages/center-tab-empty/index',
   icebreakerSession: 'pages/icebreaker-session/index',
   tierSelector: 'pages/icebreaker-session/tier-selector/index',
   editProfile: 'pages/profile-linked/edit-profile/index',
@@ -53,9 +51,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   alangFinale: 'pages/alang/finale/index',
   alangCompanion: 'pages/alang/companion/index',
   alangResult: 'pages/alang/result/index',
-  alangStoryDetail: 'pages/alang/story-detail/index',
   alangArchive: 'pages/alang/archive/index',
-  alangPreferences: 'pages/alang/preferences/index',
   alangTeaser: 'pages/alang/teaser/index',
   alangDebug: 'pages/alang/debug/index',
 } as const
@@ -79,13 +75,11 @@ export const MINI_PROGRAM_ROUTES = {
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
   eventDetail: `/${MINI_PROGRAM_PAGE_PATHS.eventDetail}`,
   notifications: `/${MINI_PROGRAM_PAGE_PATHS.notifications}`,
-  eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
   matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
   squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
   poolGroupDetail: `/${MINI_PROGRAM_PAGE_PATHS.poolGroupDetail}`,
   gatheringRoom: `/${MINI_PROGRAM_PAGE_PATHS.gatheringRoom}`,
   gatheringRoomMemory: `/${MINI_PROGRAM_PAGE_PATHS.gatheringRoomMemory}`,
-  centerTabEmpty: `/${MINI_PROGRAM_PAGE_PATHS.centerTabEmpty}`,
   icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
   tierSelector: `/${MINI_PROGRAM_PAGE_PATHS.tierSelector}`,
   editProfile: `/${MINI_PROGRAM_PAGE_PATHS.editProfile}`,
@@ -107,9 +101,7 @@ export const MINI_PROGRAM_ROUTES = {
   alangFinale: `/${MINI_PROGRAM_PAGE_PATHS.alangFinale}`,
   alangCompanion: `/${MINI_PROGRAM_PAGE_PATHS.alangCompanion}`,
   alangResult: `/${MINI_PROGRAM_PAGE_PATHS.alangResult}`,
-  alangStoryDetail: `/${MINI_PROGRAM_PAGE_PATHS.alangStoryDetail}`,
   alangArchive: `/${MINI_PROGRAM_PAGE_PATHS.alangArchive}`,
-  alangPreferences: `/${MINI_PROGRAM_PAGE_PATHS.alangPreferences}`,
   alangTeaser: `/${MINI_PROGRAM_PAGE_PATHS.alangTeaser}`,
   alangDebug: `/${MINI_PROGRAM_PAGE_PATHS.alangDebug}`,
   index: `/${MINI_PROGRAM_PAGE_PATHS.index}`,
@@ -204,9 +196,7 @@ export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
   'finale/index',
   'companion/index',
   'result/index',
-  'story-detail/index',
   'archive/index',
-  'preferences/index',
   'teaser/index',
   'debug/index',
 ] as const
@@ -268,18 +258,6 @@ export const MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_PAGES = [
   'index',
 ] as const
 
-export const MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_ROOT = 'pages/event-coordination' as const
-
-export const MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_PAGES = [
-  'index',
-] as const
-
-export const MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_ROOT = 'pages/center-tab-empty' as const
-
-export const MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_PAGES = [
-  'index',
-] as const
-
 export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -332,14 +310,6 @@ export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_PAGES,
-  },
-  {
-    root: MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_ROOT,
-    pages: MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_PAGES,
-  },
-  {
-    root: MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_ROOT,
-    pages: MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_PAGES,
   },
 ] as const
 

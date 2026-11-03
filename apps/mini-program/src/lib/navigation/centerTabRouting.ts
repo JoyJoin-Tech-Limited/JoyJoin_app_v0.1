@@ -8,7 +8,6 @@ import {
 } from '@joyjoin/shared/centerTabRouting'
 import { MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 
-export const MINI_PROGRAM_CENTER_TAB_EMPTY_ROUTE = '/pages/center-tab-empty/index'
 export const MINI_PROGRAM_POOL_GROUP_DETAIL_ROUTE = '/pages/pool-group-detail/index'
 
 export interface MiniProgramCenterAction {
