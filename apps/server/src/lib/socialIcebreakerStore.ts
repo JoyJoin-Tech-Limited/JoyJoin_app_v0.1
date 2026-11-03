@@ -30,6 +30,7 @@ import {
 import { getFeatureFlag } from './featureFlags';
 import { logger } from './logger';
 import type {
+  SocialIcebreakerPhase,
   SocialSessionParticipantSummary,
   SocialSessionState,
 } from '@shared/socialIcebreaker';
@@ -207,19 +208,41 @@ export async function createSession(state: SocialSessionState): Promise<void> {
 // lost ballot is re-cast on the client's next tap. If sessions ever grow
 // beyond a single table or mutations become non-idempotent, add optimistic
 // concurrency (state_version column) before extending this surface further.
+//
+// 2026-11-03 (P1): `expectedPhase` closes the highest-blast-radius case of that
+// gap — phase advancement. Two concurrent /advance requests (same host on two
+// devices) both pass the route's `currentPhase` check before either writes;
+// both then re-run non-idempotent side effects (glow accrual for
+// quip/mirror/miniscript/undercover has no banked marker, unlike auction).
+// Passing the phase the caller validated against turns the write into a
+// compare-and-swap on `current_phase`, so the loser persists nothing. Returns
+// `false` when the row's phase no longer matches (or the row is gone).
 export async function updateSession(
   socialSessionId: string,
   state: SocialSessionState,
-): Promise<void> {
-  await db
-    .update(socialIcebreakerSessions)
-    .set({
-      currentPhase: state.currentPhase,
-      phaseStartedAt: new Date(state.phaseStartedAt),
-      stateJson: state as unknown as Record<string, unknown>,
-      updatedAt: new Date(),
-    })
-    .where(eq(socialIcebreakerSessions.id, socialSessionId));
+  opts?: { expectedPhase?: SocialIcebreakerPhase },
+): Promise<boolean> {
+  const write = db.update(socialIcebreakerSessions).set({
+    currentPhase: state.currentPhase,
+    phaseStartedAt: new Date(state.phaseStartedAt),
+    stateJson: state as unknown as Record<string, unknown>,
+    updatedAt: new Date(),
+  });
+
+  if (opts?.expectedPhase) {
+    const written = await write
+      .where(
+        and(
+          eq(socialIcebreakerSessions.id, socialSessionId),
+          eq(socialIcebreakerSessions.currentPhase, opts.expectedPhase),
+        ),
+      )
+      .returning({ id: socialIcebreakerSessions.id });
+    return written.length > 0;
+  }
+
+  await write.where(eq(socialIcebreakerSessions.id, socialSessionId));
+  return true;
 }
 
 /** Outcome of `updateSessionAtomic`. */
@@ -623,13 +646,22 @@ export async function getActiveParticipantCount(
   return rows[0]?.count ?? 0;
 }
 
-/** Retrieve a participant row for rejoin/name-preservation logic. */
+/**
+ * Retrieve a participant row for rejoin/name-preservation logic.
+ *
+ * `isTestBot` rides along on the same query so host-transfer callers can refuse
+ * to promote a simulated bot (a bot never advances a phase, so promoting one
+ * freezes the table). Same row, no extra round trip.
+ */
 export async function getParticipant(
   socialSessionId: string,
   userId: string,
-): Promise<{ displayName: string } | null> {
+): Promise<{ displayName: string; isTestBot: boolean } | null> {
   const rows = await db
-    .select({ displayName: socialIcebreakerParticipants.displayName })
+    .select({
+      displayName: socialIcebreakerParticipants.displayName,
+      isTestBot: socialIcebreakerParticipants.isTestBot,
+    })
     .from(socialIcebreakerParticipants)
     .where(
       and(
@@ -748,6 +780,7 @@ export async function listParticipants(
       displayName: socialIcebreakerParticipants.displayName,
       joinedAt: socialIcebreakerParticipants.joinedAt,
       lastSeenAt: socialIcebreakerParticipants.lastSeenAt,
+      isTestBot: socialIcebreakerParticipants.isTestBot,
       archetype: users.archetype,
       primaryArchetype: users.primaryArchetype,
       industryNicheLabel: users.industryNicheLabel,
@@ -797,6 +830,7 @@ export async function listParticipants(
         joinedAt: participant.joinedAt.toISOString(),
         lastSeenAt: participant.lastSeenAt.toISOString(),
         isActive: participant.lastSeenAt.getTime() >= cutoff,
+        isTestBot: participant.isTestBot,
         archetype: participant.archetype ?? undefined,
         primaryArchetype: participant.primaryArchetype ?? undefined,
         profile: hasParticipantProfileSignal(participant) ? buildParticipantProfile(participant) : null,

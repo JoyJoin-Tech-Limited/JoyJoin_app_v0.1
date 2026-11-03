@@ -114,6 +114,21 @@ describe('WaitingPhase AC-13 render contract', () => {
     expect(screen.getByText('开始破冰')).toBeTruthy()
   })
 
+  // A′ (2026-11-02 host-role Q1): the 「主持人：{name}」 line used to be pure
+  // identity. It now carries the duty, and the two branches must never collapse
+  // into one sentence — the host has to read the obligation as theirs.
+  it('states the duty in the second person for the host', () => {
+    render(<WaitingPhase {...baseProps} isHost />)
+    expect(screen.getByText('主持人：悦仔测试 · 开始与推进由你点按')).toBeTruthy()
+    expect(screen.queryByText('主持人：悦仔测试 · 开始与推进由主持人点按')).toBeNull()
+  })
+
+  it('states the duty in the third person for players', () => {
+    render(<WaitingPhase {...baseProps} />)
+    expect(screen.getByText('主持人：悦仔测试 · 开始与推进由主持人点按')).toBeTruthy()
+    expect(screen.queryByText('主持人：悦仔测试 · 开始与推进由你点按')).toBeNull()
+  })
+
   it('keeps the legacy headline while the table is not full', () => {
     render(<WaitingPhase {...baseProps} playerCount={5} />)
     expect(screen.getByText('等待更多玩家加入…')).toBeTruthy()

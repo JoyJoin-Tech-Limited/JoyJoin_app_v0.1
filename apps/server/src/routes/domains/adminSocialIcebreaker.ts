@@ -10,6 +10,7 @@ import {
   listParticipants,
   transferHost,
 } from "../../lib/socialIcebreakerStore";
+import { pickAutoHostCandidate } from "../../lib/socialIcebreakerHostResilience";
 import { transitionPhase } from "../socialIcebreakerHelpers";
 
 const socialSessionParamsSchema = z.object({
@@ -115,8 +116,10 @@ export function registerAdminSocialIcebreakerRoutes(app: Express): void {
 
   // POST /api/admin/social-icebreaker/:socialSessionId/transfer-host
   // Body: { newHostUserId?: string }. When omitted, the most recently active
-  // non-host participant is selected. Ignores the current host (admin override)
-  // and is idempotent when the target already holds the role.
+  // non-host human participant is selected (simulated bots are never promoted —
+  // a bot cannot advance a phase, so it would freeze the room). Ignores the
+  // current host (admin override) and is idempotent when the target already
+  // holds the role.
   app.post("/api/admin/social-icebreaker/:socialSessionId/transfer-host", requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
       try {
         const params = socialSessionParamsSchema.safeParse(req.params);
@@ -157,23 +160,27 @@ export function registerAdminSocialIcebreakerRoutes(app: Express): void {
               code: "TARGET_NOT_PARTICIPANT",
             });
           }
+          // A simulated bot can never advance a phase, so promoting one freezes
+          // the table. The auto-select branch already skips bots; this closes the
+          // same invariant on the explicit-target path.
+          if (target.isTestBot) {
+            return res.status(400).json({
+              message: "Target participant is a simulated bot and cannot host",
+              code: "TARGET_IS_TEST_BOT",
+            });
+          }
           targetDisplayName = target.displayName;
         } else {
           const roster = await listParticipants(socialSessionId);
-          const candidates = roster
-            .filter((participant) => participant.userId !== state.hostUserId)
-            .sort(
-              (left, right) =>
-                new Date(right.lastSeenAt ?? 0).getTime() - new Date(left.lastSeenAt ?? 0).getTime(),
-            );
-          if (candidates.length === 0) {
+          const candidate = pickAutoHostCandidate(roster, state.hostUserId);
+          if (!candidate) {
             return res.status(409).json({
               message: "No eligible participant to transfer host to",
               code: "NO_ELIGIBLE_PARTICIPANT",
             });
           }
-          targetUserId = candidates[0].userId;
-          targetDisplayName = candidates[0].displayName;
+          targetUserId = candidate.userId;
+          targetDisplayName = candidate.displayName;
         }
 
         const previousHostUserId = state.hostUserId;
@@ -183,6 +190,17 @@ export function registerAdminSocialIcebreakerRoutes(app: Express): void {
         }
 
         const alreadyHost = result.outcome === "already_host";
+
+        // P3 (2026-11-03): answer "how long was the table frozen before anyone
+        // took over?" — the one question the audit row + toast could not. Phase
+        // dwell is reused rather than a new table/event: a transfer is an
+        // operator-visible recovery action, so it rides the existing admin audit
+        // context and the structured log line.
+        const phaseStartedAtMs = Number(state.phaseStartedAt ?? 0);
+        const frozenMinutes =
+          phaseStartedAtMs > 0
+            ? Math.max(0, Math.round((Date.now() - phaseStartedAtMs) / 60_000))
+            : null;
 
         logAdminAudit({
           action: "SOCIAL_ICEBREAKER_HOST_TRANSFERRED",
@@ -196,6 +214,11 @@ export function registerAdminSocialIcebreakerRoutes(app: Express): void {
             previousHostUserId,
             newHostUserId: targetUserId,
             autoSelected: !requestedUserId,
+            fromPhase: state.currentPhase,
+            frozenMinutes,
+            sessionStartedAt: state.sessionStartedAt
+              ? new Date(state.sessionStartedAt).toISOString()
+              : null,
           },
         });
 
@@ -207,6 +230,8 @@ export function registerAdminSocialIcebreakerRoutes(app: Express): void {
           newHostUserId: targetUserId,
           autoSelected: !requestedUserId,
           alreadyHost,
+          fromPhase: state.currentPhase,
+          frozenMinutes,
         });
 
         return res.json({

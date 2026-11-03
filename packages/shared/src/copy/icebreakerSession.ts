@@ -34,6 +34,21 @@ export const ICE_PHASE_MAP_ARROW = '→'
 /** waiting 玩家版明示文案（AC-13）：空档期的安心说明。 */
 export const ICE_WAITING_FOR_HOST_LINE = '等主持人开场，先和同桌打个招呼'
 
+/**
+ * 等待屏的角色公示行（2026-11-02 · host-role Q1 A′）。
+ *
+ * 「主持人：{name}」原本只是一条身份公示；host 在开场的头 60 秒常常不知道
+ * 自己已经拿到了推进权。同一句换人称，把「主持人 = 操作权」说清楚——
+ * 不是一段简报，也不加弹层/首次标记/flag。
+ *
+ * 两个分支必须保持不同措辞：host 看到责任落在自己身上，桌友看到责任在别人身上。
+ */
+export function formatIceWaitingHostLine(hostName: string, isHost: boolean): string {
+  return isHost
+    ? `主持人：${hostName} · 开始与推进由你点按`
+    : `主持人：${hostName} · 开始与推进由主持人点按`
+}
+
 // ─── host 菜单与模式 caption（AC-03）──────────────────────────────────────
 
 /** host 菜单触发器文字 pill 前缀（后接 ⋯ 图形符号）。 */

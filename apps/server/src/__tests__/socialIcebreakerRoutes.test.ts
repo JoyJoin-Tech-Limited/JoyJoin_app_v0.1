@@ -398,6 +398,10 @@ describe.sequential('social icebreaker routes', () => {
       const hostCookie = await login(baseUrl, 'nonblocking-start-host');
       const sessionId = `session-nonblocking-start-${Date.now()}`;
 
+      // 2026-11-03: budget raised 500ms → 2000ms. The failure mode this test
+      // guards is a NEVER-resolving warmup promise (mocked below), so any
+      // finite budget proves non-blocking. At 500ms the assertion sat ~110ms
+      // above the real ~390ms latency and failed under machine load.
       const response = await Promise.race([
         fetch(`${baseUrl}/api/social-icebreaker/start`, {
           method: 'POST',
@@ -410,7 +414,7 @@ describe.sequential('social icebreaker routes', () => {
           }),
         }),
         new Promise<never>((_resolve, reject) => {
-          setTimeout(() => reject(new Error('/start exceeded its warmup budget')), 500);
+          setTimeout(() => reject(new Error('/start exceeded its warmup budget')), 2000);
         }),
       ]);
       const body = await response.json() as any;

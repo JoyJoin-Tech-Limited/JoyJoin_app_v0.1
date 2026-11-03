@@ -61,3 +61,45 @@ export function evaluateHostClaimEligibility(input: {
     graceMs: input.graceMs,
   };
 }
+
+/**
+ * Candidate shape this helper needs — deliberately structural so callers can
+ * pass a full `SocialSessionParticipantSummary` or a test double.
+ */
+export interface AutoHostCandidate {
+  userId: string;
+  lastSeenAt?: string | null;
+  isTestBot?: boolean;
+}
+
+function lastSeenMs(candidate: AutoHostCandidate): number {
+  if (!candidate.lastSeenAt) return 0;
+  const parsed = Date.parse(candidate.lastSeenAt);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Pick who should inherit host authority when an admin force-transfer omits a
+ * target: the most recently seen **human** participant, excluding the current
+ * host.
+ *
+ * Why this is a separate pure function: the route used to take `candidates[0]`
+ * from `listParticipants`, which is ordered by join time and could not see
+ * `isTestBot` at all — so a single-test session could hand the host role to a
+ * simulated bot, and a bot can never advance a phase, leaving the room frozen
+ * for the rest of its 6-hour TTL. The store's `reassignOrTombstoneHostedSessions`
+ * already refuses to promote bots; this keeps the admin path consistent.
+ *
+ * Ties keep the earliest roster entry (callers pass join-ordered rosters), so
+ * repeated calls on unchanged data return the same person.
+ */
+export function pickAutoHostCandidate<T extends AutoHostCandidate>(
+  roster: readonly T[],
+  currentHostUserId: string | null,
+): T | null {
+  const candidates = roster.filter(
+    (participant) => participant.userId !== currentHostUserId && participant.isTestBot !== true,
+  );
+  if (candidates.length === 0) return null;
+  return candidates.reduce((best, next) => (lastSeenMs(next) > lastSeenMs(best) ? next : best));
+}

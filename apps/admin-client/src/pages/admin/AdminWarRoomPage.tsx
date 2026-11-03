@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Crown,
   MapPin,
   Megaphone,
   RefreshCw,
@@ -46,7 +47,9 @@ import {
   deriveIcebreakerStatus,
   filterPoolsClosingWithin24h,
   findSessionForEvent,
+  shouldShowTransferHostAction,
   summarizeAttendees,
+  toSocialSessionId,
   type IcebreakerSessionInfo,
   type WarRoomAttendanceStatus,
   type WarRoomAttendee,
@@ -150,6 +153,7 @@ export default function AdminWarRoomPage() {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [pendingOverride, setPendingOverride] = useState<PendingOverride | null>(null);
   const [chaseEvent, setChaseEvent] = useState<TodayEvent | null>(null);
+  const [transferHostSession, setTransferHostSession] = useState<IcebreakerSessionInfo | null>(null);
 
   const opsQuery = useQuery<OpsDashboard>({
     queryKey: OPS_DASHBOARD_KEY,
@@ -279,6 +283,44 @@ export default function AdminWarRoomPage() {
       });
     },
     onSettled: () => setChaseEvent(null),
+  });
+
+  /**
+   * 转移主持 — the escape hatch for a frozen table.
+   *
+   * Phase advancement is host-only, so a host whose phone died leaves the room
+   * unable to progress until the 6-hour session TTL. The server route has
+   * existed since W1 but had no console entry (the capability was unreachable
+   * by the people who actually get paged). No target is sent on purpose: the
+   * server picks the most recently seen human participant and excludes test
+   * bots, so ops does not have to guess a userId.
+   */
+  const transferHostMutation = useMutation({
+    mutationFn: async (session: IcebreakerSessionInfo) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/social-icebreaker/${toSocialSessionId(session.id)}/transfer-host`,
+        {},
+      );
+      return (await res.json()) as { success: boolean; transferred: boolean; alreadyHost: boolean };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data?.alreadyHost ? "主持人未变化" : "主持人已转移",
+        description: data?.alreadyHost
+          ? "该桌友已经是主持人"
+          : "已转给最近仍在房间里的桌友，可以继续推进环节",
+      });
+      queryClient.invalidateQueries({ queryKey: SESSIONS_KEY });
+    },
+    onError: (error) => {
+      toast({
+        title: "转移主持失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => setTransferHostSession(null),
   });
 
   const lastUpdatedLabel = opsQuery.dataUpdatedAt
@@ -533,6 +575,18 @@ export default function AdminWarRoomPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {shouldShowTransferHostAction(session) && session && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTransferHostSession(session)}
+                            disabled={transferHostMutation.isPending}
+                            data-testid={`button-transfer-host-${session.id}`}
+                          >
+                            <Crown className="mr-1.5 h-3.5 w-3.5" />
+                            转移主持
+                          </Button>
+                        )}
                         {attendanceId === null ? (
                           <span
                             className="text-xs text-muted-foreground"
@@ -665,6 +719,38 @@ export default function AdminWarRoomPage() {
               data-testid="button-confirm-chase"
             >
               {chaseMutation.isPending ? "发送中..." : "确认发送"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 转移主持确认 — 冻结桌的逃生门 */}
+      <AlertDialog
+        open={!!transferHostSession}
+        onOpenChange={(open) => !open && setTransferHostSession(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>把主持人转给其他人？</AlertDialogTitle>
+            <AlertDialogDescription>
+              {transferHostSession
+                ? `「${transferHostSession.eventTitle}」的主持人会改为最近仍在房间里的桌友${
+                    transferHostSession.hostName ? `（当前主持人：${transferHostSession.hostName}）` : ""
+                  }。转移后原主持人失去推进权，新主持人继续点按推进。`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-transfer-host">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                if (transferHostSession) transferHostMutation.mutate(transferHostSession);
+              }}
+              disabled={transferHostMutation.isPending}
+              data-testid="button-confirm-transfer-host"
+            >
+              {transferHostMutation.isPending ? "转移中..." : "确认转移"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

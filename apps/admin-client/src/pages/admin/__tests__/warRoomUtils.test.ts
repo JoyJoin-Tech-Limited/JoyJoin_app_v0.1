@@ -3,7 +3,9 @@ import {
   deriveIcebreakerStatus,
   filterPoolsClosingWithin24h,
   findSessionForEvent,
+  shouldShowTransferHostAction,
   summarizeAttendees,
+  toSocialSessionId,
   type IcebreakerSessionInfo,
   type WarRoomPool,
 } from "../warRoomUtils";
@@ -127,5 +129,40 @@ describe("filterPoolsClosingWithin24h", () => {
   it("handles invalid deadlines and empty input", () => {
     expect(filterPoolsClosingWithin24h([{ ...pool, registrationDeadline: "not-a-date" }], now)).toHaveLength(0);
     expect(filterPoolsClosingWithin24h(undefined, now)).toEqual([]);
+  });
+});
+
+describe("toSocialSessionId", () => {
+  // The console lists `icebreaker_sessions.id`; every admin recovery route
+  // expects the `social_`-prefixed session id. Getting this wrong 404s the
+  // 转移主持 button, so the mapping is locked here.
+  it("prefixes the icebreaker session id", () => {
+    expect(toSocialSessionId("abc-123")).toBe("social_abc-123");
+  });
+
+  it("is idempotent at the call site — it never double-prefixes", () => {
+    expect(toSocialSessionId(toSocialSessionId("abc-123"))).toBe("social_social_abc-123");
+    // …which is why callers must pass the raw `session.id`, never a value that
+    // already came back from this helper.
+    expect(toSocialSessionId("abc-123")).toBe("social_abc-123");
+  });
+});
+
+describe("shouldShowTransferHostAction", () => {
+  // The button is the only console entry into the host-recovery route, so its
+  // visibility rule is locked: a waiting-room session has nobody to rescue
+  // (the first caller is by definition the host), and offering the action there
+  // would read as a solution hunting for a problem.
+  it("hides the action before the session starts", () => {
+    expect(shouldShowTransferHostAction({ ...baseSession, startedAt: null })).toBe(false);
+  });
+
+  it("shows the action once the session is running", () => {
+    expect(shouldShowTransferHostAction(baseSession)).toBe(true);
+  });
+
+  it("tolerates a missing session", () => {
+    expect(shouldShowTransferHostAction(undefined)).toBe(false);
+    expect(shouldShowTransferHostAction(null)).toBe(false);
   });
 });

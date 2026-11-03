@@ -308,6 +308,21 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.json({ state: await buildClientState(state, userId) });
   }
 
+  if (result.phaseConflict) {
+    // Same host, two devices (or a stalled retry): the other request already
+    // advanced the session. Nothing from this call was persisted, so report the
+    // conflict with the authoritative state instead of pretending to advance.
+    const latest = await getSessionWithExpiry(socialSessionId);
+    return res.status(409).json({
+      error: 'Phase already advanced by another request',
+      // The mini-program toast reads `message` (apiRequest ignores `error` for
+      // 4xx), so this must be the user-facing Chinese line — never English.
+      message: '这一阶段已经推进了，正在同步',
+      code: 'PHASE_CONFLICT',
+      state: latest.state ? await buildClientState(latest.state, userId) : null,
+    });
+  }
+
   const effectiveNextPhase = result.nextPhase;
 
   // Fetch participant roster with profiles for personalised 悦仔 commentary

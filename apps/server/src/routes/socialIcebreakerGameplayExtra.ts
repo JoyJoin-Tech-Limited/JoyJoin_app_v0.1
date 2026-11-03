@@ -8,6 +8,7 @@ import type {
   LieDetectiveReveal,
   PersonalityDiceChallenge,
   PersonalityDiceChallengeGroup,
+  GroupMirrorAnswer,
 } from '@shared/socialIcebreaker';
 import {
   getNextEligiblePhase,
@@ -875,12 +876,12 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
           };
         }));
 
-        const answerMap = new Map<string, typeof newAnswers[0]>();
+        const answerMap = new Map<string, GroupMirrorAnswer>();
         for (const a of existingAnswers) {
-          answerMap.set(`${a.userId}::${a.questionId}`, a as any);
+          answerMap.set(`${a.userId}::${a.questionId}`, a);
         }
         for (const a of newAnswers) {
-          answerMap.set(`${a.userId}::${a.questionId}`, a as any);
+          answerMap.set(`${a.userId}::${a.questionId}`, a);
         }
         currentState.groupMirrorAnswers = Array.from(answerMap.values());
 
@@ -918,12 +919,12 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
   }));
 
   // Deduplicate by user + question
-  const answerMap = new Map<string, typeof newAnswers[0]>();
+  const answerMap = new Map<string, GroupMirrorAnswer>();
   for (const a of existingAnswers) {
-    answerMap.set(`${a.userId}::${a.questionId}`, a as any);
+    answerMap.set(`${a.userId}::${a.questionId}`, a);
   }
   for (const a of newAnswers) {
-    answerMap.set(`${a.userId}::${a.questionId}`, a as any);
+    answerMap.set(`${a.userId}::${a.questionId}`, a);
   }
   state.groupMirrorAnswers = Array.from(answerMap.values());
 
