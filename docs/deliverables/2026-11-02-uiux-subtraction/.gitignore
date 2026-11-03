@@ -1,0 +1,3 @@
+# Scan verdicts (small JSON) are committed; the rendered captures they were
+# computed from stay local, matching the repo-wide `screenshots/` rule.
+visual-scan/*.png

@@ -1,0 +1,40 @@
+{
+  "url": "http://localhost:5002/#/pages/pool-registration/index?id=pool-screenshot-001&motion=reduce",
+  "viewport": {
+    "width": 320,
+    "height": 568
+  },
+  "timestamp": "2026-11-02T09:44:07.973Z",
+  "verdict": "PASS",
+  "summary": {
+    "total": 1,
+    "blocking": 0,
+    "advisory": 1,
+    "byCheck": {
+      "low-contrast-text": 1
+    }
+  },
+  "screenshot": "docs/deliverables/2026-11-02-uiux-subtraction/visual-scan/before-solo-320x568.png",
+  "violations": [
+    {
+      "check": "low-contrast-text",
+      "severity": "advisory",
+      "selector": "taro-view-core.pool-reg > taro-scroll-view-core.pool-reg__scroll.taro-scroll-view__scroll-y > taro-view-core.pool-reg__terminal-center > taro-view-core.joy-card.pool-reg__already-joined > taro-button-core.joy-button.joy-button--primary",
+      "message": "Contrast 4.23:1 (needs ≥4.5:1) — \"查看我的局…\"",
+      "rect": {
+        "x": 41,
+        "y": 500,
+        "w": 238,
+        "h": 48,
+        "right": 279,
+        "bottom": 548
+      },
+      "details": {
+        "ratio": 4.23,
+        "threshold": 4.5,
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(139, 92, 246)"
+      }
+    }
+  ]
+}

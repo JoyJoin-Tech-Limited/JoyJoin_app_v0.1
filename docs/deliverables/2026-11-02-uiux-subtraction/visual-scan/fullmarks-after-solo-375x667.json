@@ -1,0 +1,17 @@
+{
+  "url": "http://localhost:5003/#/pages/pool-registration/index?id=pool-screenshot-001&motion=reduce",
+  "viewport": {
+    "width": 375,
+    "height": 667
+  },
+  "timestamp": "2026-11-02T18:28:19.790Z",
+  "verdict": "PASS",
+  "summary": {
+    "total": 0,
+    "blocking": 0,
+    "advisory": 0,
+    "byCheck": {}
+  },
+  "screenshot": "docs/deliverables/2026-11-02-uiux-subtraction/visual-scan/fullmarks-after-solo-375x667.png",
+  "violations": []
+}
