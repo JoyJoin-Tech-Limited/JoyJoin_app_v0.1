@@ -1,0 +1,506 @@
+{
+  "url": "http://localhost:5003/#/pages/matching-status/index?registrationId=reg-screenshot-001&motion=reduce",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "timestamp": "2026-11-03T09:35:42.303Z",
+  "verdict": "FAIL",
+  "summary": {
+    "total": 25,
+    "blocking": 20,
+    "advisory": 5,
+    "byCheck": {
+      "low-contrast-text": 5,
+      "element-off-right-edge": 12,
+      "text-on-text-overlap": 8
+    }
+  },
+  "screenshot": "docs/deliverables/2026-11-02-uiux-subtraction/p1-2-current/matching-status-390.png",
+  "violations": [
+    {
+      "check": "low-contrast-text",
+      "severity": "advisory",
+      "selector": "taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(1) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__name-row:nth-of-type(1) > taro-view-core.tablemate-card__me-chip > taro-text-core.tablemate-card__me-chip-text",
+      "message": "Contrast 4.23:1 (needs ≥4.5:1) — \"我…\"",
+      "rect": {
+        "x": 145,
+        "y": 548,
+        "w": 10,
+        "h": 17,
+        "right": 156,
+        "bottom": 565
+      },
+      "details": {
+        "ratio": 4.23,
+        "threshold": 4.5,
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(139, 92, 246)"
+      }
+    },
+    {
+      "check": "low-contrast-text",
+      "severity": "advisory",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(1) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-text-core.tablemate-card__archetype:nth-of-type(1)",
+      "message": "Contrast 3.81:1 (needs ≥4.5:1) — \"社牛柯基…\"",
+      "rect": {
+        "x": 51,
+        "y": 567,
+        "w": 109,
+        "h": 16,
+        "right": 160,
+        "bottom": 584
+      },
+      "details": {
+        "ratio": 3.81,
+        "threshold": 4.5,
+        "color": "rgb(190, 111, 55)",
+        "background": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "check": "low-contrast-text",
+      "severity": "advisory",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(2) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-text-core.tablemate-card__archetype:nth-of-type(1)",
+      "message": "Contrast 3.75:1 (needs ≥4.5:1) — \"寻宝狐…\"",
+      "rect": {
+        "x": 191,
+        "y": 567,
+        "w": 109,
+        "h": 16,
+        "right": 300,
+        "bottom": 584
+      },
+      "details": {
+        "ratio": 3.75,
+        "threshold": 4.5,
+        "color": "rgb(190, 113, 55)",
+        "background": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-view-core.matching-status__scroll-inner > taro-view-core.joy-card.matching-status__squad-card:nth-of-type(3) > taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3)",
+      "message": "Element extends 59px past the right edge of the viewport",
+      "rect": {
+        "x": 321,
+        "y": 442,
+        "w": 127,
+        "h": 185,
+        "right": 449,
+        "bottom": 627
+      },
+      "details": {
+        "right": 449,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-view-core.joy-card.matching-status__squad-card:nth-of-type(3) > taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__art:nth-of-type(1)",
+      "message": "Element extends 58px past the right edge of the viewport",
+      "rect": {
+        "x": 322,
+        "y": 443,
+        "w": 125,
+        "h": 95,
+        "right": 448,
+        "bottom": 538
+      },
+      "details": {
+        "right": 448,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__art:nth-of-type(1) > taro-view-core.tablemate-card__art-frame:nth-of-type(2)",
+      "message": "Element extends 58px past the right edge of the viewport",
+      "rect": {
+        "x": 322,
+        "y": 443,
+        "w": 125,
+        "h": 95,
+        "right": 448,
+        "bottom": 538
+      },
+      "details": {
+        "right": 448,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__art:nth-of-type(1) > taro-view-core.tablemate-card__art-frame:nth-of-type(2) > taro-view-core.tablemate-card__art-skeleton",
+      "message": "Element extends 58px past the right edge of the viewport",
+      "rect": {
+        "x": 322,
+        "y": 443,
+        "w": 125,
+        "h": 95,
+        "right": 448,
+        "bottom": 538
+      },
+      "details": {
+        "right": 448,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-view-core.joy-card.matching-status__squad-card:nth-of-type(3) > taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2)",
+      "message": "Element extends 58px past the right edge of the viewport",
+      "rect": {
+        "x": 322,
+        "y": 538,
+        "w": 125,
+        "h": 88,
+        "right": 448,
+        "bottom": 626
+      },
+      "details": {
+        "right": 448,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__name-row:nth-of-type(1)",
+      "message": "Element extends 50px past the right edge of the viewport",
+      "rect": {
+        "x": 331,
+        "y": 546,
+        "w": 109,
+        "h": 20,
+        "right": 440,
+        "bottom": 566
+      },
+      "details": {
+        "right": 440,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__name-row:nth-of-type(1) > taro-text-core.tablemate-card__name",
+      "message": "Element extends 50px past the right edge of the viewport",
+      "rect": {
+        "x": 331,
+        "y": 546,
+        "w": 109,
+        "h": 20,
+        "right": 440,
+        "bottom": 566
+      },
+      "details": {
+        "right": 440,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-text-core.tablemate-card__archetype:nth-of-type(1)",
+      "message": "Element extends 50px past the right edge of the viewport",
+      "rect": {
+        "x": 331,
+        "y": 567,
+        "w": 109,
+        "h": 16,
+        "right": 440,
+        "bottom": 584
+      },
+      "details": {
+        "right": 440,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "low-contrast-text",
+      "severity": "advisory",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-text-core.tablemate-card__archetype:nth-of-type(1)",
+      "message": "Contrast 3.13:1 (needs ≥4.5:1) — \"机灵海豚…\"",
+      "rect": {
+        "x": 331,
+        "y": 567,
+        "w": 109,
+        "h": 16,
+        "right": 440,
+        "bottom": 584
+      },
+      "details": {
+        "ratio": 3.13,
+        "threshold": 4.5,
+        "color": "rgb(45, 156, 200)",
+        "background": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-text-core.tablemate-card__meta:nth-of-type(2)",
+      "message": "Element extends 50px past the right edge of the viewport",
+      "rect": {
+        "x": 331,
+        "y": 585,
+        "w": 109,
+        "h": 15,
+        "right": 440,
+        "bottom": 600
+      },
+      "details": {
+        "right": 440,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__pills:nth-of-type(2)",
+      "message": "Element extends 50px past the right edge of the viewport",
+      "rect": {
+        "x": 331,
+        "y": 602,
+        "w": 109,
+        "h": 16,
+        "right": 440,
+        "bottom": 618
+      },
+      "details": {
+        "right": 440,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__pills:nth-of-type(2) > taro-view-core.connection-point-pill.pill--rare",
+      "message": "Element extends 50px past the right edge of the viewport",
+      "rect": {
+        "x": 331,
+        "y": 602,
+        "w": 109,
+        "h": 18,
+        "right": 440,
+        "bottom": 619
+      },
+      "details": {
+        "right": 440,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "element-off-right-edge",
+      "severity": "blocking",
+      "selector": "taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(3) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__pills:nth-of-type(2) > taro-view-core.connection-point-pill.pill--rare > taro-text-core.pill-text",
+      "message": "Element extends 44px past the right edge of the viewport",
+      "rect": {
+        "x": 337,
+        "y": 604,
+        "w": 97,
+        "h": 14,
+        "right": 434,
+        "bottom": 617
+      },
+      "details": {
+        "right": 434,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "check": "low-contrast-text",
+      "severity": "advisory",
+      "selector": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary",
+      "message": "Contrast 4.23:1 (needs ≥4.5:1) — \"准备开始揭晓…\"",
+      "rect": {
+        "x": 62,
+        "y": 592,
+        "w": 265,
+        "h": 50,
+        "right": 328,
+        "bottom": 642
+      },
+      "details": {
+        "ratio": 4.23,
+        "threshold": 4.5,
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(139, 92, 246)"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-view-core.footprint-oracle-card.footprint-oracle-card--family-fire > taro-view-core.footprint-oracle-card__content > taro-view-core.footprint-oracle-card__main > taro-view-core.footprint-oracle-card__body > taro-view-core.footprint-oracle-card__title:nth-of-type(2)  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-eyebrow:nth-of-type(1)",
+      "message": "Text overlaps text: \"周末松弛感饭局 · 南山…\" collides with \"悦仔来报喜…\"",
+      "rect": {
+        "x": 43,
+        "y": 205,
+        "w": 305,
+        "h": 29,
+        "right": 347,
+        "bottom": 235
+      },
+      "details": {
+        "overlapPx": {
+          "x": 62,
+          "y": 15
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-eyebrow:nth-of-type(1)"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(1) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__name-row:nth-of-type(1) > taro-text-core.tablemate-card__name  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-copy:nth-of-type(4)",
+      "message": "Text overlaps text: \"悦仔测试…\" collides with \"小队已经锁定，桌友卡片和今晚的主…\"",
+      "rect": {
+        "x": 51,
+        "y": 546,
+        "w": 86,
+        "h": 20,
+        "right": 137,
+        "bottom": 566
+      },
+      "details": {
+        "overlapPx": {
+          "x": 75,
+          "y": 20
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-copy:nth-of-type(4)"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(1) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__name-row:nth-of-type(1) > taro-view-core.tablemate-card__me-chip > taro-text-core.tablemate-card__me-chip-text  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-copy:nth-of-type(4)",
+      "message": "Text overlaps text: \"我…\" collides with \"小队已经锁定，桌友卡片和今晚的主…\"",
+      "rect": {
+        "x": 145,
+        "y": 548,
+        "w": 10,
+        "h": 17,
+        "right": 156,
+        "bottom": 565
+      },
+      "details": {
+        "overlapPx": {
+          "x": 10,
+          "y": 17
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-copy:nth-of-type(4)"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(1) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-text-core.tablemate-card__meta:nth-of-type(2)  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary",
+      "message": "Text overlaps text: \"28·女…\" collides with \"准备开始揭晓…\"",
+      "rect": {
+        "x": 51,
+        "y": 585,
+        "w": 109,
+        "h": 15,
+        "right": 160,
+        "bottom": 600
+      },
+      "details": {
+        "overlapPx": {
+          "x": 97,
+          "y": 7
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(1) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__pills.tablemate-card__pills--interest:nth-of-type(2) > taro-view-core.connection-point-pill.pill--common > taro-text-core.pill-text  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary",
+      "message": "Text overlaps text: \"徒步…\" collides with \"准备开始揭晓…\"",
+      "rect": {
+        "x": 56,
+        "y": 604,
+        "w": 98,
+        "h": 14,
+        "right": 155,
+        "bottom": 617
+      },
+      "details": {
+        "overlapPx": {
+          "x": 92,
+          "y": 14
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(2) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__name-row:nth-of-type(1) > taro-text-core.tablemate-card__name  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-copy:nth-of-type(4)",
+      "message": "Text overlaps text: \"阿泽…\" collides with \"小队已经锁定，桌友卡片和今晚的主…\"",
+      "rect": {
+        "x": 191,
+        "y": 546,
+        "w": 109,
+        "h": 20,
+        "right": 300,
+        "bottom": 566
+      },
+      "details": {
+        "overlapPx": {
+          "x": 109,
+          "y": 20
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-text-core.matching-status__overlay-copy:nth-of-type(4)"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-scroll-view-core.matching-status__member-scroll.taro-scroll-view__scroll-x > taro-view-core.matching-status__member-row > taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(2) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-text-core.tablemate-card__meta:nth-of-type(2)  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary",
+      "message": "Text overlaps text: \"30·男…\" collides with \"准备开始揭晓…\"",
+      "rect": {
+        "x": 191,
+        "y": 585,
+        "w": 109,
+        "h": 15,
+        "right": 300,
+        "bottom": 600
+      },
+      "details": {
+        "overlapPx": {
+          "x": 109,
+          "y": 7
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary"
+      }
+    },
+    {
+      "check": "text-on-text-overlap",
+      "severity": "blocking",
+      "selector": "taro-view-core.tablemate-card.tablemate-card--reduce-motion:nth-of-type(2) > taro-view-core.tablemate-card__info:nth-of-type(2) > taro-view-core.tablemate-card__pills:nth-of-type(2) > taro-view-core.connection-point-pill.pill--common > taro-text-core.pill-text  ⨯  taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary",
+      "message": "Text overlaps text: \"咖啡馆里发呆…\" collides with \"准备开始揭晓…\"",
+      "rect": {
+        "x": 196,
+        "y": 604,
+        "w": 98,
+        "h": 14,
+        "right": 295,
+        "bottom": 617
+      },
+      "details": {
+        "overlapPx": {
+          "x": 98,
+          "y": 14
+        },
+        "other": "taro-view-core.matching-status__scroll-inner > taro-custom-wrapper-core > taro-view-core.matching-status__overlay > taro-view-core.matching-status__overlay-card:nth-of-type(2) > taro-button-core.joy-button.joy-button--primary"
+      }
+    }
+  ]
+}

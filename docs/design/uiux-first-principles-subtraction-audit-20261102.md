@@ -534,6 +534,7 @@ docs/deliverables/2026-11-02-uiux-subtraction/
 - 证据已更新：`docs/deliverables/2026-11-02-uiux-subtraction/render-matrix.md`、`score-baseline.md`。
 - 最终工程验证：pool-registration/events 目标测试 **16 文件 / 108 用例**通过；`typecheck -w mini-program` 通过；隔离 `build:h5`、`build:weapp` 均通过；主包 zip **1.33 MB / 2 MB**；upload-assets 与 `verify:subpackage-styles` 通过（pool-registration 29 个必需 selector）。当时主仓 `guardrails` 被 **154 个非本次改动的 icebreaker-session 新 orphan class** 阻断，本次 pool-registration 类不在违规清单中。
 - **2026-11-03 后续复核**：外部并行改动落地后，主仓 `npm run guardrails` 已 **PASS（0 error，12 个既有 warning）**，AC-04 的外部阻断已消失；AC-02 与 AC-05 仍开放。
+- **回归加固**：新增 `PoolRegistrationTerminalStates.test.tsx` 5 个组件用例，锁定精确地区后缀去重、非匹配标题保留、双人长昵称语义节点、mascot `scaleToFill` 与 CTA 触觉/埋点/`switchTab`；pool-registration + events 目标套件 **17 文件 / 113 用例**通过，`typecheck` 与 `guardrails` 再次通过。
 - Tier-2 QA Sprint Evaluation：**PARTIAL**。AC-01/03 PASS；AC-02 PARTIAL（100/100、19/20、21/24，未达三个满分）；AC-05 FAIL（iOS、Android、WeChat DevTools 未测）。不得把本增量标为 launch-complete。
 
 ### 下一步
@@ -556,14 +557,14 @@ docs/deliverables/2026-11-02-uiux-subtraction/
 | 8a `alang/teaser` | 暗置死页，删 | `components/alang/AlangDiscoverCard.test.tsx:110` 断言 `navigateTo('/pages/alang/teaser/index')`；页面注释写明 `alangEnabled` 关闭时由 Discover 预告卡与 promo banner D 进入 | **不是死页，是功能关闭期的兜底落地页**。删它必须连同 Discover 预告卡一起下，等于"是否还为未开放功能做广告"的产品决策 → 降 P2 |
 | 8b `checkoutSubscriptionUpsellEnabled` | 死代码，删 | `event-ticket-payment/index.tsx:213/232/253/388`、`TicketPlanSelection` D2 悦聚月卡、`ticketHelpers.resolvePaymentCheckoutFlags`、server `featureFlags.ts:352/642`、`checkoutSubscriptionUpsellFlag.test.ts` | **完整实现的月卡增购面，非死代码**，且触及支付/权益。保持暗置，商业化单独决策，移出减法范围 |
 | 9 状态/时间单一源 | 5 表→1、5 函数→2、8 倒计时→2 | `eventDisplay.ts` 已是 joined-event 与 pool 两域的唯一标签源；shared `getStatusLabel` 属 matching-status 域；`STATUS_MOMENTUM_COPY`/`STATUS_WAITING_COPY` 是叙事文案不是状态标签。倒计时两处语义相反：`pool-group-detail` 过期="活动进行中"，`matching-status` 过期="当前这桌未能成局"。两处 `formatDateTimeLabel` 输出不同（含周几 vs 不含；fallback 分别为原串/空 与 '刚刚'/'时间未定'） | **撤回数量目标**，不按个数合并（§4.3 禁止压平语义变体）。本项唯一真实冗余是"等待叙事 10→2"，转入 15.2 |
-| 10 成员三层 | 不变 | — | 保留，P1，需 §12 基线 |
-| 11 报名 9→6 | 不变 | — | 保留，P1，需 §12 基线 + §4.6 内联终检 |
+| 10 成员三层 | 不变 | `pool-group-detail` 已是 TablemateCard + 默认折叠 ArchetypeHead 名单 + TablemateDetailSheet；DeckPillMini 属重开控制，TonightsPanel 是聚合桌况，memory 保留真实头像 | **现状已满足，无需改动**；撤回原删除清单，见 §17 |
+| 11 报名 9→6 | 不变 | 当前仅 3 个内容步骤；intent 已从 `user.intent` 回填；终检弹窗承载价格/欢迎礼/时间地点/退款政策与提交防重 | **现状已满足，无需改动**；撤回删除弹窗与内联重写，见 §18 |
 
 ### 15.2 修正后的 P1 执行清单（全部用户可见，全部需基线）
 
 1. **等待叙事 10 → 2**：同一"排桌中/等待"事实在 10 个表面各写一套文案，收敛为"列表卡一枚 + 状态页主叙事"。
-2. **成员三层渲染**：13 处 → 概览 `TablemateCard` / 名单 `ArchetypeHead` / 详情 `TablemateDetailSheet`，保留 `SquadDeckStage` 扇形。
-3. **报名 9 → 6 节点**：删确认弹窗、`intent` 回填 + 就地编辑，按 §4.6 提供内联终检块（付费/免费/权益 + disabled/submitting/失败/成功）。
+2. ~~**成员三层渲染**~~：**2026-11-03 源码复核发现现状已经满足**，无需为了数量目标重写；详见 §17。
+3. ~~**报名 9 → 6 节点**~~：**2026-11-03 源码复核发现 intent 回填与必要终检均已存在**，实际交互不是 9 个决策屏；详见 §18。
 
 **统一前置条件（缺一不可）**：§12 三档视口截图基线 + 三项审计评分落盘 `score-baseline.md` + 真机 iOS/Android 各一台。未落基线前，这三项不得标记为完成。
 
@@ -595,3 +596,38 @@ docs/deliverables/2026-11-02-uiux-subtraction/
 **最终结果**：31 个文件、**-1,401 行 / +0 行**；全量测试 **361/361 文件通过**（3,586 用例通过、1 skip）；guardrails **0 error**；`build:weapp` + `verify:subpackage-styles` 通过；主包 zip **1.32 MB / 2 MB**。
 
 **回滚**：整批 revert 即可，无数据与 API 合约影响。
+
+---
+
+## 17. P1-2 成员三层复核（2026-11-03，结论：现状已满足，无需改动）
+
+设计师对方向的裁决是 **APPROVE WITH CONDITIONS（仅方向）**： expressive overview → quiet roster → focused detail 的渐进披露是最佳支持路径，但高级感的来源是层级与克制，不是把组件数从 13 减到 3。
+
+源码与远程现状复核证明目标架构已经存在：
+
+- `pool-group-detail` 已使用共享 `TablemateCard` 概览、默认折叠的 `ArchetypeHead` + `MissingArchetypePlaceholder` 完整名单、共享 `TablemateDetailSheet`。
+- `matching-status` 已使用 `TablemateCard` + `TablemateDetailSheet`； settled 区卡片跳局详情与揭晓浮层打开成员详情是有意的上下文差异，不为统一而统一。
+- `DeckPillMini` 属于 `DeckCollapsePill` 的 fan → pocket → reopen 控制，包含计数、触觉、溢出与无障碍语义，**不是可删的重复名单**。
+- `SquadUnboxingTonightsPanel` 提供聚合桌况、物流、主题与开场钩子，**不是逐成员文本名单**。
+- `gathering-room/memory` 保留真实 `avatarUrl`，再以 archetype 回退，是温暖留念页，不能为了复用降级成通用头像行。
+
+因此撤回原计划中的 DeckPillMini / TonightsPanel / memory 删除动作；**P1-2 以 no-op 关闭，不改产品代码**。保护 `SquadDeckStage`、GatheringRoomScene、WarmupPresenceStrip、SquadTableCard 的各自语义与动效，不添加补偿性动画。
+
+证据：`docs/deliverables/2026-11-02-uiux-subtraction/p1-2-information-parity.md`、`p1-2-current/`。直接 matching-status 截图落在 live reveal intro，不是成员三层，扫描结果不得作为成员层证据。
+
+---
+
+## 18. P1-3 报名流程源码复核（2026-11-03，结论：现状已满足，无需改动）
+
+### 18.1 原提案为何不成立
+
+- **实际只有 3 个内容步骤**：`STEP_BRIEF → STEP_BUDGET → STEP_INTENT`；可选资料在 intent 步骤内折叠，不是额外决策屏（`poolRegistrationForm.ts`、`PoolRegistrationDetailsExpander.tsx`）。
+- **intent 已经回填**：`pool-registration/index.tsx:484-507` 在用户新进入时从 `user.intent` 初始化并过滤合法值；用户仍可修改。它是“确认已有偏好”，不是空白重问。
+- **确认弹窗不是纯重复**：最终 CTA 先进入 `RegistrationConfirmModal`，再由其调用原 `handleRegister`（`index.tsx:1025-1048`）。弹窗承载价格、欢迎礼、时间地点、报名内容，以及由 server flag 控制的退款政策；它同时处理提交中、取消、遮罩、触觉与 reduced-motion（`RegistrationConfirmModal.tsx`）。
+- **支付面板不能替代终检**：免费与权益路径没有微信支付面板；删除确认会移除必要的价格/退款/信息复述，触及支付与权益禁区边界。
+
+### 18.2 当前真实交互
+
+Brief CTA → 预算选择/下一步 → 已回填 intent 的确认（可选展开修改）→ 最终终检并提交。它是 3 个内容步骤 + 1 次必要终检，不是原报告假设的 9 个决策屏。
+
+**结论：P1-3 关闭为 no-op**。撤回“删确认弹窗 + 改内联终检”的实施提案；不为了 9→6 的数量目标引入新的支付/免费/权益状态风险。本项无产品代码改动，无需制造 BEFORE/AFTER 差异。
