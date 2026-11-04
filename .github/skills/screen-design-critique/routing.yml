@@ -1,0 +1,52 @@
+skill: screen-design-critique
+category: internal
+
+primary_ownership: >
+  Designer-seat review of rendered JoyJoin screens across seven dimensions
+  (hierarchy, brand, composition, typography, colour, affordance, density),
+  with rendered evidence and P0/P1/P2 routing to the skill that owns each fix.
+
+use_when:
+  - a rendered screen needs a design verdict before merge
+  - a PR touches UI and wants the designer pass beside engineering review
+  - an engineer wants in-flight composition direction during implementation
+  - a screen works but feels generic, crowded, flat, cold, or off-brand
+
+do_not_use_when:
+  - no render can be produced and the user wants visual sign-off anyway
+  - the question is pixel or token enforcement (use ui-layout-audit)
+  - the question is user emotion or retention (use user-satisfaction-audit)
+  - the question is ship completeness (use completeness-audit)
+  - the task is creating design assets (use lovart-design-workflow)
+
+strong_triggers:
+  - designer review
+  - critique this screen
+  - UIUX review
+  - visual designer pass
+  - screen critique
+  - does this look designed
+  - is this composition right
+  - review this UI during implementation
+  - 设计评审
+  - UI 走查
+
+owned_files:
+  - apps/mini-program/src/pages/**
+  - apps/admin-client/src/**
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: ui-layout-audit
+    when: findings are spacing, typography, or emoji-rule violations
+  - skill: frontend-design-audit
+    when: a full scored five-dimension audit is wanted instead of a critique
+  - skill: user-satisfaction-audit
+    when: the question is whether a user would return, share, or pay
+  - skill: joyjoin-brand-guidelines
+    when: the fix is brand fidelity, colour, or mascot usage
+  - skill: mini-program-screenshot-workflow
+    when: the surface exists only in WeChat and needs a capture first
