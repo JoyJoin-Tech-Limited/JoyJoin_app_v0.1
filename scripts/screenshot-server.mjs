@@ -8,6 +8,7 @@ import { registerFlashTeaserGenerators } from './screenshot/generators-flash-tea
 import { registerEventFeedbackGenerators } from './screenshot/generators-event-feedback.mjs'
 import { registerEventDetailGenerators } from './screenshot/generators-event-detail.mjs'
 import { registerCheckoutConversionGenerators } from './screenshot/generators-checkout-conversion.mjs'
+import { registerSubtractionPoolRegistrationGenerators } from './screenshot/generators-subtraction-pool-registration.mjs'
 
 const app = express()
 const PORT = process.env.SCREENSHOT_PORT || 9000
@@ -167,6 +168,7 @@ registerFlashTeaserGenerators(generatorCtx)
 registerEventFeedbackGenerators(generatorCtx)
 registerEventDetailGenerators(generatorCtx)
 registerCheckoutConversionGenerators(generatorCtx)
+registerSubtractionPoolRegistrationGenerators(generatorCtx)
 
 // ─── Generators ──────────────────────────────────────────────────
 
@@ -798,29 +800,23 @@ register('squad-unboxing-revealed-overflow', () => captureSquadUnboxingStoryReve
 register('squad-unboxing-revealed-pocketed', () => captureSquadUnboxingStoryPocketed())
 register('profile-review-welcome-coupon', captureProfileReview)
 
-// Completion ceremony (Phase 3 开盒仪式, 2026-07-31): tap the completion CTA,
-// then capture the UnboxingCeremony overlay once the lid has lifted and the
-// entry card has risen, but before the 2.4s auto-advance routes onward.
-async function captureProfileReviewCeremony() {
+// Inline completion (2026-10-30): capture the unified entry card during its
+// 720ms confirmed state, before server-nextStep navigation replaces the page.
+async function captureProfileReviewCompletion() {
   return withBrowserPage(
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
-      // motion=reduce fast-forwards the PAGE's own reveal (router param),
-      // but the ceremony reads OS-level reduced-motion only, so its lid-lift
-      // choreography still plays in the capture browser.
-      await page.goto(`${H5_BASE_URL}/#/pages/onboarding/profile-review/index?motion=reduce`, {
+      await page.goto(`${H5_BASE_URL}/#/pages/onboarding/profile-review/index`, {
         waitUntil: 'domcontentloaded',
         timeout: 60000,
       })
       await clearAndSeedStorage(page)
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
       await page.waitForSelector('.profile-review__submit', { timeout: 15000 })
-      await page.waitForTimeout(600)
+      await page.waitForTimeout(1500)
       await page.click('.profile-review__submit')
-      // 500ms celebration beat + ceremony choreography (~1.5s) → settled
-      // overlay; still ahead of the 3.2s auto-advance (2026-08-18 retune).
-      await page.waitForSelector('.unboxing-ceremony__card', { timeout: 10000 })
-      await page.waitForTimeout(1600)
+      await page.waitForSelector('.profile-review__completion', { timeout: 10000 })
+      await page.waitForTimeout(250)
       return screenshotViewport(page)
     }
   )
@@ -1697,7 +1693,7 @@ register('gathering-room-pending-compact', () => captureGatheringRoom({
   ...V17_VIEWPORT,
   viewport: { width: 320, height: 568 },
 }, { ownStatus: 'pending' }))
-register('profile-review-ceremony', captureProfileReviewCeremony)
+register('profile-review-completion', captureProfileReviewCompletion)
 register('onboarding-essential-step1', () => captureEssentialData())
 register('onboarding-essential-exit', () => captureEssentialData({ captureExitFrame: true }))
 register('onboarding-essential-step2', captureEssentialDataStep2)

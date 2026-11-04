@@ -203,7 +203,7 @@ category/intent icons 主要服务 onboarding，但经 `JoyJoinIcon` 动态注�
 
 ### 7.3 可重新分包但不是“直接移动资源”
 
-以下非 tab 页面可按领域重划：payment-verification、blind-box-payment、event-ticket-payment、event-detail、event-feedback、event-coordination、pool-group-detail、center-tab-empty、city-unlock。`login` 需要单独验证冷启动与认证回跳。
+以下非 tab 页面可按领域重划：payment-verification、blind-box-payment、event-ticket-payment、event-detail、event-feedback、pool-group-detail、city-unlock。`login` 需要单独验证冷启动与认证回跳。
 
 页面迁移会改变 app 配置、路由/深链、预加载和共享 chunk，必须分批完成。组队揭晓的未提交改动已于 2026-07-15 收口（commit `a6a160dc8`）：squad-unboxing 已迁入独立子包 `pages/squad-unboxing`，主包 zip 1.94 → 1.92MB；下列建议中涉及 squad 的部分已完成。
 

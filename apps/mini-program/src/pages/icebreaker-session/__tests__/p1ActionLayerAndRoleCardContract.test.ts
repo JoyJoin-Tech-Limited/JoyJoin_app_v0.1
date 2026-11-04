@@ -84,6 +84,25 @@ describe('AC-01 · 四视图无直发写操作', () => {
 })
 
 /**
+ * 2026-11-03: host advance is a CAS. The loser of a same-host double-tap gets
+ * 409 PHASE_CONFLICT; the dispatcher must adopt the state that 409 carries
+ * (the table already moved) instead of toasting a failure.
+ */
+describe('AC-01b · PHASE_CONFLICT adopts state instead of failing', () => {
+  it('the dispatcher routes conflicts through the shared sync', () => {
+    expect(actions).toContain('syncPhaseConflictResponse(error')
+    expect(actions).toContain('applyState: applySocialSessionState')
+    // The conflict branch must return before the generic error toast.
+    const catchBlock = actions.slice(actions.indexOf('} catch (error) {'))
+    const conflictIndex = catchBlock.indexOf('syncPhaseConflictResponse(error')
+    const toastIndex = catchBlock.indexOf('Taro.showToast')
+    expect(conflictIndex).toBeGreaterThan(-1)
+    expect(toastIndex).toBeGreaterThan(-1)
+    expect(conflictIndex).toBeLessThan(toastIndex)
+  })
+})
+
+/**
  * Wave 2 P1 剧本卡 (contract AC-04): the role card flips BOTH ways and
  * re-show lands it face-down.
  */

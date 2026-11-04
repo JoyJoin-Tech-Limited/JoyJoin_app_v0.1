@@ -494,6 +494,34 @@
       "toolingStatus": "sufficient"
     },
     {
+      "name": "UI/UX Design Reviewer",
+      "file": "uiux-design-reviewer.agent.md",
+      "description": "Use when a rendered JoyJoin screen needs the designer's seat — a seven-dimension critique (visual hierarchy, brand consistency, composition, typography, colour, affordance, information density) with Observation → Problem → Fix evidence, P0/P1/P2 routing to the owning skill, and an explicit ship / fix-then-ship / no-ship verdict. Use in review mode before merge or in implementation mode for in-flight design direction. Trigger phrases: designer review, critique this screen, UIUX review, visual designer pass, screen critique, does this look designed, is this composition right, where should this element sit, UI 走查, 设计评审, review this UI during implementation.",
+      "tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "argumentHint": "Describe the screen or in-flight question to critique (route or file path), the render set available (H5 URL, DevTools capture, or none), the single user job this screen serves, and whether you want full review mode or narrow implementation-mode direction.",
+      "subagents": [],
+      "portfolioRole": "design-critique",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [
+        "Taro Mini-Program Frontend Engineer",
+        "Supervisor"
+      ],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "screen-design-critique",
+        "frontend-design-audit",
+        "ui-layout-audit",
+        "joyjoin-brand-guidelines",
+        "wow-elements"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
       "name": "Taro Mini-Program Frontend Engineer",
       "file": "taro-mini-program-frontend-engineer.agent.md",
       "description": "Use when implementing or refining premium, brand-governed frontend UI directly in apps/mini-program, building Taro 4 plus React 18 pages or components for a WeChat Mini Program, raising a screen above generic cheap mini-program quality, adapting layouts and interactions to WXSS and WeChat runtime constraints, polishing onboarding, loading, empty, or completion states in the mini-program, or deciding whether an apps/mini-program change is MINI_PROGRAM_ONLY versus needing web or sibling-platform review. Trigger phrases: mini-program UI polish, premium mini-program UI, cheap mini-program feel, polish this Taro interaction, improve mini-program micro-interactions, make this screen feel premium, native-quality mini-program, add delight to onboarding, refine loading state, improve mini-program empty state, WXSS interaction polish, WeChat UI refinement.",

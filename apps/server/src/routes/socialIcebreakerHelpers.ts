@@ -1435,6 +1435,13 @@ export interface TransitionPhaseResult {
   transitioned: boolean;
   nextPhase: SocialIcebreakerPhase;
   pausedAtBonusGate: boolean;
+  /**
+   * A concurrent request advanced the session between the caller's read and the
+   * compare-and-swap write, so this transition persisted NOTHING (no phase
+   * change, no glow accrual, no recap snapshot). The caller should return 409
+   * and let the next poll resync.
+   */
+  phaseConflict?: boolean;
   challenge?: SocialSessionState['currentChallenge'];
   challengeMeta?: SocialSessionState['currentChallengeMeta'];
 }
@@ -1765,7 +1772,24 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
       state.bonusGateFrameworkPreloading = true;
     }
     clearAdvanceScheduling(state);
-    await updateSession(socialSessionId, state);
+    const gatePersisted = await updateSession(socialSessionId, state, {
+      expectedPhase: currentPhase,
+    });
+    // Only a definite CAS miss (`false`) is a conflict — non-CAS callers and
+    // test doubles return true/undefined.
+    if (gatePersisted === false) {
+      logger.warn('[SocialIcebreaker] bonus-gate pause lost a concurrent race', {
+        socialSessionId,
+        fromPhase: currentPhase,
+        trigger,
+      });
+      return {
+        transitioned: false,
+        nextPhase: currentPhase,
+        pausedAtBonusGate: false,
+        phaseConflict: true,
+      };
+    }
     logger.info('[SocialIcebreaker] phase_advance paused at bonus gate', {
       socialSessionId,
       fromPhase: currentPhase,
@@ -1896,7 +1920,28 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
     }
   }
 
-  await updateSession(socialSessionId, state);
+  const persisted = await updateSession(socialSessionId, state, {
+    expectedPhase: currentPhase,
+  });
+  // `false` is an explicit CAS miss; `true`/legacy-void means the write landed.
+  if (persisted === false) {
+    // Another request already moved this session out of `currentPhase`. Our
+    // in-memory copy carries uncommitted glow/highlight/cleanup effects that
+    // must NOT be persisted on top of the winner's state — drop them and let
+    // the client resync from the next poll.
+    logger.warn('[SocialIcebreaker] phase_advance lost a concurrent race; nothing persisted', {
+      socialSessionId,
+      fromPhase: currentPhase,
+      attemptedPhase: targetPhase,
+      trigger,
+    });
+    return {
+      transitioned: false,
+      nextPhase: currentPhase,
+      pausedAtBonusGate: false,
+      phaseConflict: true,
+    };
+  }
 
   // S6: group beat for every committed transition — nudge-family for phase
   // advances, celebration for the recap arrival. State-free; emitted after

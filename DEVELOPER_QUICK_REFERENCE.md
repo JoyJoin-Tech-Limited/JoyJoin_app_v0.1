@@ -500,7 +500,7 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | `personality-test` | 氛围测试 | `/personality-test` | V4 adaptive questions (8–16) → archetype assigned |
 | `essential-data` | 基本资料 | `/onboarding/setup` | displayName, gender, birthYear, currentCity, hometown, education, occupation (chat overlay), **lifeStage**, relationshipStatus, intent (up to 3) |
 | `extended-data` | 兴趣偏好 | `/onboarding/extended` | 3-tier interest selections (min 3, max 10) across 5 categories |
-| `profile-review` | 资料预览 | `/onboarding/review` | Read-only summary plus optional 1–100 character bio (content-safety checked); persisted via `POST /api/profile-review/complete` |
+| `profile-review` | 资料预览 | `/onboarding/review` | Read-only unified admission-poster summary; no bio capture on this step; persisted via `POST /api/profile-review/complete` |
 
 Note: Voice quiz is not part of the onboarding flow. Archetype is assigned during `personality-test` results, not re-collected on `essential-data`.
 
@@ -631,6 +631,7 @@ The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker
 - **Phase metrics:** `social_icebreaker_phase_metrics` table captures `dwellTimeMs` per phase on every advance.
 - **UGC report loop (E9, 2026-10-22):** `POST /api/social-icebreaker/:socialSessionId/report-content` accepts six content kinds from four long-press mount points (phase cards, script cards, lie-detective statements, recap card). The route snapshots the offending content **before** the cleanup pass in the same request, so a report on already-purged content still returns 201 with the snapshot; the reporter's free-text note is the only field that goes through content validation (self-harm evidence must never be filtered). Rate-limited to 3 per session-hour. No schema change. Contract: `sprint-contract.e9-ugc-report.md`; canonical entry in `docs/agent-context/social-icebreaker.md`.
 - **Sensory + pacing wave 2 (2026-10-20):** host one-tap nudge (`POST .../nudge-incomplete` — 「还差 N 人」, emits a state-free `SOCIAL_GROUP_BEAT`, at most one per host per session per 30s), a shared haptic grammar (`lib/utils/haptics.ts` + `socialHapticGrammar.test.ts`), quip-battle inspiration chips, per-phase duration expectations, and a recap share poster entry. The recap share path ships behind `recapSharePosterEnabled` (env `RECAP_SHARE_POSTER_ENABLED`, default **false**).
+- **Host recovery + advance CAS (2026-11-03):** a stalled host is recoverable from the admin War Room 「转移主持」 button (`POST /api/admin/social-icebreaker/:socialSessionId/transfer-host`, operator+; omitted target auto-picks the most recently active human; `already_host` idempotent; simulated bots rejected with `400 TARGET_IS_TEST_BOT`). The audit row carries `fromPhase` + `frozenMinutes`. `/advance` is compare-and-swap on `current_phase`: a stale second advance persists nothing and returns `409 PHASE_CONFLICT` with a Chinese `message` + fresh `state` (prevents double glow accrual). Waiting-screen duty line: `formatIceWaitingHostLine()` in `@shared/copy/icebreakerSession` — host and player wording must stay different. `icebreakerContentStatusEnabled` stays dark.
 - Full reference: `docs/icebreaker/icebreaker-system.md`
 
 Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.

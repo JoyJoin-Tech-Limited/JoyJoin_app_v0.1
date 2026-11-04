@@ -1,6 +1,11 @@
 
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { ARCHETYPE_CANONICAL_ORDER } from '@shared/personality/archetypeNames'
+import {
+  ARCHETYPE_CANONICAL_ORDER,
+  getArchetypeIndex,
+  resolveArchetype,
+} from '@shared/personality/archetypeNames'
+import { getArchetypeSkills, type ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import { questionsV4 } from '@shared/personality/questionsV4'
 import {
   hasAnonymousAssessmentResult,
@@ -279,13 +284,15 @@ export function getTraitEntries(
 ): Array<{ key: string; label: string; value: number }> {
   const traitScores = result?.traitScores ?? {}
 
-  return TRAIT_LABELS.map(({ key, label }) => {
-    const rawValue = Number(traitScores[key] ?? 50)
-    return {
+  return TRAIT_LABELS.flatMap(({ key, label }) => {
+    const rawValue = traitScores[key]
+    if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) return []
+
+    return [{
       key,
       label,
       value: Math.max(0, Math.min(Math.round(rawValue), 100)),
-    }
+    }]
   })
 }
 
@@ -298,6 +305,100 @@ export function getTopMatches(
   }
 
   return Array.isArray(result?.topMatches) ? result.topMatches : []
+}
+
+export interface AuthUserResultSource {
+  id?: string | number | null
+  archetype?: string | null
+  primaryArchetype?: string | null
+  secondaryArchetype?: string | null
+  completedAt?: string | null
+  traitScores?: AnonymousAssessmentResult['traitScores'] | null
+  topMatches?: AnonymousAssessmentTopMatch[] | null
+  topArchetypes?: AnonymousAssessmentTopMatch[] | null
+  archetypeConfidence?: number | null
+  isDecisive?: boolean | null
+}
+
+function resolveAuthResultArchetype(user: AuthUserResultSource | null | undefined): string | null {
+  const primaryArchetype = typeof user?.primaryArchetype === 'string' ? user.primaryArchetype.trim() : ''
+  if (primaryArchetype) return resolveArchetype(primaryArchetype)?.id ?? primaryArchetype
+
+  const legacyArchetype = typeof user?.archetype === 'string' ? user.archetype.trim() : ''
+  if (legacyArchetype) return resolveArchetype(legacyArchetype)?.id ?? legacyArchetype
+
+  return null
+}
+
+/**
+ * Build a displayable fallback from genuine auth fields only. An archetype on
+ * the profile proves identity, not a perfect match, so missing assessment data
+ * stays absent instead of becoming synthetic scores or a decisive claim.
+ */
+export function buildAuthUserResultState(
+  user: AuthUserResultSource | null | undefined,
+): ResolvedResultState | null {
+  const archetype = resolveAuthResultArchetype(user)
+  if (!archetype) return null
+
+  const topMatches = Array.isArray(user?.topArchetypes) && user.topArchetypes.length > 0
+    ? user.topArchetypes
+    : Array.isArray(user?.topMatches)
+      ? user.topMatches
+      : []
+  const archetypeConfidence = typeof user?.archetypeConfidence === 'number'
+    && Number.isFinite(user.archetypeConfidence)
+    ? user.archetypeConfidence
+    : undefined
+
+  return {
+    sessionId: `profile-${user?.id ?? archetype}`,
+    completedAt: user?.completedAt ?? new Date().toISOString(),
+    result: {
+      primaryArchetype: archetype,
+      secondaryArchetype: user?.secondaryArchetype ?? undefined,
+      traitScores: user?.traitScores ?? {},
+      topMatches,
+      archetypeConfidence,
+      isDecisive: typeof user?.isDecisive === 'boolean' ? user.isDecisive : undefined,
+    },
+    topMatches,
+  }
+}
+
+export interface ResultCardComposition {
+  skillSet: ArchetypeSkillSet | undefined
+  archetypeRank: number | undefined
+  serialNumber: string | undefined
+}
+
+/**
+ * Compose optional card metadata only from genuine sources. In particular, an
+ * auth-only revisit has no anonymous session serial, and an unrecognized
+ * archetype has neither canonical skills nor rank.
+ */
+export function buildResultCardComposition({
+  archetype,
+  sessionId,
+}: {
+  archetype?: string | null
+  sessionId?: string | null
+}): ResultCardComposition {
+  const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : ''
+  let serialNumber: string | undefined
+  if (normalizedSessionId) {
+    let hash = 0
+    for (let i = 0; i < normalizedSessionId.length; i++) {
+      hash = ((hash << 5) - hash + normalizedSessionId.charCodeAt(i)) | 0
+    }
+    serialNumber = `#${Math.abs(hash) % 90000 + 10000}`
+  }
+
+  return {
+    skillSet: archetype ? getArchetypeSkills(archetype) : undefined,
+    archetypeRank: archetype ? (getArchetypeIndex(archetype) ?? undefined) : undefined,
+    serialNumber,
+  }
 }
 
 export function getVisibleReelItems(currentIndex: number): string[] {
@@ -348,8 +449,8 @@ export function buildTypicalityLabel(
   archetypeName: string,
   accentText: string,
 ): TypicalityLabel | undefined {
-  if (!archetypeName) return undefined
-  const prefix = isDecisive === false ? '非典型' : '典型'
+  if (typeof isDecisive !== 'boolean' || !archetypeName) return undefined
+  const prefix = isDecisive ? '典型' : '非典型'
   return { prefix, name: archetypeName, accent: accentText }
 }
 

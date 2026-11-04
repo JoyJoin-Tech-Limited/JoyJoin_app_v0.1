@@ -161,9 +161,9 @@
   }
 
   &__terminal-center {
-    // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: 100%;
+    box-sizing: border-box;
+    padding: $spacing-lg 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1109,50 +1109,160 @@
   }
 
   // ─── Already-joined guard state ────────────────────────────────
+  // One calm terminal composition: brand header → event facts → single CTA.
+  // Local overrides intentionally refine the shared event card only here.
   &__already-joined {
-    @include flex-center;
+    display: flex;
     flex-direction: column;
-    gap: $spacing-md;
-    // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
-    min-height: 72vh;
-    min-height: 72dvh;
+    gap: $spacing-lg;
+    width: 100%;
+    max-width: 640rpx;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  &__already-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
     text-align: center;
-    @include card-premium;
-    padding: $spacing-lg;
-    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.04) 100%);
-    border: 2rpx solid rgba($color-primary, 0.08);
   }
 
   &__terminal-card {
     width: 100%;
     align-self: stretch;
+    min-height: 0;
+    padding: $spacing-lg;
+    // The shared card carries an inline gradient; this terminal uses one solid
+    // surface so functional meta keeps a verified contrast ratio.
+    background: $color-surface !important;
+    border: 1rpx solid $color-border;
+    box-shadow: $shadow-card;
+    text-align: left;
+    animation: none;
+
+    .footprint-oracle-card__type-corner {
+      display: none;
+    }
+
+    .footprint-oracle-card__pulse-pill {
+      display: none;
+    }
+
+    .footprint-oracle-card__topline {
+      align-items: flex-start;
+      gap: $spacing-md;
+      margin-bottom: $spacing-md;
+    }
+
+    .footprint-oracle-card__title {
+      font-size: $font-size-lg;
+      line-height: 1.45;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+
+    .segmented-countdown-clock {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+      max-width: none;
+      align-items: flex-start;
+      gap: $spacing-xs;
+    }
+
+    .segmented-countdown-clock__values,
+    .segmented-countdown-clock__labels {
+      justify-content: flex-start;
+      gap: $spacing-xs;
+    }
+
+    .segmented-countdown-clock__cell {
+      width: auto;
+      min-width: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    .segmented-countdown-clock__digit {
+      font-family: $font-mono;
+      font-size: $font-size-md;
+      color: $color-text-primary;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .segmented-countdown-clock__divider {
+      font-size: $font-size-sm;
+    }
+
+    .segmented-countdown-clock__unit,
+    .segmented-countdown-clock__separator {
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+    }
+
+    .footprint-oracle-card__location {
+      color: $color-text-secondary;
+    }
+
+    .segmented-countdown-clock__progress {
+      display: none;
+    }
   }
 
   &__already-mascot {
-    width: 160rpx;
-    height: 160rpx;
-    margin: 0 auto;
+    width: 128rpx;
+    height: 128rpx;
+    flex: 0 0 auto;
     display: block;
   }
 
   &__already-title {
     display: block;
-    @include type-subheading;
+    @include type-heading;
     color: $color-text-primary;
-    line-height: 1.4;
+    line-height: 1.35;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 
   &__already-text {
-    display: block;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
     @include type-body;
     color: $color-text-secondary;
     line-height: $line-height-relaxed;
-    max-width: 560rpx;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
+  &__already-partner {
+    display: inline-block;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
   }
 
   &__already-cta {
     width: 100%;
-    max-width: 520rpx;
+    box-shadow: none;
+    // 40rpx bold qualifies as large text, keeping white on brand purple
+    // above the 3:1 large-text contrast floor without inventing a new colour.
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+
+    &:active {
+      box-shadow: none;
+    }
   }
 
   .joy-button--secondary {

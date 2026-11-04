@@ -7,14 +7,6 @@
       "cdnPath": "assets/joyjoin-logo.webp"
     },
     {
-      "localPath": "assets/empty-state/center-empty-bg.webp",
-      "cdnPath": "assets/empty-state/center-empty-bg.webp"
-    },
-    {
-      "localPath": "assets/empty-state/center-empty-illustration.webp",
-      "cdnPath": "assets/empty-state/center-empty-illustration.webp"
-    },
-    {
       "localPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2",
       "cdnPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2"
     },

@@ -32,7 +32,7 @@ import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { looksLikeOfflineError } from '../../../lib/utils/offlineDetection'
-import { prefetchCeremonyAssets, prefetchInterestIllustrations } from '../../../lib/utils/onboardingPrefetch'
+import { prefetchInterestIllustrations } from '../../../lib/utils/onboardingPrefetch'
 import { logError, logInfo, logWarn } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import Button from '../../../components/ui/Button'
@@ -675,10 +675,6 @@ export default function ExtendedDataPage() {
       })
 
       const submitResponse = await submitInterests(apiRequest, { interests: selectionDrafts })
-
-      // Fire-and-forget: warm the profile-review ceremony's blind-box art
-      // during the post-submit gap. Never awaited, never blocks navigation.
-      void prefetchCeremonyAssets()
 
       // Checkpoint + auth refresh are fire-and-forget: the submit response
       // already carries the server-computed nextStep, and the background

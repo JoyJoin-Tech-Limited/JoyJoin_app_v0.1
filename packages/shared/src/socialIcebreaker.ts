@@ -153,6 +153,15 @@ export interface SocialSessionParticipantSummary {
   joinedAt?: string;
   lastSeenAt?: string;
   isActive?: boolean;
+  /**
+   * Whether this roster slot is a simulated (single-test) bot.
+   *
+   * Server-only recovery hint: the admin force-transfer auto-pick must never
+   * hand host authority to a bot (the store's own `reassignOrTombstoneHostedSessions`
+   * enforces the same invariant), and a bot hosting a live room freezes it
+   * forever because bots cannot advance phases.
+   */
+  isTestBot?: boolean;
 }
 
 export interface PulseCheckResult {

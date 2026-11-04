@@ -15,8 +15,6 @@ const SUBPACKAGE_ROOTS = [
   'pages/alang-story',
   'pages/event-feedback',
   'pages/city-unlock',
-  'pages/event-coordination',
-  'pages/center-tab-empty',
 ] as const
 
 const REG_TARO_SCOPED_PACKAGE = /@tarojs[\\/][a-z]+/

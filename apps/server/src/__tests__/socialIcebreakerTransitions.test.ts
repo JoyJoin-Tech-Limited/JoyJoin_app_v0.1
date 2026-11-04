@@ -10,7 +10,7 @@ const {
   generateRecapSummaryMock,
   getSessionWithExpiryMock,
 } = vi.hoisted(() => ({
-  updateSessionMock: vi.fn(async () => {}),
+  updateSessionMock: vi.fn(async (): Promise<boolean> => true),
   listParticipantsMock: vi.fn(async () => [
     { userId: 'host-user', displayName: 'Host', archetype: '社牛柯基', joinedAt: 1 },
   ]),
@@ -221,8 +221,8 @@ describe.skip('processAutoAdvance — retired all-ready fast fuse', () => {
       expired: false,
     }));
     let releaseClearPersist!: () => void;
-    const clearPersistGate = new Promise<void>((resolve) => {
-      releaseClearPersist = resolve;
+    const clearPersistGate = new Promise<boolean>((resolve) => {
+      releaseClearPersist = () => resolve(true);
     });
     updateSessionMock.mockImplementationOnce(() => clearPersistGate);
 
@@ -458,6 +458,24 @@ describe('transitionPhase', () => {
     expect(state.advanceFuseKind).toBeUndefined();
     expect(state.stallNudgeAt).toBeUndefined();
     expect(state.lastAdvanceTrigger).toBe('host_tap');
+  });
+
+  // 2026-11-03 (P1): a lost compare-and-set must surface as a conflict and must
+  // NOT report a transition — the in-memory copy carries uncommitted glow /
+  // highlight / cleanup effects that would double-bank on top of the winner.
+  it('reports a phase conflict when the CAS write loses the race', async () => {
+    const state = makeState({ currentPhase: 'warmup' });
+    updateSessionMock.mockResolvedValueOnce(false);
+
+    const result = await transitionPhase({
+      state,
+      socialSessionId: state.socialSessionId,
+      trigger: 'host_tap',
+    });
+
+    expect(result.transitioned).toBe(false);
+    expect(result.phaseConflict).toBe(true);
+    expect(result.nextPhase).toBe('warmup');
   });
 
   it('early-end does not count the skipped phase as played', async () => {

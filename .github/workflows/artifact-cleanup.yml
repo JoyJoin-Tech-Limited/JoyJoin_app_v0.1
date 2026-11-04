@@ -1,0 +1,88 @@
+name: Prune Build Cache Artifacts
+
+# 2026-11-03: the account-wide artifact quota reached its ceiling and every
+# `actions/upload-artifact` call failed ("Artifact storage quota has been hit"),
+# which silently skipped the dependent WeChat upload for a day. The bulk was
+# BuildKit cache: `docker/build-push-action` exports one `*.dockerbuild`
+# artifact per image build, and each deploy adds more. Our real artifacts
+# (taro dist, digests) total tens of MB; the build caches were the hog.
+#
+# The dist handoff between build and upload now uses the Actions cache, so this
+# job exists to keep the shell from filling up again. Ownership is split with
+# `auto-prune.yml` (weekly): that job deletes any artifact older than 30 days,
+# this one only deletes `*.dockerbuild` exports, on a daily cadence, because a
+# week of image builds is enough to exhaust the quota again.
+
+on:
+  schedule:
+    # 04:10 UTC = 12:10 Asia/Shanghai, away from deploy windows.
+    - cron: '10 4 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report what would be deleted without deleting'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Delete stale build-cache artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run) || 'false' }}
+        run: |
+          set -euo pipefail
+
+          BUILD_CACHE_MAX_AGE_DAYS=2
+          NOW=$(date -u +%s)
+
+          gh api --paginate "repos/$REPO/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | [.id, .name, .created_at, .expired] | @tsv' > artifacts.tsv
+
+          total=$(wc -l < artifacts.tsv)
+          deleted=0
+          kept=0
+
+          while IFS=$'\t' read -r id name created expired; do
+            age_days=$(( (NOW - $(date -u -d "$created" +%s)) / 86400 ))
+
+            # BuildKit cache entries are pure rebuild cost — refresh them often.
+            # Anything that is not a build cache belongs to auto-prune (>30d).
+            if [[ "$name" == *.dockerbuild && "$age_days" -ge "$BUILD_CACHE_MAX_AGE_DAYS" ]]; then
+              reason="build cache ${age_days}d old"
+            else
+              kept=$((kept + 1))
+              continue
+            fi
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "[dry-run] would delete $id ($name) — $reason"
+              deleted=$((deleted + 1))
+              continue
+            fi
+
+            if gh api -X DELETE "repos/$REPO/actions/artifacts/$id" >/dev/null 2>&1; then
+              deleted=$((deleted + 1))
+            else
+              echo "::warning::could not delete artifact $id ($name); leaving it for the next run"
+              kept=$((kept + 1))
+            fi
+          done < artifacts.tsv
+
+          echo "total=$total deleted=$deleted kept=$kept dry_run=$DRY_RUN"
+          {
+            echo "### Artifact prune"
+            echo ""
+            echo "| total | deleted | kept | dry run |"
+            echo "|---|---|---|---|"
+            echo "| $total | $deleted | $kept | $DRY_RUN |"
+          } >> "$GITHUB_STEP_SUMMARY"

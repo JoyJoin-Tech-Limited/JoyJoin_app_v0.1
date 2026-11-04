@@ -9,14 +9,11 @@ import {
   getUserInterests,
   claimWelcomeCoupon,
   type UserInterestsResponse,
-  type WelcomeCouponResponse,
 } from '@shared/api'
 import { getIntentEmoji, getIntentLabel } from '@shared/constants'
 import { MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { getIndustryDisplayLabel, getOccupationDisplayLabel } from '@shared/occupations'
-import { getErrorForSurface } from '@shared/copy/errorBaselines'
 import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
-import type { OnboardingNextStep } from '@shared/onboarding'
 import { STALE_TIME_PROFILE_TAGLINE_MS } from '../../../lib/utils/uiConstants'
 import AnalyzingAnimation from '../../../components/loading/AnalyzingAnimation'
 import InterestChipCloud from '../../../components/profile/InterestChipCloud'
@@ -34,7 +31,6 @@ import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
-import { looksLikeOfflineError } from '../../../lib/utils/offlineDetection'
 import Button from '../../../components/ui/Button'
 import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import Card from '../../../components/ui/Card'
@@ -54,10 +50,10 @@ import {
 } from '../../../lib/onboarding/insightPoster'
 import { useInsightPosterShare } from '../../../lib/onboarding/useInsightPosterShare'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
-import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
-import UnboxingCeremony from '../../../components/onboarding/UnboxingCeremony'
 import { resolveGiftRevealDelayMs, GIFT_REVEAL_CAP_MS } from '../../../lib/onboarding/giftRevealTiming'
+import { useProfileReviewCompletion } from './useProfileReviewCompletion'
+import { useWelcomeGiftClaim } from './useWelcomeGiftClaim'
 import {
   buildInterestHeatConclusion,
   getProfileFieldAnnotation,
@@ -129,20 +125,10 @@ function getAgeLabel(user: Record<string, unknown> | undefined): string {
 export default function ProfileReviewPage() {
   const router = useRouter()
   const { shouldReduceMotion } = useMiniRevealMotion(router?.params)
-  const [isCelebrating, setIsCelebrating] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isPageExiting, setIsPageExiting] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [error, setError] = useState('')
   const [isRevealReady, setIsRevealReady] = useState(false)
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false)
-  const [welcomeCoupon, setWelcomeCoupon] = useState<WelcomeCouponResponse | null>(null)
-  const [isCouponLoading, setIsCouponLoading] = useState(false)
   const [isCouponCardVisible, setIsCouponCardVisible] = useState(false)
-  const [couponError, setCouponError] = useState(false)
-  const [couponAttempt, setCouponAttempt] = useState(0)
-  const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
-  const [showCeremony, setShowCeremony] = useState(false)
   // entry-card-insight-v2 (AC-10/D7): the gift card waits for the 悦仔的观察
   // row sequence to land (+1.5s dwell), with a 10s post-reveal hard cap.
   const [insightRowsLanded, setInsightRowsLanded] = useState(false)
@@ -155,7 +141,6 @@ export default function ProfileReviewPage() {
   const [shellFading, setShellFading] = useState(false)
   const [shellDismissed, setShellDismissed] = useState(false)
   const shellRenderedRef = useRef(false)
-  const hasTrackedInviteImpressionRef = useRef(false)
   const hasTrackedGiftImpressionRef = useRef(false)
   // AC-19: per-visit dedupe for the insight_reveal_complete telemetry event.
   const insightRevealTrackedRef = useRef(false)
@@ -164,9 +149,6 @@ export default function ProfileReviewPage() {
   const taglineQueryStartedAtRef = useRef<number | null>(null)
   const hasStagedDiscoverPrefetchRef = useRef(false)
   const isScrolledRef = useRef(false)
-  // Server-computed nextStep captured from the completeProfileReview response,
-  // so post-ceremony routing needs no /api/auth/user round-trip.
-  const completedNextStepRef = useRef<OnboardingNextStep | null>(null)
   const aigcLabelsEnabled = useAIGCLabelsEnabled()
 
   // prefers-reduced-motion gating: skip the ceremonial reveal animation when motion is reduced.
@@ -176,16 +158,59 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion])
 
-  // setIsCouponLoading must reset too: a page hide mid-claim cancels the
-  // effect (isRevealReady flips false), the in-flight promise's .finally skips
-  // its setIsCouponLoading(false), and without this reset the re-run guard
-  // would strand the UI on a permanent skeleton with no retry affordance.
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsCouponLoading, setIsInviteCardVisible, setShowCeremony, setShellFading, setInsightRowsLanded, setGiftCapReached)
+  const {
+    error,
+    begin: handleComplete,
+    handleHide: handleCompletionHide,
+    handleShow: handleCompletionShow,
+    isSubmitting,
+    isCelebrating,
+    isPageExiting,
+  } = useProfileReviewCompletion({
+    shouldReduceMotion,
+    complete: () => completeProfileReview(apiRequest),
+    resolveNextStep: () => withTimeout(getUserState(), QUERY_TIMEOUT_MS),
+    navigate: (nextStep) => navigateToMiniProgramNextStep(nextStep ?? undefined, { mode: 'replace' }),
+    onServerComplete: () => {
+      markReviewCompleted()
+      haptics('success')
+      logInfo('[ProfileReview] Profile review completed; showing inline confirmation')
+      void invalidateAuth()
+    },
+    onStepCompleted: (nextStep) => {
+      analytics.stepCompleted({
+        nextStep: nextStep ?? 'unknown',
+        hasArchetype: archetype !== '',
+        hasInterests: Boolean(interestsData?.totalSelections),
+      })
+    },
+    onNavigate: (nextStep) => {
+      logInfo('[ProfileReview] Routing from server nextStep after inline confirmation', { nextStep: nextStep ?? 'unknown' })
+      if (nextStep === 'discover' && user?.id) {
+        try {
+          Taro.setStorageSync(`joyjoin_discover_arrival_pending:${user.id}`, true)
+        } catch {
+          // Arrival guidance is best-effort and never gates navigation.
+        }
+      }
+    },
+    onFailure: (stage, _failure, message) => {
+      analytics.errorOccurred(stage === 'complete' && message.includes('网络') ? 'submit_offline' : 'complete_failed', message)
+      logError('[ProfileReview] Completion flow failed', { stage, message })
+    },
+  })
 
-  // Reset invite-card impression tracking when the user returns via swipe-back
-  // so analytics accurately reflect each visit.
   useDidShow(() => {
-    hasTrackedInviteImpressionRef.current = false
+    handleCompletionShow()
+  })
+  useDidHide(() => {
+    handleCompletionHide()
+  })
+
+  useResetOnShow(setIsRevealReady, setIsCouponCardVisible, setShellFading, setInsightRowsLanded, setGiftCapReached)
+
+  // Reset per-visit impression tracking on swipe-back.
+  useDidShow(() => {
     hasTrackedGiftImpressionRef.current = false
     insightRevealTrackedRef.current = false
     hasStagedDiscoverPrefetchRef.current = false
@@ -193,9 +218,9 @@ export default function ProfileReviewPage() {
   })
   const queryClient = useQueryClient()
   const { user, isLoading } = useAuthGuard({
-    // The ceremony overlay is a mid-navigation state: keep the onboarding
-    // redirect suspended so it cannot yank the user away before routing.
-    suspendOnboardingRedirect: isSubmitting || isPageExiting || showCeremony,
+    // Keep the onboarding redirect suspended through inline confirmation and
+    // routing so the auth cache cannot trigger a second navigation.
+    suspendOnboardingRedirect: isSubmitting || isPageExiting || isCelebrating,
   })
 
   // Loading-shell continuity bridge: hold the shell for a short exit fade
@@ -237,48 +262,24 @@ export default function ProfileReviewPage() {
     analytics.stepAbandoned('exit', { stepId: 'review', stepIndex: 0 })
   })
 
-  // Claim (or re-fetch) the lifetime welcome coupon once the reveal animation
-  // finishes. The coupon renders on-page as the WelcomeGiftCard (restored
-  // 2026-09-07) and its discount also rides inside the UnboxingCeremony's
-  // rising entry card (拆盒即得礼); a failed claim degrades to a retry card
-  // on-page and a ceremony card without the gift row — neither blocks on
-  // this request.
-  useEffect(() => {
-    if (!isRevealReady || !user || isCouponLoading || welcomeCoupon) return
-
-    let cancelled = false
-    setIsCouponLoading(true)
-    setCouponError(false)
-
-    withTimeout(claimWelcomeCoupon(apiRequest), QUERY_TIMEOUT_MS)
-      .then((coupon) => {
-        if (cancelled) return
-        setWelcomeCoupon(coupon)
-        analytics.interaction('welcome_gift_card_impression', {
-          code: coupon.code,
-          discountValue: coupon.discountValue,
-          isNewlyAwarded: coupon.isNewlyAwarded,
-        })
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setCouponError(true)
-        analytics.errorOccurred('welcome_gift_card_claim_failed', err instanceof Error ? err.message : String(err))
-        logError('[ProfileReview] Failed to claim welcome coupon', {
-          message: err instanceof Error ? err.message : String(err),
-        })
-      })
-      .finally(() => {
-        if (!cancelled) setIsCouponLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // isCouponLoading is intentionally not a dependency: the claim fires once
-    // per reveal, and a failure must not retrigger the effect into a loop.
-    // couponAttempt is the manual-retry escape hatch from the error card.
-  }, [isRevealReady, user, analytics, welcomeCoupon, couponAttempt])
+  // The gift is progressive enhancement: one live request at a time, safe
+  // coded diagnostics, and no dependency in the completion/navigation path.
+  const {
+    coupon: welcomeCoupon,
+    isLoading: isCouponLoading,
+    error: couponError,
+    retry: retryWelcomeGift,
+  } = useWelcomeGiftClaim({
+    enabled: isRevealReady && Boolean(user),
+    claim: () => withTimeout(claimWelcomeCoupon(apiRequest), QUERY_TIMEOUT_MS),
+    onError: (giftError) => {
+      analytics.errorOccurred(
+        'welcome_gift_card_claim_failed',
+        giftError.diagnostics.code ?? giftError.diagnostics.category,
+      )
+      logError('[ProfileReview] Failed to claim welcome coupon', { ...giftError.diagnostics })
+    },
+  })
 
   // Replay the gift-card entrance animation when the user swipes back to this
   // page. useDidShow's return value is discarded by Taro, so the timer lives
@@ -306,32 +307,8 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion, welcomeCoupon])
 
-  // Reveal the Xiaoyue invitation teaser once the entry card (and its summary
-  // card) has landed — anchored to the reveal, not to the coupon request.
-  useEffect(() => {
-    if (shouldReduceMotion) {
-      if (isRevealReady) {
-        setIsInviteCardVisible(true)
-      }
-      return
-    }
-    if (!isRevealReady) return
-    const timer = setTimeout(() => {
-      setIsInviteCardVisible(true)
-    }, 900)
-    return () => clearTimeout(timer)
-  }, [isRevealReady, shouldReduceMotion])
-
-  // Track invite-card impression each time it becomes visible.
-  useEffect(() => {
-    if (!isInviteCardVisible || hasTrackedInviteImpressionRef.current) return
-    hasTrackedInviteImpressionRef.current = true
-    analytics.interaction('profile_review_invite_impression')
-  }, [isInviteCardVisible, analytics])
-
-  // Predictive Discover shell prefetch: the invite card is the strongest signal
-  // that the user will enter Discover next. Warm the composite shell so the tab
-  // renders from cache instead of cold-fetching on navigation.
+  // Predictive Discover shell prefetch remains one-shot and fail-open. It is
+  // triggered by the actual entry-card reveal, not a duplicate summary card.
   const stageDiscoverPrefetch = useCallback(() => {
     if (hasStagedDiscoverPrefetchRef.current) return
     hasStagedDiscoverPrefetchRef.current = true
@@ -346,18 +323,15 @@ export default function ProfileReviewPage() {
   }, [queryClient, analytics])
 
   useEffect(() => {
-    if (!isInviteCardVisible) return
+    if (!isRevealReady) return
     stageDiscoverPrefetch()
-  }, [isInviteCardVisible, stageDiscoverPrefetch])
+  }, [isRevealReady, stageDiscoverPrefetch])
 
-  // Ceremony-time fallback (PR-3): reduced-motion speed-runners can complete
-  // the page before the invite card appears. The forced-dwell UnboxingCeremony
-  // overlay (~3.2s) gives the shell request time to land.
-  // hasStagedDiscoverPrefetchRef dedupes across triggers.
+  // Fast confirmers also warm Discover during the short inline success beat.
   useEffect(() => {
-    if (!showCeremony) return
+    if (!isCelebrating) return
     stageDiscoverPrefetch()
-  }, [showCeremony, stageDiscoverPrefetch])
+  }, [isCelebrating, stageDiscoverPrefetch])
 
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
   const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
@@ -625,108 +599,6 @@ export default function ProfileReviewPage() {
     .filter(Boolean)
     .join(' ')
 
-  const handleCeremonyComplete = useCallback(async () => {
-    setShowCeremony(false)
-    // Keep the auth-guard redirect suspended through routing: between the
-    // ceremony's dismissal and beforeNavigate, invalidateAuth() flips
-    // nextStep to 'discover', which would otherwise let useAuthGuard fire
-    // its own switchTab and double-navigate.
-    setIsPageExiting(true)
-
-    try {
-      // Auth refresh runs in the background — the ceremony dwell covers it.
-      void invalidateAuth()
-      // The complete response's nextStep (stashed by handleComplete) is
-      // authoritative; only old servers without the field need a refetch.
-      const nextStep =
-        completedNextStepRef.current
-        ?? (await withTimeout(getUserState(), QUERY_TIMEOUT_MS)).nextStep
-
-      analytics.stepCompleted({
-        nextStep: nextStep ?? 'discover',
-        hasArchetype: archetype !== '',
-        hasInterests: Boolean(interestsData?.totalSelections),
-      })
-
-      logInfo('[ProfileReview] Onboarding complete, routing from refreshed nextStep', {
-        nextStep,
-      })
-
-      // PR-5: signal Discover to show the one-time play-mode coachmark (the
-      // intro flow's explainer content, folded into a first-visit card).
-      // Storage must never block routing.
-      if (nextStep === 'discover' && user?.id) {
-        try {
-          Taro.setStorageSync(`joyjoin_discover_arrival_pending:${user.id}`, true)
-        } catch {
-          // Non-fatal: the coachmark is a nice-to-have, never a gate.
-        }
-      }
-
-      await navigateToMiniProgramNextStep(nextStep, {
-        mode: 'replace',
-        transition: { beforeNavigate: () => setIsPageExiting(true) },
-      })
-    } catch (err) {
-      setIsPageExiting(false)
-      setIsCelebrating(false)
-      const message = err instanceof Error ? err.message : getErrorForSurface('operation-failed', 'inline-error')
-      setError(message)
-      analytics.errorOccurred('complete_failed', message)
-      logError('[ProfileReview] Post-ceremony routing failed', { message })
-    }
-  }, [analytics, archetype, interestsData?.totalSelections, invalidateAuth, user?.id])
-
-  const handleComplete = useCallback(async () => {
-    if (isSubmitting) {
-      return
-    }
-
-    setIsSubmitting(true)
-    setError('')
-
-    try {
-      logInfo('[ProfileReview] Completing profile review')
-      // Bio is no longer collected here (2026-08-18 simplification) — the
-      // server treats it as optional; the profile tab nudges for it later.
-      const completeRes = await completeProfileReview(apiRequest)
-      completedNextStepRef.current = completeRes?.nextStep ?? null
-
-      // Confirmation succeeded — the ceremony overlay and onward routing are
-      // post-completion states, never abandonment.
-      markReviewCompleted()
-
-      setIsCelebrating(true)
-      haptics('success')
-
-      // Phase 3 completion ceremony (Bet 2, the "second box opening"):
-      // the sealed box opens and the entry card rises; routing continues in
-      // handleCeremonyComplete on tap or after the overlay's auto-advance.
-      // PR-5: everyone sees the UnboxingCeremony — the 双仪式 either/or is
-      // gone, so the single-ceremony rule holds by construction.
-      setShowCeremony(true)
-    } catch (err) {
-      setIsPageExiting(false)
-      setIsCelebrating(false)
-      // Offline branch: unified preflight copy (essential/extended-data
-      // parity). The page collects no input and the completion call is
-      // idempotent-safe to retry, so re-submit is the only promise made.
-      if (looksLikeOfflineError(err)) {
-        const offlineMessage = getErrorForSurface('offline-preflight', 'inline-error')
-        setError(offlineMessage)
-        analytics.errorOccurred('submit_offline', offlineMessage)
-        logError('[ProfileReview] Complete failed offline', { message: offlineMessage })
-        return
-      }
-      const message = err instanceof Error ? err.message : getErrorForSurface('operation-failed', 'inline-error')
-      setError(message)
-      analytics.errorOccurred('complete_failed', message)
-      logError('[ProfileReview] Complete failed', { message })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [analytics, isSubmitting, markReviewCompleted])
-
   const getStageClassName = useCallback(
     (step: number) =>
       [
@@ -915,11 +787,8 @@ export default function ProfileReviewPage() {
                 onLineFeedback={handleInsightLineFeedback}
               />
             </View>
-          </Card>
 
-          {/* Insight share poster entry (AC-01): quiet, fail-closed, sits
-              between the entry card and the folded summary card — spatially
-              separated from the gift card. */}
+          {/* Quiet secondary sharing stays inside the single entry card. */}
           <InsightShareEntry
             visible={insightShareVisible}
             isGenerating={insightPosterShare.isGenerating}
@@ -934,7 +803,7 @@ export default function ProfileReviewPage() {
               already-filled data (小档案 / 意向 / 兴趣热量地图) collapses into
               one compact card, default folded — this page's job is to let the
               user through, not collect more data. 详情 expands in place. */}
-          <Card className={`profile-review__summary ${getStageClassName(5)}`}>
+          <View className={`profile-review__summary ${getStageClassName(5)}`}>
             <View
               className='profile-review__summary-header'
               onClick={handleSummaryToggle}
@@ -1134,6 +1003,50 @@ export default function ProfileReviewPage() {
                 </View>
               </View>
             ) : null}
+          </View>
+
+          <View className='profile-review__gift-region'>
+            {welcomeCoupon ? (
+              <WelcomeGiftCard
+                compact
+                discountValue={welcomeCoupon.discountValue}
+                discountType={welcomeCoupon.discountType}
+                validUntil={welcomeCoupon.validUntil ?? null}
+                visible={isCouponCardVisible}
+                reduceMotion={shouldReduceMotion}
+                className='profile-review__gift-card'
+              />
+            ) : isCouponLoading ? (
+              <WelcomeGiftCard compact isLoading visible className='profile-review__gift-card' />
+            ) : couponError ? (
+              <View
+                className='profile-review__coupon-error'
+                onClick={couponError.retryable ? () => {
+                  haptics('light')
+                  analytics.interaction('welcome_gift_card_retry_tap', { ...couponError.diagnostics })
+                  retryWelcomeGift()
+                } : undefined}
+                hoverClass={couponError.retryable ? 'profile-review__coupon-error--pressed' : 'none'}
+                role={couponError.retryable ? 'button' : 'status'}
+                aria-label={couponError.retryable ? `${couponError.message}，点击重试` : couponError.message}
+              >
+                <View className='profile-review__coupon-error-copy'>
+                  <Text className='profile-review__coupon-error-title'>见面礼状态</Text>
+                  <Text className='profile-review__coupon-error-subtitle'>
+                    {couponError.message}{couponError.retryable ? '，点击重试' : ''}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+
+          {isCelebrating ? (
+            <View className='profile-review__completion' role='status' aria-live='polite'>
+              <View className='profile-review__completion-mark' aria-hidden='true' />
+              <Text className='profile-review__completion-title'>入场卡已生效</Text>
+              <Text className='profile-review__completion-copy'>正在带你前往下一步</Text>
+            </View>
+          ) : null}
           </Card>
 
           {error ? (
@@ -1148,60 +1061,6 @@ export default function ProfileReviewPage() {
             </View>
           ) : null}
 
-          {welcomeCoupon ? (
-            <WelcomeGiftCard
-              discountValue={welcomeCoupon.discountValue}
-              discountType={welcomeCoupon.discountType}
-              validUntil={welcomeCoupon.validUntil ?? null}
-              visible={isCouponCardVisible}
-              reduceMotion={shouldReduceMotion}
-              onTap={() => {
-                analytics.interaction('welcome_gift_card_tap', {
-                  code: welcomeCoupon.code,
-                  discountValue: welcomeCoupon.discountValue,
-                  isNewlyAwarded: welcomeCoupon.isNewlyAwarded,
-                })
-              }}
-              className='profile-review__gift-card'
-            />
-          ) : isCouponLoading ? (
-            <WelcomeGiftCard isLoading className='profile-review__gift-card' />
-          ) : couponError ? (
-            <View
-              className='profile-review__coupon-error'
-              onClick={() => {
-                haptics('light')
-                analytics.interaction('welcome_gift_card_retry_tap')
-                setCouponError(false)
-                setCouponAttempt((prev) => prev + 1)
-              }}
-              hoverClass='profile-review__coupon-error--pressed'
-              role='button'
-              aria-label='见面礼领取失败，点击重试'
-            >
-              {/* status-warning (bundled local tier) renders offline; the
-                  'ui' tier gift glyph is CDN-first and would degrade to a raw
-                  emoji on the error card when the CDN is unreachable. */}
-              <JoyJoinIcon emoji='⚠️' tier='status' size={40} className='profile-review__coupon-error-icon' />
-              <View className='profile-review__coupon-error-copy'>
-                <Text className='profile-review__coupon-error-title'>见面礼领取遇到小状况</Text>
-                <Text className='profile-review__coupon-error-subtitle'>点我重新收下悦仔的见面礼</Text>
-              </View>
-            </View>
-          ) : null}
-
-          <ProfileReviewInviteCard
-            visible={isInviteCardVisible}
-            reduceMotion={shouldReduceMotion}
-            archetypeId={archetype}
-            displayName={displayName}
-            topInterestLabel={topInterestLabels[0] ?? null}
-            intentLabel={intentLabels[0]?.label ?? null}
-            className='profile-review__invite-card'
-          />
-
-          {/* Reserve space for the floating CTA */}
-          <View className='profile-review__footer-reserve' />
         </View>
       </ScrollView>
 
@@ -1230,33 +1089,15 @@ export default function ProfileReviewPage() {
           className='profile-review__submit'
           onClick={() => {
             haptics('medium')
-            handleComplete()
+            void handleComplete()
           }}
-          disabled={isSubmitting || isCelebrating}
-          loading={isSubmitting && !isCelebrating}
+          disabled={isSubmitting || isCelebrating || isPageExiting}
+          loading={(isSubmitting || isPageExiting) && !isCelebrating}
         >
-          {isCelebrating ? '入场卡已确认' : isSubmitting ? '正在完成…' : '确认并进入发现'}
+          {isCelebrating ? '入场卡已确认' : isPageExiting ? '正在前往…' : isSubmitting ? '正在完成…' : '确认并进入发现'}
         </Button>
       </View>
 
-      {/* Phase 3 completion ceremony: the "second box opening" — sealed box
-          opens, the entry card rises; tap or auto-advance routes onward. */}
-      <UnboxingCeremony
-        visible={showCeremony}
-        displayName={displayName}
-        archetypeName={visual?.name}
-        accentText={visual?.accentText}
-        giftDiscountValue={welcomeCoupon?.discountValue ?? null}
-        giftDiscountType={welcomeCoupon?.discountType ?? null}
-        giftValidUntil={welcomeCoupon?.validUntil ?? null}
-        giftLoading={isCouponLoading && !welcomeCoupon}
-        onAdvance={(mode) => {
-          analytics.interaction('ceremony_advance', { mode })
-        }}
-        onComplete={() => {
-          void handleCeremonyComplete()
-        }}
-      />
     </View>
   )
 }

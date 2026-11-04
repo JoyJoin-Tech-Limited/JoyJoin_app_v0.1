@@ -11,7 +11,7 @@ import {
   strokeRoundedRect,
   clipRoundedRect,
   drawBadge,
-  drawTextBlock,
+  splitText,
   exportCanvasWithRetry,
 } from '../../../../lib/utils/canvasHelpers'
 import { getWindowInfoCompat } from '../../../../lib/utils/systemInfo'
@@ -327,14 +327,71 @@ function drawTrackedText(
   ctx.restore()
 }
 
+/** Return a trimmed, measured single line; ellipsis is preferable to clipping. */
+function fitCanvasTextToWidth(
+  ctx: Taro.CanvasContext,
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+): string {
+  const normalized = text.trim()
+  if (!normalized || maxWidth <= 0) return ''
+  ctx.save()
+  ctx.setFontSize(fontSize)
+  if (ctx.measureText(normalized).width <= maxWidth) {
+    ctx.restore()
+    return normalized
+  }
+
+  const chars = Array.from(normalized)
+  let low = 0
+  let high = chars.length
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2)
+    const candidate = `${chars.slice(0, mid).join('')}…`
+    if (ctx.measureText(candidate).width <= maxWidth) low = mid
+    else high = mid - 1
+  }
+  ctx.restore()
+  return low > 0 ? `${chars.slice(0, low).join('')}…` : ''
+}
+
+/** Keep the shared wrapping contract, then measure every rendered line. */
+function drawMeasuredTextBlock(
+  ctx: Taro.CanvasContext,
+  options: {
+    text: string
+    x: number
+    y: number
+    maxCharsPerLine: number
+    maxLines: number
+    maxWidth: number
+    lineHeight: number
+    fontSize: number
+    color: string
+    align?: 'left' | 'center' | 'right'
+  },
+): number {
+  const lines = splitText(options.text, options.maxCharsPerLine, options.maxLines)
+  ctx.save()
+  ctx.setFillStyle(options.color)
+  ctx.setTextAlign(options.align ?? 'left')
+  ctx.setTextBaseline('top')
+  lines.forEach((line, index) => {
+    const fitted = fitCanvasTextToWidth(ctx, line, options.maxWidth, options.fontSize)
+    if (fitted) ctx.fillText(fitted, options.x, options.y + index * options.lineHeight)
+  })
+  ctx.restore()
+  return lines.length * options.lineHeight
+}
+
 /**
  * Draw the collectible edition stamp — full content width, mirroring the
  * in-app card's gold holo bar (限量氛围版).
  */
-function drawHolographicStamp(ctx: Taro.CanvasContext): void {
+function drawHolographicStamp(ctx: Taro.CanvasContext, barY = STAMP_Y): void {
   ctx.save()
   const barX = LEFT_EDGE
-  const barY = STAMP_Y
   const barWidth = CONTENT_WIDTH
   const goldGrad = createMetallicGold(ctx, barX, barY, barX + barWidth, barY)
   fillRoundedRect(ctx, barX, barY, barWidth, STAMP_HEIGHT, STAMP_HEIGHT / 2, goldGrad)
@@ -351,84 +408,93 @@ function drawHolographicStamp(ctx: Taro.CanvasContext): void {
  * Without a QR image (guests, flag off, WeChat failure) the band centers a
  * copy-only variant pointing at 微信搜索.
  */
-function drawFriendCtaBand(ctx: Taro.CanvasContext, qrCodeImagePath?: string): void {
+function drawFriendCtaBand(
+  ctx: Taro.CanvasContext,
+  qrCodeImagePath?: string,
+  bandY = CTA_BAND_Y,
+): void {
   const bandX = LEFT_EDGE
-  const bandY = CTA_BAND_Y
   const bandW = CONTENT_WIDTH
   const bandH = CTA_BAND_HEIGHT
-
-  // Dimensional purple: lighter top edge → deeper base, plus a hairline
-  // inner border — reads as a raised button, not a flat rectangle.
-  const bandGradient = ctx.createLinearGradient(bandX, bandY, bandX, bandY + bandH)
-  bandGradient.addColorStop(0, '#9d75f9')
-  bandGradient.addColorStop(0.55, COLOR_BRAND_PURPLE)
-  bandGradient.addColorStop(1, '#7c3aed')
-  fillRoundedRect(ctx, bandX, bandY, bandW, bandH, CTA_BAND_RADIUS, bandGradient)
-  strokeRoundedRect(ctx, bandX + 2, bandY + 2, bandW - 4, bandH - 4, CTA_BAND_RADIUS - 2, 'rgba(255, 255, 255, 0.18)', 2)
-
-  // Decorative circles (brand-safe ornament, same idea as the coupon banner).
-  ctx.save()
-  clipRoundedRect(ctx, bandX, bandY, bandW, bandH, CTA_BAND_RADIUS)
-  ctx.setFillStyle(COLOR_CTA_DECOR)
-  ctx.beginPath()
-  ctx.arc(bandX + 60, bandY + 10, 120, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(bandX + bandW - 40, bandY + bandH - 10, 150, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.restore()
-
-  const hasQr = Boolean(qrCodeImagePath)
-  const textX = bandX + 48
   const headline = '12 种氛围命格，你是哪一种？'
-  const instruction = hasQr
-    ? '长按识别小程序码，3 分钟测出你的命格'
-    : '微信搜索「悦聚」小程序，3 分钟开测'
 
-  if (hasQr && qrCodeImagePath) {
-    const chipX = bandX + bandW - 32 - CTA_QR_CHIP_SIZE
-    const chipY = bandY + (bandH - CTA_QR_CHIP_SIZE) / 2
+  const drawBandShell = (): void => {
+    // Dimensional purple: lighter top edge → deeper base, plus a hairline
+    // inner border — reads as a raised button, not a flat rectangle.
+    const bandGradient = ctx.createLinearGradient(bandX, bandY, bandX, bandY + bandH)
+    bandGradient.addColorStop(0, '#9d75f9')
+    bandGradient.addColorStop(0.55, COLOR_BRAND_PURPLE)
+    bandGradient.addColorStop(1, '#7c3aed')
+    fillRoundedRect(ctx, bandX, bandY, bandW, bandH, CTA_BAND_RADIUS, bandGradient)
+    strokeRoundedRect(ctx, bandX + 2, bandY + 2, bandW - 4, bandH - 4, CTA_BAND_RADIUS - 2, 'rgba(255, 255, 255, 0.18)', 2)
+
+    // Decorative circles (brand-safe ornament, same idea as the coupon banner).
     ctx.save()
-    ctx.setShadow(0, 8, 24, 'rgba(46, 16, 101, 0.35)')
-    fillRoundedRect(ctx, chipX, chipY, CTA_QR_CHIP_SIZE, CTA_QR_CHIP_SIZE, 24, PALETTE.white)
+    clipRoundedRect(ctx, bandX, bandY, bandW, bandH, CTA_BAND_RADIUS)
+    ctx.setFillStyle(COLOR_CTA_DECOR)
+    ctx.beginPath()
+    ctx.arc(bandX + 60, bandY + 10, 120, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(bandX + bandW - 40, bandY + bandH - 10, 150, 0, Math.PI * 2)
+    ctx.fill()
     ctx.restore()
-    // Gold rim ties the code chip to the card's collectible frame.
-    strokeRoundedRect(ctx, chipX, chipY, CTA_QR_CHIP_SIZE, CTA_QR_CHIP_SIZE, 24, 'rgba(245, 200, 107, 0.9)', 2)
-    try {
-      ctx.drawImage(
-        qrCodeImagePath,
-        chipX + CTA_QR_INSET,
-        chipY + CTA_QR_INSET,
-        CTA_QR_CHIP_SIZE - CTA_QR_INSET * 2,
-        CTA_QR_CHIP_SIZE - CTA_QR_INSET * 2,
-      )
-    } catch {
-      logWarn('[sharePoster] QR drawImage failed; band keeps copy-only layout')
-    }
+  }
 
+  const drawCopyOnly = (): void => {
     ctx.save()
     ctx.setFillStyle(COLOR_CTA_TEXT)
-    ctx.setFontSize(32)
-    ctx.setTextAlign('left')
+    ctx.setFontSize(34)
+    ctx.setTextAlign('center')
     ctx.setTextBaseline('middle')
-    ctx.fillText(headline, textX, bandY + 84)
+    ctx.fillText(headline, bandX + bandW / 2, bandY + 82)
     ctx.setFillStyle(COLOR_CTA_TEXT_SOFT)
-    ctx.setFontSize(21)
-    ctx.fillText(instruction, textX, bandY + 138)
+    ctx.setFontSize(22)
+    ctx.fillText('微信搜索「悦聚」小程序，3 分钟开测', bandX + bandW / 2, bandY + 138)
     ctx.restore()
+  }
+
+  drawBandShell()
+  if (!qrCodeImagePath) {
+    drawCopyOnly()
     return
   }
 
-  // Copy-only variant — vertically centered two-line block.
+  const chipX = bandX + bandW - 32 - CTA_QR_CHIP_SIZE
+  const chipY = bandY + (bandH - CTA_QR_CHIP_SIZE) / 2
+  ctx.save()
+  ctx.setShadow(0, 8, 24, 'rgba(46, 16, 101, 0.35)')
+  fillRoundedRect(ctx, chipX, chipY, CTA_QR_CHIP_SIZE, CTA_QR_CHIP_SIZE, 24, PALETTE.white)
+  ctx.restore()
+  // Gold rim ties the code chip to the card's collectible frame.
+  strokeRoundedRect(ctx, chipX, chipY, CTA_QR_CHIP_SIZE, CTA_QR_CHIP_SIZE, 24, 'rgba(245, 200, 107, 0.9)', 2)
+  try {
+    ctx.drawImage(
+      qrCodeImagePath,
+      chipX + CTA_QR_INSET,
+      chipY + CTA_QR_INSET,
+      CTA_QR_CHIP_SIZE - CTA_QR_INSET * 2,
+      CTA_QR_CHIP_SIZE - CTA_QR_INSET * 2,
+    )
+  } catch {
+    // CanvasContext queues commands; repaint the opaque band so no chip,
+    // shadow, QR instruction, or reserved code well survives in the export.
+    logWarn('[sharePoster] QR drawImage failed; repainting copy-only band')
+    drawBandShell()
+    drawCopyOnly()
+    return
+  }
+
+  const textX = bandX + 48
   ctx.save()
   ctx.setFillStyle(COLOR_CTA_TEXT)
-  ctx.setFontSize(34)
-  ctx.setTextAlign('center')
+  ctx.setFontSize(32)
+  ctx.setTextAlign('left')
   ctx.setTextBaseline('middle')
-  ctx.fillText(headline, bandX + bandW / 2, bandY + 82)
+  ctx.fillText(headline, textX, bandY + 84)
   ctx.setFillStyle(COLOR_CTA_TEXT_SOFT)
-  ctx.setFontSize(22)
-  ctx.fillText(instruction, bandX + bandW / 2, bandY + 138)
+  ctx.setFontSize(21)
+  ctx.fillText('长按识别小程序码，3 分钟测出你的命格', textX, bandY + 138)
   ctx.restore()
 }
 
@@ -508,29 +574,41 @@ function createCardBackground(ctx: Taro.CanvasContext, accentSoft: string): void
  * (典型夸夸仓鼠) and a quiet brand lockup on the right.
  */
 function drawTopChrome(ctx: Taro.CanvasContext, confidenceLabel?: string): void {
-  const chipText = confidenceLabel ?? '悦聚氛围卡'
+  const brandText = 'JOYJOIN · 悦聚'
   ctx.save()
-  ctx.setFontSize(22)
-  const chipWidth = Math.ceil(ctx.measureText(chipText).width) + 56
+  ctx.setFontSize(20)
+  const brandWidth = ctx.measureText(brandText).width
   ctx.restore()
 
-  drawBadge(ctx, {
-    text: chipText,
-    x: LEFT_EDGE,
-    y: CHROME_Y,
-    width: chipWidth,
-    height: CHROME_HEIGHT,
-    fill: PALETTE.badgeDarkFill,
-    color: PALETTE.badgeDarkText,
-    fontSize: 22,
-  })
+  const requestedChip = confidenceLabel?.trim() ?? ''
+  if (requestedChip) {
+    ctx.save()
+    ctx.setFontSize(22)
+    const requestedWidth = Math.ceil(ctx.measureText(requestedChip).width) + 56
+    ctx.restore()
+    const maxChipWidth = Math.max(0, Math.floor(RIGHT_EDGE - brandWidth - 24 - LEFT_EDGE))
+    const chipWidth = Math.min(requestedWidth, maxChipWidth)
+    const chipText = fitCanvasTextToWidth(ctx, requestedChip, chipWidth - 56, 22)
+    if (chipText) {
+      drawBadge(ctx, {
+        text: chipText,
+        x: LEFT_EDGE,
+        y: CHROME_Y,
+        width: chipWidth,
+        height: CHROME_HEIGHT,
+        fill: PALETTE.badgeDarkFill,
+        color: PALETTE.badgeDarkText,
+        fontSize: 22,
+      })
+    }
+  }
 
   ctx.save()
   ctx.setFillStyle(PALETTE.textMuted)
   ctx.setFontSize(20)
   ctx.setTextAlign('right')
   ctx.setTextBaseline('middle')
-  ctx.fillText('JOYJOIN · 悦聚', RIGHT_EDGE, CHROME_Y + CHROME_HEIGHT / 2)
+  ctx.fillText(brandText, RIGHT_EDGE, CHROME_Y + CHROME_HEIGHT / 2)
   ctx.restore()
 }
 
@@ -632,20 +710,24 @@ function drawCompactIdentity(
     'left',
   )
 
-  ctx.save()
-  ctx.setFillStyle(PALETTE.textDark)
-  ctx.setFontSize(HERO_NAME_SIZE)
-  ctx.setTextAlign('left')
-  ctx.setTextBaseline('top')
-  ctx.fillText(input.archetype, HERO_TEXT_X, HERO_NAME_Y)
-  ctx.restore()
+  const archetypeText = fitCanvasTextToWidth(ctx, input.archetype, RIGHT_EDGE - HERO_TEXT_X, HERO_NAME_SIZE)
+  if (archetypeText) {
+    ctx.save()
+    ctx.setFillStyle(PALETTE.textDark)
+    ctx.setFontSize(HERO_NAME_SIZE)
+    ctx.setTextAlign('left')
+    ctx.setTextBaseline('top')
+    ctx.fillText(archetypeText, HERO_TEXT_X, HERO_NAME_Y)
+    ctx.restore()
+  }
 
-  drawTextBlock(ctx, {
+  drawMeasuredTextBlock(ctx, {
     text: input.tagline,
     x: HERO_TEXT_X,
     y: HERO_TAGLINE_Y,
     maxCharsPerLine: 15,
     maxLines: 2,
+    maxWidth: RIGHT_EDGE - HERO_TEXT_X,
     lineHeight: HERO_TAGLINE_LINE_HEIGHT,
     fontSize: 28,
     color: PALETTE.textSecondary,
@@ -654,13 +736,24 @@ function drawCompactIdentity(
   // Rarity line — the collection hook (稀有度 12%), balanced by the edition
   // provenance micro-text on the right (图鉴 · 2026 — collectibles carry
   // provenance; derived from the render date, honest year edition).
-  if (input.rarityLabel) {
+  const provenanceText = `图鉴 · ${new Date().getFullYear()}`
+  ctx.save()
+  ctx.setFontSize(16)
+  const provenanceWidth = ctx.measureText(provenanceText).width
+  ctx.restore()
+  const rarityText = fitCanvasTextToWidth(
+    ctx,
+    input.rarityLabel ?? '',
+    RIGHT_EDGE - provenanceWidth - 16 - HERO_TEXT_X,
+    20,
+  )
+  if (rarityText) {
     ctx.save()
     ctx.setFillStyle(COLOR_RANK_RIGHT_TEXT)
     ctx.setFontSize(20)
     ctx.setTextAlign('left')
     ctx.setTextBaseline('top')
-    ctx.fillText(input.rarityLabel, HERO_TEXT_X, HERO_RARITY_Y)
+    ctx.fillText(rarityText, HERO_TEXT_X, HERO_RARITY_Y)
     ctx.restore()
   }
   ctx.save()
@@ -668,7 +761,7 @@ function drawCompactIdentity(
   ctx.setFontSize(16)
   ctx.setTextAlign('right')
   ctx.setTextBaseline('top')
-  ctx.fillText(`图鉴 · ${new Date().getFullYear()}`, RIGHT_EDGE, HERO_RARITY_Y + 2)
+  ctx.fillText(provenanceText, RIGHT_EDGE, HERO_RARITY_Y + 2)
   ctx.restore()
 }
 
@@ -677,59 +770,82 @@ function drawCompactIdentity(
  */
 function drawRankStrip(
   ctx: Taro.CanvasContext,
-  archetypeRank: number,
-  serialNumber: string,
+  archetypeRank: number | undefined,
+  serialNumber: string | undefined,
+  stripY = RANK_STRIP_Y,
 ): void {
   const badgeRadius = RANK_STRIP_HEIGHT / 2
-
-  const leftText = `氛围编号 #${archetypeRank}`
-  ctx.save()
-  ctx.setFontSize(20)
-  const leftMeasured = ctx.measureText(leftText).width
-  ctx.restore()
-
-  const leftBadgeWidth = Math.max(200, Math.ceil(leftMeasured) + 48)
-  fillRoundedRect(ctx, LEFT_EDGE, RANK_STRIP_Y, leftBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_LEFT_BG)
-  strokeRoundedRect(ctx, LEFT_EDGE, RANK_STRIP_Y, leftBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_LEFT_BORDER, 1)
-
-  ctx.save()
-  ctx.setFillStyle(PALETTE.traitLabel)
-  ctx.setFontSize(20)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.fillText(leftText, LEFT_EDGE + leftBadgeWidth / 2, RANK_STRIP_Y + RANK_STRIP_HEIGHT / 2)
-  ctx.restore()
-
-  const serialText = serialNumber.startsWith('#') ? serialNumber : `#${serialNumber}`
+  const hasRank = typeof archetypeRank === 'number' && Number.isFinite(archetypeRank) && archetypeRank > 0
+  const normalizedSerial = serialNumber?.trim() ?? ''
+  const leftText = hasRank ? `氛围编号 #${archetypeRank}` : ''
+  const rightText = normalizedSerial
+    ? (normalizedSerial.startsWith('#') ? normalizedSerial : `#${normalizedSerial}`)
+    : ''
+  if (!leftText && !rightText) return
 
   ctx.save()
   ctx.setFontSize(20)
-  ctx.setTextAlign('left')
-  ctx.setTextBaseline('middle')
-  const measured = ctx.measureText(serialText).width
+  const leftMeasured = leftText ? ctx.measureText(leftText).width : 0
+  const rightMeasured = rightText ? ctx.measureText(rightText).width : 0
   ctx.restore()
 
-  const rightBadgeWidth = Math.max(180, Math.ceil(measured) + 48)
-  const rightBadgeX = RIGHT_EDGE - rightBadgeWidth
-  fillRoundedRect(ctx, rightBadgeX, RANK_STRIP_Y, rightBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_RIGHT_BG)
-  strokeRoundedRect(ctx, rightBadgeX, RANK_STRIP_Y, rightBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_RIGHT_BORDER, 1)
+  let leftBadgeWidth = leftText ? Math.max(200, Math.ceil(leftMeasured) + 48) : 0
+  let rightBadgeWidth = rightText ? Math.max(180, Math.ceil(rightMeasured) + 48) : 0
+  const badgeGap = 16
+  if (leftText && rightText && leftBadgeWidth + rightBadgeWidth + badgeGap > CONTENT_WIDTH) {
+    const scale = (CONTENT_WIDTH - badgeGap) / (leftBadgeWidth + rightBadgeWidth)
+    leftBadgeWidth = Math.floor(leftBadgeWidth * scale)
+    rightBadgeWidth = Math.floor(rightBadgeWidth * scale)
+  }
+  leftBadgeWidth = Math.min(leftBadgeWidth, CONTENT_WIDTH)
+  rightBadgeWidth = Math.min(rightBadgeWidth, CONTENT_WIDTH)
 
-  // Debossed serial — cream underlay offset +1px below the dark ink fakes
-  // the letterpress dent of a museum plaque number.
-  ctx.save()
-  ctx.setFontSize(20)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.setFillStyle('rgba(255, 255, 255, 0.65)')
-  ctx.fillText(serialText, rightBadgeX + rightBadgeWidth / 2, RANK_STRIP_Y + RANK_STRIP_HEIGHT / 2 + 1.5)
-  ctx.setFillStyle(COLOR_RANK_RIGHT_TEXT)
-  ctx.fillText(serialText, rightBadgeX + rightBadgeWidth / 2, RANK_STRIP_Y + RANK_STRIP_HEIGHT / 2)
-  ctx.restore()
+  if (leftText) {
+    const fittedLeft = fitCanvasTextToWidth(ctx, leftText, leftBadgeWidth - 48, 20)
+    fillRoundedRect(ctx, LEFT_EDGE, stripY, leftBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_LEFT_BG)
+    strokeRoundedRect(ctx, LEFT_EDGE, stripY, leftBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_LEFT_BORDER, 1)
+    if (fittedLeft) {
+      ctx.save()
+      ctx.setFillStyle(PALETTE.traitLabel)
+      ctx.setFontSize(20)
+      ctx.setTextAlign('center')
+      ctx.setTextBaseline('middle')
+      ctx.fillText(fittedLeft, LEFT_EDGE + leftBadgeWidth / 2, stripY + RANK_STRIP_HEIGHT / 2)
+      ctx.restore()
+    }
+  }
+
+  if (rightText) {
+    const rightBadgeX = RIGHT_EDGE - rightBadgeWidth
+    const fittedRight = fitCanvasTextToWidth(ctx, rightText, rightBadgeWidth - 48, 20)
+    fillRoundedRect(ctx, rightBadgeX, stripY, rightBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_RIGHT_BG)
+    strokeRoundedRect(ctx, rightBadgeX, stripY, rightBadgeWidth, RANK_STRIP_HEIGHT, badgeRadius, COLOR_RANK_RIGHT_BORDER, 1)
+
+    // Debossed serial — cream underlay offset +1px below the dark ink fakes
+    // the letterpress dent of a museum plaque number.
+    if (fittedRight) {
+      ctx.save()
+      ctx.setFontSize(20)
+      ctx.setTextAlign('center')
+      ctx.setTextBaseline('middle')
+      ctx.setFillStyle('rgba(255, 255, 255, 0.65)')
+      ctx.fillText(fittedRight, rightBadgeX + rightBadgeWidth / 2, stripY + RANK_STRIP_HEIGHT / 2 + 1.5)
+      ctx.setFillStyle(COLOR_RANK_RIGHT_TEXT)
+      ctx.fillText(fittedRight, rightBadgeX + rightBadgeWidth / 2, stripY + RANK_STRIP_HEIGHT / 2)
+      ctx.restore()
+    }
+  }
 }
 
-function drawEnergyBar(ctx: Taro.CanvasContext, energyLevel: number): void {
+function drawEnergyBar(
+  ctx: Taro.CanvasContext,
+  energyLevel: number,
+  labelY = ENERGY_LABEL_Y,
+): void {
   const label = '聚会续航力'
   const trackX = LEFT_EDGE
+  const trackY = labelY + (ENERGY_TRACK_Y - ENERGY_LABEL_Y)
+  const hintY = labelY + (ENERGY_HINT_Y - ENERGY_LABEL_Y)
   const trackWidth = RIGHT_EDGE - LEFT_EDGE
 
   ctx.save()
@@ -737,39 +853,39 @@ function drawEnergyBar(ctx: Taro.CanvasContext, energyLevel: number): void {
   ctx.setFontSize(24)
   ctx.setTextAlign('left')
   ctx.setTextBaseline('top')
-  ctx.fillText(label, LEFT_EDGE, ENERGY_LABEL_Y)
+  ctx.fillText(label, LEFT_EDGE, labelY)
   ctx.setTextAlign('right')
-  ctx.fillText(`${clampPercent(energyLevel)}%`, RIGHT_EDGE, ENERGY_LABEL_Y)
+  ctx.fillText(`${clampPercent(energyLevel)}%`, RIGHT_EDGE, labelY)
   ctx.restore()
 
-  fillRoundedRect(ctx, trackX, ENERGY_TRACK_Y, trackWidth, ENERGY_TRACK_HEIGHT, ENERGY_TRACK_HEIGHT / 2, PALETTE.traitTrack)
+  fillRoundedRect(ctx, trackX, trackY, trackWidth, ENERGY_TRACK_HEIGHT, ENERGY_TRACK_HEIGHT / 2, PALETTE.traitTrack)
 
   const fillWidth = Math.max(40, trackWidth * (clampPercent(energyLevel) / 100))
-  const energyGradient = ctx.createLinearGradient(trackX, ENERGY_TRACK_Y, trackX + fillWidth, ENERGY_TRACK_Y)
+  const energyGradient = ctx.createLinearGradient(trackX, trackY, trackX + fillWidth, trackY)
   energyGradient.addColorStop(0, COLOR_ENERGY_AMBER)
   energyGradient.addColorStop(0.5, COLOR_ENERGY_ORANGE)
   energyGradient.addColorStop(1, COLOR_ENERGY_RED)
-  fillRoundedRect(ctx, trackX, ENERGY_TRACK_Y, fillWidth, ENERGY_TRACK_HEIGHT, ENERGY_TRACK_HEIGHT / 2, energyGradient)
+  fillRoundedRect(ctx, trackX, trackY, fillWidth, ENERGY_TRACK_HEIGHT, ENERGY_TRACK_HEIGHT / 2, energyGradient)
 
   // Instrument detailing: hairline tick marks at the quarter points turn a
   // flat bar into a gauge; a soft glow at the fill tip reads as the live
   // power level.
   ctx.save()
-  clipRoundedRect(ctx, trackX, ENERGY_TRACK_Y, trackWidth, ENERGY_TRACK_HEIGHT, ENERGY_TRACK_HEIGHT / 2)
+  clipRoundedRect(ctx, trackX, trackY, trackWidth, ENERGY_TRACK_HEIGHT, ENERGY_TRACK_HEIGHT / 2)
   ctx.setFillStyle('rgba(255, 255, 255, 0.55)')
   for (const ratio of [0.25, 0.5, 0.75]) {
-    ctx.fillRect(trackX + trackWidth * ratio - 0.75, ENERGY_TRACK_Y, 1.5, ENERGY_TRACK_HEIGHT)
+    ctx.fillRect(trackX + trackWidth * ratio - 0.75, trackY, 1.5, ENERGY_TRACK_HEIGHT)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tipGlow = (ctx as any).createRadialGradient(
-      trackX + fillWidth, ENERGY_TRACK_Y + ENERGY_TRACK_HEIGHT / 2, 1,
-      trackX + fillWidth, ENERGY_TRACK_Y + ENERGY_TRACK_HEIGHT / 2, 16,
+      trackX + fillWidth, trackY + ENERGY_TRACK_HEIGHT / 2, 1,
+      trackX + fillWidth, trackY + ENERGY_TRACK_HEIGHT / 2, 16,
     )
     tipGlow.addColorStop(0, 'rgba(255, 255, 255, 0.5)')
     tipGlow.addColorStop(1, 'rgba(255, 255, 255, 0)')
     ctx.setFillStyle(tipGlow)
-    ctx.fillRect(trackX + fillWidth - 16, ENERGY_TRACK_Y - 6, 32, ENERGY_TRACK_HEIGHT + 12)
+    ctx.fillRect(trackX + fillWidth - 16, trackY - 6, 32, ENERGY_TRACK_HEIGHT + 12)
   } catch {
     // No radial-gradient support — ticks alone carry the gauge look.
   }
@@ -781,7 +897,7 @@ function drawEnergyBar(ctx: Taro.CanvasContext, energyLevel: number): void {
   ctx.setFontSize(18)
   ctx.setTextAlign('right')
   ctx.setTextBaseline('top')
-  ctx.fillText('你在聚会里的持久活力', RIGHT_EDGE, ENERGY_HINT_Y)
+  ctx.fillText('你在聚会里的持久活力', RIGHT_EDGE, hintY)
   ctx.restore()
 }
 
@@ -804,23 +920,25 @@ function drawSkillCard(
 
   drawBadge(ctx, { text: options.label, x: options.x + 24, y: options.y + 20, width: 108, height: 38, fill: options.accent, color: PALETTE.white, fontSize: 18 })
 
-  drawTextBlock(ctx, {
+  drawMeasuredTextBlock(ctx, {
     text: options.title,
     x: options.x + 24,
     y: options.y + 74,
     maxCharsPerLine: 10,
     maxLines: 1,
+    maxWidth: options.width - 48,
     lineHeight: 38,
     fontSize: 28,
     color: PALETTE.skillTitle,
   })
 
-  drawTextBlock(ctx, {
+  drawMeasuredTextBlock(ctx, {
     text: options.effect,
     x: options.x + 24,
     y: options.y + 118,
     maxCharsPerLine: 14,
     maxLines: 2,
+    maxWidth: options.width - 48,
     lineHeight: 30,
     fontSize: 19,
     color: PALETTE.skillEffect,
@@ -835,12 +953,13 @@ function drawFooterBand(ctx: Taro.CanvasContext, shareLine: string): void {
   const dividerGrad = createMetallicGold(ctx, POSTER_WIDTH / 2 - 60, 0, POSTER_WIDTH / 2 + 60, 0)
   fillRoundedRect(ctx, POSTER_WIDTH / 2 - 60, FOOTER_DIVIDER_Y, 120, 3, 1.5, dividerGrad)
 
-  drawTextBlock(ctx, {
+  drawMeasuredTextBlock(ctx, {
     text: shareLine || '来悦聚测测你的氛围命格，看看默契会带你去哪里',
     x: POSTER_WIDTH / 2,
     y: FOOTER_SHARELINE_Y,
     maxCharsPerLine: 30,
     maxLines: 1,
+    maxWidth: Math.min(POSTER_WIDTH / 2 - LEFT_EDGE, RIGHT_EDGE - POSTER_WIDTH / 2) * 2,
     lineHeight: 32,
     fontSize: 22,
     color: PALETTE.textSecondary,
@@ -870,39 +989,62 @@ export async function generatePersonalitySharePoster(input: PersonalitySharePost
 
   drawCompactIdentity(ctx, input, archetypeImagePath, heroDimensions)
 
-  if (typeof input.archetypeRank === 'number' && input.serialNumber) {
+  const hasRank = typeof input.archetypeRank === 'number'
+    && Number.isFinite(input.archetypeRank)
+    && input.archetypeRank > 0
+  const hasSerial = Boolean(input.serialNumber?.trim())
+  const hasRankStrip = hasRank || hasSerial
+  const hasEnergy = typeof input.energyLevel === 'number' && Number.isFinite(input.energyLevel)
+  const skillCards = [
+    {
+      title: (input.activeSkillTitle ?? '').trim(),
+      effect: (input.activeSkillEffect ?? '').trim(),
+      label: '氛围技能',
+      fill: PALETTE.activeSkillFill,
+      accent: PALETTE.activeSkillAccent,
+    },
+    {
+      title: (input.passiveSkillTitle ?? '').trim(),
+      effect: (input.passiveSkillEffect ?? '').trim(),
+      label: '氛围天赋',
+      fill: PALETTE.passiveSkillFill,
+      accent: PALETTE.passiveSkillAccent,
+    },
+  ].filter((card) => Boolean(card.title || card.effect))
+
+  // Preserve the canonical full-data geometry exactly. Missing sections remove
+  // their whole slot, and every following collectible/CTA block moves up.
+  const rankCompaction = hasRankStrip ? 0 : ENERGY_LABEL_Y - RANK_STRIP_Y
+  const energyCompaction = hasEnergy ? 0 : SKILL_Y - ENERGY_LABEL_Y
+  const skillCompaction = skillCards.length > 0 ? 0 : STAMP_Y - SKILL_Y
+  const energyY = ENERGY_LABEL_Y - rankCompaction
+  const skillY = SKILL_Y - rankCompaction - energyCompaction
+  const stampY = STAMP_Y - rankCompaction - energyCompaction - skillCompaction
+  const ctaY = CTA_BAND_Y - rankCompaction - energyCompaction - skillCompaction
+
+  if (hasRankStrip) {
     drawRankStrip(ctx, input.archetypeRank, input.serialNumber)
   }
 
-  if (typeof input.energyLevel === 'number') {
-    drawEnergyBar(ctx, input.energyLevel)
+  if (hasEnergy) {
+    drawEnergyBar(ctx, input.energyLevel as number, energyY)
   }
 
-  const skillCardWidth = (CONTENT_WIDTH - SKILL_CARD_GAP) / 2
-  drawSkillCard(ctx, {
-    x: LEFT_EDGE,
-    y: SKILL_Y,
-    width: skillCardWidth,
-    title: input.activeSkillTitle,
-    effect: input.activeSkillEffect,
-    label: '氛围技能',
-    fill: PALETTE.activeSkillFill,
-    accent: PALETTE.activeSkillAccent,
-  })
-  drawSkillCard(ctx, {
-    x: LEFT_EDGE + skillCardWidth + SKILL_CARD_GAP,
-    y: SKILL_Y,
-    width: skillCardWidth,
-    title: input.passiveSkillTitle,
-    effect: input.passiveSkillEffect,
-    label: '氛围天赋',
-    fill: PALETTE.passiveSkillFill,
-    accent: PALETTE.passiveSkillAccent,
+  const skillCardWidth = skillCards.length === 1
+    ? CONTENT_WIDTH
+    : (CONTENT_WIDTH - SKILL_CARD_GAP) / 2
+  skillCards.forEach((card, index) => {
+    drawSkillCard(ctx, {
+      ...card,
+      x: LEFT_EDGE + index * (skillCardWidth + SKILL_CARD_GAP),
+      y: skillY,
+      width: skillCardWidth,
+    })
   })
 
-  drawHolographicStamp(ctx)
+  drawHolographicStamp(ctx, stampY)
 
-  drawFriendCtaBand(ctx, input.qrCodeImagePath)
+  drawFriendCtaBand(ctx, input.qrCodeImagePath, ctaY)
 
   drawFooterBand(ctx, input.shareLine)
 
@@ -919,7 +1061,18 @@ export async function generatePersonalitySharePoster(input: PersonalitySharePost
     ctx.draw(false, async () => {
       if (settled) return
       try {
-        const tempFilePath = await exportCanvasWithRetry(PERSONALITY_SHARE_POSTER_CANVAS_ID, POSTER_WIDTH, POSTER_HEIGHT)
+        const tempFilePath = await exportCanvasWithRetry(
+          PERSONALITY_SHARE_POSTER_CANVAS_ID,
+          POSTER_WIDTH,
+          POSTER_HEIGHT,
+          [dpr, 1],
+          { autoCleanup: false },
+        )
+        if (settled) {
+          // The outer promise already rejected; own and release this late file.
+          try { Taro.getFileSystemManager().unlinkSync(tempFilePath) } catch { /* best-effort */ }
+          return
+        }
         settled = true
         clearTimeout(timeout)
 
@@ -929,6 +1082,7 @@ export async function generatePersonalitySharePoster(input: PersonalitySharePost
         logInfo('[sharePoster] Portrait poster generated', { width: POSTER_WIDTH, height: POSTER_HEIGHT, dpr })
         resolve(tempFilePath)
       } catch (error) {
+        if (settled) return
         settled = true
         clearTimeout(timeout)
         logWarn('[sharePoster] Portrait poster generation failed', { error: error instanceof Error ? error.message : String(error) })

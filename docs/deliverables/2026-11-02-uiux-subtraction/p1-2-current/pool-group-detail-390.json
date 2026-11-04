@@ -1,0 +1,17 @@
+{
+  "url": "http://localhost:5003/#/pages/pool-group-detail/index?groupId=group-screenshot-001&motion=reduce",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "timestamp": "2026-11-03T09:35:47.929Z",
+  "verdict": "PASS",
+  "summary": {
+    "total": 0,
+    "blocking": 0,
+    "advisory": 0,
+    "byCheck": {}
+  },
+  "screenshot": "docs/deliverables/2026-11-02-uiux-subtraction/p1-2-current/pool-group-detail-390.png",
+  "violations": []
+}

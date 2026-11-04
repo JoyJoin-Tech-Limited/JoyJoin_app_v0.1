@@ -530,13 +530,15 @@
     font-size: $font-size-xs;
     font-weight: 600;
 
+    // Savings pill speaks in the violet-foil family (2026-10-29) — matches
+    // the event-ticket-payment coupon stub across the two payment pages.
     &--savings {
       font-weight: 700;
-      background: rgba($color-secondary, 0.08);
+      background: rgba($color-primary-dark, 0.1);
     }
 
     &--savings-text {
-      color: $color-secondary;
+      color: $color-primary-dark;
       font-size: $font-size-xs;
       font-weight: 700;
     }

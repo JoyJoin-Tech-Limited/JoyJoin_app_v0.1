@@ -215,12 +215,14 @@ export function drawTextBlock(ctx: Taro.CanvasContext, options: {
  * Export canvas to temp file with DPR-aware retry.
  * Capped at DPR 2 universally for memory safety on
  * mid-range devices (1080×1920 at DPR 3 ≈ 74MB backing store).
+ * Pass `{ autoCleanup: false }` only when the caller owns temp-file lifetime.
  */
 export async function exportCanvasWithRetry(
   canvasId: string,
   width: number,
   height: number,
   dprValues: number[] = [2, 1],
+  options: { autoCleanup?: boolean } = {},
 ): Promise<string> {
   for (let attempt = 0; attempt < dprValues.length; attempt++) {
     const dpr = dprValues[attempt]
@@ -237,12 +239,14 @@ export async function exportCanvasWithRetry(
         quality: 1,
       })
 
-      setTimeout(() => {
-        try {
-          const fs = Taro.getFileSystemManager()
-          fs.unlinkSync(output.tempFilePath)
-        } catch {}
-      }, 60000)
+      if (options.autoCleanup !== false) {
+        setTimeout(() => {
+          try {
+            const fs = Taro.getFileSystemManager()
+            fs.unlinkSync(output.tempFilePath)
+          } catch {}
+        }, 60000)
+      }
 
       return output.tempFilePath
     } catch (error) {

@@ -204,6 +204,7 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
 @media (prefers-reduced-motion: reduce) {
   .welcome-gift-card__skeleton-text,
   .welcome-gift-card__skeleton-pill,
+  .welcome-gift-card__compact-skeleton,
   .welcome-gift-card__placeholder--shimmer {
     animation: none;
   }
@@ -263,6 +264,60 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
   font-size: $font-size-xs;
   line-height: $line-height-display;
   color: $color-text-secondary;
+}
+
+// Compact, read-only grant status used inside the unified Profile Review card.
+.welcome-gift-card--compact {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: auto;
+  min-height: 104rpx;
+  padding: $spacing-sm;
+  aspect-ratio: auto;
+  border: 2rpx solid rgba($color-primary, 0.1);
+  background: rgba($color-primary-light, 0.32);
+  box-shadow: none;
+}
+
+.welcome-gift-card__compact-image {
+  width: 104rpx;
+  height: 72rpx;
+  margin-right: $spacing-sm;
+  border-radius: $card-radius-sm;
+  flex-shrink: 0;
+}
+
+.welcome-gift-card__compact-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.welcome-gift-card__compact-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-display;
+  color: $color-text-primary;
+}
+
+.welcome-gift-card__compact-body {
+  margin-top: 4rpx;
+  font-size: $font-size-xs;
+  line-height: $line-height-relaxed;
+  color: $color-text-secondary;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.welcome-gift-card__compact-skeleton {
+  width: 100%;
+  height: 72rpx;
+  border-radius: $card-radius-sm;
+  background: rgba($color-primary, 0.1);
+  animation: gift-card-shimmer 1.6s ease-in-out infinite;
 }
 
 // Extra-tight fallback for very narrow screens so copy never collides with the illustration.

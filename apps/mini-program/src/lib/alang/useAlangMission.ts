@@ -15,14 +15,12 @@ import {
   callAbandonMission,
   callDebugReset,
   fetchStoryArchives,
-  fetchArchiveDetail,
 } from './api'
 import type { AlangMissionDetail } from '@shared/api'
 
 const ALANG_MISSIONS_KEY = ['alang', 'missions']
 const ALANG_MISSION_DETAIL_KEY = (slug: string) => ['alang', 'mission', slug]
 const ALANG_ARCHIVES_KEY = ['alang', 'archives']
-const ALANG_ARCHIVE_DETAIL_KEY = (id: string) => ['alang', 'archive', id]
 const ALANG_QUERY_ROOT = ['alang']
 const ALANG_RECOVER_MUTATION_KEY = ['alang', 'recover']
 
@@ -218,15 +216,6 @@ export function useStoryArchives(enabled = true) {
     queryKey: ALANG_ARCHIVES_KEY,
     queryFn: fetchStoryArchives,
     enabled,
-    staleTime: 60_000,
-  })
-}
-
-export function useArchiveDetail(archiveId: string, enabled = true) {
-  return useQuery({
-    queryKey: ALANG_ARCHIVE_DETAIL_KEY(archiveId),
-    queryFn: () => fetchArchiveDetail(archiveId),
-    enabled: !!archiveId && enabled,
     staleTime: 60_000,
   })
 }

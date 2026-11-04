@@ -1,5 +1,8 @@
 // ─── Brand Gradient ───────────────────────────────────────────────
-$brand-gradient-from: #FF6B9D;
+// 2026-10-29: gradient foot repointed from hot pink (#FF6B9D, never in the
+// brand palette) to true Warm Coral (#FF9B85) — keeps the coral→violet
+// hue-shift story honest across loading shells, TapRhythm, alang, etc.
+$brand-gradient-from: #FF9B85;
 $brand-gradient-to:   #A86BFF;
 $brand-gradient:      linear-gradient(135deg, #{$brand-gradient-from}, #{$brand-gradient-to});
 
@@ -7,7 +10,10 @@ $brand-gradient:      linear-gradient(135deg, #{$brand-gradient-from}, #{$brand-
 $color-primary:        #8B5CF6;
 $color-primary-dark:   #7C3AED;
 $color-primary-light:  #EDE9FE;
-$color-secondary:      #FF6B9D;
+// 2026-10-29: remapped from hot pink #FF6B9D to the canonical Warm Coral
+// #FF9B85 (brand palette). The old value read "girly/clinky" on coupon and
+// accent surfaces; coral stays warm without the candy register.
+$color-secondary:      #FF9B85;
 $color-brand-lavender: #C4B5FD;
 
 $color-bg:             #FAFAFA;
@@ -130,7 +136,10 @@ $color-info:           #2563EB;
 
 $color-landed-gold:    #FBBF24;
 $color-brand-gold:     #F0A030;
-$color-burst-pink:     #FF6B9D;
+// 2026-10-29: renamed from $color-burst-pink — the value is Warm Coral
+// #FF9B85 (brand palette), not pink. Class modifier `--pink` in
+// IcebreakerInclusionSheet retains its name for BEM-baseline compatibility.
+$color-burst-coral:    #FF9B85;
 
 // ─── Amber accent (rarity badges, warm highlights) ────────────────
 $color-amber:          #F59E0B;
@@ -316,10 +325,13 @@ $line-height-relaxed: 1.6;
 $line-height-loose:   1.75;
 
 // ─── Chemistry Indicator Tokens ────────────────────────────────────
+// 2026-10-29: warm tier moved from magenta (#BE185D on pink) to brick
+// #BE3D2E on coral — sits in the coral family, distinct from fire's
+// crimson (#DC2626) and calm's green.
 $chemistry-fire-bg:    rgba($color-error, 0.12);
 $chemistry-fire-text:  #DC2626;
 $chemistry-warm-bg:    rgba($color-secondary, 0.14);
-$chemistry-warm-text:  #BE185D;
+$chemistry-warm-text:  #BE3D2E;
 $chemistry-calm-bg:    rgba($color-success, 0.12);
 $chemistry-calm-text:  #059669;
 $chemistry-mild-bg:    rgba($color-primary-light, 0.96);

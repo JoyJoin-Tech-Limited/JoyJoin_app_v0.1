@@ -266,8 +266,6 @@ apps/mini-program/
 │   │   ├── icebreaker-session/    # Social icebreaker UI
 │   │   │   ├── phases/            # Phase view components (warmup, lie-detective, etc.)
 │   │   │   └── overlays/          # Overlays & modals (celebration, intro, etc.)
-│   │   ├── my-events/             # User's registered events
-│   │   ├── event-coordination/    # Event day coordination
 │   │   ├── event-feedback/        # Post-event feedback
 │   │   ├── profile/               # User profile view
 │   │   ├── profile-linked/        # Subpackage: profile-linked auxiliary pages
@@ -284,7 +282,7 @@ apps/mini-program/
 │   │   ├── ui/                    # UI primitives (Button, Card, FormStepper, etc.)
 │   │   ├── loading/               # Loading states & animations
 │   │   ├── mascot/                # Archetype & Xiaoyue visuals
-│   │   ├── onboarding/            # BoxJourneySpine (装盒进度), UnboxingCeremony (completion overlay)
+│   │   ├── onboarding/            # BoxJourneySpine (装盒进度), WelcomeGiftCard (compact gift status), UnboxingCeremony (inactive reference)
 │   │   ├── ConnectionPointPill/
 │   │   ├── GroupAnalysisSourceHint/
 │   │   └── VirtualList/

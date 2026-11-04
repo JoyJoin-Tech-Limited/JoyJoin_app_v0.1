@@ -136,12 +136,14 @@ async function pruneRemoteBranches() {
   }
 
   try {
-    // Fetch all remote branches via gh CLI
+    // Fetch all remote branches via gh CLI (paginated — the first page alone
+    // used to be capped at 100 names)
     const ghResult = spawnSync('gh', [
       'api',
+      '--paginate',
       `/repos/${repo}/branches?per_page=100`,
       '--jq', '.[].name',
-    ], { encoding: 'utf8', timeout: 30000 });
+    ], { encoding: 'utf8', timeout: 60000 });
 
     if (ghResult.status !== 0) {
       console.log(`   GitHub API error: ${ghResult.stderr}`);
@@ -151,22 +153,50 @@ async function pruneRemoteBranches() {
     const allBranches = ghResult.stdout.trim().split('\n').filter(Boolean);
     const alwaysKeep = new Set(['main', 'feat/mini-program-foundation']);
 
-    // Get merged branches via gh CLI
+    // Open pull requests are never safe to prune: deleting the head branch of
+    // an open PR leaves it unmergeable (2026-11-04: this function deleted
+    // `fix/shared-archetype-mix-test` while PR #658 was green and open).
+    const openResult = spawnSync('gh', [
+      'pr', 'list',
+      '--repo', repo,
+      '--state', 'open',
+      '--limit', '200',
+      '--json', 'headRefName',
+    ], { encoding: 'utf8', timeout: 30000 });
+
+    /** @type {Set<string>} */
+    const openPrBranches = new Set();
+    if (openResult.status === 0) {
+      try {
+        for (const pr of JSON.parse(openResult.stdout)) {
+          if (pr.headRefName) openPrBranches.add(pr.headRefName);
+        }
+      } catch {}
+    } else {
+      // Fail closed: without the open-PR list we cannot prove a branch is safe.
+      console.log('   Skipping: could not list open pull requests');
+      return;
+    }
+
+    // Merged pull requests are the only reliable "this work landed" signal for
+    // a squash-merging repo: the branch tip is never an ancestor of main.
     const mergedResult = spawnSync('gh', [
       'pr', 'list',
       '--repo', repo,
       '--state', 'merged',
-      '--limit', '100',
+      '--limit', '200',
       '--json', 'headRefName,mergedAt',
     ], { encoding: 'utf8', timeout: 30000 });
 
-    /** @type {Map<string, string>} */
-    const mergedBranches = new Map();
+    /** @type {Map<string, number>} */
+    const mergedAtByBranch = new Map();
     if (mergedResult.status === 0) {
       try {
-        const merges = JSON.parse(mergedResult.stdout);
-        for (const m of merges) {
-          if (m.headRefName) mergedBranches.set(m.headRefName, m.mergedAt);
+        for (const pr of JSON.parse(mergedResult.stdout)) {
+          const mergedTs = Date.parse(pr.mergedAt);
+          if (pr.headRefName && Number.isFinite(mergedTs)) {
+            mergedAtByBranch.set(pr.headRefName, mergedTs);
+          }
         }
       } catch {}
     }
@@ -174,11 +204,41 @@ async function pruneRemoteBranches() {
     const cutoff = Date.now() - BRANCH_STALE_DAYS * 86400000;
 
     let deleted = 0;
+    let candidates = 0;
     for (const branch of allBranches) {
       if (alwaysKeep.has(branch)) continue;
 
-      const mergedAt = mergedBranches.get(branch);
-      if (mergedAt && new Date(mergedAt).getTime() > cutoff) continue;
+      if (openPrBranches.has(branch)) {
+        results.skipped.push(`remote-branch:${branch}`);
+        continue;
+      }
+
+      const mergedTs = mergedAtByBranch.get(branch);
+      const mergedByAncestry = git(['merge-base', '--is-ancestor', `origin/${branch}`, 'origin/main']).ok;
+
+      // Neither signal means the branch still holds work main does not have.
+      if (mergedTs === undefined && !mergedByAncestry) {
+        results.skipped.push(`remote-branch:${branch}`);
+        continue;
+      }
+
+      const tip = git(['log', '-1', '--format=%ct', `origin/${branch}`]);
+      const tipTs = Number(tip.output) * 1000;
+      if (!tip.ok || !Number.isFinite(tipTs) || tipTs <= 0) {
+        results.skipped.push(`remote-branch:${branch}`);
+        continue;
+      }
+
+      // A commit pushed after the merge means the branch outlived its PR.
+      if (mergedTs !== undefined && tipTs > mergedTs + 60_000) {
+        results.skipped.push(`remote-branch:${branch}`);
+        continue;
+      }
+
+      const landedTs = mergedTs ?? tipTs;
+      if (landedTs > cutoff) continue;
+
+      candidates++;
 
       if (!DRY_RUN) {
         try {
@@ -201,12 +261,15 @@ async function pruneRemoteBranches() {
           results.skipped.push(`remote-branch:${branch}`);
         }
       } else {
-        console.log(`   [DRY RUN] Would delete remote: ${branch} (merged at ${mergedAt || 'unknown'})`);
+        console.log(`   [DRY RUN] Would delete remote: ${branch} (landed ${new Date(landedTs).toISOString()})`);
       }
     }
 
     if (DRY_RUN) {
-      console.log(`   Dry run: would delete up to ${allBranches.length - alwaysKeep.size} remote branches`);
+      const protect = openPrBranches.size + alwaysKeep.size;
+      console.log(`   Dry run: ${candidates} deletable remote branch(es); ${protect} protected by open PRs / always-keep`);
+    } else {
+      console.log(`   Deleted ${deleted} of ${candidates} deletable remote branch(es)`);
     }
   } catch (err) {
     console.log(`   Error: ${err.message}`);
@@ -231,12 +294,14 @@ async function pruneArtifacts() {
   }
 
   try {
-    // For simplicity, use artifacts API directly
+    // For simplicity, use artifacts API directly (paginated: the first page
+    // alone is 100 entries and the repo has had 500+ artifacts)
     const artifactsResult = spawnSync('gh', [
       'api',
+      '--paginate',
       `/repos/${repo}/actions/artifacts?per_page=100`,
       '--jq', '.artifacts[] | select(.expired == false) | "\\(.id)|\\(.name)|\\(.created_at)"',
-    ], { encoding: 'utf8', timeout: 30000 });
+    ], { encoding: 'utf8', timeout: 60000 });
 
     if (artifactsResult.status !== 0 && artifactsResult.status !== null) {
       console.log(`   gh API error: ${artifactsResult.stderr?.slice(0, 200)}`);

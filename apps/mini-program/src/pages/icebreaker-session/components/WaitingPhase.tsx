@@ -5,7 +5,7 @@ import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpression
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { DEFAULT_EVENT_GROUP_SIZE } from '@shared/constants'
 import type { VibeId } from '../../../lib/vibeMapping'
-import { ICE_WAITING_FOR_HOST_LINE } from '@shared/copy/icebreakerSession'
+import { ICE_WAITING_FOR_HOST_LINE, formatIceWaitingHostLine } from '@shared/copy/icebreakerSession'
 import { buildSessionActivityGuide } from '@shared/copy/eventActivityGuide'
 import { getPhaseLabel } from '../phaseUtils'
 import Card from '../../../components/ui/Card'
@@ -79,7 +79,7 @@ export default function WaitingPhase({
           />
           <Text className='icebreaker__waiting-l1-word'>{GLANCE_L1_WORD_WAITING}</Text>
           <Text className='icebreaker__waiting-l3'>
-            {`当前 ${playerCount} 人已加入${hostName ? ` · 主持人：${hostName}` : ''}`}
+            {`当前 ${playerCount} 人已加入${hostName ? ` · ${formatIceWaitingHostLine(hostName, isHost)}` : ''}`}
           </Text>
         </View>
         <View className='icebreaker__waiting-tier'>
@@ -121,7 +121,7 @@ export default function WaitingPhase({
         </Text>
         {hostName && (
           <Text className='icebreaker__waiting-host'>
-            主持人：{hostName}
+            {formatIceWaitingHostLine(hostName, isHost)}
           </Text>
         )}
 

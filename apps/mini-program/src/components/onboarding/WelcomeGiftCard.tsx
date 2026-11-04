@@ -2,7 +2,6 @@ import { View, Text, Image } from '@tarojs/components'
 import { useCdnFirstSrc } from '../../lib/utils/cdnAssets'
 import { formatCouponValidUntilLabel } from '../../lib/utils/couponValidity'
 import { haptics } from '../../lib/utils/haptics'
-import './WelcomeGiftCard.scss'
 
 export interface WelcomeGiftCardProps {
   /**
@@ -31,6 +30,8 @@ export interface WelcomeGiftCardProps {
   reduceMotion?: boolean
   /** When true, renders a skeleton placeholder instead of coupon content. */
   isLoading?: boolean
+  /** Compact, non-interactive status row for the unified entry card. */
+  compact?: boolean
 }
 
 const COUPON_IMAGE_PATH = '/assets/lovart/gift-card/coupon.webp'
@@ -69,6 +70,7 @@ export default function WelcomeGiftCard({
   visible = true,
   reduceMotion = false,
   isLoading = false,
+  compact = false,
 }: WelcomeGiftCardProps): JSX.Element {
   const handleTap = () => {
     haptics('light')
@@ -85,10 +87,43 @@ export default function WelcomeGiftCard({
     visible ? 'welcome-gift-card--visible' : '',
     reduceMotion ? 'welcome-gift-card--reduce-motion' : '',
     isLoading ? 'welcome-gift-card--loading' : '',
+    compact ? 'welcome-gift-card--compact' : '',
     className,
   ]
     .filter(Boolean)
     .join(' ')
+
+  if (compact) {
+    return (
+      <View
+        className={rootClass}
+        role='status'
+        aria-live='polite'
+        aria-label={isLoading ? '悦仔见面礼确认中' : `见面礼已放入权益，${badgeLabel}，报名可用`}
+      >
+        {isLoading ? (
+          <View className='welcome-gift-card__compact-skeleton' aria-hidden='true' />
+        ) : (
+          <>
+            <Image
+              className='welcome-gift-card__compact-image'
+              src={imageSrc}
+              mode='aspectFill'
+              lazyLoad={false}
+              onError={onImageError}
+              aria-hidden='true'
+            />
+            <View className='welcome-gift-card__compact-copy'>
+              <Text className='welcome-gift-card__compact-title'>见面礼已放入权益</Text>
+              <Text className='welcome-gift-card__compact-body'>
+                {badgeLabel} · 报名可用{validityHint ? ` · 有效期至 ${validityHint}` : ''}
+              </Text>
+            </View>
+          </>
+        )}
+      </View>
+    )
+  }
 
   if (isLoading) {
     return (

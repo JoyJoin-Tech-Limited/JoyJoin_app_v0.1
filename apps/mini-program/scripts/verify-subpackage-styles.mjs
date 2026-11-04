@@ -386,16 +386,16 @@ const REQUIREMENTS = [
   },
   {
     page: 'pages/onboarding/profile-review/index.wxss',
-    // welcome-gift-card + invite radar: restored on-page 2026-09-07; both
-    // components side-effect-import their SCSS — assert the page WXSS keeps
-    // them (pre-incident shape of the 2026-07/08 blank-surface regressions).
+    // The unified entry card co-compiles its compact gift status and inline
+    // completion feedback. The duplicate invite radar was removed 2026-10-30.
     // insight-reveal (entry-card-insight-v2, 2026-10-14): the component has no
     // TSX-side SCSS import; its rules are @use'd by the page SCSS. If the @use
     // is dropped, the staged 「悦仔的观察」 rows render unstyled on device.
     selectors: [
       'xiaoyue-inline-error{',
       'welcome-gift-card{',
-      'profile-review-invite-card__radar{',
+      'welcome-gift-card__compact-title{',
+      'profile-review__completion{',
       'insight-reveal__card{',
       'insight-reveal__evidence-pill{',
       // Amendment A1 (AC-16): aggregated AIGC footer row.

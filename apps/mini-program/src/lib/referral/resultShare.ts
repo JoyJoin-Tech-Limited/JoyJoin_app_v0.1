@@ -43,19 +43,3 @@ export function buildPersonalityResultTimelineQuery(referralCode?: string | null
   const base = 'source=personality-result'
   return code ? `${base}&invitationCode=${encodeURIComponent(code)}` : base
 }
-
-/**
- * 悦仔-voice reward nudge under the share CTA (results final stage).
- * Generic by design — reward tiers are coupon-denominated and may change, so
- * the line never promises an amount or discount.
- */
-export const RESULT_SHARE_REWARD_HINT = '朋友完成测试，你就多一张券'
-
-/**
- * The reward promise is only true when the share actually carries attribution
- * — an anonymous sharer (or a failed stats fetch) produces a code-less share
- * that earns nothing, so the hint renders only when a code exists.
- */
-export function getResultShareRewardHint(referralCode?: string | null): string {
-  return normalizeReferralCode(referralCode) ? RESULT_SHARE_REWARD_HINT : ''
-}

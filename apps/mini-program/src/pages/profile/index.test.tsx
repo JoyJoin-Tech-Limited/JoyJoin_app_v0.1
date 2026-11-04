@@ -276,7 +276,7 @@ describe('Profile approved V4 layout', () => {
     })
   })
 
-  it('shows a recovery state instead of an undressed avatar when the outfit payload is missing', () => {
+  it('keeps the canonical base avatar visible with one retry owner when the outfit payload is missing', () => {
     state.queryStates.set('mini-program/equipment/me', {
       data: {
         archetypeId: 'corgi',
@@ -289,11 +289,13 @@ describe('Profile approved V4 layout', () => {
       },
     })
 
-    const { container, getAllByText, getByText } = render(<ProfilePage />)
+    const { container, getByRole, getByText, queryByText } = render(<ProfilePage />)
 
     expect(getByText('装备暂未同步')).toBeTruthy()
-    expect(getAllByText('待重试').length).toBeGreaterThan(0)
-    expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
+    expect(getByRole('button', { name: '重新同步装备' })).toBeTruthy()
+    expect(queryByText('待重试')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    expect(container.querySelector('.profile-page__partner-equipment-placeholder-bar')).toBeNull()
     expect(container.querySelector('.profile-page__partner-image')).toBeNull()
   })
 
@@ -308,7 +310,8 @@ describe('Profile approved V4 layout', () => {
 
     expect(getByText('装备同步中…')).toBeTruthy()
     expect(queryByText('0 件')).toBeNull()
-    expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    expect(container.querySelector('.profile-page__partner-equipment-placeholder-bar')).toBeNull()
   })
 
   it('falls back to the retry state when equipment sync stalls past the UI deadline', () => {
@@ -330,7 +333,8 @@ describe('Profile approved V4 layout', () => {
 
       expect(getByText('装备暂未同步')).toBeTruthy()
       expect(queryByText('装备同步中…')).toBeNull()
-      expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
+      expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+      expect(container.querySelector('.profile-page__partner-equipment-placeholder-bar')).toBeNull()
     } finally {
       vi.useRealTimers()
     }
@@ -347,7 +351,10 @@ describe('Profile approved V4 layout', () => {
 
     expect(getByText('装备暂未同步')).toBeTruthy()
     expect(queryByText('0 件')).toBeNull()
-    expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
+    expect(queryByText('待重试')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    expect(container.querySelector('.profile-page__partner-equipment-placeholder-bar')).toBeNull()
+    expect(container.querySelectorAll('[aria-label="重新同步装备"]')).toHaveLength(1)
 
     fireEvent.click(getByRole('button', { name: '重新同步装备' }))
     expect(state.equipmentRefetch).toHaveBeenCalledTimes(1)
@@ -633,6 +640,18 @@ describe('Profile approved V4 layout', () => {
     expect(follows(badges, story)).toBe(true)
     expect(follows(story, quest)).toBe(true)
     expect(follows(quest, settings)).toBe(true)
+  })
+
+  it('P2-1: every data-band metric has explicit value, label, and progress rows', () => {
+    const { container } = render(<ProfilePage />)
+    const cells = Array.from(container.querySelectorAll('.profile-page__data-band-cell'))
+
+    expect(cells).toHaveLength(3)
+    for (const cell of cells) {
+      expect(cell.querySelector('.profile-page__data-band-value-row')).toBeTruthy()
+      expect(cell.querySelector('.profile-page__data-band-label-row')).toBeTruthy()
+      expect(cell.querySelector('.profile-page__data-band-progress-row')).toBeTruthy()
+    }
   })
 
   it('P2-3: 存下这张卡 entry renders under the story card when an archetype exists', () => {

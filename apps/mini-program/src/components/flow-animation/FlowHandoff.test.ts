@@ -10,15 +10,14 @@ const poolRegistrationScss = readFileSync(
   resolve(process.cwd(), 'src/pages/pool-registration/index.scss'),
   'utf8',
 )
-describe('onboarding completion single-ceremony rule (PR-5)', () => {
-  it('routes every completion through the UnboxingCeremony — no intro branch', () => {
-    // The 双仪式 either/or is gone: handleComplete must always mount the
-    // ceremony and handleCeremonyComplete must navigate directly.
+describe('onboarding completion inline-ceremony rule (2026-10-30)', () => {
+  it('confirms in place and routes directly — no separate ceremony step or duplicate summary', () => {
     expect(profileReviewSource).not.toContain('JoyJoinIntroFlow')
-    expect(profileReviewSource).not.toContain('setIntroNextStep')
-    expect(profileReviewSource).not.toContain('handleIntroComplete')
-    expect(profileReviewSource).not.toContain('shouldShowFlow')
-    expect(profileReviewSource).toContain('setShowCeremony(true)')
+    expect(profileReviewSource).not.toContain('UnboxingCeremony')
+    expect(profileReviewSource).not.toContain('ProfileReviewInviteCard')
+    expect(profileReviewSource).not.toContain('profile-review__footer-reserve')
+    expect(profileReviewSource).toContain('useProfileReviewCompletion')
+    expect(profileReviewSource).toContain('profile-review__completion')
   })
 
   it('bundles the shared flow visuals into the Flow 2 host page', () => {

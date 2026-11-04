@@ -86,8 +86,6 @@ const requiredPages = [
   'dialogue/index',
   'companion/index',
   'result/index',
-  'story-detail/index',
-  'preferences/index',
   'debug/index',
 ]
 

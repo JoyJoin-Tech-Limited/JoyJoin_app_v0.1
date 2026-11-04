@@ -93,28 +93,34 @@ export default function ProfilePartnerVisual({
           role='status'
           aria-live='polite'
         >
-          <View className='profile-page__partner-equipment-placeholder' aria-hidden='true'>
-            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--short' />
-            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--tall' />
-            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--medium' />
+          <View className='profile-page__partner-pixel'>
+            <PixelAvatarComposite
+              archetypeId={archetype}
+              outfit={outfit ?? EMPTY_EQUIPMENT_OUTFIT}
+              itemsById={itemsById}
+              variant='compact'
+              className='profile-page__partner-pixel-composite'
+            />
           </View>
-          <Text className='profile-page__partner-equipment-state-title'>
-            {isError ? '装备暂未同步' : '装备同步中…'}
-          </Text>
-          <Text className='profile-page__partner-equipment-state-copy'>
-            {isError ? '已保存的搭配不会丢失' : '正在取回你已保存的搭配'}
-          </Text>
-          {isError && (
-            <View
-              className='profile-page__partner-equipment-retry'
-              hoverClass='profile-page__partner-equipment-retry--pressed'
-              onClick={onRetryEquipment}
-              role='button'
-              aria-label='重新同步装备'
-            >
-              <Text>重试</Text>
-            </View>
-          )}
+          <View className='profile-page__partner-equipment-state-panel'>
+            <Text className='profile-page__partner-equipment-state-title'>
+              {isError ? '装备暂未同步' : '装备同步中…'}
+            </Text>
+            <Text className='profile-page__partner-equipment-state-copy'>
+              {isError ? '已保存的搭配不会丢失' : '正在取回你已保存的搭配'}
+            </Text>
+            {isError && (
+              <View
+                className='profile-page__partner-equipment-retry'
+                hoverClass='profile-page__partner-equipment-retry--pressed'
+                onClick={onRetryEquipment}
+                role='button'
+                aria-label='重新同步装备'
+              >
+                <Text>重试</Text>
+              </View>
+            )}
+          </View>
         </View>
       )
     }

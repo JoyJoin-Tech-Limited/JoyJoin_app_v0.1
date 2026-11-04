@@ -55,6 +55,26 @@ describe('personality results orchestration split', () => {
     expect(loginSource).toContain("analytics.errorOccurred('login_handoff_failed', message, { reason })")
   })
 
+  it('wires the truthful auth fallback without synthetic result claims or referral rewards', () => {
+    expect(pageSource).toContain('buildAuthUserResultState(auth.user)')
+    expect(pageSource).not.toMatch(/score:\s*100|confidence:\s*1|archetypeConfidence:\s*1|isDecisive:\s*true/)
+    expect(pageSource).not.toMatch(/getResultShareRewardHint|shareRewardHint/)
+    expect(pageSource).toContain('buildPersonalityResultSharePath(shareReferralCode)')
+    expect(pageSource).toContain('buildPersonalityResultTimelineQuery(shareReferralCode)')
+  })
+
+  it('composes card metadata without inventing serial, rank, skills, or mixed-auth identity', () => {
+    expect(pageSource).toContain('buildResultCardComposition({')
+    expect(pageSource).toContain('archetype: displayArchetype')
+    expect(pageSource).toContain('sessionId: sessionSnapshot?.sessionId')
+    expect(pageSource).toContain('authUserArchetype: authUserResult?.result.primaryArchetype ?? null')
+    expect(pageSource).not.toContain("?? 'unknown'")
+    expect(pageSource).not.toContain('return 1')
+    expect(pageSource).toContain('skillSet={skillSet}')
+    expect(pageSource).toContain('archetypeRank={archetypeRank}')
+    expect(pageSource).toContain('serialNumber={serialNumber}')
+  })
+
   it('keeps the stage dispatch JSX and hidden canvases on the page', () => {
     expect(pageSource).toContain("case 'slot':")
     expect(pageSource).toContain("case 'reveal':")

@@ -60,6 +60,17 @@ export interface IcebreakerSessionInfo {
 
 export const ICEBREAKER_STALL_THRESHOLD_MINUTES = 20;
 
+/**
+ * `icebreaker_sessions.id` → `social_icebreaker_sessions.id`.
+ *
+ * The console lists the former; every admin recovery route
+ * (`/api/admin/social-icebreaker/:socialSessionId/...`) expects the latter.
+ * Mirrors `toSocialSessionId` in `apps/server/src/lib/socialIcebreakerStore.ts`.
+ */
+export function toSocialSessionId(icebreakerSessionId: string): string {
+  return `social_${icebreakerSessionId}`;
+}
+
 export function deriveIcebreakerStatus(
   session: IcebreakerSessionInfo | undefined | null,
 ): IcebreakerLiveStatus | null {
@@ -82,6 +93,20 @@ export function findSessionForEvent(
   const byId = sessions.find((s) => s.eventId && s.eventId === event.id);
   if (byId) return byId;
   return sessions.find((s) => !s.eventId && s.eventTitle === event.title);
+}
+
+/**
+ * Show 「转移主持」 only once a session is actually running.
+ *
+ * Before `startedAt` the session is still in `waiting` — nobody is frozen yet,
+ * and the first caller is by definition the host, so a transfer action would be
+ * a solution without a problem. The console cannot see the roster, so whether a
+ * second human exists is settled by the server (409 `NO_ELIGIBLE_PARTICIPANT`).
+ */
+export function shouldShowTransferHostAction(
+  session: IcebreakerSessionInfo | undefined | null,
+): boolean {
+  return Boolean(session && session.startedAt);
 }
 
 export interface WarRoomPool {

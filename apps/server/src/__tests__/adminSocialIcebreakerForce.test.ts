@@ -229,6 +229,58 @@ describe('AC-W1.3 admin transfer-host', () => {
     });
   });
 
+  // 2026-11-03 (P0): the auto-select branch refuses bots via
+  // pickAutoHostCandidate; the explicit-target branch must enforce the same
+  // invariant, otherwise `{ newHostUserId: '<bot>' }` freezes the room (a bot
+  // never advances a phase).
+  it('refuses to promote a simulated bot on the explicit path', async () => {
+    h.getSessionWithExpiry = vi.fn(async () => ({ state: baseSession(), expired: false }));
+    h.getParticipant = vi.fn(async () => ({ displayName: 'Bot 1', isTestBot: true }));
+    await withServer(buildApp(), async (base) => {
+      const res = await fetch(`${base}/api/admin/social-icebreaker/social_w1-admin/transfer-host`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ newHostUserId: 'bot-1' }),
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { code: string };
+      expect(body.code).toBe('TARGET_IS_TEST_BOT');
+      expect(h.transferHost).not.toHaveBeenCalled();
+      expect(h.audit).not.toHaveBeenCalled();
+    });
+  });
+
+  it('still allows a human target when the roster contains bots', async () => {
+    h.getSessionWithExpiry = vi.fn(async () => ({ state: baseSession(), expired: false }));
+    h.getParticipant = vi.fn(async () => ({ displayName: 'P2', isTestBot: false }));
+    await withServer(buildApp(), async (base) => {
+      const res = await fetch(`${base}/api/admin/social-icebreaker/social_w1-admin/transfer-host`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ newHostUserId: 'p2' }),
+      });
+      expect(res.status).toBe(200);
+      expect(h.transferHost).toHaveBeenCalledWith('social_w1-admin', 'p2', 'P2');
+    });
+  });
+
+  // P3 (2026-11-03): the audit row answers "how long was the table frozen?"
+  it('records the phase and frozen minutes in the audit context', async () => {
+    h.getSessionWithExpiry = vi.fn(async () => ({ state: baseSession(), expired: false }));
+    await withServer(buildApp(), async (base) => {
+      const res = await fetch(`${base}/api/admin/social-icebreaker/social_w1-admin/transfer-host`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ newHostUserId: 'p2' }),
+      });
+      expect(res.status).toBe(200);
+      const record = h.audit.mock.calls[0][0];
+      expect(record.context.fromPhase).toBe('auction');
+      expect(typeof record.context.frozenMinutes).toBe('number');
+      expect(record.context.frozenMinutes).toBeGreaterThanOrEqual(2);
+    });
+  });
+
   it('viewer is rejected with 403', async () => {
     h.getSessionWithExpiry = vi.fn(async () => ({ state: baseSession(), expired: false }));
     await withServer(buildApp(), async (base) => {

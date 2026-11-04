@@ -48,6 +48,17 @@ Base: `/api/social-icebreaker`
 
 Mini-script has its own top-level route: `POST /api/miniscript/generate`.
 
+### Admin recovery routes
+
+Base: `/api/admin/social-icebreaker` (operator / super_admin)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/:socialSessionId/force-end` | Jump the session to `recap` through `transitionPhase` |
+| `POST` | `/:socialSessionId/transfer-host` | Body `{ newHostUserId? }`; omitted target = most recently active non-host **human**. `already_host` is idempotent; simulated bots are rejected with `400 TARGET_IS_TEST_BOT`. Audit `SOCIAL_ICEBREAKER_HOST_TRANSFERRED` records `fromPhase` + `frozenMinutes` |
+
+Console entry: admin War Room 「转移主持」, visible only when `shouldShowTransferHostAction(session)` is true (`startedAt` set).
+
 ## State Store Schema
 
 **`social_icebreaker_sessions`**
@@ -58,11 +69,13 @@ Mini-script has its own top-level route: `POST /api/miniscript/generate`.
 - `phase_started_at`, `session_started_at`, `expires_at` (6h TTL)
 - `state_json`: full `SocialSessionState` JSONB
 
+`updateSession()` is read-modify-write with no version column. Phase advancement passes `{ expectedPhase }` to make the write a compare-and-swap on `current_phase`; a miss returns `false` and the route answers `409 PHASE_CONFLICT` with fresh state.
+
 **`social_icebreaker_participants`**
 - `id` (uuid PK)
 - `social_session_id` (FK, cascade)
 - `user_id`, `display_name`
-- `joined_at`, `last_seen_at`
+- `is_test_bot`, `joined_at`, `last_seen_at`
 
 Unique index on `(social_session_id, user_id)`.
 

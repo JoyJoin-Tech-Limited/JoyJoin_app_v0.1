@@ -10,7 +10,6 @@ import {
   completeAlangMission,
   abandonAlangMission,
   getAlangStoryArchives,
-  getAlangArchiveDetail,
   alangDebugForceNode,
   alangDebugReset,
   alangDebugMockGps,
@@ -57,10 +56,6 @@ export async function callAbandonMission(slug: string) {
 
 export async function fetchStoryArchives() {
   return getAlangStoryArchives(apiRequest)
-}
-
-export async function fetchArchiveDetail(archiveId: string) {
-  return getAlangArchiveDetail(apiRequest, archiveId)
 }
 
 export async function callDebugForceNode(slug: string, nodeId: string) {

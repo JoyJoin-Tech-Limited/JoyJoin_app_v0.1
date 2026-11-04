@@ -7,6 +7,7 @@ import {
   fillRoundedRect,
   strokeRoundedRect,
   clipRoundedRect,
+  exportCanvasWithRetry,
 } from './canvasHelpers'
 import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 
@@ -91,6 +92,34 @@ function splitText(text: string, maxChars: number, maxLines = 2): string[] {
   const last = trimmed[maxLines - 1] ?? ''
   trimmed[maxLines - 1] = `${last.slice(0, Math.max(last.length - 1, 1))}…`
   return trimmed
+}
+
+/** Fit personality-square single-line copy by measurement, never by clipping. */
+function fitSquareTextToWidth(
+  ctx: Taro.CanvasContext,
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+): string {
+  const normalized = text.trim()
+  if (!normalized || maxWidth <= 0) return ''
+  ctx.save()
+  ctx.setFontSize(fontSize)
+  if (ctx.measureText(normalized).width <= maxWidth) {
+    ctx.restore()
+    return normalized
+  }
+  const chars = Array.from(normalized)
+  let low = 0
+  let high = chars.length
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2)
+    const candidate = `${chars.slice(0, mid).join('')}…`
+    if (ctx.measureText(candidate).width <= maxWidth) low = mid
+    else high = mid - 1
+  }
+  ctx.restore()
+  return low > 0 ? `${chars.slice(0, low).join('')}…` : ''
 }
 
 function drawTextBlock(
@@ -216,6 +245,56 @@ function exportCanvas(
   })
 }
 
+// Personality exports remain alive for the sharing flow's pending actions.
+// Group-reveal intentionally continues through the legacy exportCanvas above.
+function exportPersonalitySquareCanvas(
+  ctx: Taro.CanvasContext,
+  canvasId: string,
+  width: number,
+  height: number,
+): Promise<string> {
+  const sys = getWindowInfoCompat()
+  const mult = Math.min(Math.max(sys.pixelRatio || 2, 1), 2)
+  const DRAW_TIMEOUT_MS = 15_000
+
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        reject(new Error('Canvas draw timed out'))
+      }
+    }, DRAW_TIMEOUT_MS)
+
+    ctx.draw(false, async () => {
+      if (settled) return
+      try {
+        const tempFilePath = await exportCanvasWithRetry(
+          canvasId,
+          width,
+          height,
+          [mult, 1],
+          { autoCleanup: false },
+        )
+        if (settled) {
+          // The outer promise already rejected; own and release this late file.
+          try { Taro.getFileSystemManager().unlinkSync(tempFilePath) } catch { /* best-effort */ }
+          return
+        }
+        settled = true
+        clearTimeout(timeout)
+        try { ctx.clearRect(0, 0, width, height) } catch {}
+        resolve(tempFilePath)
+      } catch (error) {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        reject(error)
+      }
+    })
+  })
+}
+
 // ─── Square Poster compact helpers ───────────────────────────────────────────
 
 function clampPercent(value: number): number {
@@ -246,7 +325,10 @@ function drawCompactTraitBars(
   traitEntries: { label: string; value: number }[],
   accentColor: string,
 ): number {
-  const entries = traitEntries.slice(0, 3)
+  const entries = traitEntries
+    .filter((entry) => Boolean(entry.label?.trim()) && Number.isFinite(entry.value))
+    .slice(0, 3)
+    .map((entry) => ({ label: entry.label.trim(), value: clampPercent(entry.value) }))
   const rowHeight = 18
   const trackHeight = 8
   const trackRadius = 4
@@ -259,13 +341,16 @@ function drawCompactTraitBars(
     const rowY = y + index * rowHeight
 
     // Label
-    ctx.save()
-    ctx.setFillStyle(PALETTE.textMuted)
-    ctx.setFontSize(14)
-    ctx.setTextAlign('left')
-    ctx.setTextBaseline('middle')
-    ctx.fillText(entry.label, x, rowY + trackHeight / 2)
-    ctx.restore()
+    const label = fitSquareTextToWidth(ctx, entry.label, labelWidth, 14)
+    if (label) {
+      ctx.save()
+      ctx.setFillStyle(PALETTE.textMuted)
+      ctx.setFontSize(14)
+      ctx.setTextAlign('left')
+      ctx.setTextBaseline('middle')
+      ctx.fillText(label, x, rowY + trackHeight / 2)
+      ctx.restore()
+    }
 
     // Value
     ctx.save()
@@ -347,44 +432,43 @@ function drawSkillBadges(
 ): number {
   const badgeHeight = 24
   const badgeRadius = 12
-  const gap = 10
+  const entries = [
+    { name: skillSet.activeSkill.name?.trim() ?? '', fill: PALETTE.activeSkillBg, color: PALETTE.activeSkillText },
+    { name: skillSet.passiveSkill.name?.trim() ?? '', fill: PALETTE.passiveSkillBg, color: PALETTE.passiveSkillText },
+  ].filter((entry) => Boolean(entry.name))
+  if (entries.length === 0) return 0
+  const gap = entries.length === 2 ? 10 : 0
 
-  // Measure texts to size badges
   ctx.save()
   ctx.setFontSize(13)
-
-  const activeText = skillSet.activeSkill.name || '主动技'
-  const passiveText = skillSet.passiveSkill.name || '被动技'
-
-  const activeTextWidth = ctx.measureText(activeText).width
-  const passiveTextWidth = ctx.measureText(passiveText).width
+  const widths = entries.map((entry) => Math.round(ctx.measureText(entry.name).width + 18))
   ctx.restore()
 
-  const activeBadgeWidth = Math.round(activeTextWidth + 18)
-  const passiveBadgeWidth = Math.round(passiveTextWidth + 18)
-  const totalWidth = activeBadgeWidth + gap + passiveBadgeWidth
-  const startX = x + (width - totalWidth) / 2
+  const requestedWidth = widths.reduce((sum, badgeWidth) => sum + badgeWidth, 0) + gap
+  if (requestedWidth > width) {
+    const scale = Math.max(0, width - gap) / (requestedWidth - gap)
+    for (let index = 0; index < widths.length; index++) {
+      widths[index] = Math.floor(widths[index] * scale)
+    }
+  }
+  const totalWidth = widths.reduce((sum, badgeWidth) => sum + badgeWidth, 0) + gap
+  let badgeX = x + (width - totalWidth) / 2
 
-  // Active badge — warm peach
-  fillRoundedRect(ctx, startX, y, activeBadgeWidth, badgeHeight, badgeRadius, PALETTE.activeSkillBg)
-  ctx.save()
-  ctx.setFillStyle(PALETTE.activeSkillText)
-  ctx.setFontSize(13)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.fillText(activeText, startX + activeBadgeWidth / 2, y + badgeHeight / 2)
-  ctx.restore()
-
-  // Passive badge — cool lavender
-  const passiveX = startX + activeBadgeWidth + gap
-  fillRoundedRect(ctx, passiveX, y, passiveBadgeWidth, badgeHeight, badgeRadius, PALETTE.passiveSkillBg)
-  ctx.save()
-  ctx.setFillStyle(PALETTE.passiveSkillText)
-  ctx.setFontSize(13)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.fillText(passiveText, passiveX + passiveBadgeWidth / 2, y + badgeHeight / 2)
-  ctx.restore()
+  entries.forEach((entry, index) => {
+    const badgeWidth = widths[index]
+    const text = fitSquareTextToWidth(ctx, entry.name, badgeWidth - 18, 13)
+    fillRoundedRect(ctx, badgeX, y, badgeWidth, badgeHeight, badgeRadius, entry.fill)
+    if (text) {
+      ctx.save()
+      ctx.setFillStyle(entry.color)
+      ctx.setFontSize(13)
+      ctx.setTextAlign('center')
+      ctx.setTextBaseline('middle')
+      ctx.fillText(text, badgeX + badgeWidth / 2, y + badgeHeight / 2)
+      ctx.restore()
+    }
+    badgeX += badgeWidth + gap
+  })
 
   return badgeHeight
 }
@@ -401,11 +485,11 @@ function drawRankSerialChip(
   const badgeRadius = 12
 
   const parts: string[] = []
-  if (typeof archetypeRank === 'number' && archetypeRank > 0) {
+  if (typeof archetypeRank === 'number' && Number.isFinite(archetypeRank) && archetypeRank > 0) {
     parts.push(`氛围编号 #${archetypeRank}`)
   }
-  if (serialNumber) {
-    parts.push(serialNumber)
+  if (serialNumber.trim()) {
+    parts.push(serialNumber.trim())
   }
   if (parts.length === 0) return 0
 
@@ -422,15 +506,18 @@ function drawRankSerialChip(
   strokeRoundedRect(ctx, badgeX, y, badgeWidth, badgeHeight, badgeRadius, 'rgba(139,92,246,0.15)', 1)
 
   // Debossed serial (portrait parity — letterpress dent on the plaque).
-  ctx.save()
-  ctx.setFontSize(13)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.setFillStyle('rgba(255, 255, 255, 0.65)')
-  ctx.fillText(text, badgeX + badgeWidth / 2, y + badgeHeight / 2 + 1)
-  ctx.setFillStyle(PALETTE.textMuted)
-  ctx.fillText(text, badgeX + badgeWidth / 2, y + badgeHeight / 2)
-  ctx.restore()
+  const fittedText = fitSquareTextToWidth(ctx, text, badgeWidth - 22, 13)
+  if (fittedText) {
+    ctx.save()
+    ctx.setFontSize(13)
+    ctx.setTextAlign('center')
+    ctx.setTextBaseline('middle')
+    ctx.setFillStyle('rgba(255, 255, 255, 0.65)')
+    ctx.fillText(fittedText, badgeX + badgeWidth / 2, y + badgeHeight / 2 + 1)
+    ctx.setFillStyle(PALETTE.textMuted)
+    ctx.fillText(fittedText, badgeX + badgeWidth / 2, y + badgeHeight / 2)
+    ctx.restore()
+  }
 
   return badgeHeight
 }
@@ -529,29 +616,48 @@ export async function generatePersonalitySquarePoster(
   drawGlow(M + 36, M + cardH - 52, 130, 'rgba(255, 248, 220, 0.4)')
   ctx.restore()
 
-  // Top chrome — in-app dark typicality chip + quiet brand lockup
-  const chipText = input.typicalityChip || '悦聚氛围卡'
+  // Top chrome — omit the typicality chip when unknown; keep the brand lockup.
+  const brandText = 'JOYJOIN · 悦聚'
+  const brandX = M + cardW - 24
   ctx.save()
-  ctx.setFontSize(15)
-  const chipTextWidth = ctx.measureText(chipText).width
+  ctx.setFontSize(14)
+  const brandWidth = ctx.measureText(brandText).width
   ctx.restore()
-  drawBadge(ctx, chipText, M + 24, M + 20, Math.ceil(chipTextWidth) + 36, 30, 15, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
+  const requestedChip = input.typicalityChip?.trim() ?? ''
+  if (requestedChip) {
+    const chipX = M + 24
+    ctx.save()
+    ctx.setFontSize(15)
+    const requestedWidth = Math.ceil(ctx.measureText(requestedChip).width) + 36
+    ctx.restore()
+    const maxChipWidth = Math.max(0, Math.floor(brandX - brandWidth - 20 - chipX))
+    const chipWidth = Math.min(requestedWidth, maxChipWidth)
+    // drawBadge renders 30px-high chips at 17px (not the legacy 15px measure).
+    // Eight-pixel side allowances preserve both 典型 and 非典型 canonical labels.
+    const chipText = fitSquareTextToWidth(ctx, requestedChip, chipWidth - 16, Math.round(30 * 0.55))
+    if (chipText) {
+      drawBadge(ctx, chipText, chipX, M + 20, chipWidth, 30, 15, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
+    }
+  }
   ctx.save()
   ctx.setFillStyle(PALETTE.textMuted)
   ctx.setFontSize(14)
   ctx.setTextAlign('right')
   ctx.setTextBaseline('middle')
-  ctx.fillText('JOYJOIN · 悦聚', M + cardW - 24, M + 35)
+  ctx.fillText(brandText, brandX, M + 35)
   ctx.restore()
 
-  // Archetype name (large, centered)
-  ctx.save()
-  ctx.setFillStyle(PALETTE.textDark)
-  ctx.setFontSize(46)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('top')
-  ctx.fillText(input.archetype, S / 2, M + 64)
-  ctx.restore()
+  // Archetype name (large, centered, measured within the card).
+  const archetypeText = fitSquareTextToWidth(ctx, input.archetype, cardW - 64, 46)
+  if (archetypeText) {
+    ctx.save()
+    ctx.setFillStyle(PALETTE.textDark)
+    ctx.setFontSize(46)
+    ctx.setTextAlign('center')
+    ctx.setTextBaseline('top')
+    ctx.fillText(archetypeText, S / 2, M + 64)
+    ctx.restore()
+  }
 
   // Hero image (circular, metallic coin ring + inner rim + accent halo)
   const imgSize = 160
@@ -630,11 +736,11 @@ export async function generatePersonalitySquarePoster(
   // 3 compact trait bars
   if (input.traitEntries && input.traitEntries.length > 0) {
     const traitHeight = drawCompactTraitBars(ctx, contentX, cursorY, contentW, input.traitEntries, accentColor)
-    cursorY += traitHeight + 6
+    if (traitHeight > 0) cursorY += traitHeight + 6
   }
 
   // Energy bar
-  if (typeof input.energyLevel === 'number') {
+  if (typeof input.energyLevel === 'number' && Number.isFinite(input.energyLevel)) {
     const energyHeight = drawCompactEnergyBar(ctx, contentX, cursorY, contentW, input.energyLevel)
     cursorY += energyHeight + 6
   }
@@ -642,11 +748,14 @@ export async function generatePersonalitySquarePoster(
   // Skill badges
   if (input.skillSet) {
     const skillHeight = drawSkillBadges(ctx, contentX, cursorY, contentW, input.skillSet)
-    cursorY += skillHeight + 6
+    if (skillHeight > 0) cursorY += skillHeight + 6
   }
 
   // Rank + serial chip
-  if ((typeof input.archetypeRank === 'number' && input.archetypeRank > 0) || input.serialNumber) {
+  const hasRank = typeof input.archetypeRank === 'number'
+    && Number.isFinite(input.archetypeRank)
+    && input.archetypeRank > 0
+  if (hasRank || input.serialNumber?.trim()) {
     drawRankSerialChip(ctx, contentX, cursorY, contentW, input.archetypeRank ?? 0, input.serialNumber ?? '')
   }
 
@@ -655,50 +764,28 @@ export async function generatePersonalitySquarePoster(
   // the right with a gold rim when available.
   const bandX = M + 24
   const bandW = cardW - 48
-  const bandGrad = ctx.createLinearGradient(bandX, ctaBandY, bandX, ctaBandY + ctaBandHeight)
-  bandGrad.addColorStop(0, '#9d75f9')
-  bandGrad.addColorStop(0.55, '#8b5cf6')
-  bandGrad.addColorStop(1, '#7c3aed')
-  fillRoundedRect(ctx, bandX, ctaBandY, bandW, ctaBandHeight, 24, bandGrad)
-  strokeRoundedRect(ctx, bandX + 1.5, ctaBandY + 1.5, bandW - 3, ctaBandHeight - 3, 22.5, 'rgba(255, 255, 255, 0.18)', 1.5)
-  ctx.save()
-  clipRoundedRect(ctx, bandX, ctaBandY, bandW, ctaBandHeight, 24)
-  ctx.setFillStyle('rgba(255,255,255,0.09)')
-  ctx.beginPath()
-  ctx.arc(bandX + 36, ctaBandY + 6, 72, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(bandX + bandW - 20, ctaBandY + ctaBandHeight - 4, 88, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.restore()
-
-  const hasQr = Boolean(input.qrCodeImagePath)
   const ctaHeadline = '你是哪一种氛围命格？'
-  const ctaInstruction = hasQr ? '长按识别小程序码，3 分钟开测' : '微信搜索「悦聚」，3 分钟开测'
   const ctaTextColor = '#fff7d6'
   const ctaTextSoft = 'rgba(255, 247, 214, 0.85)'
-  if (hasQr && input.qrCodeImagePath) {
-    const qrChipSize = 96
-    const qrChipX = bandX + bandW - 20 - qrChipSize
-    const qrChipY = ctaBandY + (ctaBandHeight - qrChipSize) / 2
-    fillRoundedRect(ctx, qrChipX, qrChipY, qrChipSize, qrChipSize, 16, '#ffffff')
-    strokeRoundedRect(ctx, qrChipX, qrChipY, qrChipSize, qrChipSize, 16, 'rgba(245, 200, 107, 0.9)', 1.5)
-    try {
-      ctx.drawImage(input.qrCodeImagePath, qrChipX + 8, qrChipY + 8, qrChipSize - 16, qrChipSize - 16)
-    } catch {
-      // QR decode failure — band keeps copy-only layout
-    }
+  const drawCtaBandShell = (): void => {
+    const bandGrad = ctx.createLinearGradient(bandX, ctaBandY, bandX, ctaBandY + ctaBandHeight)
+    bandGrad.addColorStop(0, '#9d75f9')
+    bandGrad.addColorStop(0.55, '#8b5cf6')
+    bandGrad.addColorStop(1, '#7c3aed')
+    fillRoundedRect(ctx, bandX, ctaBandY, bandW, ctaBandHeight, 24, bandGrad)
+    strokeRoundedRect(ctx, bandX + 1.5, ctaBandY + 1.5, bandW - 3, ctaBandHeight - 3, 22.5, 'rgba(255, 255, 255, 0.18)', 1.5)
     ctx.save()
-    ctx.setFillStyle(ctaTextColor)
-    ctx.setFontSize(24)
-    ctx.setTextAlign('left')
-    ctx.setTextBaseline('middle')
-    ctx.fillText(ctaHeadline, bandX + 28, ctaBandY + 46)
-    ctx.setFillStyle(ctaTextSoft)
-    ctx.setFontSize(16)
-    ctx.fillText(ctaInstruction, bandX + 28, ctaBandY + 82)
+    clipRoundedRect(ctx, bandX, ctaBandY, bandW, ctaBandHeight, 24)
+    ctx.setFillStyle('rgba(255,255,255,0.09)')
+    ctx.beginPath()
+    ctx.arc(bandX + 36, ctaBandY + 6, 72, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(bandX + bandW - 20, ctaBandY + ctaBandHeight - 4, 88, 0, Math.PI * 2)
+    ctx.fill()
     ctx.restore()
-  } else {
+  }
+  const drawCopyOnly = (): void => {
     ctx.save()
     ctx.setFillStyle(ctaTextColor)
     ctx.setFontSize(24)
@@ -707,11 +794,43 @@ export async function generatePersonalitySquarePoster(
     ctx.fillText(ctaHeadline, S / 2, ctaBandY + 46)
     ctx.setFillStyle(ctaTextSoft)
     ctx.setFontSize(16)
-    ctx.fillText(ctaInstruction, S / 2, ctaBandY + 82)
+    ctx.fillText('微信搜索「悦聚」，3 分钟开测', S / 2, ctaBandY + 82)
     ctx.restore()
   }
 
-  return exportCanvas(ctx, canvasId, S, S)
+  drawCtaBandShell()
+  if (!input.qrCodeImagePath) {
+    drawCopyOnly()
+  } else {
+    const qrChipSize = 96
+    const qrChipX = bandX + bandW - 20 - qrChipSize
+    const qrChipY = ctaBandY + (ctaBandHeight - qrChipSize) / 2
+    fillRoundedRect(ctx, qrChipX, qrChipY, qrChipSize, qrChipSize, 16, '#ffffff')
+    strokeRoundedRect(ctx, qrChipX, qrChipY, qrChipSize, qrChipSize, 16, 'rgba(245, 200, 107, 0.9)', 1.5)
+    let qrRendered = false
+    try {
+      ctx.drawImage(input.qrCodeImagePath, qrChipX + 8, qrChipY + 8, qrChipSize - 16, qrChipSize - 16)
+      qrRendered = true
+    } catch {
+      // Repaint the queued band commands so the failed chip leaves no pixels.
+      drawCtaBandShell()
+      drawCopyOnly()
+    }
+    if (qrRendered) {
+      ctx.save()
+      ctx.setFillStyle(ctaTextColor)
+      ctx.setFontSize(24)
+      ctx.setTextAlign('left')
+      ctx.setTextBaseline('middle')
+      ctx.fillText(ctaHeadline, bandX + 28, ctaBandY + 46)
+      ctx.setFillStyle(ctaTextSoft)
+      ctx.setFontSize(16)
+      ctx.fillText('长按识别小程序码，3 分钟开测', bandX + 28, ctaBandY + 82)
+      ctx.restore()
+    }
+  }
+
+  return exportPersonalitySquareCanvas(ctx, canvasId, S, S)
 }
 
 // ─── Group Reveal Poster (blind-box squad reveal) ────────────────────────────

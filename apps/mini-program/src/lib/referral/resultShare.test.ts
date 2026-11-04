@@ -1,9 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   buildPersonalityResultSharePath,
   buildPersonalityResultTimelineQuery,
-  getResultShareRewardHint,
-  RESULT_SHARE_REWARD_HINT,
 } from './resultShare'
 
 describe('buildPersonalityResultSharePath', () => {
@@ -39,23 +39,10 @@ describe('buildPersonalityResultTimelineQuery', () => {
   })
 })
 
-describe('getResultShareRewardHint', () => {
-  it('renders the reward line only when a code exists', () => {
-    expect(getResultShareRewardHint('abc123')).toBe(RESULT_SHARE_REWARD_HINT)
-  })
+describe('personality result referral boundary', () => {
+  it('keeps the share module attribution-only, with no coupon or reward helper/copy', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/lib/referral/resultShare.ts'), 'utf8')
 
-  it('renders nothing for anonymous / failed-code sharers', () => {
-    expect(getResultShareRewardHint(undefined)).toBe('')
-    expect(getResultShareRewardHint(null)).toBe('')
-    expect(getResultShareRewardHint('  ')).toBe('')
-  })
-
-  it('never promises a specific coupon amount or discount', () => {
-    expect(RESULT_SHARE_REWARD_HINT).not.toMatch(/折|×|\d+\s*张|%|元/)
-    expect(RESULT_SHARE_REWARD_HINT).toContain('多一张券')
-  })
-
-  it('stays inside WeChat-review vocabulary (no banned words)', () => {
-    expect(RESULT_SHARE_REWARD_HINT).not.toMatch(/匹配|社交|灵魂|撮合/)
+    expect(source).not.toMatch(/getResultShareRewardHint|RESULT_SHARE_REWARD_HINT|多一张券|发券|奖励/)
   })
 })

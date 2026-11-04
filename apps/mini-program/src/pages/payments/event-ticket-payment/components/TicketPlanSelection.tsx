@@ -207,7 +207,12 @@ export default function TicketPlanSelection({
         )}
         <View className='ticket-price-summary__row ticket-price-summary__row--total'>
           <Text className='ticket-price-summary__label'>实付金额</Text>
-          <Text className='ticket-price-summary__value ticket-price-summary__value--total'>{formatPrice(finalPrice)}</Text>
+          {/* slice(1) strips the ¥ from formatPrice — hanging-¥ hero numeral
+              pairs with the coupon stub (2026-10-29). */}
+          <View className='ticket-price-summary__amount'>
+            <Text className='ticket-price-summary__currency'>¥</Text>
+            <Text className='ticket-price-summary__amount-num'>{formatPrice(finalPrice).slice(1)}</Text>
+          </View>
         </View>
       </View>
 

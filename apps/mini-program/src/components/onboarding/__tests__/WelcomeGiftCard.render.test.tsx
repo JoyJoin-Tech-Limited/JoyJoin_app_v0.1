@@ -50,6 +50,31 @@ describe('WelcomeGiftCard expiry caption (audit F5)', () => {
   })
 })
 
+describe('WelcomeGiftCard compact grant status', () => {
+  it('is read-only and describes the coupon actually placed in 权益', () => {
+    render(
+      <WelcomeGiftCard
+        compact
+        discountValue={2000}
+        discountType='fixed_amount'
+        validUntil='2026-12-25T15:59:59.000Z'
+      />,
+    )
+
+    expect(screen.getByRole('status', { name: /见面礼已放入权益，20元/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByText('见面礼已放入权益')).toBeInTheDocument()
+    expect(screen.getByText(/20元 · 报名可用 · 有效期至/)).toBeInTheDocument()
+  })
+
+  it('keeps compact loading honest without claiming a grant', () => {
+    render(<WelcomeGiftCard compact isLoading />)
+
+    expect(screen.getByRole('status', { name: '悦仔见面礼确认中' })).toBeInTheDocument()
+    expect(screen.queryByText('见面礼已放入权益')).not.toBeInTheDocument()
+  })
+})
+
 describe('WelcomeGiftCard fixed-amount 见面礼 (WELCOME20)', () => {
   it('renders the canonical fixed ¥20 coupon as 20元', () => {
     render(<WelcomeGiftCard discountValue={2000} discountType='fixed_amount' />)

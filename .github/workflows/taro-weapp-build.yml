@@ -19,7 +19,7 @@ on:
       - 'package-lock.json'
       - '.github/workflows/taro-weapp-build.yml'
   # Publish only after the matching staging commit is healthy. A push still
-  # gets an early compile/package check above (and its dist artifact is what the
+  # gets an early compile/package check above (and its cached dist is what the
   # release run reuses, so the package is built once per commit); this event
   # performs the release.
   workflow_run:
@@ -43,7 +43,7 @@ on:
 
 permissions:
   contents: read
-  # Cross-run artifact download (upload job pulls dist from the push build run).
+  # `gh api` reads of earlier workflow runs (change detection + push-build check).
   actions: read
 
 # Never interrupt an in-flight upload, but collapse multiple waiting runs to the
@@ -284,14 +284,27 @@ jobs:
           done
           echo "✅ Compiled output verified: Flash marker present, no scope regression, all $(( $(printf '%s' "$expected_assets" | wc -w) )) assets present"
 
-      - name: Upload mini-program artifact
-        if: steps.push-build-check.outputs.push_build_exists != 'true'
-        uses: actions/upload-artifact@v4.6.2
+      # dist is handed to the upload job through the Actions CACHE, not through
+      # an artifact:
+      # - push (main): the workflow_run release restores this dist.
+      # - workflow_run without a push build: this run uploads its fallback dist.
+      # - workflow_dispatch: uploads this run's dist when should_upload is true.
+      # 2026-11-03: the account-wide artifact quota hit its ceiling and
+      # `actions/upload-artifact` failed every build, which skipped the
+      # dependent upload job and blocked the 开发版 for a day. Cache storage has
+      # its own 10 GB budget and a key per commit, so it cannot be starved by
+      # BuildKit's `*.dockerbuild` cache artifacts. Pull-request runs still skip
+      # this step, so a PR check never depends on storage quotas.
+      - name: Cache mini-program dist for the upload job
+        if: >-
+          steps.push-build-check.outputs.push_build_exists != 'true' &&
+          github.event_name != 'pull_request' &&
+          (github.event_name != 'workflow_dispatch' ||
+           github.event.inputs.should_upload == 'true')
+        uses: actions/cache/save@v4.2.0
         with:
-          name: taro-weapp-dist
           path: apps/mini-program/dist
-          retention-days: 30
-          if-no-files-found: error
+          key: taro-weapp-dist-${{ github.sha }}
 
   # CVM tunnel upload: rsync dist → SSH → miniprogram-ci on CVM (fixed IP).
   # Automatic uploads follow a successful staging deployment for the exact
@@ -324,32 +337,15 @@ jobs:
       queue: max
       cancel-in-progress: false
     steps:
-      # Prefer the dist artifact from the push build of this commit (already
-      # compiled-output verified there); fall back to this run's artifact when
-      # the workflow_run had to rebuild it.
-      - name: Resolve dist artifact source run
-        id: artifact-source
-        if: github.event_name == 'workflow_run'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          set -euo pipefail
-          PUSH_RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&event=push&status=success&per_page=100" \
-            --jq '[.workflow_runs[] | select(.name == "Build Taro WeChat Mini-Program")] | .[0].id // empty')
-          if [ -n "$PUSH_RUN_ID" ]; then
-            echo "run_id=$PUSH_RUN_ID" >> "$GITHUB_OUTPUT"
-            echo "Using dist artifact from push build run $PUSH_RUN_ID"
-          else
-            echo "No push build found for $HEAD_SHA; using this run's artifact (fallback rebuild)."
-          fi
-
-      - uses: actions/download-artifact@v4.3.0
+      # Restore the dist cached by the push build of this commit (already
+      # compiled-output verified there). `fail-on-cache-miss` keeps a missing
+      # package from silently uploading yesterday's build.
+      - name: Restore mini-program dist from the build cache
+        uses: actions/cache/restore@v4.2.0
         with:
-          name: taro-weapp-dist
           path: apps/mini-program/dist
-          run-id: ${{ steps.artifact-source.outputs.run_id || github.run_id }}
-          github-token: ${{ github.token }}
+          key: taro-weapp-dist-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fail-on-cache-miss: true
 
       - name: Upload to WeChat Mini Program via CVM
         timeout-minutes: 25

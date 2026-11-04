@@ -38,7 +38,7 @@
 
 - Cold-start chain (`app.ts`): polyfill (:3) → font + asset preloads in `useLaunch` (:153-188) → providers (Auth, DynamicAccent, Achievement) + 4 bridges (AutoLogin, PendingOrderResume, ProfessionRetry, AchievementPopup) + TabBarStateBridge. No synchronous blocking work; storage reads try/caught (:160-172); cached auth hydrates synchronously (`queryClient.ts:32-42`); landing gate caps 4s (`useAuthGate`).
 - Packaging: `lazyCodeLoading: 'requiredComponents'` (`app.config.ts:31`), 6 subpackages + 16 main-package pages (`lib/onboarding/onboardingRoutes.ts:140-158`), preload rules on every main entry (:172-206). Main zip ≈1.73MB.
-- `perf-audit-collect.mjs` flags non-tab main-package pages (`scripts/perf-audit-collect.mjs:122-138`) — city-unlock/event-coordination/pool-group-detail/center-tab-empty are subpackage candidates.
+- `perf-audit-collect.mjs` flags non-tab main-package pages (`scripts/perf-audit-collect.mjs:122-138`) — city-unlock/pool-group-detail are subpackage candidates.
 - Page-stack discipline is good: `useResetOnShow` resets transient flags on swipe-back (`hooks/useResetOnShow.ts`); cached tab-bar scroll position re-applied synchronously on `useDidShow` (`discover/index.tsx:772-801`).
 
 ## Perf tooling

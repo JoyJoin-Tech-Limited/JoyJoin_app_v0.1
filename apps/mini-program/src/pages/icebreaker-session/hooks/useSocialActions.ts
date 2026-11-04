@@ -18,7 +18,7 @@ import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreak
 import { trackMiniScriptGameplay } from '../../../lib/analytics/miniscriptGameplayAnalytics'
 import { buildSocialPath, getErrorText } from '../icebreakerSessionModel'
 import type { SessionParticipant } from '../phaseUtils'
-import { syncSocialActionResponse } from '../socialActionSync'
+import { syncPhaseConflictResponse, syncSocialActionResponse } from '../socialActionSync'
 import {
   classifyTopicsFailure,
   getTopicsServerRetryDelayMs,
@@ -201,6 +201,14 @@ export function useSocialActions(args: UseSocialActionsArgs) {
 
       setPendingAction(actionKey)
 
+      const handleSyncError = (syncError: unknown) => {
+        logWarn('[IcebreakerSession] Action succeeded but session reconciliation failed', {
+          socialSessionId,
+          actionKey,
+          message: syncError instanceof Error ? syncError.message : String(syncError),
+        })
+      }
+
       try {
         const response = await apiRequest<T>({
           // Full `/api/...` paths (mini-script family) bypass the session-scoped
@@ -214,13 +222,7 @@ export function useSocialActions(args: UseSocialActionsArgs) {
         await syncSocialActionResponse(response, {
           applyState: applySocialSessionState,
           refetch: refetchSession,
-          onSyncError: (syncError) => {
-            logWarn('[IcebreakerSession] Action succeeded but session reconciliation failed', {
-              socialSessionId,
-              actionKey,
-              message: syncError instanceof Error ? syncError.message : String(syncError),
-            })
-          },
+          onSyncError: handleSyncError,
         })
         // S1 + Wave 3 归口: Confirm fires on the success path of every
         // user-gestured mutating action, so a felt "land" replaces visual
@@ -238,6 +240,22 @@ export function useSocialActions(args: UseSocialActionsArgs) {
         }
         return response
       } catch (error) {
+        // Host advance CAS lost (two devices, or a stalled retry): the other
+        // request already advanced the phase. Adopt the authoritative state the
+        // 409 carries — the table visibly moves — instead of toasting a failure
+        // the host would read as "my tap did nothing" (2026-11-03).
+        if (await syncPhaseConflictResponse(error, {
+          applyState: applySocialSessionState,
+          refetch: refetchSession,
+          onSyncError: handleSyncError,
+        })) {
+          logWarn('[IcebreakerSession] Phase already advanced elsewhere — state adopted', {
+            socialSessionId,
+            actionKey,
+          })
+          return null
+        }
+
         const message = getErrorText(error, '操作没成功，再试试')
         logError('[IcebreakerSession] Social action failed', {
           socialSessionId,

@@ -61,13 +61,14 @@
     z-index: 0;
     pointer-events: none;
 
-    // Inner soft ring for depth
+    // Inner soft ring for depth — violet foil family (2026-10-29): coupon
+    // value surfaces speak in $color-primary-dark, not pink.
     &::after {
       content: '';
       position: absolute;
       inset: 40rpx;
       border-radius: 50%;
-      background: rgba($color-secondary, 0.08);
+      background: rgba($color-primary-dark, 0.08);
     }
   }
 
@@ -232,7 +233,7 @@
     font-size: 22rpx;
     line-height: 1.4;
     font-weight: $font-weight-bold;
-    color: $color-secondary;
+    color: $color-primary-dark;
   }
 
   // ── CTA: breathing pill with arrow ─────────────────────────────────

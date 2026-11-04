@@ -126,17 +126,6 @@ export function isJoinedEventTerminal(status?: string | null): boolean {
   return !!status && JOINED_EVENT_TERMINAL_STATUSES.has(status)
 }
 
-export function getCountdownText(startTime: string): string {
-  const now = new Date()
-  const start = new Date(startTime)
-  const diff = start.getTime() - now.getTime()
-  if (diff < 0) return '进行中'
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  if (hours < 24) return `${hours}小时后开始`
-  const days = Math.floor(hours / 24)
-  return `${days}天后开始`
-}
-
 export function getJoinedEventStatusLabel(status?: string | null): string {
   switch (status) {
     case 'matched':
