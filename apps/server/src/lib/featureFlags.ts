@@ -158,7 +158,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** When true, AIGC labels ("AI 生成内容" / "AI 辅助生成") are rendered on
    *  AI-generated surfaces in the mini-program. The server always returns
    *  AIGC meta; the client gates rendering with this flag.
-   *  Env fallback: AIGC_LABELS_ENABLED (default: false). */
+   *  Default ON since 2026-10-22 (compliance posture — WeChat requires AIGC
+   *  disclosure, and rendering is fail-closed: no meta, no label, so curated
+   *  fallbacks and user text never acquire one). This JSDoc previously claimed
+   *  default false and contradicted DEFAULT_FLAG_VALUES; keep the two in sync
+   *  (locked by featureFlagDefaultsContract.test.ts).
+   *  Env fallback: AIGC_LABELS_ENABLED (default: true). */
   aigcLabelsEnabled: "AIGC_LABELS_ENABLED",
   /** When true, matching results are held in a pending operator-review state
    *  instead of immediately notifying users and assigning venues. Admin must
@@ -318,8 +323,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   poolTeaserEnabled: "POOL_TEASER_ENABLED",
   /** Tier-1 semantic content moderation via WeChat msgSecCheck. When on,
    *  user-input text that passes the deterministic Tier-0 filter is also
-   *  checked by msgSecCheck (fail-open). Env fallback:
-   *  CONTENT_MODERATION_MSGSECCHECK_ENABLED (default: false). */
+   *  checked by msgSecCheck (fail-open, 250ms budget; late verdicts are
+   *  enforced in the background). Default ON since 2026-10-22 — the only
+   *  reason to switch it off is a msgSecCheck outage, not review posture.
+   *  Env fallback: CONTENT_MODERATION_MSGSECCHECK_ENABLED (default: true). */
   contentModerationMsgSecCheckEnabled: "CONTENT_MODERATION_MSGSECCHECK_ENABLED",
   /** Severe-tier fail-closed content moderation (decision-table rows 2/3 of
    *  content-mod-s1). When false, warning-tier Tier-0 violations are allowed
@@ -777,7 +784,6 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   socialSquadComposedHeroEnabled: false,
   /** 匹配状态页拼图悬念前奏 — 调用点 false。 */
   matchingPuzzlePreludeEnabled: false,
-  /** AIGC 生成内容角标 — 调用点 false（合规开关，见 feature-flags.md 待办）。 */
   /** AI 生成内容角标 — 2026-10-22 改为默认开启（合规姿态）。
    *  「AI 生成」标识是微信对 AIGC 的强制要求，关闭等于裸奔。渲染仍是
    *  fail-closed：只有内容确实由模型生成时才出角标，纯模板/兜底内容不打标。 */

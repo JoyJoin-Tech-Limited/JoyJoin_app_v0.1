@@ -120,4 +120,47 @@ describe("feature flag defaults contract", () => {
     expect(wrong).toEqual([]);
     expect(silent).toEqual([]);
   });
+
+  /**
+   * The FLAG_ENV_MAP JSDoc states `(default: true|false)` per flag. It is the
+   * first thing an engineer reads before touching a default, and it drifted
+   * silently: on 2026-11-04 `aigcLabelsEnabled` and
+   * `contentModerationMsgSecCheckEnabled` both still said "default: false"
+   * while running ON since 2026-10-22. A comment that contradicts the truth is
+   * exactly how a compliance flag gets switched off by someone "restoring" its
+   * documented default — so the claim is now part of the contract.
+   */
+  it("every FLAG_ENV_MAP comment default claim matches DEFAULT_FLAG_VALUES", () => {
+    const source = readFileSync(join(SERVER_SRC, "lib/featureFlags.ts"), "utf8");
+    const mapStart = source.indexOf("export const FLAG_ENV_MAP");
+    const defaultsStart = source.indexOf("export const DEFAULT_FLAG_VALUES");
+    expect(mapStart).toBeGreaterThan(-1);
+    expect(defaultsStart).toBeGreaterThan(mapStart);
+
+    const lines = source.slice(mapStart, defaultsStart).split("\n");
+    const mismatches: string[] = [];
+    let claimed: boolean | null = null;
+    let checked = 0;
+
+    for (const line of lines) {
+      const claim = line.match(/\(default:\s*(true|false)\)/);
+      if (claim) claimed = claim[1] === "true";
+
+      const entry = line.match(/^\s*(\w+):\s*"[A-Z0-9_]+",/);
+      if (!entry || claimed === null) continue;
+
+      checked += 1;
+      const actual = DEFAULT_FLAG_VALUES[entry[1]];
+      if (actual !== claimed) {
+        mismatches.push(
+          `${entry[1]}: comment says default ${claimed}, DEFAULT_FLAG_VALUES is ${actual}`,
+        );
+      }
+      claimed = null;
+    }
+
+    expect(mismatches).toEqual([]);
+    // Guards against the regex rotting into a no-op.
+    expect(checked).toBeGreaterThan(40);
+  });
 });
