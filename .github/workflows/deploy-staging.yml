@@ -220,14 +220,19 @@ jobs:
           test -s "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
           sha256sum "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
 
+      # Hand the bundle to `deploy-staging` through the Actions cache, not
+      # artifacts: artifacts share the account-wide storage quota with every
+      # BuildKit `*.dockerbuild` export, and on 2026-11-04 that quota ran out
+      # mid-deploy ("Failed to CreateArtifact: Artifact storage quota has been
+      # hit"), skipping the deployment entirely. Cache has its own 10 GB budget.
+      # Best-effort save (a re-run reuses the key); the restore below is strict.
       - name: Preserve prebuilt staging images
         if: steps.delivery-mode.outputs.registry_active == 'bundle'
-        uses: actions/upload-artifact@v4.6.2
+        continue-on-error: true
+        uses: actions/cache/save@v4.2.0
         with:
-          name: joyjoin-staging-images-${{ github.sha }}
           path: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
-          retention-days: 1
-          if-no-files-found: error
+          key: staging-images-${{ github.sha }}-${{ github.run_attempt }}
 
       # 2026-10-26 delta delivery: the image pair above re-ships ~640 MiB even
       # though only the app layer changes between deploys. Export just that
@@ -270,12 +275,11 @@ jobs:
 
       - name: Preserve staging app delta
         if: steps.delivery-mode.outputs.registry_active == 'bundle'
-        uses: actions/upload-artifact@v4.6.2
+        continue-on-error: true
+        uses: actions/cache/save@v4.2.0
         with:
-          name: joyjoin-staging-delta-${{ github.sha }}
           path: ${{ runner.temp }}/joyjoin-staging-delta.tar.gz
-          retention-days: 1
-          if-no-files-found: error
+          key: staging-delta-${{ github.sha }}-${{ github.run_attempt }}
 
   deploy-staging:
     name: Staging Deployment
@@ -379,19 +383,23 @@ jobs:
             echo "admin_image=${ghcr_admin}" >> "$GITHUB_OUTPUT"
           fi
 
+      # `fail-on-cache-miss` keeps a missing bundle from silently deploying the
+      # previous release (the build job's save is best-effort, this is the gate).
       - name: Restore prebuilt staging images
         if: steps.delivery-mode.outputs.registry_active == 'bundle'
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/cache/restore@v4.2.0
         with:
-          name: joyjoin-staging-images-${{ github.sha }}
-          path: ${{ runner.temp }}
+          path: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
+          key: staging-images-${{ github.sha }}-${{ github.run_attempt }}
+          fail-on-cache-miss: true
 
       - name: Restore staging app delta
         if: steps.delivery-mode.outputs.registry_active == 'bundle'
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/cache/restore@v4.2.0
         with:
-          name: joyjoin-staging-delta-${{ github.sha }}
-          path: ${{ runner.temp }}
+          path: ${{ runner.temp }}/joyjoin-staging-delta.tar.gz
+          key: staging-delta-${{ github.sha }}-${{ github.run_attempt }}
+          fail-on-cache-miss: true
 
       - name: Prepare remote and upload deployment workspace
         env:
