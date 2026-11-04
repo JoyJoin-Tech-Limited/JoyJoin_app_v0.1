@@ -266,8 +266,6 @@ apps/mini-program/
 │   │   ├── icebreaker-session/    # Social icebreaker UI
 │   │   │   ├── phases/            # Phase view components (warmup, lie-detective, etc.)
 │   │   │   └── overlays/          # Overlays & modals (celebration, intro, etc.)
-│   │   ├── my-events/             # User's registered events
-│   │   ├── event-coordination/    # Event day coordination
 │   │   ├── event-feedback/        # Post-event feedback
 │   │   ├── profile/               # User profile view
 │   │   ├── profile-linked/        # Subpackage: profile-linked auxiliary pages

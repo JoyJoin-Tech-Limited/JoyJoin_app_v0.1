@@ -241,6 +241,22 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   GET .../recap → AI-generated { headline, moments[], closingLine, medals[], lieDetectiveV2Stats?, personalityDiceHighlights?, undercoverWordResult?, microChallengeHighlights?, groupMirrorHighlights? } (`social-recap-summary-v2`; includes lie highlights, dice, MiniScript premise excerpt, auction lines when present). V2 recap snapshot is built once during phase advance and persisted in `recapSnapshot`.
 ```
 
+### Host recovery & advance concurrency (2026-11-03)
+
+The host role is still assigned silently (first caller wins; no claim UI, no briefing modal, no feature flag). Two hardenings make that safe to operate:
+
+**Waiting-screen duty line.** `formatIceWaitingHostLine(hostName, isHost)` in `packages/shared/src/copy/icebreakerSession.ts` renders 「主持人：{name} · 开始与推进由你点按」 for the host and 「主持人：{name} · 开始与推进由主持人点按」 for players. Both `WaitingPhase.tsx` branches must keep different wording — the first caller often does not know they own the advance button.
+
+**Admin recovery (War Room).** A host whose phone dies freezes the table until the 6-hour TTL unless an operator intervenes. The admin console now exposes the existing recovery route:
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/admin/social-icebreaker/:socialSessionId/transfer-host` | operator / super_admin | Body `{ newHostUserId? }`. Omitted target → the most recently active non-host **human** participant. `already_host` is idempotent. Simulated bots are never promoted (`400 TARGET_IS_TEST_BOT`) — a bot cannot advance a phase. Audit `SOCIAL_ICEBREAKER_HOST_TRANSFERRED` carries `fromPhase` + `frozenMinutes`. |
+
+The War Room 「转移主持」 button renders only once the session has `startedAt` (`shouldShowTransferHostAction()` in `apps/admin-client/src/pages/admin/warRoomUtils.ts`) — a waiting room has nobody to rescue, and the server owns the "no eligible human" case.
+
+**Advance is compare-and-swap.** `updateSession(id, state, { expectedPhase })` writes with `AND current_phase = expected` and returns `false` on a miss. `transitionPhase` surfaces that as `phaseConflict`, and `POST /advance` answers `409 PHASE_CONFLICT` with a Chinese `message` plus the authoritative `state`. The losing request persists nothing, so non-idempotent glow accrual (quip / group mirror / mini script / undercover) cannot double-bank when one host advances from two devices. Callers test `=== false` only; non-CAS writes and test doubles return `true`/`undefined`.
+
 ### Single-Player Test Mode & Tier Reset (2026-07-06; updated 2026-07-08)
 
 A **single-player test flow** lets staff/internal users start a Social Icebreaker session without a full matched group, primarily for QA and demo. It is gated by server-side `isMatchingTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true` and is disabled in `APP_MODE=production`).
@@ -364,7 +380,7 @@ socialIcebreakerSessions
   // persisted session state + expiresAt
 
 socialIcebreakerParticipants
-  // joined roster with joinedAt / lastSeenAt heartbeats
+  // joined roster with joinedAt / lastSeenAt heartbeats + isTestBot
 
 socialIcebreakerLieTruths
   // server-only truth data; never returned to clients
@@ -374,6 +390,8 @@ social_icebreaker_phase_metrics
 ```
 
 Sessions expire after 6 hours and expired rows are swept periodically. Missing vs expired sessions are differentiated in the API so clients can handle `410 SESSION_EXPIRED` separately from a true `404`.
+
+`updateSession()` is read-modify-write on the whole `state_json` blob (no version column). The one non-idempotent path — phase advancement — is guarded by passing `{ expectedPhase }`, which turns the write into a compare-and-swap on `current_phase`; see “Host recovery & advance concurrency”.
 
 ### Backend API Endpoints
 
@@ -386,7 +404,7 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics. Sets `warmupTopicsStatus = 'generating'` before LLM work and `'ready'`/`'error'` after. **Reliability:** 6s deterministic `raceWithTimeout` hard bound (Promise.race) on all icebreaker LLM calls → deterministic fallback; endpoint re-reads latest session snapshot + merges owned fields only to avoid concurrent-ready lost updates; stall suppression while generating (≤30s). Client shows error card with retry on failure (no phantom local deck). |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/ready` | any | Mark whether the current player is ready to move on |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/next-topic` | host | Advance to the next shared warmup topic after mutual readiness |
-| `POST` | `/api/social-icebreaker/:socialSessionId/advance` | host | Advance to next phase; accepts `force: true` to skip stragglers; auto-skips `lie_detective` if <3 players |
+| `POST` | `/api/social-icebreaker/:socialSessionId/advance` | host | Advance to next phase. Compare-and-swap on `current_phase`: a stale second advance persists nothing and returns `409 PHASE_CONFLICT` with the authoritative `state` (prevents duplicate glow accrual). Accepts `force: true` to skip stragglers; auto-skips `lie_detective` if <3 players |
 | `POST` | `/api/social-icebreaker/:socialSessionId/set-tier` | host | Change tier + vibe during `waiting` or `warmup` phase; server recompiles run plan |
 | `POST` | `/api/social-icebreaker/:socialSessionId/pulse-check` | any | Submit vibe (1=cold, 2=warm, 3=fire) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/micro-challenge/complete` | any | Mark self as challenge done |

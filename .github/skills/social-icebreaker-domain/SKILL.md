@@ -51,9 +51,10 @@ TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 | Action | Authority |
 |--------|-----------|
 | Start session | First caller (becomes host) |
-| Advance phase / generate content | **Host only** |
+| Advance phase / generate content | **Host only** — `/advance` is compare-and-swap on `current_phase`; a stale second advance persists nothing and returns `409 PHASE_CONFLICT` |
 | Change tier/vibe during warmup | **Host only** (locked to `waiting`/`warmup`; preset ↔ custom switch requires double confirmation) |
 | Ready / complete / vote / bid | **Any player** (self-state) |
+| Recover a stalled host | **Operator+** via admin `POST /api/admin/social-icebreaker/:socialSessionId/transfer-host` (War Room 「转移主持」); omitted target auto-selects the most recently active non-host human; `already_host` idempotent; simulated bots are never promoted (`400 TARGET_IS_TEST_BOT`) |
 
 **Pattern:** Host owns **phase transitions**, **generative triggers**, and **tier/vibe selection**; players own **self-state mutations**. See [references/session-spec.md](references/session-spec.md) for routes, schema, parity, AI boundaries, and advance guards.
 
@@ -91,10 +92,14 @@ Run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a
 | Sweep not running | `startSocialIcebreakerSweep` threw | Sweep is fail-open (disables itself on error) |
 | Bonus gate missing | Flag off or phase excluded | Verify `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`; check `bonusGateOffered` |
 | Moment Card PNG 404 | Server render flag off | Enable `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER` |
+| Host taps 进入下一阶段 and gets `409 PHASE_CONFLICT` | Another request already advanced the session (same host on two devices, or a stalled retry) | Expected: the 409 carries a fresh `state`; the client resyncs. Only a definite `updateSession(...) === false` is a conflict — never test `!persisted` |
+| Admin 转移主持 returns `400 TARGET_IS_TEST_BOT` | Target (explicit or auto-selected) is a simulated bot | Pick a human participant; a bot cannot advance a phase, so promoting it freezes the table |
+| Table frozen because the host phone died | Host never advances and the session sits until the 6h TTL | Operator+ opens the admin War Room and taps 「转移主持」; audit row `SOCIAL_ICEBREAKER_HOST_TRANSFERRED` records `fromPhase` + `frozenMinutes` |
 
 ## Review checklist
 
 - [ ] New/modified route checks `state.currentPhase === expected` before mutating
+- [ ] Phase-advance writes pass `{ expectedPhase }` to `updateSession()` and treat only `=== false` as `phaseConflict` (test doubles return `undefined`)
 - [ ] Host-only routes validate `userId === state.hostUserId`
 - [ ] Phase added to `PHASE_ORDER` **and** `getNextEligiblePhase` **and** both client registries
 - [ ] `cleanupPhaseStateForNextPhase` scrubs ephemeral state when leaving the phase

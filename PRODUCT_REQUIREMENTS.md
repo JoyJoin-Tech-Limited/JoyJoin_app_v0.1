@@ -538,7 +538,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 **13. Social Icebreaker — Primary In-Event Flow** 🧊 *(added §1.7)*
 - `/icebreaker/:sessionId` (`IcebreakerSessionPage`) is now the canonical in-event experience
-- Phases: 话题卡 → 挑战 → 侦探 → 回顾; full reference in `docs/icebreaker-system.md`
+- Phases: 话题卡 → 挑战 → 侦探 → 回顾; full reference in `docs/icebreaker/icebreaker-system.md`
 
 ### 2025 Milestones (Nov 18-20, 2025)
 
@@ -1530,6 +1530,7 @@ Phase progression is **server-authoritative**. The server determines the current
 - All participants see the same phase simultaneously
 - The HOST triggers phase advances via server calls; the server then broadcasts the update
 - Phase configuration (e.g., which phases are active, their duration) is controlled server-side via `apps/server/src/socialIcebreakerPhaseConfig.ts`
+- A stale or duplicated advance (the same host on two devices) is rejected rather than applied twice: the server returns a conflict with the authoritative state, and the host sees 「这一阶段已经推进了，正在同步」 before the view resyncs.
 
 #### Phases (MVP)
 
@@ -1552,6 +1553,7 @@ Phase progression is **server-authoritative**. The server determines the current
 - **Session persistence:** All session state (phase, participants, lie-truths) is stored in PostgreSQL via `apps/server/src/lib/socialIcebreakerStore.ts`. Sessions survive server restarts.
 - **Rejoin:** A participant who closes and reopens the session is restored to the current live state without data loss. The server rehydrates their view from the persisted record.
 - **Session expiry:** Sessions are not retained indefinitely — they are scoped to the event lifecycle. Expired sessions return a terminal state that prevents further interaction.
+- **Host recovery:** Because only the host can advance a phase, a host whose phone dies would otherwise freeze the table until expiry. An operator or super admin can transfer host duty from the admin War Room (「转移主持」 → `POST /api/admin/social-icebreaker/:socialSessionId/transfer-host`). With no explicit target the server promotes the most recently active non-host **human** participant; re-targeting the current host is idempotent; simulated bots are never promoted, since a bot cannot advance a phase. The audit record keeps the phase the table was stuck in and how many minutes it had been frozen. The host-duty line on the waiting screen («主持人：{name} · 开始与推进由你点按» for the host, «…由主持人点按» for players) is the only place the responsibility is stated, because host assignment stays silent.
 
 #### v2 Phase Rollout *(PR #370)*
 
@@ -1562,7 +1564,7 @@ Server-driven phase rollout configuration was added for Social Icebreaker v2. Be
 - **Toolkit** (legacy): Pre-event game browser — retained for backward compatibility, not featured as primary CTA
 
 #### Technical Reference
-Full system documentation: `docs/icebreaker-system.md`
+Full system documentation: `docs/icebreaker/icebreaker-system.md`
 
 Active server files:
 - `apps/server/src/routes/socialIcebreaker.ts` — route handlers
