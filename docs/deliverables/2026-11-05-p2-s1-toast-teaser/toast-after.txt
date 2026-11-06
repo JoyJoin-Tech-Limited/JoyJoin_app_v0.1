@@ -1,0 +1,190 @@
+apps/mini-program/src/native-custom-tab-bar/index.js:361:          if (wx.showToast) {
+apps/mini-program/src/native-custom-tab-bar/index.js:362:            wx.showToast({ title: '切换失败，请重试', icon: 'none' })
+apps/mini-program/src/native-custom-tab-bar/index.js:411:          if (wx.showToast) {
+apps/mini-program/src/native-custom-tab-bar/index.js:412:            wx.showToast({ title: '切换失败，请重试', icon: 'none' })
+apps/mini-program/src/native-custom-tab-bar/__tests__/tabBarStructure.test.ts:15: * `wx.showToast({ icon: 'none' })`.
+apps/mini-program/src/native-custom-tab-bar/__tests__/tabBarBehavior.test.ts:295:    expect(global.wx.showToast).toHaveBeenCalledWith(
+apps/mini-program/src/lib/onboarding/useInsightPosterShare.ts:100:        void Taro.showToast({ title: '已保存到相册', icon: 'success', duration: 2000 })
+apps/mini-program/src/lib/onboarding/useInsightPosterShare.ts:104:        void Taro.showToast({
+apps/mini-program/src/lib/onboarding/useInsightPosterShare.ts:175:          void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+apps/mini-program/src/lib/onboarding/useInsightPosterShare.ts:207:        void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
+apps/mini-program/src/lib/navigation/__tests__/matchingNavigation.test.ts:66:      expect(Taro.showToast).toHaveBeenCalledWith(
+apps/mini-program/src/lib/navigation/__tests__/matchingNavigation.test.ts:94:      expect(Taro.showToast).toHaveBeenCalledWith(
+apps/mini-program/src/lib/navigation/__tests__/matchingNavigation.test.ts:112:      expect(Taro.showToast).toHaveBeenCalledWith(
+apps/mini-program/src/lib/navigation/__tests__/matchingNavigation.test.ts:140:      expect(Taro.showToast).toHaveBeenCalledWith(
+apps/mini-program/src/pages/squad-unboxing/useSquadUnboxingController.ts:356:      Taro.showToast({ title: message, icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/squad-unboxing/useSquadUnboxingController.ts:903:    Taro.showToast({
+apps/mini-program/src/pages/squad-unboxing/useSquadUnboxingController.ts:912:      Taro.showToast({ title: '小队信息还在同步，请稍后再试', icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/squad-unboxing/index.tsx:754:      Taro.showToast({ title: '当前设备不支持生成桌卡', icon: 'none', duration: 1800 })
+apps/mini-program/src/pages/squad-unboxing/index.tsx:784:      Taro.showToast({ title: '桌卡已存进相册', icon: 'success', duration: 1800 })
+apps/mini-program/src/pages/squad-unboxing/index.tsx:791:      Taro.showToast({ title: '保存没成功，打开相册权限后再试试', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/squad-unboxing/index.tsx:834:        Taro.showToast({ title: '地址已复制', icon: 'success', duration: 1500 })
+apps/mini-program/src/pages/squad-unboxing/index.tsx:843:      Taro.showToast({ title: '场地已确定', icon: 'success', duration: 2000 })
+apps/mini-program/src/components/dev/SingleTestBanner.tsx:89:      Taro.showToast({ title: `调试局已创建，共${result.bots.length + 1}人`, icon: 'none' })
+apps/mini-program/src/components/dev/SingleTestBanner.tsx:93:      Taro.showToast({ title: getErrorTitle('启动失败', err), icon: 'none' })
+apps/mini-program/src/components/dev/SingleTestBanner.tsx:115:      Taro.showToast({ title: '测试数据已重置', icon: 'success' })
+apps/mini-program/src/components/dev/SingleTestBanner.tsx:118:      Taro.showToast({ title: getErrorTitle('重置失败', err), icon: 'none' })
+apps/mini-program/src/components/dev/TestLoginSheet.tsx:55:      Taro.showToast({
+apps/mini-program/src/components/dev/TestLoginSheet.tsx:65:      Taro.showToast({
+apps/mini-program/src/components/alang/AlangDiscoverCard.test.tsx:65:      expect(Taro.showToast).toHaveBeenCalledWith({
+apps/mini-program/src/components/alang/AlangDiscoverCard.test.tsx:129:      expect(Taro.showToast).toHaveBeenCalledWith({
+apps/mini-program/src/lib/api/ai-content/reportAIContent.ts:58:    Taro.showToast({ title: '举报已提交', icon: 'success', duration: 2000 })
+apps/mini-program/src/lib/api/ai-content/reportAIContent.ts:60:    Taro.showToast({
+apps/mini-program/src/components/mascot/XiaoyueInlineError.tsx:19: * replacing bare `Taro.showToast` error toasts across onboarding surfaces.
+apps/mini-program/src/components/alang/AlangDiscoverCard.tsx:112:        await Taro.showToast({
+apps/mini-program/src/components/alang/AlangDiscoverCard.tsx:127:      await Taro.showToast({
+apps/mini-program/src/lib/profile/useProfileCardShare.ts:76:      void Taro.showToast({ title: '已保存到相册', icon: 'success', duration: 2000 })
+apps/mini-program/src/lib/profile/useProfileCardShare.ts:80:      void Taro.showToast({
+apps/mini-program/src/lib/profile/useProfileCardShare.ts:136:          void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+apps/mini-program/src/lib/profile/useProfileCardShare.ts:162:        void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
+apps/mini-program/src/components/ProfessionChatOverlay.tsx:305:    Taro.showToast({ title: '再具体一点，或点跳过', icon: 'none', duration: 2000 })
+apps/mini-program/src/components/ProfessionChatOverlay.tsx:486:      Taro.showToast({ title: '这个职业已经分析过啦', icon: 'none', duration: 1800 })
+apps/mini-program/src/components/ProfessionChatOverlay.tsx:506:      Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2000 })
+apps/mini-program/src/components/ProfessionChatOverlay.tsx:786:      Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2000 })
+apps/mini-program/src/components/ProfessionChatOverlay.tsx:947:      Taro.showToast({ title: '先让悦仔识别成功，或点跳过', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.test.ts:100:  return vi.mocked(Taro.showToast).mock.calls.map(([options]) => String(options?.title ?? ''))
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.test.ts:141:    vi.mocked(Taro.showToast).mockResolvedValue({ errMsg: 'showToast:ok' })
+apps/mini-program/src/pages/onboarding/personality-test/results/hooks/useResultsRevealSequence.ts:903:      void Taro.showToast({ title: '请手动返回重新测试', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/profile-linked/invite/index.tsx:186:      success: () => Taro.showToast({ title: '已复制', icon: 'success' }),
+apps/mini-program/src/pages/profile-linked/invite/index.tsx:194:      Taro.showToast({ title: '邀请链接暂不可用', icon: 'none' })
+apps/mini-program/src/pages/profile-linked/invite/index.tsx:200:      success: () => Taro.showToast({ title: '已复制链接', icon: 'success' }),
+apps/mini-program/src/pages/profile-linked/invite/index.tsx:208:      success: () => Taro.showToast({ title: '已复制文案', icon: 'success' }),
+apps/mini-program/src/pages/onboarding/personality-test/results/hooks/useResultsLoginHandoff.ts:174:      void Taro.showToast({ title: '登录成功，正在为你排桌…', icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/profile-linked/personal-story/index.tsx:79:      Taro.showToast({
+apps/mini-program/src/pages/profile-linked/personal-story/index.tsx:89:      Taro.showToast({
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:337:      void Taro.showToast({
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:385:        void Taro.showToast({ title: `${label}已保存`, icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:686:              void Taro.showToast({ title: '正在重试...', icon: 'loading', duration: 1200 })
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:735:          void Taro.showToast({ title: '氛围卡已生成', icon: 'success', duration: 1500 })
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:756:        void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:798:        void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:838:      void Taro.showToast({ title: '动态短片已保存', icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/onboarding/personality-test/results/useResultShareActions.ts:849:      void Taro.showToast({
+apps/mini-program/src/pages/profile-linked/my-image/index.tsx:204:      Taro.showToast({ title: '形象已保存', icon: 'success' })
+apps/mini-program/src/pages/profile-linked/my-image/index.tsx:211:      Taro.showToast({ title: '形象没有保存，请重新选择', icon: 'none' })
+apps/mini-program/src/pages/profile-linked/my-image/index.tsx:225:    onError: () => Taro.showToast({ title: '这次没有抽出来，请稍后再试', icon: 'none' }),
+apps/mini-program/src/pages/profile-linked/my-image/index.tsx:236:      Taro.showToast({ title: '新装备已放入衣橱', icon: 'success' })
+apps/mini-program/src/pages/profile-linked/my-image/index.tsx:238:    onError: () => Taro.showToast({ title: '碎片不足或兑换没有完成', icon: 'none' }),
+apps/mini-program/src/hooks/useOptimisticMutation.test.tsx:248:      expect(Taro.showToast).toHaveBeenCalledWith({ title: '回滚提示: boom', icon: 'none' })
+apps/mini-program/src/hooks/useOptimisticMutation.test.tsx:279:      expect(Taro.showToast).toHaveBeenCalledWith({ title: '提交没成功，再试一次', icon: 'none' })
+apps/mini-program/src/hooks/useOptimisticMutation.test.tsx:430:    expect(Taro.showToast).toHaveBeenCalledWith({ title: '提交没成功，再试一次', icon: 'none' })
+apps/mini-program/src/pages/profile/index.tsx:704:      void Taro.showToast({
+apps/mini-program/src/pages/profile/index.tsx:721:        await Taro.showToast({
+apps/mini-program/src/pages/profile/index.tsx:1115:                        void Taro.showToast({
+apps/mini-program/src/hooks/useOptimisticMutation.ts:212:    Taro.showToast({ title: message, icon: 'none' })
+apps/mini-program/src/pages/matching-status/MatchHistorySection.tsx:28:            Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/profile-linked/rewards/index.tsx:174:      Taro.showToast({
+apps/mini-program/src/pages/profile-linked/rewards/index.tsx:182:      Taro.showToast({ title: message, icon: 'none', duration: TOAST_ERROR_MS })
+apps/mini-program/src/hooks/auth/useWeChatLogin.ts:69:      Taro.showToast({
+apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts:632:      Taro.showToast({ title: '已取消，期待下次见到你', icon: 'none', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts:650:      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
+apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts:659:      Taro.showToast({ title: '活动信息还在同步，请稍后再试', icon: 'none', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts:668:        Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts:675:      Taro.showToast({ title: '小队信息还在同步，请稍后再试', icon: 'none', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts:1023:        Taro.showToast({
+apps/mini-program/src/hooks/useOptimisticRegistration.ts:268:            Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/hooks/useOptimisticRegistration.ts:330:            Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/hooks/useOptimisticRegistration.ts:352:          // (rollbackMessage) — no Taro.showToast in this branch.
+apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx:478:      Taro.showToast({ title: '保存成功', icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx:497:          Taro.showToast({ title: fieldMessage, icon: 'none', duration: 3000 })
+apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx:505:      Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
+apps/mini-program/src/lib/utils/__tests__/toast.test.ts:11:const mockShowToast = vi.mocked(Taro.showToast)
+apps/mini-program/src/pages/profile-linked/settings/index.tsx:133:        await Taro.showToast({
+apps/mini-program/src/pages/profile-linked/settings/index.tsx:198:          await Taro.showToast({
+apps/mini-program/src/pages/discover/index.tsx:668:      Taro.showToast({ title: '暂无开放活动', icon: 'none' })
+apps/mini-program/src/pages/discover/index.tsx:678:      Taro.showToast({ title: '预告页打开失败，请更新小程序后重试', icon: 'none' })
+apps/mini-program/src/pages/event-detail/__tests__/eventDetailPage.test.ts:84:    expect(tsx).toContain("Taro.showToast({ title: '活动结束后才能评价哦'")
+apps/mini-program/src/pages/alang/companion/index.tsx:78:      Taro.showToast({ title: '设置没有打开，请稍后再试', icon: 'none' })
+apps/mini-program/src/pages/alang/companion/index.tsx:96:      Taro.showToast({ title: '没有放下成功，任务还在', icon: 'none' })
+apps/mini-program/src/pages/alang/companion/index.tsx:114:      Taro.showToast({ title: '地图没有打开，请稍后再试', icon: 'none' })
+apps/mini-program/src/pages/alang/companion/index.tsx:137:      Taro.showToast({ title: '复测没有启动，请确认后台开关仍开启', icon: 'none' })
+apps/mini-program/src/lib/utils/toast.ts:10:export type AppToastOptions = Parameters<typeof Taro.showToast>[0] & {
+apps/mini-program/src/lib/utils/toast.ts:20:export function showAppToast(options: AppToastOptions): ReturnType<typeof Taro.showToast> {
+apps/mini-program/src/lib/utils/toast.ts:22:  return Taro.showToast({
+apps/mini-program/src/pages/event-detail/index.tsx:169:      Taro.showToast({ title: '活动结束后才能评价哦', icon: 'none', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/pool-group-detail/index.tsx:245:      Taro.showToast({ title: '场地已确定', icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/pool-group-detail/index.tsx:271:      Taro.showToast({ title: '海报没生成成功，再试试', icon: 'none', duration: TOAST_SHORT_MS })
+apps/mini-program/src/pages/pool-group-detail/index.tsx:326:        Taro.showToast({ title: '地址已复制，去地图粘贴搜索', icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/pool-group-detail/index.tsx:329:        Taro.showToast({ title: '复制失败，请稍后再试', icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/alang/debug/index.tsx:67:      void Taro.showToast({ title: '已重置，可以重新测试', icon: 'success' })
+apps/mini-program/src/pages/alang/debug/index.tsx:70:      Taro.showToast({ title: '重置没成功，请稍后再试', icon: 'none' })
+apps/mini-program/src/pages/icebreaker-session/hooks/useMiniScriptGeneration.ts:128:        void Taro.showToast({ title: '剧本已选好', icon: 'success', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/icebreaker-session/hooks/useMiniScriptGeneration.ts:221:          void Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/gathering-room/useGatheringRoomController.ts:509:        Taro.showToast({ title: '还没连上房间，稍后再试', icon: 'none', duration: TOAST_SHORT_MS })
+apps/mini-program/src/pages/gathering-room/useGatheringRoomController.ts:528:      Taro.showToast({ title: '招呼已发出', icon: 'none', duration: TOAST_SHORT_MS })
+apps/mini-program/src/pages/gathering-room/useGatheringRoomController.ts:601:      Taro.showToast({ title: '晚到已登记，路上注意安全', icon: 'none', duration: TOAST_SHORT_MS })
+apps/mini-program/src/pages/gathering-room/useGatheringRoomController.ts:607:      Taro.showToast({ title: message, icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/phases/MiniScriptHeroView.tsx:528:        void Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/phases/MiniScriptHeroView.tsx:534:        void Taro.showToast({ title: '操作没成功，再试试', icon: 'none', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:197:          void Taro.showToast({ title: '正在同步，请稍候', icon: 'none', duration: 1500 })
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:273:          Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:404:          void Taro.showToast({ title: '刚才那一下没传到，再试试', icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:467:            void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:507:            void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:531:          void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:551:        void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:663:          void Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:720:          void Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:830:        void Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:839:        void Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:969:        void Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/hooks/useSocialActions.ts:1045:        void Taro.showToast({ title: '生成仍在进行，请稍后再试', icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/payments/event-ticket-payment/index.tsx:729:      Taro.showToast({ title: '缺少报名信息，请返回重新选择', icon: 'none', duration: TOAST_DURATION })
+apps/mini-program/src/pages/payments/event-ticket-payment/index.tsx:793:          Taro.showToast({ title: '方案已更新，请重新选择', icon: 'none', duration: TOAST_DURATION })
+apps/mini-program/src/pages/payments/event-ticket-payment/index.tsx:901:        Taro.showToast({ title: conflictMessage, icon: 'none', duration: TOAST_DURATION })
+apps/mini-program/src/pages/payments/event-ticket-payment/index.tsx:916:      Taro.showToast({ title: msg, icon: 'none', duration: TOAST_DURATION })
+apps/mini-program/src/pages/payments/event-ticket-payment/index.tsx:951:        Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/payments/event-ticket-payment/index.tsx:968:        Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/gathering-room/index.tsx:320:      .then(() => Taro.showToast({ title: '地址已复制，去地图粘贴搜索', icon: 'none' }))
+apps/mini-program/src/pages/gathering-room/index.tsx:321:      .catch(() => Taro.showToast({ title: '复制失败，请稍后再试', icon: 'none' }))
+apps/mini-program/src/pages/icebreaker-session/hooks/useXiaoyueAgentAsk.ts:257:    void Taro.showToast({ title: XIAOYUE_AGENT_ASK_COPY.closedToast, icon: 'none', duration: 2_000 })
+apps/mini-program/src/pages/icebreaker-session/hooks/useXiaoyueAgentAsk.ts:280:      void Taro.showToast({ title: '已重新开启主动提示', icon: 'none', duration: 2_000 })
+apps/mini-program/src/pages/icebreaker-session/hooks/useUgcReport.ts:144:          void Taro.showToast({ title: UGC_REPORT_FAILURE_TOAST, icon: 'none', duration: 2500 })
+apps/mini-program/src/pages/icebreaker-session/hooks/useUgcReport.ts:154:        void Taro.showToast({ title: UGC_REPORT_SUCCESS_TOAST, icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx:54:      Taro.showToast({ title: getErrorMessage('operation-failed'), icon: 'none' })
+apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx:72:      Taro.showToast({ title: getErrorMessage('operation-failed'), icon: 'none' })
+apps/mini-program/src/pages/icebreaker-session/hooks/useRecapSharePoster.ts:107:        void Taro.showToast({ title: '已保存到相册', icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/icebreaker-session/hooks/useRecapSharePoster.ts:111:        void Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/hooks/useRecapSharePoster.ts:173:          void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+apps/mini-program/src/pages/icebreaker-session/hooks/useRecapSharePoster.ts:202:        void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
+apps/mini-program/src/pages/event-feedback/hooks/useKeepsakeCard.ts:70:          void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+apps/mini-program/src/pages/event-feedback/hooks/useKeepsakeCard.ts:103:      void Taro.showToast({ title: '已保存到相册', icon: 'success', duration: 2000 })
+apps/mini-program/src/pages/event-feedback/hooks/useKeepsakeCard.ts:108:        void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
+apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.tsx:385:      void Taro.showToast({ title: '高光整理没成功，再试一次', icon: 'none' })
+apps/mini-program/src/pages/event-feedback/index.tsx:766:        Taro.showToast({ title: '微信号已复制', icon: 'success', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/event-feedback/index.tsx:769:        Taro.showToast({ title: getErrorMessage('copy-failed'), icon: 'none', duration: TOAST_DEFAULT_MS })
+apps/mini-program/src/pages/payments/blind-box-payment/index.tsx:373:    Taro.showToast({ title: '已选择优惠券', icon: 'none', duration: 1200 })
+apps/mini-program/src/pages/payments/blind-box-payment/index.tsx:442:    await Taro.showToast({
+apps/mini-program/src/pages/payments/blind-box-payment/index.tsx:683:      await Taro.showToast({
+apps/mini-program/src/pages/payments/blind-box-payment/index.tsx:770:      await Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx:403:      Taro.showToast({ title: '缺少会话信息', icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx:408:      Taro.showToast({ title: '至少选择一个游戏哦', icon: 'none', duration: TOAST_MEDIUM_MS })
+apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx:420:          Taro.showToast({
+apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx:482:      Taro.showToast({
+apps/mini-program/src/pages/payment-verification/index.tsx:74:    void Taro.showToast({
+apps/mini-program/src/pages/pool-registration/components/PoolRegistrationSuccessCeremony.tsx:90:        Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/icebreaker-session/__tests__/p1ActionLayerAndRoleCardContract.test.ts:98:    const toastIndex = catchBlock.indexOf('Taro.showToast')
+apps/mini-program/src/pages/icebreaker-session/index.tsx:435:      void Taro.showToast({
+apps/mini-program/src/pages/pool-registration/index.tsx:336:      Taro.showToast({ title: '这张邀请卡过期啦，自己来也很好玩', icon: 'none', duration: TOAST_LONG_MS })
+apps/mini-program/src/pages/pool-registration/index.tsx:340:      Taro.showToast({ title: resolveMessage(error, 'submit-failed'), icon: 'none', duration: TOAST_LONG_MS })
+apps/mini-program/src/pages/pool-registration/index.tsx:818:      Taro.showToast({ title: blocker, icon: 'none', duration: TOAST_LONG_MS })
+apps/mini-program/src/pages/pool-registration/index.tsx:872:        Taro.showToast({ title: '暂时无法打开活动，请稍后再试', icon: 'none' })
+apps/mini-program/src/pages/pool-registration/index.tsx:902:      Taro.showToast({ title: submitBlocker, icon: 'none', duration: TOAST_LONG_MS })
+apps/mini-program/src/pages/pool-registration/index.tsx:1004:      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
+apps/mini-program/src/pages/pool-registration/index.tsx:1034:      Taro.showToast({ title: submitBlocker, icon: 'none', duration: TOAST_LONG_MS })
+apps/mini-program/src/pages/icebreaker-session/components/CustomModeSection.tsx:50:      Taro.showToast({ title: disabledReason || '该玩法暂未开放', icon: 'none', duration: 2000 })
+apps/mini-program/src/pages/alang/search/index.tsx:234:      Taro.showToast({ title: '设置没有打开，请稍后再试', icon: 'none' })
+apps/mini-program/src/pages/alang/search/index.tsx:250:      Taro.showToast({ title: '地图没有打开，请稍后再试', icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:276:      Taro.showToast({ title: '没有拿到定位，请检查微信定位权限', icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:315:      Taro.showToast({ title: '先获取当前位置，再输入地点关键词', icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:331:        Taro.showToast({ title: '地点服务暂时不可用，也可以直接点地图', icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:335:      Taro.showToast({ title: '地点服务暂时不可用，也可以直接点地图', icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:365:    Taro.showToast({
+apps/mini-program/src/pages/alang/config/index.tsx:646:        Taro.showToast({ title: message, icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:675:        Taro.showToast({ title: message, icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:681:        Taro.showToast({ title: validationError, icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:754:        Taro.showToast({ title: message, icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:788:      Taro.showToast({ title: '旧进度已清除，可以开始新一轮', icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:790:      Taro.showToast({ title: '旧进度没有清除成功，请稍后再试', icon: 'none' })
+apps/mini-program/src/pages/alang/config/index.tsx:937:            Taro.showToast({ title: '地图暂时没有加载，也可以用地点搜索', icon: 'none' })
+apps/mini-program/src/pages/alang/result/index.tsx:90:      Taro.showToast({ title: '复测没有启动，请确认后台开关仍开启', icon: 'none' })

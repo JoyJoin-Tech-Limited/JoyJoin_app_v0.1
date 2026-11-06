@@ -115,7 +115,6 @@ export default function FlashTeaserPage() {
           <Text className='flash-teaser__subtitle-line'>这座城市里藏着几位数字朋友</Text>
           <Text className='flash-teaser__subtitle-line'>内测结束，就来见你</Text>
         </View>
-        <Text className='flash-teaser__promise'>正式上线时，第一时间告诉你</Text>
       </View>
 
       <View className='flash-teaser__footer'>

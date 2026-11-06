@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { logInfo, logWarn } from '../utils/logger'
+import { showAppToast } from '../utils/toast'
 
 /**
  * Canonical URL for the matched pool-group detail page (post-match journey).
@@ -16,7 +17,7 @@ export function openPoolGroupDetail(groupId: string): void {
     url,
     fail: (err) => {
       logWarn('[Navigation] navigateTo pool-group-detail failed', { error: err })
-      Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+      showAppToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
     },
   })
 }
@@ -33,7 +34,7 @@ export function replaceWithPoolGroupDetail(groupId: string): void {
         url,
         fail: (navErr) => {
           logWarn('[Navigation] navigateTo fallback for pool-group-detail failed', { error: navErr })
-          Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+          showAppToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
         },
       })
     },
@@ -52,7 +53,7 @@ export function openSquadUnboxing(groupId: string): void {
     url,
     fail: (err) => {
       logWarn('[Navigation] navigateTo squad-unboxing failed', { error: err })
-      Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+      showAppToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
     },
   })
 }
@@ -72,7 +73,7 @@ export function replaceWithSquadUnboxing(groupId: string): void {
         url,
         fail: (navErr) => {
           logWarn('[Navigation] navigateTo fallback for squad-unboxing failed', { error: navErr })
-          Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+          showAppToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
         },
       })
     },
@@ -91,7 +92,7 @@ export function openGatheringRoom(groupId: string): void {
     url,
     fail: (err) => {
       logWarn('[Navigation] navigateTo gathering-room failed', { error: err })
-      Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+      showAppToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
     },
   })
 }
@@ -108,7 +109,7 @@ export function replaceWithGatheringRoom(groupId: string): void {
         url,
         fail: (navErr) => {
           logWarn('[Navigation] navigateTo fallback for gathering-room failed', { error: navErr })
-          Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+          showAppToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
         },
       })
     },
