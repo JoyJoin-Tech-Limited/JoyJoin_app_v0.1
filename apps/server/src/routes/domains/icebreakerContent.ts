@@ -329,6 +329,30 @@ export function registerIcebreakerContentRoutes(app: Express): void {
     }
   });
 
+  app.post('/api/notifications/:id/read', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const parsedId = z.string().trim().min(1).max(128).safeParse(req.params.id);
+      if (!parsedId.success) {
+        return res.status(400).json({ error: "Invalid notification id", code: "INVALID_NOTIFICATION_ID" });
+      }
+
+      const marked = await notificationsRepo.markNotificationAsRead(userId, parsedId.data);
+      if (!marked) {
+        return res.status(404).json({ error: "Notification not found", code: "NOTIFICATION_NOT_FOUND" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error marking notification as read", { error: String(error) });
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
   app.post('/api/notifications/mark-read', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;

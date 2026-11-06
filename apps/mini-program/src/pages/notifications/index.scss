@@ -46,6 +46,35 @@
     gap: $spacing-sm;
   }
 
+  &__mark-all {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    padding: $spacing-md $spacing-md 0;
+  }
+
+  &__mark-all-button {
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border-radius: 999rpx;
+    background: $color-surface;
+    transition: background 0.12s ease, opacity 0.12s ease;
+    @include flex-center;
+
+    &--pressed {
+      background: rgba($color-primary, 0.08);
+    }
+
+    &--disabled {
+      opacity: 0.48;
+    }
+  }
+
+  &__mark-all-text {
+    font-size: $font-size-xs;
+    color: $color-primary;
+  }
+
   &__row {
     display: flex;
     flex-direction: row;
@@ -57,6 +86,14 @@
 
     &--unread {
       background: rgba($color-primary, 0.04);
+    }
+
+    &--linked {
+      transition: background 0.12s ease;
+    }
+
+    &--pressed {
+      background: rgba($color-primary, 0.08);
     }
   }
 
@@ -114,6 +151,16 @@
     background: $color-primary;
     flex-shrink: 0;
     margin-top: 14rpx;
+  }
+
+  &__row-chevron {
+    align-self: center;
+    flex-shrink: 0;
+    width: 12rpx;
+    height: 12rpx;
+    border-right: 3rpx solid $color-primary;
+    border-bottom: 3rpx solid $color-primary;
+    transform: rotate(-45deg);
   }
 
   &__more {

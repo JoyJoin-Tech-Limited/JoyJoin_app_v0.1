@@ -7,6 +7,7 @@ import {
   getPricing,
   getUserCoupons,
   isEventPackPlanType,
+  markNotificationRead,
   markNotificationsAsRead,
   normalizeEventPoolRegistrationPayload,
   normalizeSubscriptionPlanType,
@@ -143,6 +144,7 @@ describe('shared API coupon normalization', () => {
     await getJoinedEvents(api);
     await getNotificationCounts(api);
     await markNotificationsAsRead(api, 'discover');
+    await markNotificationRead(api, 'notification / 1');
 
     expect(apiMock).toHaveBeenNthCalledWith(1, { path: '/api/events/joined' });
     expect(apiMock).toHaveBeenNthCalledWith(2, { path: '/api/notifications/counts' });
@@ -150,6 +152,10 @@ describe('shared API coupon normalization', () => {
       path: '/api/notifications/mark-read',
       method: 'POST',
       data: { category: 'discover' },
+    });
+    expect(apiMock).toHaveBeenNthCalledWith(4, {
+      path: '/api/notifications/notification%20%2F%201/read',
+      method: 'POST',
     });
   });
 

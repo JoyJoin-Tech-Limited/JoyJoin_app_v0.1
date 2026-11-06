@@ -205,7 +205,7 @@ export async function executePostMatchCommitSideEffects(
                     // user knows exactly when the location will be settled
                     // (paired with the venue-TBD retry scheduler + ops alerts).
                     message: "我们正在为您协调最佳场地，最晚会在活动开始前 2 小时确定并通知您",
-                    relatedResourceId: poolId,
+                    relatedResourceId: groupIds[i],
                   })
                 )
               );

@@ -228,6 +228,16 @@ export function markNotificationsAsRead(
   })
 }
 
+export function markNotificationRead(
+  api: ApiTransport,
+  id: string
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: `/api/notifications/${encodeURIComponent(id)}/read`,
+    method: 'POST',
+  })
+}
+
 export function getReferralStats(api: ApiTransport): Promise<ReferralStatsResponse> {
   return api<ReferralStatsResponse>({ path: '/api/referrals/stats' })
 }

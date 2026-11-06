@@ -5,6 +5,7 @@ import { and, desc, eq, lt, sql } from "drizzle-orm";
 export interface NotificationsRepository {
   getNotificationCounts(userId: string): Promise<NotificationCounts>;
   markNotificationsAsRead(userId: string, category: string): Promise<void>;
+  markNotificationAsRead(userId: string, id: string): Promise<boolean>;
   createNotification(data: { userId: string; category: string; type: string; title: string; message?: string; relatedResourceId?: string }): Promise<void>;
   getAdminNotifications(adminId: string): Promise<Array<Notification & { recipientCount: number; readCount: number }>>;
   createBroadcastNotification(data: { sentBy: string; category: string; type: string; title: string; message?: string; userIds: string[] }): Promise<{ sent: number }>;
@@ -47,6 +48,15 @@ export const notificationsRepo: NotificationsRepository = {
       .update(notifications)
       .set({ isRead: true })
       .where(and(eq(notifications.userId, userId), eq(notifications.category, category), eq(notifications.isRead, false)));
+  },
+
+  async markNotificationAsRead(userId: string, id: string): Promise<boolean> {
+    const rows = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.userId, userId), eq(notifications.id, id)))
+      .returning({ id: notifications.id });
+    return rows.length > 0;
   },
 
   async createNotification(data: { userId: string; category: string; type: string; title: string; message?: string; relatedResourceId?: string }): Promise<void> {

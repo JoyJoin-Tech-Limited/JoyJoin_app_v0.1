@@ -1,18 +1,35 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import { useReachBottom } from '@tarojs/taro'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { memo, useEffect, useRef } from 'react'
-import { getNotifications, type NotificationListItem } from '@shared/api'
+import { useInfiniteQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
+import { memo, useCallback, useRef, useState } from 'react'
+import {
+  getNotifications,
+  markNotificationRead,
+  type NotificationCountsResponse,
+  type NotificationListItem,
+  type NotificationListResponse,
+} from '@shared/api'
 import { apiRequest } from '../../lib/api/api'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../lib/utils/haptics'
+import {
+  canNavigateNotification,
+  navigateFromNotification,
+} from '../../lib/navigation/notificationNavigation'
+import { showAppToast } from '../../lib/utils/toast'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import LoadingScreen from '../../components/loading/LoadingScreen'
-import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { NOTIFICATION_COUNTS_KEY, useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import './index.scss'
 
 const PAGE_SIZE = 30
+
+type NotificationCategory = 'activities' | 'discover' | 'chat'
+type NotificationListData = InfiniteData<NotificationListResponse>
+
+export const NOTIFICATIONS_LIST_QUERY_KEY = ['mini-program', 'notifications', 'list'] as const
+
+const CATEGORY_ORDER: NotificationCategory[] = ['activities', 'discover', 'chat']
 
 const CATEGORY_META: Record<string, { emoji: string; label: string }> = {
   activities: { emoji: '🎉', label: '活动' },
@@ -35,11 +52,42 @@ function formatRelativeTime(iso: string): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 
-const NotificationRow = memo(function NotificationRow({ item }: { item: NotificationListItem }) {
+function updateNotificationReadState(
+  current: NotificationListData | undefined,
+  shouldMark: (item: NotificationListItem) => boolean,
+): NotificationListData | undefined {
+  if (!current) return current
+  let changed = false
+  const pages = current.pages.map((page) => {
+    let pageChanged = false
+    const items = page.items.map((item) => {
+      if (item.isRead || !shouldMark(item)) return item
+      pageChanged = true
+      changed = true
+      return { ...item, isRead: true }
+    })
+    return pageChanged ? { ...page, items } : page
+  })
+  return changed ? { ...current, pages } : current
+}
+
+interface NotificationRowProps {
+  item: NotificationListItem
+  opening: boolean
+  onOpen: (item: NotificationListItem) => void
+}
+
+const NotificationRow = memo(function NotificationRow({ item, opening, onOpen }: NotificationRowProps) {
   const meta = CATEGORY_META[item.category] ?? { emoji: '🔔', label: '通知' }
+  const isMapped = canNavigateNotification(item)
   return (
     <View
-      className={`notifications-page__row${item.isRead ? '' : ' notifications-page__row--unread'}`}
+      className={`notifications-page__row${item.isRead ? '' : ' notifications-page__row--unread'}${isMapped ? ' notifications-page__row--linked' : ''}`}
+      hoverClass={isMapped && !opening ? 'notifications-page__row--pressed' : undefined}
+      onClick={isMapped ? () => onOpen(item) : undefined}
+      role={isMapped ? 'button' : undefined}
+      aria-label={isMapped ? `${item.title}，查看详情` : undefined}
+      aria-disabled={isMapped ? opening : undefined}
     >
       <View className='notifications-page__row-icon' aria-hidden='true'>
         <JoyJoinIcon emoji={meta.emoji} tier='category' size={20} />
@@ -58,26 +106,81 @@ const NotificationRow = memo(function NotificationRow({ item }: { item: Notifica
       {!item.isRead ? (
         <View className='notifications-page__row-dot' aria-hidden='true' />
       ) : null}
+      {isMapped ? <View className='notifications-page__row-chevron' aria-hidden='true' /> : null}
     </View>
   )
 })
 
 export default function NotificationsPage() {
-  const { mutate: markNotificationsRead } = useMarkNotificationsAsRead()
-  const markedRef = useRef(false)
+  const queryClient = useQueryClient()
+  const { mutateAsync: markCategoryRead } = useMarkNotificationsAsRead()
+  const [pendingCategory, setPendingCategory] = useState<NotificationCategory | null>(null)
+  const categoryPendingRef = useRef(false)
+  const [openingId, setOpeningId] = useState<string | null>(null)
+  const openingRef = useRef(false)
 
-  // Leaving the list page clears the tab badges — the list IS the read surface.
-  useEffect(() => {
-    return () => {
-      if (markedRef.current) return
-      markedRef.current = true
-      void markNotificationsRead('activities')
-      void markNotificationsRead('discover')
+  const handleOpenNotification = useCallback(async (item: NotificationListItem) => {
+    if (openingRef.current || !canNavigateNotification(item)) return
+    openingRef.current = true
+    setOpeningId(item.id)
+    haptics('light')
+
+    try {
+      let accepted = false
+      try {
+        accepted = await navigateFromNotification(item)
+      } catch {
+        showAppToast({ title: '跳转失败，请重试', icon: 'none' })
+      }
+      if (!accepted) return
+
+      try {
+        const result = await markNotificationRead(apiRequest, item.id)
+        if (!result.success) throw new Error('Notification read was not confirmed')
+      } catch {
+        showAppToast({ title: '已打开，暂未标为已读', icon: 'none' })
+        return
+      }
+
+      queryClient.setQueryData<NotificationListData>(NOTIFICATIONS_LIST_QUERY_KEY, (current) =>
+        updateNotificationReadState(current, (candidate) => candidate.id === item.id),
+      )
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_COUNTS_KEY })
+    } finally {
+      openingRef.current = false
+      setOpeningId(null)
     }
-  }, [markNotificationsRead])
+  }, [queryClient])
+
+  const handleMarkCategory = useCallback(async (category: NotificationCategory) => {
+    if (categoryPendingRef.current) return
+    categoryPendingRef.current = true
+    setPendingCategory(category)
+    haptics('light')
+
+    try {
+      const result = await markCategoryRead(category)
+      if (!result.success) throw new Error('Category read was not confirmed')
+      queryClient.setQueryData<NotificationListData>(NOTIFICATIONS_LIST_QUERY_KEY, (current) =>
+        updateNotificationReadState(current, (item) => item.category === category),
+      )
+      queryClient.setQueryData<NotificationCountsResponse>(NOTIFICATION_COUNTS_KEY, (current) => {
+        if (!current) return current
+        const next = { ...current, [category]: 0 }
+        return { ...next, total: next.activities + next.discover + next.chat }
+      })
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_LIST_QUERY_KEY })
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_COUNTS_KEY })
+    } catch {
+      showAppToast({ title: '暂时无法标记，请重试', icon: 'none' })
+    } finally {
+      categoryPendingRef.current = false
+      setPendingCategory(null)
+    }
+  }, [markCategoryRead, queryClient])
 
   const query = useInfiniteQuery({
-    queryKey: ['mini-program', 'notifications', 'list'],
+    queryKey: NOTIFICATIONS_LIST_QUERY_KEY,
     queryFn: ({ pageParam }) =>
       getNotifications(apiRequest, { limit: PAGE_SIZE, before: pageParam }),
     initialPageParam: undefined as string | undefined,
@@ -91,6 +194,9 @@ export default function NotificationsPage() {
   })
 
   const items: NotificationListItem[] = query.data?.pages.flatMap((p) => p.items) ?? []
+  const categoryActions = CATEGORY_ORDER.filter((category) =>
+    items.some((item) => item.category === category),
+  )
   const loading = query.isLoading
   const error = query.isError
 
@@ -126,9 +232,40 @@ export default function NotificationsPage() {
         </View>
       ) : (
         <ScrollView className='notifications-page__scroll' scrollY enhanced showScrollbar={false}>
+          {categoryActions.length > 0 ? (
+            <View className='notifications-page__mark-all' aria-label='按类型全部标为已读'>
+              {categoryActions.map((category) => {
+                const disabled = pendingCategory !== null
+                const pending = pendingCategory === category
+                return (
+                  <View
+                    key={category}
+                    className={`notifications-page__mark-all-button${disabled ? ' notifications-page__mark-all-button--disabled' : ''}`}
+                    hoverClass={disabled ? undefined : 'notifications-page__mark-all-button--pressed'}
+                    onClick={() => {
+                      if (!disabled) void handleMarkCategory(category)
+                    }}
+                    role='button'
+                    aria-label={`${CATEGORY_META[category].label}全部已读`}
+                    aria-disabled={disabled}
+                    aria-busy={pending}
+                  >
+                    <Text className='notifications-page__mark-all-text'>
+                      {pending ? '标记中…' : `${CATEGORY_META[category].label}全部已读`}
+                    </Text>
+                  </View>
+                )
+              })}
+            </View>
+          ) : null}
           <View className='notifications-page__list'>
             {items.map((item) => (
-              <NotificationRow key={item.id} item={item} />
+              <NotificationRow
+                key={item.id}
+                item={item}
+                opening={openingId === item.id}
+                onOpen={handleOpenNotification}
+              />
             ))}
           </View>
           {query.isFetchingNextPage ? (

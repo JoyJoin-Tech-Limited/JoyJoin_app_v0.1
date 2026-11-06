@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
@@ -9,7 +9,6 @@ import { injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
 import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
@@ -33,18 +32,10 @@ interface Connection {
 
 export default function ConnectionsPage() {
   const { authLoading, renderGate } = useMiniPageGate()
-  const markAsRead = useMarkNotificationsAsRead()
-  const hasMarkedRef = useRef(false)
 
   useCustomTabBarSync({
     enabled: !authLoading,
   })
-
-  useEffect(() => {
-    if (hasMarkedRef.current) return
-    markAsRead.mutate('chat')
-    hasMarkedRef.current = true
-  }, [markAsRead])
 
   // Warm own first-viewport assets + adjacent tabs' assets during idle so
   // the next tab switch paints instantly.

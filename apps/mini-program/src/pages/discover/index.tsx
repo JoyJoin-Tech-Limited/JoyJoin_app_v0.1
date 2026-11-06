@@ -18,7 +18,7 @@ import { getGuidanceTipCopy } from '@shared/copy/guidanceCopy'
 import { useAuth } from '../../hooks/useAuth'
 import { useGuidanceQueue } from '../../hooks/useGuidanceQueue'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import { useMarkNotificationsAsRead, useNotificationCounts } from '../../hooks/useNotificationCounts'
+import { useNotificationCounts } from '../../hooks/useNotificationCounts'
 import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
 import { loadDiscoverPools } from '../../lib/api/discoverPools'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
@@ -939,8 +939,6 @@ function AuthenticatedDiscover({
 
 export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
-  const markAsRead = useMarkNotificationsAsRead()
-  const hasMarkedRef = useRef(false)
 
   // ── Discover-only scroll-responsive tab bar collapse ──
   // Collapses the native custom tab bar as the user scrolls down the feed,
@@ -1153,15 +1151,6 @@ export default function DiscoverPage() {
       })
     })
   }, [isLoading, isAuthenticated])
-
-  useEffect(() => {
-    if (!isAuthenticated || hasMarkedRef.current) return
-    const timer = setTimeout(() => {
-      markAsRead.mutate('discover')
-      hasMarkedRef.current = true
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [isAuthenticated, markAsRead])
 
   return (
     <>

@@ -14,7 +14,6 @@ import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
-import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import { CountdownTickProvider } from '../../hooks/useCountdownTick'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
@@ -47,22 +46,11 @@ function EventCardSkeleton() {
 export default function EventsPage() {
   const { isDegradation } = useDeviceTier()
   const { authLoading, renderGate } = useMiniPageGate()
-  const markAsRead = useMarkNotificationsAsRead()
-  const hasMarkedRef = useRef(false)
   useCustomTabBarSync({
     enabled: !authLoading,
   })
 
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
-
-  useEffect(() => {
-    if (hasMarkedRef.current) return
-    const timer = setTimeout(() => {
-      markAsRead.mutate('activities')
-      hasMarkedRef.current = true
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [markAsRead])
 
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
   const [hasManualTabSelection, setHasManualTabSelection] = useState(false)
