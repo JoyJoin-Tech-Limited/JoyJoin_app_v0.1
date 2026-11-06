@@ -23,25 +23,24 @@ Each section is one feature area. Within each:
 
 | # | Scenario | Expected Result |
 |---|----------|----------------|
-| 1.1 | Complete personality test → results page → tap share button | Share action sheet appears with "保存到相册" and "分享到朋友圈" options |
-| 1.2 | Tap "保存到相册" (portrait poster) | 1080×1920 poster generated and saved to device album |
+| 1.1 | Complete personality test → results page → tap "生成我的氛围卡" | Poster generation starts; when complete, an action sheet offers save/share/preview options (plus "保存朋友圈卡片" when the square poster exists) |
+| 1.2 | Tap "保存到相册" (portrait poster) | 1080×1560 poster generated and saved to device album |
 | 1.3 | Verify poster content | Shows: archetype name (colored accent), hero image, trait scores, blend line if non-decisive |
 | 1.4 | Poster image quality | WebP primary; if save fails → PNG fallback from CDN |
-| 1.5 | "分享到朋友圈" (square poster) | 750×750 square poster generated → opens WeChat Moments share sheet |
+| 1.5 | "保存朋友圈卡片" (square poster) | 750×750 square poster generated best-effort and saved to album; the flow remains portrait-usable if square generation fails |
 | 1.6 | Feature flag OFF: set `personalityShareEnabled=false` | Share button hidden on results page |
-| 1.7 | Offline / poor network on share tap | Graceful error toast, no crash |
+| 1.7 | Offline / poor network on share tap | With cached/pre-resolved archetype art, generation completes as a copy-only no-QR poster; with no usable art, honest error toast with retry, no crash |
 
 ### Edge Cases
 
 | # | Scenario | Expected Result |
 |---|----------|----------------|
-| 1.8 | Archetype image CDN unreachable during poster generation | Falls back to CDN PNG (`visual.asset` → `ASSET_BASE_PNG`); no blank poster |
+| 1.8 | Archetype image CDN unreachable during poster generation | Local/pre-resolved art is used when available; if no usable art candidate resolves, generation fails honestly with retry — no fabricated traits/skills or blank poster |
 | 1.9 | Canvas `drawImage` fails on WebP | PNG fallback fetches from CDN on-demand |
 | 1.10 | Rapid double-tap on share button | Only one poster generation triggered |
-| 1.11 | User navigates away mid-generation | Poster generation cancels; no orphan canvas |
+| 1.11 | User navigates away mid-generation | Generation epoch invalidates stale work; no orphan canvas or late export side effect; flow-owned temp files are cleaned exactly once |
 
 ### Known Gaps
-- Square poster generation exists (`momentsPosterFactory.ts`) but **not wired** to results page — only portrait flows active
 - Server endpoint `GET /api/personality-test/share-card-data` is **orphaned** (unused by client)
 
 ---

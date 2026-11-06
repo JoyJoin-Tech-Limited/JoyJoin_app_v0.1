@@ -8,8 +8,7 @@
 ## ⚠️ 口径 Caveat — read this first
 
 `event_attendance.attendance_status` is a **self-declared intent** captured
-pre-event: the user taps 确认出席 / 会晚到 in the mini-program (squad-unboxing
-or event-coordination surfaces). It does **not** record physical arrival.
+pre-event: the user taps 确认出席 / 会晚到 in the mini-program (squad-unboxing). It does **not** record physical arrival. The removed `event-coordination` surface is no longer an attendance path.
 
 A physical no-show only becomes visible if ops marks the attendee `absent`
 day-of via the admin attendance-override endpoint

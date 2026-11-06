@@ -2,7 +2,7 @@
 
 > Test surface: `apps/mini-program/src/pages/onboarding/personality-test/results/`  
 > Primary client: WeChat Mini Program (iOS + Android)  
-> Last updated: 2026-10-14 (poster redesign + share-QR band)
+> Last updated: 2026-11-04 (share hardening honesty contract + lifecycle/permission updates)
 
 ---
 
@@ -22,9 +22,9 @@
 | 1.1 | Tap **"保存我的氛围卡"** button | Button enters loading state with phase text ("准备素材中…", "正在渲染全息卡面…", "正在生成朋友圈卡片…"); haptic medium feedback | |
 | 1.2 | Wait for generation (~1-3s) | Toast "氛围卡已生成"; action sheet appears with options | |
 | 1.3 | Observe generated poster (Preview) | Image is sharp (no blurry text or borders) | |
-| 1.4 | Check poster visual elements | Warm accent-tinted gradient card; dark typicality chip top-left (e.g. 典型夸夸仓鼠) + `JOYJOIN · 悦聚` lockup top-right; metallic gold border with bevel hairline + corner registration ticks; coin-ringed circular portrait; eyebrow micro-caps `JOYJOIN ARCHETYPE COLLECTION`; archetype name + tagline; rarity line + `图鉴 · <year>` provenance; rank strip (氛围编号 #X + debossed serial); energy bar with quarter tick marks + hint "你在聚会里的持久活力"; two skill cards with accent inner frames; full-width embossed gold **"限量氛围版"** stamp (tracked text); purple CTA band (see 1.7); footer hairline divider + share caption + `JOYJOIN · 悦聚 — 测测你的氛围命格，找到同频的人` | |
+| 1.4 | Check poster visual elements | Warm accent-tinted gradient card; dark typicality chip top-left (e.g. 典型夸夸仓鼠) + `JOYJOIN · 悦聚` lockup top-right; metallic gold border with bevel hairline + corner registration ticks; coin-ringed circular portrait; eyebrow micro-caps `JOYJOIN ARCHETYPE COLLECTION`; archetype name + tagline; rarity line + `图鉴 · <year>` provenance; rank strip (氛围编号 #X + debossed serial); energy bar with quarter tick marks + hint "你在聚会里的持久活力"; two skill cards with accent inner frames; full-width embossed gold **"限量氛围版"** stamp (tracked text); purple CTA band (see 1.7); footer hairline divider + share caption + `JOYJOIN · 悦聚 — 测测你的氛围命格，找到同频的人`. For partial result data, missing trait/skill/energy/rank/serial/typicality sections are omitted and spacing collapses — never synthetic 50/default claims | |
 | 1.5 | Check poster resolution | DPR capped at 2 for memory safety (portrait: 2160×3120 max; square: 1500×1500 max) | |
-| 1.6 | Offline pre-check: enable airplane mode, tap generate | Toast "网络好像断了，请检查连接后再试"; generation not attempted | |
+| 1.6 | Offline pre-check: enable airplane mode, tap generate | With cached/pre-resolved art, generation completes with the copy-only no-QR band; only QR fetch is skipped. With no usable art candidate, generation fails honestly with retry — no fake offline block | |
 | 1.7 | Check CTA band QR behavior | Logged-in: band shows "12 种氛围命格，你是哪一种？" + "长按识别小程序码，3 分钟测出你的命格" with a white gold-rimmed mini-program code chip on the right. Guest / offline / flag-off: same band, copy-only variant ("微信搜索「悦聚」小程序，3 分钟开测"), no chip. Poster must generate successfully in BOTH modes | |
 
 ---
@@ -36,7 +36,7 @@
 | 1b.1 | After poster generation, check action sheet includes "保存朋友圈卡片" | Option is present only when square poster generation succeeded | |
 | 1b.2 | On low-end / degradation-tier device | Square poster generation is skipped entirely; square canvas element not rendered; action sheet shows portrait-only options | |
 | 1b.3 | Tap "保存朋友圈卡片" | Square poster (750×750) is saved to album; toast "朋友圈卡片" with success icon | |
-| 1b.4 | Check square poster visual elements | Dark typicality chip + brand lockup chrome; archetype name; coin-ringed hero; tagline; top 3 traits as compact bars tinted with the archetype accent (NOT purple fallback); energy bar; skill badges; rank chip (氛围编号 #X · debossed serial); purple CTA band ("你是哪一种氛围命格？" + QR chip when logged in, copy-only otherwise) | |
+| 1b.4 | Check square poster visual elements | Dark typicality chip + brand lockup chrome; archetype name; coin-ringed hero; tagline; top 3 traits as compact bars tinted with the archetype accent (NOT purple fallback); energy bar; skill badges; rank chip (氛围编号 #X · debossed serial); purple CTA band ("你是哪一种氛围命格？" + QR chip when logged in, copy-only otherwise). Missing sections omit and collapse rather than render defaults | |
 | 1b.5 | Check square poster resolution | DPR capped at 2 (1500×1500 max) | |
 
 ---
@@ -57,7 +57,7 @@
 
 | # | Step | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 3.1 | Tap "保存我的氛围卡" (or "分享卡片" after first gen) → select "保存到相册" | Haptic medium; toast "已保存到相册" with success icon | |
+| 3.1 | Tap "生成我的氛围卡" (or "打开分享选项" after first gen) → select "保存到相册" | Haptic medium; toast "已保存到相册" with success icon | |
 | 3.2 | Check device Photos app | Portrait poster PNG exists in album | |
 | 3.3 | Verify analytics event | Network tab shows `interaction` event with `action: "share_action_selected"`, `option: "save"` | |
 | 3.4 | Verify success analytics | `interaction` event with `action: "share_save_success"` | |
@@ -73,8 +73,8 @@
 | 4.3 | Tap "取消" on modal | Modal dismisses; no crash; no toast | |
 | 4.4 | Tap "保存到相册" again → tap "去设置" | Opens WeChat mini-program settings page | |
 | 4.5 | In settings, enable "保存到相册" permission | Permission toggles on | |
-| 4.6 | Return to JoyJoin (auto or manual) | Mini-program resumes; user can retry save | |
-| 4.7 | Retry "保存到相册" | Save succeeds; toast "已保存到相册" | |
+| 4.6 | Return to JoyJoin (auto or manual) | Mini-program resumes and the pending album save automatically retries once permission is granted | |
+| 4.7 | Confirm final save state | Save succeeds; toast "已保存到相册" | |
 | 4.8 | Verify denial analytics | `interaction` event with `action: "share_save_permission_denied"` fired at step 4.2 | |
 
 ---
@@ -97,6 +97,7 @@
 | 6.2 | Long-press preview image | Native WeChat context menu appears (save, share, etc.) | |
 | 6.3 | Swipe to dismiss | Preview closes gracefully | |
 | 6.4 | Verify analytics | `interaction` event with `action: "share_action_selected"`, `option: "preview"` | |
+| 6.5 | Cancel/dismiss the share action sheet | Dismissal is neutral: no error toast, no generation retry/error telemetry; valid cached poster persists and re-tap opens the action sheet without regenerating | |
 
 ---
 

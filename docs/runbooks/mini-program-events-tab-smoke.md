@@ -1,7 +1,8 @@
 # Mini-Program Events Tab Smoke Runbook
 
-> **Scope:** Local verification for the mini-program tab-shell cleanup around the
-> canonical Events tab (`足迹`) and the legacy `journey` / `my-events` entries.
+> **Scope:** Local verification for the mini-program tab shell around the
+> canonical Events tab (`足迹`). The legacy `journey` and `my-events` alias
+> pages were removed on 2026-11-03; no legacy-entry smoke remains.
 >
 > **Audience:** Frontend engineers and QA validating `apps/mini-program` in
 > WeChat DevTools.
@@ -21,7 +22,6 @@ This smoke is specifically for the MP-3 shell cleanup. It verifies that:
 1. The canonical second tab is `pages/events/index`.
 2. The visible tab label is `足迹`.
 3. The final page header is `我的足迹`.
-4. The legacy `pages/my-events/index` entry recovers into the canonical Events tab instead of behaving like a separate destination. (`pages/journey/index` was removed entirely.)
 
 ---
 
@@ -30,7 +30,7 @@ This smoke is specifically for the MP-3 shell cleanup. It verifies that:
 From the repo root:
 
 ```bash
-npx vitest run apps/mini-program/src/lib/navigation/tabBarConfig.test.ts apps/mini-program/src/lib/onboarding/onboardingRoutes.test.ts apps/mini-program/src/pages/my-events/index.test.ts
+npx vitest run apps/mini-program/src/lib/navigation/tabBarConfig.test.ts apps/mini-program/src/lib/onboarding/onboardingRoutes.test.ts
 npm run typecheck -w mini-program
 npm run build:weapp -w mini-program
 ```
@@ -131,37 +131,31 @@ Expected result:
 - The page shows `XiaoyueEmptyState` with `emotion='sad'`, an error title/subtitle, and a retry CTA.
 - Tapping retry re-fetches the events list.
 
-### Case 3 - Legacy `my-events` alias
+### Case 3 - Deleted legacy entries
 
-Goal: confirm the older my-events entry now funnels into the same Events tab.
+Goal: confirm the removed `pages/journey` and `pages/my-events` aliases are not
+restored as active flows.
 
-Entry options:
+Entry check:
 
-1. Add a temporary compile mode that starts at `/pages/my-events/index`.
-2. Or, in the AppService console, run:
-
-```javascript
-wx.reLaunch({ url: "/pages/my-events/index" })
-```
-
-Expected result:
-
-- You may briefly see the placeholder copy `旧入口已迁移到「足迹」`.
-- The app lands on the canonical Events destination.
-- Final route is `pages/events/index`.
-- The second tab is selected.
-- The header reads `我的足迹`.
+- Do not launch either removed route in the current release.
+- In WeChat DevTools, attempting `wx.reLaunch({ url: "/pages/my-events/index" })`
+  or the deleted `journey` route should report the route/page as unavailable.
+- A restored funnel into `pages/events/index` would mean the deleted alias page
+  came back and must be investigated.
 
 ---
 
 ## Pass criteria
 
-Treat the smoke as passed only when both entry points behave as follows:
+Treat the smoke as passed only when the canonical entry point behaves as follows:
 
 | Entry path | Final route | Final header | Tab expectation |
 | --- | --- | --- | --- |
 | `pages/events/index` | `pages/events/index` | `我的足迹` | second tab selected; tab bar visible (`display: block`, no `hidden`) |
-| `pages/my-events/index` | `pages/events/index` | `我的足迹` | second tab selected; tab bar visible (`display: block`, no `hidden`) |
+
+The removed `pages/journey` and `pages/my-events` routes are expected to be
+unavailable; do not mark their unavailability as a smoke failure.
 
 ---
 
@@ -169,8 +163,8 @@ Treat the smoke as passed only when both entry points behave as follows:
 
 Treat any of the following as a regression:
 
-- `my-events` remains a separate destination instead of funneling into Events.
-- The final route after the alias is still the alias path instead of `pages/events/index`.
+- `pages/journey` or `pages/my-events` is restored as a routable mini-program page.
+- The Events tab no longer lands on `pages/events/index`.
 - The selected tab does not move to the second `足迹` slot.
 - The final page title is not `我的足迹`.
 - The tab bar is present in the WXML tree but invisible (`display: none` or
@@ -190,5 +184,4 @@ Operational issues that are not product regressions:
 
 - Canonical tab config: `apps/mini-program/src/lib/navigation/tabBarConfig.ts`
 - Events page: `apps/mini-program/src/pages/events/index.tsx`
-- My-events alias shell: `apps/mini-program/src/pages/my-events/index.tsx`
-- `pages/journey/index` — **removed** (no longer registered in onboardingRoutes)
+- `pages/my-events/index` and `pages/journey/index` — **removed on 2026-11-03** (no longer registered in onboardingRoutes)

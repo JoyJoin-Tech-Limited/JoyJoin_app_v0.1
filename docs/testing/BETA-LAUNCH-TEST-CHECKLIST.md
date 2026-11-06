@@ -21,12 +21,12 @@
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
 | 1.1 | Share button visible | Complete personality test, reach FinalStage (slot machine + collectible card) | Share CTA section visible below collectible card with "分享" or action trigger |
-| 1.2 | Generate poster | Tap share CTA | Poster generation begins: 3-phase progress ("准备素材中…" → "正在渲染全息卡面…" → "正在导出高清图片…"). Completion triggers haptic `success`. |
-| 1.3 | Share options sheet | Wait for poster generation to complete | Action sheet appears with 3 options: "保存到相册", "分享给朋友", "预览海报" |
-| 1.4 | Save to album | Tap "保存到相册" | Triggers `scope.writePhotosAlbum` permission; if granted, poster saved. If denied, shows settings redirect. |
+| 1.2 | Generate poster | Tap share CTA | Poster generation begins: 3-phase progress ("准备素材中…" → "正在渲染全息卡面…" → "正在生成朋友圈卡片…"). Completion triggers haptic `success`. |
+| 1.3 | Share options sheet | Wait for poster generation to complete | Action sheet appears with up to 4 options: "保存到相册", "分享给朋友" (when native image sharing is available), "保存朋友圈卡片" (when the 750×750 square poster exists), "预览海报" |
+| 1.4 | Save to album | Tap "保存到相册" | Triggers `scope.writePhotosAlbum` permission; if granted, poster saved. If denied, shows settings redirect; returning with permission granted automatically resumes the pending save without another tap. |
 | 1.5 | Share to WeChat | Tap "分享给朋友" | WeChat share image menu opens with poster as shared image |
 | 1.6 | Preview poster | Tap "预览海报" | Full-screen poster preview opens with pinch-to-zoom |
-| 1.7 | Poster content correctness | Inspect generated poster | Contains: hero archetype image, archetype name (in accent text color), tagline, summary text, top 3 matches with chemistry %s, 6 trait bars, skill cards, energy bar, rank badges, holographic stamp element, JoyJoin attribution |
+| 1.7 | Poster content correctness | Inspect generated poster | A complete result contains: hero archetype image, archetype name (in accent text color), tagline, summary text, top 3 matches with chemistry %s, 6 trait bars, skill cards, energy bar, rank badges, holographic stamp element, JoyJoin attribution. Partial result data omits the missing sections without synthetic 50/default claims or placeholder holes. |
 | 1.8 | Feature flag off | Set `PERSONALITY_SHARE_ENABLED=false`, restart app | Share CTA hidden on results page |
 
 ### Edge Cases
@@ -35,8 +35,8 @@
 |---|-----------|-------|----------|
 | 1.9 | Rapid double-tap share | Tap share button twice quickly before generation completes | Second tap ignored; only one poster generation in progress |
 | 1.10 | Poster generation failure | Simulate network failure during image loading | Shows error state with retry CTA; haptic `warning` |
-| 1.11 | Save album permission denied | Deny `scope.writePhotosAlbum`, then tap "保存到相册" | Shows settings- redirect dialog; user can go to system settings to enable |
-| 1.12 | Dismiss action sheet | After generation, tap outside sheet or "取消" | Sheet dismisses; poster state resets, can regenerate |
+| 1.11 | Save album permission denied | Deny `scope.writePhotosAlbum`, then tap "保存到相册" | Shows settings-redirect dialog; user can go to system settings to enable, and returning with permission granted resumes the pending save automatically |
+| 1.12 | Dismiss action sheet | After generation, tap outside sheet or "取消" | Sheet dismisses neutrally (no error state/toast); a validly cached portrait/square poster persists and a re-tap opens the sheet without regenerating |
 | 1.13 | Archetype image CDN failure | Block CDN archetype images | Falls back to accent-color circle with first character of archetype name |
 
 ---
