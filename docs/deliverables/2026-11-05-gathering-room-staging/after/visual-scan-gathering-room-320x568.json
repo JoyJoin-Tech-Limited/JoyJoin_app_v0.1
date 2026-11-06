@@ -1,0 +1,40 @@
+{
+  "url": "http://localhost:5003/#/pages/gathering-room/index?groupId=group-screenshot-001&motion=reduce",
+  "viewport": {
+    "width": 320,
+    "height": 568
+  },
+  "timestamp": "2026-11-05T07:59:52.094Z",
+  "verdict": "PASS",
+  "summary": {
+    "total": 1,
+    "blocking": 0,
+    "advisory": 1,
+    "byCheck": {
+      "low-contrast-text": 1
+    }
+  },
+  "screenshot": "docs/deliverables/2026-11-05-gathering-room-staging/after/visual-scan-gathering-room-320x568.png",
+  "violations": [
+    {
+      "check": "low-contrast-text",
+      "severity": "advisory",
+      "selector": "div.taro_router > div.taro_page.taro_navigation_page > taro-view-core.gathering-room > taro-view-core.gathering-room__action-bar:nth-of-type(3) > taro-button-core.joy-button.joy-button--primary",
+      "message": "Contrast 4.23:1 (needs ≥4.5:1) — \"确认出席…\"",
+      "rect": {
+        "x": 20,
+        "y": 451,
+        "w": 280,
+        "h": 48,
+        "right": 300,
+        "bottom": 499
+      },
+      "details": {
+        "ratio": 4.23,
+        "threshold": 4.5,
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(139, 92, 246)"
+      }
+    }
+  ]
+}

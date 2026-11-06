@@ -164,6 +164,12 @@
     color: $color-text-primary-warm;
   }
 
+  &__facts-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24rpx;
+  }
+
   &__fact-module {
     display: flex;
     flex-direction: column;
@@ -345,6 +351,51 @@
     &__appointment-actions {
       gap: 16rpx;
       padding-top: 16rpx;
+    }
+  }
+}
+
+@media (max-height: 700px) {
+  .gathering-room {
+    &__action-bar {
+      gap: 16rpx;
+      padding: 20rpx 40rpx calc(env(safe-area-inset-bottom) + 20rpx);
+    }
+
+    &__facts-grid {
+      flex-direction: row;
+      align-items: stretch;
+      gap: 16rpx;
+    }
+
+    &__fact-module {
+      flex: 1;
+      min-width: 0;
+      gap: 12rpx;
+    }
+
+    &__fact-label {
+      font-size: 20rpx;
+    }
+
+    &__fact-label-row {
+      min-height: 32rpx;
+    }
+
+    &__fact-time {
+      font-size: 36rpx;
+    }
+
+    &__fact-venue {
+      font-size: 24rpx;
+    }
+
+    &__fact-address {
+      font-size: 20rpx;
+    }
+
+    &__appointment-actions {
+      padding-top: 12rpx;
     }
   }
 }

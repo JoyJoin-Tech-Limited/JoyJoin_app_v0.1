@@ -1638,6 +1638,14 @@ async function captureGatheringRoomMemory(viewport = V17_VIEWPORT) {
 }
 
 register('gathering-room', captureGatheringRoom)
+register('gathering-room-375x667', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 375, height: 667 },
+}))
+register('gathering-room-320x568', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 320, height: 568 },
+}))
 register('gathering-room-ended', () => captureGatheringRoom(V17_VIEWPORT, { ended: true }))
 register('gathering-room-memory', captureGatheringRoomMemory)
 register('gathering-room-confirm-interaction', captureGatheringRoomConfirmInteraction)

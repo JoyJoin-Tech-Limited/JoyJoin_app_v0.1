@@ -189,7 +189,7 @@ ROI = 用户可感知摩擦消除 ÷ 工程小时。P0 为"用户不可见、零
 
 | 表面 | 体量 | 裁决 | 理由 |
 |------|------|------|------|
-| `gathering-room`（集结房间） | 727 行 / 2 页 | **不上线，30 天后删** | 与 `pool-group-detail` 功能重叠（成员 + 时间 + 出席确认），上线等于新增第 4 个"局详情"页；pre-event presence 价值可由 events 分段承接。保留代码至 2026-12-02 观察。 |
+| `gathering-room`（集结房间） | 727 行 / 2 页 | **原“不上线、30 天后删”裁决撤销（见 §19）** | Owner 已在 2026-10-12 确认生产 DB flag LIVE；本次补充短屏布局修复与证据。当前动作是设备 QA/上线加固，不是删除。 |
 | `alang/teaser`（pool teaser） | 134 行 | **删** | discover 已有 teaser 卡，页面本身只回跳 discover，是单向死端。 |
 | `checkoutSubscriptionUpsell` | 无独立页 | **删** | checkout 已是全站最重路径（4.0k 行），转化点不宜再加分支。 |
 | `personal-story` / `my-image` / `equipment` / `rewards` | 3.4k 行分包 | **保持暗置** | 不进首屏、不进 tab，不影响摩擦；是否上线是产品命题，不是减法命题。 |
@@ -631,3 +631,34 @@ docs/deliverables/2026-11-02-uiux-subtraction/
 Brief CTA → 预算选择/下一步 → 已回填 intent 的确认（可选展开修改）→ 最终终检并提交。它是 3 个内容步骤 + 1 次必要终检，不是原报告假设的 9 个决策屏。
 
 **结论：P1-3 关闭为 no-op**。撤回“删确认弹窗 + 改内联终检”的实施提案；不为了 9→6 的数量目标引入新的支付/免费/权益状态风险。本项无产品代码改动，无需制造 BEFORE/AFTER 差异。
+
+---
+
+## 19. Gathering-room 上线状态校正与短屏修复（2026-11-05，取代 §5/P2 删除裁决）
+
+### 19.1 事实校正
+
+- **代码/env 默认仍是 fail-closed**：`GATHERING_ROOM_ENABLED` 默认 `false`，未设置时不开放集结房间。
+- **生产状态已有 owner 确认 LIVE**：`docs/testing/LAUNCH-QA-HARD-STOP-VERIFICATION.md` 记录 2026-10-12 owner 确认 `gatheringRoomEnabled` 生产 DB flag 已开启；用户真机截图也与此一致。
+- 因此早前“不上线、30 天后删”的建议**撤回**。当前不是删除候选，而是“已 LIVE、需补设备 QA 与短屏修复”的表面。
+
+### 19.2 本次修复与证据
+
+- **问题**：短屏上场景区域被底部行动区挤压，出现“场景很小、白卡片很大”、头像/名牌感知被截断或空间不连续。
+- **修复**：`pages/gathering-room/index.tsx` 将时间与地点模块包进 `gathering-room__facts-grid`；`index.scss` 增加 `@media (max-height:700px)` 短屏布局：事实信息并排、行动区 padding/gap/字号压缩，`fact-time` 用 36rpx 以满足既有截图 gate。
+- **验证**：`docs/deliverables/2026-11-05-gathering-room-staging/after/` 已有 390×844 / 375×667 / 320×568 截图与 visual-scan JSON，三档均 PASS；唯一 advisory 是共享 primary CTA 白字在品牌紫上的 4.23:1，非本次布局引入，非阻断。
+- **staging 说明**：本 checkout 没有 `deployment/.env.staging`，staging 需通过 DB/admin 或部署 env 显式设置 `GATHERING_ROOM_ENABLED=true`；生产 DB flag 已是 LIVE，不通过代码默认值改动。
+
+### 19.3 PM 语言收益
+
+集结房间把“等活动的这段时间”变成一个**一起等待的地方**：用户能看到谁来、谁已确认、互相 poke/挥手，提前感到“这张桌子正在成形”。它能降低临阵焦虑、减少爽约、提升到场准备度，并让活动前的归属感更强。减法原则不是“看到重叠就删”，而是保留它独有的“赛前集结”时刻。
+
+### 19.4 QA Sprint Evaluation（2026-11-05）
+
+**结论：PARTIAL，无阻断项。**
+
+- **AC-01 PASS**：390/375/320 三档 AFTER 截图复核通过，短屏紧凑布局生效，无头像/名牌裁切；visual scan 三档 PASS，`blocking=0`；唯一 advisory 是共享 primary CTA 白字在品牌紫上的 4.23:1，非本次引入。
+- **AC-02 PARTIAL-environmental**：代码/env 默认值未被改动，生产 LIVE 状态已在文档中校正；但 `deployment/.env.staging` 在当前 checkout 不存在，staging 显式开启仍是树外运维动作，暂无落地证据。
+- **Harness pillars**：Reliability / Scalability / Security / Observability / Maintainability 均 PASS；工程门禁作为既有证据接受。
+
+**关闭条件**：在 staging 通过 DB/admin/env 设置 `GATHERING_ROOM_ENABLED=true` 并补一条 room-open 证据；把 shared primary CTA 对比度 advisory 单独跟踪。

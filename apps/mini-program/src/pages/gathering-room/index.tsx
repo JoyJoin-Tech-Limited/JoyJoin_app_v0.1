@@ -424,44 +424,46 @@ export default function GatheringRoomPage() {
             </View>
           </View>
 
-        <View className='gathering-room__fact-module'>
-          <View className='gathering-room__fact-label-row'>
-            <JoyJoinIcon emoji='📅' size={24} />
-            <Text className='gathering-room__fact-label'>时间</Text>
-          </View>
-          <Text className='gathering-room__fact-time'>{eventDateTimeLabel}</Text>
-          {eventPhase !== 'ended' ? (
-            <Text className='gathering-room__fact-meta'>
-              {hasValidEventTime ? countdownLabel : '时间确定后在这里更新'}
-            </Text>
-          ) : null}
-          {canReportLate && ownConfirmed ? (
-            <View
-              className={ownIsLate
-                ? 'gathering-room__fact-action gathering-room__fact-action--done'
-                : 'gathering-room__fact-action'}
-              role='button'
-              aria-label={ownIsLate ? '已登记会晚到' : '会晚到？提前告诉大家'}
-              onClick={ownIsLate || isReportingLate ? undefined : handleReportLate}
-            >
-              <Text>{isReportingLate ? '正在登记…' : ownIsLate ? '已登记会晚到' : '会晚到？提前告诉大家'}</Text>
+        <View className='gathering-room__facts-grid'>
+          <View className='gathering-room__fact-module'>
+            <View className='gathering-room__fact-label-row'>
+              <JoyJoinIcon emoji='📅' size={24} />
+              <Text className='gathering-room__fact-label'>时间</Text>
             </View>
-          ) : lateAvailabilityText && ownConfirmed ? (
-            <Text className='gathering-room__fact-meta'>{lateAvailabilityText}</Text>
-          ) : null}
-        </View>
-
-        <View className='gathering-room__fact-module'>
-          <View className='gathering-room__fact-label-row'>
-            <JoyJoinIcon emoji='📍' size={24} />
-            <Text className='gathering-room__fact-label'>地点</Text>
+            <Text className='gathering-room__fact-time'>{eventDateTimeLabel}</Text>
+            {eventPhase !== 'ended' ? (
+              <Text className='gathering-room__fact-meta'>
+                {hasValidEventTime ? countdownLabel : '时间确定后在这里更新'}
+              </Text>
+            ) : null}
+            {canReportLate && ownConfirmed ? (
+              <View
+                className={ownIsLate
+                  ? 'gathering-room__fact-action gathering-room__fact-action--done'
+                  : 'gathering-room__fact-action'}
+                role='button'
+                aria-label={ownIsLate ? '已登记会晚到' : '会晚到？提前告诉大家'}
+                onClick={ownIsLate || isReportingLate ? undefined : handleReportLate}
+              >
+                <Text>{isReportingLate ? '正在登记…' : ownIsLate ? '已登记会晚到' : '会晚到？提前告诉大家'}</Text>
+              </View>
+            ) : lateAvailabilityText && ownConfirmed ? (
+              <Text className='gathering-room__fact-meta'>{lateAvailabilityText}</Text>
+            ) : null}
           </View>
-          <Text className='gathering-room__fact-venue'>
-            {venueReady && venueName ? venueName : '地点待定'}
-          </Text>
-          <Text className='gathering-room__fact-address'>
-            {venueAddress || '地点确定后在这里更新'}
-          </Text>
+
+          <View className='gathering-room__fact-module'>
+            <View className='gathering-room__fact-label-row'>
+              <JoyJoinIcon emoji='📍' size={24} />
+              <Text className='gathering-room__fact-label'>地点</Text>
+            </View>
+            <Text className='gathering-room__fact-venue'>
+              {venueReady && venueName ? venueName : '地点待定'}
+            </Text>
+            <Text className='gathering-room__fact-address'>
+              {venueAddress || '地点确定后在这里更新'}
+            </Text>
+          </View>
         </View>
 
         {ownAttendanceStatus === 'pending' && eventPhase !== 'ended' ? (
