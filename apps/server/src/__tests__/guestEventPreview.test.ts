@@ -59,18 +59,25 @@ interface PoolRow {
   targetGroups: number | null;
 }
 
+// Relative fixtures: buildGuestEventPreview() reads the real clock, so a
+// hardcoded future date silently becomes an expired pool once the calendar
+// passes it (observed 2026-11-06: 8 tests failed because the 2026-11-05
+// deadline was in the past).
+const FUTURE_EVENT_DATE = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+const FUTURE_REGISTRATION_DEADLINE = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
+
 let poolSeq = 0;
 function makePool(overrides: Partial<PoolRow> = {}): PoolRow {
   poolSeq += 1;
   return {
     id: `pool-${poolSeq}`,
     title: `周五夜聊酒局 ${poolSeq}`,
-    dateTime: new Date("2026-11-07T12:00:00.000Z"),
+    dateTime: new Date(FUTURE_EVENT_DATE),
     district: "南山区",
     eventType: "饭局",
     status: "active",
     isTestPool: false,
-    registrationDeadline: new Date("2026-11-05T12:00:00.000Z"),
+    registrationDeadline: new Date(FUTURE_REGISTRATION_DEADLINE),
     city: "深圳",
     minGroupSize: 4,
     maxGroupSize: 6,
@@ -189,12 +196,12 @@ describe("buildGuestEventPreview — triple gate satisfied", () => {
   });
 
   it("serializes dateTime as an ISO string", async () => {
-    const pool = makePool({ id: "pool-iso", dateTime: new Date("2026-11-07T12:00:00.000Z") });
+    const pool = makePool({ id: "pool-iso", dateTime: new Date(FUTURE_EVENT_DATE) });
     configureDb([pool, makePool(), makePool()], []);
 
     const result = await buildGuestEventPreview();
 
-    expect(result[0].dateTime).toBe("2026-11-07T12:00:00.000Z");
+    expect(result[0].dateTime).toBe(FUTURE_EVENT_DATE.toISOString());
   });
 });
 
