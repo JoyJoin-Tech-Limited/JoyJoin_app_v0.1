@@ -544,7 +544,7 @@ To add a new automation:
 
 ## Related
 
-- [Developer Quick Reference](../DEVELOPER_QUICK_REFERENCE.md) — canonical engineering guardrails
+- [Developer Quick Reference](../../DEVELOPER_QUICK_REFERENCE.md) — canonical engineering guardrails
 - [CI/CD Pipeline](../../.github/workflows/cicd.yml) — main production pipeline
 - [Synthetic Monitoring](../../.github/workflows/synthetic-probe.yml) — uptime probes
 - [Agent Orchestration](../../.github/workflows/orchestrate.yml) — AI agent coordination

@@ -320,7 +320,7 @@ npm test apps/server/src/__tests__/themeLLM.test.ts
 
 ## 📚 Full Documentation
 
-See: `docs/event-theme-generator.md`
+See: `docs/archive/event-theme-generator.md`
 
 ---
 

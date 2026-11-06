@@ -27,5 +27,5 @@ Pool matching must not run concurrently for the same pool — use an execution g
 - `apps/server/src/routes/domains/eventGroupOutcomes.ts`
 - `apps/server/src/poolRealtimeMatchingService.ts` — registration-triggered and scheduled match runs
 - `apps/server/src/poolMatchingService.ts` — read-only for understanding how pool config feeds group formation (scoring changes belong to `matching-domain`)
-- `docs/MATCHING_ALGORITHM_REFERENCE.md` — pair/group algorithm reference (cross-check with pool operations)
-- `docs/admin-rbac-matrix.md`
+- `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` — pair/group algorithm reference (cross-check with pool operations)
+- `docs/admin/admin-rbac-matrix.md`

@@ -15,7 +15,7 @@
 
 When `ENABLE_SEMANTIC_SIMILARITY=true`, the first six weights are redistributed to make room for semantic similarity (approximately: chemistry 26% / interest 26% / socialAffinity 19% / backgroundDiversity 14% / preference 5% / language 4% / **semanticSimilarity 6%**). Pair cache keys include `semantic` vs `legacy` so 6D and 7D paths do not collide.
 
-Full narrative and matrices: `docs/MATCHING_ALGORITHM_REFERENCE.md`.
+Full narrative and matrices: `docs/systems/MATCHING_ALGORITHM_REFERENCE.md`.
 
 ## MatcherV2 specifics
 
@@ -63,5 +63,5 @@ Full narrative and matrices: `docs/MATCHING_ALGORITHM_REFERENCE.md`.
 - `apps/server/src/__tests__/interestSignalBoundary.test.ts`
 - `packages/shared/src/personality/archetypeCompatibility.ts`
 - `packages/shared/src/types/aiMeta.ts`
-- `docs/MATCHING_ALGORITHM_REFERENCE.md`
-- `docs/interest-signal-boost.md`
+- `docs/systems/MATCHING_ALGORITHM_REFERENCE.md`
+- `docs/systems/interest-signal-boost.md`

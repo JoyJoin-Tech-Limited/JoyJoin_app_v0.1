@@ -11,7 +11,7 @@ There is no single executable binary that runs “the agent” for contributor w
 | **Policy** | [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md), [`copilot-instructions.md`](./copilot-instructions.md) | Lanes, review expectations |
 | **Doc refresh playbook** | [`../docs/ai/ai-workflow-documentation-refresh.md`](../docs/ai/ai-workflow-documentation-refresh.md) | Coordinated updates across product docs, skills, agents, and orchestration (lanes, `docs-sync`, validation) |
 
-**Product / runtime AI** (icebreaker, match explanation, LLM-backed features) uses separate patterns. See [`docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) — not the same stack as contributor orchestration.
+**Product / runtime AI** (icebreaker, match explanation, LLM-backed features) uses separate patterns. See [`docs/ai/ai-agent-harness-separation-strategy.md`](../docs/ai/ai-agent-harness-separation-strategy.md) — not the same stack as contributor orchestration.
 
 **Turn narrative (chat-visible):** [`agents/AGENT_TURN_VISIBLE_FORMAT.md`](./agents/AGENT_TURN_VISIBLE_FORMAT.md).
 

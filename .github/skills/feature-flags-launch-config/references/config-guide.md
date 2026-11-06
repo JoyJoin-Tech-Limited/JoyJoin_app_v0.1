@@ -36,7 +36,7 @@ To expose a flag to the client:
 
 1. Add the env var read in the relevant server file (e.g., `process.env.MY_FEATURE_ENABLED === 'true'`).
 2. Gate the route or service logic with a clear early return / fallback.
-3. Document the flag in `docs/LAUNCH_CONFIG.md` or `docs/ai-feature-flags.md`.
+3. Document the flag in `docs/product/LAUNCH_CONFIG.md` or `docs/ai/ai-feature-flags.md`.
 4. Add the var (commented out or with safe default) to `.env.example` and `deployment/.env.staging.example`.
 5. If the client needs the flag, expose it in `/api/auth/user` or a dedicated config endpoint.
 6. Add a test that verifies both enabled and disabled paths.
@@ -47,8 +47,8 @@ If a flag is being retired, ensure the enabled behavior is the new default, upda
 
 ## Canonical References
 
-- `docs/LAUNCH_CONFIG.md` — canonical launch configuration guide
-- `docs/ai-feature-flags.md` — AI-specific feature flags and environment variables
+- `docs/product/LAUNCH_CONFIG.md` — canonical launch configuration guide
+- `docs/ai/ai-feature-flags.md` — AI-specific feature flags and environment variables
 - `apps/server/src/lib/configValidation.ts` — startup config validation
 - `apps/server/src/auth/policy.ts` — auth/debug flag policy
 - `apps/server/src/matchingSemantic.ts` — `isSemanticSimilarityEnabled()`

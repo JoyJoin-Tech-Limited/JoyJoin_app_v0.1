@@ -211,9 +211,9 @@ If issues arise, rollback steps:
 
 ## Related Documentation
 
-- [DEVELOPER_QUICK_REFERENCE.md](../DEVELOPER_QUICK_REFERENCE.md)
-- [PRODUCT_REQUIREMENTS.md](../PRODUCT_REQUIREMENTS.md)
-- [Interest Carousel Implementation](../archived/docs/IMPLEMENTATION_SUMMARY_INTERESTS.md)
+- [DEVELOPER_QUICK_REFERENCE.md](../../../DEVELOPER_QUICK_REFERENCE.md)
+- [PRODUCT_REQUIREMENTS.md](../../../PRODUCT_REQUIREMENTS.md)
+- [Interest Carousel Implementation](../../../archived/docs/IMPLEMENTATION_SUMMARY_INTERESTS.md)
 
 ---
 

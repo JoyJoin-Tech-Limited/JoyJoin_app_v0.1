@@ -227,7 +227,7 @@ interface MobileContainerProps {
 
 ### 1. Mobile Design System Documentation
 
-**Location**: `docs/mobile-design-system.md`
+**Location**: `docs/design/mobile-design-system.md`
 
 **Contents**:
 - Platform support strategy
@@ -501,9 +501,9 @@ Before using in production:
 
 ### Documentation
 
-- [Mobile Design System](./mobile-design-system.md)
-- [Platform Coordination](./reference/PLATFORM_COORDINATION.md)
-- [WeChat Mini Program Reference](./reference/wechat-mini-program-reference.md)
+- [Mobile Design System](../../design/mobile-design-system.md)
+- [Platform Coordination](../../reference/PLATFORM_COORDINATION.md)
+- [WeChat Mini Program Reference](../../reference/wechat-mini-program-reference.md)
 - [Original Specification](../problem_statement.md)
 
 ### Component Files

@@ -466,7 +466,7 @@ Every orchestrator service should implement the same 7-stage structural pipeline
 | `packages/shared/src/schema.ts` | ✅ Active | Database schema source of truth; agent services read but do not own schema definition |
 | `apps/server/src/inference/llmFallbackInference.ts` | ⚡ Implemented, not wired | Attribute inference fallback via direct DeepSeek; `callLLMForInference()` has no runtime callers yet |
 | `apps/server/src/matchingWeightsService.ts` | ⚡ Primary adaptive-weight path, implemented but not wired | Thompson Sampling weight learning; not yet connected to `poolMatchingService.ts` |
-| `docs/icebreaker-system.md` | ✅ Active | Full technical reference for Social Icebreaker system |
+| `docs/icebreaker/icebreaker-system.md` | ✅ Active | Full technical reference for Social Icebreaker system |
 | `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` | ✅ Active | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
 | `docs/systems/PERSONALITY_TEST_SYSTEM.md` | ✅ Active | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
 | `docs/systems/interest-signal-boost.md` | ✅ Active | Interest signal boost feature reference; signals flow into icebreaker/explanation prompts, not pair scoring |

@@ -4425,7 +4425,7 @@ joyjoin-monorepo/
 **Ownership routing:**
 - Engineering / architecture questions: start with `CONTRIBUTING.md`, `docs/README.md`, and the owning workspace README
 - Product canon / scope questions: use this PRD plus the current planning owner for the affected initiative
-- Design-system / mobile UX questions: start with `design_guidelines.md`, `docs/mobile-design-system.md`, and the relevant frontend/design-system guidance
+- Design-system / mobile UX questions: start with `design_guidelines.md`, `docs/design/mobile-design-system.md`, and the relevant frontend/design-system guidance
 
 ---
 

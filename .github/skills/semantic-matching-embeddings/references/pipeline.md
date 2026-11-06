@@ -67,6 +67,6 @@ Located in `apps/server/src/dialogueEmbeddingsService.ts`.
 - `apps/server/src/repositories/userSemanticProfilesRepo.ts` — DB access for `user_semantic_profiles`
 - `apps/server/src/__tests__/userSemanticProfileService.test.ts` — Pipeline boundary and degradation tests
 - `packages/shared/src/schema.ts` — `userSemanticProfiles`, `dialogueEmbeddings` table definitions
-- `docs/ai-feature-flags.md` — Embedding env var reference
-- `docs/MATCHING_ALGORITHM_REFERENCE.md` — Full algorithm narrative including semantic similarity section
-- `docs/LAUNCH_CONFIG.md` — `ENABLE_SEMANTIC_SIMILARITY` rollout guidance
+- `docs/ai/ai-feature-flags.md` — Embedding env var reference
+- `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` — Full algorithm narrative including semantic similarity section
+- `docs/product/LAUNCH_CONFIG.md` — `ENABLE_SEMANTIC_SIMILARITY` rollout guidance

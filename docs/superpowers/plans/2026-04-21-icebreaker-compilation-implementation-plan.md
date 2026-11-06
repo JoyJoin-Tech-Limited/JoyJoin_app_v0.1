@@ -44,7 +44,7 @@
 | `apps/user-client/src/hooks/useSocialIcebreaker.ts` | Type-only / field passthrough if response adds `runPlan`. |
 | `apps/user-client/src/components/social-icebreaker/SocialIcebreakerOrchestrator.tsx` | Optional: show “Tonight’s flow” chips from `runPlan.segments` (read-only v1). |
 | `apps/mini-program/src/pages/icebreaker-session/index.tsx` | Parity: same read-only UI if exposed. |
-| `docs/icebreaker-system.md` | Document plan schema, trigger, and admin/debug access. |
+| `docs/icebreaker/icebreaker-system.md` | Document plan schema, trigger, and admin/debug access. |
 
 ---
 
@@ -188,7 +188,7 @@ Inspect the generated SQL for naming consistency with existing migrations.
 cd apps/server && npm run db:migrate
 ```
 
-Follow [`database-migration-safety`](../../.github/skills/database-migration-safety/SKILL.md) for staging ordering and rollback notes.
+Follow [`database-migration-safety`](../../../.github/skills/database-migration-safety/SKILL.md) for staging ordering and rollback notes.
 
 ---
 
@@ -319,10 +319,10 @@ cd apps/server && npm run test -- --run src/__tests__/socialIcebreakerRoutes.tes
 
 **Files (choose minimal path approved by you):**
 
-- Option A: **SQL / admin script** only in v1 (`docs/icebreaker-system.md` query examples).
-- Option B: Admin route `GET /api/admin/icebreaker-run-plans/:scopeType/:scopeId` with `requireAdmin` + audit log per [`admin-audit-and-rbac-governance`](../../.github/skills/admin-audit-and-rbac-governance/SKILL.md).
+- Option A: **SQL / admin script** only in v1 (`docs/icebreaker/icebreaker-system.md` query examples).
+- Option B: Admin route `GET /api/admin/icebreaker-run-plans/:scopeType/:scopeId` with `requireAdmin` + audit log per [`admin-audit-and-rbac-governance`](../../../.github/skills/admin-audit-and-rbac-governance/SKILL.md).
 
-- [ ] **Step 1:** Implement Option A **or** B; document in `docs/icebreaker-system.md`.
+- [ ] **Step 1:** Implement Option A **or** B; document in `docs/icebreaker/icebreaker-system.md`.
 
 ---
 
@@ -361,7 +361,7 @@ Contents checklist:
 **Files:**
 
 - Modify: [`apps/server/src/lib/compileIcebreakerRunPlan.ts`](../../apps/server/src/lib/compileIcebreakerRunPlan.ts) (metrics hooks if repo has a pattern)
-- Follow: [`platform-observability-and-ops`](../../.github/skills/platform-observability-and-ops/SKILL.md)
+- Follow: [`platform-observability-and-ops`](../../../.github/skills/platform-observability-and-ops/SKILL.md)
 
 - [ ] **Step 1:** Emit structured logs: `icebreaker.run_plan.compiled` with `{ scopeType, scopeId, planHash, segmentCount, compilerId }`.
 

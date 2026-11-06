@@ -66,7 +66,7 @@ When auditing a skill or the full skills system, evaluate against these areas:
 7. Technical correctness
 8. Distribution readiness
 
-For the full golden checklist, see [`references/checklist.md`](./references/checklist.md).
+For the full golden checklist, see [`references/checklist.md`](./checklist.md).
 
 When auditing code-review or operational-quality skills, also check against **Harness Engineering Framework pillars**: reliability, scalability, security, observability, and maintainability. A skill that teaches code review should require explicit evaluation against each pillar and produce a per-pillar compliance verdict (Pass / Fail / Needs attention).
 
@@ -79,7 +79,7 @@ Produce: `SKILL.md` with correct frontmatter, all required sections, and a `refe
 Produce: targeted patches to weak or missing sections. Do not rewrite sections that are already compliant. Document what changed and why.
 
 ### Repo-wide audit
-Produce: an audit report per skill listing compliant and non-compliant items per checklist area. See [`references/examples.md`](./references/examples.md) for the audit report format.
+Produce: an audit report per skill listing compliant and non-compliant items per checklist area. See [`references/examples.md`](./examples.md) for the audit report format.
 
 ### PR review for skill changes
 Produce: inline comments or a review summary noting which checklist items pass or fail. Flag missing trigger phrases, missing review checklists, or bloated `SKILL.md` files.

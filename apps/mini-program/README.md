@@ -442,7 +442,7 @@ For **matched** flows, `GET /api/pool-groups/:groupId/analysis` returns `fromCac
 | [`../../docs/reference/PLATFORM_COORDINATION.md`](../../docs/reference/PLATFORM_COORDINATION.md) | Auth, API, and payment flow parity between mini-program and web |
 | [`../../docs/reference/perf.md`](../../docs/reference/perf.md) | Performance guidelines for the monorepo |
 | [`../../docs/reference/wechat-mini-program-reference.md`](../../docs/reference/wechat-mini-program-reference.md) | WeChat-specific API reference |
-| [`../../docs/mini-program-data-fetching.md`](../../docs/mini-program-data-fetching.md) | React Query key conventions |
+| [`../../docs/mini-program/mini-program-data-fetching.md`](../../docs/mini-program/mini-program-data-fetching.md) | React Query key conventions |
 | [`docs/TECH_STACK.md`](./docs/TECH_STACK.md) | Deep technical stack reference |
 | [`docs/USER_FLOW.md`](./docs/USER_FLOW.md) | Complete user flow mapping |
 | [`.github/skills/platform-coordination-protocol/SKILL.md`](../../.github/skills/platform-coordination-protocol/SKILL.md) | Skill: cross-platform coordination |

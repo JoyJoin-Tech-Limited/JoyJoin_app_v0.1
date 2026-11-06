@@ -69,7 +69,7 @@ In `development` (`NODE_ENV === 'development'`), both `getWechatOpenId` and `get
 - Mini Program is the **launch-primary** and only active user-facing client.
 - The web client (`apps/user-client`) was archived to `archived/workspaces/user-client/` (2026-05-07).
   Formerly it used a hybrid WeChat OAuth2 / `wx.login()` path — no longer active.
-- Any change to shared auth/payment contracts must be reviewed against `docs/PLATFORM_COORDINATION.md`.
+- Any change to shared auth/payment contracts must be reviewed against `docs/reference/PLATFORM_COORDINATION.md`.
 
 ## Canonical References
 
@@ -82,5 +82,5 @@ In `development` (`NODE_ENV === 'development'`), both `getWechatOpenId` and `get
 - `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` — Mini Program login hook
 - `apps/mini-program/src/pages/blind-box-payment/index.tsx` — `Taro.requestPayment` launch
 - `archived/workspaces/user-client/src/hooks/useWeChatLogin.ts` — Archived Web OAuth / `wx.login()` hybrid hook
-- `docs/PLATFORM_COORDINATION.md` — Cross-platform auth/payment coordination playbook
-- `docs/wechat-mini-program-reference.md` — Low-level WeChat API and rpx reference
+- `docs/reference/PLATFORM_COORDINATION.md` — Cross-platform auth/payment coordination playbook
+- `docs/reference/wechat-mini-program-reference.md` — Low-level WeChat API and rpx reference

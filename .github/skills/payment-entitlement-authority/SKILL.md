@@ -37,7 +37,7 @@ Use this skill when you are:
 | Shared contracts | `packages/shared/src/api.ts` | Pure DTOs, plan normalization, verification decision helpers |
 | Schema | `packages/shared/src/schema.ts` | Persistence contract for payments and credit tables |
 
-Platform launch flows stay local: Mini Program owns `Taro.requestPayment`; web owns H5 redirect. Coordinate shared contract changes through `docs/PLATFORM_COORDINATION.md`.
+Platform launch flows stay local: Mini Program owns `Taro.requestPayment`; web owns H5 redirect. Coordinate shared contract changes through `docs/reference/PLATFORM_COORDINATION.md`.
 
 See [`references/payment-ops.md`](references/payment-ops.md) for webhook handling specifics, verification polling, refund procedures, event-pack credit details, and cross-platform coordination.
 
@@ -67,10 +67,10 @@ Check whether the payment is still `pending`, whether the webhook or status quer
 Verify that `REFUND.SUCCESS` reaches `paymentService.handleWebhook()` and that `paymentFulfillmentRepo.finalizeRefundedPayment()` ran. Do not patch the route to set refunded state directly.
 
 **Mini-program and web payment behavior drifted after a shared change**
-Update `packages/shared/src/api.ts`, re-read `docs/PLATFORM_COORDINATION.md`, and confirm both platform adapters still compile and preserve their local launch responsibilities.
+Update `packages/shared/src/api.ts`, re-read `docs/reference/PLATFORM_COORDINATION.md`, and confirm both platform adapters still compile and preserve their local launch responsibilities.
 
 **The client sees `PAYMENTS_DISABLED` unexpectedly**
-Check `PAYMENTS_ENABLED`, the launch-config guidance in `docs/LAUNCH_CONFIG.md`, and whether the client is reading the current `/api/auth/user` response.
+Check `PAYMENTS_ENABLED`, the launch-config guidance in `docs/product/LAUNCH_CONFIG.md`, and whether the client is reading the current `/api/auth/user` response.
 
 ## Review checklist
 
@@ -80,7 +80,7 @@ Check `PAYMENTS_ENABLED`, the launch-config guidance in `docs/LAUNCH_CONFIG.md`,
 - [ ] Event-pack credits are only mutated through `apps/server/src/repositories/eventCreditsRepo.ts`
 - [ ] Entitlement gating remains server-owned in `apps/server/src/routes.ts`
 - [ ] Shared payment DTOs and verification helpers stay pure in `packages/shared/src/api.ts`
-- [ ] Shared contract or platform-boundary changes update `docs/PLATFORM_COORDINATION.md` and the affected platform builds
-- [ ] Payment feature-flag or environment assumptions still match `docs/LAUNCH_CONFIG.md`
+- [ ] Shared contract or platform-boundary changes update `docs/reference/PLATFORM_COORDINATION.md` and the affected platform builds
+- [ ] Payment feature-flag or environment assumptions still match `docs/product/LAUNCH_CONFIG.md`
 - [ ] Relevant payment tests were updated when the authority boundary or behavior changed
 - [ ] Grill-me interview completed for any payment path change (see `references/grill-me-checklist.md`)

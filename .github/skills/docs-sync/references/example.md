@@ -16,7 +16,7 @@ A PR added a new onboarding step that allows users to upload a profile photo bef
 ### Step 1 — Inventory
 
 - Agent memory: searched for "onboarding", "photo", "nextStep" → found a memory caching the active onboarding step list (stale — missing `photo-upload`)
-- Docs: `README.md`, `AGENTS.md`, `docs/onboarding-flow.md`, `DEVELOPER_QUICK_REFERENCE.md`, `onboarding-state-architecture` SKILL.md
+- Docs: `README.md`, `AGENTS.md`, `docs/systems/onboarding-flow.md`, `DEVELOPER_QUICK_REFERENCE.md`, `onboarding-state-architecture` SKILL.md
 - All files read and tagged `[assessed / needs-edit / skip]`
 
 ### Step 2 — Impact analysis
@@ -32,7 +32,7 @@ All four categories have documentation and memory implications.
 
 | Change | Agent memory | Canonical doc / skill | Section |
 |--------|-------------|----------------------|---------|
-| New `nextStep` value | Update cached step list | `docs/onboarding-flow.md` | Step sequence |
+| New `nextStep` value | Update cached step list | `docs/systems/onboarding-flow.md` | Step sequence |
 | New `nextStep` value | — | `onboarding-state-architecture` SKILL.md | Active onboarding steps table |
 | New `users` column | — | `DEVELOPER_QUICK_REFERENCE.md` | Server-owned completion semantics |
 | New POST endpoint | — | `DEVELOPER_QUICK_REFERENCE.md` / `docs/api/` | Route table |
@@ -43,7 +43,7 @@ All four categories have documentation and memory implications.
 **Agent memory (via MCP `agentMemory`)**
 - `update` the cached onboarding-step memory to include `photo-upload` with absolute date `2026-04-30`
 
-**`docs/onboarding-flow.md` — step sequence (before)**
+**`docs/systems/onboarding-flow.md` — step sequence (before)**
 ```
 | `extended-data`   | `/onboarding/extended` | `ExtendedDataPage.tsx` | `hasCompletedInterestsCarousel` |
 | `profile-review`  | `/onboarding/review`   | `FinalProfileReviewPage.tsx` | `hasSeenProfileReview` |

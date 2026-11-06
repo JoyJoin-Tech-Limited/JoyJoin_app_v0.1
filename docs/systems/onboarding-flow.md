@@ -31,17 +31,17 @@ Essential Data → Extended Data → Profile Review → Discover Page
 
 ### Mini Program (Taro) path mirror
 
-Server `nextStep` and assessment APIs are the same as web; only routes and storage differ. Registration for Taro pages is centralized in [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) (onboarding flows live in the **`pages/onboarding`** subpackage).
+Server `nextStep` and assessment APIs are the same as web; only routes and storage differ. Registration for Taro pages is centralized in [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) (onboarding flows live in the **`pages/onboarding`** subpackage).
 
 | Phase | Taro location | WeChat / API notes |
 |--------|----------------|---------------------|
 | Personality test (anonymous) | `pages/onboarding/personality-test/index` | Same `/api/assessment/v4/*` calls as web; anonymous answers via Taro storage (`apps/mini-program/src/lib/auth/anonymousOnboarding.ts`) |
 | Results | `pages/onboarding/personality-test/results` | Reveal + share; inline WeChat login imports anonymous answers |
-| Inline login (post-result) | Handled on results page | `authenticateMiniProgramUserWithTest()` in [`api.ts`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login-with-test` |
-| Login only (returning users) | `pages/index/index?auth=logout\|expired` (landing `loggedOut` state; `pages/login/index` retired 2026-09-01) | [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → `POST /api/auth/wechat/login` |
-| Post-auth onboarding | `pages/onboarding/onboarding`, `essential-data`, `extended-data`, `profile-review` | Navigate with [`navigateToMiniProgramNextStep`](../apps/mini-program/src/lib/onboarding/onboardingNavigation.ts) per `GET /api/auth/user` |
+| Inline login (post-result) | Handled on results page | `authenticateMiniProgramUserWithTest()` in [`api.ts`](../../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login-with-test` |
+| Login only (returning users) | `pages/index/index?auth=logout\|expired` (landing `loggedOut` state; `pages/login/index` retired 2026-09-01) | [`useWeChatLogin`](../../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → `POST /api/auth/wechat/login` |
+| Post-auth onboarding | `pages/onboarding/onboarding`, `essential-data`, `extended-data`, `profile-review` | Navigate with [`navigateToMiniProgramNextStep`](../../apps/mini-program/src/lib/onboarding/onboardingNavigation.ts) per `GET /api/auth/user` |
 
-Blind-box **payment** after onboarding is **not** part of this table; see [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) (mini-program `blind-box-payment` + `payment-verification` pages).
+Blind-box **payment** after onboarding is **not** part of this table; see [`docs/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md) (mini-program `blind-box-payment` + `payment-verification` pages).
 
 **Original planning target:** +15% signup conversion (based on Soul, 16Personalities benchmarks). Treat this as historical planning context, not a live KPI report.
 

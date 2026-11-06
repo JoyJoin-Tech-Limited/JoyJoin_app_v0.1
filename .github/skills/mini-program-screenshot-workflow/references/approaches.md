@@ -218,7 +218,7 @@ Use this procedure after any tab-bar or routing change:
    | 中心入口 | `pages/center-hub/index` | `block` | absent ✅ |
    | Login (loggedOut) | `pages/index/index?auth=logout` | n/a | hidden / not attached ✅ |
 
-For the complete runbook, see [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../../docs/runbooks/mini-program-tab-bar-smoke.md).
+For the complete runbook, see [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../../../docs/runbooks/mini-program-tab-bar-smoke.md).
 
 ## Approach C: Real Device Preview (CLI QR Code)
 

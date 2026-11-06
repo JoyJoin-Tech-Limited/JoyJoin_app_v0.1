@@ -53,7 +53,7 @@ After implementing or changing an admin action, verify the route guard, the audi
 Verify that `logAdminAudit(...)` is actually called in the mutation path and search logs by the `[AdminAudit]` prefix rather than generic request logs.
 
 **An action is using the wrong middleware**
-Check the live route against [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md) and [`references/rbac-matrix.md`](references/rbac-matrix.md). Do not trust an old assumption that every `/api/admin/*` write is equivalent.
+Check the live route against [`docs/admin/admin-rbac-matrix.md`](../../../docs/admin/admin-rbac-matrix.md) and [`references/rbac-matrix.md`](references/rbac-matrix.md). Do not trust an old assumption that every `/api/admin/*` write is equivalent.
 
 **The audit record contains too much data**
 Reduce `before`, `after`, and `context` to safe business fields only. Redaction is a safety net, not a license to pass large or sensitive objects.

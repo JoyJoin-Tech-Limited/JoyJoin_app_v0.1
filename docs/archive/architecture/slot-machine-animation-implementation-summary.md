@@ -100,7 +100,7 @@ setCurrentIndex(targetIndex);
 
 ### Files Created
 
-#### 4. `docs/slot-machine-animation-storyboard.md`
+#### 4. `docs/slot-machine/slot-machine-animation-storyboard.md`
 **Purpose**: Comprehensive technical specification and design document
 
 **Contents**:
@@ -169,7 +169,7 @@ Idle → Anticipation (0.9s) → Spinning (2.8s) → Slowing (0.5s) → [Near-mi
 ## Next Steps for Design Team
 
 ### 1. Design Review Required
-- [ ] Review `docs/slot-machine-animation-storyboard.md`
+- [ ] Review `docs/slot-machine/slot-machine-animation-storyboard.md`
 - [ ] Validate timing parameters (currently ~6.5s total)
 - [ ] Approve Pokémon-style bouncy reveal approach
 - [ ] Confirm accessibility requirements are met

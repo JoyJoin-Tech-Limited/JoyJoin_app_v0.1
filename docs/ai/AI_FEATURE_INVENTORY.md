@@ -219,4 +219,4 @@ Today, the mini-program has:
 5. **Onboarding profile tagline** on the profile review step.
 6. **Occupation free-text search** during onboarding step 3 (`POST /api/occupation/search` with Granite embedding + exact-match hybrid).
 
-Several nearby surfaces remain deterministic or web-only (for example `group.matchExplanation` on pool group detail until analysis is loaded, and XiaoYue commentary). See `docs/mini-program-ai-roadmap-handoff.md` for deeper AI integration (Researcher → Planner → AI Engineer) and roadmap alignment with `docs/ai/AI_INTEGRATION_PLAN.md`.
+Several nearby surfaces remain deterministic or web-only (for example `group.matchExplanation` on pool group detail until analysis is loaded, and XiaoYue commentary). See `docs/mini-program/mini-program-ai-roadmap-handoff.md` for deeper AI integration (Researcher → Planner → AI Engineer) and roadmap alignment with `docs/ai/AI_INTEGRATION_PLAN.md`.

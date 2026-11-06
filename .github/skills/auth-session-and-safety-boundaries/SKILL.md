@@ -24,7 +24,7 @@ description: >
 
 Shared auth middleware lives in `apps/server/src/adminAuth.ts` (`requireAdmin`, `requireSuperAdmin`, `requireOperatorOrAbove`). User auth (`requireAuth`) still exists as local helpers in some route files and should be extracted rather than duplicated.
 
-All `/api/admin/*` routes must use `requireAdmin` middleware. Admin RBAC is documented in `docs/admin-rbac-matrix.md`.
+All `/api/admin/*` routes must use `requireAdmin` middleware. Admin RBAC is documented in `docs/admin/admin-rbac-matrix.md`.
 
 Session data is typed — do not access arbitrary keys on `req.session`. Use the typed accessor attached by auth middleware, not raw session reads. See [`references/safety-patterns.md`](references/safety-patterns.md) for exact file locations, typed session contract rules, and dev-only endpoint patterns.
 
@@ -63,7 +63,7 @@ Dev auth tools are gated by `ENABLE_DEV_AUTH_TOOLS=1` (server) and `import.meta.
 - **Unexpected 401 or 403 in local or CI when using dev auth tools** — verify that `ENABLE_DEV_AUTH_TOOLS=1` is set for the environment and that `isDevAuthToolsEnabled()` is only used in non-production code paths.
 - **Webhook signature verification failing** — confirm the raw request body is being read (not a parsed JSON body) for signature calculation. Also check that the WeChat Pay secret is correctly loaded from env.
 - **Dev-only route accessible in production** — the environment guard is missing or using the wrong env key. Always gate on `process.env.ENABLE_DEV_AUTH_TOOLS !== '1'` server-side.
-- **New admin route returns 200 without auth** — `requireAdmin` middleware was omitted. Cross-reference against `docs/admin-rbac-matrix.md` and add the correct middleware.
+- **New admin route returns 200 without auth** — `requireAdmin` middleware was omitted. Cross-reference against `docs/admin/admin-rbac-matrix.md` and add the correct middleware.
 - **Session cookie not sent in production** — verify `secure: true`, `httpOnly: true`, and `sameSite: 'lax'` or `'strict'` are set. Do not relax `secure: true` for any production codepath.
 
 ## Review checklist

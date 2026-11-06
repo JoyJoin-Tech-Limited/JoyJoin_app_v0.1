@@ -19,7 +19,7 @@ description: >-
 - Adding a new feature flag or changing an existing flag's semantics
 - Planning a staged rollout or kill-switch response
 - Auditing whether a feature is correctly gated and degrades gracefully
-- Updating `docs/LAUNCH_CONFIG.md`, `docs/ai-feature-flags.md`, or env example files
+- Updating `docs/product/LAUNCH_CONFIG.md`, `docs/ai/ai-feature-flags.md`, or env example files
 - Exposing a server-side flag to the client via `/api/auth/user`
 
 ## When NOT to use this skill
@@ -70,7 +70,7 @@ For rollout patterns, startup validation details, client exposure specifics, and
 ## Quick examples
 
 - **Add a new DB-backed kill switch:** Add key+env mapping to `lib/featureFlags.ts` `FLAG_ENV_MAP` → add default env var to `.env.example` → gate logic via `await getFeatureFlag(key)` → add admin route entry if toggleable → expose via `buildAuthUserResponse.ts` if client needs it → add tests for both paths.
-- **Add a new env-only feature flag:** Add env read → gate logic → document in `docs/LAUNCH_CONFIG.md` → add to `.env.example` → expose via `/api/auth/user` if client needs it → add tests for both paths.
+- **Add a new env-only feature flag:** Add env read → gate logic → document in `docs/product/LAUNCH_CONFIG.md` → add to `.env.example` → expose via `/api/auth/user` if client needs it → add tests for both paths.
 - **Kill-switch a payment incident:** Set `PAYMENTS_ENABLED=false` → verify `/api/readyz` returns `200` → confirm `POST /api/payments/create` returns `503` with `code: "PAYMENTS_DISABLED"` → confirm client shows maintenance message.
 - **Safely roll out `ENABLE_SEMANTIC_SIMILARITY`:** Enable in staging → run matching stress simulation → monitor `joyjoin_matching_semantic_similarity_score` and `joyjoin_matching_semantic_pair_score_delta` in `/api/metrics` → enable in production during a low-traffic window.
 - **Expose a flag to the client:** Add the boolean to `AuthUserResponse` in `packages/shared/src/api.ts` and resolve it in `apps/server/src/lib/buildAuthUserResponse.ts`. Client hooks should read from the server response, never from a local env var.
@@ -79,7 +79,7 @@ For rollout patterns, startup validation details, client exposure specifics, and
 
 | Symptom | Cause / Fix |
 |---------|-------------|
-| Feature works locally but not in production | The flag may be unset in production, or the default differs. Check `docs/LAUNCH_CONFIG.md` and deployed env values. |
+| Feature works locally but not in production | The flag may be unset in production, or the default differs. Check `docs/product/LAUNCH_CONFIG.md` and deployed env values. |
 | Payment routes return 503 after deploy | `PAYMENTS_ENABLED` is `false` or a required `WECHAT_PAY_*` var is missing when `PAYMENTS_ENABLED=true`. Check `/api/readyz`. |
 | Semantic similarity scores look wrong | Verify `ENABLE_SEMANTIC_SIMILARITY` is `true`. Check `joyjoin_matching_semantic_feature_enabled` gauge in `/api/metrics`. |
 | Auction lots are generic instead of AI-generated | `SOCIAL_AUCTION_LLM_ENABLED` is unset/false. This is the expected fallback. Set to `true` to enable model generation. |
@@ -89,7 +89,7 @@ For rollout patterns, startup validation details, client exposure specifics, and
 
 ## Review checklist
 
-- [ ] New flag has a safe default and is documented in `docs/LAUNCH_CONFIG.md` or `docs/ai-feature-flags.md`
+- [ ] New flag has a safe default and is documented in `docs/product/LAUNCH_CONFIG.md` or `docs/ai/ai-feature-flags.md`
 - [ ] Env example files include the new var
 - [ ] Startup validation in `configValidation.ts` handles cross-field constraints if applicable
 - [ ] Flag is read server-side; the client receives it through an API response, not a local env var

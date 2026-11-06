@@ -6,7 +6,7 @@
 ## Data map (confirm against schema)
 
 - [ ] **Identifiers:** Phone, WeChat OpenID / unionid (if collected), session cookies — documented in privacy notice.
-- [ ] **Profile & assessment:** Fields stored in [`packages/shared/src/schema.ts`](../packages/shared/src/schema.ts) (personality, demographics, preferences) — purpose limitation stated.
+- [ ] **Profile & assessment:** Fields stored in [`packages/shared/src/schema.ts`](../../packages/shared/src/schema.ts) (personality, demographics, preferences) — purpose limitation stated.
 - [ ] **Payments:** WeChat Pay transaction identifiers, amounts, status — processor terms linked.
 - [ ] **AI (if enabled):** Which features call LLMs; no training on user content unless separately agreed.
 

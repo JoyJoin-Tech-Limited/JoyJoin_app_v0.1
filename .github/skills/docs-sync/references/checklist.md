@@ -69,12 +69,12 @@ Use this checklist to verify a documentation and memory update is complete and c
 - [ ] Every new `users` table flag or completion signal is listed in the correct onboarding step table
 - [ ] Every new environment variable is described in `.env.example` and `DEVELOPER_QUICK_REFERENCE.md`
 - [ ] Every new shared UI component is listed in `packages/shared/src/README.md`
-- [ ] Every new Prometheus metric or structured log field is listed in `docs/observability.md` or the observability skill
+- [ ] Every new Prometheus metric or structured log field is listed in `docs/systems/observability.md` or the observability skill
 - [ ] Every new monorepo workspace or domain in `routes/domains/` is listed in the relevant skill and quick reference
 
 ### High-miss-rate docs (explicitly verify these)
 - [ ] **`PRODUCT_REQUIREMENTS.md`** was assessed: if the change affects a user-facing screen family, feature capability, or data flow, the relevant subsection was updated
-- [ ] **`docs/mini-program-product-reference.md`** was assessed: if the change touches the mini-program, the page inventory, user flow, or platform-parity table was updated
+- [ ] **`docs/mini-program/mini-program-product-reference.md`** was assessed: if the change touches the mini-program, the page inventory, user flow, or platform-parity table was updated
 
 ---
 

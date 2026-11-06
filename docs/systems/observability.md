@@ -245,7 +245,7 @@ via `infra/grafana/provisioning/dashboards/`.
 
 ## 5. Alerting
 
-Alert rules live in `infra/alerting/rules.yml`. See the [Alerting Runbook](runbooks/alerting.md)
+Alert rules live in `infra/alerting/rules.yml`. See the [Alerting Runbook](../runbooks/alerting.md)
 for the complete list of alerts, thresholds, and response procedures.
 
 **Active alerts:**
@@ -371,5 +371,5 @@ To investigate an incident:
 
 ## 10. Runbooks
 
-- [Observability Runbook](runbooks/observability.md) — architecture, day-2 ops
-- [Alerting Runbook](runbooks/alerting.md) — per-alert response procedures
+- [Observability Runbook](../runbooks/observability.md) — architecture, day-2 ops
+- [Alerting Runbook](../runbooks/alerting.md) — per-alert response procedures

@@ -59,7 +59,7 @@ For DeepSeek client details, async cache pipeline, dialogue insight storage, cos
 ---
 
 **User says:** "Add a fallback embedding provider when DeepSeek is down."
-**Apply this skill by:** Modifying `embeddingClient.ts` — extend `getProviderConfig()` to return a secondary provider config when `DEEPSEEK_API_KEY` is absent, update `EmbeddingResult.provider` union type, and add a retry loop that cycles through providers. Preserve the existing policy comment and update `docs/ai-feature-flags.md` if the policy changes.
+**Apply this skill by:** Modifying `embeddingClient.ts` — extend `getProviderConfig()` to return a secondary provider config when `DEEPSEEK_API_KEY` is absent, update `EmbeddingResult.provider` union type, and add a retry loop that cycles through providers. Preserve the existing policy comment and update `docs/ai/ai-feature-flags.md` if the policy changes.
 **Result:** Fallback provider wired; embedding pipeline degrades more gracefully.
 
 ## Troubleshooting

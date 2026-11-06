@@ -111,5 +111,5 @@ Contracts are stored at `.git/.orchestration/sprints/sprint-contract.{taskId}.md
 ## Related
 
 - [`harness-completion-gate`](../harness-completion-gate/SKILL.md) — Final 5-pillar gate
-- [`harness-kpi-framework`](../../docs/proposals/harness-kpi-framework.md) — Scoring rubrics
-- [`harness-consensus-plan`](../../docs/proposals/harness-consensus-plan.md) — Unified architecture
+- [`harness-kpi-framework`](../../../docs/proposals/harness-kpi-framework.md) — Scoring rubrics
+- [`harness-consensus-plan`](../../../docs/proposals/harness-consensus-plan.md) — Unified architecture

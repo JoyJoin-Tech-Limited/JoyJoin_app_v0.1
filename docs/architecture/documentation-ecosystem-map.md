@@ -33,8 +33,8 @@ These are the files most frequently referenced and treated as source-of-truth. W
 | `docs/systems/onboarding-flow.md` | Active onboarding reference (last verified 2026-04-19) | — | — |
 | `docs/systems/PERSONALITY_TEST_SYSTEM.md` | V4 engine + cross-client surfaces | — | — |
 | `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` | Deterministic matching authority | — | — |
-| `docs/icebreaker-system.md` | Primary Social Icebreaker reference (2026-04-21) | — | — |
-| `docs/mini-program-product-reference.md` | Product-to-code bridge for launch-primary client | 1 | 14 |
+| `docs/icebreaker/icebreaker-system.md` | Primary Social Icebreaker reference (2026-04-21) | — | — |
+| `docs/mini-program/mini-program-product-reference.md` | Product-to-code bridge for launch-primary client | 1 | 14 |
 | `docs/product/LAUNCH_CONFIG.md` | Launch readiness configuration | — | — |
 | `docs/reference/perf.md` | Performance budgets; mini-program subpackage strategy | — | — |
 | `docs/systems/observability.md` | Observability reference | — | — |
@@ -49,7 +49,7 @@ The documentation graph has a **hub-and-spoke** structure:
 
 - **Central hub:** `docs/README.md` links outward to 45+ documents.
 - **Secondary hub:** `.github/skills/orchestration-turn-reporting/SKILL.md` is referenced by 38 other docs.
-- **Bridge docs:** `docs/mini-program-product-reference.md` and `docs/proposals/mini-program-cleanup-and-upgrade-plan.md` connect product canon to implementation runbooks.
+- **Bridge docs:** `docs/mini-program/mini-program-product-reference.md` and `docs/proposals/mini-program-cleanup-and-upgrade-plan.md` connect product canon to implementation runbooks.
 - **Isolated leaf docs:** Several high-value docs have **zero** inbound references.
 
 ### 3.2 High-Value Leaf Docs (Orphaned)
@@ -70,14 +70,14 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 
 #### `PRODUCT_REQUIREMENTS.md`
 - **Outbound:** 0 — references code files inline (backticks) but does not hyperlink to other docs.
-- **Inbound from:** `README.md`, `CONTRIBUTING.md`, `QUICK_REFERENCE.md`, `docs/README.md`, `docs/ai/ai-workflow-documentation-refresh.md`, `docs/mini-program-product-reference.md`
+- **Inbound from:** `README.md`, `CONTRIBUTING.md`, `QUICK_REFERENCE.md`, `docs/README.md`, `docs/ai/ai-workflow-documentation-refresh.md`, `docs/mini-program/mini-program-product-reference.md`
 
 #### `AGENTS.md`
 - **Outbound:** 0
 - **Inbound:** 0 — Completely isolated in the reference graph.
 
-#### `docs/mini-program-product-reference.md`
-- **Outbound (14):** `PRODUCT_REQUIREMENTS.md`, `apps/mini-program/README.md`, `apps/server/src/README.md`, `packages/shared/src/README.md`, `packages/shared/src/schema.ts`, `docs/ai/AI_FEATURE_INVENTORY.md`, `docs/product/LAUNCH_CONFIG.md`, `docs/reference/PLATFORM_COORDINATION.md`, `docs/admin/admin-rbac-matrix.md`, `docs/architecture/current-state.md`, `docs/mini-program-data-fetching.md`, `docs/systems/onboarding-flow.md`, `docs/runbooks/mini-program-ai-smoke.md`, `docs/runbooks/mini-program-events-tab-smoke.md`
+#### `docs/mini-program/mini-program-product-reference.md`
+- **Outbound (14):** `PRODUCT_REQUIREMENTS.md`, `apps/mini-program/README.md`, `apps/server/src/README.md`, `packages/shared/src/README.md`, `packages/shared/src/schema.ts`, `docs/ai/AI_FEATURE_INVENTORY.md`, `docs/product/LAUNCH_CONFIG.md`, `docs/reference/PLATFORM_COORDINATION.md`, `docs/admin/admin-rbac-matrix.md`, `docs/architecture/current-state.md`, `docs/mini-program/mini-program-data-fetching.md`, `docs/systems/onboarding-flow.md`, `docs/runbooks/mini-program-ai-smoke.md`, `docs/runbooks/mini-program-events-tab-smoke.md`
 - **Inbound from:** `docs/README.md` only.
 
 #### `docs/architecture/connection-points-system.md`
@@ -117,28 +117,28 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 
 | File | Issue | Recommended Action |
 |------|-------|-------------------|
-| `docs/MIGRATION_2026-02-04_SIGNUP_FLOW.md` | Explicitly labeled **"HISTORICAL DOCUMENT — For Reference Only"** | Keep as archive; do not update |
-| `docs/ONBOARDING_ROUTING_FIX_2026-02-10.md` | Historical routing-fix record | Keep as archive |
-| `docs/ONBOARDING_ROUTING_FIX_VISUAL.md` | Historical | Keep as archive |
-| `docs/xiaoyue-design-guide.md` | AGENTS.md: **"Xiaoyue chat-based onboarding is deprecated"** | Quarantine or archive |
-| `docs/xiaoyue-expression-creative-brief.md` | Same deprecation | Quarantine or archive |
-| `docs/xiaoyue-formatting-improvements.md` | Same deprecation | Quarantine or archive |
-| `docs/xiaoyue-implementation-summary.md` | Same deprecation | Quarantine or archive |
-| `docs/xiaoyue-intro-animation-brief.md` | Same deprecation | Quarantine or archive |
-| `docs/xiaoyue-lovart-grid-prompts.md` | Same deprecation | Quarantine or archive |
-| `docs/xiaoyue-lovart-prompts.md` | Same deprecation | Quarantine or archive |
+| `docs/migrations/MIGRATION_2026-02-04_SIGNUP_FLOW.md` | Explicitly labeled **"HISTORICAL DOCUMENT — For Reference Only"** | Keep as archive; do not update |
+| `docs/migrations/ONBOARDING_ROUTING_FIX_2026-02-10.md` | Historical routing-fix record | Keep as archive |
+| `docs/migrations/ONBOARDING_ROUTING_FIX_VISUAL.md` | Historical | Keep as archive |
+| `docs/archive/xiaoyue/xiaoyue-design-guide.md` | AGENTS.md: **"Xiaoyue chat-based onboarding is deprecated"** | Quarantine or archive |
+| `docs/archive/xiaoyue/xiaoyue-expression-creative-brief.md` | Same deprecation | Quarantine or archive |
+| `docs/archive/xiaoyue/xiaoyue-formatting-improvements.md` | Same deprecation | Quarantine or archive |
+| `docs/archive/xiaoyue/xiaoyue-implementation-summary.md` | Same deprecation | Quarantine or archive |
+| `docs/archive/xiaoyue/xiaoyue-intro-animation-brief.md` | Same deprecation | Quarantine or archive |
+| `docs/archive/xiaoyue/xiaoyue-lovart-grid-prompts.md` | Same deprecation | Quarantine or archive |
+| `docs/archive/xiaoyue/xiaoyue-lovart-prompts.md` | Same deprecation | Quarantine or archive |
 | `docs/xiaoyue-ui-mockup.txt` | Same deprecation | Quarantine or archive |
 | `docs/xiaoyue-visual-comparison.txt` | Same deprecation | Quarantine or archive |
-| `docs/README-xiaoyue-formatting.md` | Xiaoyue formatting guide; likely tied to deprecated chat UX | Review for archival |
+| `docs/archive/xiaoyue/README-xiaoyue-formatting.md` | Xiaoyue formatting guide; likely tied to deprecated chat UX | Review for archival |
 | `docs/reference/wechat-mini-program-reference.md` | README explicitly says **"not the Taro source of truth"** | Mark supplemental; do not expand |
 | `docs/architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md` | Covers web-mobile; mini-program is now launch-primary | Add stale warning header |
-| `docs/icebreaker-ux-report.md` | UX analysis; may predate current Social Icebreaker dominance | Verify currency |
-| `docs/personality-accuracy-report.md` | May be outdated relative to V4 engine | Verify or archive |
-| `docs/ICEBREAKER_PHASE_ROLLOUT.md` | Rollout plan says MVP phases are live; may be complete | Mark as completed |
-| `docs/slot-machine-animation-storyboard.md` | Implementation likely complete | Archive or mark complete |
-| `docs/slot-machine-animation-implementation-summary.md` | Implementation likely complete | Archive or mark complete |
-| `docs/SWIPE_CARD_MODERNIZATION.md` | Tech-debt cleanup; may be done | Verify currency |
-| `docs/RESPONSIVE_AUDIT.md` | Audit doc; may be done | Verify currency |
+| `docs/icebreaker/icebreaker-ux-report.md` | UX analysis; may predate current Social Icebreaker dominance | Verify currency |
+| `docs/archive/personality-accuracy-report.md` | May be outdated relative to V4 engine | Verify or archive |
+| `docs/architecture/implementation-summaries/ICEBREAKER_PHASE_ROLLOUT.md` | Rollout plan says MVP phases are live; may be complete | Mark as completed |
+| `docs/slot-machine/slot-machine-animation-storyboard.md` | Implementation likely complete | Archive or mark complete |
+| `docs/archive/architecture/slot-machine-animation-implementation-summary.md` | Implementation likely complete | Archive or mark complete |
+| `docs/archive/SWIPE_CARD_MODERNIZATION.md` | Tech-debt cleanup; may be done | Verify currency |
+| `docs/archive/RESPONSIVE_AUDIT.md` | Audit doc; may be done | Verify currency |
 
 ---
 
@@ -157,7 +157,7 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 
 ### 6.3 Stranded Files (not clearly linked from index)
 - `docs/archetype-orbit-demo.html` — HTML demo; not mentioned in `README.md`
-- `docs/api/industry-classification.md` — API doc for a specific domain; lightly linked
+- `docs/archive/api/industry-classification.md` — API doc for a specific domain; lightly linked
 - `docs/tech-debt/connection-points-cleanup.md` — only one file in `tech-debt/`; no category index
 - `docs/admin/admin-rbac-matrix.md` — standalone; not prominently indexed
 - `docs/handoffs/` — only one file; no handoff index
@@ -168,6 +168,8 @@ Per `docs/proposals/README.md`, only `mini-program-cleanup-and-upgrade-plan.md` 
 
 ### 6.5 Broken Links (35 total)
 Most broken links are caused by **incorrect relative path nesting** (e.g., `.github/.github/skills/...` or `docs/.github/skills/...`). A single regex sweep of `.github/skills/` and `docs/proposals/` would fix the majority.
+
+> **Swept 2026-11-04:** a repo-wide sweep rewrote moved `docs/**` pointers, one-short relative links, and non-`.md` link targets (≈456 refs across 106 files); the resolver now reports 0 remaining broken doc pointers. Left intentionally: six documents that were referenced but never committed (`spot-the-bot-game-design`, `sd-pixel-avatar-style-guide`, `mini-program-icebreaker-prd`, `admin-metrics`, `icebreaker-run-plan-handoff`, `DB_TOOLING_ROLLBACK`) and two `omo-orchestration-bridge` skill rows.
 
 ### 6.6 Circular References (49 two-doc cycles)
 The `.github/` AI workflow ecosystem is densely interconnected. Most cycles are **intentional** bidirectional cross-references between tightly coupled docs and do not indicate logical contradictions.
@@ -189,12 +191,12 @@ When you add, remove, or significantly change a documentation file:
 
 | When you change... | Update these docs first |
 |-------------------|------------------------|
-| Mini-program page, flow, or UI | `PRODUCT_REQUIREMENTS.md`, `docs/mini-program-product-reference.md`, `apps/mini-program/README.md` |
+| Mini-program page, flow, or UI | `PRODUCT_REQUIREMENTS.md`, `docs/mini-program/mini-program-product-reference.md`, `apps/mini-program/README.md` |
 | Backend API route | `DEVELOPER_QUICK_REFERENCE.md`, `docs/api/`, `apps/server/src/README.md` |
 | Matching algorithm | `docs/systems/MATCHING_ALGORITHM_REFERENCE.md`, `.github/skills/matching-domain/SKILL.md` |
 | Onboarding step | `PRODUCT_REQUIREMENTS.md`, `docs/systems/onboarding-flow.md`, `.github/skills/onboarding-state-architecture/SKILL.md` |
-| Personality test | `docs/systems/PERSONALITY_TEST_SYSTEM.md`, `docs/mini-program-product-reference.md` |
-| Social icebreaker phase | `.github/skills/social-icebreaker-domain/SKILL.md`, `docs/icebreaker-system.md` |
+| Personality test | `docs/systems/PERSONALITY_TEST_SYSTEM.md`, `docs/mini-program/mini-program-product-reference.md` |
+| Social icebreaker phase | `.github/skills/social-icebreaker-domain/SKILL.md`, `docs/icebreaker/icebreaker-system.md` |
 | Environment variable | `.env.example`, `DEVELOPER_QUICK_REFERENCE.md` |
 | Shared UI component | `packages/shared/src/README.md`, `.github/skills/design-system-governance/SKILL.md` |
 | Database schema | `docs/architecture/current-state.md`, `.github/skills/backend-models-standards/SKILL.md` |

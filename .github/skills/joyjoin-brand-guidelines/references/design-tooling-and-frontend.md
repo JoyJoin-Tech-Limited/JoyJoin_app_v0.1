@@ -51,7 +51,7 @@ JoyJoin screens should be unmistakably JoyJoin. Generic "AI-generated" aesthetic
 
 - Applies to both Web and Taro mini-program implementations whenever JoyJoin screens, components, or motion need to feel unmistakably on-brand.
 - Brand intent should remain consistent across platforms even when the renderer, font availability, or interaction model differs.
-- For shared interaction baselines use [`design-system-governance`](../design-system-governance/SKILL.md); this skill owns emotional tone, typography, colour language, and overall brand feel.
+- For shared interaction baselines use [`design-system-governance`](../../design-system-governance/SKILL.md); this skill owns emotional tone, typography, colour language, and overall brand feel.
 
 ### UI/UX & Aesthetic Guidance
 
@@ -73,4 +73,4 @@ JoyJoin screens should be unmistakably JoyJoin. Generic "AI-generated" aesthetic
 ### Accessibility & Performance Notes
 
 - Brand polish must still satisfy WCAG 2.1 AA contrast, focus visibility, readable copy sizing, and non-colour-only state indication.
-- Ensure reduced-motion fallbacks preserve meaning, and defer to [`wow-elements`](../wow-elements/SKILL.md) for motion-specific implementation guidance.
+- Ensure reduced-motion fallbacks preserve meaning, and defer to [`wow-elements`](../../wow-elements/SKILL.md) for motion-specific implementation guidance.

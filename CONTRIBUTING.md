@@ -15,7 +15,7 @@ Read these documents in order:
 - **Need architecture or code-placement guidance?** Start with [`.github/skills/README.md`](./.github/skills/README.md).
 - **Need a focused agent for a workflow?** Check [`.github/agents/README.md`](./.github/agents/README.md).
 - **Working in the server?** Read [`apps/server/src/README.md`](./apps/server/src/README.md).
-- **Working on active onboarding?** Read [`apps/user-client/src/features/onboarding/README.md`](./apps/user-client/src/features/onboarding/README.md).
+- **Working on active onboarding?** Read [`archived/workspaces/user-client/src/features/onboarding/README.md`](./archived/workspaces/user-client/src/features/onboarding/README.md).
 - **Adding shared code?** Read [`packages/shared/src/README.md`](./packages/shared/src/README.md).
 
 ## Workflow expectations

@@ -1,12 +1,12 @@
 # Mini-program AI — deeper integration handoff
 
-This note ties **mini-program AI work** to the repo’s **governed planning lane** and the long-range roadmap. It is not a runtime authority document; pair it with [`ai/AI_INTEGRATION_PLAN.md`](./ai/AI_INTEGRATION_PLAN.md) and [`ai/ai-agent-harness-separation-strategy.md`](./ai/ai-agent-harness-separation-strategy.md).
+This note ties **mini-program AI work** to the repo’s **governed planning lane** and the long-range roadmap. It is not a runtime authority document; pair it with [`ai/AI_INTEGRATION_PLAN.md`](../ai/AI_INTEGRATION_PLAN.md) and [`ai/ai-agent-harness-separation-strategy.md`](../ai/ai-agent-harness-separation-strategy.md).
 
 **For sequenced work packages and acceptance criteria**, see [`mini-program-ai-further-execution-plan.md`](./mini-program-ai-further-execution-plan.md).
 
 ## When to use the kickoff lane
 
-Use **Supervisor → Researcher → Planner** (see [`.github/AI_WORKFLOW_POLICY.md`](../.github/AI_WORKFLOW_POLICY.md)) when:
+Use **Supervisor → Researcher → Planner** (see [`.github/AI_WORKFLOW_POLICY.md`](../../.github/AI_WORKFLOW_POLICY.md)) when:
 
 - You are changing **provider routing**, **prompt versioning strategy**, **shadow / non-authoritative inference**, or **evaluation metrics** across server + mini-program.
 - You need **approval-first** scope for instrumentation, A/B buckets, or predictive layers that might touch matching semantics.
@@ -24,7 +24,7 @@ After approval, route implementation to **AI Engineer** (server AI surfaces) and
 
 ## Canonical MP inventory
 
-See [`ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) for **mini-program-visible** AI features and fallbacks.
+See [`ai/AI_FEATURE_INVENTORY.md`](../ai/AI_FEATURE_INVENTORY.md) for **mini-program-visible** AI features and fallbacks.
 
 ## Theme reveal + cache consistency
 

@@ -18,7 +18,7 @@ What to review manually versus leave to tooling:
 
 ## Author-facing summary (optional)
 
-When the author or team wants a **stakeholder-readable** one-pager outside the GitHub comment thread, you may use the same narrative shape as the orchestration **executive briefing** in [`orchestration-turn-reporting`](../orchestration-turn-reporting/SKILL.md): one-line header, **Observation**, **Implication / Context**, **Next Step**, optional **Bottom Line**. For PR threads, the structured **Final verdict format** below remains the default.
+When the author or team wants a **stakeholder-readable** one-pager outside the GitHub comment thread, you may use the same narrative shape as the orchestration **executive briefing** in [`orchestration-turn-reporting`](../../orchestration-turn-reporting/SKILL.md): one-line header, **Observation**, **Implication / Context**, **Next Step**, optional **Bottom Line**. For PR threads, the structured **Final verdict format** below remains the default.
 
 ## Final verdict format
 
@@ -97,13 +97,13 @@ Flag these patterns for closer inspection:
 
 | Domain | Skill |
 |--------|-------|
-| Auth, sessions, and safety gates | [`auth-session-and-safety-boundaries`](../auth-session-and-safety-boundaries/SKILL.md) |
-| Transactions, idempotency, retries | [`reliability-and-state-integrity`](../reliability-and-state-integrity/SKILL.md) |
-| Logging, metrics, tracing, audit | [`platform-observability-and-ops`](../platform-observability-and-ops/SKILL.md) |
-| Route and domain layering | [`server-domain-architecture`](../server-domain-architecture/SKILL.md) |
-| Onboarding state and routing | [`onboarding-state-architecture`](../onboarding-state-architecture/SKILL.md) |
-| Pool matching and scoring | [`matching-domain`](../matching-domain/SKILL.md) |
-| Icebreaker sessions and phases | [`social-icebreaker-domain`](../social-icebreaker-domain/SKILL.md) |
-| UI tokens and component variants | [`design-system-governance`](../design-system-governance/SKILL.md) |
-| Shared vs app-local components | [`frontend-component-architecture`](../frontend-component-architecture/SKILL.md) |
-| Monorepo dependencies and scripts | [`monorepo-workspace-governance`](../monorepo-workspace-governance/SKILL.md) |
+| Auth, sessions, and safety gates | [`auth-session-and-safety-boundaries`](../../auth-session-and-safety-boundaries/SKILL.md) |
+| Transactions, idempotency, retries | [`reliability-and-state-integrity`](../../reliability-and-state-integrity/SKILL.md) |
+| Logging, metrics, tracing, audit | [`platform-observability-and-ops`](../../platform-observability-and-ops/SKILL.md) |
+| Route and domain layering | [`server-domain-architecture`](../../server-domain-architecture/SKILL.md) |
+| Onboarding state and routing | [`onboarding-state-architecture`](../../onboarding-state-architecture/SKILL.md) |
+| Pool matching and scoring | [`matching-domain`](../../matching-domain/SKILL.md) |
+| Icebreaker sessions and phases | [`social-icebreaker-domain`](../../social-icebreaker-domain/SKILL.md) |
+| UI tokens and component variants | [`design-system-governance`](../../design-system-governance/SKILL.md) |
+| Shared vs app-local components | [`frontend-component-architecture`](../../frontend-component-architecture/SKILL.md) |
+| Monorepo dependencies and scripts | [`monorepo-workspace-governance`](../../monorepo-workspace-governance/SKILL.md) |

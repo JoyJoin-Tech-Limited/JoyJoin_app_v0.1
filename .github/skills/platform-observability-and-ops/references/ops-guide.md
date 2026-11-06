@@ -36,7 +36,7 @@ logger.error('Payment webhook failed', { orderId, error: err.message });
 1. Add a counter/histogram in `middleware/metrics.ts` or near the call site
 2. Expose it via `GET /api/metrics`
 3. Add an alert rule in `infra/alerting/rules.yml` if it maps to a SLO threshold
-4. Document the intent in `docs/observability.md` — Runbooks section
+4. Document the intent in `docs/systems/observability.md` — Runbooks section
 
 ## Audit logging
 

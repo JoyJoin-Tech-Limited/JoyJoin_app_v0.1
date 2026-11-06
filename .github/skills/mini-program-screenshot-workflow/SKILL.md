@@ -62,7 +62,7 @@ See [references/approaches.md](references/approaches.md) for full step-by-step i
 - **Mock server returns 404** → Verify endpoint paths exactly (e.g., `/api/event-pools`, not `/api/pools`) and response shapes (raw array vs wrapped object).
 - **DevTools MCP `get_page_data` returns empty tree** → Confirm navigation succeeded with `check_health`; verify the page path matches the compiled route.
 - **QR code preview never loads** → Use DevTools GUI QR instead of `--qr-output-dest`; the CLI image export flag is broken.
-- **Tab bar appears in WXML but is invisible on a tab page** → Check the computed `display` value and the outer `hidden` attribute. If `display: none`, the visibility guard may have regressed. See [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../docs/runbooks/mini-program-tab-bar-smoke.md).
+- **Tab bar appears in WXML but is invisible on a tab page** → Check the computed `display` value and the outer `hidden` attribute. If `display: none`, the visibility guard may have regressed. See [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../../docs/runbooks/mini-program-tab-bar-smoke.md).
 
 ## Review checklist
 

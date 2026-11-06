@@ -10,7 +10,7 @@ The machine-readable orchestration contract is `.github/orchestration.yaml`. The
 - [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) defines when to use direct delivery, the `Researcher` -> `Planner` kickoff lane (or **`Supervisor` first** to sequence that kickoff), and the operational review lane.
 - [`ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) defines how to change agents, skills, hooks, runtime scripts, and validation surfaces safely.
 - [`../docs/ai/ai-workflow-documentation-refresh.md`](../docs/ai/ai-workflow-documentation-refresh.md) defines scope tiers, routing lanes for large refreshes, and **Workflow Governance Reviewer** vs full doc sync.
-- [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) remains the source of truth for runtime product AI architecture and invariants.
+- [`../docs/ai/ai-agent-harness-separation-strategy.md`](../docs/ai/ai-agent-harness-separation-strategy.md) remains the source of truth for runtime product AI architecture and invariants.
 
 ## Execution discipline
 

@@ -1,7 +1,7 @@
 # Mini-program data fetching — query keys & invalidation
 
 **Audience:** Engineers working on the WeChat mini-program (`apps/mini-program`).  
-**Phase 0 baseline** per [`docs/proposals/mini-program-cleanup-and-upgrade-plan.md`](./proposals/mini-program-cleanup-and-upgrade-plan.md).
+**Phase 0 baseline** per [`docs/proposals/mini-program-cleanup-and-upgrade-plan.md`](../proposals/mini-program-cleanup-and-upgrade-plan.md).
 
 ## Convention
 
@@ -76,9 +76,9 @@ The mini-program uses **composite shell endpoints** to reduce tab-switch latency
 ## Verification
 
 - `npm run typecheck -w mini-program`
-- For AI-touched flows: [`docs/runbooks/mini-program-ai-smoke.md`](./runbooks/mini-program-ai-smoke.md)
+- For AI-touched flows: [`docs/runbooks/mini-program-ai-smoke.md`](../runbooks/mini-program-ai-smoke.md)
 
 ## Related
 
-- [`apps/mini-program/README.md`](../apps/mini-program/README.md) — workspace entry
-- [`docs/reference/reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) — shared API contracts with web
+- [`apps/mini-program/README.md`](../../apps/mini-program/README.md) — workspace entry
+- [`docs/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md) — shared API contracts with web

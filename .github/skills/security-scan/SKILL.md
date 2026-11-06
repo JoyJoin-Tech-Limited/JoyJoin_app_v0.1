@@ -51,7 +51,7 @@ Use this skill when you are:
 - `apps/server/src/auth/policy.ts` is the auth-debug policy source of truth.
 - `scripts/check/check-guardrails.mjs` enforces env, secret, and legacy guardrails in CI.
 - `.github/workflows/quality-gates.yml` runs guardrails, type checks, tests, harness gate, and simulation; `deploy-staging.yml` and `deploy-production.yml` run it on `main` and `release` respectively.
-- `docs/launch-risks.md` is the honest known-risk register (dependency posture, auth-debug surfaces, CI coverage gaps). `docs/CLI_TOOLS.md` covers debug-tool constraints.
+- `docs/launch-risks.md` is the honest known-risk register (dependency posture, auth-debug surfaces, CI coverage gaps). `docs/reference/CLI_TOOLS.md` covers debug-tool constraints.
 - `scripts/check/check-dependency-vulns.mjs` (`npm run check:deps`) is the dependency ratchet: it gates critical/high advisories reachable from workspace *runtime* dependencies and baselines the rest in `scripts/check/dependency-vuln-baseline.json`. CI runs it as its own job because a full `npm audit` takes minutes.
 
 ## Quick examples
@@ -92,4 +92,4 @@ List the concrete checks performed, the files reviewed, and any missing automati
 - `.github/workflows/deploy-staging.yml`
 - `.github/workflows/deploy-production.yml`
 - `docs/launch-risks.md`
-- `docs/CLI_TOOLS.md`
+- `docs/reference/CLI_TOOLS.md`

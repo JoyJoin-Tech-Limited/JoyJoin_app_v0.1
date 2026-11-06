@@ -36,7 +36,7 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 - `apps/mini-program` is a Taro 4 plus React 18 app compiled for the WeChat Mini Program runtime.
 - `archived/workspaces/user-client/` is the archived web reference (read-only) for shared product intent, but mini-program implementation details must respect Taro and WeChat runtime constraints.
 - Browser DOM tags, browser globals, and browser lifecycle assumptions do not transfer directly to Taro pages or components.
-- Duplicated auth, API, and payment flows require coordination using `docs/PLATFORM_COORDINATION.md`.
+- Duplicated auth, API, and payment flows require coordination using `docs/reference/PLATFORM_COORDINATION.md`.
 
 ## When To Use This Agent
 
@@ -77,7 +77,7 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 - `MINI_PROGRAM_ONLY`: Taro component structure, `app.config.ts`, WeChat page wiring, `Taro.*`, `wx.*`, WXSS-safe styling, page lifecycle, and renderer-local UI behavior.
 - `WEB_ONLY`: browser DOM structure, Wouter routing, browser storage, Radix browser composition, and web-only interaction polish.
 - `BOTH_REQUIRED`: duplicated auth, API, payment, pricing, session semantics, shared types, or other coordinated business behavior across web and mini-program.
-- If a task touches a `BOTH_REQUIRED` surface, review `docs/PLATFORM_COORDINATION.md` and inspect the sibling platform before finalizing the change.
+- If a task touches a `BOTH_REQUIRED` surface, review `docs/reference/PLATFORM_COORDINATION.md` and inspect the sibling platform before finalizing the change.
 
 ## Mini-Program Approach For `apps/mini-program`
 
@@ -115,7 +115,7 @@ For frontend UI tasks, use this sequence:
 
 When a request targets `apps/mini-program` but may affect duplicated business behavior:
 
-- Review `docs/PLATFORM_COORDINATION.md` before assuming the change is platform-local.
+- Review `docs/reference/PLATFORM_COORDINATION.md` before assuming the change is platform-local.
 - Inspect the sibling admin-client/server contracts (and the archived web copy only as historical reference) for auth/session bootstrap, API wrapper, payment flow, or shared contract drift.
 - Treat mini-program payment intent flow as the strongest current reference for payment mechanics; review the archived web flow only as historical context.
 - If the work is mostly renderer-local but the underlying behavior mapping is unclear, use `Mini-Program Parity Auditor` first.

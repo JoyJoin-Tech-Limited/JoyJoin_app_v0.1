@@ -5,7 +5,7 @@
 > **Target:** WeChat Mini Program (Taro)
 > **Generation strategy:** **Single grid prompt → crop script.** One 2400×2400 master image containing 9 cells (3 cols × 3 rows × 800×800). Each cell is one independent badge sharing the same low-poly painterly medallion style.
 > **Companion assets:** Batch B emotional icons (`REVEAL_MAP` reveal icons), existing archetype hero images, and the new Batch C ceremony heroes. The 5 D4 sub-variants share their color palette with the 5 Batch B reveal icons so the "chemistry reveal" feels like one continuous family.
-> **Related rubric:** [`docs/reference/emotional-value-rubric.md`](../../reference/emotional-value-rubric.md) — primary lift 成就感 (Achievement) 2.5→4, secondary lift 被理解感 (Being Understood) and 仪式感 (Ritual).
+> **Related rubric:** [`docs/reference/emotional-value-rubric.md`](../reference/emotional-value-rubric.md) — primary lift 成就感 (Achievement) 2.5→4, secondary lift 被理解感 (Being Understood) and 仪式感 (Ritual).
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Endpoint-to-permission mapping
 
-Treat [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md) as the current permission table. Do not infer permissions from page names or menu placement.
+Treat [`docs/admin/admin-rbac-matrix.md`](../../../../docs/admin/admin-rbac-matrix.md) as the current permission table. Do not infer permissions from page names or menu placement.
 
 | Middleware | Use case |
 |------------|----------|
@@ -52,7 +52,7 @@ Never pass passwords, secrets, tokens, cookies, or session material.
 
 ## Related files
 
-- [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md)
-- [`docs/runbooks/admin-incident-handling.md`](../../docs/runbooks/admin-incident-handling.md)
-- [`apps/server/src/lib/adminAuditLogger.ts`](../../apps/server/src/lib/adminAuditLogger.ts)
-- [`apps/server/src/routes/domains/admin.ts`](../../apps/server/src/routes/domains/admin.ts)
+- [`docs/admin/admin-rbac-matrix.md`](../../../../docs/admin/admin-rbac-matrix.md)
+- [`docs/runbooks/admin-incident-handling.md`](../../../../docs/runbooks/admin-incident-handling.md)
+- [`apps/server/src/lib/adminAuditLogger.ts`](../../../../apps/server/src/lib/adminAuditLogger.ts)
+- [`apps/server/src/routes/domains/admin.ts`](../../../../apps/server/src/routes/domains/admin.ts)

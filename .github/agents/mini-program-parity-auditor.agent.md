@@ -20,7 +20,7 @@ Your job is to audit parity between `apps/mini-program` and the `apps/admin-clie
 
 `apps/mini-program` is the launch-primary user client. `archived/workspaces/user-client/` is a read-only historical reference, not a live parity target.
 
-Use `docs/PLATFORM_COORDINATION.md` as the source of truth for duplicated auth, API, and payment hotspots. Treat those surfaces as coordinated unless you can prove the difference is renderer-only.
+Use `docs/reference/PLATFORM_COORDINATION.md` as the source of truth for duplicated auth, API, and payment hotspots. Treat those surfaces as coordinated unless you can prove the difference is renderer-only.
 
 ## Constraints
 
@@ -35,7 +35,7 @@ Use `docs/PLATFORM_COORDINATION.md` as the source of truth for duplicated auth, 
 1. Map the requested feature area across `apps/mini-program` and `apps/admin-client` / `apps/server`; for historical comparisons, map from `archived/workspaces/user-client/` (read-only).
 2. Compare route coverage and page registration first so missing screens are obvious.
 3. Compare business intent, interaction flow, data loading, mutation paths, state transitions, and visible UI structure.
-4. Check the known coordinated hotspots from `docs/PLATFORM_COORDINATION.md`:
+4. Check the known coordinated hotspots from `docs/reference/PLATFORM_COORDINATION.md`:
    - auth session bootstrap
    - API transport or request wrappers
    - payment flow and payment verification

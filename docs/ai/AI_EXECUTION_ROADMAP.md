@@ -13,8 +13,8 @@ This roadmap is about **how JoyJoin executes AI-assisted engineering work**, not
 | **`AI_EXECUTION_ROADMAP.md`** (this file) | 30-60-90 execution roadmap for policy, governance, validation, and tooling improvements around AI-assisted delivery. |
 | [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) | Product AI roadmap for shipped and planned user-facing AI capabilities. |
 | [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md) | Current-state runtime AI architecture and invariants. |
-| [`../.github/AI_WORKFLOW_POLICY.md`](../.github/AI_WORKFLOW_POLICY.md) | Active contributor policy for choosing lanes and escalation paths. |
-| [`../.github/ORCHESTRATION_GOVERNANCE.md`](../.github/ORCHESTRATION_GOVERNANCE.md) | Governance rules for changing agents, skills, hooks, and orchestration surfaces. |
+| [`../../.github/AI_WORKFLOW_POLICY.md`](../../.github/AI_WORKFLOW_POLICY.md) | Active contributor policy for choosing lanes and escalation paths. |
+| [`../../.github/ORCHESTRATION_GOVERNANCE.md`](../../.github/ORCHESTRATION_GOVERNANCE.md) | Governance rules for changing agents, skills, hooks, and orchestration surfaces. |
 
 ## Strategic goal
 

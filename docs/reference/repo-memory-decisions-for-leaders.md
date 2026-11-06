@@ -95,8 +95,8 @@ The note’s **owner** field is a **label** (team or person accountable for keep
 
 ## Where to go next
 
-- **Operational detail:** [`repo-memory/README.md`](../repo-memory/README.md)  
-- **Who runs the automation lane:** [`Repo Memory Steward`](../.github/agents/repo-memory-steward.agent.md) (for technical implementers)
+- **Operational detail:** [`repo-memory/README.md`](../../repo-memory/README.md)  
+- **Who runs the automation lane:** [`Repo Memory Steward`](../../.github/agents/repo-memory-steward.agent.md) (for technical implementers)
 
 If you want a **one-line policy** for your staff, you can paste:
 

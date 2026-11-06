@@ -125,7 +125,7 @@ Premium visuals must stay **measurable**. Do **not** silently merge oversized bi
 
 ### Premium without harming load
 
-Crisp hierarchy and restrained motion must **not** depend on **unbounded** binary weight. Tie decisions to first-load and scroll smoothness expectations in [`../../frontend-performance-and-loading/SKILL.md`](../../frontend-performance-and-loading/SKILL.md) and [`../../../../docs/perf.md`](../../../../docs/perf.md) where applicable.
+Crisp hierarchy and restrained motion must **not** depend on **unbounded** binary weight. Tie decisions to first-load and scroll smoothness expectations in [`../../frontend-performance-and-loading/SKILL.md`](../../frontend-performance-and-loading/SKILL.md) and [`../../../../docs/reference/perf.md`](../../../../docs/reference/perf.md) where applicable.
 
 ---
 

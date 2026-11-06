@@ -91,9 +91,9 @@ node apps/mini-program/scripts/optimize-promo-assets.mjs
 | File | Status | Description |
 |------|--------|-------------|
 | `README.md` | ✅ Updated | Tech stack, project structure, build commands, native tab bar guide, coordination rules |
-| `docs/TECH_STACK.md` | ✅ New | Deep technical reference: runtime, build pipeline, state layer, styling tokens, API wrapper, navigation, payments, testing, assets |
-| `docs/USER_FLOW.md` | ✅ New | Mermaid flowchart, 29-screen detailed table, 6 narrative walkthroughs, 8 ambiguous/dead-end flow findings |
-| `docs/2026-04-22-PROJECT_HEALTH_REPORT.md` | ✅ New | This file — synthesis of all 5 agent findings |
+| `apps/mini-program/docs/TECH_STACK.md` | ✅ New | Deep technical reference: runtime, build pipeline, state layer, styling tokens, API wrapper, navigation, payments, testing, assets |
+| `apps/mini-program/docs/USER_FLOW.md` | ✅ New | Mermaid flowchart, 29-screen detailed table, 6 narrative walkthroughs, 8 ambiguous/dead-end flow findings |
+| `apps/mini-program/docs/2026-04-22-PROJECT_HEALTH_REPORT.md` | ✅ New | This file — synthesis of all 5 agent findings |
 
 ---
 
@@ -244,9 +244,9 @@ The mini-program communicates with the backend via **52 endpoints** across 10 lo
 - `scripts/optimize-promo-assets.mjs` — WebP generation for promo banners
 - `src/lib/uiConstants.ts` — centralized UI constants (timing, colors, intervals)
 - `README.md` (updated)
-- `docs/TECH_STACK.md`
-- `docs/USER_FLOW.md`
-- `docs/2026-04-22-PROJECT_HEALTH_REPORT.md`
+- `apps/mini-program/docs/TECH_STACK.md`
+- `apps/mini-program/docs/USER_FLOW.md`
+- `apps/mini-program/docs/2026-04-22-PROJECT_HEALTH_REPORT.md`
 
 ### Round 3 — Aggressive Cleanup & Polish (→ 9.9/10)
 
@@ -274,6 +274,6 @@ The mini-program communicates with the backend via **52 endpoints** across 10 lo
 
 ### Created
 - `README.md` (updated)
-- `docs/TECH_STACK.md`
-- `docs/USER_FLOW.md`
-- `docs/2026-04-22-PROJECT_HEALTH_REPORT.md`
+- `apps/mini-program/docs/TECH_STACK.md`
+- `apps/mini-program/docs/USER_FLOW.md`
+- `apps/mini-program/docs/2026-04-22-PROJECT_HEALTH_REPORT.md`

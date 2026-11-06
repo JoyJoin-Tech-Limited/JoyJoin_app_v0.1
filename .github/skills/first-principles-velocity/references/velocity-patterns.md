@@ -79,7 +79,7 @@ Escalate in **one step** with **evidence**.
 
 **Rule:** Optimize for outcome first. Use cheaper tiers only when the task is truly shallow or verification-like. Escalate tier when logic, coordination, or stakes rise.
 
-**Catalog source:** [`.github/agents/MODEL_CATALOG.md`](../../agents/MODEL_CATALOG.md)
+**Catalog source:** [`.github/agents/MODEL_CATALOG.md`](../../../agents/MODEL_CATALOG.md)
 
 ## Five Execution Themes (Detailed)
 

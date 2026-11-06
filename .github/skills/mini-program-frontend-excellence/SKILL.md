@@ -98,10 +98,10 @@ For Full-tier changes. Routine changes use the quick check above.
 - [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` for user-facing screens (0–24). A technically perfect screen with 0 情绪价值 is a failure.
 ## Related skills
 
-- [`ui-layout-audit`](./ui-layout-audit/SKILL.md) — pixel-level layout, spacing, typography audit; [`references/render-integrity-checklist.md`](./ui-layout-audit/references/render-integrity-checklist.md) — R1–R8 render-layer defect taxonomy
-- [`frontend-design-audit`](./frontend-design-audit/SKILL.md) — 5-dimension design quality audit (0–20)
+- [`ui-layout-audit`](../ui-layout-audit/SKILL.md) — pixel-level layout, spacing, typography audit; [`references/render-integrity-checklist.md`](../ui-layout-audit/references/render-integrity-checklist.md) — R1–R8 render-layer defect taxonomy
+- [`frontend-design-audit`](../frontend-design-audit/SKILL.md) — 5-dimension design quality audit (0–20)
 - [`completeness-audit`](../completeness-audit/SKILL.md) — 11-dimension 完成度 audit with ROI recommendations; run after Full-tier changes
-- [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) — brand colour, typography, mascot usage
-- [`wow-elements`](./wow-elements/SKILL.md) — crafted motion and emotional polish
-- [`design-system-governance`](./design-system-governance/SKILL.md) — token and variant discipline
+- [`joyjoin-brand-guidelines`](../joyjoin-brand-guidelines/SKILL.md) — brand colour, typography, mascot usage
+- [`wow-elements`](../wow-elements/SKILL.md) — crafted motion and emotional polish
+- [`design-system-governance`](../design-system-governance/SKILL.md) — token and variant discipline
 - [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — stress-test interview for Full-tier changes

@@ -49,7 +49,7 @@ Use this skill when you are:
 
 ## Current repo anchors
 
-- `docs/perf.md` defines the current web performance goals and validation ideas.
+- `docs/reference/perf.md` defines the current web performance goals and validation ideas.
 - `scripts/test-performance-fixes.sh` is a lightweight example of repeatable verification.
 - Several simulation and analysis scripts under `scripts/` can act as baseline measurement harnesses for non-UI work.
 
@@ -89,7 +89,7 @@ That is not a benchmark. Add concrete package-size and first-open measurements, 
 
 ## Related files
 
-- `docs/perf.md`
+- `docs/reference/perf.md`
 - `scripts/test-performance-fixes.sh`
 - `scripts/analyze-matching-issues.ts`
 - `scripts/simulate-1000-users.ts`

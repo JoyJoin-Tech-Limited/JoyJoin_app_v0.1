@@ -199,7 +199,7 @@ apps/user-client/src/assets/matching/
 
 ### 7. Mini Program 分包策略（launch-primary 客户端）
 
-`apps/mini-program` 是当前 **launch-primary** WeChat 客户端；性能预算与分包决策优先在这里验证，再对照 web。权威策略说明见 [`apps/mini-program/README.md`](../apps/mini-program/README.md) 的 *Package Loading Strategy*。
+`apps/mini-program` 是当前 **launch-primary** WeChat 客户端；性能预算与分包决策优先在这里验证，再对照 web。权威策略说明见 [`apps/mini-program/README.md`](../../apps/mini-program/README.md) 的 *Package Loading Strategy*。
 
 **当前主包预算与资产策略（2026-07-07）：**
 
@@ -215,7 +215,7 @@ apps/user-client/src/assets/matching/
 
 | 机制 | 位置 |
 |------|------|
-| 主包页面列表 + 分包声明 + `preloadRule` | [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) → 由 [`app.config.ts`](../apps/mini-program/src/app.config.ts) 引用 |
+| 主包页面列表 + 分包声明 + `preloadRule` | [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) → 由 [`app.config.ts`](../../apps/mini-program/src/app.config.ts) 引用 |
 | Onboarding subpackage | `root: pages/onboarding`，7 个页面（见 `MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES`） |
 | Pool-registration subpackage | `root: pages/pool-registration`，1 个页面；pool-specific hero backdrops 在分包内 `assets/`，Batch C 仪式化资源走 CDN |
 | Matching-status subpackage | `root: pages/matching-status`，1 个页面 |

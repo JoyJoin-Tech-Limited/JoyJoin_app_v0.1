@@ -508,7 +508,7 @@ Later async updates (venue assignment, refreshed theme highlights, cached pair e
 
 In production, “agents” are **deployed workers** (queue consumers or scheduled jobs), not interactive Cursor sessions. Recommended split:
 
-Repo agent specs for human/IDE orchestration of the same responsibilities: [`.github/agents/game-design-agent.agent.md`](../.github/agents/game-design-agent.agent.md) and [`.github/agents/game-development-agent.agent.md`](../.github/agents/game-development-agent.agent.md). Modular compile checklists: [`.github/skills/game-design-icebreaker-compilation/SKILL.md`](../.github/skills/game-design-icebreaker-compilation/SKILL.md).
+Repo agent specs for human/IDE orchestration of the same responsibilities: [`.github/agents/game-design-agent.agent.md`](../../.github/agents/game-design-agent.agent.md) and [`.github/agents/game-development-agent.agent.md`](../../.github/agents/game-development-agent.agent.md). Modular compile checklists: [`.github/skills/game-design-icebreaker-compilation/SKILL.md`](../../.github/skills/game-design-icebreaker-compilation/SKILL.md).
 
 **Game Design Agent (production)** — *compile*
 

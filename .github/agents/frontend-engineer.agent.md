@@ -49,7 +49,7 @@ You are expert in React 18, TypeScript, Vite, Wouter, TanStack Query, Tailwind, 
 - `WEB_ONLY`: browser DOM, semantic HTML, Radix composition, Wouter route wiring, browser storage, canvas or html2canvas, and desktop or mobile web polish.
 - `MINI_PROGRAM_ONLY`: `Taro.*`, `wx.*`, page configs, `app.config.ts`, WXML or WXSS constraints, and WeChat navigation or runtime behavior.
 - `BOTH_REQUIRED`: auth or session semantics, API request wrappers, payment flows, pricing assumptions, shared contracts, or behavior duplicated across the mini-program and sibling surfaces (admin-client/server; historically the archived web client).
-- If a task touches a `BOTH_REQUIRED` surface, review `docs/PLATFORM_COORDINATION.md` and the sibling platform before finalizing the change.
+- If a task touches a `BOTH_REQUIRED` surface, review `docs/reference/PLATFORM_COORDINATION.md` and the sibling platform before finalizing the change.
 
 ## Archived Web Reference Approach
 

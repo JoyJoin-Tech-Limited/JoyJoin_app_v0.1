@@ -17,7 +17,7 @@ This file is the canonical source for reusable frontend performance and interact
 
 ## Pixel precision (mini-program)
 
-- **Spec-backed screens:** Match Figma (or equivalent) measurements **exactly** after rpx conversion — avoidable deviation beyond **1 physical px** is a defect unless documented with platform constraint and design approval. Full rules: [`mini-program-frontend-excellence/references/pixel-precision.md`](../mini-program-frontend-excellence/references/pixel-precision.md).
+- **Spec-backed screens:** Match Figma (or equivalent) measurements **exactly** after rpx conversion — avoidable deviation beyond **1 physical px** is a defect unless documented with platform constraint and design approval. Full rules: [`mini-program-frontend-excellence/references/pixel-precision.md`](../../mini-program-frontend-excellence/references/pixel-precision.md).
 - **Unspecced screens:** Use **8rpx** spacing rhythm and align insets with sibling screens; verify in **WeChat DevTools** before merge.
 
 ## Web spacing (brief)

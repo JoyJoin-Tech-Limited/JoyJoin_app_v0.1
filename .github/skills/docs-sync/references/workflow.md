@@ -23,7 +23,7 @@ This reference expands the 5-step execution flow from `SKILL.md` with full editi
 
 **Output an internal file list** (not shown to user). Tag each item: `[assessed / needs-edit / skip]`. **Missing one is the most common failure mode of this skill.**
 
-**Critical inventory reminder:** `PRODUCT_REQUIREMENTS.md` and `docs/mini-program-product-reference.md` are the two most frequently missed documentation targets. They must be explicitly assessed in every sync, even when the changed code does not obviously touch product requirements.
+**Critical inventory reminder:** `PRODUCT_REQUIREMENTS.md` and `docs/mini-program/mini-program-product-reference.md` are the two most frequently missed documentation targets. They must be explicitly assessed in every sync, even when the changed code does not obviously touch product requirements.
 
 ---
 
@@ -151,7 +151,7 @@ Always address **Required** updates first. Present **Recommended** updates for c
 See [`mapping.md`](./mapping.md) for the full source-to-doc mapping guide including:
 - New API route → `DEVELOPER_QUICK_REFERENCE.md`, `docs/api/`, relevant domain skill
 - Route renamed/removed → Update all occurrences; mark removed routes
-- New `nextStep` onboarding value → `docs/onboarding-flow.md`, `onboarding-state-architecture` skill
+- New `nextStep` onboarding value → `docs/systems/onboarding-flow.md`, `onboarding-state-architecture` skill
 - New shared component → `packages/shared/src/README.md`, `frontend-component-architecture` skill
 - New design token → `design-system-governance` skill
 - New env var → `.env.example` comment, `DEVELOPER_QUICK_REFERENCE.md`
@@ -159,7 +159,7 @@ See [`mapping.md`](./mapping.md) for the full source-to-doc mapping guide includ
 - New domain in `routes/domains/` → `server-domain-architecture` skill, `apps/server/src/README.md`
 - Matching weight or signal change → `matching-domain` skill
 - Icebreaker phase or action change → `social-icebreaker-domain` skill
-- New Prometheus metric → `platform-observability-and-ops` skill, `docs/observability.md`
+- New Prometheus metric → `platform-observability-and-ops` skill, `docs/systems/observability.md`
 - Drizzle schema change → `backend-models-standards` notes, migration docs
 
 ---

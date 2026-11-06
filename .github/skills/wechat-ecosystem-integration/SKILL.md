@@ -76,4 +76,4 @@ Server: `paymentService.createMiniProgramPayment({ userId, paymentType, relatedI
 - [ ] Mini Program `Taro.request` uses `enableCookie: true` for session-carrying requests
 - [ ] Payment config validation checks `WECHAT_PAY_APP_ID === WECHAT_APPID` when JSAPI is active
 - [ ] Auth callback handlers validate CSRF `state` before exchanging codes
-- [ ] Any change to shared auth/payment DTOs is reviewed against `docs/PLATFORM_COORDINATION.md`
+- [ ] Any change to shared auth/payment DTOs is reviewed against `docs/reference/PLATFORM_COORDINATION.md`

@@ -20,7 +20,7 @@ Use it when modifying any of the following:
 - orchestration, auto-eval, and repo-memory runtime scripts under `scripts/`
 - validation or regression tests that lock in orchestration behavior
 
-This is a governance document, not a runtime-product AI architecture document. For shipped product AI behavior and invariants, use [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md). For contributor workflow policy, use [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md).
+This is a governance document, not a runtime-product AI architecture document. For shipped product AI behavior and invariants, use [`../docs/ai/ai-agent-harness-separation-strategy.md`](../docs/ai/ai-agent-harness-separation-strategy.md). For contributor workflow policy, use [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md).
 
 ## Governance principles
 

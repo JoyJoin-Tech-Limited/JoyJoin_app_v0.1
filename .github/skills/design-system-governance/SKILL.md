@@ -75,7 +75,7 @@ documentation format, and platform-specific notes, see
 → Move the variant to `buttonVariants.ts`, delete the local override, rebuild.
 
 **Component failing accessibility contrast check**
-→ Verify against WCAG AA 4.5 : 1 ratio documented in `docs/button-design.md`.
+→ Verify against WCAG AA 4.5 : 1 ratio documented in `docs/design/button-design.md`.
 
 ## Review checklist
 

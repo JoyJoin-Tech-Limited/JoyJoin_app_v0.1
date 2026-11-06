@@ -117,7 +117,7 @@ Include **`utilization`** on both `agent_turn_summary` and `supervisor_turn_repo
 
 - **`utilization`:** array (max **30** rows per turn after normalization) of objects:
   - **`task`** — short label for the slice of work (e.g. "Pool API validation").
-  - **`agents`** — JoyJoin agent names that **owned or executed** that slice this turn (e.g. `Backend Engineer`, `Researcher`). Use the names from [`.github/agents/manifest.json`](../../agents/manifest.json).
+  - **`agents`** — JoyJoin agent names that **owned or executed** that slice this turn (e.g. `Backend Engineer`, `Researcher`). Use the names from [`.github/agents/manifest.json`](../../../agents/manifest.json).
   - **`skills`** — repo skill ids from [`.github/skills/`](../) that were **actively applied** for that slice (e.g. `server-domain-architecture`, `first-principles-velocity`). Use **skill folder names**, not file paths.
 
 **Supervisor:** When consolidating multiple children, either **merge** into one row per thematic task or **list** rows per child handoff—whichever makes gaps clearer. Prefer **skills** you know were co-loaded or decisive for the task, not every skill bound to the agent.

@@ -7,7 +7,7 @@
 > **Target:** WeChat Mini Program (Taro)
 > **Generation strategy:** **Single grid prompt → crop script.** One 3200×1600 master image containing 8 cells (4 cols × 2 rows × 800×800). Each cell is one independent illustration sharing the same low-poly painterly style lock.
 > **Companion assets:** Batch B (emotional icons), existing xiaoyue mascot expressions, and the speed-friending phase icon. All color accents must stay within the JoyJoin 8-color palette.
-> **Related rubric:** [`docs/reference/emotional-value-rubric.md`](../../reference/emotional-value-rubric.md) — 6 dimensions, target lift 仪式感 2.5→4, 归属感 3→4.
+> **Related rubric:** [`docs/reference/emotional-value-rubric.md`](../reference/emotional-value-rubric.md) — 6 dimensions, target lift 仪式感 2.5→4, 归属感 3→4.
 
 ---
 

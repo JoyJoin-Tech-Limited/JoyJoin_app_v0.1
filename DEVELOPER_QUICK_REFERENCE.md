@@ -694,7 +694,7 @@ The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by 
 5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; browser blind-box checkout returns through `BlindBoxConfirmationPage`, which confirms payment state and then hands off to `/events` or `/discover`.
 6. **Mini-program matched-member cards must reuse `TablemateCard`.** The matching-status matched carousel, pool-group-detail deck strip, and squad-unboxing front-face all share `apps/mini-program/src/components/TablemateCard`; pair-chemistry copy/emoji/helpers live in `apps/mini-program/src/lib/utils/pairChemistry.ts`. Do not rebuild a one-off member card for a new matched surface.
 
-Full reference: `docs/reference/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
+Full reference: `docs/reference/ui-matching-reveal-improvements.md`, `docs/architecture/implementation-summaries/matching-reveal-implementation-summary.md`
 
 ---
 
@@ -1389,7 +1389,7 @@ import { Button } from "@/components/ui/button";
 ```
 
 **Source of truth:** `packages/shared/src/ui/Button.tsx` (runtime) · `packages/shared/src/ui/buttonVariants.ts` (styling)  
-**Full design reference:** `docs/button-design.md`
+**Full design reference:** `docs/design/button-design.md`
 
 ### Import Aliases
 

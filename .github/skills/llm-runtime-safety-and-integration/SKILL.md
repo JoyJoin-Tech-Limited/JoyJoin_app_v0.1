@@ -26,7 +26,7 @@ calls observable, fail-safe, and separated from deterministic product authority.
 ## Core rules
 
 1. **Start from current-state AI architecture.** Read
-   `docs/ai-agent-harness-separation-strategy.md` first for what is live today.
+   `docs/ai/ai-agent-harness-separation-strategy.md` first for what is live today.
 2. **Keep deterministic authority deterministic.** Matching scores, onboarding
    routing, auth gates, and server-owned phase transitions must not become
    partially AI-owned by accident.
@@ -65,7 +65,7 @@ metadata rules, and router configs, see [`references/llm-ops.md`](./references/l
 → Check that the call site uses `logAITrace(...)` and fields stay non-PII.
 
 **Implementation uses the roadmap doc as if the feature is already live**
-→ Re-check `docs/ai-agent-harness-separation-strategy.md`. Roadmap is not runtime
+→ Re-check `docs/ai/ai-agent-harness-separation-strategy.md`. Roadmap is not runtime
    authority.
 
 **Model call is influencing deterministic matching or routing logic**
@@ -85,8 +85,8 @@ metadata rules, and router configs, see [`references/llm-ops.md`](./references/l
 
 ## Related files
 
-- `docs/ai-agent-harness-separation-strategy.md`
-- `docs/AI_INTEGRATION_PLAN.md`
+- `docs/ai/ai-agent-harness-separation-strategy.md`
+- `docs/ai/AI_INTEGRATION_PLAN.md`
 - `apps/server/src/ai/socialModelRouter.ts`
 - `apps/server/src/ai/creativeModelRouter.ts`
 - `apps/server/src/lib/aiTraceLogger.ts`

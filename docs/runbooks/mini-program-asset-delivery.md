@@ -278,7 +278,7 @@ The per-subpackage `manualChunks` rule in `apps/mini-program/config/miniProgramC
 
 ## 6. References
 
-- [`apps/mini-program/docs/ASSET_STRATEGY.md`](../apps/mini-program/docs/ASSET_STRATEGY.md) — two-tier bundled/CDN strategy, icon tiers, conversion rules
+- [`apps/mini-program/docs/ASSET_STRATEGY.md`](../../apps/mini-program/docs/ASSET_STRATEGY.md) — two-tier bundled/CDN strategy, icon tiers, conversion rules
 - [`docs/agent-context/mini-program-assets.md`](../agent-context/mini-program-assets.md) — implementation notes and recent gotchas
 - [`docs/agent-context/gathering-room.md`](../agent-context/gathering-room.md) — gathering-room feature context and 2026-08-17 device fix
 - [`AGENTS.md`](../../AGENTS.md) §3 — exact WeChat upload and CDN commands

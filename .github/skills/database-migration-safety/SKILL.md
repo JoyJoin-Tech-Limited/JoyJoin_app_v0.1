@@ -94,8 +94,8 @@ Treat that as a migration bug. Idempotent scripts should converge on the same va
 
 ## Related files
 
-- [`packages/shared/src/schema.ts`](../../packages/shared/src/schema.ts)
-- [`scripts/verify-db-alignment.mjs`](../../scripts/verify-db-alignment.mjs) — CI gate: compares schema.ts against live DB
-- [`scripts/verify-journal-sync.mjs`](../../scripts/verify-journal-sync.mjs) — ensures all .sql migrations are tracked in _journal.json
-- [`scripts/rebuild-journal.mjs`](../../scripts/rebuild-journal.mjs) — rebuilds _journal.json from migration files
+- [`packages/shared/src/schema.ts`](../../../packages/shared/src/schema.ts)
+- [`scripts/verify/verify-db-alignment.mjs`](../../../scripts/verify/verify-db-alignment.mjs) — CI gate: compares schema.ts against live DB
+- [`scripts/verify/verify-journal-sync.mjs`](../../../scripts/verify/verify-journal-sync.mjs) — ensures all .sql migrations are tracked in _journal.json
+- [`scripts/rebuild-journal.mjs`](../../../scripts/rebuild-journal.mjs) — rebuilds _journal.json from migration files
 - [`backend-models-standards/SKILL.md`](../backend-models-standards/SKILL.md)

@@ -35,7 +35,7 @@ Event-pack credit lifecycle lives in `apps/server/src/repositories/eventCreditsR
 Platform launch and pending-order persistence stay local:
 - Mini Program owns `Taro.requestPayment` and pending-order storage (launch-primary)
 - Browser clients own H5 redirect launch (reference-only, not shipping)
-- Coordinate shared contract changes through `docs/PLATFORM_COORDINATION.md`
+- Coordinate shared contract changes through `docs/reference/PLATFORM_COORDINATION.md`
 
 ## Related files
 
@@ -46,8 +46,8 @@ Platform launch and pending-order persistence stay local:
 - `apps/server/src/routes.ts`
 - `packages/shared/src/api.ts`
 - `packages/shared/src/schema.ts`
-- `docs/PLATFORM_COORDINATION.md`
-- `docs/LAUNCH_CONFIG.md`
+- `docs/reference/PLATFORM_COORDINATION.md`
+- `docs/product/LAUNCH_CONFIG.md`
 - `apps/server/src/__tests__/paymentWebhook.test.ts`
 - `apps/server/src/__tests__/paymentFulfillmentRepo.test.ts`
 - `apps/server/src/__tests__/miniProgramPaymentRoutes.test.ts`

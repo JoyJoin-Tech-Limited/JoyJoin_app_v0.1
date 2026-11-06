@@ -221,7 +221,7 @@ Run: `npm run test -w @joyjoin/shared`
 
 ## 11. Related Docs
 
-- [`README.md`](./README.md) — boundary rules, what belongs
+- [`README.md`](./src/README.md) — boundary rules, what belongs
 - [`../../AGENTS.md`](../../AGENTS.md) — root agent guide with full skill table
 - [`../../apps/server/src/README.md`](../../apps/server/src/README.md) — server domain ownership
 - [`../../.github/skills/backend-models-standards/SKILL.md`](../../.github/skills/backend-models-standards/SKILL.md)

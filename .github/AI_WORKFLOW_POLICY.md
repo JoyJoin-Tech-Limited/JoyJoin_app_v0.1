@@ -15,9 +15,9 @@ This policy defines how contributors should use AI in this repository.
 | [`ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) | Change-management rules for agents, skills, hooks, orchestration scripts, and their validation surfaces. |
 | [`AI_TOOLING_UNIFIED_BRAIN.md`](./AI_TOOLING_UNIFIED_BRAIN.md) | Cursor vs Copilot shared policy, MCP wiring (Context7, Hermes, optional agent memory), and IDE glue. |
 | [`SUPERPOWERS_JOYOIN_INTEGRATION.md`](./SUPERPOWERS_JOYOIN_INTEGRATION.md) | Cursor **Superpowers** plugin + JoyJoin skills/agents/memory (Copilot does not load Superpowers). |
-| [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) | Current shipped runtime AI architecture, invariants, and separation boundaries. |
-| [`../docs/AI_INTEGRATION_PLAN.md`](../docs/AI_INTEGRATION_PLAN.md) | Product AI roadmap, rollout gates, and future-phase sequencing. |
-| [`../docs/AI_EXECUTION_ROADMAP.md`](../docs/AI_EXECUTION_ROADMAP.md) | 30-60-90 engineering roadmap for improving AI delivery workflow, orchestration validation, and operational readiness. |
+| [`../docs/ai/ai-agent-harness-separation-strategy.md`](../docs/ai/ai-agent-harness-separation-strategy.md) | Current shipped runtime AI architecture, invariants, and separation boundaries. |
+| [`../docs/ai/AI_INTEGRATION_PLAN.md`](../docs/ai/AI_INTEGRATION_PLAN.md) | Product AI roadmap, rollout gates, and future-phase sequencing. |
+| [`../docs/ai/AI_EXECUTION_ROADMAP.md`](../docs/ai/AI_EXECUTION_ROADMAP.md) | 30-60-90 engineering roadmap for improving AI delivery workflow, orchestration validation, and operational readiness. |
 
 This policy does **not** approve new runtime AI product behavior by itself. Product AI changes still require the runtime architecture docs, the right domain skills, and explicit rollout gates.
 
@@ -220,7 +220,7 @@ When you **do** extend the portfolio, follow a consistent sequence so capabiliti
 
 ### Custom orchestration outside the IDE
 
-The in-repo graph (hooks, `Supervisor`, turn summaries) is **guidance and handoff**, not a peer-to-peer multi-agent runtime. You **can** add **custom orchestration** around it: e.g. CI jobs, `scripts/orchestration/orchestration-supervisor.mjs`, scheduled workflows, or external runners that aggregate multiple human or API sessions—provided you keep **deterministic authority** and **repo-memory** rules in [`.github/ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) and [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md). New automation must not imply hidden autonomous execution without an explicit approval boundary.
+The in-repo graph (hooks, `Supervisor`, turn summaries) is **guidance and handoff**, not a peer-to-peer multi-agent runtime. You **can** add **custom orchestration** around it: e.g. CI jobs, `scripts/orchestration/orchestration-supervisor.mjs`, scheduled workflows, or external runners that aggregate multiple human or API sessions—provided you keep **deterministic authority** and **repo-memory** rules in [`.github/ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) and [`../docs/ai/ai-agent-harness-separation-strategy.md`](../docs/ai/ai-agent-harness-separation-strategy.md). New automation must not imply hidden autonomous execution without an explicit approval boundary.
 
 ## Working checklist
 

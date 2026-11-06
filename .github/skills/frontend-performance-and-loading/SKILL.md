@@ -32,7 +32,7 @@ placement or visual token decisions.
    performance; use `frontend-component-architecture` for component location.
 3. **Gate prefetch work on real need.** Do not prefetch heavy assets or next-step
    data for users unlikely to use it.
-4. **Use shared performance references.** `docs/perf.md` is the runtime strategy
+4. **Use shared performance references.** `docs/reference/perf.md` is the runtime strategy
    guide; `.github/skills/design-system-governance/references/frontend-excellence-thresholds.md`
    has reusable list and interaction heuristics.
 5. **Treat web and mini-program as different renderers.** Performance intent should
@@ -46,7 +46,7 @@ analysis steps, and LCP optimization checklists, see
 
 ## Current repo anchors
 
-- `docs/perf.md` — active web performance strategy
+- `docs/reference/perf.md` — active web performance strategy
 - `archived/workspaces/user-client/src/App.tsx` — archived route-level lazy loading reference
 - `scripts/test-performance-fixes.sh` — lightweight verification style
 
@@ -57,7 +57,7 @@ analysis steps, and LCP optimization checklists, see
 - **Tune a mini-program collection** → use shared thresholds; prefer
   `VirtualList` or subpackages.
 - **Budget large new assets** → flag oversized rasters per repo scripts and align
-  first-load expectations with `docs/perf.md`.
+  first-load expectations with `docs/reference/perf.md`.
 
 ## Troubleshooting
 
@@ -84,7 +84,7 @@ analysis steps, and LCP optimization checklists, see
 
 ## Related files
 
-- `docs/perf.md`
+- `docs/reference/perf.md`
 - `archived/workspaces/user-client/src/App.tsx`
 - `scripts/test-performance-fixes.sh`
 - `.github/skills/design-system-governance/references/frontend-excellence-thresholds.md`

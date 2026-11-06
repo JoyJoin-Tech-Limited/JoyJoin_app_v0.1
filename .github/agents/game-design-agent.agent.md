@@ -30,7 +30,7 @@ Produce **validated, psychologically bounded `IcebreakerRunPlan` JSON** and a sh
 ## Default workflow
 
 1. Load `game-design-icebreaker-compilation` skill subsections relevant to the request.
-2. Read `packages/shared/src/icebreakerRunPlan.ts` and `docs/icebreaker-system.md` (pre-event lifecycle section).
+2. Read `packages/shared/src/icebreakerRunPlan.ts` and `docs/icebreaker/icebreaker-system.md` (pre-event lifecycle section).
 3. Draft `segments` + `context` + optional `rationale`; run mental or tooling validation against Zod shape.
 4. Run `TemplateMatcher` + `NoveltyFlag` + `StateMachineDraft` appendix.
 5. Hand off to **Game Development Agent** when templates or server gates must change; to **AI Engineer** when only prompt/slot-fill changes.

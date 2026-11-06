@@ -88,5 +88,5 @@ Document the env assumptions, seeded data, and feature flags before trusting the
 - `scripts/test-e2e-flow.ts`
 - `scripts/synthetic/happy-path-probe.mjs`
 - `.github/workflows/synthetic-probe.yml`
-- `docs/onboarding-flow.md`
+- `docs/systems/onboarding-flow.md`
 - `docs/runbooks/alerting.md`

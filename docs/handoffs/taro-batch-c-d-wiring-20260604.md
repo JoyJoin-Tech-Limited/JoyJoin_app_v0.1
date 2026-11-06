@@ -18,7 +18,7 @@ The 情绪价值 lift these unlock is the primary motivation:
 - **Batch C (Ceremony & Belonging)** lifts 仪式感 2.5→4 and 归属感 3→4
 - **Batch D (Achievement & Milestone)** lifts 成就感 2.5→4
 
-Both are the lowest-scoring dimensions today. See [`docs/reference/emotional-value-rubric.md`](../../reference/emotional-value-rubric.md).
+Both are the lowest-scoring dimensions today. See [`docs/reference/emotional-value-rubric.md`](../reference/emotional-value-rubric.md).
 
 ---
 
