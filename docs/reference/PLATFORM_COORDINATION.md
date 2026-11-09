@@ -81,7 +81,7 @@ The biggest remaining risk is payment orchestration, not broken contracts. The M
   - Domain/database types are shared through `packages/shared/src/schema.ts`.
   - Request/response DTOs for pricing, coupons, payments, notifications, blind-box events, and pool-group details are shared through `packages/shared/src/api.ts`.
 - **Active endpoint alignment**
-  - Shared and present on server: `/api/pricing`, `/api/user/coupons`, `/api/auth/wechat/login`, `/api/auth/wechat/login-with-test`, `/api/payments/miniprogram/create`, `/api/payments/create`, `/api/coupons/validate`, `/api/subscription/renew`, `/api/payments/status/:wechatOrderId`, `/api/my-events`, `/api/notifications/counts`, `/api/notifications/mark-read`.
+  - Shared and present on server: `/api/pricing`, `/api/user/coupons`, `/api/auth/wechat/login`, `/api/auth/wechat/login-with-test`, `/api/payments/miniprogram/create`, `/api/payments/create`, `/api/coupons/validate`, `/api/subscription/renew`, `/api/payments/status/:wechatOrderId`, `/api/my-events`, `/api/notifications/counts`, `/api/notifications/mark-read`, `/api/notifications/:id/read`.
   - Browser blind-box payment pages no longer call `/api/event-packs/purchase`; event packs stay disabled behind `supportsEventPacks = false`.
   - Browser payment responses now expose `paymentRedirectUrl` and `paymentStatus`, and shared helpers normalize launch URLs across both nested and top-level payload shapes.
   - `/api/payments/create` is now the primary browser event-payment path.

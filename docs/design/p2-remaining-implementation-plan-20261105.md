@@ -1,7 +1,7 @@
 # P2 余项执行计划草案
 
 - 日期：2026-11-05
-- 状态：UI/UX designer 方向 **APPROVE**；Momus 两项剩余执行前置（Events DTO/服务端分桶数据、通知已读生命周期）已写入 §3/§4；尚非最终渲染/真机批准
+- 状态：UI/UX designer 方向 **APPROVE**；Momus 两项剩余执行前置（Events DTO/服务端分桶数据、通知已读生命周期）已写入 §3/§4；**P2-S1 与 P2-S3 已于 2026-11-06 交付**（见 §10）；真机批准仍开放
 - 范围： gathering-room 已移除删除候选后，剩余 P2 工程项 + 三项产品/商业实验
 - 原则：先清理“维护成本”，再改“信息架构”，最后做“商业实验”。不为数量目标新增页面/组件/flag。
 
@@ -72,6 +72,8 @@
 
 ## 4. 通知列表 —— 精确类型矩阵 + 可点深链
 
+> 2026-11-06 已按本节矩阵交付，结果与验证见 §10.2。
+
 ### 当前状态
 - `pages/notifications` 列表行基本不可点；通知生产端的 `relatedResourceId` 并不总等于 eventId，不能凭类型名猜目标。
 - 现有页面在 unmount 时会把 `activities` / `discover` 类别批量标已读；按类别 read endpoint 还排除 `system`。若改成单行已读，这些行为必须先重新定义，否则“跳转失败仍 unread”会在返回/unmount 时被旧逻辑覆盖。
@@ -104,6 +106,8 @@
 ---
 
 ## 5. Toast 封装与渐进迁移
+
+> 2026-11-06 已完成 native-toast adapter 试点与 teaser copy-only，结果见 §10.1。
 
 ### 当前状态
 - 全仓搜索约 184 处只是估计，包含测试/注释；先用扫描器生成精确 baseline，不把数量当事实。
@@ -168,9 +172,9 @@
 | Sprint | 项 | 前置条件 |
 |--------|----|----------|
 | P2-S0 | alang/config+debug 裁决、center-hub 路由/分段、通知矩阵、庆祝表面清单、teaser 提醒真伪 | 对应 owner 书面确认，未决不得开工 |
-| P2-S1 | toast 生产试点 + teaser copy-only 测量 | toast adapter contract test；teaser 无提醒交付则不承诺 |
+| P2-S1 | toast 生产试点 + teaser copy-only 测量 | ✅ 2026-11-06 交付（§10）；toast adapter contract test 已落盘 |
 | P2-S2 | center-hub 复用 Events inbox、默认「进行中」 | 路由与 `eventPartition` fixture 先锁定 |
-| P2-S3 | 通知深链与 per-item read | 精确类型/ID/fallback/read 矩阵先锁定 |
+| P2-S3 | 通知深链与 per-item read | ✅ 2026-11-06 交付（§10）；真机 tap → destination → back 录制仍开放 |
 | P2-S4 | 仅注册成功庆祝收敛 | 与订阅 upsell 分开；先 baseline/cohort/样本/回滚，再灰度 |
 | 独立实验（非本 P2） | 订阅 upsell、alang/config 迁 admin、真实 teaser 提醒 | 各自新 Sprint/Tier、商业或 QA owner |
 
@@ -194,3 +198,23 @@
 - 不改匹配引擎或人格系统。
 - 未经 QA 裁决不删除/迁移 alang/config+debug。
 - 不为 P2 新增用户可见 tab、页面家族或新商业化承诺；不把真实提醒、admin 迁移或订阅实验偷渡进本计划。
+
+## 10. 交付记录（2026-11-06）
+
+### 10.1 P2-S1 — toast adapter 试点 + teaser copy-only
+
+- 交付 commit：`4bab79d10`。
+- `apps/mini-program/src/lib/utils/toast.ts`：`showAppToast(options)` 原生适配器，`neutral | success | error` 三档语义复用既有 `TOAST_*` 常量；显式传入的 options 覆盖默认值，原生 Promise 原样返回。未新增 overlay/队列/去重层。
+- 试点：`apps/mini-program/src/lib/navigation/matchingNavigation.ts` 的六处导航失败 toast 迁移到适配器（文案与时长不变）。
+- Teaser：`pages/alang/teaser` 删除「正式上线时，第一时间告诉你」这句无交付能力的提醒承诺；页面保留静态内测语义，不接 `requestSubscribeMessage`。
+- 证据：`docs/deliverables/2026-11-05-p2-s1-toast-teaser/evidence.md`；3 个测试文件 / 24 tests、typecheck、guardrails、隔离 H5 build 均通过。
+- 未做：真实提醒交付链路；裸 `Taro.showToast` 全仓清理（仅保留 touched-file ratchet 语义）。
+
+### 10.2 P2-S3 — 通知深链 + per-item read
+
+- 交付 commit：`df929e26b`。
+- 服务端：`POST /api/notifications/:id/read`（`requireAuth`，owner-scoped，幂等；`400 INVALID_NOTIFICATION_ID` / `404 NOTIFICATION_NOT_FOUND`）；按类别 `POST /api/notifications/mark-read` 保持不变。`matchingPostMatchEffects` 的 `venue_tbd` 通知改为携带 `groupId` 作为 `relatedResourceId`。
+- 客户端：`apps/mini-program/src/lib/navigation/notificationNavigation.ts` 固化映射矩阵；`match_success` / `venue_tbd` → `pool-group-detail`，`feedback_invite` 仅在服务端 feedback state 为 `open` 时进 `event-feedback`，其余回 `event-detail`；`mutual_match` → Connections tab；`event_reminder` / `pool_full` → `event-detail`；`subscription_*` → rewards；未知/缺失资源 read-only。`venue_tbd` 仅在 `ApiError` 404 时回退 `event-detail`（兼容旧 poolId 行）。
+- 已读生命周期：仅在导航被系统接受且服务端确认后标记该行已读并更新 badge；导航失败保持 unread。通知页、Events、Discover、Connections 的入口/unmount 自动批量已读已移除；显式分类「全部已读」保留为 badge 清零路径。`system`/未知 read-only 行保持未读，直到用户显式点分类「全部已读」（服务端按 category 清理，不区分 type）；per-item 路由本身不排除 `system`，但客户端不对 read-only 行调用。
+- 证据：服务端 3 文件 / 13 tests；mini-program 4 文件 / 44 tests；`tsc --noEmit`、guardrails、`build:weapp` + `verify:subpackage-styles`、mini 全量 3655 tests 通过；server 全量在修复 `guestEventPreview` 日期时间炸弹（`022ac6992`）后通过。
+- 未做/仍开放：真机 tap → destination → back 录制；center-hub、Events DTO 三桶、alang config/debug 迁移均未在本 Sprint 范围。

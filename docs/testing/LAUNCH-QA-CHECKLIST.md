@@ -138,7 +138,7 @@
 - [ ] `subscribeRemindersEnabled` 杀开关可关；调度窗（T-3h..T-12h / T+20h..T+30h）正确
 - [ ] 推送文案纯服务性，零营销词
 - [ ] WS：连接/心跳/重连；`ROOM_*` 5s 离场宽限、2s poke 节流；断线后 3s 轮询兜底仍工作（**本批 `websocket.ts`/`useWebSocket.ts` 有改动 — staging 重测**）
-- [ ] 通知中心未读数/已读语义正确；admin 广播留审计
+- [ ] 通知中心未读数/已读语义正确；单条点击仅在导航被接受且 `POST /api/notifications/:id/read` 成功后标已读，失败保持 unread；无入口/unmount 自动批量已读；分类「全部已读」可清零；深链矩阵（`match_success`/`venue_tbd`→group、`feedback_invite`→feedback 或 event-detail、未知→read-only）逐条走查；admin 广播留审计
 - [ ] **调度器健康（新增）：** `subscribeReminderScheduler.ts`（10min tick）、`venueTbdRetryScheduler.ts`、`socialIcebreakerSweep.ts`（TTL 清扫 + recap dwell 补写）— 重启后无重复跑/无漏跑、各有杀开关、日志可见
 - [ ] **时区正确性（新增）：** 调度窗口基于 `lib/eventDateTime.ts`（+8h、`getUTC*`），跨设备/服务器时钟不漂移；禁止跨时钟比较 `updatedAt`（2026-08-13 设备时钟漂移教训）
 

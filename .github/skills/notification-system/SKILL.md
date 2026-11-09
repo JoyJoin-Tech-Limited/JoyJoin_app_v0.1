@@ -2,9 +2,11 @@
 name: notification-system
 description: >
   JoyJoin in-app notification system: DB-backed notification records, WebSocket broadcast fallbacks,
-  admin broadcast/single-send endpoints, per-user unread counts by category, and mark-read semantics.
-  Use when adding notification triggers, changing delivery patterns, or debugging why users don't
-  see notifications. Triggers: notification, broadcast, mark-read, notification counts,
+  admin broadcast/single-send endpoints, per-user unread counts by category, mark-read semantics,
+  deterministic mini-program deep links, and owner-scoped per-item read.
+  Use when adding notification triggers, changing delivery patterns, wiring notification taps, or
+  debugging why users don't see notifications. Triggers: notification, broadcast, mark-read,
+  notification counts, notification deep link, per-item read, notificationNavigation,
   createNotification, notificationsRepo, eventBroadcast, in-app notification, admin notification.
 ---
 
@@ -39,11 +41,15 @@ Trigger (event status, match, admin action)
 **Categories:** `discover`, `activities`, `chat`. **Types:** `event_reminder`, `system_alert`, `mutual_match`, `match_success`, `pool_full`, `new_message`, `admin_announcement`, etc. **2026-06-28 additions:** `match_success` is created for every group member after `poolMatchingService` commits groups; `pool_full` is created for all registered users when a pool reaches capacity.
 
 **Key invariant:** Unread counts are computed from the database (`isRead = false`), not WebSocket state. Clients poll `/api/notifications/counts` every 30s as fallback.
+
+**Read lifecycle (2026-11-06):** a notification row becomes read only after (a) the mini-program accepts the navigation for a mapped row and (b) `POST /api/notifications/:id/read` confirms. Failed navigation, resolver failure, or a failed read call leave the row unread. Tab entry and page unmount no longer bulk-mark categories; explicit per-category 「全部已读」 remains the badge-clearing path. Read-only rows (unmapped type or missing resource id) never navigate and never call per-item read — they clear only through category mark-all.
+
 ## API Endpoints
 
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
 | `GET` | `/api/notifications/counts` | Phone | Unread counts per category + total |
+| `POST` | `/api/notifications/:id/read` | Phone | Mark one owned notification as read (idempotent; 400 `INVALID_NOTIFICATION_ID`, 404 `NOTIFICATION_NOT_FOUND`) |
 | `POST` | `/api/notifications/mark-read` | Phone | Mark category as read |
 | `POST` | `/api/notifications` | Phone | Create notification for self |
 | `GET` | `/api/admin/notifications` | Admin | Admin notification history |
@@ -69,7 +75,8 @@ See [references/implementation.md](references/implementation.md) for DB schema, 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
 | User never sees a notification | Row not created | Add `notificationsRepo.createNotification` in the flow; wrap in try/catch |
-| Badge count stale after reading | `mark-read` succeeded but query not invalidated | Ensure `useMarkNotificationsAsRead` calls `invalidateQueries` for count key |
+| Badge count stale after reading | Read succeeded but count query not invalidated | Invalidate the count key after per-item read and after category mark-all |
+| Notification tap does nothing | Type is not in the mapped matrix, or `relatedResourceId` is blank | Treat as read-only by design; add the type + destination to `notificationNavigation.ts` only with a deterministic resolver |
 | Duplicate notifications for same event | Multiple trigger paths | Deduplicate with pre-insert check or centralize in one trigger function |
 | Admin broadcast shows wrong stats | `getNotificationStats` grouping mismatch | Ensure broadcast rows share identical values; do not vary `message` per recipient |
 | WS arrives but badge missing | Client only listens to WS, never refetches | Badge derives from DB counts; WS is supplemental |
@@ -83,7 +90,12 @@ See [references/implementation.md](references/implementation.md) for DB schema, 
 - [ ] Broadcast (if any) happens **after** DB persistence
 - [ ] `eventBroadcast.ts` is used for event lifecycle notifications rather than ad-hoc repo calls
 - [ ] Admin broadcast endpoints enforce `requireOperatorOrAbove`
-- [ ] `mark-read` mutation invalidates the count query on both web and mini-program
+- [ ] `relatedResourceId` carries the ID family the client resolver expects for that type (e.g. `venue_tbd` uses `groupId`, not `poolId`)
+- [ ] Per-item read is owner-scoped and idempotent; missing and other-user IDs return the same 404
+- [ ] Mini-program marks a row read only after navigation is accepted and the read call succeeds; failure leaves it unread
+- [ ] No tab-entry/unmount bulk auto-read; explicit per-category mark-all is the only batch path
+- [ ] Unmapped types and rows without a usable resource id are read-only (no chevron, haptic, toast, or `role='button'`)
+- [ ] Read/category mutations invalidate the count query
 - [ ] No sensitive data (tokens, internal IDs) in notification `title` or `message`
 
 ## Related Skills

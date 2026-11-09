@@ -44,6 +44,8 @@
 - **Xiaoyue in sad/loading states:** No-match uses `optOutReassure` mascot (bounce-in). Center-hub loading uses `homeWelcome`. Center-hub error uses `actionFailure`. Always pair mascot with warm copy — never dead text alone.
 - **Reduced-motion suppression:** All new animations (spring entrances, mascot bounce-in, hover transitions) must be suppressed under `@media (prefers-reduced-motion: reduce)`.
 
+**Toast adapter (2026-11-06):** `apps/mini-program/src/lib/utils/toast.ts` exports `showAppToast(options)` — the canonical wrapper for non-blocking feedback. Tones: `neutral` (icon none, 2000ms), `success` (icon success, 1800ms), `error` (icon error, 2600ms); all reuse the `TOAST_*` constants in `lib/utils/uiConstants.ts`. Explicit caller options win, and the native `Taro.showToast` Promise is returned untouched (await semantics preserved). Do not add an overlay/queue/dedupe layer; do not use toast for form-blocking errors (inline errors) or on top of the registration-success ceremony. New code should prefer `showAppToast` over raw `Taro.showToast`; migrate touched files opportunistically (pilot: six navigation-failure call sites in `lib/navigation/matchingNavigation.ts`).
+
 **Persistent Query Cache (Tier 2 offline) — 2026-06-02:**
 - **Location:** `apps/mini-program/src/lib/api/persistentCache.ts` owns all persistence logic. **Never** inline `Taro.setStorageSync` calls in page components.
 - **Whitelisted keys only:** Only `['mini-program', 'event-pools']` (`POOLS_QUERY_KEY`) and `['mini-program', 'joined-events']` (`JOINED_EVENTS_QUERY_KEY`) are persisted. Matching status, auth user, shell composites, and notification counts are explicitly excluded.

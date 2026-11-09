@@ -81,7 +81,7 @@ Patterns for making the system reliable, secure, and observable.
 | [`security-scan`](./security-scan/SKILL.md) | Security scan and posture review for auth/debug surfaces, secret handling, dependency risk, CI guardrails, and production overrides |
 | [`content-safety-abuse-detection`](./content-safety-abuse-detection/SKILL.md) | Abuse detection, content filtering, user moderation, trust-and-safety mechanics, rate limiting, and admin moderation surfaces |
 | [`feature-flags-launch-config`](./feature-flags-launch-config/SKILL.md) | Feature flags, launch configuration, env-gated behavior, kill switches, safe rollout/rollback discipline, and startup validation |
-| [`notification-system`](./notification-system/SKILL.md) | In-app notification persistence, WebSocket broadcast fallback, admin broadcast/send, per-user unread counts, and mark-read semantics |
+| [`notification-system`](./notification-system/SKILL.md) | In-app notification persistence, WebSocket broadcast fallback, admin broadcast/send, per-user unread counts, per-item + category mark-read semantics, and deterministic mini-program deep links |
 
 ---
 

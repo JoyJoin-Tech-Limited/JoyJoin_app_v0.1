@@ -11,7 +11,7 @@ export const notifications = pgTable("notifications", {
   type: varchar("type").notNull(),                // event_reminder | system_alert | mutual_match | ...
   title: varchar("title").notNull(),
   message: text("message"),
-  relatedResourceId: varchar("related_resource_id"), // eventId, chatId, etc.
+  relatedResourceId: varchar("related_resource_id"), // type-dependent: groupId | poolId | eventId | null
   isRead: boolean("is_read").default(false),
   sentBy: varchar("sent_by").references(() => users.id), // admin sender
   isBroadcast: boolean("is_broadcast").default(false),
@@ -39,7 +39,28 @@ WebSocket broadcasts are a **best-effort enhancement**, not the source of truth.
 
 ## Mark-read semantics
 
-`POST /api/notifications/mark-read` accepts a `category` parameter. All unread rows in that category for the authenticated user are updated to `isRead: true` in a single batch operation.
+Two read paths exist:
+
+- `POST /api/notifications/:id/read` — owner-scoped, idempotent single-row read. Returns `{ success: true }`; invalid ids return `400 INVALID_NOTIFICATION_ID`, missing or other-user ids return the same `404 NOTIFICATION_NOT_FOUND`. Repository: `notificationsRepo.markNotificationAsRead(userId, id)`.
+- `POST /api/notifications/mark-read` — accepts a `category` (`discover` | `activities` | `chat`) and batch-updates all unread rows in that category for the authenticated user.
+
+**Client lifecycle (mini-program):** per-item read happens only after the deep-link navigation is accepted, then the list cache and count query are updated. A failed navigation, failed resolver, or failed read call leaves the row unread. There is no tab-entry or unmount bulk auto-read. Read-only rows (unmapped type, blank `relatedResourceId`) clear only through explicit per-category 「全部已读」.
+
+## Deep links (mini-program)
+
+`apps/mini-program/src/lib/navigation/notificationNavigation.ts` is the single resolver. `canNavigateNotification` requires a mapped type plus a non-blank `relatedResourceId`; everything else is read-only.
+
+| Type | Target | Fallback |
+|------|--------|----------|
+| `match_success` | `/pages/pool-group-detail/index?groupId=…` | — |
+| `venue_tbd` | resolve `getPoolGroupDetails(groupId)` then `/pages/pool-group-detail/index?groupId=…` | `event-detail` only on `ApiError` 404 (legacy poolId rows) |
+| `feedback_invite` | `/pages/event-feedback/index?id=…` only when server feedback state is `open` | `event-detail` |
+| `mutual_match` | Connections tab (`switchTab`) | — |
+| `event_reminder`, `pool_full` | `event-detail` | — |
+| `subscription_activated`, `subscription_expiring`, `subscription_expired` | rewards page | — |
+| Unknown / missing id | read-only (no navigation) | — |
+
+`venue_tbd` notifications created by `matchingPostMatchEffects.ts` carry `groupId` as `relatedResourceId` (changed 2026-11-06 from `poolId`).
 
 ## Per-user unread counts
 
@@ -63,9 +84,10 @@ New notification types must map to one of these three categories.
 
 ## Frontend hooks
 
-- **Mini-program:** `apps/mini-program/src/hooks/useNotificationCounts.ts` — TanStack Query with 30s refetch, uses `@shared/api` helpers
-
-The hook also exposes `useMarkNotificationsAsRead()` which invalidates the count query on success.
+- **Mini-program counts:** `apps/mini-program/src/hooks/useNotificationCounts.ts` — TanStack Query with 30s refetch, uses `@shared/api` helpers
+- **Category mark-all:** `useMarkNotificationsAsRead()` wraps `POST /api/notifications/mark-read` and invalidates the count query on success
+- **Per-item read:** `markNotificationRead(api, id)` in `packages/shared/src/api/user.ts`; the notifications page calls it after navigation is accepted
+- **Notification list page:** `apps/mini-program/src/pages/notifications/index.tsx` — per-row deep link, optimistic read patch, per-category 「全部已读」 pills
 
 ## Admin broadcast endpoints
 
@@ -82,9 +104,12 @@ The hook also exposes `useMarkNotificationsAsRead()` which invalidates the count
 
 - `apps/server/src/repositories/notificationsRepo.ts`
 - `apps/server/src/eventBroadcast.ts`
-- `apps/server/src/routes.ts` (notification endpoints around lines 4741–4775, 5043–5071, 8615–8696)
+- `apps/server/src/routes/domains/icebreakerContent.ts` (notification endpoints)
+- `apps/server/src/lib/matchingPostMatchEffects.ts` (`venue_tbd` payload)
 - `apps/server/src/storage.ts`
 - `apps/server/src/wsService.ts`
 - `packages/shared/src/schema.ts` (`notifications` table, `NotificationCounts`)
-- `packages/shared/src/api.ts` (`getNotificationCounts`, `markNotificationsAsRead`)
+- `packages/shared/src/api/user.ts` (`markNotificationRead`)
+- `apps/mini-program/src/lib/navigation/notificationNavigation.ts`
+- `apps/mini-program/src/pages/notifications/index.tsx`
 - `apps/mini-program/src/hooks/useNotificationCounts.ts`
