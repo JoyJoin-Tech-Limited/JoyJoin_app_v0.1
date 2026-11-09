@@ -163,6 +163,8 @@ const [
     wechatIdCollectionEnabled,
     recapSharePosterEnabled,
     quipInspirationChipsEnabled,
+    icebreakerAcknowledgmentBeatEnabled,
+    feedbackAcknowledgmentItemEnabled,
     entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
@@ -251,6 +253,8 @@ const [
     // answer-phase static-curation chips row. Ships dark; flag-off =
     // byte-identical legacy answer phase (zero render, zero events).
     getFeatureFlag('quipInspirationChipsEnabled', false),
+    getFeatureFlag('icebreakerAcknowledgmentBeatEnabled', false),
+    getFeatureFlag('feedbackAcknowledgmentItemEnabled', false),
     // Server-resolved entitlement signal (pool-registration gate semantics via
     // lib/entitlement.ts), joined into the flag batch so the cold-start auth
     // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
@@ -327,6 +331,8 @@ const [
       profilePixelAvatarEnabled,
       /** Gathering room (集结房间) entry CTAs + room page. */
       gatheringRoomEnabled,
+      icebreakerAcknowledgmentBeatEnabled,
+      feedbackAcknowledgmentItemEnabled,
       /** Social Icebreaker social haptic grammar (ships dark). */
       icebreakerHapticGrammarEnabled,
       /** Social Icebreaker mood-anchored ambient field (ships dark). */

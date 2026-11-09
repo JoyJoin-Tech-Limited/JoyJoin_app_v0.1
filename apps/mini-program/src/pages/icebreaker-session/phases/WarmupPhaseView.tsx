@@ -17,6 +17,8 @@ import { GyroParallaxSpike } from '../spike/GyroParallaxSpike'
 import { HandshakeRitual } from '../components/HandshakeRitual'
 import { GlancePeek } from '../components/GlancePeek'
 import { isHandshakeRitualGateOpen } from '../viewModels/glanceStackModel'
+import { assignAcknowledgmentBeat } from '../viewModels/acknowledgmentBeatModel'
+import type { SocialSessionPoolGroupContext } from '@shared/socialIcebreaker'
 import type { SessionParticipant } from '../phaseUtils'
 import type { WarmupReadiness } from '../hooks/useWarmupReadiness'
 import { useUgcReport } from '../hooks/useUgcReport'
@@ -50,6 +52,12 @@ interface WarmupPhaseViewProps {
   warmupTopicsMeta?: AIResponseMeta
   socialSessionId?: string
   icebreakerSessionId?: string
+  /** Server-resolved experiment flag; assignment remains deterministic per table. */
+  acknowledgmentBeatEnabled?: boolean
+  /** Server-confirmed only for real, non-test pool-group sessions. */
+  poolGroupContext?: SocialSessionPoolGroupContext | null
+  /** Page-visible and free of page-level high-priority overlays. */
+  acknowledgmentExposureAllowed?: boolean
   onGenerateTopics: (mood: AtmosphereMood) => void
   isGeneratingTopics: boolean
   topicsError?: boolean
@@ -98,6 +106,9 @@ export function WarmupPhaseView({
   warmupTopicsMeta,
   socialSessionId,
   icebreakerSessionId,
+  acknowledgmentBeatEnabled = false,
+  poolGroupContext,
+  acknowledgmentExposureAllowed = false,
   onGenerateTopics,
   isGeneratingTopics,
   topicsError = false,
@@ -133,6 +144,17 @@ export function WarmupPhaseView({
 
   const fallbackMixText = useMemo(() => buildArchetypeMixText(participants), [participants])
   const archetypeMixText = propArchetypeMixText ?? fallbackMixText
+  const acknowledgmentExperiment = useMemo(
+    () => assignAcknowledgmentBeat({
+      enabled: acknowledgmentBeatEnabled,
+      icebreakerSessionId,
+      poolGroupContext,
+      isTestMode,
+      runBots,
+    }),
+    [acknowledgmentBeatEnabled, icebreakerSessionId, poolGroupContext, isTestMode, runBots],
+  )
+
   const welcomeSegments = useMemo(
     () => buildWelcomeSegments(participants, undefined),
     [participants],
@@ -403,6 +425,11 @@ export function WarmupPhaseView({
             selfReadyOptimistic={selfReadyOptimistic}
             warmupDataReady={warmupDataReady}
             topicsRecovery={topicsRecovery}
+            acknowledgmentExperiment={acknowledgmentExperiment}
+            icebreakerSessionId={icebreakerSessionId}
+            acknowledgmentExposureAllowed={
+              acknowledgmentExposureAllowed && !ritualGateOpen && !showCelebration
+            }
           />
         </View>
       </GyroParallaxSpike>

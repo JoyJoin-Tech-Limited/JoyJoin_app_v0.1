@@ -1,4 +1,5 @@
 import { blindBoxEvents, eventAttendance, eventPoolGroups, eventPoolRegistrations, eventPools } from "@shared/schema";
+import type { SocialSessionPoolGroupContext } from "@shared/socialIcebreaker";
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 
@@ -12,13 +13,24 @@ export type SocialIcebreakerAccessCode =
   | "SESSION_NOT_FOUND";
 
 type SocialIcebreakerAccessResult =
-  | { allowed: true }
+  | { allowed: true; poolGroupContext?: SocialSessionPoolGroupContext }
   | {
       allowed: false;
       status: 403 | 404 | 410;
       code: SocialIcebreakerAccessCode;
       body: Record<string, unknown>;
     };
+
+export function resolveRealPoolGroupContext(
+  eventPoolGroupId: string,
+  poolId: string,
+  isTestPool: boolean | null,
+): SocialSessionPoolGroupContext | undefined {
+  // Fail closed for test pools AND an unknown pool row. Only a server-joined,
+  // explicitly real pool may enter the acknowledgment experiment.
+  if (isTestPool !== false) return undefined;
+  return { eventPoolGroupId, poolId };
+}
 
 /**
  * Authorize a user for a social icebreaker session.
@@ -40,11 +52,13 @@ export async function getSocialIcebreakerAccess(
   userId: string,
 ): Promise<SocialIcebreakerAccessResult> {
   // --- Path 1: groupId ---
-  const [group] = await db
-    .select()
+  const [groupRow] = await db
+    .select({ group: eventPoolGroups, isTestPool: eventPools.isTestPool })
     .from(eventPoolGroups)
+    .leftJoin(eventPools, eq(eventPoolGroups.poolId, eventPools.id))
     .where(eq(eventPoolGroups.id, sessionId))
     .limit(1);
+  const group = groupRow?.group;
 
   if (group) {
     if (group.status === "completed" || group.status === "cancelled") {
@@ -76,7 +90,10 @@ export async function getSocialIcebreakerAccess(
       };
     }
 
-    return { allowed: true };
+    return {
+      allowed: true,
+      poolGroupContext: resolveRealPoolGroupContext(group.id, group.poolId, groupRow?.isTestPool ?? null),
+    };
   }
 
   // --- Path 2: blindBoxEventId ---

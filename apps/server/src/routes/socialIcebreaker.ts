@@ -396,6 +396,14 @@ router.post('/start', async (req: any, res) => {
     }
 
     const state = existing.state;
+    const previousPoolGroupContext = JSON.stringify(state.poolGroupContext ?? null);
+    if (access.poolGroupContext) {
+      state.poolGroupContext = access.poolGroupContext;
+    } else {
+      delete state.poolGroupContext;
+    }
+    const poolGroupContextChanged =
+      JSON.stringify(state.poolGroupContext ?? null) !== previousPoolGroupContext;
     const existingParticipant = await getParticipant(existing.socialSessionId, userId);
     const participantDisplayName =
       displayName || existingParticipant?.displayName || state.hostDisplayName;
@@ -432,7 +440,9 @@ router.post('/start', async (req: any, res) => {
     const enabledPhasesBefore = JSON.stringify(state.enabledPhases ?? []);
     ensureSessionEnabledPhases(state);
     let shouldPersist =
-      JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore || botsBackfilled;
+      JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore ||
+      botsBackfilled ||
+      poolGroupContextChanged;
 
     // Detect a tier/vibe change from the mini-program tier-selector and reset
     // the session accordingly. This fixes the case where a single-player test
@@ -614,6 +624,7 @@ router.post('/start', async (req: any, res) => {
   const newState: SocialSessionState = {
     socialSessionId,
     icebreakerSessionId: sessionId,
+    ...(access.poolGroupContext ? { poolGroupContext: access.poolGroupContext } : {}),
     currentPhase: 'warmup',
     hostUserId: userId,
     hostDisplayName: displayName || '主持人',

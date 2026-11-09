@@ -154,3 +154,13 @@ export {
   ICE_PHASE_ONE_LINE_RULE_PREFIX,
   getIcePhaseOneLineRule,
 } from './icebreakerSession.js';
+
+// acknowledgment-beat-v1 frozen experiment + feedback copy
+export {
+  ACKNOWLEDGMENT_BEAT_EXPERIMENT_ID,
+  ACKNOWLEDGMENT_BEAT_ASSIGNMENT_SALT,
+  ACKNOWLEDGMENT_BEAT_CUE,
+  ACKNOWLEDGMENT_FEEDBACK_QUESTION,
+  ACKNOWLEDGMENT_FEEDBACK_HINT,
+  ACKNOWLEDGMENT_FEEDBACK_LABELS,
+} from './acknowledgmentBeat.js';

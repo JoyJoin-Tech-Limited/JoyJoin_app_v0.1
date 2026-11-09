@@ -506,6 +506,8 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  projection is. Env fallback: ICEBREAKER_CONTENT_STATUS_ENABLED
    *  (default: false). */
   icebreakerContentStatusEnabled: "ICEBREAKER_CONTENT_STATUS_ENABLED",
+  icebreakerAcknowledgmentBeatEnabled: "ICEBREAKER_ACKNOWLEDGMENT_BEAT_ENABLED",
+  feedbackAcknowledgmentItemEnabled: "FEEDBACK_ACKNOWLEDGMENT_ITEM_ENABLED",
   /** Recap share poster + forward pathway (2026-10-20, spec
    *  docs/deliberations/2026-10-20-recap-share-and-quip-chips-spec.md 规格一):
    *  gates the recap 「存下这张高光卡」/「直接存卡」 canvas-poster CTAs and the
@@ -707,6 +709,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  explicit false so the admin toggle UI and listFeatureFlags() show a
    *  stable default. Flag-off = byte-identical pre-Wave-3 snapshots. */
   icebreakerContentStatusEnabled: false,
+  icebreakerAcknowledgmentBeatEnabled: false,
+  feedbackAcknowledgmentItemEnabled: false,
   /** Recap share poster ships dark (2026-10-20 spec 规格一); explicit false
    *  so the admin toggle UI and listFeatureFlags() show a stable default.
    *  Flag-off = zero share surface on the recap (byte-identical legacy). */

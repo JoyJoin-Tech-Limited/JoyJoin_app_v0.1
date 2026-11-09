@@ -4,6 +4,12 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import {
+  ACKNOWLEDGMENT_BEAT_EXPERIMENT_ID,
+  ACKNOWLEDGMENT_FEEDBACK_HINT,
+  ACKNOWLEDGMENT_FEEDBACK_LABELS,
+  ACKNOWLEDGMENT_FEEDBACK_QUESTION,
+} from '@shared/copy/acknowledgmentBeat'
+import {
   validateWechatContactId,
   WECHAT_CONTACT_ID_MAX_LENGTH,
   WECHAT_ID_FORMAT_HINT,
@@ -274,6 +280,8 @@ export default function EventFeedbackPage() {
   const [mutualMatches, setMutualMatches] = useState<MutualMatch[]>([])
   // ─── Balanced layer state (均衡反馈) — every field is optional ───
   const [atmosphereScore, setAtmosphereScore] = useState(0)
+  // acknowledgment-beat-v1: analytics-only felt-heard signal; 0 means untouched.
+  const [acknowledgmentScore, setAcknowledgmentScore] = useState(0)
   const [radar, setRadar] = useState<ConnectionRadarState>({
     topicResonance: 0,
     personalityMatch: 0,
@@ -373,6 +381,11 @@ export default function EventFeedbackPage() {
   // Stable within a visit — neither selections nor the auth user can change
   // while sitting on the wechat/wrapup steps (no selection UI there).
   const wechatCollectionEnabled = !!currentUser?.features?.wechatIdCollectionEnabled
+  const acknowledgmentItemEnabled = !!currentUser?.features?.feedbackAcknowledgmentItemEnabled
+  // Latest-value ref: an in-flight canonical POST must re-check the kill switch
+  // at the actual analytics emission point, not reuse a stale closure value.
+  const acknowledgmentItemEnabledRef = useRef(acknowledgmentItemEnabled)
+  acknowledgmentItemEnabledRef.current = acknowledgmentItemEnabled
   const needWechatStep =
     wechatCollectionEnabled &&
     selectedConnections.length > 0 &&
@@ -429,6 +442,12 @@ export default function EventFeedbackPage() {
     queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: !!eventId && !authLoading && !!currentUserId,
   })
+  const matchedPoolRegistration = useMemo(
+    () => poolRegistrations?.find(
+      (registration) => registration.poolId === eventId && !!registration.assignedGroupId,
+    ),
+    [poolRegistrations, eventId],
+  )
 
   // 「10.15 那局」title anchor — reuses the shared registrations cache, no
   // extra request; falls back to 「这局」 when the date is unavailable.
@@ -691,6 +710,18 @@ export default function EventFeedbackPage() {
           },
         }),
       })
+      if (acknowledgmentItemEnabledRef.current && acknowledgmentScore > 0) {
+        // Optional experiment signal only — the canonical feedback payload above
+        // is unchanged. Variant is resolved offline from the table assignment;
+        // never infer or fabricate it on this page.
+        trackFeedbackEvent('feedback_acknowledgment_submitted', {
+          eventId,
+          eventPoolGroupId: matchedPoolRegistration?.assignedGroupId,
+          poolId: matchedPoolRegistration?.poolId,
+          experimentId: ACKNOWLEDGMENT_BEAT_EXPERIMENT_ID,
+          score: acknowledgmentScore,
+        })
+      }
       setMutualMatches(res.mutualMatches || [])
       setStep('revealed')
       // The server backfilled the 微信号 inside the same POST (social.ts
@@ -747,6 +778,9 @@ export default function EventFeedbackPage() {
     selectedConnections,
     isSubmitting,
     atmosphereScore,
+    acknowledgmentScore,
+    acknowledgmentItemEnabled,
+    matchedPoolRegistration,
     attendeeTraits,
     participants,
     radar,
@@ -1204,6 +1238,19 @@ export default function EventFeedbackPage() {
               <RatingFace value={rating} onSelect={setRating} />
             </View>
           </View>
+
+          {acknowledgmentItemEnabled ? (
+            <View className='event-feedback__card'>
+              <Text className='event-feedback__card-title'>{ACKNOWLEDGMENT_FEEDBACK_QUESTION}</Text>
+              <Text className='event-feedback__card-hint'>{ACKNOWLEDGMENT_FEEDBACK_HINT}</Text>
+              <ScaleDots
+                value={acknowledgmentScore}
+                onChange={setAcknowledgmentScore}
+                labels={ACKNOWLEDGMENT_FEEDBACK_LABELS}
+                ariaGroupLabel='我的发言被同桌接住的程度，1 到 5 分'
+              />
+            </View>
+          ) : null}
 
           <View className='event-feedback__card'>
             <Text className='event-feedback__card-title'>氛围温度计</Text>

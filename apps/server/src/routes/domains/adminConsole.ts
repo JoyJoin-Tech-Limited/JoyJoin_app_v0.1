@@ -43,6 +43,7 @@ import {
   getTicketPaymentFunnel,
   listAnalyticsEvents,
 } from "../../lib/adminAnalytics";
+import { loadPreGenerationCoverage } from "../../lib/preGenerationCoverage";
 
 const rangeQuerySchema = z.object({
   from: z.string().optional(),
@@ -457,6 +458,45 @@ export function registerAdminConsoleRoutes(app: Express): void {
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({ code: "EVENTS_QUERY_FAILED", message: "事件列表加载失败" });
+    }
+  });
+
+  /**
+   * GET /api/admin/pre-generation/coverage?days&includeTest
+   *
+   * The publishable reliability number: did the content for a phase already
+   * exist before the host opened it? All math lives in
+   * `lib/preGenerationCoverage.ts`; this route only parses the range.
+   *
+   * `status: "INSUFFICIENT_DATA"` is a first-class answer, not an error — a
+   * small sample must not be rendered as a percentage (console truth contract).
+   */
+  app.get("/api/admin/pre-generation/coverage", requireAdmin, async (req, res) => {
+    try {
+      const parsed = rangeQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ code: "INVALID_RANGE", message: "时间范围参数无效" });
+      }
+
+      const range = resolveAdminRange(parsed.data);
+      const report = await loadPreGenerationCoverage(range, {
+        includeTest: req.query.includeTest === "true",
+      });
+
+      res.json({
+        range: {
+          from: range.from.toISOString(),
+          to: range.to.toISOString(),
+          description: describeAdminRange(range),
+        },
+        ...report,
+        asOf: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error("[adminConsole] pre-generation coverage query failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ code: "PREGEN_COVERAGE_FAILED", message: "预生成覆盖率加载失败" });
     }
   });
 }

@@ -111,6 +111,8 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
   socialIcebreakerCustomModeEnabled: 'icebreaker-core',
   runPlanTemplatesEnabled: 'icebreaker-core',
   icebreakerContentStatusEnabled: 'icebreaker-core',
+  icebreakerAcknowledgmentBeatEnabled: 'icebreaker-core',
+  feedbackAcknowledgmentItemEnabled: 'icebreaker-core',
   icebreakerHapticGrammarEnabled: 'icebreaker-core',
   icebreakerMoodFieldEnabled: 'icebreaker-core',
   icebreakerGlanceStackEnabled: 'icebreaker-core',
@@ -222,6 +224,8 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
   socialIcebreakerCustomModeEnabled: '自定义冰局模式',
   runPlanTemplatesEnabled: '冰局流程模板',
   icebreakerContentStatusEnabled: '冰局内容状态显示',
+  icebreakerAcknowledgmentBeatEnabled: '开场接话提示实验',
+  feedbackAcknowledgmentItemEnabled: '活动反馈接话感受题',
   icebreakerHapticGrammarEnabled: '冰局触感语法',
   icebreakerMoodFieldEnabled: '冰局氛围色场',
   icebreakerGlanceStackEnabled: '冰局速览层级',
@@ -379,6 +383,10 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
     '默认开启。开启后，冰局各环节流程由后台模板配置驱动，客户端可选择本场氛围（深聊/均衡/玩乐）；关闭时回退为旧版固定流程，并隐藏氛围选择。',
   icebreakerContentStatusEnabled:
     '默认关闭。开启后，冰局界面会显示各环节内容准备状态、成员「我离开一下」暂离标记和主持人离线提示；关闭时界面与旧版完全一致，用户无感知。仅影响界面显示，不影响任何数据。',
+  icebreakerAcknowledgmentBeatEnabled:
+    '默认关闭。仅用于真实活动桌的接话提示小流量实验；开启后按桌固定分组，实验组在已翻开的开场题卡看到一句静态接话提示，对照组不变。不涉及匹配、排桌或主持人权限。出现体验护栏异常时立即关闭。',
+  feedbackAcknowledgmentItemEnabled:
+    '默认关闭。开启后，活动反馈页增加一道可跳过的接话感受题；答案仅在反馈提交成功后写入分析事件，不进入正式反馈载荷，不影响奖励、匹配或同桌结果。',
   icebreakerHapticGrammarEnabled:
     '默认关闭，待现场验证：开启后，冰局会话页按状态切换触发五类触感反馈（轻点/轮到你/确认/揭晓/庆祝）。',
   icebreakerMoodFieldEnabled: '默认关闭，待现场验证：开启后，冰局会话页背景随环节情绪切换氛围色场，并保持屏幕常亮。',

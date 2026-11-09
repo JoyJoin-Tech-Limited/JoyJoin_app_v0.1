@@ -1329,6 +1329,8 @@ export default function IcebreakerSessionPage() {
     topicsRecovery,
     warmupReadiness,
     suppressWarmupPermissionLine: !!sessionGuidanceLine,
+    acknowledgmentBeatEnabled: features?.icebreakerAcknowledgmentBeatEnabled ?? false,
+    acknowledgmentExposureAllowed: isPageVisible && !highPriorityOverlayVisible,
     onWarmupOverlayVisibilityChange: handleWarmupOverlayVisibilityChange,
     myVoteIndex,
     hasGeneratedStatements,

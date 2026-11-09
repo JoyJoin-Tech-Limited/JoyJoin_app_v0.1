@@ -399,6 +399,14 @@ $color-warm-rose: #B83A5E;
     font-variant-numeric: tabular-nums;
   }
 
+  &__ack-beat {
+    display: block;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-secondary-warm;
+    text-align: center;
+  }
+
   &__permission-inner {
     line-height: 1.65;
     text-align: center;

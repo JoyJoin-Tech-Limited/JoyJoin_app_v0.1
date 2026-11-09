@@ -184,6 +184,7 @@ const DISCOVER_EVENT_TYPES = [
   // 2026-10-16 uplift item 19: 互选纪念卡 saved to the photo album from the
   // revealed screen. eventId + matchCount metadata only — zero PII.
   "feedback_keepsake_save",
+  "feedback_acknowledgment_submitted",
   "promo_banner_impression",
   "promo_banner_cta_tap",
   "promo_banner_image_error",
@@ -490,6 +491,9 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   // Campfire Vault Card PR1 (contract A5) — no PII in payloads
   "topic_card_brave_view",
   "permission_line_view",
+  // acknowledgment-beat-v1 — assignment + visible cue exposure only.
+  "warmup_acknowledgment_assignment",
+  "warmup_response_beat_view",
   // icebreaker-uiux-wave1 (contract AC-20 / plan #37) — funnel-metric
   // pre-embed: ready-rate / phase-completion-rate / 纪念卡保存率. Whitelist
   // parity only — no aggregation, no tables, no routes, no dashboards.

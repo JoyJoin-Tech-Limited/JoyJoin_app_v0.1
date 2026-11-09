@@ -719,9 +719,17 @@ export interface HostTableBrief {
   phaseKey: string;
 }
 
+export interface SocialSessionPoolGroupContext {
+  /** Server-confirmed eventPoolGroups.id — never inferred from a polymorphic route id. */
+  eventPoolGroupId: string;
+  poolId: string;
+}
+
 export interface SocialSessionState {
   socialSessionId: string;
   icebreakerSessionId: string;
+  /** Present only for real, non-test pool-group sessions; omitted for blind-box/legacy/test sessions. */
+  poolGroupContext?: SocialSessionPoolGroupContext;
   currentPhase: SocialIcebreakerPhase;
   hostUserId: string;
   hostDisplayName: string;

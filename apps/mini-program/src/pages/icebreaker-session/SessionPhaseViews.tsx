@@ -38,6 +38,10 @@ import { deriveAwayMemberNames } from './viewModels/rejoinCatchUpModel'
 export interface SessionPhaseViewsProps {
   /** Quiet Concierge: the shell owns the global skip-permission line. */
   suppressWarmupPermissionLine?: boolean
+  /** v1 static acknowledgment cue, independently kill-switched by the server. */
+  acknowledgmentBeatEnabled?: boolean
+  /** Page-visible and free of page-level high-priority overlays. */
+  acknowledgmentExposureAllowed?: boolean
   onWarmupOverlayVisibilityChange?: (visible: boolean) => void
   phase: SessionPhase
   session: SocialSessionState | null
@@ -316,6 +320,9 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
           runBots={session.runBots ?? false}
           warmupTopicsMeta={session.warmupTopicsMeta}
           suppressPermissionLine={props.suppressWarmupPermissionLine}
+          acknowledgmentBeatEnabled={props.acknowledgmentBeatEnabled}
+          poolGroupContext={session.poolGroupContext}
+          acknowledgmentExposureAllowed={props.acknowledgmentExposureAllowed}
           onOverlayVisibilityChange={props.onWarmupOverlayVisibilityChange}
           socialSessionId={socialSessionId ?? undefined}
           icebreakerSessionId={session.icebreakerSessionId}

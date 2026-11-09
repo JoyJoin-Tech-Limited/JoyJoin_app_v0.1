@@ -48,6 +48,8 @@ export type FeedbackAnalyticsEventType =
   // revealed screen. Metadata carries eventId + matchCount only — zero PII,
   // zero contact info (the card structurally excludes it).
   | 'feedback_keepsake_save'
+  // acknowledgment-beat-v1 — optional felt-heard response after canonical save.
+  | 'feedback_acknowledgment_submitted'
 
 export function trackFeedbackEvent(
   eventType: FeedbackAnalyticsEventType,

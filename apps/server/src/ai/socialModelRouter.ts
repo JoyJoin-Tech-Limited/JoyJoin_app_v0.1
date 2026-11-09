@@ -79,7 +79,9 @@ type SocialFunction =
   | 'generatePoolCardHeadline'    // pool card AI headline — MiniMax preferred (warm creative copy)
   | 'generateQuipBattlePrompts'   // quip battle prompts — creative fill-in-the-blank (flash, fallback-rich)
   | 'generateUndercoverWordPair'   // undercover word pair generation
-  | 'generateGroupMirrorQuestions'; // group mirror question generation
+  | 'generateGroupMirrorQuestions' // group mirror question generation
+  | 'simulateTableSeat'            // dev-only table simulation — one anonymized seat persona
+  | 'judgeTableSimulation';        // dev-only table simulation — awkwardness judge
 
 type SocialFunctionRoutingPolicy = {
   preferredProvider: 'minimax' | 'deepseek';
@@ -139,6 +141,8 @@ const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolic
   generateQuipBattlePrompts: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateUndercoverWordPair: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateGroupMirrorQuestions: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  simulateTableSeat: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  judgeTableSimulation: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
 
   // ── Tier 1: Flash-thinking + high — reserved for genuinely analytical tasks ──
   generatePairExplanation: {

@@ -25,6 +25,18 @@ import {
   buildMoodOptions,
   getTotalTopics,
 } from '../viewModels/warmupViewModels'
+import {
+  ACKNOWLEDGMENT_BEAT_CUE,
+  ACKNOWLEDGMENT_EXPOSURE_DELAY_MS,
+  buildAcknowledgmentBeatMetadata,
+  shouldShowAcknowledgmentBeat,
+  type AcknowledgmentBeatExperiment,
+} from '../viewModels/acknowledgmentBeatModel'
+import {
+  buildAcknowledgmentAssignmentStorageKey,
+  buildAcknowledgmentViewStorageKey,
+  claimAcknowledgmentBeatExposure,
+} from '../viewModels/acknowledgmentBeatExposureStore'
 import type { VibeId } from '../../../lib/vibeMapping'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
@@ -72,6 +84,11 @@ interface WarmupCardSlotProps {
   warmupDataReady?: boolean
   /** Transient-failure recovery state — shown on the 'recovering' card. */
   topicsRecovery?: TopicsRecoveryState | null
+  /** Frozen v1 acknowledgment experiment; precomputed by the phase view. */
+  acknowledgmentExperiment?: AcknowledgmentBeatExperiment
+  icebreakerSessionId?: string
+  /** True only while the page is visible and no high-priority overlay occludes the cue. */
+  acknowledgmentExposureAllowed?: boolean
 }
 
 const TOPIC_MOOD_EMOJI: Record<AtmosphereMood, string> = {
@@ -206,6 +223,9 @@ export function WarmupCardSlot({
   selfReadyOptimistic = false,
   warmupDataReady = true,
   topicsRecovery = null,
+  acknowledgmentExperiment,
+  icebreakerSessionId,
+  acknowledgmentExposureAllowed = false,
 }: WarmupCardSlotProps) {
   const aigcEnabled = useAIGCLabelsEnabled()
   // C8 — degradation tier renders every decorative beat on this card
@@ -259,9 +279,21 @@ export function WarmupCardSlot({
   // Bottom-chrome presence (whisper / counter / deep expander) decides the
   // teaching hint's anchor — it must never cover the persistent bottom slot.
   const showDeepPrompt = vibe === 'deep_chat' && !!currentTopic?.promptTiers
-  const showBottomCounter = !showPermissionLine && !showDeepPrompt
+  const showAcknowledgmentBeat = !!currentTopic && shouldShowAcknowledgmentBeat({
+    experiment: acknowledgmentExperiment,
+    state,
+    isFlipped,
+    showPermissionLine,
+    showDeepPrompt,
+  })
+  // Treatment replaces the counter in the same bottom slot; it never adds a
+  // second teaching row or shifts permission/deep-pouch chrome.
+  const showBottomCounter = !showPermissionLine && !showDeepPrompt && !showAcknowledgmentBeat
   const hasBottomChrome =
-    (showPermissionLine && !!currentTopic?.permissionLine) || showBottomCounter || showDeepPrompt
+    (showPermissionLine && !!currentTopic?.permissionLine) ||
+    showBottomCounter ||
+    showDeepPrompt ||
+    showAcknowledgmentBeat
 
   // ── Campfire Vault Card PR2: ember rim + all-ready halo (E1–E5 / H1–H4) ──
   // Zero added network traffic (G3): the rim derives entirely from the
@@ -459,6 +491,64 @@ export function WarmupCardSlot({
     }
   }, [state, isFlipped, currentTopic, showPermissionLine])
 
+  const acknowledgmentAssignmentTrackedRef = useRef<Set<string>>(new Set())
+  const acknowledgmentBeatViewTrackedRef = useRef<Set<string>>(new Set())
+
+  // v1 experiment exposure: one assignment per session/device, then one view
+  // per visible flipped topic. Device-persisted claims survive remounts; refs
+  // remain the fail-open fallback when WeChat storage is unavailable.
+  useEffect(() => {
+    if (!acknowledgmentExperiment?.eligible || !icebreakerSessionId) return
+    if (acknowledgmentAssignmentTrackedRef.current.has(icebreakerSessionId)) return
+    const metadata = buildAcknowledgmentBeatMetadata(acknowledgmentExperiment)
+    if (!metadata) return
+    const storageKey = buildAcknowledgmentAssignmentStorageKey(icebreakerSessionId)
+    acknowledgmentAssignmentTrackedRef.current.add(icebreakerSessionId)
+    if (!claimAcknowledgmentBeatExposure(storageKey)) return
+    socialIcebreakerAnalytics.track(
+      'warmup_acknowledgment_assignment',
+      undefined,
+      icebreakerSessionId,
+      'warmup',
+      metadata,
+    )
+  }, [acknowledgmentExperiment, icebreakerSessionId])
+
+  useEffect(() => {
+    if (!showAcknowledgmentBeat || !isFlipped || state !== 'topic_card') return
+    if (!acknowledgmentExposureAllowed || !currentTopic || !icebreakerSessionId) return
+    const storageKey = buildAcknowledgmentViewStorageKey(
+      icebreakerSessionId,
+      topicSetRevision ?? 0,
+      currentTopic.id,
+    )
+    if (acknowledgmentBeatViewTrackedRef.current.has(storageKey)) return
+
+    // isFlipped starts a 500ms CardFlip transition; only claim the exposure
+    // after the back face can actually be read. Overlay/page changes cancel.
+    const timer = setTimeout(() => {
+      if (acknowledgmentBeatViewTrackedRef.current.has(storageKey)) return
+      const baseMetadata = buildAcknowledgmentBeatMetadata(acknowledgmentExperiment)
+      if (!baseMetadata) return
+      acknowledgmentBeatViewTrackedRef.current.add(storageKey)
+      if (!claimAcknowledgmentBeatExposure(storageKey)) return
+      socialIcebreakerAnalytics.track(
+        'warmup_response_beat_view',
+        undefined,
+        icebreakerSessionId,
+        'warmup',
+        {
+          ...baseMetadata,
+          topicId: currentTopic.id,
+          topicIndex: currentIndex,
+          topicSetRevision,
+        },
+      )
+    }, reduceMotion ? 200 : ACKNOWLEDGMENT_EXPOSURE_DELAY_MS)
+
+    return () => clearTimeout(timer)
+  }, [showAcknowledgmentBeat, isFlipped, state, acknowledgmentExposureAllowed, currentTopic, currentIndex, topicSetRevision, acknowledgmentExperiment, icebreakerSessionId, reduceMotion])
+
   const frontFace = (
     <View className='warmup-card-slot__face warmup-card-slot__face--front'>
       <View className='warmup-card-slot__front'>
@@ -635,6 +725,9 @@ export function WarmupCardSlot({
                 <Text className='warmup-card-slot__bottom-counter'>
                   {`第 ${currentIndex + 1}/${totalTopics} 题`}
                 </Text>
+              ) : null}
+              {showAcknowledgmentBeat ? (
+                <Text className='warmup-card-slot__ack-beat'>{ACKNOWLEDGMENT_BEAT_CUE}</Text>
               ) : null}
             </View>
 

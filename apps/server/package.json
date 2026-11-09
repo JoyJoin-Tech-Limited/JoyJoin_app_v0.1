@@ -27,6 +27,8 @@
     "check:flash-readiness": "node --env-file=../../.env --import tsx/esm src/scripts/check-flash-readiness.ts",
     "check:glow-honesty": "node --env-file=../../.env --import tsx/esm src/scripts/check-glow-medal-honesty.ts",
     "audit:icebreaker-profile-context": "node --env-file=../../.env --import tsx/esm src/scripts/audit-icebreaker-profile-context.ts",
+    "audit:pre-generation-coverage": "node --env-file=../../.env --import tsx/esm src/scripts/audit-pre-generation-coverage.ts",
+    "simulate:table": "node --env-file=../../.env --import tsx/esm src/scripts/simulate-table.ts",
     "backfill:match-history": "node --env-file=../../.env --import tsx/esm src/scripts/backfill-match-history.ts",
     "backfill:legacy-event-credits": "node --env-file=../../.env --import tsx/esm src/scripts/backfill-legacy-event-credits.ts",
     "benchmark:matching-stress": "tsx src/benchmarks/matchingStressSimulation.cli.ts"

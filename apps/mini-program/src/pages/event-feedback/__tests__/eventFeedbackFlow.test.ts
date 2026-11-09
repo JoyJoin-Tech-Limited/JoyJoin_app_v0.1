@@ -31,6 +31,10 @@ const scss = readFileSync(resolve(here, '..', 'index.scss'), 'utf-8')
 const connectionsTsx = readFileSync(resolve(here, '..', 'steps', 'ConnectionsStep.tsx'), 'utf-8')
 const wrapupTsx = readFileSync(resolve(here, '..', 'steps', 'WrapupStep.tsx'), 'utf-8')
 const avatarTsx = readFileSync(resolve(here, '..', 'steps', 'ParticipantAvatar.tsx'), 'utf-8')
+const acknowledgmentCopy = readFileSync(
+  resolve(here, '../../../../../../packages/shared/src/copy/acknowledgmentBeat.ts'),
+  'utf-8',
+)
 /** index + extracted steps — for assertions that hold across the whole page. */
 const allTsx = [tsx, connectionsTsx, wrapupTsx].join('\n')
 
@@ -905,5 +909,36 @@ describe('premium uplift item 19 (2026-10-16, 互选纪念卡)', () => {
     expect(tsx).toContain("import { KEEPSAKE_CARD_CANVAS_ID } from './keepsakeCard'")
     // Entry tap is a no-op while generating.
     expect(tsx).toContain('if (isKeepsakeGenerating) return')
+  })
+})
+
+describe('acknowledgment-beat-v1 felt-heard item', () => {
+  it('renders an optional five-point item only behind the server flag', () => {
+    expect(tsx).toContain('currentUser?.features?.feedbackAcknowledgmentItemEnabled')
+    expect(tsx).toContain('ACKNOWLEDGMENT_FEEDBACK_QUESTION')
+    expect(tsx).toContain('ACKNOWLEDGMENT_FEEDBACK_HINT')
+    expect(acknowledgmentCopy).toContain('今晚，我的发言有被同桌接住')
+    expect(acknowledgmentCopy).toContain('凭感觉选一个就好，可不答')
+    expect(tsx).toContain('acknowledgmentScore')
+    expect(tsx).toContain('ACKNOWLEDGMENT_FEEDBACK_LABELS')
+    expect(tsx).toContain("ariaGroupLabel='我的发言被同桌接住的程度，1 到 5 分'")
+  })
+
+  it('keeps the item out of canonical feedback/deep-feedback payloads', () => {
+    const payloadBlock = tsx.split('data: buildEventFeedbackPayload({')[1]?.split('}),')[0] ?? ''
+    expect(payloadBlock).not.toContain('acknowledgmentScore')
+    const deepBlock = tsx.split('const hasDeepFields =')[1]?.split('const res =')[0] ?? ''
+    expect(deepBlock).not.toContain('acknowledgmentScore')
+  })
+
+  it('emits analytics only after the canonical POST succeeds, with no variant fabrication', () => {
+    const postPos = tsx.indexOf('path: `/api/events/${encodeURIComponent(eventId)}/feedback`')
+    const trackPos = tsx.indexOf("trackFeedbackEvent('feedback_acknowledgment_submitted'")
+    expect(postPos).toBeGreaterThan(-1)
+    expect(trackPos).toBeGreaterThan(postPos)
+    expect(tsx).toContain('acknowledgmentItemEnabledRef.current = acknowledgmentItemEnabled')
+    expect(tsx).toContain('if (acknowledgmentItemEnabledRef.current && acknowledgmentScore > 0)')
+    expect(tsx).toContain('eventPoolGroupId: matchedPoolRegistration?.assignedGroupId')
+    expect(tsx).not.toContain("variant: 'treatment'")
   })
 })
