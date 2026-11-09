@@ -58,6 +58,12 @@ TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 
 **Pattern:** Host owns **phase transitions**, **generative triggers**, and **tier/vibe selection**; players own **self-state mutations**. See [references/session-spec.md](references/session-spec.md) for routes, schema, parity, AI boundaries, and advance guards.
 
+## Experiments, coverage, and dev harnesses
+
+- **Acknowledgment beat v1 (2026-11-09, both flags default OFF):** `icebreakerAcknowledgmentBeatEnabled` shows one static line 「先接一句，再换题；不想展开也可以。」 on visible flipped warmup topic cards; `feedbackAcknowledgmentItemEnabled` adds the optional five-point 「我的发言有被同桌接住」 feedback item. Eligibility requires the server-confirmed `poolGroupContext` from `lib/socialIcebreakerAccess.ts` (`eventPoolGroups → eventPools`, `isTestPool=false`); blind-box/legacy/test/unknown sessions fail closed. Assignment is deterministic per table, exposure dedupes in WeChat storage, and the feedback score never enters the canonical payload. Frozen contract: `docs/design/icebreaker-acknowledgment-beat-experiment-20261109.md`.
+- **Pre-generation coverage:** `lib/preGenerationCoverage.ts` is the single definition behind `GET /api/admin/pre-generation/coverage` and `audit:pre-generation-coverage`. `strictOnTimeRate` excludes each session's first phase and `recap`; below 20 samples the status is `INSUFFICIENT_DATA` and rates must not be quoted.
+- **Table simulator:** `lib/tableSimulation/` is a dev/QA-only six-seat harness (`simulate:table`). Deterministic heuristics are the truth; the LLM judge may only raise severity or widen the seat set. It is never a runtime request path and refuses `APP_MODE=production` without an explicit override.
+
 ## Grill-me stress-test
 
 Run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests session lifecycle, host authority, phase state machine, bonus gate, AI fallback, and cross-platform parity.

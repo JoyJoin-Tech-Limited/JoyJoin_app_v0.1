@@ -1555,6 +1555,12 @@ Phase progression is **server-authoritative**. The server determines the current
 - **Session expiry:** Sessions are not retained indefinitely — they are scoped to the event lifecycle. Expired sessions return a terminal state that prevents further interaction.
 - **Host recovery:** Because only the host can advance a phase, a host whose phone dies would otherwise freeze the table until expiry. An operator or super admin can transfer host duty from the admin War Room (「转移主持」 → `POST /api/admin/social-icebreaker/:socialSessionId/transfer-host`). With no explicit target the server promotes the most recently active non-host **human** participant; re-targeting the current host is idempotent; simulated bots are never promoted, since a bot cannot advance a phase. The audit record keeps the phase the table was stuck in and how many minutes it had been frozen. The host-duty line on the waiting screen («主持人：{name} · 开始与推进由你点按» for the host, «…由主持人点按» for players) is the only place the responsibility is stated, because host assignment stays silent.
 
+#### Warmup Acknowledgment-Beat Experiment (2026-11-09)
+
+A dark, flag-gated experiment tests whether one static warmup cue improves the feeling that 「我的发言有被同桌接住」. With `icebreakerAcknowledgmentBeatEnabled` (default OFF), eligible real pool tables see 「先接一句，再换题；不想展开也可以。」 on visible, flipped topic cards. There is no button, timer, overlay, phase/timing change, host-authority change, or new AI generation. Eligibility requires a server-confirmed `poolGroupContext` for a non-test pool; blind-box, legacy, test, and unknown sessions fail closed. Assignment is deterministic per table (50/50 control/treatment) and exposure is deduped across remounts.
+
+The companion `feedbackAcknowledgmentItemEnabled` (default OFF) adds an optional five-point 「今晚，我的发言有被同桌接住」 item to event feedback. An untouched item is unanswered, never 0; the score is recorded only as a post-success analytics event and never enters the canonical feedback payload, group outcome, rewards, matching, or simulator data. The frozen analysis rules and staged rollout (staging ON/OFF verification → production feedback-only baseline → beat ON with 50/50 holdout) live in `docs/design/icebreaker-acknowledgment-beat-experiment-20261109.md`.
+
 #### v2 Phase Rollout *(PR #370)*
 
 Server-driven phase rollout configuration was added for Social Icebreaker v2. Beta phase scaffolding exists for future phases beyond MVP (the four current phases remain the active set). New phases can be toggled via server configuration without a client deployment.

@@ -72,6 +72,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`design/icebreaker-agent-m1-tech-spec-20261026.md`](./design/icebreaker-agent-m1-tech-spec-20261026.md) — M1 运行时契约规范源（信号、决策、动作、episode facts）
 - [`design/icebreaker-guidance-quiet-concierge-20261027.md`](./design/icebreaker-guidance-quiet-concierge-20261027.md) — Quiet Concierge 三类说明书 UI/UX 规格与实现状态
 - [`design/icebreaker-w1-w3-implementation-plan-20261027.md`](./design/icebreaker-w1-w3-implementation-plan-20261027.md) — W1–W3 画像驱动破冰实施计划
+- [`design/icebreaker-acknowledgment-beat-experiment-20261109.md`](./design/icebreaker-acknowledgment-beat-experiment-20261109.md) — 开场接话提示实验：冻结口径、事件合同、rollout 与暂停规则
 - [`design/icebreaker-content-quality-evaluation-20261026.md`](./design/icebreaker-content-quality-evaluation-20261026.md) — DQS 离线内容质量评级与 PASS/FAIL/INCONCLUSIVE 门槛
 - [`runbooks/icebreaker-agent-m1-release-checklist.md`](./runbooks/icebreaker-agent-m1-release-checklist.md) — M1/Quiet Concierge 发布前置与回滚清单
 

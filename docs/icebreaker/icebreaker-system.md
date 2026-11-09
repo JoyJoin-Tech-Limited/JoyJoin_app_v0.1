@@ -122,6 +122,12 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 
 > **Phase durations are vibe-aware.** When `RUN_PLAN_TEMPLATES_ENABLED=true`, the template compiler (`resolveTemplateSlots` in `packages/shared/src/runPlanCompiler.ts`) allocates `allocatedMinutes` per segment from 9 default templates (3 vibes × 3 tiers). When `false`, legacy hardcoded plans apply uniform durations regardless of vibe.
 
+### Warmup acknowledgment beat and pre-generation coverage (2026-11-09)
+
+**Acknowledgment beat v1** is a dark experiment on the `warmup` phase, not a new interaction. When `icebreakerAcknowledgmentBeatEnabled` is ON, an eligible real pool table sees one static line on a visible, flipped topic card: 「先接一句，再换题；不想展开也可以。」 There is no button, timer, overlay, animation, phase/timing/host-authority change, or new LLM call. Eligibility comes only from the server-confirmed `poolGroupContext` (`getSocialIcebreakerAccess` joins `eventPoolGroups → eventPools` and requires `isTestPool=false`); blind-box, legacy, test, and unknown sessions fail closed. Assignment is deterministic per table (`salt acknowledgment-beat-v1:2026-11-09`, FNV-1a, 50/50 control/treatment), and exposure dedupe persists in WeChat storage across remounts. The companion `feedbackAcknowledgmentItemEnabled` flag adds an optional five-point 「今晚，我的发言有被同桌接住」 item to event feedback; its score is sent only as a post-success analytics event and never enters the canonical feedback payload, group outcome, rewards, matching, or simulator data. Both flags default OFF, are exposed through auth `features`, and follow the frozen rollout/analysis contract in `docs/design/icebreaker-acknowledgment-beat-experiment-20261109.md` (staging ON/OFF verification, production feedback-only baseline, then beat ON with a 50/50 holdout).
+
+**Pre-generation coverage** measures whether AI content was ready before a phase opened. `apps/server/src/lib/preGenerationCoverage.ts` is the single definition used by `GET /api/admin/pre-generation/coverage` and the `audit:pre-generation-coverage` CLI: `strictOnTimeRate` compares result creation to the phase's `started_at` and structurally excludes each session's first phase and `recap`; `openReadyRate` allows a 15s grace; `eventualCoverageRate` ignores timing. Below 20 samples the status is `INSUFFICIENT_DATA` and rates must not be quoted externally. The separate `simulate:table` harness under `apps/server/src/lib/tableSimulation/` is dev/QA-only and never runs at request time.
+
 ### Session Lifecycle
 
 ```

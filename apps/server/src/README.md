@@ -80,6 +80,9 @@ Primary files:
 - `apps/server/src/socialIcebreakerPhaseConfig.ts`
 - `apps/server/src/routes/socialIcebreakerHelpers.ts` — phase transition pipeline, auto-advance fuse, stall recovery, recap snapshot
 - `apps/server/src/routes/socialIcebreakerGameplayCore.ts`, `socialIcebreakerGameplayExtra.ts`, `socialIcebreakerCustom.ts`, `socialIcebreakerTier.ts`, `socialIcebreakerExtended.ts` — phase routes and custom/tier/extended flows
+- `apps/server/src/lib/preGenerationCoverage.ts` — single definition for pre-generation coverage (`GET /api/admin/pre-generation/coverage` + `audit:pre-generation-coverage` CLI); below 20 samples returns `INSUFFICIENT_DATA`
+- `apps/server/src/lib/tableSimulation/` — dev/QA-only six-seat table simulator (heuristics are deterministic truth; the LLM judge may only raise severity, never clear a heuristic flag); refuses `APP_MODE=production` without an explicit override
+- `apps/server/src/lib/socialIcebreakerAccess.ts` — session access plus the server-confirmed `poolGroupContext` used by the acknowledgment-beat experiment (non-test pool only); clients never infer it from a polymorphic route id
 
 Boundary:
 - `apps/server/src/routes/socialIcebreaker.ts` persists live social-session state through `apps/server/src/lib/socialIcebreakerStore.ts`.
@@ -182,6 +185,7 @@ Primary files:
 - `apps/server/src/routes/domains/adminMatchingReview.ts` — operator review queue for formed match groups: list pools, list groups, approve, reject
 - `apps/server/src/lib/matchingPostMatchEffects.ts` — shared post-match side-effect runner used by auto-match and admin approval
 - `apps/server/src/routes/domains/adminGeolocation.ts` — `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — location snapshot analytics, gated by `requireSuperAdmin`
+- `apps/server/src/routes/domains/adminConsole.ts` — `GET /api/admin/pre-generation/coverage` (admin-authenticated, `rangeQuerySchema`) delegates to `lib/preGenerationCoverage.ts`; `INSUFFICIENT_DATA` below 20 samples
 - `apps/server/src/routes/domains/geo.ts` — Tencent Maps WebService proxy: `POST /api/geo/reverse-geocode`, `/ip-locate`, `/places/suggest`, `/places/search`, `/walking-route`; GCJ-02 `latitude/longitude`, authenticated + rate-limited metered proxies, stable `MAP_*` errors, 4 s upstream timeout, bounded cache/polyline. Also owns admin-gated `GET /api/config/map` for the separate Admin MapPicker JS key.
 - `apps/server/src/routes/domains/alang.ts` — `/api/alang/*` mission/progress/GPS/archive state machine and strict single-test debug routes. `lib/alang/alangDisclosure.ts` removes search coordinates; `lib/alang/alangTargetResolver.ts` gives route display and GPS one canonical endpoint; `lib/alang/alangGeoFence.ts` enforces the fixed 5 m arrival authority.
 - `apps/server/src/routes/domains/adminUsers.ts` — `GET /api/admin/users`, `GET /api/admin/users/:id`, `GET /api/admin/users/:id/detail`, `PATCH /api/admin/users/:id/ban`, `PATCH /api/admin/users/:id/unban`, `DELETE /api/admin/users/:id/data` — user list/detail, moderation actions (operator+), and GDPR-style data deletion

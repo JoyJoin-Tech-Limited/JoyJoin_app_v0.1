@@ -166,6 +166,8 @@ npm run simulate:personas:run:all     # full suite: boundaries + centroids
 npm run simulate:personas:retest      # test-retest reliability (5 runs each)
 npm run simulate:expert-packet        # generate human-readable review packet
 npm run simulate:gate                 # CI gate: generate + run centroids
+npm run audit:pre-generation-coverage -w @joyjoin/server  # Pre-generation strict-on-time / open-ready / eventual coverage (INSUFFICIENT_DATA <20 samples)
+npm run simulate:table -w @joyjoin/server -- --fixture=corgi-mix --rounds=3  # Dev/QA six-seat table simulator (never a runtime surface)
 
 # WeChat Mini-Program upload (开发版)
 # CI: a push to main starts the mini-program build immediately (same workflow,
