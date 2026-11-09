@@ -175,7 +175,7 @@
 |--------|----|----------|
 | P2-S0 | alang/config+debug 裁决、center-hub 路由/分段、通知矩阵、庆祝表面清单、teaser 提醒真伪 | 对应 owner 书面确认，未决不得开工 |
 | P2-S1 | toast 生产试点 + teaser copy-only 测量 | ✅ 2026-11-06 交付（§10）；toast adapter contract test 已落盘 |
-| P2-S2 | center-hub 复用 Events inbox、默认「进行中」 | ✅ 2026-11-09 代码交付（§10.3）；AC-01–07/09 PASS，AC-08 DevTools/rendered 验收仍开放 |
+| P2-S2 | center-hub 复用 Events inbox、默认「进行中」 | ✅ 2026-11-09 代码交付（§10.3）；AC-01–07/09 PASS，AC-08 已交付 H5 rendered 证据（PARTIAL-H5，无 P0/P1），DevTools GUI/真机验收仍开放 |
 | P2-S3 | 通知深链与 per-item read | ✅ 2026-11-06 交付（§10）；真机 tap → destination → back 录制仍开放 |
 | P2-S4 | 仅注册成功庆祝收敛 | 与订阅 upsell 分开；先 baseline/cohort/样本/回滚，再灰度 |
 | 独立实验（非本 P2） | 订阅 upsell、alang/config 迁 admin、真实 teaser 提醒 | 各自新 Sprint/Tier、商业或 QA owner |
@@ -230,5 +230,5 @@
 - 用户批准的 AC-09 窄扩展：页面 → `FootprintOracleCard` → `EventSummaryCard` 传递可选 `isHistorical`，默认行为不变。历史非终态卡显示中性「已结束」，不再出现 countdown/live/匹配等待文案，点击进 `event-detail`；真实 terminal 与 `feedbackPending` 优先级不变，原始 DTO/status 不被改写。
 - 自动验证：5 个合同测试文件 / 46 tests PASS；mini 全量 371 文件 / 3699 passed + 1 skipped；typecheck、guardrails（0 errors / 12 个既有 warnings）、`build:weapp`、`verify:subpackage-styles`、auto-eval（91/99）与 orchestration validate 均通过。Harness gate 为 CONCERN 91，只含 foreign/pre-existing 项，无 P2 scoped finding。
 - 独立评审：Verifier 与 QA 对 AC-01–07、AC-09 均为 PASS；五个 Harness pillar 均为静态 PASS。UI/UX 静态 blocker 已清零但无 rendered PASS；完成度 provisional 35/44；用户视角两个代码 P0 已清零；性能 WARN 38/60、无代码 blocker。
-- **总体仍为 PARTIAL，不是 release/rendered 批准：** AC-08 的 WeChat DevTools/artifact 矩阵与真机验收 NOT RUN。验收清单已写入 `docs/testing/LAUNCH-QA-CHECKLIST.md` §8。
+- **总体仍为 PARTIAL，不是 release/rendered 批准：** AC-08 已于 2026-11-09 交付 H5 rendered artifact 矩阵（`docs/deliverables/2026-11-09-p2-s2-ac08/`，18 PNG + evidence.md；QA 复评 PARTIAL-H5 EVIDENCE，无 P0/P1，3 个 P2 H5 cosmetic nits）；WeChat DevTools GUI 与真机验收仍 NOT RUN，是关闭 AC-08 的剩余闸门。验收清单已写入 `docs/testing/LAUNCH-QA-CHECKLIST.md` §8。
 - 非阻断后续：Center 只有未来局时默认空「进行中」的发现性提示、长列表 profile/virtualization、Events 同桶重按去重、空 completed 桶的共享 countdown provider 休眠；均不改变本次已锁定的路由/分桶语义。

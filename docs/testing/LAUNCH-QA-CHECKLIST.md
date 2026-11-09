@@ -139,7 +139,7 @@
 - [ ] 推送文案纯服务性，零营销词
 - [ ] WS：连接/心跳/重连；`ROOM_*` 5s 离场宽限、2s poke 节流；断线后 3s 轮询兜底仍工作（**本批 `websocket.ts`/`useWebSocket.ts` 有改动 — staging 重测**）
 - [ ] 通知中心未读数/已读语义正确；单条点击仅在导航被接受且 `POST /api/notifications/:id/read` 成功后标已读，失败保持 unread；无入口/unmount 自动批量已读；分类「全部已读」可清零；深链矩阵（`match_success`/`venue_tbd`→group、`feedback_invite`→feedback 或 event-detail、未知→read-only）逐条走查；admin 广播留审计
-- [ ] **P2-S2 三桶渲染验收（2026-11-09 代码交付，仍待执行）：** 在 WeChat DevTools 对 Events 与 Center Hub 留存 loading/error、三桶各自 populated/empty、Events hero/refresh、Center re-show/中心 tab 重按的截图或 artifact；逐张核对 UTC+8 跨日、derived cancelled、历史非终态卡无 countdown/live/匹配等待文案且点击进 event-detail、真实 terminal + feedbackPending 仍保留反馈入口。Center 默认「进行中」且不自动跳桶，Events 仅首次手动选择前按 upcoming → ongoing → completed 回退。真机批准另行记录，不由 DevTools 证据代替
+- [ ] **P2-S2 三桶渲染验收（2026-11-09：H5 rendered 证据已交付，QA PARTIAL-H5 无 P0/P1；DevTools/真机仍待执行）：** H5 artifact 矩阵见 `docs/deliverables/2026-11-09-p2-s2-ac08/`（18 PNG + evidence.md，覆盖两页 loading/error、三桶各自 populated/empty、hero、历史卡、无自动跳桶、Events 回退）。剩余须在 WeChat DevTools GUI 执行：原生 pull-to-refresh、Center 原生 re-show/中心 tab 重按、历史/terminal 导航点击、以及 H5 P2 nits（Center 空态 mascot 裁切、Events 错误插画过小、Center 进行中空态副标题末字换行）是否在 WXML 复现；逐张核对 UTC+8 跨日、derived cancelled、历史非终态卡无 countdown/live/匹配等待文案且点击进 event-detail、真实 terminal + feedbackPending 仍保留反馈入口。Center 默认「进行中」且不自动跳桶，Events 仅首次手动选择前按 upcoming → ongoing → completed 回退。真机批准另行记录，不由 DevTools 证据代替
 - [ ] **调度器健康（新增）：** `subscribeReminderScheduler.ts`（10min tick）、`venueTbdRetryScheduler.ts`、`socialIcebreakerSweep.ts`（TTL 清扫 + recap dwell 补写）— 重启后无重复跑/无漏跑、各有杀开关、日志可见
 - [ ] **时区正确性（新增）：** 调度窗口基于 `lib/eventDateTime.ts`（+8h、`getUTC*`），跨设备/服务器时钟不漂移；禁止跨时钟比较 `updatedAt`（2026-08-13 设备时钟漂移教训）
 
