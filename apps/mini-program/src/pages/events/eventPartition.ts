@@ -1,26 +1,29 @@
 import type { JoinedEventSummary } from '@shared/api'
+import { getHongKongDateForComparison } from '@shared/hongKongTime'
 import { getJoinedEventDisplayDateTime, isJoinedEventTerminal } from '../../lib/utils/eventDisplay'
 
 export interface JoinedEventBuckets {
+  ongoing: JoinedEventSummary[]
   upcoming: JoinedEventSummary[]
   completed: JoinedEventSummary[]
 }
 
-function getJoinedEventTime(event: JoinedEventSummary): number | null {
-  const displayDateTime = getJoinedEventDisplayDateTime(event)
-  if (typeof displayDateTime !== 'string' || displayDateTime.trim().length === 0) {
+const ACTIVE_WORKFLOW_STATUSES = new Set(['pending', 'registered', 'matched'])
+
+function getHongKongCalendarDay(value: string | Date): string | null {
+  const parsed = value instanceof Date ? value : new Date(value)
+  if (!Number.isFinite(parsed.getTime())) {
     return null
   }
 
-  const timestamp = new Date(displayDateTime).getTime()
-  return Number.isFinite(timestamp) ? timestamp : null
+  return getHongKongDateForComparison(parsed).toISOString().slice(0, 10)
 }
 
 export function partitionJoinedEventsByDateTime(
   events: JoinedEventSummary[],
   referenceTime = new Date(),
 ): JoinedEventBuckets {
-  const now = referenceTime.getTime()
+  const referenceDay = getHongKongCalendarDay(referenceTime)
 
   return events.reduce<JoinedEventBuckets>(
     (buckets, event) => {
@@ -31,16 +34,26 @@ export function partitionJoinedEventsByDateTime(
         return buckets
       }
 
-      const eventTime = getJoinedEventTime(event)
+      const displayDateTime = getJoinedEventDisplayDateTime(event)
+      const eventDay = typeof displayDateTime === 'string'
+        ? getHongKongCalendarDay(displayDateTime)
+        : null
+      const isActiveWorkflow = ACTIVE_WORKFLOW_STATUSES.has(canonicalStatus)
 
-      if (eventTime === null || eventTime >= now) {
-        buckets.upcoming.push(event)
-      } else {
+      // An invalid preferred finalDateTime intentionally follows this rule;
+      // getJoinedEventDisplayDateTime owns precedence and no fallback is made here.
+      if (eventDay === null || referenceDay === null) {
+        buckets[isActiveWorkflow ? 'ongoing' : 'upcoming'].push(event)
+      } else if (eventDay < referenceDay) {
         buckets.completed.push(event)
+      } else if (eventDay === referenceDay || isActiveWorkflow) {
+        buckets.ongoing.push(event)
+      } else {
+        buckets.upcoming.push(event)
       }
 
       return buckets
     },
-    { upcoming: [], completed: [] },
+    { ongoing: [], upcoming: [], completed: [] },
   )
 }

@@ -19,6 +19,8 @@ export interface FootprintOracleCardProps {
   index?: number
   onClick?: (event: JoinedEventSummary) => void
   isDegradation?: boolean
+  /** Presentation-only context for past-day records in the completed bucket. */
+  isHistorical?: boolean
 }
 
 export default React.memo(function FootprintOracleCard({
@@ -26,6 +28,7 @@ export default React.memo(function FootprintOracleCard({
   index = 0,
   onClick,
   isDegradation = false,
+  isHistorical = false,
 }: FootprintOracleCardProps) {
   const { isDegradation: deviceIsDegradation } = useDeviceTier()
   const effectiveDegradation = isDegradation || deviceIsDegradation
@@ -33,6 +36,7 @@ export default React.memo(function FootprintOracleCard({
 
   const status = event.displayStatus ?? event.status ?? 'upcoming'
   const isTerminal = isJoinedEventTerminal(status)
+  const isHistoricalNonterminal = isHistorical && !isTerminal
 
   const handleClick = React.useCallback(() => {
     haptics('light')
@@ -72,7 +76,7 @@ export default React.memo(function FootprintOracleCard({
 
   const railAriaParts = useMemo(() => {
     const parts: string[] = []
-    if (!isTerminal && Boolean(event.dateTime || event.finalDateTime)) {
+    if (!isHistoricalNonterminal && !isTerminal && Boolean(event.dateTime || event.finalDateTime)) {
       parts.push('含活动倒计时')
     }
     if (groupSize != null && groupSize > 0) {
@@ -86,13 +90,13 @@ export default React.memo(function FootprintOracleCard({
       parts.push(price > 0 ? `费用 ¥${price}` : '免费')
     }
     return parts
-  }, [event.dateTime, event.finalDateTime, groupSize, isTerminal, price, status])
+  }, [event.dateTime, event.finalDateTime, groupSize, isHistoricalNonterminal, isTerminal, price, status])
 
   const railAriaLabel = railAriaParts.length > 0 ? railAriaParts.join('，') : undefined
 
   // ─── Right-side info rail ──────────────────────────────────────
   const rightRail = useMemo(() => {
-    const hasCountdown = !isTerminal && Boolean(event.dateTime || event.finalDateTime)
+    const hasCountdown = !isHistoricalNonterminal && !isTerminal && Boolean(event.dateTime || event.finalDateTime)
     const hasGroupSize = groupSize != null && groupSize > 0
     const hasPrice = price != null
     const isSparse = !hasCountdown && !hasGroupSize && !hasPrice
@@ -130,7 +134,7 @@ export default React.memo(function FootprintOracleCard({
             {price > 0 ? `¥${price}` : '免费'}
           </Text>
         )}
-        {isSparse && !showFeedbackPill && (
+        {isSparse && !showFeedbackPill && !isHistoricalNonterminal && (
           <Text className='footprint-oracle-card__rail-hint footprint-oracle-card__rail-hint--placeholder'>
             待公布
           </Text>
@@ -144,7 +148,7 @@ export default React.memo(function FootprintOracleCard({
         )}
       </>
     )
-  }, [displayDateTime, event.dateTime, event.finalDateTime, event.id, groupSize, handleFeedbackPillTap, isTerminal, price, showFeedbackPill, status])
+  }, [displayDateTime, event.dateTime, event.finalDateTime, event.id, groupSize, handleFeedbackPillTap, isHistoricalNonterminal, isTerminal, price, showFeedbackPill, status])
 
   return (
     <EventSummaryCard
@@ -158,6 +162,7 @@ export default React.memo(function FootprintOracleCard({
       location={event.location}
       status={event.status}
       displayStatus={event.displayStatus}
+      isHistorical={isHistorical}
       interactive
       onClick={handleClick}
       hoverClass='footprint-oracle-card--pressed'

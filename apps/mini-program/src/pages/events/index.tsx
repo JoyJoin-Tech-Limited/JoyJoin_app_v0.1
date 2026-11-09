@@ -25,11 +25,27 @@ import { logWarn } from '../../lib/utils/logger'
 import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { partitionJoinedEventsByDateTime } from './eventPartition'
 import { navigateToEventCard } from '../../lib/utils/eventCardNavigation'
+import { isJoinedEventTerminal } from '../../lib/utils/eventDisplay'
 import './index.scss'
 
 const FIRST_EVENT_HERO_STATUSES = new Set(['upcoming', 'pending', 'registered', 'matched', 'confirmed', 'venue_unlocked'])
 
-type TabKey = 'upcoming' | 'completed'
+type TabKey = 'ongoing' | 'upcoming' | 'completed'
+
+const EMPTY_STATE_COPY: Record<TabKey, { title: string; description: string }> = {
+  ongoing: {
+    title: '暂无进行中的活动',
+    description: '这里会列出今天的活动和正在推进的报名。',
+  },
+  upcoming: {
+    title: '暂无待开始的活动',
+    description: '这里会列出待开始的活动安排。',
+  },
+  completed: {
+    title: '暂无已结束的活动',
+    description: '这里会保留已经结束的活动记录。',
+  },
+}
 
 function EventCardSkeleton() {
   return (
@@ -142,20 +158,26 @@ export default function EventsPage() {
   let resolvedActiveTab = activeTab
 
   if (!hasManualTabSelection) {
-    if (activeTab === 'upcoming' && partitionedEvents.upcoming.length === 0 && partitionedEvents.completed.length > 0) {
+    if (partitionedEvents.upcoming.length > 0) {
+      resolvedActiveTab = 'upcoming'
+    } else if (partitionedEvents.ongoing.length > 0) {
+      resolvedActiveTab = 'ongoing'
+    } else if (partitionedEvents.completed.length > 0) {
       resolvedActiveTab = 'completed'
-    } else if (
-      activeTab === 'completed'
-      && partitionedEvents.completed.length === 0
-      && partitionedEvents.upcoming.length > 0
-    ) {
+    } else {
       resolvedActiveTab = 'upcoming'
     }
   }
 
-  const displayEvents = resolvedActiveTab === 'upcoming'
-    ? partitionedEvents.upcoming
-    : partitionedEvents.completed
+  const displayEvents = partitionedEvents[resolvedActiveTab]
+  const emptyCopy = EMPTY_STATE_COPY[resolvedActiveTab]
+  const firstEvent = events.length === 1 ? events[0] : undefined
+  const firstEventStatus = firstEvent?.displayStatus ?? firstEvent?.status ?? ''
+  const showFirstEventHero = resolvedActiveTab !== 'completed'
+    && firstEvent !== undefined
+    && displayEvents[0] === firstEvent
+    && !isJoinedEventTerminal(firstEventStatus)
+    && FIRST_EVENT_HERO_STATUSES.has(firstEventStatus)
 
   const handleTabChange = (tab: TabKey) => {
     haptics('light')
@@ -166,7 +188,7 @@ export default function EventsPage() {
 
   const handleEventTap = useCallback((event: JoinedEventSummary) => {
     eventsAnalytics.trackCardTap(event, resolvedActiveTab)
-    navigateToEventCard(event)
+    navigateToEventCard(event, { isHistorical: resolvedActiveTab === 'completed' })
   }, [resolvedActiveTab])
 
   const navigateToDiscover = () => {
@@ -177,25 +199,38 @@ export default function EventsPage() {
   return renderGate(
     <View className={`events-page ${tabEntranceClass}`}>
       {/* Tabs */}
-      <View className='events-page__tabs'>
+      <View className='events-page__tabs' role='tablist'>
+        <View
+          className={`events-page__tab ${resolvedActiveTab === 'ongoing' ? 'events-page__tab--active' : ''}`}
+          role='tab'
+          aria-selected={resolvedActiveTab === 'ongoing'}
+          hoverClass='events-page__tab--pressed'
+          onClick={() => handleTabChange('ongoing')}
+        >
+          <Text className='events-page__tab-text'>进行中</Text>
+        </View>
         <View
           className={`events-page__tab ${resolvedActiveTab === 'upcoming' ? 'events-page__tab--active' : ''}`}
+          role='tab'
+          aria-selected={resolvedActiveTab === 'upcoming'}
           hoverClass='events-page__tab--pressed'
           onClick={() => handleTabChange('upcoming')}
         >
-          <Text className='events-page__tab-text'>待参加</Text>
+          <Text className='events-page__tab-text'>待开始</Text>
         </View>
         <View
           className={`events-page__tab ${resolvedActiveTab === 'completed' ? 'events-page__tab--active' : ''}`}
+          role='tab'
+          aria-selected={resolvedActiveTab === 'completed'}
           hoverClass='events-page__tab--pressed'
           onClick={() => handleTabChange('completed')}
         >
-          <Text className='events-page__tab-text'>已完成</Text>
+          <Text className='events-page__tab-text'>已结束</Text>
         </View>
       </View>
 
       {/* D1 — First event celebration hero (Batch D): only for an active first event. */}
-      {events.length === 1 && FIRST_EVENT_HERO_STATUSES.has(events[0]?.status ?? '') && (
+      {showFirstEventHero && (
         <View className='events-page__first-event-hero'>
           <Image
             className='events-page__first-event-hero-img'
@@ -210,57 +245,60 @@ export default function EventsPage() {
 
       {/* ScrollView exception: this is the events feed list port (see viewport-zero-scroll skill). */}
       <ScrollView className='events-page__list' scrollY enhanced showScrollbar={false}>
-        {isFetching && !isLoading && (
-          <View className='events-page__refresh-indicator' />
-        )}
-        {isLoading ? (
-          <>
-            <EventCardSkeleton />
-            <EventCardSkeleton />
-            <EventCardSkeleton />
-          </>
-        ) : isError ? (
-          <StatusCard
-            className='events-page__empty-state'
-            tone='error'
-            title='加载失败'
-            description='网络有点调皮，再试一次吧'
-            action={{
-              label: '重试',
-              onClick: () => refetch(),
-              variant: 'primary',
-            }}
-          />
-        ) : displayEvents.length > 0 ? (
-          <CountdownTickProvider>
-            <CustomWrapper>
-              {displayEvents.map((event, index) => (
-                <View key={String(event.id)} className='events-page__card'>
-                  <FootprintOracleCard
-                    event={event}
-                    index={index}
-                    onClick={handleEventTap}
-                    isDegradation={isDegradation}
-                  />
-                </View>
-              ))}
-            </CustomWrapper>
-          </CountdownTickProvider>
-        ) : (
-          <StatusCard
-            className='events-page__empty-state'
-            tone='empty'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
-            title='还没有活动'
-            description='去发现感兴趣的活动吧'
-            action={{
-              label: '去发现',
-              onClick: navigateToDiscover,
-              variant: 'primary',
-            }}
-          />
-        )}
-        <View className='events-page__spacer' />
+        <View className='events-page__list-content'>
+          {isFetching && !isLoading && (
+            <View className='events-page__refresh-indicator' />
+          )}
+          {isLoading ? (
+            <>
+              <EventCardSkeleton />
+              <EventCardSkeleton />
+              <EventCardSkeleton />
+            </>
+          ) : isError ? (
+            <StatusCard
+              className='events-page__empty-state'
+              tone='error'
+              title='加载失败'
+              description='网络有点调皮，再试一次吧'
+              action={{
+                label: '重试',
+                onClick: () => refetch(),
+                variant: 'primary',
+              }}
+            />
+          ) : displayEvents.length > 0 ? (
+            <CountdownTickProvider>
+              <CustomWrapper>
+                {displayEvents.map((event, index) => (
+                  <View key={String(event.id)} className='events-page__card'>
+                    <FootprintOracleCard
+                      event={event}
+                      index={index}
+                      onClick={handleEventTap}
+                      isDegradation={isDegradation}
+                      isHistorical={resolvedActiveTab === 'completed'}
+                    />
+                  </View>
+                ))}
+              </CustomWrapper>
+            </CountdownTickProvider>
+          ) : (
+            <StatusCard
+              className='events-page__empty-state'
+              tone='empty'
+              heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
+              title={emptyCopy.title}
+              description={emptyCopy.description}
+              action={{
+                label: '去发现',
+                onClick: navigateToDiscover,
+                variant: 'primary',
+              }}
+            />
+          )}
+          <View className='events-page__spacer' />
+        </View>
       </ScrollView>
     </View>
   )

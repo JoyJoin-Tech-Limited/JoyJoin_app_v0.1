@@ -1,6 +1,6 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useCallback, useEffect, useState } from 'react'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { haptics } from '../../lib/utils/haptics'
@@ -17,29 +17,51 @@ import FootprintOracleCard from '../../components/events/FootprintOracleCard'
 import { CountdownTickProvider } from '../../hooks/useCountdownTick'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import { navigateToEventCard } from '../../lib/utils/eventCardNavigation'
+import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
+import { partitionJoinedEventsByDateTime } from '../events/eventPartition'
 import './index.scss'
+
+type TabKey = 'ongoing' | 'upcoming' | 'completed'
+
+const EMPTY_STATE_COPY: Record<TabKey, { title: string; subtitle: string }> = {
+  ongoing: {
+    title: '暂无进行中的活动',
+    subtitle: '这里会列出今天的活动和正在推进的报名。',
+  },
+  upcoming: {
+    title: '暂无待开始的活动',
+    subtitle: '这里会列出待开始的活动安排。',
+  },
+  completed: {
+    title: '暂无已结束的活动',
+    subtitle: '这里会保留已经结束的活动记录。',
+  },
+}
 
 function CenterHubContent({
   events,
+  activeTab,
   isLoading,
   isError,
+  onRetry,
 }: {
   events: JoinedEventSummary[]
+  activeTab: TabKey
   isLoading: boolean
   isError: boolean
+  onRetry: () => void
 }) {
   const { isDegradation } = useDeviceTier()
 
   const handleEventTap = useCallback((event: JoinedEventSummary) => {
-    Taro.navigateTo({
-      url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(event.id)}`,
-    })
-  }, [])
+    eventsAnalytics.trackCardTap(event, activeTab)
+    navigateToEventCard(event, { isHistorical: activeTab === 'completed' })
+  }, [activeTab])
 
   if (isLoading) {
     return (
-      <View className='center-hub__loading'>
+      <View className='center-hub__loading' role='status' aria-live='polite'>
         <Image
           className={`center-hub__loading-mascot${isDegradation ? ' center-hub__loading-mascot--no-animation' : ''}`}
           mode='aspectFit'
@@ -52,7 +74,7 @@ function CenterHubContent({
 
   if (isError) {
     return (
-      <View className='center-hub__state'>
+      <View className='center-hub__state' role='alert'>
         <Image
           className={`center-hub__error-mascot${isDegradation ? ' center-hub__error-mascot--no-animation' : ''}`}
           mode='aspectFit'
@@ -64,7 +86,7 @@ function CenterHubContent({
           className='center-hub__cta'
           onClick={() => {
             haptics('light')
-            Taro.reLaunch({ url: '/pages/center-hub/index' })
+            onRetry()
           }}
         >
           重新加载
@@ -90,8 +112,8 @@ function CenterHubContent({
               aria-label='悦仔'
             />
           </View>
-          <Text className='center-hub__empty-title'>暂无进行中的活动</Text>
-          <Text className='center-hub__empty-subtitle'>报名成功后，你的匹配进度和小队揭晓会出现在这里。</Text>
+          <Text className='center-hub__empty-title'>{EMPTY_STATE_COPY[activeTab].title}</Text>
+          <Text className='center-hub__empty-subtitle'>{EMPTY_STATE_COPY[activeTab].subtitle}</Text>
           <View
             className='center-hub__empty-cta'
             hoverClass='center-hub__empty-cta--pressed'
@@ -106,54 +128,6 @@ function CenterHubContent({
           </View>
         </View>
 
-        <View className='center-hub__flow-card'>
-          <Text className='center-hub__flow-title'>活动流程</Text>
-          <View className='center-hub__flow-steps'>
-            <View className='center-hub__flow-step'>
-              <View className='center-hub__flow-step-indicator center-hub__flow-step-indicator--active'>
-                <Image
-                  className='center-hub__flow-step-img'
-                  src={cdnAsset('/assets/icons/flow-icons/flow-1.webp')}
-                  mode='aspectFit'
-                />
-              </View>
-              <Text className='center-hub__flow-step-label'>报名成功</Text>
-            </View>
-            <View className='center-hub__flow-connector' aria-hidden='true' />
-            <View className='center-hub__flow-step'>
-              <View className='center-hub__flow-step-indicator'>
-                <Image
-                  className='center-hub__flow-step-img'
-                  src={cdnAsset('/assets/icons/flow-icons/flow-2.webp')}
-                  mode='aspectFit'
-                />
-              </View>
-              <Text className='center-hub__flow-step-label'>等待匹配</Text>
-            </View>
-            <View className='center-hub__flow-connector' aria-hidden='true' />
-            <View className='center-hub__flow-step'>
-              <View className='center-hub__flow-step-indicator'>
-                <Image
-                  className='center-hub__flow-step-img'
-                  src={cdnAsset('/assets/icons/flow-icons/flow-3.webp')}
-                  mode='aspectFit'
-                />
-              </View>
-              <Text className='center-hub__flow-step-label'>小队揭晓</Text>
-            </View>
-            <View className='center-hub__flow-connector' aria-hidden='true' />
-            <View className='center-hub__flow-step'>
-              <View className='center-hub__flow-step-indicator center-hub__flow-step-indicator--active'>
-                <Image
-                  className='center-hub__flow-step-img'
-                  src={cdnAsset('/assets/icons/flow-icons/flow-4.webp')}
-                  mode='aspectFit'
-                />
-              </View>
-              <Text className='center-hub__flow-step-label'>确认出席</Text>
-            </View>
-          </View>
-        </View>
       </View>
     )
   }
@@ -165,20 +139,23 @@ function CenterHubContent({
       enableFlex
       scrollWithAnimation
     >
-      <Text className='center-hub__list-header'>你的活动</Text>
-      <CountdownTickProvider>
-        {events.map((event, index) => (
-          <View key={event.id} className='center-hub__card'>
-            <FootprintOracleCard
-              event={event}
-              index={index}
-              isDegradation={isDegradation}
-              onClick={handleEventTap}
-            />
-          </View>
-        ))}
-      </CountdownTickProvider>
-      <View className='center-hub__bottom-spacer' />
+      <View className='center-hub__list-content'>
+        <Text className='center-hub__list-header'>你的活动</Text>
+        <CountdownTickProvider>
+          {events.map((event, index) => (
+            <View key={event.id} className='center-hub__card'>
+              <FootprintOracleCard
+                event={event}
+                index={index}
+                isDegradation={isDegradation}
+                isHistorical={activeTab === 'completed'}
+                onClick={handleEventTap}
+              />
+            </View>
+          ))}
+        </CountdownTickProvider>
+        <View className='center-hub__bottom-spacer' />
+      </View>
     </ScrollView>
   )
 }
@@ -201,6 +178,7 @@ export default function CenterHubPage() {
     data: events = [],
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ['mini-program', 'joined-events'],
     queryFn: () => getJoinedEvents(apiRequest),
@@ -208,7 +186,22 @@ export default function CenterHubPage() {
     staleTime: 30_000,
   })
 
+  const [activeTab, setActiveTab] = useState<TabKey>('ongoing')
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
+
+  useDidShow(() => {
+    // Re-show and center-tab re-tap intentionally preserve the selected bucket.
+  })
+
+  const partitionedEvents = useMemo(() => partitionJoinedEventsByDateTime(events), [events])
+  const displayEvents = partitionedEvents[activeTab]
+
+  const handleTabChange = useCallback((tab: TabKey) => {
+    if (tab === activeTab) return
+    haptics('light')
+    setActiveTab(tab)
+    eventsAnalytics.track('events_tab_switch', { tab })
+  }, [activeTab])
 
   return renderGate(
     <PageMorphWrapper
@@ -216,10 +209,41 @@ export default function CenterHubPage() {
       loading={<LoadingScreen message='正在加载你的活动…' />}
       content={
         <View className={`center-hub ${tabEntranceClass}`}>
+          <View className='center-hub__tabs' role='tablist'>
+            <View
+              className={`center-hub__tab ${activeTab === 'ongoing' ? 'center-hub__tab--active' : ''}`}
+              role='tab'
+              aria-selected={activeTab === 'ongoing'}
+              hoverClass='center-hub__tab--pressed'
+              onClick={() => handleTabChange('ongoing')}
+            >
+              <Text className='center-hub__tab-text'>进行中</Text>
+            </View>
+            <View
+              className={`center-hub__tab ${activeTab === 'upcoming' ? 'center-hub__tab--active' : ''}`}
+              role='tab'
+              aria-selected={activeTab === 'upcoming'}
+              hoverClass='center-hub__tab--pressed'
+              onClick={() => handleTabChange('upcoming')}
+            >
+              <Text className='center-hub__tab-text'>待开始</Text>
+            </View>
+            <View
+              className={`center-hub__tab ${activeTab === 'completed' ? 'center-hub__tab--active' : ''}`}
+              role='tab'
+              aria-selected={activeTab === 'completed'}
+              hoverClass='center-hub__tab--pressed'
+              onClick={() => handleTabChange('completed')}
+            >
+              <Text className='center-hub__tab-text'>已结束</Text>
+            </View>
+          </View>
           <CenterHubContent
-            events={events}
+            events={displayEvents}
+            activeTab={activeTab}
             isLoading={isLoading}
             isError={isError}
+            onRetry={refetch}
           />
         </View>
       }

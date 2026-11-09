@@ -78,6 +78,8 @@ export interface EventSummaryCardProps {
   location?: string
   status?: string
   displayStatus?: string
+  /** Presentation-only context; never changes the canonical event status. */
+  isHistorical?: boolean
   className?: string
   reduceMotion?: boolean
   isDegradation?: boolean
@@ -112,6 +114,7 @@ function EventSummaryCard({
   location,
   status: rawStatus,
   displayStatus,
+  isHistorical = false,
   className,
   reduceMotion: reduceMotionProp,
   isDegradation: isDegradationProp,
@@ -134,16 +137,18 @@ function EventSummaryCard({
   const uid = id ?? generatedUidRef.current
 
   const status = displayStatus ?? rawStatus ?? 'upcoming'
-  const family = STATUS_FAMILY_MAP[status] ?? 'calm'
+  const isTerminal = isJoinedEventTerminal(status)
+  const isHistoricalNonterminal = isHistorical && !isTerminal
+  const isEnded = isTerminal || isHistoricalNonterminal
+  const family = isHistoricalNonterminal ? 'warm' : STATUS_FAMILY_MAP[status] ?? 'calm'
   const familyColor = ARCHETYPE_FAMILY_COLORS[family] ?? FALLBACK_FAMILY_COLOR
   const gradient = ARCHETYPE_FAMILY_GRADIENTS[family] ?? ARCHETYPE_FAMILY_GRADIENTS.calm
 
-  const statusLabel = getJoinedEventStatusLabel(status)
-  const momentumLabel = STATUS_MOMENTUM_COPY[status] ?? statusLabel
-  const isTerminal = isJoinedEventTerminal(status)
-  const isLiveStatus = status === 'matched' || status === 'venue_unlocked'
+  const statusLabel = isHistoricalNonterminal ? '已结束' : getJoinedEventStatusLabel(status)
+  const momentumLabel = isHistoricalNonterminal ? '已结束' : STATUS_MOMENTUM_COPY[status] ?? statusLabel
+  const isLiveStatus = !isHistoricalNonterminal && (status === 'matched' || status === 'venue_unlocked')
   const showVenue = VENUE_VISIBLE_STATUSES.has(status)
-  const isMatched = status === 'matched'
+  const isMatched = !isHistoricalNonterminal && status === 'matched'
 
   const dateTimeText = formatEventDateTime(dateTime)
 
@@ -168,7 +173,7 @@ function EventSummaryCard({
   }, [eventType, city, district, venueName, location, showVenue])
 
   const cornerAssetSrc = getOracleCardCornerAsset(eventType)
-  const showCornerAsset = cornerAssetSrc && !effectiveDegradation && !isTerminal
+  const showCornerAsset = cornerAssetSrc && !effectiveDegradation && !isEnded
 
   const [cornerLoadFailed, setCornerLoadFailed] = React.useState(false)
   const { isPageVisible } = usePageVisibility()
@@ -188,12 +193,12 @@ function EventSummaryCard({
     [title, statusLabel, dateTimeText, locationLine, footerHint, railAriaLabel],
   )
 
-  const waitingCopy = STATUS_WAITING_COPY[status]
+  const waitingCopy = isHistoricalNonterminal ? undefined : STATUS_WAITING_COPY[status]
 
   const cardClass = [
     'footprint-oracle-card',
     `footprint-oracle-card--family-${family}`,
-    isTerminal ? 'footprint-oracle-card--terminal' : '',
+    isEnded ? 'footprint-oracle-card--terminal' : '',
     isMatched ? 'footprint-oracle-card--matched' : '',
     railMode ? 'footprint-oracle-card--rail' : '',
     effectiveDegradation ? 'footprint-oracle-card--low-end' : '',
@@ -204,7 +209,7 @@ function EventSummaryCard({
     .filter(Boolean)
     .join(' ')
 
-  const clockEnabled = !isTerminal && Boolean(dateTime)
+  const clockEnabled = !isEnded && Boolean(dateTime)
 
   return (
     <View

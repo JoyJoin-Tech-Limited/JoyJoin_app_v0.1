@@ -1,6 +1,7 @@
+import Taro from '@tarojs/taro'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { JoinedEventSummary } from '@shared/api'
-import { describe, expect, it } from 'vitest'
-import { buildEventCardUrl } from '../eventCardNavigation'
+import { buildEventCardUrl, navigateToEventCard } from '../eventCardNavigation'
 
 function makeEvent(overrides: Partial<JoinedEventSummary> = {}): JoinedEventSummary {
   return {
@@ -44,5 +45,61 @@ describe('eventCardNavigation', () => {
       const event = makeEvent({ id: 'ev 1&2', displayStatus: 'completed' })
       expect(buildEventCardUrl(event)).toBe('/pages/event-detail/index?id=ev%201%262')
     })
+  })
+})
+
+describe('eventCardNavigation historical context', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('preserves matching-status navigation by default for a nonterminal registration', () => {
+    const event = makeEvent({
+      status: 'matched',
+      displayStatus: 'matched',
+      registrationId: 'registration-1',
+    })
+
+    expect(buildEventCardUrl(event)).toBe(
+      '/pages/matching-status/index?registrationId=registration-1',
+    )
+    expect(buildEventCardUrl(event, { isHistorical: false })).toBe(
+      '/pages/matching-status/index?registrationId=registration-1',
+    )
+  })
+
+  it('resolves a historical nonterminal registration to event-detail without mutating the DTO', () => {
+    const event = makeEvent({
+      id: 'past-event',
+      status: 'matched',
+      displayStatus: 'matched',
+      registrationId: 'registration-1',
+    })
+    const originalEvent = { ...event }
+
+    expect(buildEventCardUrl(event, { isHistorical: true })).toBe(
+      '/pages/event-detail/index?id=past-event',
+    )
+    navigateToEventCard(event, { isHistorical: true })
+
+    expect(Taro.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/event-detail/index?id=past-event',
+    })
+    expect(event).toEqual(originalEvent)
+    expect(event.registrationId).toBe('registration-1')
+    expect(event.displayStatus).toBe('matched')
+  })
+
+  it('keeps genuine terminal navigation unchanged when historical context is supplied', () => {
+    const event = makeEvent({
+      id: 'terminal-event',
+      status: 'completed',
+      displayStatus: 'completed',
+    })
+
+    expect(buildEventCardUrl(event)).toBe('/pages/event-detail/index?id=terminal-event')
+    expect(buildEventCardUrl(event, { isHistorical: true })).toBe(
+      '/pages/event-detail/index?id=terminal-event',
+    )
   })
 })

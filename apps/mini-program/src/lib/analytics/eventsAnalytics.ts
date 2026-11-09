@@ -59,7 +59,7 @@ class EventsAnalytics {
   }
 
   /** Convenience helper for card taps — always includes card version, tab, and event type. */
-  trackCardTap(event: JoinedEventSummary, tab: 'upcoming' | 'completed'): void {
+  trackCardTap(event: JoinedEventSummary, tab: 'ongoing' | 'upcoming' | 'completed'): void {
     this.track('events_card_tap', {
       eventId: event.id,
       tab,
