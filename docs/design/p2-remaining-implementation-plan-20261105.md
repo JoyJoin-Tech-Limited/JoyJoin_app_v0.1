@@ -1,7 +1,7 @@
 # P2 余项执行计划草案
 
 - 日期：2026-11-05
-- 状态：UI/UX designer 方向 **APPROVE**；Momus 两项剩余执行前置（Events DTO/服务端分桶数据、通知已读生命周期）已写入 §3/§4；**P2-S1 与 P2-S3 已于 2026-11-06 交付**（见 §10）；真机批准仍开放
+- 状态：UI/UX designer 方向 **APPROVE**；Momus 两项剩余执行前置（Events DTO/服务端分桶数据、通知已读生命周期）已写入 §3/§4；**P2-S1 与 P2-S3 已于 2026-11-06 交付，P2-S2 代码已于 2026-11-09 交付**（见 §10）；P2-S2 的 DevTools/rendered 验收仍为 PARTIAL，真机批准仍开放
 - 范围： gathering-room 已移除删除候选后，剩余 P2 工程项 + 三项产品/商业实验
 - 原则：先清理“维护成本”，再改“信息架构”，最后做“商业实验”。不为数量目标新增页面/组件/flag。
 
@@ -40,6 +40,8 @@
 ---
 
 ## 3. `center-hub` —— 复用 Events inbox 层级，默认「进行中」
+
+> 2026-11-09 已按 §8 接受的“当前 DTO 最小三桶”范围交付代码；历史非终态卡的诚实展示也在用户批准的窄扩展内完成。交付结果、验证与仍开放的 DevTools 验收见 §10.3。
 
 ### 当前状态
 - `center-hub` 与 `events` 都在承载“我的局”；Events 当前只有「待参加 / 已完成」，center-hub 使用未分段的 joined-events 列表。
@@ -173,7 +175,7 @@
 |--------|----|----------|
 | P2-S0 | alang/config+debug 裁决、center-hub 路由/分段、通知矩阵、庆祝表面清单、teaser 提醒真伪 | 对应 owner 书面确认，未决不得开工 |
 | P2-S1 | toast 生产试点 + teaser copy-only 测量 | ✅ 2026-11-06 交付（§10）；toast adapter contract test 已落盘 |
-| P2-S2 | center-hub 复用 Events inbox、默认「进行中」 | 路由与 `eventPartition` fixture 先锁定 |
+| P2-S2 | center-hub 复用 Events inbox、默认「进行中」 | ✅ 2026-11-09 代码交付（§10.3）；AC-01–07/09 PASS，AC-08 DevTools/rendered 验收仍开放 |
 | P2-S3 | 通知深链与 per-item read | ✅ 2026-11-06 交付（§10）；真机 tap → destination → back 录制仍开放 |
 | P2-S4 | 仅注册成功庆祝收敛 | 与订阅 upsell 分开；先 baseline/cohort/样本/回滚，再灰度 |
 | 独立实验（非本 P2） | 订阅 upsell、alang/config 迁 admin、真实 teaser 提醒 | 各自新 Sprint/Tier、商业或 QA owner |
@@ -199,7 +201,7 @@
 - 未经 QA 裁决不删除/迁移 alang/config+debug。
 - 不为 P2 新增用户可见 tab、页面家族或新商业化承诺；不把真实提醒、admin 迁移或订阅实验偷渡进本计划。
 
-## 10. 交付记录（2026-11-06）
+## 10. 交付记录（2026-11-06 至 2026-11-09）
 
 ### 10.1 P2-S1 — toast adapter 试点 + teaser copy-only
 
@@ -218,3 +220,15 @@
 - 已读生命周期：仅在导航被系统接受且服务端确认后标记该行已读并更新 badge；导航失败保持 unread。通知页、Events、Discover、Connections 的入口/unmount 自动批量已读已移除；显式分类「全部已读」保留为 badge 清零路径。`system`/未知 read-only 行保持未读，直到用户显式点分类「全部已读」（服务端按 category 清理，不区分 type）；per-item 路由本身不排除 `system`，但客户端不对 read-only 行调用。
 - 证据：服务端 3 文件 / 13 tests；mini-program 4 文件 / 44 tests；`tsc --noEmit`、guardrails、`build:weapp` + `verify:subpackage-styles`、mini 全量 3655 tests 通过；server 全量在修复 `guestEventPreview` 日期时间炸弹（`022ac6992`）后通过。
 - 未做/仍开放：真机 tap → destination → back 录制；center-hub、Events DTO 三桶、alang config/debug 迁移均未在本 Sprint 范围。
+
+### 10.3 P2-S2 — Center Hub + Events 当前 DTO 三桶 IA
+
+- 交付 commit：`6e1a348f4`（2026-11-09）。范围仅为 mini-program 当前 `JoinedEventSummary`；没有 server/shared DTO、支付/退款/出席行动推断或 tabBar 改动。
+- `eventPartition.ts` 以 canonical `displayStatus ?? status` 和固定 UTC+8 日历日做 total、单次 O(n) 分桶：terminal 永远进「已结束」；过去日非终态进「已结束」；当天非终态进「进行中」；未来日按工作流状态进入「进行中」或「待开始」；缺失/非法日期有明确兜底。原始顺序与记录引用保留。
+- Events 保留「待开始」默认、手动选择前 `upcoming → ongoing → completed` 的非空回退、手动选择后的持久选择、refresh 与 first-event hero；hero 仅属于当前可见桶且排除 canonical terminal。Center Hub 是真实 destination，新挂载默认「进行中」，不因空桶/查询更新/re-show/中心 tab 重按自动跳桶；无 hero、mark-read 或 loader-only redirect。
+- 两页均有 tablist/tab/`aria-selected`、active+pressed 对比度、reduced-motion reset、ScrollView 内容 padding 与桶别 empty copy。Center 同桶重按不再重复 haptic/request/analytics。
+- 用户批准的 AC-09 窄扩展：页面 → `FootprintOracleCard` → `EventSummaryCard` 传递可选 `isHistorical`，默认行为不变。历史非终态卡显示中性「已结束」，不再出现 countdown/live/匹配等待文案，点击进 `event-detail`；真实 terminal 与 `feedbackPending` 优先级不变，原始 DTO/status 不被改写。
+- 自动验证：5 个合同测试文件 / 46 tests PASS；mini 全量 371 文件 / 3699 passed + 1 skipped；typecheck、guardrails（0 errors / 12 个既有 warnings）、`build:weapp`、`verify:subpackage-styles`、auto-eval（91/99）与 orchestration validate 均通过。Harness gate 为 CONCERN 91，只含 foreign/pre-existing 项，无 P2 scoped finding。
+- 独立评审：Verifier 与 QA 对 AC-01–07、AC-09 均为 PASS；五个 Harness pillar 均为静态 PASS。UI/UX 静态 blocker 已清零但无 rendered PASS；完成度 provisional 35/44；用户视角两个代码 P0 已清零；性能 WARN 38/60、无代码 blocker。
+- **总体仍为 PARTIAL，不是 release/rendered 批准：** AC-08 的 WeChat DevTools/artifact 矩阵与真机验收 NOT RUN。验收清单已写入 `docs/testing/LAUNCH-QA-CHECKLIST.md` §8。
+- 非阻断后续：Center 只有未来局时默认空「进行中」的发现性提示、长列表 profile/virtualization、Events 同桶重按去重、空 completed 桶的共享 countdown provider 休眠；均不改变本次已锁定的路由/分桶语义。
