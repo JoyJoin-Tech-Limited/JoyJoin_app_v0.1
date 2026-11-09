@@ -8,6 +8,13 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "miniprogram-ci": {
+      "request": {
+        "form-data": "2.5.6"
+      }
+    }
+  },
   "scripts": {
     "dev": "npm run db:push && npm run dev:server",
     "build": "npm run dep-check && npm run build:admin && npm run build:server",

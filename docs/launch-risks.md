@@ -3,7 +3,7 @@
 > Honest, current-state record of the security risks we know about and the
 > automated coverage that does or does not exist for them.
 >
-> **Last reviewed:** 2026-10-21 · **Owner:** engineering · **Review cadence:** with every dependency/security batch, otherwise quarterly.
+> **Last reviewed:** 2026-11-09 · **Owner:** engineering · **Review cadence:** with every dependency/security batch, otherwise quarterly.
 
 This file exists because the repo previously had no single place that said
 "here is what CI actually checks". Reviews were sometimes written as if a scan
@@ -59,6 +59,19 @@ like mitigation but isn't is worse than an honest baseline entry, so the overrid
 was reverted and swiper stays baselined until the Taro upgrade (W3) brings a
 compatible version.
 
+2026-11-09 Dependabot critical triage: `form-data` was remediated with a narrow
+root override for `miniprogram-ci → request` only (`2.3.3 → 2.5.6`), covering both
+the unsafe-multipart-boundary and CRLF-injection advisories without downgrading
+Axios's separate `form-data@4.0.6`. `npm ci --ignore-scripts`, `check:deps`,
+`dep-check`, `guardrails`, `build:weapp`, and `verify:subpackage-styles` pass.
+The two `decompress@4.2.1` advisories remain accepted build-tool risk: they are
+reachable only through `@tarojs/cli → download-git-repo → download`, no patched
+`decompress` exists, and current Taro CLI 4.3.2 still declares that chain. The
+repository does not call the template-download path in application or build
+scripts; do not use it with untrusted template archives. `swiper` remains
+baselined as described above; current Taro Components 4.3.2 still pins the
+vulnerable 11.1.15, so there is no compatible upstream-only fix.
+
 ### What the gate is
 
 `npm run check:deps` → `scripts/check/check-dependency-vulns.mjs`
@@ -76,12 +89,14 @@ compatible version.
 | Package | Severity | Why accepted | reviewBy |
 |---|---|---|---|
 | `swiper` / `@tarojs/components` | critical | Reachable only through the Taro component package's H5 build path. `apps/mini-program/src` has zero `swiper` imports and WeChat renders the native `<Swiper>`. `npm audit fix` would downgrade `@tarojs/*` to 3.2.16 and break the build — permanently rejected. Forcing a 12.x `overrides` pin was attempted and reverted (see W2 note above); the real resolution is the Taro upgrade (W3). | 2027-01-31 |
+| `decompress` via `@tarojs/cli` | critical (Dependabot) | No patched release exists. Development-only template-download chain (`@tarojs/cli → download-git-repo → download`); not called by application code or the normal mini-program build. Current Taro CLI 4.3.2 still declares the chain, and npm's suggested fix is a breaking CLI downgrade. Do not feed untrusted template archives to that path. | 2027-01-31 |
 | `@tarojs/taro` | critical | Not a distinct advisory — npm audit inherits the critical severity from `@tarojs/components` (swiper) and `@tarojs/helper`. The only "fix" offered is a Taro downgrade to 3.6.22. | 2027-01-31 |
 | `lodash` | high | **No patched release exists** (affected range `<=4.17.23`, current release is 4.17.21). Reachable only through build-time `@tarojs/helper`; no app code imports lodash. The advisories only fire on `_.template` key names / `_.unset` / `_.omit` with attacker-controlled paths. | 2027-01-31 |
 | `braces`, `micromatch`, `chokidar`, `find-yarn-workspace-root`, `@tarojs/helper` | high | Build-time config/glob/watch utilities inside the Taro CLI toolchain. No request path. | 2027-01-31 |
 
 Cleared and no longer in the baseline: `@babel/traverse` (critical),
-`browserslist`, `json5` (W1, 2026-10-21), and `drizzle-orm` (W2, 2026-10-22).
+`browserslist`, `json5` (W1, 2026-10-21), `drizzle-orm` (W2, 2026-10-22), and
+`form-data` under `miniprogram-ci → request` (2026-11-09).
 
 **Never run `npm audit fix --force` in this repo.** npm's resolution for the
 `@tarojs/*` advisories is a downgrade to Taro 3.2.16 (and `@tarojs/cli@1.3.8`),
@@ -151,3 +166,4 @@ passed. The ❌ rows are open gaps, not implicit passes.
 |---|---|
 | 2026-10-21 | Created. Added the dependency gate + Dependabot config; recorded the 11-node accepted-risk baseline and the rejected `npm audit fix --force` path. |
 | 2026-10-22 | W1+W2 landed (185 → 134 root nodes; runtime gate 11 → 9 findings after two new upstream advisories arrived). Repaired a profile-pixel WebP that the anonymization commit had left with a broken hash **and** a broken VP8L stream. Added `Build Mini-Program` to `quality-gates` so a broken bundle can no longer reach `main`. Enabled CodeQL default setup, GitHub secret scanning, push protection, and Dependabot security updates. |
+| 2026-11-09 | Triaged the four critical Dependabot alerts. Remediated `form-data` with a scoped override to 2.5.6; documented the two unpatched development-only `decompress` advisories and reconfirmed the existing `swiper` accepted risk. Clean install, dependency ownership/runtime gates, guardrails, mini-program build, and subpackage-style verification passed. |
