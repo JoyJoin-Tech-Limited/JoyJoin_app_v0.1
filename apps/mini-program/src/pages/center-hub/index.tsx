@@ -6,11 +6,11 @@ import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { haptics } from '../../lib/utils/haptics'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import Button from '../../components/ui/Button'
+import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
@@ -26,16 +26,16 @@ type TabKey = 'ongoing' | 'upcoming' | 'completed'
 
 const EMPTY_STATE_COPY: Record<TabKey, { title: string; subtitle: string }> = {
   ongoing: {
-    title: '暂无进行中的活动',
-    subtitle: '这里会列出今天的活动和正在推进的报名。',
+    title: '此刻，还没有进行中的活动',
+    subtitle: '活动有进展时，会在这里告诉你。',
   },
   upcoming: {
-    title: '暂无待开始的活动',
-    subtitle: '这里会列出待开始的活动安排。',
+    title: '还没有待开始的活动',
+    subtitle: '有新的安排时，会在这里告诉你。',
   },
   completed: {
-    title: '暂无已结束的活动',
-    subtitle: '这里会保留已经结束的活动记录。',
+    title: '第一段回忆，等你写下',
+    subtitle: '活动结束后，可以在这里回看足迹。',
   },
 }
 
@@ -98,36 +98,18 @@ function CenterHubContent({
   if (events.length === 0) {
     return (
       <View className='center-hub__state center-hub__state--empty'>
-        <View className='center-hub__empty-hero'>
-          <View className='center-hub__empty-deco' aria-hidden='true'>
-            <View className='center-hub__empty-deco-dot center-hub__empty-deco-dot--1' />
-            <View className='center-hub__empty-deco-dot center-hub__empty-deco-dot--2' />
-            <View className='center-hub__empty-deco-dot center-hub__empty-deco-dot--3' />
-          </View>
-          <View className='center-hub__empty-glow'>
-            <Image
-              className='center-hub__empty-mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-              mode='aspectFit'
-              aria-label='悦仔'
-            />
-          </View>
-          <Text className='center-hub__empty-title'>{EMPTY_STATE_COPY[activeTab].title}</Text>
-          <Text className='center-hub__empty-subtitle'>{EMPTY_STATE_COPY[activeTab].subtitle}</Text>
-          <View
-            className='center-hub__empty-cta'
-            hoverClass='center-hub__empty-cta--pressed'
-            onClick={() => {
-              haptics('light')
-              Taro.switchTab({ url: '/pages/discover/index' })
-            }}
-            role='button'
-            aria-label='去探索活动'
-          >
-            <Text className='center-hub__empty-cta-text'>去探索活动</Text>
-          </View>
-        </View>
-
+        <XiaoyueEmptyState
+          variant='editorial'
+          emotion='events'
+          title={EMPTY_STATE_COPY[activeTab].title}
+          subtitle={EMPTY_STATE_COPY[activeTab].subtitle}
+          actionLabel='去探索活动'
+          onAction={() => {
+            haptics('light')
+            Taro.switchTab({ url: '/pages/discover/index' })
+          }}
+          size='lg'
+        />
       </View>
     )
   }

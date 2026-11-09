@@ -28,11 +28,11 @@
     transition: background 0.12s ease, border-color 0.12s ease;
 
     &--active {
-      background: $color-primary;
-      border-color: $color-primary;
+      background: rgba($color-primary, 0.08);
+      border-color: rgba($color-primary, 0.12);
 
       .events-page__tab-text {
-        color: $color-text-white;
+        color: $color-primary;
       }
     }
 

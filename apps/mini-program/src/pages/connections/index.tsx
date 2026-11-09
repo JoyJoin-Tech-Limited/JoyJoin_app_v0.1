@@ -157,39 +157,16 @@ export default function ConnectionsPage() {
             </Card>
           ))
         ) : (
-          <View className='connections-page__empty-state connections-page__empty-state--no-data'>
-            <View className='connections-page__empty-hero'>
-              <View className='connections-page__empty-deco' aria-hidden='true'>
-                <View className='connections-page__empty-deco-dot connections-page__empty-deco-dot--1' />
-                <View className='connections-page__empty-deco-dot connections-page__empty-deco-dot--2' />
-                <View className='connections-page__empty-deco-dot connections-page__empty-deco-dot--3' />
-              </View>
-              <View className='connections-page__empty-glow'>
-                <Image
-                  className='connections-page__empty-mascot'
-                  src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-connections-empty.webp')}
-                  mode='aspectFit'
-                  lazyLoad={false}
-                  aria-label='悦仔'
-                />
-              </View>
-              <Text className='connections-page__empty-title'>
-                悦仔在等你带新朋友回来
-              </Text>
-              <Text className='connections-page__empty-subtitle'>
-                参加活动并完成互动后，
-                {'\n'}你与活动伙伴的连接会出现在这里。
-              </Text>
-              <View
-                className='connections-page__empty-cta'
-                hoverClass='connections-page__empty-cta--active'
-                onClick={() => Taro.switchTab({ url: '/pages/discover/index' })}
-                role='button'
-                aria-label='去探索活动'
-              >
-                <Text className='connections-page__empty-cta-text'>去探索活动</Text>
-              </View>
-            </View>
+          <View className='connections-page__empty-state'>
+            <XiaoyueEmptyState
+              variant='editorial'
+              emotion='curious'
+              title='新的连接，从一场活动开始'
+              subtitle={'参加活动并完成互动后，\n双向选择的连接会出现在这里。'}
+              actionLabel='去探索活动'
+              onAction={() => Taro.switchTab({ url: '/pages/discover/index' })}
+              size='lg'
+            />
 
             <View className='connections-page__flow-card'>
               <Text className='connections-page__flow-title'>连接建立流程</Text>

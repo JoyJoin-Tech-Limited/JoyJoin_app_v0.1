@@ -170,9 +170,10 @@ Canonical CDN base URL for all phases: `https://joyjoinapp.com/static`.
 
 - **CTAs use solid `$color-primary` (`#8B5CF6`) — no gradient.** Gradient was purged from all mini-program CTAs.
 - **Bottom action bar pattern**: solid white (`$color-surface`) + subtle top shadow (`rgba($color-text-primary, 0.04)`).
-- **Empty-state typography standard (2026-06-18):**
-  - Use `XiaoyueEmptyState` for mascot-led empty/loading/error states (Connections, Center Hub).
-  - Use `StatusCard` for Lovart-hero empty/error states (Discover, Events).
+- **Empty-state typography standard (updated 2026-11-09):**
+  - Use `XiaoyueEmptyState variant='editorial'` for the scoped no-data states on Discover, Events, Center Hub, and Connections. This is an opt-in, no-card treatment: one group entrance, static mascot/halo afterward, no infinite breathing, and complete reduced-motion disablement.
+  - Keep `StatusCard` for the existing Discover/Events error branches and other established Lovart-hero status surfaces; do not globally restyle it or migrate Notifications/Gathering Room without a separate review. Meaningful grouping cards such as Connections `flow-card` and Discover `CityUnlockFeedCard` remain.
+  - Canonical decision tree, copy/motion rules, inventory, and exclusions: `docs/design/empty-state-visual-strategy-20261109.md`.
   - Titles: Alimama brand font, `line-height ≥ 1.4`, bold.
   - Subtitles/body: system UI font, `line-height ≥ 1.6`.
   - Title-to-subtitle spacing: 16–24rpx (`$spacing-sm` to `$spacing-md`).

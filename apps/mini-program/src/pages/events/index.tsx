@@ -15,9 +15,9 @@ import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import { CountdownTickProvider } from '../../hooks/useCountdownTick'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
+import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { isLongListRowCount, MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD } from '../../lib/utils/longListThreshold'
@@ -34,16 +34,16 @@ type TabKey = 'ongoing' | 'upcoming' | 'completed'
 
 const EMPTY_STATE_COPY: Record<TabKey, { title: string; description: string }> = {
   ongoing: {
-    title: '暂无进行中的活动',
-    description: '这里会列出今天的活动和正在推进的报名。',
+    title: '此刻，还没有进行中的活动',
+    description: '活动有进展时，会在这里告诉你。',
   },
   upcoming: {
-    title: '暂无待开始的活动',
-    description: '这里会列出待开始的活动安排。',
+    title: '还没有待开始的活动',
+    description: '有新的安排时，会在这里告诉你。',
   },
   completed: {
-    title: '暂无已结束的活动',
-    description: '这里会保留已经结束的活动记录。',
+    title: '第一段回忆，等你写下',
+    description: '活动结束后，可以在这里回看足迹。',
   },
 }
 
@@ -284,18 +284,17 @@ export default function EventsPage() {
               </CustomWrapper>
             </CountdownTickProvider>
           ) : (
-            <StatusCard
-              className='events-page__empty-state'
-              tone='empty'
-              heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
-              title={emptyCopy.title}
-              description={emptyCopy.description}
-              action={{
-                label: '去发现',
-                onClick: navigateToDiscover,
-                variant: 'primary',
-              }}
-            />
+            <View className='events-page__empty-state'>
+              <XiaoyueEmptyState
+                variant='editorial'
+                emotion='events'
+                title={emptyCopy.title}
+                subtitle={emptyCopy.description}
+                actionLabel='去发现'
+                onAction={navigateToDiscover}
+                size='lg'
+              />
+            </View>
           )}
           <View className='events-page__spacer' />
         </View>

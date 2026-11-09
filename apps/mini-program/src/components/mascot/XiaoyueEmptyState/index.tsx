@@ -24,6 +24,8 @@ export type XiaoyueEmptyStateEmotion =
 
 export interface XiaoyueEmptyStateProps {
   emotion: XiaoyueEmptyStateEmotion
+  /** Opt-in no-card editorial treatment for quiet, no-data states. */
+  variant?: 'default' | 'editorial'
   title: string
   subtitle?: string
   actionLabel?: string
@@ -70,6 +72,7 @@ function classNames(...parts: Array<string | false | undefined>): string {
 
 export default function XiaoyueEmptyState({
   emotion,
+  variant = 'default',
   title,
   subtitle,
   actionLabel,
@@ -122,7 +125,14 @@ export default function XiaoyueEmptyState({
   }, [archetypeId, archetypeTokens, disableBlur, haloDimPx])
 
   return (
-    <View className={classNames('xiaoyue-empty-state', showCelebrationBadge && 'xiaoyue-empty-state--celebration')}>
+    <View
+      className={classNames(
+        'xiaoyue-empty-state',
+        variant === 'editorial' && 'xiaoyue-empty-state--editorial',
+        variant === 'editorial' && motionReduced && 'xiaoyue-empty-state--motion-reduced',
+        showCelebrationBadge && 'xiaoyue-empty-state--celebration'
+      )}
+    >
       <View
         className={classNames(
           'xiaoyue-empty-state__mascot-wrap',

@@ -340,7 +340,6 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    animation: discover-empty-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   // ── Pool list ─────────────────────────────────────────────────
@@ -963,18 +962,6 @@ $oracle-badge-clearance: 120rpx;
   }
 }
 
-// ─── Empty state entrance ────────────────────────────────────────
-@keyframes discover-empty-enter {
-  from {
-    opacity: 0;
-    transform: translateY(16rpx) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 // ─── Reduced motion ──────────────────────────────────────────────
 @media (prefers-reduced-motion: reduce) {
   .oracle-card {
@@ -999,12 +986,6 @@ $oracle-badge-clearance: 120rpx;
   .discover-auth__refresh-indicator {
     animation: none;
     background: $color-divider;
-  }
-
-  .discover-auth__empty-state {
-    animation: none;
-    opacity: 1;
-    transform: none;
   }
 
   .discover-auth__greeting-line,

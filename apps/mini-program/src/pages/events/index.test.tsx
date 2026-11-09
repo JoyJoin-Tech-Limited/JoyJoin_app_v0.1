@@ -125,6 +125,23 @@ vi.mock('../../components/ui/StatusCard', () => ({
   ),
 }))
 
+vi.mock('../../components/mascot/XiaoyueEmptyState', () => ({
+  default: ({ title, subtitle, actionLabel, onAction, variant, emotion }: {
+    title: string
+    subtitle?: string
+    actionLabel?: string
+    onAction?: () => void
+    variant?: string
+    emotion?: string
+  }) => (
+    <div data-testid='events-empty-state' data-variant={variant} data-emotion={emotion}>
+      <span>{title}</span>
+      {subtitle && <span>{subtitle}</span>}
+      {actionLabel && onAction && <button type='button' onClick={onAction}>{actionLabel}</button>}
+    </div>
+  ),
+}))
+
 vi.mock('../../components/events/FootprintOracleCard', () => ({
   default: ({ event, onClick, isHistorical = false }: { event: JoinedEventSummary; onClick: (event: JoinedEventSummary) => void; isHistorical?: boolean }) => (
     <button
@@ -269,11 +286,21 @@ describe('EventsPage three-bucket IA', () => {
     expect(screen.getByTestId('event-card-completed')).toBeInTheDocument()
   })
 
-  it('remains on upcoming when every bucket is empty', () => {
+  it('renders the editorial empty state and fires its CTA analytics once before Discover navigation', () => {
     renderEvents([])
 
     expectActiveTab('待开始')
-    expect(screen.getByText('暂无待开始的活动')).toBeInTheDocument()
+    expect(screen.getByText('还没有待开始的活动')).toBeInTheDocument()
+    expect(screen.getByTestId('events-empty-state')).toHaveAttribute('data-variant', 'editorial')
+    expect(screen.getByTestId('events-empty-state')).toHaveAttribute('data-emotion', 'events')
+
+    mocks.track.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: '去发现' }))
+    expect(mocks.track).toHaveBeenCalledTimes(1)
+    expect(mocks.track).toHaveBeenCalledWith('events_empty_state_cta_tap')
+    expect(mocks.switchTab).toHaveBeenCalledTimes(1)
+    expect(mocks.switchTab).toHaveBeenCalledWith({ url: '/pages/discover/index' })
+    expect(mocks.track.mock.invocationCallOrder[0]).toBeLessThan(mocks.switchTab.mock.invocationCallOrder[0])
   })
 
   it('never applies fallback after manual selection, including query updates and refresh', () => {
@@ -284,7 +311,7 @@ describe('EventsPage three-bucket IA', () => {
 
     fireEvent.click(getTab('已结束'))
     expectActiveTab('已结束')
-    expect(screen.getByText('暂无已结束的活动')).toBeInTheDocument()
+    expect(screen.getByText('第一段回忆，等你写下')).toBeInTheDocument()
 
     setQueryState([makeEvent('upcoming-new', 'confirmed', '2026-04-15T19:30:00+08:00')])
     view.rerender(<EventsPage />)
@@ -292,7 +319,7 @@ describe('EventsPage three-bucket IA', () => {
 
     fireEvent.click(getTab('进行中'))
     expectActiveTab('进行中')
-    expect(screen.getByText('暂无进行中的活动')).toBeInTheDocument()
+    expect(screen.getByText('此刻，还没有进行中的活动')).toBeInTheDocument()
 
     act(() => { mocks.pullDownRefresh?.() })
     expectActiveTab('进行中')
@@ -311,9 +338,9 @@ describe('EventsPage three-bucket IA', () => {
     const copies: string[] = []
 
     for (const [tab, title, description] of [
-      ['待开始', '暂无待开始的活动', '这里会列出待开始的活动安排。'],
-      ['进行中', '暂无进行中的活动', '这里会列出今天的活动和正在推进的报名。'],
-      ['已结束', '暂无已结束的活动', '这里会保留已经结束的活动记录。'],
+      ['待开始', '还没有待开始的活动', '有新的安排时，会在这里告诉你。'],
+      ['进行中', '此刻，还没有进行中的活动', '活动有进展时，会在这里告诉你。'],
+      ['已结束', '第一段回忆，等你写下', '活动结束后，可以在这里回看足迹。'],
     ]) {
       fireEvent.click(getTab(tab))
       expect(screen.getByText(title)).toBeInTheDocument()
@@ -331,10 +358,12 @@ describe('EventsPage three-bucket IA', () => {
     const view = render(<EventsPage />)
     expect(view.container.querySelector('.events-page__list > .events-page__list-content')).toBeInTheDocument()
     expect(view.container.querySelectorAll('.events-page__card--skeleton')).toHaveLength(3)
+    expect(screen.queryByTestId('events-empty-state')).not.toBeInTheDocument()
 
     setQueryState([], { isError: true })
     view.rerender(<EventsPage />)
     expect(screen.getByText('加载失败')).toBeInTheDocument()
+    expect(screen.queryByTestId('events-empty-state')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
     expect(mocks.queryState.refetch).toHaveBeenCalledTimes(1)
   })

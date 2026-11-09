@@ -42,6 +42,7 @@ import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import StatusCard from '../../components/ui/StatusCard'
+import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import HeroPromoBanner, { type PromoBannerVariant } from '../../components/HeroPromoBanner'
 import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -907,26 +908,17 @@ function AuthenticatedDiscover({
             />
           </>
         ) : (
-          <StatusCard
-            className='discover-auth__empty-state'
-            tone='empty'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
-            title='还没有适合你的活动'
-            description={
-              selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
-                ? '试试切换其他区域'
-                : '新活动即将上线，敬请期待'
-            }
-            action={
-              selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
-                ? {
-                    label: '清除筛选',
-                    onClick: () => onFilterSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID),
-                    variant: 'secondary',
-                  }
-                : undefined
-            }
-          />
+          <View className='discover-auth__empty-state'>
+            <XiaoyueEmptyState
+              variant='editorial'
+              emotion='events'
+              title={hasManualFilter ? '当前筛选下，还没有活动' : '当前没有可报名的活动'}
+              subtitle={hasManualFilter ? '清除筛选，看看其他区域。' : '活动上线后，会在这里展示。'}
+              actionLabel={hasManualFilter ? '清除筛选' : undefined}
+              onAction={hasManualFilter ? () => onFilterSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID) : undefined}
+              size='lg'
+            />
+          </View>
         )}
         {/* Keep the city entry as the final section beneath activities/empty state. */}
         <CityUnlockFeedCard onSelectCity={onOpenCityPicker} />
