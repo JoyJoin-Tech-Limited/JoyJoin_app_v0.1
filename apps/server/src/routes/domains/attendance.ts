@@ -89,6 +89,30 @@ export function registerAttendanceRoutes(app: Express): void {
         context: { eventId, userId },
       });
 
+      // G0 P0 hardening (2026-11-10): an ops no-show override is the same
+      // eligibility event as a self-reported absence — the pair may not be
+      // revealed. Failure-isolated: the override itself already committed and
+      // the reveal eligibility predicate reads `attendance_status='absent'`
+      // directly, so this is cleanup, not the guard.
+      if (status === 'absent') {
+        try {
+          const { voidNoShowConnectionSelections } = await import(
+            "../../lib/connectionSelectionLifecycle"
+          );
+          await voidNoShowConnectionSelections({
+            blindBoxEventId: eventId,
+            userIds: [userId],
+            logPrefix: "[AdminAttendanceOverride]",
+          });
+        } catch (invalidateError) {
+          logger.warn("[AdminAttendanceOverride] no-show connection-selection void failed", {
+            eventId,
+            userId,
+            error: invalidateError instanceof Error ? invalidateError.message : String(invalidateError),
+          });
+        }
+      }
+
       // Broadcast the override
       const user = await storage.getUser(userId);
       const displayName = getUserDisplayName(user);

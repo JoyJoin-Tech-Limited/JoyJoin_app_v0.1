@@ -27,6 +27,8 @@ interface ExecutorSeed {
   groupRows?: Array<{ groupId: string }>;
   memberRows?: Array<{ userId: string }>;
   attendanceRows?: Array<{ userId: string }>;
+  /** `event_pool_groups` rows covering the event — drives the multi-table gate. */
+  tableRows?: Array<{ id: string }>;
 }
 
 function createExecutor(seed: ExecutorSeed) {
@@ -35,7 +37,6 @@ function createExecutor(seed: ExecutorSeed) {
   const executor = {
     select: () => ({
       from: (table: unknown) => {
-        const isRegistrationsTable = table !== eventAttendance;
         return {
           innerJoin: () => ({
             where: () => ({
@@ -46,12 +47,19 @@ function createExecutor(seed: ExecutorSeed) {
             }),
           }),
           where: async () => {
-            if (isRegistrationsTable) {
-              calls.push('members');
-              return seed.memberRows ?? [];
+            // `event_pool_groups` drives the table-count probe (P0 hardening);
+            // `event_attendance` stays the legacy fallback; everything else is
+            // the registrations table (member list).
+            if (table === eventPoolGroups) {
+              calls.push('tables');
+              return seed.tableRows ?? [];
             }
-            calls.push('attendance');
-            return seed.attendanceRows ?? [];
+            if (table === eventAttendance) {
+              calls.push('attendance');
+              return seed.attendanceRows ?? [];
+            }
+            calls.push('members');
+            return seed.memberRows ?? [];
           },
         };
       },
@@ -77,6 +85,7 @@ describe('getEventTableRoster', () => {
 
     expect(roster.source).toBe('pool_group');
     expect(roster.tableScoped).toBe(true);
+    expect(roster.scope).toBe('table');
     expect(roster.userIds.sort()).toEqual(['peer-1', 'viewer']);
     // The attendance table is never consulted once the group is known.
     expect(calls).not.toContain('attendance');
@@ -92,7 +101,94 @@ describe('getEventTableRoster', () => {
 
     expect(roster.source).toBe('event_attendance');
     expect(roster.tableScoped).toBe(false);
+    expect(roster.scope).toBe('event');
     expect(roster.userIds.sort()).toEqual(['peer-1', 'viewer']);
+  });
+
+  it('allows the same-event fallback on a SINGLE-table event (tableRows ≤ 1)', async () => {
+    const { executor, calls } = createExecutor({
+      groupRows: [],
+      tableRows: [{ id: 'group-only' }],
+      attendanceRows: [{ userId: 'viewer' }, { userId: 'peer-1' }],
+    });
+
+    const roster = await getEventTableRoster('event-1', 'viewer', { executor });
+
+    // One table means same-event == same-table, so the fallback is provably safe.
+    expect(roster.scope).toBe('event');
+    expect(roster.tableCount).toBe(1);
+    expect(roster.userIds.sort()).toEqual(['peer-1', 'viewer']);
+    expect(calls).toContain('tables');
+  });
+
+  it('fails CLOSED when the event has >1 table and the viewer group is unresolved', async () => {
+    const { executor } = createExecutor({
+      groupRows: [],
+      // Two tables: the viewer might be at either, so same-event attendance is
+      // not evidence of same-table membership.
+      tableRows: [{ id: 'group-1' }, { id: 'group-2' }],
+      attendanceRows: [{ userId: 'viewer' }, { userId: 'other-table-peer' }],
+    });
+
+    const roster = await getEventTableRoster('event-1', 'viewer', { executor });
+
+    expect(roster.userIds).toEqual([]);
+    expect(roster.scope).toBe('multi_table_unresolved');
+    expect(roster.tableCount).toBe(2);
+    expect(roster.tableScoped).toBe(false);
+  });
+
+  it('rejects every peer with multi_table_unresolved on a multi-table event', async () => {
+    const { executor } = createExecutor({
+      groupRows: [],
+      tableRows: [{ id: 'group-1' }, { id: 'group-2' }],
+      attendanceRows: [{ userId: 'viewer' }, { userId: 'peer-1' }],
+    });
+
+    const result = await validateTablemateSelection({
+      canonicalEventId: 'event-1',
+      viewerId: 'viewer',
+      peerIds: ['peer-1'],
+      route: 'PUT /api/events/:eventId/connection-selection',
+      executor,
+    });
+
+    expect(result.invalidPeerIds).toEqual(['peer-1']);
+    expect(result.reason).toBe('multi_table_unresolved');
+    expect(findInvalidTablemates(['peer-1'], result.roster)).toEqual(['peer-1']);
+    // Two warns: the roster-level fail-closed notice, then the selection gate.
+    const payload = loggerMock.warn.mock.calls.at(-1)?.[1] as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      roster_scope: 'multi_table_unresolved',
+      roster_table_count: 2,
+      rejection_reason: 'multi_table_unresolved',
+    });
+  });
+
+  it('accepts a same-table peer on a multi-table event when the group IS resolved', async () => {
+    const { executor } = createExecutor({
+      groupRows: [{ groupId: 'group-2' }],
+      tableRows: [{ id: 'group-1' }, { id: 'group-2' }],
+      memberRows: [{ userId: 'viewer' }, { userId: 'same-table-peer' }],
+      // A peer from the OTHER table is in the event-wide attendance list — it
+      // must never leak into the roster once the group is known.
+      attendanceRows: [{ userId: 'viewer' }, { userId: 'other-table-peer' }],
+    });
+
+    const result = await validateTablemateSelection({
+      canonicalEventId: 'event-1',
+      viewerId: 'viewer',
+      peerIds: ['same-table-peer'],
+      route: 'PUT /api/events/:eventId/connection-selection',
+      executor,
+    });
+
+    expect(result.invalidPeerIds).toEqual([]);
+    expect(result.reason).toBe('none');
+    expect(result.roster.scope).toBe('table');
+    expect(findInvalidTablemates(['other-table-peer'], result.roster)).toEqual([
+      'other-table-peer',
+    ]);
   });
 
   it('returns an empty roster for an unknown event (fail closed downstream)', async () => {

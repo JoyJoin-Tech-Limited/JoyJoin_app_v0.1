@@ -24,6 +24,7 @@ import {
   getConnectionSelectionWindow,
   getOwnSelectedPeerIds,
   replaceConnectionSelection,
+  applyConnectionSelectionsForEvent,
 } from "../../repositories/connectionSelectionRepo";
 import { validateTablemateSelection } from "../../repositories/eventTableRosterRepo";
 import { formatAge } from "@shared/utils";
@@ -553,7 +554,7 @@ export function registerSocialRoutes(app: Express): void {
       // states — accepting a stranger is a security defect, not a V2 product
       // behaviour — and runs before moderation/writes, like the cap and window.
       if (normalizedSelection.length > 0) {
-        const { invalidPeerIds } = await validateTablemateSelection({
+        const { invalidPeerIds, reason } = await validateTablemateSelection({
           canonicalEventId,
           viewerId: userId,
           peerIds: normalizedSelection,
@@ -563,6 +564,10 @@ export function registerSocialRoutes(app: Express): void {
           return res.status(400).json({
             code: "INVALID_TABLEMATE_SELECTION",
             message: "只能选择同桌的伙伴",
+            // Observability only — the client renders `code` alone. Distinguishes
+            // an ordinary out-of-table payload from the fail-closed multi-table
+            // case where the viewer's own table could not be resolved.
+            reason,
           });
         }
       }
@@ -677,17 +682,41 @@ export function registerSocialRoutes(app: Express): void {
       }
 
       if (normalizedSelection.length > 0) {
-        for (const selectedUserId of normalizedSelection) {
-          try {
-            await storage.upsertConnection(canonicalEventId, userId, selectedUserId, {
-              mutualSelectionV2Enabled,
-              revealAt: selectionWindow?.revealAt ?? null,
-            });
-            shellCache.invalidateUser(userId);
+        // Authoritative 0–5 cap (P0 hardening 2026-11-10): one transaction that
+        // takes the (user, event) advisory lock, re-reads the caller's persisted
+        // selections under it, and accepts peers in payload order only while the
+        // union stays ≤ 5. The route-level union check above is the cheap
+        // pre-check; a concurrent PUT or a second device can still beat it, and
+        // this is what actually holds the invariant. A cap-race rejection is
+        // logged inside the repo and is reflected in the response summary below
+        // (the client sees the real N/5, so nothing is silently lost).
+        try {
+          const batch = await applyConnectionSelectionsForEvent({
+            eventId: canonicalEventId,
+            callerId: userId,
+            peerIds: normalizedSelection,
+            mutualSelectionV2Enabled,
+            revealAt: selectionWindow?.revealAt ?? null,
+          });
+          // The submitter's own cache is invalidated unconditionally below.
+          for (const selectedUserId of batch.acceptedPeerIds) {
             shellCache.invalidateUser(selectedUserId);
-          } catch (connError) {
-            logger.error(`[Connections] Error upserting connection`, { from: userId, to: selectedUserId, error: String(connError) });
           }
+          if (batch.rejectedPeerIds.length > 0) {
+            logger.warn("[Connections] feedback selection capped at write time", {
+              eventId: canonicalEventId,
+              userId,
+              submitted_count: normalizedSelection.length,
+              accepted_count: batch.acceptedPeerIds.length,
+              rejected_count: batch.rejectedPeerIds.length,
+            });
+          }
+        } catch (connError) {
+          logger.error(`[Connections] Error persisting connection selections`, {
+            userId,
+            eventId: canonicalEventId,
+            error: String(connError),
+          });
         }
       }
 
@@ -860,7 +889,7 @@ export function registerSocialRoutes(app: Express): void {
       // POST, before any write. A peer outside the viewer's table is a coded 400
       // — never a silently-created `connections` row.
       if (normalizedSelection.length > 0) {
-        const { invalidPeerIds } = await validateTablemateSelection({
+        const { invalidPeerIds, reason } = await validateTablemateSelection({
           canonicalEventId,
           viewerId: userId,
           peerIds: normalizedSelection,
@@ -870,6 +899,7 @@ export function registerSocialRoutes(app: Express): void {
           return res.status(400).json({
             code: "INVALID_TABLEMATE_SELECTION",
             message: "只能选择同桌的伙伴",
+            reason,
           });
         }
       }

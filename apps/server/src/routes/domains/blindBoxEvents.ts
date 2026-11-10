@@ -310,6 +310,30 @@ export function registerBlindBoxEventRoutes(app: Express): void {
 
       await storage.updateAttendanceStatus(eventId, userId, normalizedStatus, normalizedEstimatedLateMinutes, normalizedAbsentReason);
 
+      // G0 P0 hardening (2026-11-10): a no-show is no longer a tablemate, so
+      // their connection-selection rows must not survive to the reveal. Runs
+      // after the status write (the reveal predicate reads the same column) and
+      // is failure-isolated: an absence marking must never 500 because a
+      // cleanup query failed.
+      if (normalizedStatus === 'absent') {
+        try {
+          const { voidNoShowConnectionSelections } = await import(
+            "../../lib/connectionSelectionLifecycle"
+          );
+          await voidNoShowConnectionSelections({
+            blindBoxEventId: eventId,
+            userIds: [userId],
+            logPrefix: "[AttendanceStatus]",
+          });
+        } catch (invalidateError) {
+          logger.warn("[AttendanceStatus] no-show connection-selection void failed", {
+            eventId,
+            userId,
+            error: invalidateError instanceof Error ? invalidateError.message : String(invalidateError),
+          });
+        }
+      }
+
       // Fetch user displayName for broadcast
       const user = await storage.getUser(userId);
       const displayName = getUserDisplayName(user);

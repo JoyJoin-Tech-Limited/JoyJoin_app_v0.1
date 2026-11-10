@@ -16,14 +16,16 @@
  *     `apps/mini-program/src/lib/navigation/notificationNavigation.ts` already
  *     maps to `switchTab(Connections)`. No client change required.
  *
- * Idempotency: the INSERT is `… SELECT … WHERE NOT EXISTS (same user + type +
- * related_resource_id)` for both recipients in ONE statement, keyed by the
- * connection id. A connection reveals exactly once, so (user, connection) is
- * also the reveal-day key — duplicate or overlapping scheduler ticks insert
- * nothing. No unique index is added here (that would need a migration and could
- * conflict with pre-existing duplicate legacy rows); the follow-up if multi-
- * replica double-sends ever matter is `UNIQUE (user_id, type,
- * related_resource_id)` on `notifications`.
+ * Idempotency (P0 hardening, 2026-11-10): two layers, both inside the INSERT.
+ *
+ *   1. `WHERE NOT EXISTS (same user + type + related_resource_id)` — cheap, and
+ *      keeps a duplicate scheduler tick from even attempting the row.
+ *   2. `ON CONFLICT DO NOTHING` — the authoritative cross-process guard. Two
+ *      replicas sweeping the same reveal window can both pass layer 1 (it is a
+ *      non-locking read) and both attempt the insert; the partial unique index
+ *      `notifications_mutual_match_user_resource_uidx`
+ *      (migration `0102_notification_mutual_match_dedupe.sql`) makes exactly
+ *      one of them win and the other a silent no-op.
  *
  * Fail-open: one broken connection (or a missing `notifications` row target)
  * must never abort the sweep — it is logged and the next tick retries the rest.
@@ -108,6 +110,7 @@ export async function notifyRevealedConnections(
             AND n.type = ${CONNECTION_REVEAL_NOTIFICATION.type}
             AND n.related_resource_id = ${connectionId}
         )
+        ON CONFLICT DO NOTHING
         RETURNING id
       `);
 

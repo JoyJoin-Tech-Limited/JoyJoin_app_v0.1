@@ -7,16 +7,22 @@
  * unreadable and no surface lists the pair, so a stalled sweep delays the
  * reveal but never leaks it.
  *
- * One tick does three bounded things, in order:
- *   1. reveal sweep      — `finalizeConnectionReveals()` (idempotent UPDATE);
- *   2. reveal fan-out     — one in-app `mutual_match` notification per side
+ * One tick does four bounded things, in order:
+ *   1. reveal sweep      — `finalizeConnectionReveals()` (idempotent UPDATE,
+ *                          gated by the seat-eligibility predicate so a
+ *                          refunded / cancelled / no-show peer is never
+ *                          revealed);
+ *   2. expiry            — `expireIneligibleRevealSelections()` deletes the due
+ *                          pairs step 1 skipped, so an unhonourable selection
+ *                          expires instead of lingering in 待揭晓;
+ *   3. reveal fan-out     — one in-app `mutual_match` notification per side
  *                          (`lib/connectionRevealNotifications.ts`), deduped by
  *                          (user, connection) so a duplicate tick cannot
  *                          double-send;
- *   3. retention cleanup  — hard-delete non-mutual rows whose reveal window
+ *   4. retention cleanup  — hard-delete non-mutual rows whose reveal window
  *                          closed > 30 days ago
  *                          (`purgeClosedConnectionSelections`, bounded batch).
- * Steps 2 and 3 are individually fail-open: a notification or cleanup failure
+ * Steps 2–4 are individually fail-open: a notification or cleanup failure
  * is logged and retried next tick, and never rolls back the reveal itself.
  *
  * Kill switch: `mutualSelectionV2Enabled`. Flag OFF ⇒ every tick returns
@@ -32,6 +38,7 @@
 import { getFeatureFlag } from "./featureFlags";
 import { logger } from "./logger";
 import {
+  expireIneligibleRevealSelections,
   finalizeConnectionReveals,
   purgeClosedConnectionSelections,
 } from "../repositories/connectionSelectionRepo";
@@ -49,6 +56,8 @@ export interface ConnectionRevealTickResult {
   revealed: number;
   /** In-app notifications inserted for the pairs revealed this tick. */
   notifiedUsers: number;
+  /** Due `mutual_pending` rows dropped because a side was no longer seated. */
+  expired: number;
   /** Non-mutual selection rows purged past their 30-day retention. */
   cleaned: number;
   /** True when a previous tick was still running (no-op). */
@@ -62,7 +71,7 @@ export async function runConnectionRevealTick(
   now: Date = new Date(),
 ): Promise<ConnectionRevealTickResult> {
   if (inFlight) {
-    return { enabled: true, revealed: 0, notifiedUsers: 0, cleaned: 0, skipped: true };
+    return { enabled: true, revealed: 0, notifiedUsers: 0, expired: 0, cleaned: 0, skipped: true };
   }
 
   // Claim the slot BEFORE the first await: the flag lookup is itself async, so
@@ -73,7 +82,7 @@ export async function runConnectionRevealTick(
   try {
     enabled = await getFeatureFlag("mutualSelectionV2Enabled");
     if (!enabled) {
-      return { enabled: false, revealed: 0, notifiedUsers: 0, cleaned: 0, skipped: false };
+      return { enabled: false, revealed: 0, notifiedUsers: 0, expired: 0, cleaned: 0, skipped: false };
     }
 
     const result = await finalizeConnectionReveals({ now });
@@ -82,6 +91,19 @@ export async function runConnectionRevealTick(
       logger.info("[Connections] reveal sweep flipped mutual_pending rows", {
         revealed: result.revealed,
         reveal_at_through: now.toISOString(),
+      });
+    }
+
+    // Expire the due pairs the eligibility predicate rejected (a peer who was
+    // refunded / cancelled / marked absent). Isolated like the other steps: a
+    // failure here leaves the rows for the next tick (and the 30-day purge).
+    let expired = 0;
+    try {
+      const expiredResult = await expireIneligibleRevealSelections({ now });
+      expired = expiredResult.expired;
+    } catch (expireError) {
+      logger.warn("[Connections] ineligible reveal expiration failed", {
+        error: expireError instanceof Error ? expireError.message : String(expireError),
       });
     }
 
@@ -114,12 +136,12 @@ export async function runConnectionRevealTick(
       });
     }
 
-    return { enabled: true, revealed: result.revealed, notifiedUsers, cleaned, skipped: false };
+    return { enabled: true, revealed: result.revealed, notifiedUsers, expired, cleaned, skipped: false };
   } catch (error) {
     logger.warn("[Connections] reveal sweep failed; retrying next tick", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { enabled, revealed: 0, notifiedUsers: 0, cleaned: 0, skipped: false };
+    return { enabled, revealed: 0, notifiedUsers: 0, expired: 0, cleaned: 0, skipped: false };
   } finally {
     inFlight = false;
   }

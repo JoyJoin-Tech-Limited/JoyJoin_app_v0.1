@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { connections, events, users, connectionSelectionWindows } from '@shared/schema';
 
@@ -50,6 +51,7 @@ import {
   CONNECTION_SELECTION_CLEANUP_BATCH_LIMIT,
   CONNECTION_SELECTION_RETENTION_DAYS,
   decideSelectionWithdrawal,
+  expireIneligibleRevealSelections,
   finalizeConnectionReveals,
   getConnectionSelectionWindow,
   getOwnPendingReveal,
@@ -454,7 +456,10 @@ describe('purgeClosedConnectionSelections statement guards', () => {
     path.resolve(TEST_DIR, '../repositories/connectionSelectionRepo.ts'),
     'utf8',
   );
-  const start = SOURCE.indexOf('DELETE FROM connections');
+  // Anchor on the id-subquery form: the ineligible-reveal expiry statement also
+  // starts with `DELETE FROM connections`, so a bare indexOf would grab the
+  // wrong statement after the G0 P0 hardening.
+  const start = SOURCE.indexOf('DELETE FROM connections\n    WHERE id IN (');
   const statement = SOURCE.slice(start, SOURCE.indexOf('RETURNING id', start));
 
   it('never deletes a revealed mutual connection', () => {
@@ -639,6 +644,77 @@ describe('purgeClosedConnectionSelections', () => {
     expect(captured[0]).toContain('LIMIT 1');
     expect(captured[1]).toContain('LIMIT 5000');
     expect(CONNECTION_SELECTION_CLEANUP_BATCH_LIMIT).toBe(500);
+  });
+});
+
+// ── reveal eligibility (P0 hardening, 2026-11-10) ──────────────────────────
+
+const dialect = new PgDialect();
+
+function captureStatements(rows: unknown[] = []) {
+  const captured: any[] = [];
+  const execute = vi.fn(async (statement: any) => {
+    captured.push(statement);
+    return { rows };
+  });
+  return { execute, captured };
+}
+
+describe('finalizeConnectionReveals — seat eligibility gate', () => {
+  it('only reveals a pair whose BOTH sides still hold a seat', async () => {
+    const { execute, captured } = captureStatements();
+
+    await finalizeConnectionReveals({ now: REVEAL_AT, executor: { execute } as any });
+
+    const text = dialect.sqlToQuery(captured[0]).sql.toLowerCase();
+
+    // Pool-derived events: both users must still be matched/completed in THIS
+    // group, and the owning pool must not be cancelled/archived.
+    expect(text).toContain('from event_pool_registrations');
+    expect(text).toContain("match_status in ('matched', 'completed')");
+    expect(text).toContain("p.status in ('cancelled', 'archived')");
+    // Legacy events: a cancelled seat or a no-show (absent) blocks the reveal.
+    expect(text).toContain('from event_attendance');
+    expect(text).toContain("a.status = 'cancelled'");
+    expect(text).toContain("attendance_status = 'absent'");
+    // Both user sides are checked, not just one.
+    expect(text).toContain('r.user_id = connections.user_a_id');
+    expect(text).toContain('r.user_id = connections.user_b_id');
+  });
+
+  it('keeps the due/unrevealed guards alongside the eligibility gate', async () => {
+    const { execute, captured } = captureStatements();
+
+    await finalizeConnectionReveals({ now: REVEAL_AT, executor: { execute } as any });
+
+    const text = dialect.sqlToQuery(captured[0]).sql.toLowerCase();
+    expect(text).toContain("where status = 'mutual_pending'");
+    expect(text).toContain('and revealed_at is null');
+    expect(text).toContain('and reveal_at <= ');
+  });
+
+  it('expires the pairs it skipped instead of notifying them', async () => {
+    const { execute, captured } = captureStatements([{ id: 'c1' }, { id: 'c2' }]);
+
+    const result = await expireIneligibleRevealSelections({
+      now: REVEAL_AT,
+      executor: { execute } as any,
+    });
+
+    const text = dialect.sqlToQuery(captured[0]).sql.toLowerCase();
+    // Delete only the due, still-waiting rows the eligibility gate rejected.
+    expect(text).toContain("where status = 'mutual_pending'");
+    expect(text).toContain('and reveal_at <= ');
+    expect(text).toContain('and not (');
+    expect(result.expired).toBe(2);
+  });
+
+  it('is a no-op when nothing is due', async () => {
+    const { execute } = captureStatements([]);
+
+    await expect(
+      expireIneligibleRevealSelections({ now: REVEAL_AT, executor: { execute } as any }),
+    ).resolves.toEqual({ expired: 0 });
   });
 });
 

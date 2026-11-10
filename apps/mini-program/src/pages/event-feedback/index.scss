@@ -98,6 +98,29 @@
     margin-top: -$spacing-xs;
   }
 
+  // Persistent 409 window-closed notice (UIUX P1, 2026-11-10). The toast is
+  // transient; a failed save that leaves no trace reads as success. Quiet warm
+  // surface, top-of-screen, states the outcome in words.
+  &__selection-blocked {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-warning, 0.1);
+  }
+
+  &__selection-blocked-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-primary;
+    text-align: left;
+  }
+
   // Exit ramp (2026-10-16 #19): primary CTA carries the connection intent to
   // the 连接 tab; 返回 demoted to a quiet ghost.
   &__success-actions {
@@ -432,13 +455,24 @@
   // Batch C item 9: memory anchors — visibility-gated meta (age band ·
   // gender · industry, same server-gated data path as the wrap-up rows) and
   // the self-selected social identity tag, centered under the name.
+  //
+  // UIUX P1 (2026-11-10): at the 2-column tile's inner width the three-field
+  // meta (「95后 · 女性 · 内容创作」) ellipsized the industry anchor. It now
+  // wraps to a second line instead, with the two-line box height RESERVED so
+  // the grid rhythm is identical on every card. All three fields are kept.
   &__participant-meta {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
     font-size: $font-size-xs;
     color: $color-text-tertiary-on-light;
+    width: 100%;
     max-width: 100%;
-    white-space: nowrap;
+    line-height: 1.4;
+    min-height: $font-size-xs * 1.4 * 2;
+    text-align: center;
     overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
 
   &__participant-socialtag {
@@ -506,6 +540,29 @@
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
     color: $color-text-secondary-on-light;
+  }
+
+  // G0 replace-mode caution (UIUX P1, 2026-11-10): its own quiet row — tinted,
+  // left-aligned, 24rpx clear of the CTA below. The old version reused the
+  // count-chip typography with no margin, so a destructive warning read as a
+  // caption glued to the button. Neutral tint; never red-alarm styling (the
+  // overwrite is a heads-up, not an error).
+  &__footer-notice {
+    display: flex;
+    align-items: flex-start;
+    padding: $spacing-sm $spacing-md;
+    margin-bottom: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+  }
+
+  &__footer-notice-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+    text-align: left;
   }
 
   &__empty-participants {
@@ -649,6 +706,27 @@
     background: transparent;
     border: 2rpx solid $color-border;
     color: $color-text-primary;
+  }
+
+  // Single-CTA footer scope (UIUX P0, 2026-11-10): the guard above only
+  // matched `__footer-row`, but the connections step (and several other steps)
+  // render the CTA directly inside `__footer` — there the platform disabled
+  // colour still won at ~1.5:1. Same palette re-assert, footer scope (0,3,0).
+  &__footer .event-feedback__submit[disabled] {
+    background: $color-primary;
+    color: $color-text-white;
+  }
+
+  // Busy save must read ALIVE (UIUX P0, 2026-11-10). Taro H5 renders
+  // `disabled="false"` as a real attribute, so the `[disabled]` opacity rule
+  // above (and any platform disabled colour) still matches a busy CTA — the
+  // measured result was opacity 0.5, i.e. the ~1.5:1 「正在保存…」 label this
+  // fixes. An ancestor-scoped class rule (0,3,0) outranks both and pins the
+  // solid primary fill at full opacity.
+  &__footer .event-feedback__submit--busy {
+    background: $color-primary;
+    color: $color-text-white;
+    opacity: 1;
   }
 
   // Why-we-ask hint (2026-08-15 merge): one quiet line under the progress dots

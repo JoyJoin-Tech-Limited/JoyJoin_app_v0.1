@@ -413,6 +413,36 @@ async function refundPoolPaidRegistrations(
     }
   }
 
+  // G0 P0 hardening (2026-11-10): a refunded seat is no longer a tablemate.
+  // Void every non-mutual selection row that involves one of the refunded users
+  // so the reveal sweep cannot honour a pairing with someone whose seat was
+  // never allocated (Trigger B) or whose group collapsed. The window stays OPEN
+  // for the rest of the table — only these users drop out.
+  //
+  // Deliberately outside the money loop and failure-isolated: a cleanup error
+  // must never classify a successful refund as failed. The reveal eligibility
+  // predicate is the fail-closed layer if this never runs.
+  if (unmatchedUserIds && unmatchedUserIds.size > 0) {
+    try {
+      const { voidConnectionSelectionsForUsers } = await import("../lib/connectionSelectionLifecycle");
+      await voidConnectionSelectionsForUsers({
+        poolId,
+        userIds: [...unmatchedUserIds],
+        // Both Trigger B and the collapse path leave the user without a seat;
+        // `seat_not_allocated` is the honest, shared vocabulary (REFUND_CONTEXTS
+        // .seat_not_allocated / .collapsed both mean "no seat for you").
+        reason: "seat_not_allocated",
+      });
+    } catch (invalidateError) {
+      logger.warn("[AutoRefund] connection-selection void failed for refunded users", {
+        poolId,
+        context,
+        refunded_users: unmatchedUserIds.size,
+        error: invalidateError instanceof Error ? invalidateError.message : String(invalidateError),
+      });
+    }
+  }
+
   // AC-W2.5: notify EVERY unmatched user, on every payment path. The money and
   // credit loops above only reach paid / credit-covered registrations —
   // subscription-covered and free registrations produce no payment row and no
@@ -488,6 +518,22 @@ export async function refundPoolCancellation(
   poolId: string,
   poolTitle: string,
 ): Promise<AutoRefundSummary> {
+  // G0 P0 hardening (2026-11-10): the whole event is dead, so the 24h 互选 round
+  // ends with it. Idempotent + monotone, so the admin route having already done
+  // this is a no-op. Runs BEFORE the refund pipeline (which early-returns when
+  // `autoRefundEnabled` is off) so an ops/script caller can never leave a live
+  // selection window behind. Failure is logged, never fatal: the reveal
+  // eligibility predicate is the fail-closed layer.
+  try {
+    const { invalidateConnectionSelections } = await import("../lib/connectionSelectionLifecycle");
+    await invalidateConnectionSelections({ poolId, reason: "pool_cancelled" });
+  } catch (error) {
+    logger.error("[AutoRefund] connection-selection invalidation failed on pool cancel", {
+      poolId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   const summary = await refundPoolPaidRegistrations(poolId, poolTitle, "pool_cancelled");
   await sendSummary(poolId, summary);
   return summary;

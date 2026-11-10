@@ -108,14 +108,31 @@ export function registerEventFeedbackGenerators(ctx) {
   } = ctx
 
   const VIEWPORT = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }
+  // G0 edit-mode captures use a taller frame: the 3-row roster already sits at
+  // the page flex column's edge, and the edit footer (notice row + CTA) must be
+  // in frame to review the CTA colour/label fix.
+  const TALL_VIEWPORT = { viewport: { width: 390, height: 1000 }, deviceScaleFactor: 2 }
 
-  async function mockFeedbackApi(page, { mutualMatches = [] } = {}) {
+  async function mockFeedbackApi(
+    page,
+    { mutualMatches = [], feedbackState = { state: 'open' }, putResponse } = {},
+  ) {
     await page.route('**/api/events/*/feedback-state', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ state: 'open' }),
+        body: JSON.stringify(feedbackState),
       }))
+
+    await page.route('**/api/events/*/connection-selection', (route) => {
+      if (route.request().method() !== 'PUT') return route.fallback()
+      if (putResponse?.pending) return // hold the request open (busy CTA capture)
+      return route.fulfill({
+        status: putResponse?.status ?? 200,
+        contentType: 'application/json',
+        body: JSON.stringify(putResponse?.body ?? {}),
+      })
+    })
 
     await page.route('**/api/events/*/participants', (route) =>
       route.fulfill({
@@ -186,8 +203,10 @@ export function registerEventFeedbackGenerators(ctx) {
     await clearAndSeedStorage(page)
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
     // Cold browser contexts + full H5 boot occasionally exceed the 10s default;
-    // give the first meaningful paint a generous budget.
-    await waitForContent(page, '.rating-face__row', 30000)
+    // give the first meaningful paint a generous budget. Submitted-state
+    // journeys (G0 edit re-entry) skip the form entirely — they wait on the
+    // revealed screen instead.
+    await waitForContent(page, options.waitFor ?? '.rating-face__row', 30000)
     // H5-renderer neutralizer: taro-image-core positions its inner <img> with
     // `left: 50%` but the compensating translate never lands in the H5
     // emulation, so every Image paints shifted right by exactly half a box
@@ -381,7 +400,7 @@ export function registerEventFeedbackGenerators(ctx) {
     }))
 
   // One participant selected: shows the archetype-accent ring, the 4rpx lift,
-  // the「已选 N 位」count pill and the morphed CTA「已选 1 人，下一步」.
+  // the「已选 N 位」count pill and the morphed CTA「已选 1 位，下一步」.
   register('event-feedback-connections-selected', () =>
     withBrowserPage(VIEWPORT, async (page) => {
       await openFeedbackPage(page)
@@ -570,11 +589,146 @@ export function registerEventFeedbackGenerators(ctx) {
         () =>
           !document.querySelector('.event-feedback__remedy-card') &&
           !document.querySelector('.event-feedback__success-secondary') &&
-          (document.body.textContent || '').includes('连接里第一时间见'),
+          (document.body.textContent || '').includes('互选揭晓后在连接里见'),
         undefined,
         { timeout: 10000 },
       )
       await page.waitForTimeout(900)
+      return page.screenshot({ fullPage: false })
+    }))
+
+  // ─── G0 selection-edit surfaces (UIUX review, 2026-11-10) ───────────────
+  // Re-entry state: the GET reports `submitted` + an open window, so the
+  // revealed screen offers 修改选择 and the step re-opens prefilled. These
+  // captures exist to prove the P1 fixes on the step itself: no step framing,
+  // the overwrite caution is its own row, and the CTA label survives
+  // busy/disabled (the platform disabled colour must not eat it).
+  async function openSelectionEdit(page, { replace = false, putResponse } = {}) {
+    await openFeedbackPage(page, {
+      wechatContactId: 'joyjoin_lucky',
+      waitFor: '.event-feedback__success-back',
+      feedbackState: {
+        state: 'submitted',
+        connectionSelection: {
+          state: 'open',
+          // replace mode = the same count with NO ids (a legacy/partial payload)
+          selectedCount: 3,
+          selectedUserIds: replace ? [] : ['ef-seed-1', 'ef-seed-3'],
+          revealAt: '2026-11-11T13:00:00.000Z',
+        },
+      },
+      putResponse,
+    })
+    await waitForContent(page, '.event-feedback__success-back')
+    await page.getByText('修改选择', { exact: true }).click()
+    await waitForContent(page, '.event-feedback__participant-item')
+    await page.addStyleTag({
+      content: [
+        '.event-feedback__participant-item .archetype-head { width: 58px !important; height: 58px !important; }',
+        '.event-feedback__participant-item .archetype-head__image { width: 53px !important; height: 53px !important; }',
+      ].join('\n'),
+    })
+    await page.waitForTimeout(400)
+  }
+
+  register('event-feedback-selection-edit', () =>
+    withBrowserPage(TALL_VIEWPORT, async (page) => {
+      await openSelectionEdit(page)
+      await page.waitForFunction(
+        () => {
+          const cta = document.querySelector('.event-feedback__submit')
+          if (!cta) return false
+          const style = getComputedStyle(cta)
+          return (
+            !document.querySelector('.event-feedback__title') &&
+            document.querySelectorAll('.event-feedback__progress-dot').length === 0 &&
+            (cta.textContent || '').includes('保存修改') &&
+            // The idle edit CTA must not inherit the disabled dim (Taro H5
+            // would emit `disabled="false"` if the prop were passed as false).
+            !cta.hasAttribute('disabled') &&
+            style.opacity === '1'
+          )
+        },
+        undefined,
+        { timeout: 10000 },
+      )
+      await page.waitForTimeout(600)
+      return page.screenshot({ fullPage: false })
+    }))
+
+  // Busy save: the PUT is held open, so the CTA renders 「正在保存…」 with the
+  // native disabled attribute OFF and the solid primary fill.
+  register('event-feedback-selection-edit-saving', () =>
+    withBrowserPage(TALL_VIEWPORT, async (page) => {
+      await openSelectionEdit(page, { putResponse: { pending: true } })
+      await page.locator('.event-feedback__submit').click()
+      await page.waitForFunction(
+        () => {
+          const cta = document.querySelector('.event-feedback__submit')
+          if (!cta) return false
+          const style = getComputedStyle(cta)
+          return (
+            (cta.textContent || '').includes('正在保存') &&
+            cta.getAttribute('aria-busy') === 'true' &&
+            // The label must stay solid: H5 emits `disabled="false"` as a real
+            // attribute, so the [disabled] opacity rule would otherwise match.
+            style.opacity === '1' &&
+            style.backgroundColor === 'rgb(139, 92, 246)'
+          )
+        },
+        undefined,
+        { timeout: 10000 },
+      )
+      await page.waitForTimeout(400)
+      return page.screenshot({ fullPage: false })
+    }))
+
+  // Replace mode: nothing prefilled, the overwrite caution is its own row, and
+  // the CTA is genuinely blocked (native disabled + palette re-assert).
+  register('event-feedback-selection-edit-replace', () =>
+    withBrowserPage(TALL_VIEWPORT, async (page) => {
+      await openSelectionEdit(page, { replace: true })
+      await page.waitForFunction(
+        () => {
+          const notice = document.querySelector('.event-feedback__footer-notice')
+          const cta = document.querySelector('.event-feedback__submit')
+          const color = cta ? getComputedStyle(cta).backgroundColor : ''
+          return (
+            !!notice &&
+            (cta?.textContent || '').includes('重新选择') &&
+            cta?.hasAttribute('disabled') === true &&
+            color === 'rgb(139, 92, 246)'
+          )
+        },
+        undefined,
+        { timeout: 10000 },
+      )
+      await page.waitForTimeout(400)
+      return page.screenshot({ fullPage: false })
+    }))
+
+  // 409 window-closed: the toast fades, so the revealed screen must keep the
+  // persistent 「这次修改没有保存」 notice.
+  register('event-feedback-selection-window-closed', () =>
+    withBrowserPage(TALL_VIEWPORT, async (page) => {
+      await openSelectionEdit(page, {
+        putResponse: {
+          status: 409,
+          body: { code: 'SELECTION_WINDOW_CLOSED', message: '本轮互选已经结束' },
+        },
+      })
+      await page.locator('.event-feedback__submit').click()
+      await page.waitForFunction(
+        () => {
+          const notice = document.querySelector('.event-feedback__selection-blocked-text')
+          return (notice?.textContent || '').includes('这次修改没有保存')
+        },
+        undefined,
+        { timeout: 10000 },
+      )
+      // Let the transient toast (2s) clear so the capture shows the PERSISTENT
+      // notice — the whole point of this state.
+      await page.waitForTimeout(2600)
       return page.screenshot({ fullPage: false })
     }))
 }

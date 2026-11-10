@@ -74,6 +74,11 @@ export default function ConnectionsPage() {
     ? connectionsData
     : ((shellData?.connections as Connection[] | undefined) ?? [])
   const pendingReveal = shellData?.pendingReveal ?? null
+  // UIUX P1 (2026-11-10): a counted pending reveal is NOT an empty state —
+  // something is provably waiting. The editorial 「新的连接，从一场活动开始」
+  // block (plus the 3-step flow card) contradicted the card above it.
+  const pendingRevealCount = pendingReveal?.count ?? 0
+  const hasPendingReveal = pendingRevealCount > 0
 
   // G0: count-only pending-reveal exposure. Fire once per mount when the
   // server-confirmed card actually renders; never send identities or counts of
@@ -117,10 +122,10 @@ export default function ConnectionsPage() {
           </View>
         ) : (
           <>
-            {pendingReveal && pendingReveal.count > 0 ? (
+            {hasPendingReveal ? (
               <ConnectionPendingCard
-                count={pendingReveal.count}
-                revealAtLabel={formatConnectionRevealLabel(pendingReveal.revealAt)}
+                count={pendingRevealCount}
+                revealAtLabel={formatConnectionRevealLabel(pendingReveal?.revealAt)}
                 className='connections-page__pending-reveal'
               />
             ) : null}
@@ -194,6 +199,14 @@ export default function ConnectionsPage() {
               </View>
             </Card>
               ))
+            ) : hasPendingReveal ? (
+              // Pending-only state: the card above already states the count and
+              // the reveal moment; one quiet line explains where the result
+              // will appear. The editorial empty state + flow card stay out —
+              // they would tell the user nothing is happening.
+              <Text className='connections-page__pending-hint'>
+                揭晓后，互选成功的同桌会出现在这里
+              </Text>
             ) : (
               <View className='connections-page__empty-state'>
             <XiaoyueEmptyState

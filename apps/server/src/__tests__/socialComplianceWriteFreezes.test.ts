@@ -51,7 +51,11 @@ describe('social compliance chat boundary', () => {
     expect(handler).not.toContain('connections: []');
     expect(handler).not.toContain('mutualMatches: []');
     expect(handler).toContain('storage.updateUserWechatId(');
-    expect(handler).toContain('storage.upsertConnection(');
+    // G0 P0 hardening (2026-11-10): the selection write moved from a per-peer
+    // `storage.upsertConnection()` loop to the cap-enforcing, advisory-locked
+    // batch writer. The compliance intent is unchanged — the handler still
+    // persists the contact-exchange selections instead of freezing them.
+    expect(handler).toContain('applyConnectionSelectionsForEvent(');
     expect(handler).toContain('storage.getMutualConnections(');
     expect(handler).toContain('storage.createNotification(');
   });

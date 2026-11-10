@@ -423,6 +423,29 @@ export function registerAdminEventPoolRoutes(app: Express): void {
 
         // WeCom notification when pool is cancelled
         if (pool.status === "cancelled") {
+          // Connection-selection invalidation (G0 P0 hardening, 2026-11-10):
+          // an admin cancel must close the 24h 互选 window and void every
+          // non-mutual selection for the pool's tables IMMEDIATELY, before the
+          // reveal sweep could turn a cancelled event into a delivered
+          // connection. Awaited (not fire-and-forget) so the window is already
+          // closed when this response lands; a failure is logged rather than
+          // 500-ing the cancel — the reveal eligibility predicate in
+          // `connectionSelectionRepo` is the fail-closed layer.
+          try {
+            const { invalidateConnectionSelections } = await import(
+              "../../lib/connectionSelectionLifecycle"
+            );
+            await invalidateConnectionSelections({
+              poolId: pool.id,
+              reason: "pool_cancelled",
+            });
+          } catch (invalidateError) {
+            logger.error("Failed to invalidate connection selections on pool cancel", {
+              poolId: pool.id,
+              error: String(invalidateError),
+            });
+          }
+
           void (async () => {
             try {
               const adminId = getActingAdminId(req);

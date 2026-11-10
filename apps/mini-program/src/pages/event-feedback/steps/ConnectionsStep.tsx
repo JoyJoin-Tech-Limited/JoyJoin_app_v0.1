@@ -49,6 +49,12 @@ export interface ConnectionsStepProps {
   errorMessage?: string
   /** Edit-mode escape hatch — returns to the read-only post-submit state. */
   onCancelEdit?: () => void
+  /**
+   * Edit mode re-enters the connections step inside an already-submitted flow:
+   * the step framing (「想继续了解谁？」 title + progress dots) would re-stage it
+   * as a new step. Hidden while editing — the card title + 保存修改 CTA carry it.
+   */
+  hideStepFraming?: boolean
 }
 
 export default function ConnectionsStep({
@@ -66,25 +72,28 @@ export default function ConnectionsStep({
   noticeMessage,
   errorMessage,
   onCancelEdit,
+  hideStepFraming = false,
 }: ConnectionsStepProps) {
   const selectedCount = selectedConnections.length
-  const defaultSubmitLabel = selectedCount > 0 ? `已选 ${selectedCount} 人，下一步` : '下一步'
+  const defaultSubmitLabel = selectedCount > 0 ? `已选 ${selectedCount} 位，下一步` : '下一步'
   const primaryLabel = isSaving ? '正在保存…' : submitLabel ?? defaultSubmitLabel
-  const countSuffix = selectedCount > 0 ? `，已选 ${selectedCount} 人` : ''
+  const countSuffix = selectedCount > 0 ? `，已选 ${selectedCount} 位` : ''
   const primaryAriaLabel = isSaving
     ? '正在保存'
     : submitLabel
       ? `${submitLabel}${countSuffix}${submitDisabled ? '，请先选择同桌' : ''}`
       : selectedCount > 0
-        ? `已选 ${selectedCount} 人，进入下一步`
+        ? `已选 ${selectedCount} 位，进入下一步`
         : '进入下一步'
 
   return (
     <View className='event-feedback'>
-      <View className='event-feedback__header'>
-        <Text className='event-feedback__title'>想继续了解谁？</Text>
-        {progressDots}
-      </View>
+      {!hideStepFraming ? (
+        <View className='event-feedback__header'>
+          <Text className='event-feedback__title'>想继续了解谁？</Text>
+          {progressDots}
+        </View>
+      ) : null}
 
       <ScrollView className='event-feedback__deep-scroll' scrollY enhanced showScrollbar={false}>
         {/* Batch C item 6: same scroll-inner centering grammar as the wechat
@@ -203,10 +212,13 @@ export default function ConnectionsStep({
           </View>
         )}
         {/* Replace-mode caution (G0 re-entry): the old selection is invisible
-            before reveal, so the save overwrites it wholesale. Neutral tone —
-            reuses the shared hint style, no new selectors. */}
+            before reveal, so the save overwrites it wholesale. Its own quiet
+            row (UIUX P1, 2026-11-10) — reusing the count-chip text made it read
+            as a caption glued to the CTA. Neutral tint, no red alarm. */}
         {noticeMessage ? (
-          <Text className='event-feedback__selection-count-text'>{noticeMessage}</Text>
+          <View className='event-feedback__footer-notice'>
+            <Text className='event-feedback__footer-notice-text'>{noticeMessage}</Text>
+          </View>
         ) : null}
         {/* Edit-mode server error (G0): coded copy from the PUT, announced once.
             Reuses the shared error-text style — no new selectors. */}
@@ -215,10 +227,22 @@ export default function ConnectionsStep({
             <Text className='event-feedback__wechat-field-error'>{errorMessage}</Text>
           </View>
         ) : null}
+        {/* CTA label contrast (UIUX P0, 2026-11-10): the native `disabled`
+            attribute is reserved for the GENUINE replace-mode block and is
+            omitted entirely otherwise (`|| undefined`) — Taro renders an
+            explicit `disabled={false}` as `disabled="false"`, which still
+            matches `[disabled]` in CSS and dimmed the normal CTA to 0.5 in H5.
+            Busy is a JS guard + aria-disabled/aria-busy, with the solid fill
+            re-asserted in SCSS as the platform-colour backstop. */}
         <Button
-          className='event-feedback__submit'
-          onClick={onNext}
-          disabled={isSaving || submitDisabled}
+          className={`event-feedback__submit${isSaving ? ' event-feedback__submit--busy' : ''}`}
+          onClick={() => {
+            if (isSaving || submitDisabled) return
+            onNext()
+          }}
+          disabled={submitDisabled || undefined}
+          aria-disabled={isSaving || submitDisabled}
+          aria-busy={isSaving}
           ariaLabel={primaryAriaLabel}
         >
           {primaryLabel}

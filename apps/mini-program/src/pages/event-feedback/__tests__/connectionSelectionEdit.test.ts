@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 import {
   buildConnectionSelectionEditRequest,
   buildReplaceSelectionWarning,
+  buildSelectionAnticipationLine,
   buildSelectionEditedMetadata,
   buildSelectionUpdatedNotice,
+  buildSelectionWindowClosedNotice,
   formatRevealMomentLabel,
   isConnectionSelectionEditable,
   readEditableSelectionIds,
   resolveSelectionEditError,
   resolveSelectionEditMode,
+  shouldShowSelectionAnticipation,
 } from '../connectionSelectionEdit'
 
 // G0 24h mutual-selection edit surface (2026-11-10). These locks cover the
@@ -190,5 +193,44 @@ describe('post-save confirmation copy', () => {
   it('ignores an unparseable reveal instant', () => {
     expect(formatRevealMomentLabel('not-a-date')).toBe('')
     expect(buildSelectionUpdatedNotice('not-a-date')).toBe('选择已更新。明天回来看看。')
+  })
+})
+
+describe('revealed-screen reveal promise (UIUX P1, 2026-11-10)', () => {
+  it('uses the same server reveal instant as the edit save', () => {
+    expect(buildSelectionAnticipationLine('2026-11-11T13:00:00.000Z')).toBe(
+      '你选的人，如果也选了你，11月11日 21:00 在连接里见',
+    )
+  })
+
+  it('never invents a timing when the server sent none', () => {
+    const line = buildSelectionAnticipationLine(null)
+    expect(line).toBe('你选的人，如果也选了你，互选揭晓后在连接里见')
+    // The retired hardcoded promise must not come back, and no clock may leak.
+    expect(line).not.toContain('第一时间')
+    expect(line).not.toMatch(/\d{1,2}:\d{2}/)
+    expect(buildSelectionAnticipationLine('not-a-date')).toBe(line)
+  })
+
+  it('hides the anticipation once the window is closed (reveal already settled)', () => {
+    expect(shouldShowSelectionAnticipation({ state: 'closed' })).toBe(false)
+    expect(shouldShowSelectionAnticipation({ state: 'open' })).toBe(true)
+    expect(shouldShowSelectionAnticipation({ state: 'not_open' })).toBe(true)
+    // Legacy payloads (no summary at all) keep the pre-G0 line.
+    expect(shouldShowSelectionAnticipation(null)).toBe(true)
+    expect(shouldShowSelectionAnticipation(undefined)).toBe(true)
+    expect(shouldShowSelectionAnticipation({})).toBe(true)
+  })
+
+  it('states that a window-closed save did not land, using the server copy', () => {
+    expect(buildSelectionWindowClosedNotice('本轮互选已经结束')).toBe(
+      '本轮互选已经结束，这次修改没有保存。',
+    )
+    // No double punctuation, and no empty promise if the copy is missing.
+    expect(buildSelectionWindowClosedNotice('本轮互选已经结束。')).toBe(
+      '本轮互选已经结束，这次修改没有保存。',
+    )
+    expect(buildSelectionWindowClosedNotice('')).toBe('本轮互选已经结束，这次修改没有保存。')
+    expect(buildSelectionWindowClosedNotice(undefined)).toBe('本轮互选已经结束，这次修改没有保存。')
   })
 })

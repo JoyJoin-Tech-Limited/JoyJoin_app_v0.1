@@ -35,6 +35,18 @@
     margin-bottom: $spacing-md;
   }
 
+  // G0 pending-only state (UIUX P1, 2026-11-10): when the viewer's own
+  // selections are still sealed there ARE pending results, so the editorial
+  // empty state contradicts the count card. One quiet line replaces it.
+  &__pending-hint {
+    display: block;
+    text-align: center;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-tertiary-on-light;
+    padding: $spacing-md 0;
+  }
+
   &__loading {
     display: flex;
     flex-direction: column;

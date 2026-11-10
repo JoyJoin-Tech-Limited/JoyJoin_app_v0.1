@@ -30,6 +30,7 @@ const mockGetFeatureFlag = vi.fn();
 const selectionCtx = vi.hoisted(() => ({
   getConnectionSelectionWindow: vi.fn(),
   replaceConnectionSelection: vi.fn(),
+  applyConnectionSelectionsForEvent: vi.fn(),
   countOwnSelections: vi.fn(),
   getOwnSelectedPeerIds: vi.fn(),
 }));
@@ -175,6 +176,11 @@ beforeEach(() => {
     selectedCount: params.peerIds.length,
     withdrawn: 0,
     declinedRevealed: 0,
+  }));
+  selectionCtx.applyConnectionSelectionsForEvent.mockImplementation(async (params: any) => ({
+    acceptedPeerIds: [...params.peerIds],
+    rejectedPeerIds: [],
+    transitions: [],
   }));
   selectionCtx.countOwnSelections.mockResolvedValue(0);
   selectionCtx.getOwnSelectedPeerIds.mockReset();

@@ -543,8 +543,11 @@ describe('premium uplift Batch A (2026-10-16, items 1/2/15/16/17)', () => {
   })
 
   it('item 17 — honest three-branch copy; the no-ID line sells anticipation, not a dead end', () => {
-    expect(tsx).toContain('你选的人，如果也选了你，连接里第一时间见')
-    expect(tsx).toContain('!hasMatches && selectedConnections.length > 0')
+    // 2026-11-10 UIUX P1: the anticipation line is now formatter-owned (server
+    // reveal instant, else vague) and window-gated — no hardcoded promise.
+    expect(tsx).toContain('buildSelectionAnticipationLine(effectiveSelectionSummary?.revealAt)')
+    expect(tsx).toContain('!hasMatches &&')
+    expect(tsx).toContain('selectedConnections.length > 0 &&')
     expect(tsx).toContain('TA 设置后，连接里就能看到')
     expect(tsx).not.toContain('对方尚未设置微信号')
     // The old one-branch-fits-all line is gone.
@@ -758,7 +761,7 @@ describe('premium uplift Batch C (2026-10-16, items 3/4/5/6C/7/8/9/14)', () => {
     expect(cardBlock).not.toContain('event-feedback__card-hint')
     expect(connectionsTsx).not.toContain('跳过，下一步')
     expect(connectionsTsx).not.toContain('跳过选择，进入下一步')
-    expect(connectionsTsx).toContain('已选 ${selectedCount} 人，下一步')
+    expect(connectionsTsx).toContain('已选 ${selectedCount} 位，下一步')
     const benefitBlock = scss.split('&__benefit {')[1]?.split('}')[0] ?? ''
     expect(benefitBlock).toContain('rgba($color-primary, 0.05)')
   })
@@ -794,6 +797,18 @@ describe('premium uplift Batch C (2026-10-16, items 3/4/5/6C/7/8/9/14)', () => {
     const avatarBlock = scss.split('&__participant-avatar {')[1]?.split('&__participant-name')[0] ?? ''
     expect(avatarBlock).toContain('&--large')
     expect(avatarBlock).toContain('112rpx')
+  })
+
+  it('item 9b — tile meta keeps all three anchors on two clamped lines (UIUX P1)', () => {
+    // At the 2-col tile's inner width 「95后 · 女性 · 内容创作」 ellipsized the
+    // industry anchor. Two lines + a reserved box keep the grid rhythm.
+    const metaBlock = scss.split('&__participant-meta {')[1]?.split('}')[0] ?? ''
+    expect(metaBlock).toContain('-webkit-line-clamp: 2')
+    expect(metaBlock).toContain('-webkit-box-orient: vertical')
+    expect(metaBlock).toContain('min-height: $font-size-xs * 1.4 * 2')
+    expect(metaBlock).toContain('word-break: break-word')
+    expect(metaBlock).not.toContain('white-space: nowrap')
+    expect(metaBlock).not.toContain('text-overflow: ellipsis')
   })
 
   it('item 14 — improvement areas become pills with a circle checkbox; hint has three clean branches', () => {
@@ -947,5 +962,82 @@ describe('acknowledgment-beat-v1 felt-heard item', () => {
     expect(tsx).toContain('if (acknowledgmentItemEnabledRef.current && acknowledgmentScore > 0)')
     expect(tsx).toContain('eventPoolGroupId: matchedPoolRegistration?.assignedGroupId')
     expect(tsx).not.toContain("variant: 'treatment'")
+  })
+})
+
+// ─── G0 UIUX review fixes (2026-11-10) ─────────────────────────────────────
+// Pre-ship review verdict FIX-THEN-SHIP: the edit surface's CTA lost its label
+// when busy, the reveal promise disagreed with the edit save, the 409 notice
+// vanished with the toast, and the overwrite caution touched the CTA.
+describe('G0 mutual-selection edit — UIUX review fixes (2026-11-10)', () => {
+  it('P0 — busy CTA keeps its label; native disabled is reserved for the real block', () => {
+    // The native attribute is a platform-colour trap: with it on, WeChat/H5
+    // repaint the button and 「正在保存…」 drops to ~1.5:1.
+    const ctaBlock =
+      connectionsTsx.split('className={`event-feedback__submit')[1]?.split('</Button>')[0] ?? ''
+    expect(ctaBlock).toContain('disabled={submitDisabled || undefined}')
+    // A real `disabled=` (not the `aria-disabled=` sibling) must never key off
+    // the busy flag.
+    expect(ctaBlock).not.toMatch(/(^|\s)disabled=\{[^}]*isSaving/)
+    expect(ctaBlock).toContain('aria-busy={isSaving}')
+    expect(ctaBlock).toContain('aria-disabled={isSaving || submitDisabled}')
+    expect(ctaBlock).toContain('if (isSaving || submitDisabled) return')
+    expect(connectionsTsx).toContain('event-feedback__submit--busy')
+    // No opacity demotion for busy: Taro H5 renders `disabled="false"` as a
+    // real attribute, so a nested `--busy` rule cannot beat the `[disabled]`
+    // opacity rule — the override must be ancestor-scoped (0,3,0).
+    expect(scss).toContain('&__footer .event-feedback__submit--busy {')
+    const busyBlock = scss.split('&__footer .event-feedback__submit--busy {')[1]?.split('}')[0] ?? ''
+    expect(busyBlock).toContain('opacity: 1')
+    expect(busyBlock).toContain('background: $color-primary')
+    expect(busyBlock).toContain('color: $color-text-white')
+    // The re-assert must actually match the single-CTA footer (the old guard
+    // was scoped to `__footer-row` only and never applied here).
+    expect(scss).toContain('&__footer .event-feedback__submit[disabled]')
+    expect(scss).toContain('color: $color-text-white')
+  })
+
+  it('P1 — the overwrite caution is its own quiet row, clear of the CTA', () => {
+    expect(connectionsTsx).toContain("className='event-feedback__footer-notice'")
+    expect(connectionsTsx).toContain("className='event-feedback__footer-notice-text'")
+    expect(connectionsTsx).not.toContain("className='event-feedback__selection-count-text'>{noticeMessage}")
+    const noticeBlock = scss.split('&__footer-notice {')[1]?.split('}')[0] ?? ''
+    // ≥16rpx clearance from the CTA below (24rpx = $spacing-md).
+    expect(noticeBlock).toContain('margin-bottom: $spacing-md')
+    expect(noticeBlock).toContain('background: rgba($color-text-primary, 0.04)')
+    expect(noticeBlock).not.toContain('$color-error')
+    expect(noticeBlock).not.toContain('$color-warning')
+  })
+
+  it('P1 — one reveal formatter for the first submit and the edit save', () => {
+    expect(tsx).toContain('buildSelectionAnticipationLine(effectiveSelectionSummary?.revealAt)')
+    expect(tsx).toContain('shouldShowSelectionAnticipation(effectiveSelectionSummary)')
+    expect(tsx).not.toContain('连接里第一时间见')
+    // Zero-mutual + closed window never shows the anticipation promise: the
+    // render is gated on no matches, ≥1 own pick, and the server's verdict.
+    const anticipationPos = tsx.indexOf('shouldShowSelectionAnticipation(effectiveSelectionSummary)')
+    const precedingGate = tsx.slice(Math.max(0, anticipationPos - 260), anticipationPos)
+    expect(precedingGate).toContain('!hasMatches &&')
+    expect(precedingGate).toContain('selectedConnections.length > 0 &&')
+  })
+
+  it('P1 — a 409 window-closed save leaves a persistent notice on the revealed screen', () => {
+    expect(tsx).toContain('setSelectionEditBlocked(buildSelectionWindowClosedNotice(message))')
+    expect(tsx).toContain("className='event-feedback__selection-blocked'")
+    expect(tsx).toContain("role='status'")
+    // The toast stays as the immediate signal.
+    expect(tsx).toContain("Taro.showToast({ title: message, icon: 'none', duration: TOAST_DEFAULT_MS })")
+    const blockedBlock = scss.split('&__selection-blocked {')[1]?.split('}')[0] ?? ''
+    expect(blockedBlock).toContain('background: rgba($color-warning, 0.1)')
+  })
+
+  it('trivial — edit mode drops the step framing and the count noun is unified', () => {
+    expect(tsx).toContain('hideStepFraming={isEditingSelection}')
+    expect(connectionsTsx).toContain('hideStepFraming = false')
+    expect(connectionsTsx).toContain('{!hideStepFraming ? (')
+    // One noun everywhere on this step: 位.
+    expect(connectionsTsx).toContain('已选 ${selectedCount} 位，进入下一步')
+    expect(connectionsTsx).toContain('已选 ${selectedCount} 位，下一步')
+    expect(connectionsTsx).not.toContain('已选 ${selectedCount} 人')
   })
 })

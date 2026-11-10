@@ -114,7 +114,17 @@ export const notifications = pgTable("notifications", {
   sentBy: varchar("sent_by").references(() => users.id), // Admin user ID if sent by admin
   isBroadcast: boolean("is_broadcast").default(false), // Whether this is a broadcast notification
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  // Cross-replica dedupe for the G0 reveal notification (P0 hardening,
+  // 2026-11-10 — migration `0102_notification_mutual_match_dedupe.sql`).
+  // `connectionRevealNotifications` inserts with `ON CONFLICT DO NOTHING`, so
+  // two replicas sweeping the same reveal window cannot double-send. Partial on
+  // purpose: broadcasts and every other notification type keep their current
+  // duplicate-tolerant behaviour.
+  uniqueIndex("notifications_mutual_match_user_resource_uidx")
+    .on(table.userId, table.relatedResourceId)
+    .where(sql`"type" = 'mutual_match' AND "related_resource_id" IS NOT NULL`),
+]);
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,

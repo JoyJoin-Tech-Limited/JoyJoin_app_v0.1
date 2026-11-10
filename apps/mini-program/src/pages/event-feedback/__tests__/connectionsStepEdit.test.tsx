@@ -49,8 +49,8 @@ function renderStep(overrides: Partial<ConnectionsStepProps> = {}) {
 describe('connections step — selection edit mode', () => {
   it('keeps the first-submit CTA when no edit label is supplied', () => {
     renderStep({ selectedConnections: ['p1'] })
-    expect(screen.getByRole('button', { name: '已选 1 人，进入下一步' })).toHaveTextContent(
-      '已选 1 人，下一步',
+    expect(screen.getByRole('button', { name: '已选 1 位，进入下一步' })).toHaveTextContent(
+      '已选 1 位，下一步',
     )
   })
 
@@ -65,8 +65,47 @@ describe('connections step — selection edit mode', () => {
   it('swaps the primary CTA to 保存修改 in edit mode', () => {
     renderStep({ selectedConnections: ['p1'], submitLabel: '保存修改' })
 
-    expect(screen.getByRole('button', { name: '保存修改，已选 1 人' })).toHaveTextContent('保存修改')
+    expect(screen.getByRole('button', { name: '保存修改，已选 1 位' })).toHaveTextContent('保存修改')
     expect(screen.queryByText('下一步')).not.toBeInTheDocument()
+  })
+
+  it('keeps the busy CTA legible: no native disabled, solid label, aria-busy', () => {
+    const onNext = vi.fn()
+    renderStep({
+      selectedConnections: ['p1'],
+      submitLabel: '保存修改',
+      isSaving: true,
+      onNext,
+    })
+
+    const cta = screen.getByRole('button', { name: '正在保存' })
+    expect(cta).toHaveTextContent('正在保存…')
+    // UIUX P0 (2026-11-10): the native attribute stays OFF while busy — with
+    // it on, the platform repaints the CTA in its own disabled colour and the
+    // label drops to ~1.5:1. Busy is a JS + aria guard instead.
+    expect(cta).not.toHaveAttribute('disabled')
+    expect(cta).toHaveAttribute('aria-disabled', 'true')
+    expect(cta).toHaveAttribute('aria-busy', 'true')
+    fireEvent.click(cta)
+    expect(onNext).not.toHaveBeenCalled()
+  })
+
+  it('drops the step framing while editing (no title, no progress dots)', () => {
+    renderStep({
+      submitLabel: '保存修改',
+      hideStepFraming: true,
+      progressDots: <span data-testid='step-dots' />,
+    })
+
+    expect(screen.queryByText('想继续了解谁？')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('step-dots')).not.toBeInTheDocument()
+  })
+
+  it('keeps the step framing on the first pass', () => {
+    renderStep({ progressDots: <span data-testid='step-dots' /> })
+
+    expect(screen.getByText('想继续了解谁？')).toBeInTheDocument()
+    expect(screen.getByTestId('step-dots')).toBeInTheDocument()
   })
 
   it('shows the coded server error above the CTA and keeps the grid interactive', () => {
@@ -106,7 +145,11 @@ describe('connections step — selection edit mode', () => {
 
     // Nothing is prefilled — the server never sent the old peer IDs.
     expect(screen.getByRole('button', { name: '选择阿团' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByText(/你已选 3 位/)).toBeInTheDocument()
+    // UIUX P1 (2026-11-10): the caution is its own row — the count-chip style
+    // made it read as a caption glued to the CTA.
+    const caution = screen.getByText(/你已选 3 位/)
+    expect(caution).toHaveClass('event-feedback__footer-notice-text')
+    expect(caution).not.toHaveClass('event-feedback__selection-count-text')
     // An empty replace would wipe the old set, so the CTA starts blocked.
     expect(screen.getByRole('button', { name: '重新选择，请先选择同桌' })).toBeDisabled()
   })

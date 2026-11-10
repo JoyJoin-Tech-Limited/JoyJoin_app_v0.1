@@ -452,6 +452,8 @@ async function cancelPostRevealNoRefund(params: {
 
   let remainingCount: number | null = null;
   let collapsed = false;
+  /** The group's derived `events.id`, captured in-tx for the post-commit void. */
+  let linkedEventId: string | null = null;
 
   try {
     await db.transaction(async (tx: any) => {
@@ -500,6 +502,7 @@ async function cancelPostRevealNoRefund(params: {
 
         remainingCount =
           typeof groupAfter?.memberCount === "number" ? groupAfter.memberCount : null;
+        linkedEventId = groupAfter?.eventId ?? null;
 
         // M5 / Amendment 4: set event_attendance.status='cancelled' (the
         // pinned column — attendanceStatus is the separate check-in state
@@ -566,6 +569,48 @@ async function cancelPostRevealNoRefund(params: {
 
   // ── Post-commit side effects. Each is decoupled from the cancel commit:
   // failure is logged, never rolled back, never blocks the response (AC-7/8).
+
+  // G0 P0 hardening (2026-11-10): the exiter is no longer seated, so every
+  // non-mutual selection row involving them must be voided — otherwise the
+  // reveal sweep at `revealAt` would still hand their WeChat id to a tablemate
+  // (or hand a tablemate's to them). `mutual` rows are never touched.
+  // When the group collapses, the whole TABLE is dead: close the window and
+  // void every non-mutual row for the event, not just the exiter's.
+  if (linkedEventId) {
+    try {
+      const { invalidateConnectionSelections, voidConnectionSelectionsForUsers } = await import(
+        "./connectionSelectionLifecycle"
+      );
+      if (collapsed) {
+        await invalidateConnectionSelections({
+          canonicalEventId: linkedEventId,
+          reason: "group_collapsed",
+        });
+      } else {
+        await voidConnectionSelectionsForUsers({
+          canonicalEventId: linkedEventId,
+          userIds: [userId],
+          reason: "seat_cancelled",
+        });
+      }
+    } catch (invalidateError) {
+      logger.error(`${logPrefix} connection-selection void failed after seat cancel`, {
+        registrationId: registration.id,
+        eventId: linkedEventId,
+        collapsed,
+        error: invalidateError instanceof Error ? invalidateError.message : String(invalidateError),
+      });
+    }
+  } else if (groupId) {
+    // Fail-closed documentation: a group with no derived `events` row has no
+    // `connections` rows either (the FK target is `events.id`), so there is
+    // genuinely nothing to void. The reveal eligibility predicate still covers
+    // the pool-side seat state if an event row appears later.
+    logger.warn(`${logPrefix} seat cancel had no linked event — no connection selection to void`, {
+      registrationId: registration.id,
+      groupId,
+    });
+  }
 
   // Audit (AC-2): forfeiture record with the pinned 「揭示后取消（不退款）」
   // vocabulary — admin-visible as the cancellation reason.

@@ -126,7 +126,50 @@ describe('ConnectionsPage editorial empty state', () => {
     expect(screen.getByText('有 2 个选择等待揭晓')).toBeInTheDocument()
     expect(screen.getByText('11月11日 21:00 揭晓')).toBeInTheDocument()
     expect(screen.queryByText(/p1|p2|阿团/)).not.toBeInTheDocument()
+  })
+
+  it('shows only the pending card plus one quiet line — never the editorial empty state', () => {
+    // UIUX P1 (2026-11-10): 「新的连接，从一场活动开始」 + the 3-step flow card
+    // directly contradict a counted pending reveal. When something is waiting,
+    // the empty-state editorial block must not render at all.
+    setQueryState({
+      connections: [],
+      pendingReveal: { count: 2, revealAt: '2026-11-11T13:00:00.000Z' },
+    })
+
+    const { container } = render(<ConnectionsPage />)
+
+    expect(screen.getByText('有 2 个选择等待揭晓')).toBeInTheDocument()
+    expect(screen.getByText('揭晓后，互选成功的同桌会出现在这里')).toBeInTheDocument()
+    expect(screen.queryByText('新的连接，从一场活动开始')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('connections-state')).not.toBeInTheDocument()
+    expect(container.querySelector('.connections-page__flow-card')).toBeNull()
+    expect(screen.queryByRole('button', { name: '去探索活动' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the editorial empty state when the pending count is zero', () => {
+    setQueryState({
+      connections: [],
+      pendingReveal: { count: 0, revealAt: null },
+    })
+
+    render(<ConnectionsPage />)
+
     expect(screen.getByText('新的连接，从一场活动开始')).toBeInTheDocument()
+    expect(screen.queryByText('揭晓后，互选成功的同桌会出现在这里')).not.toBeInTheDocument()
+  })
+
+  it('keeps the pending card above a non-empty list without the quiet line', () => {
+    setQueryState({
+      connections: [{ id: 'connection-1', peerName: '阿团', peerArchetype: 'corgi' }],
+      pendingReveal: { count: 1, revealAt: '2026-11-11T13:00:00.000Z' },
+    })
+
+    render(<ConnectionsPage />)
+
+    expect(screen.getByText('有 1 个选择等待揭晓')).toBeInTheDocument()
+    expect(screen.getByText('阿团')).toBeInTheDocument()
+    expect(screen.queryByText('揭晓后，互选成功的同桌会出现在这里')).not.toBeInTheDocument()
   })
 
   it('keeps loading and error variants unchanged and retries through the existing query', () => {

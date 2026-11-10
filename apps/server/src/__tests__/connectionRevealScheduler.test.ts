@@ -12,6 +12,7 @@ const flagState = vi.hoisted(() => ({ enabled: false }));
 const finalizeMock = vi.hoisted(() => vi.fn());
 const notifyMock = vi.hoisted(() => vi.fn());
 const purgeMock = vi.hoisted(() => vi.fn());
+const expireMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/featureFlags', () => ({
   getFeatureFlag: vi.fn(async () => flagState.enabled),
@@ -19,6 +20,7 @@ vi.mock('../lib/featureFlags', () => ({
 
 vi.mock('../repositories/connectionSelectionRepo', () => ({
   finalizeConnectionReveals: finalizeMock,
+  expireIneligibleRevealSelections: expireMock,
   purgeClosedConnectionSelections: purgeMock,
 }));
 
@@ -52,6 +54,8 @@ beforeEach(() => {
   });
   purgeMock.mockReset();
   purgeMock.mockResolvedValue({ deleted: 0, cutoff: NOW });
+  expireMock.mockReset();
+  expireMock.mockResolvedValue({ expired: 0 });
 });
 
 afterEach(() => {
@@ -67,6 +71,7 @@ describe('runConnectionRevealTick', () => {
       enabled: false,
       revealed: 0,
       notifiedUsers: 0,
+      expired: 0,
       cleaned: 0,
       skipped: false,
     });
@@ -97,6 +102,7 @@ describe('runConnectionRevealTick', () => {
       enabled: true,
       revealed: 2,
       notifiedUsers: 4,
+      expired: 0,
       cleaned: 0,
       skipped: false,
     });
@@ -129,6 +135,7 @@ describe('runConnectionRevealTick', () => {
       enabled: true,
       revealed: 1,
       notifiedUsers: 0,
+      expired: 0,
       cleaned: 0,
       skipped: false,
     });
@@ -178,6 +185,7 @@ describe('runConnectionRevealTick', () => {
       enabled: true,
       revealed: 0,
       notifiedUsers: 0,
+      expired: 0,
       cleaned: 0,
       skipped: true,
     });
@@ -188,6 +196,7 @@ describe('runConnectionRevealTick', () => {
       enabled: true,
       revealed: 0,
       notifiedUsers: 0,
+      expired: 0,
       cleaned: 0,
       skipped: false,
     });
@@ -201,6 +210,7 @@ describe('runConnectionRevealTick', () => {
       enabled: true,
       revealed: 0,
       notifiedUsers: 0,
+      expired: 0,
       cleaned: 0,
       skipped: false,
     });

@@ -153,6 +153,45 @@ export function buildSelectionUpdatedNotice(revealAt: string | null | undefined)
   return label ? `选择已更新。${label} 回来看看。` : '选择已更新。明天回来看看。'
 }
 
+/**
+ * Anticipation line on the just-submitted revealed screen (UIUX P1, 2026-11-10).
+ *
+ * The first submit and the edit save must promise the SAME thing: the old
+ * hardcoded 「连接里第一时间见」 invented a timing the server never sent. One
+ * formatter, one reveal authority — the server instant when present, otherwise
+ * a deliberately vague line. Never a fabricated 21:00 / 第一时间.
+ */
+export function buildSelectionAnticipationLine(revealAt: string | null | undefined): string {
+  const label = formatRevealMomentLabel(revealAt)
+  return label
+    ? `你选的人，如果也选了你，${label} 在连接里见`
+    : '你选的人，如果也选了你，互选揭晓后在连接里见'
+}
+
+/**
+ * Whether the anticipation line may still be shown.
+ *
+ * Once the server says the window is `closed` the reveal already settled, so a
+ * zero-mutual viewer would be promised a result that cannot arrive. Legacy /
+ * not_open / open keep the line (the pre-G0 behaviour); only `closed` hides it.
+ */
+export function shouldShowSelectionAnticipation(
+  summary: ConnectionSelectionSummaryLike | null | undefined,
+): boolean {
+  return summary?.state !== 'closed'
+}
+
+/**
+ * Persistent 409 notice for the revealed screen (UIUX P1, 2026-11-10).
+ *
+ * The toast alone let a failed save scroll away and read as success. This line
+ * stays on screen and states the outcome explicitly: the edit did NOT save.
+ */
+export function buildSelectionWindowClosedNotice(serverMessage?: string): string {
+  const reason = typeof serverMessage === 'string' ? serverMessage.trim().replace(/[。.!！]+$/, '') : ''
+  return `${reason || '本轮互选已经结束'}，这次修改没有保存。`
+}
+
 export interface SelectionEditError {
   message: string
   /**

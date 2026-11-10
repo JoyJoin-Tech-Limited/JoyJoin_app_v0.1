@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 
 /**
@@ -108,6 +111,55 @@ describe('notifyRevealedConnections', () => {
     expect(CONNECTION_REVEAL_NOTIFICATION.message).not.toMatch(/\d/);
     expect(CONNECTION_REVEAL_NOTIFICATION.title).not.toMatch(/\d/);
     expect(CONNECTION_REVEAL_NOTIFICATION.message).not.toContain('用户');
+  });
+
+  it('uses ON CONFLICT DO NOTHING so two replicas cannot double-send', async () => {
+    const { executor, statements } = createExecutor([[{}, {}]]);
+
+    await notifyRevealedConnections([CONNECTION], { executor });
+
+    const statement = statements[0].text;
+    // The partial unique index is the conflict target; without this clause the
+    // second replica's INSERT would throw (and the row would still be lost, but
+    // noisily). Both layers are asserted so neither can be dropped silently.
+    expect(statement).toContain('ON CONFLICT DO NOTHING');
+    expect(statement).toContain('INSERT INTO notifications');
+  });
+
+  it('suppresses a partially-duplicated insert (one side already notified)', async () => {
+    // The peer's row already exists (another replica won the race); only the
+    // caller's side is new.
+    const { executor } = createExecutor([[{ id: 'n-0' }]]);
+
+    const result = await notifyRevealedConnections([CONNECTION], { executor });
+
+    expect(result).toEqual({
+      notifiedConnections: 1,
+      notifiedUsers: 1,
+      skippedDuplicates: 0,
+      failed: 0,
+    });
+  });
+
+  it('the dedupe contract is backed by a partial unique index migration', () => {
+    const testDir = path.dirname(fileURLToPath(import.meta.url));
+    const migration = readFileSync(
+      path.resolve(
+        testDir,
+        '../../migrations/0102_notification_mutual_match_dedupe.sql',
+      ),
+      'utf8',
+    );
+
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS');
+    expect(migration).toContain('"notifications" ("user_id", "related_resource_id")');
+    expect(migration).toContain(`WHERE "type" = 'mutual_match'`);
+    expect(migration).toContain('AND "related_resource_id" IS NOT NULL');
+    // Idempotent + non-destructive: duplicates are cleaned by key, never by a
+    // table wipe.
+    expect(migration).toContain('ROW_NUMBER()');
+    expect(migration).not.toContain('TRUNCATE');
+    expect(migration).not.toContain('DROP TABLE');
   });
 
   it('counts a fully-deduped connection as skipped, not notified', async () => {

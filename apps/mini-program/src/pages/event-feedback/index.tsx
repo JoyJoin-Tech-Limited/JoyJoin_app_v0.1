@@ -57,11 +57,14 @@ import { formatEventDayLabel } from './feedbackSummary'
 import {
   buildConnectionSelectionEditRequest,
   buildReplaceSelectionWarning,
+  buildSelectionAnticipationLine,
   buildSelectionEditedMetadata,
   buildSelectionUpdatedNotice,
+  buildSelectionWindowClosedNotice,
   resolveSelectionEditError,
   resolveSelectionEditMode,
   readEditableSelectionIds,
+  shouldShowSelectionAnticipation,
   type ConnectionSelectionSummaryLike,
 } from './connectionSelectionEdit'
 import ParticipantAvatar from './steps/ParticipantAvatar'
@@ -345,6 +348,9 @@ export default function EventFeedbackPage() {
   const [isSavingSelectionEdit, setIsSavingSelectionEdit] = useState(false)
   const [selectionEditError, setSelectionEditError] = useState('')
   const [selectionEditNotice, setSelectionEditNotice] = useState('')
+  // UIUX P1 (2026-11-10): a 409 window-closed save used to leave only a toast.
+  // This persists on the revealed screen so nobody believes the save landed.
+  const [selectionEditBlocked, setSelectionEditBlocked] = useState('')
 
   // G12 (2026-08-07 audit): a swipe-back mid-submit would otherwise leave the
   // CTA stuck in 提交中… — reset the transient flag when the page is re-shown.
@@ -702,6 +708,7 @@ export default function EventFeedbackPage() {
     if (selectionEditMode === 'hidden') return
     setSelectionEditError('')
     setSelectionEditNotice('')
+    setSelectionEditBlocked('')
     const serverIds = readEditableSelectionIds(effectiveSelectionSummary)
     if (serverIds) {
       // IDs only — this is selection state, never a peer identity.
@@ -717,6 +724,7 @@ export default function EventFeedbackPage() {
 
   const cancelSelectionEdit = useCallback(() => {
     setSelectionEditError('')
+    setSelectionEditBlocked('')
     setIsEditingSelection(false)
     setStep('revealed')
   }, [])
@@ -744,6 +752,7 @@ export default function EventFeedbackPage() {
       // Honest confirmation instead of a fabricated countdown: the server's own
       // reveal instant when it sent one, otherwise a vague 「明天」.
       setSelectionEditNotice(buildSelectionUpdatedNotice(summary?.revealAt))
+      setSelectionEditBlocked('')
       setStep('revealed')
       // The pending-reveal count lives on the Connections shell.
       queryClient.invalidateQueries({ queryKey: CONNECTIONS_SHELL_QUERY_KEY })
@@ -757,6 +766,11 @@ export default function EventFeedbackPage() {
         setSelectionSummary((prev) => ({ ...(prev ?? {}), state: 'closed' }))
         setIsEditingSelection(false)
         setSelectionEditError('')
+        setSelectionEditNotice('')
+        // UIUX P1 (2026-11-10): the toast is transient. A persistent notice on
+        // the revealed screen states that the edit did NOT save, so a dismissed
+        // toast cannot be mistaken for a successful save.
+        setSelectionEditBlocked(buildSelectionWindowClosedNotice(message))
         setStep('revealed')
         Taro.showToast({ title: message, icon: 'none', duration: TOAST_DEFAULT_MS })
         return
@@ -901,6 +915,7 @@ export default function EventFeedbackPage() {
       selectionIdsKnownRef.current = true
       setSelectionSummary(res.connectionSelection ?? null)
       setSelectionEditNotice('')
+      setSelectionEditBlocked('')
       setIsEditingSelection(false)
       // The reveal count is now authoritative for this visit — the effects that
       // report reveal_viewed / zero_mutual_viewed key off this ref.
@@ -1243,14 +1258,32 @@ export default function EventFeedbackPage() {
               「如果 TA 也选了你」 to someone who picked nobody is a lie).
               selectedConnections survives the in-session submit; a re-entered
               (already-submitted) visit honestly falls back to the thanks-only
-              branch. Particles + success haptic stay match-only. */}
-          {!hasMatches && selectedConnections.length > 0 && (
-            <Text className='event-feedback__success-subtext'>你选的人，如果也选了你，连接里第一时间见</Text>
-          )}
+              branch. Particles + success haptic stay match-only.
+              UIUX P1 (2026-11-10): the promise now comes from the SAME
+              formatter as the edit save (server reveal instant, else vague
+              copy) — the old hardcoded 「第一时间见」 invented a timing. It is
+              also suppressed once the server says the window is closed (the
+              reveal already settled; a zero-mutual user would be promised a
+              result that cannot arrive). */}
+          {!hasMatches &&
+            selectedConnections.length > 0 &&
+            shouldShowSelectionAnticipation(effectiveSelectionSummary) && (
+              <Text className='event-feedback__success-subtext'>
+                {buildSelectionAnticipationLine(effectiveSelectionSummary?.revealAt)}
+              </Text>
+            )}
           {/* G0 edit confirmation: replaces anticipation noise with the honest
               outcome of the save. No countdown, no fabricated reveal time. */}
           {selectionEditNotice ? (
             <Text className='event-feedback__success-subtext'>{selectionEditNotice}</Text>
+          ) : null}
+          {/* 409 window-closed (UIUX P1, 2026-11-10): the toast fades, so the
+              outcome is also stated here —「这次修改没有保存」, not a silent
+              return that looks like success. role=status, announced once. */}
+          {selectionEditBlocked ? (
+            <View className='event-feedback__selection-blocked' role='status' aria-live='polite'>
+              <Text className='event-feedback__selection-blocked-text'>{selectionEditBlocked}</Text>
+            </View>
           ) : null}
 
           {/* 微信号补救卡 (spec §5): the last-chance capture for users who
@@ -1603,6 +1636,10 @@ export default function EventFeedbackPage() {
           selectionEditMode === 'replace' &&
           selectedConnections.length === 0
         }
+        // UIUX trivial (2026-11-10): editing re-enters a step inside an
+        // already-submitted flow — the「想继续了解谁？」framing + progress dots
+        // would re-stage it as a brand-new step.
+        hideStepFraming={isEditingSelection}
         noticeMessage={
           isEditingSelection && selectionEditMode === 'replace'
             ? buildReplaceSelectionWarning(effectiveSelectionSummary?.selectedCount)
