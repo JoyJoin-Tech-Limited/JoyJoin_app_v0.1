@@ -21,6 +21,7 @@ import { matchEventPool, saveMatchResults } from "../../poolMatchingService";
 import { addMemberToPoolGroup } from "../../lib/poolGroupAdmin";
 import { notifyPoolCancelled } from "../../lib/wecomNotifications";
 import { shellCache } from "../../lib/shellCache";
+import { validatePoolScheduleForVenuePromise } from "../../lib/poolScheduleRules";
 
 const updateEventPoolSchema = z.object({
   title: z.string().min(1).optional(),
@@ -207,9 +208,14 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         registrationDeadline: new Date(req.body.registrationDeadline),
       });
 
-      if (validatedData.dateTime <= validatedData.registrationDeadline) {
+      const scheduleError = validatePoolScheduleForVenuePromise(
+        validatedData.dateTime,
+        validatedData.registrationDeadline,
+      );
+      if (scheduleError) {
         return res.status(400).json({
-          message: "活动时间必须晚于报名截止时间",
+          message: scheduleError,
+          code: "REGISTRATION_DEADLINE_TOO_LATE",
         });
       }
 
@@ -305,6 +311,32 @@ export function registerAdminEventPoolRoutes(app: Express): void {
       }
 
       updates.updatedAt = new Date();
+
+      // Partial updates may touch only one side of the schedule, so validate
+      // the merged pair. The 24h venue promise is unreachable when registration
+      // closes later than event − 26h.
+      if (updates.dateTime || updates.registrationDeadline) {
+        const [currentSchedule] = await db
+          .select({
+            dateTime: eventPools.dateTime,
+            registrationDeadline: eventPools.registrationDeadline,
+          })
+          .from(eventPools)
+          .where(eq(eventPools.id, req.params.id));
+
+        if (currentSchedule) {
+          const nextDateTime = updates.dateTime ?? new Date(currentSchedule.dateTime);
+          const nextDeadline =
+            updates.registrationDeadline ?? new Date(currentSchedule.registrationDeadline);
+          const scheduleError = validatePoolScheduleForVenuePromise(nextDateTime, nextDeadline);
+          if (scheduleError) {
+            return res.status(400).json({
+              message: scheduleError,
+              code: "REGISTRATION_DEADLINE_TOO_LATE",
+            });
+          }
+        }
+      }
 
       let oldStatus: string | undefined;
       if (updates.status) {

@@ -3,10 +3,12 @@
  *
  * Venue assignment runs exactly once after matching. When no suitable venue is
  * found the group is marked `venueAssignmentStatus='unassigned'` and the members
- * get a `venue_tbd` notification promising a decision by T-2h. This executor is
- * the retry pass the scheduler invokes: it re-runs assignment for every pool
- * that still has unassigned groups whose event has not started, so a slot that
- * frees up (or a venue added later) can resolve the group.
+ * get a `venue_tbd` notification promising a decision by 活动前一天 (T-24h).
+ * Missing that deadline is not an alert anymore — the pool is cancelled and
+ * fully refunded (`cancelPoolForUnresolvedVenue`). This executor is the retry
+ * pass the scheduler invokes: it re-runs assignment for every pool that still
+ * has unassigned groups whose event has not started, so a slot that frees up
+ * (or a venue added later) can resolve the group.
  *
  * Scope bounded deliberately: only future/upcoming matched pools are retried; a
  * past event is left as-is (no point booking a venue for a finished dinner).
@@ -192,6 +194,102 @@ export async function retryVenueAssignmentForPool(poolId: string): Promise<Venue
     assignedThisPass: remappedAssignments.size,
     stillUnassigned: remappedUnassigned.size,
     reasonBreakdown,
+  };
+}
+
+export interface VenueTbdCancellationResult {
+  poolId: string;
+  cancelled: boolean;
+  refunded: boolean;
+  reason: string;
+}
+
+/**
+ * Hard 24h promise (2026-11-11).
+ *
+ * When a matched pool still has unassigned groups inside the T-24h window we can
+ * no longer tell those members where to go, and a "venue still pending" card
+ * that close to the event is worse than an honest cancellation. The pool is
+ * cancelled and every paid registration is refunded in full, so the user only
+ * ever sees two outcomes: 场地已定 or 已取消并退款.
+ *
+ * Idempotent: the status CAS and the refund claim both no-op on a retry, and a
+ * refund failure aborts the cancellation so the next tick can try again rather
+ * than stranding paid users on a cancelled event.
+ */
+export async function cancelPoolForUnresolvedVenue(
+  poolId: string,
+): Promise<VenueTbdCancellationResult> {
+  const [pool] = await db
+    .select({ id: eventPools.id, title: eventPools.title, status: eventPools.status })
+    .from(eventPools)
+    .where(eq(eventPools.id, poolId))
+    .limit(1);
+
+  if (!pool) {
+    return { poolId, cancelled: false, refunded: false, reason: "pool_not_found" };
+  }
+  if (pool.status !== "matched") {
+    return { poolId, cancelled: false, refunded: false, reason: `pool_status_${pool.status}` };
+  }
+
+  const unassignedGroups = await db
+    .select({ id: eventPoolGroups.id })
+    .from(eventPoolGroups)
+    .where(
+      and(
+        eq(eventPoolGroups.poolId, poolId),
+        eq(eventPoolGroups.venueAssignmentStatus, "unassigned"),
+      ),
+    );
+  if (unassignedGroups.length === 0) {
+    return { poolId, cancelled: false, refunded: false, reason: "venue_resolved" };
+  }
+
+  // Close the 互选 window first: a cancelled event must never deliver a
+  // connection (same rule as the admin cancel path in adminEventPools).
+  try {
+    const { invalidateConnectionSelections } = await import("./connectionSelectionLifecycle");
+    await invalidateConnectionSelections({ poolId, reason: "pool_cancelled" });
+  } catch (error) {
+    logger.warn("[VenueTbdRetry] failed to invalidate connection selections on venue cancel", {
+      component: "venue_tbd_retry",
+      poolId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    const { refundPoolCancellation } = await import("../services/autoRefundService");
+    await refundPoolCancellation(poolId, pool.title);
+  } catch (error) {
+    logger.error("[VenueTbdRetry] refund failed; keeping the pool open for a retry", {
+      component: "venue_tbd_retry",
+      poolId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { poolId, cancelled: false, refunded: false, reason: "refund_failed" };
+  }
+
+  const cancelledRows = await db
+    .update(eventPools)
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(and(eq(eventPools.id, poolId), eq(eventPools.status, "matched")))
+    .returning({ id: eventPools.id });
+
+  logger.warn("[VenueTbdRetry] cancelled pool at the T-24h venue deadline", {
+    component: "venue_tbd_retry",
+    poolId,
+    poolTitle: pool.title,
+    unassignedGroups: unassignedGroups.length,
+    cancelled: cancelledRows.length > 0,
+  });
+
+  return {
+    poolId,
+    cancelled: cancelledRows.length > 0,
+    refunded: true,
+    reason: "venue_unresolved_deadline",
   };
 }
 

@@ -46,7 +46,7 @@ export default function GatheringRoomMemoryPage() {
     [self]
   )
   const dateLabel = formatMemoryDate(roomState?.eventDateTime)
-  const venueName = roomState?.venue?.name ?? '地点待定'
+  const venueName = roomState?.venue?.name ?? '地点未公布'
 
   const profileCardShare = useProfileCardShare({
     enabled: Boolean(self?.archetype),

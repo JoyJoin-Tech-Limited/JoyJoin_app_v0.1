@@ -460,13 +460,14 @@ export default function GatheringRoomPage() {
             <Text
               className={`gathering-room__fact-venue${venueReady && venueName ? '' : ' gathering-room__fact-venue--tbd'}`}
             >
-              {venueReady && venueName ? venueName : '地点待定'}
+              {venueReady && venueName ? venueName : '场地安排中'}
             </Text>
             {/* An ended event can no longer resolve its venue, so the promise
-                has to stop pretending it might. */}
+                has to stop pretending it might. Before the event, the venue is
+                a promise with a deadline: 活动前一天一定告诉你，定不下来就退款。 */}
             <Text className='gathering-room__fact-address'>
               {venueAddress
-                || (venueReady && venueName ? '' : eventPhase === 'ended' ? '地点未公布' : '地点确定后在这里更新')}
+                || (venueReady && venueName ? '' : eventPhase === 'ended' ? '地点未公布' : '活动前一天会告诉你具体地点')}
             </Text>
           </View>
         </View>

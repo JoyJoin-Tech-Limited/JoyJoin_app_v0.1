@@ -3,20 +3,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * W8 (AC-W8.5) — venue-TBD retry scheduler.
  *
- * Venue assignment runs once; when it leaves a group unassigned the members are
- * promised a decision by T-2h. The scheduler retries and escalates: a `warning`
- * after repeated unresolved retries, `critical` once T-2h has been breached.
+ * Venue assignment runs once; when it leaves a group unassigned the scheduler
+ * retries and warns ops after repeated failures. Inside the T-24h window the
+ * promise wins: the pool is cancelled and refunded instead of alerted on.
  */
 
 vi.mock('../lib/venueTbdRetry', () => ({
   retryVenueTbdAssignments: vi.fn(),
+  cancelPoolForUnresolvedVenue: vi.fn(),
 }));
 
-const { loggerWarnMock, loggerErrorMock, loggerInfoMock, notifyMock } = vi.hoisted(() => ({
+const { loggerWarnMock, loggerErrorMock, loggerInfoMock, notifyMock, cancelMock } = vi.hoisted(() => ({
   loggerWarnMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
   notifyMock: vi.fn().mockResolvedValue(undefined),
+  cancelMock: vi.fn().mockResolvedValue({
+    poolId: 'pool-1',
+    cancelled: true,
+    refunded: true,
+    reason: 'venue_unresolved_deadline',
+  }),
 }));
 
 vi.mock('../lib/logger', () => ({
@@ -29,7 +36,8 @@ vi.mock('../lib/wecomNotifications/matching', () => ({
 
 import {
   createVenueTbdRetryScheduler,
-  resolveVenueTbdEscalationSeverity,
+  resolveVenueTbdAction,
+  VENUE_TBD_DECISION_HOURS,
   VENUE_TBD_ESCALATION_THRESHOLD,
 } from '../lib/venueTbdRetryScheduler';
 
@@ -60,6 +68,7 @@ function makeScheduler(retry: () => Promise<any>) {
     logger: { info: loggerInfoMock, warn: loggerWarnMock, error: loggerErrorMock },
     retryVenueTbdAssignments: retry,
     notifyEscalation: notifyMock as any,
+    cancelPool: cancelMock as any,
     now: () => NOW,
   });
 }
@@ -68,22 +77,30 @@ describe('W8 AC-W8.5 — venue TBD retry scheduler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     notifyMock.mockResolvedValue(undefined);
+    cancelMock.mockResolvedValue({
+      poolId: 'pool-1',
+      cancelled: true,
+      refunded: true,
+      reason: 'venue_unresolved_deadline',
+    });
   });
 
-  it('resolveVenueTbdEscalationSeverity: critical at/after T-2h, warning after repeated retries', () => {
-    expect(resolveVenueTbdEscalationSeverity({ consecutiveUnresolved: 1, hoursUntilEvent: 24 })).toBeNull();
-    expect(resolveVenueTbdEscalationSeverity({ consecutiveUnresolved: VENUE_TBD_ESCALATION_THRESHOLD, hoursUntilEvent: 24 })).toBe('warning');
-    expect(resolveVenueTbdEscalationSeverity({ consecutiveUnresolved: 1, hoursUntilEvent: 2 })).toBe('critical');
-    expect(resolveVenueTbdEscalationSeverity({ consecutiveUnresolved: 1, hoursUntilEvent: 1 })).toBe('critical');
-    expect(resolveVenueTbdEscalationSeverity({ consecutiveUnresolved: 1, hoursUntilEvent: null })).toBeNull();
+  it('resolveVenueTbdAction: cancels inside T-24h, warns after repeated retries outside it', () => {
+    expect(VENUE_TBD_DECISION_HOURS).toBe(24);
+    expect(resolveVenueTbdAction({ consecutiveUnresolved: 1, hoursUntilEvent: 48 })).toBeNull();
+    expect(resolveVenueTbdAction({ consecutiveUnresolved: VENUE_TBD_ESCALATION_THRESHOLD, hoursUntilEvent: 48 })).toBe('warning');
+    expect(resolveVenueTbdAction({ consecutiveUnresolved: 1, hoursUntilEvent: 24 })).toBe('cancel');
+    expect(resolveVenueTbdAction({ consecutiveUnresolved: 1, hoursUntilEvent: 1 })).toBe('cancel');
+    expect(resolveVenueTbdAction({ consecutiveUnresolved: 1, hoursUntilEvent: null })).toBeNull();
   });
 
   it('does not alert on the first unresolved retry, then warns on the second', async () => {
-    const retry = vi.fn().mockResolvedValue(makeResult(24));
+    const retry = vi.fn().mockResolvedValue(makeResult(48));
     const scheduler = makeScheduler(retry);
 
     await scheduler.run();
     expect(notifyMock).not.toHaveBeenCalled();
+    expect(cancelMock).not.toHaveBeenCalled();
     expect(scheduler.getConsecutiveUnresolved()).toBe(1);
 
     await scheduler.run();
@@ -93,28 +110,41 @@ describe('W8 AC-W8.5 — venue TBD retry scheduler', () => {
         poolId: 'pool-1',
         unassignedGroups: 1,
         severity: 'warning',
-        hoursUntilEvent: 24,
+        hoursUntilEvent: 48,
       }),
     );
   });
 
-  it('escalates immediately at the T-2h deadline', async () => {
-    const retry = vi.fn().mockResolvedValue(makeResult(2));
+  it('cancels instead of escalating once the T-24h venue deadline is reached', async () => {
+    const retry = vi.fn().mockResolvedValue(makeResult(24));
     const scheduler = makeScheduler(retry);
 
     await scheduler.run();
 
-    expect(notifyMock).toHaveBeenCalledTimes(1);
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ severity: 'critical', hoursUntilEvent: 2 }),
+    expect(cancelMock).toHaveBeenCalledTimes(1);
+    expect(cancelMock).toHaveBeenCalledWith('pool-1');
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('stays fail-open when the deadline cancellation throws', async () => {
+    const retry = vi.fn().mockResolvedValue(makeResult(3));
+    cancelMock.mockRejectedValueOnce(new Error('refund provider down'));
+    const scheduler = makeScheduler(retry);
+
+    await scheduler.run();
+
+    expect(scheduler.isStopped()).toBe(false);
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      '[VenueTbdRetry] deadline cancellation failed; will retry',
+      expect.objectContaining({ poolId: 'pool-1', error: 'refund provider down' }),
     );
   });
 
   it('resets the unresolved counter when all TBD venues resolve', async () => {
     const retry = vi
       .fn()
-      .mockResolvedValueOnce(makeResult(24))
-      .mockResolvedValueOnce({ ...makeResult(24), totalStillUnassigned: 0, pools: [] });
+      .mockResolvedValueOnce(makeResult(48))
+      .mockResolvedValueOnce({ ...makeResult(48), totalStillUnassigned: 0, pools: [] });
     const scheduler = makeScheduler(retry);
 
     await scheduler.run();

@@ -223,7 +223,7 @@ async function buildActionQueue(): Promise<ActionQueueRow[]> {
       label: "场地待定",
       count: unassignedVenues,
       correctNumber: `${unassignedVenues} 个未开始场次尚未分配场地`,
-      recommendedAction: "手动指定场地，否则参与者看到「地点待定」",
+      recommendedAction: "手动指定场地，否则活动前 24 小时系统会自动取消并全额退款",
       slaHours: 24,
       owner: "ops",
       severity: unassignedVenues > 0 ? "critical" : "info",

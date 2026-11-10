@@ -162,6 +162,29 @@ The admin portal event-pools page exposes these via a **分配场地** button on
 - **WeCom alert:** Fires when any pool has ≥1 unassigned group (reason breakdown included)
 - **In-app notifications:** `venue_assigned` / `venue_tbd` sent to all group members
 
+## 24h venue promise (2026-11-11)
+
+The venue is a promise with a deadline, not an open-ended state:
+
+1. `registrationDeadline` must be **at least 26h before** `dateTime`
+   (`packages`-side rule lives in `apps/server/src/lib/poolScheduleRules.ts`,
+   enforced on admin create and update). Without the buffer the T-24h run could
+   not happen, so a pool with a later deadline is rejected with
+   `REGISTRATION_DEADLINE_TOO_LATE`.
+2. `lib/venueTbdRetryScheduler.ts` keeps retrying assignment every 30 minutes.
+   Outside T-24h it only alerts ops (warning after repeated unresolved passes).
+   **Inside T-24h it cancels instead of alerting:** `cancelPoolForUnresolvedVenue`
+   closes the 互选 window, refunds every paid registration in full
+   (`refundPoolCancellation`) and flips the pool to `cancelled`. A refund failure
+   aborts the cancellation, so the next tick retries rather than stranding paid
+   users on a dead event.
+3. Result for the user: two outcomes only — 场地已定, or 已取消并退款. No
+   "venue pending" limbo on the eve of the event, and no user-facing 地点待定 on
+   post-matching surfaces (`场地安排中` → `活动前一天会告诉你具体地点`).
+
+The operational root cause is supply, not scheduling: keeping 1–2 partner venues
+per district with backup slots is what stops this path from firing.
+
 ## Feature Flag
 
 `venueAssignmentEnabled` is a **DB-backed feature flag** (2026-06-17) registered in `FLAG_ENV_MAP` at `apps/server/src/lib/featureFlags.ts`. The DB row is the source of truth; env var `VENUE_ASSIGNMENT_ENABLED` is the fallback.
@@ -178,6 +201,7 @@ The admin portal event-pools page exposes these via a **分配场地** button on
 - [ ] Race condition test passes (concurrent assignment simulation)
 - [ ] Contract expiry check active
 - [ ] WeCom alert fires for unassigned groups
-- [ ] Mini-program shows "地点待定" gracefully
+- [ ] Mini-program shows 场地安排中 before the deadline and never 地点待定 after matching
+- [ ] 24h venue promise verified: unresolved at T-24h cancels + fully refunds
 - [ ] Admin dashboard shows unassigned reason codes
 - [ ] Unit tests pass (9 scenarios)

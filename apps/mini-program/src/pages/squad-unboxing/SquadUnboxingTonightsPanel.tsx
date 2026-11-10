@@ -128,7 +128,7 @@ export default function SquadUnboxingTonightsPanel({
           <View className='squad-unboxing__meta-value-wrap'>
             <View className='squad-unboxing__meta-value-line'>
               <Text className='squad-unboxing__meta-value'>
-                {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
+                {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '场地安排中'}
               </Text>
               {group.venueName ? (
                 <View

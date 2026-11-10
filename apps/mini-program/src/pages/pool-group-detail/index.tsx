@@ -406,7 +406,7 @@ export default function PoolGroupDetailPage() {
             <Text className='pool-group-detail__info-label'>地点</Text>
           </View>
           <Text className='pool-group-detail__info-value'>
-            {isVenuePending ? '地点待定' : venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
+            {isVenuePending ? '场地安排中' : venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '场地安排中'}
           </Text>
         </View>
         <View className='pool-group-detail__info-row'>
@@ -470,13 +470,13 @@ export default function PoolGroupDetailPage() {
           <View className='pool-group-detail__info-row'>
             <Text className='pool-group-detail__info-label'><JoyJoinIcon emoji='⏳' size={24} /> 状态</Text>
             <Text className='pool-group-detail__info-value pool-group-detail__info-value--tbd'>
-              地点待定
+              场地安排中
             </Text>
           </View>
           <View className='pool-group-detail__info-row'>
             <Text className='pool-group-detail__info-label'>&nbsp;</Text>
             <Text className='pool-group-detail__info-value pool-group-detail__info-value--tbd-hint'>
-              一有消息马上告诉你，活动前会通知具体地点
+              活动前一天会告诉你具体地点
             </Text>
           </View>
         </Card>
