@@ -214,14 +214,18 @@ export function accumulateGlowForPhase(
     }
     case 'undercover_word': {
       const result = state.undercoverWordResults;
-      if (result) {
+      // `undercoverUserId` is optional on the shared type since G0 (it is
+      // stripped from every client projection); the server-side state always
+      // carries it, so a missing id simply skips the glow award.
+      const undercoverUserId = result?.undercoverUserId;
+      if (result && undercoverUserId) {
         if (!result.caught) {
           // 卧底成功隐藏 → 卧底本人 +3.
-          addGlow(state, result.undercoverUserId, 'undercover', GLOW_POINT_RULES.undercover.perEvent, GLOW_POINT_RULES.undercover.cap);
+          addGlow(state, undercoverUserId, 'undercover', GLOW_POINT_RULES.undercover.perEvent, GLOW_POINT_RULES.undercover.cap);
         } else {
           // 抓对卧底 → 投对者各 +2.
           for (const vote of state.undercoverWordVotes ?? []) {
-            if (vote.targetUserId === result.undercoverUserId) {
+            if (vote.targetUserId === undercoverUserId) {
               addGlow(state, vote.voterId, 'undercover', GLOW_UNDERCOVER_CATCH_POINTS, GLOW_POINT_RULES.undercover.cap);
             }
           }

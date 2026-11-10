@@ -294,7 +294,10 @@ describe('event-feedback merged 3-screen flow (2026-08-15)', () => {
   it('resets the submitting, submitted and remedy-saving transient flags on re-show', () => {
     // 2026-10-16: setRemedySaving joined the reset set (微信号 remedy card
     // mid-save swipe-back would otherwise leave 保存中… stuck).
-    expect(tsx).toContain('useResetOnShow(setIsSubmitting, setSubmitted, setRemedySaving)')
+    // 2026-11-10: the G0 selection-edit save flag joins it for the same reason.
+    expect(tsx).toContain(
+      'useResetOnShow(setIsSubmitting, setSubmitted, setRemedySaving, setIsSavingSelectionEdit)',
+    )
     expect(tsx).toContain("import { useResetOnShow } from '../../hooks/useResetOnShow'")
   })
 
@@ -743,6 +746,10 @@ describe('premium uplift Batch C (2026-10-16, items 3/4/5/6C/7/8/9/14)', () => {
     expect(connectionsTsx).toContain("className='event-feedback__benefit'")
     expect(connectionsTsx).toContain("className='event-feedback__benefit-icon'")
     expect(connectionsTsx).toContain('互相选择后，即可看到对方的微信号')
+    // G0: the UI mirrors the server-owned 0–5 cap.
+    expect(tsx).toContain('MAX_CONNECTION_SELECTIONS = 5')
+    expect(tsx).toContain('selectedConnections.length >= MAX_CONNECTION_SELECTIONS')
+    expect(connectionsTsx).toContain('最多选 {maxSelections} 位')
     // The promise moved out of the card (dedupe) — the card keeps only its title.
     const benefitPos = connectionsTsx.indexOf("event-feedback__benefit'")
     const cardPos = connectionsTsx.indexOf("event-feedback__card'")
@@ -751,7 +758,7 @@ describe('premium uplift Batch C (2026-10-16, items 3/4/5/6C/7/8/9/14)', () => {
     expect(cardBlock).not.toContain('event-feedback__card-hint')
     expect(connectionsTsx).not.toContain('跳过，下一步')
     expect(connectionsTsx).not.toContain('跳过选择，进入下一步')
-    expect(connectionsTsx).toContain('已选 ${selectedConnections.length} 人，下一步')
+    expect(connectionsTsx).toContain('已选 ${selectedCount} 人，下一步')
     const benefitBlock = scss.split('&__benefit {')[1]?.split('}')[0] ?? ''
     expect(benefitBlock).toContain('rgba($color-primary, 0.05)')
   })

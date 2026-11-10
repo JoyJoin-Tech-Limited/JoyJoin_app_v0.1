@@ -16,7 +16,7 @@ import {
   WECHAT_ID_WCID_PREFIX_HINT,
   WECHAT_ID_SET_ONCE_HINT,
 } from '@shared/wechatContactId'
-import { getEventFeedbackState, getEventParticipants, getMyPoolRegistrations, type AuthUserResponse, type EventParticipantSummary } from '@shared/api'
+import { getEventFeedbackState, getEventParticipants, getMyPoolRegistrations, type AuthUserResponse, type EventFeedbackStateResponse, type EventParticipantSummary } from '@shared/api'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { apiRequest } from '../../lib/api/api'
 import { queryClient } from '../../lib/api/queryClient'
@@ -54,6 +54,16 @@ import {
 import { buildEventFeedbackPayload, type AttendeeTraitInput } from './feedbackPayload'
 import { buildGroupOutcomePayload } from './groupOutcomePayload'
 import { formatEventDayLabel } from './feedbackSummary'
+import {
+  buildConnectionSelectionEditRequest,
+  buildReplaceSelectionWarning,
+  buildSelectionEditedMetadata,
+  buildSelectionUpdatedNotice,
+  resolveSelectionEditError,
+  resolveSelectionEditMode,
+  readEditableSelectionIds,
+  type ConnectionSelectionSummaryLike,
+} from './connectionSelectionEdit'
 import ParticipantAvatar from './steps/ParticipantAvatar'
 import ConnectionsStep from './steps/ConnectionsStep'
 import WrapupStep from './steps/WrapupStep'
@@ -118,6 +128,9 @@ function renderStepProgress(
 // must not vanish — the hint slot is taken by the error (item 11, one voice),
 // so the error itself restates the rule.
 const WECHAT_ID_FORMAT_ERROR = `微信号格式不太对：${WECHAT_ID_FORMAT_HINT}`
+
+/** Mirrors the server-owned cap in `connectionSelectionWindow.ts`. */
+const MAX_CONNECTION_SELECTIONS = 5
 
 // ─── Balanced layer primitives (均衡反馈) ──────────────────────────────────
 // The thermometer and the connection radar share ONE 1-5 dot language (灯格):
@@ -324,30 +337,64 @@ export default function EventFeedbackPage() {
   const [remedySaved, setRemedySaved] = useState(false)
   const [remedyError, setRemedyError] = useState('')
 
+  // ─── G0 selection edit (2026-11-10) ──────────────────────────────────────
+  // The window verdict comes ONLY from a server write response. `null` (legacy
+  // payload / flag OFF) means the edit affordance never renders.
+  const [selectionSummary, setSelectionSummary] = useState<ConnectionSelectionSummaryLike | null>(null)
+  const [isEditingSelection, setIsEditingSelection] = useState(false)
+  const [isSavingSelectionEdit, setIsSavingSelectionEdit] = useState(false)
+  const [selectionEditError, setSelectionEditError] = useState('')
+  const [selectionEditNotice, setSelectionEditNotice] = useState('')
+
   // G12 (2026-08-07 audit): a swipe-back mid-submit would otherwise leave the
   // CTA stuck in 提交中… — reset the transient flag when the page is re-shown.
   // 2026-08-15: also reset the optimistic submitted flip so the button does not
   // show 已提交 while clickable after returning from swipe-back.
   // 2026-10-16: remedySaving joins the reset set (remedy card mid-save swipe).
-  useResetOnShow(setIsSubmitting, setSubmitted, setRemedySaving)
+  // 2026-11-10: the selection-edit save flag joins it for the same reason.
+  useResetOnShow(setIsSubmitting, setSubmitted, setRemedySaving, setIsSavingSelectionEdit)
 
   // ─── Entry gate (2026-10-16 feedback activation, PM plan §3) ─────────────
   // The lifecycle state is server-computed (opens at dateTime+3h, eligibility
   // checked there); recap-push deep links and bookmarked URLs must not bypass
   // it. Fail-closed: a failed lookup never opens the form.
+  //
+  // G0 (2026-11-10): the same GET also carries `connectionSelection` when
+  // `mutualSelectionV2Enabled` is ON (server: `buildConnectionSelectionSummary`
+  // → state + counts, never peer IDs before reveal). The shared DTO predates
+  // that field and is not owned by this workspace, so the payload is widened
+  // locally instead of silently dropping it — this is what lets a re-entry
+  // visit show the edit affordance at all.
+  type FeedbackStatePayload = EventFeedbackStateResponse & {
+    connectionSelection?: ConnectionSelectionSummaryLike
+  }
   const {
     data: feedbackStateData,
     isLoading: feedbackStateLoading,
     isError: feedbackStateError,
     refetch: refetchFeedbackState,
-  } = useQuery({
+  } = useQuery<FeedbackStatePayload>({
     queryKey: ['mini-program', 'event-feedback-state', eventId],
-    queryFn: () => getEventFeedbackState(apiRequest, eventId),
+    queryFn: async () =>
+      (await getEventFeedbackState(apiRequest, eventId)) as FeedbackStatePayload,
     enabled: !!eventId && !authLoading && !!currentUserId,
     staleTime: 30_000,
     retry: 1,
   })
   const feedbackState = feedbackStateData?.state
+
+  // ─── G0 edit gate (2026-11-10) ───────────────────────────────────────────
+  // Two sources, one authority: a write response from THIS visit (POST/PUT)
+  // knows the exact peer IDs, so the grid can be prefilled; a re-entry only
+  // gets the GET's state + count, so it edits in replace mode from an empty
+  // grid. The window verdict comes from whichever server payload we hold last.
+  const selectionIdsKnownRef = useRef(false)
+  const entrySelectionSummary = feedbackStateData?.connectionSelection ?? null
+  const effectiveSelectionSummary = selectionSummary ?? entrySelectionSummary
+  const selectionEditMode = resolveSelectionEditMode(
+    effectiveSelectionSummary,
+    selectionIdsKnownRef.current,
+  )
 
   // feedback_page_open (PM plan §7): once per mount, with source attribution
   // when the deep link carried a known `from`.
@@ -364,8 +411,10 @@ export default function EventFeedbackPage() {
   // Already submitted → land directly on the thank-you state (direct URL
   // visits / re-entries). Derived at render (not via an effect) so the form
   // never flashes for one frame; in-session submits setStep('revealed')
-  // themselves, which this mirrors.
-  const effectiveStep: FeedbackStep = feedbackState === 'submitted' ? 'revealed' : step
+  // themselves, which this mirrors. G0 edit re-entry is the one exception: the
+  // submitted gate must yield to the selection-edit step (the POST already ran).
+  const effectiveStep: FeedbackStep =
+    feedbackState === 'submitted' && !isEditingSelection ? 'revealed' : step
 
   // C5 — Fire success haptic when entering the revealed step (effect, not render)
   useEffect(() => {
@@ -409,6 +458,41 @@ export default function EventFeedbackPage() {
     trackFeedbackEvent('feedback_wechat_step_shown', { eventId })
   }, [effectiveStep, eventId])
 
+  // ─── G0 24h mutual-selection funnel (2026-11-10) ─────────────────────────
+  // Selection-step exposure: once per mount, no target IDs. `windowState` is
+  // deliberately omitted — the client only learns the server-owned window from
+  // a write response, so the view event stays a pure exposure signal instead of
+  // guessing a state.
+  const selectionViewedTrackedRef = useRef(false)
+  useEffect(() => {
+    if (effectiveStep !== 'connections' || selectionViewedTrackedRef.current || !eventId) return
+    selectionViewedTrackedRef.current = true
+    trackFeedbackEvent('connection_selection_viewed', { eventId })
+  }, [effectiveStep, eventId])
+
+  // Reveal moment (reveal_viewed XOR zero_mutual_viewed), once per mount.
+  // `mutualMatches` is only authoritative for THIS visit when the canonical POST
+  // just returned it — an already-submitted re-entry renders the reveal step
+  // with an empty local list, so firing there would report a false zero-mutual.
+  // Gate on the in-session submit; never send names or peer IDs.
+  const revealCountKnownRef = useRef(false)
+  const revealTrackedRef = useRef(false)
+  useEffect(() => {
+    if (effectiveStep !== 'revealed' || revealTrackedRef.current) return
+    if (!revealCountKnownRef.current) return
+    revealTrackedRef.current = true
+    const mutualCount = mutualMatches.length
+    if (mutualCount > 0) {
+      trackFeedbackEvent('connection_reveal_viewed', { mutualCount })
+      return
+    }
+    trackFeedbackEvent('zero_mutual_viewed', { ...(eventId ? { eventId } : {}) })
+  }, [effectiveStep, mutualMatches, eventId])
+
+  // ─── G0 selection edit (2026-11-10) ──────────────────────────────────────
+  // Handlers only: the state lives with the other page state above so the
+  // swipe-back reset hook can reach it.
+
   /** Optimistically mirror a freshly-saved 微信号 into the auth cache so the
    *  revealed remedy gate (and any other surface keying off
    *  currentUser.wechatContactId) settles without a round-trip. */
@@ -427,8 +511,9 @@ export default function EventFeedbackPage() {
       return res.filter((p) => p.id !== currentUserId)
     },
     // The roster is only needed once the gate says open — locked / ineligible /
-    // submitted visits never render the form.
-    enabled: !!eventId && !authLoading && !!currentUserId && feedbackState === 'open',
+    // submitted visits never render the form. G0 exception: a re-entry
+    // selection edit still needs the roster even though feedback is submitted.
+    enabled: !!eventId && !authLoading && !!currentUserId && (feedbackState === 'open' || isEditingSelection),
   })
 
   // W4 (AC-W4.2a): resolve the caller's matched group for this event so the
@@ -596,10 +681,91 @@ export default function EventFeedbackPage() {
   }, [eventId])
 
   const toggleConnection = useCallback((userId: string) => {
+    if (
+      !selectedConnections.includes(userId) &&
+      selectedConnections.length >= MAX_CONNECTION_SELECTIONS
+    ) {
+      Taro.showToast({ title: `最多选 ${MAX_CONNECTION_SELECTIONS} 位同桌`, icon: 'none' })
+      return
+    }
     setSelectedConnections((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     )
+  }, [selectedConnections])
+
+  // ─── G0 selection edit handlers (2026-11-10) ─────────────────────────────
+  // The edit surface re-enters the EXISTING connections step (no new page, no
+  // new tab). `prefilled` opens with the caller's own IDs pressed (server-sent
+  // on re-entry, in-memory in-session); `replace` only happens when the payload
+  // carried no IDs, and then the grid starts empty rather than inventing them.
+  const startSelectionEdit = useCallback(() => {
+    if (selectionEditMode === 'hidden') return
+    setSelectionEditError('')
+    setSelectionEditNotice('')
+    const serverIds = readEditableSelectionIds(effectiveSelectionSummary)
+    if (serverIds) {
+      // IDs only — this is selection state, never a peer identity.
+      setSelectedConnections(serverIds)
+    } else if (selectionEditMode === 'replace') {
+      // Never fabricate a prefill: the old set is invisible on this payload, and
+      // the PUT replaces it wholesale.
+      setSelectedConnections([])
+    }
+    setIsEditingSelection(true)
+    setStep('connections')
+  }, [selectionEditMode, effectiveSelectionSummary])
+
+  const cancelSelectionEdit = useCallback(() => {
+    setSelectionEditError('')
+    setIsEditingSelection(false)
+    setStep('revealed')
   }, [])
+
+  const handleSaveSelectionEdit = useCallback(async () => {
+    if (!eventId || isSavingSelectionEdit) return
+    setIsSavingSelectionEdit(true)
+    setSelectionEditError('')
+    try {
+      const res = await apiRequest<{ connectionSelection?: ConnectionSelectionSummaryLike }>(
+        buildConnectionSelectionEditRequest(eventId, selectedConnections),
+      )
+      const summary = res.connectionSelection ?? null
+      selectionIdsKnownRef.current = true
+      setSelectionSummary(summary)
+      setIsEditingSelection(false)
+      setIsSavingSelectionEdit(false)
+      haptics('light')
+      // Counts + server window state only — never which peers were added or
+      // removed, and never their IDs.
+      trackFeedbackEvent(
+        'connection_selection_edited',
+        buildSelectionEditedMetadata(eventId, selectedConnections.length, summary?.state),
+      )
+      // Honest confirmation instead of a fabricated countdown: the server's own
+      // reveal instant when it sent one, otherwise a vague 「明天」.
+      setSelectionEditNotice(buildSelectionUpdatedNotice(summary?.revealAt))
+      setStep('revealed')
+      // The pending-reveal count lives on the Connections shell.
+      queryClient.invalidateQueries({ queryKey: CONNECTIONS_SHELL_QUERY_KEY })
+    } catch (err) {
+      const { message, windowClosed } = resolveSelectionEditError(err)
+      logError('[EventFeedback] Selection edit failed', { message, windowClosed })
+      setIsSavingSelectionEdit(false)
+      if (windowClosed) {
+        // The window closed under us: show the server's copy once and return to
+        // the read-only post-submit state — no dead retry form.
+        setSelectionSummary((prev) => ({ ...(prev ?? {}), state: 'closed' }))
+        setIsEditingSelection(false)
+        setSelectionEditError('')
+        setStep('revealed')
+        Taro.showToast({ title: message, icon: 'none', duration: TOAST_DEFAULT_MS })
+        return
+      }
+      // 400 TOO_MANY_SELECTIONS / INVALID_SELECTION / transport: stay on the
+      // step with the cap UI intact so the user can retry.
+      setSelectionEditError(message)
+    }
+  }, [eventId, isSavingSelectionEdit, selectedConnections])
 
   // Up to MAX_TAGS_PER_ATTENDEE tags per person; a 4th tap is ignored.
   const toggleAttendeeTag = useCallback((userId: string, tag: string) => {
@@ -689,7 +855,10 @@ export default function EventFeedbackPage() {
         Object.values(attendeeTraits).some(
           (entry) => entry.tags.length > 0 || entry.note.trim() !== '',
         )
-      const res = await apiRequest<{ mutualMatches?: MutualMatch[] }>({
+      const res = await apiRequest<{
+        mutualMatches?: MutualMatch[]
+        connectionSelection?: ConnectionSelectionSummaryLike
+      }>({
         path: `/api/events/${encodeURIComponent(eventId)}/feedback`,
         method: 'POST',
         data: buildEventFeedbackPayload({
@@ -722,6 +891,20 @@ export default function EventFeedbackPage() {
           score: acknowledgmentScore,
         })
       }
+      trackFeedbackEvent('connection_selection_submitted', {
+        eventId,
+        count: selectedConnections.length,
+        windowState: res.connectionSelection?.state ?? 'legacy',
+      })
+      // Server-owned window verdict for the reveal step: the edit affordance
+      // only exists because this write (or the edit PUT) said `open`.
+      selectionIdsKnownRef.current = true
+      setSelectionSummary(res.connectionSelection ?? null)
+      setSelectionEditNotice('')
+      setIsEditingSelection(false)
+      // The reveal count is now authoritative for this visit — the effects that
+      // report reveal_viewed / zero_mutual_viewed key off this ref.
+      revealCountKnownRef.current = true
       setMutualMatches(res.mutualMatches || [])
       setStep('revealed')
       // The server backfilled the 微信号 inside the same POST (social.ts
@@ -1014,6 +1197,9 @@ export default function EventFeedbackPage() {
   // ─── Revealed step ─────────────────────────────────────────────────────────
   if (effectiveStep === 'revealed') {
     const hasMatches = mutualMatches.length > 0
+    // G0: edit affordance is driven purely by the server's window verdict —
+    // hidden for closed / not_open / legacy (no summary at all).
+    const canEditSelection = selectionEditMode !== 'hidden'
     const reducedMotion = getSystemReducedMotionCompat()
     return (
       <View className='event-feedback event-feedback--revealed'>
@@ -1061,6 +1247,11 @@ export default function EventFeedbackPage() {
           {!hasMatches && selectedConnections.length > 0 && (
             <Text className='event-feedback__success-subtext'>你选的人，如果也选了你，连接里第一时间见</Text>
           )}
+          {/* G0 edit confirmation: replaces anticipation noise with the honest
+              outcome of the save. No countdown, no fabricated reveal time. */}
+          {selectionEditNotice ? (
+            <Text className='event-feedback__success-subtext'>{selectionEditNotice}</Text>
+          ) : null}
 
           {/* 微信号补救卡 (spec §5): the last-chance capture for users who
               skipped the collection step but landed a mutual match. remedySaved
@@ -1188,6 +1379,23 @@ export default function EventFeedbackPage() {
                 {isKeepsakeGenerating ? '正在生成…' : '存下这一刻'}
               </Button>
             )}
+            {/* G0 24h window: quiet secondary affordance, rendered only while
+                the server said the window is open. It re-enters the existing
+                connections step prefilled — no new surface. */}
+            {canEditSelection ? (
+              <View
+                className='event-feedback__success-back'
+                hoverClass='event-feedback__success-back--pressed'
+                role='button'
+                aria-label='修改选择'
+                onClick={() => {
+                  haptics('light')
+                  startSelectionEdit()
+                }}
+              >
+                <Text>修改选择</Text>
+              </View>
+            ) : null}
             <View
               className='event-feedback__success-back'
               hoverClass='event-feedback__success-back--pressed'
@@ -1379,6 +1587,29 @@ export default function EventFeedbackPage() {
         participants={participants}
         participantsError={participantsError}
         selectedConnections={selectedConnections}
+        maxSelections={MAX_CONNECTION_SELECTIONS}
+        submitLabel={
+          isEditingSelection
+            ? selectionEditMode === 'replace'
+              ? '重新选择'
+              : '保存修改'
+            : undefined
+        }
+        isSaving={isEditingSelection && isSavingSelectionEdit}
+        // Replace mode starts empty, so an immediate save would wipe the old
+        // set — require at least one explicit pick first.
+        submitDisabled={
+          isEditingSelection &&
+          selectionEditMode === 'replace' &&
+          selectedConnections.length === 0
+        }
+        noticeMessage={
+          isEditingSelection && selectionEditMode === 'replace'
+            ? buildReplaceSelectionWarning(effectiveSelectionSummary?.selectedCount)
+            : undefined
+        }
+        errorMessage={isEditingSelection ? selectionEditError : undefined}
+        onCancelEdit={isEditingSelection ? cancelSelectionEdit : undefined}
         onToggleConnection={toggleConnection}
         onRetryParticipants={() => {
           haptics('light')
@@ -1386,6 +1617,12 @@ export default function EventFeedbackPage() {
         }}
         onNext={() => {
           haptics('light')
+          // G0 edit mode: the canonical POST already ran; a later change is a
+          // full-replace PUT, never a second feedback submission.
+          if (isEditingSelection) {
+            void handleSaveSelectionEdit()
+            return
+          }
           // Conditional 微信号 step (spec §3): picked ≥1 person + no ID on
           // file + flag on → collect before the wrap-up screen.
           setStep(needWechatStep ? 'wechat' : 'wrapup')

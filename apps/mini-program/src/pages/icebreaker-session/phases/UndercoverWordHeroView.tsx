@@ -31,7 +31,7 @@ interface UndercoverWordHeroViewProps {
   revealed?: boolean
   results?: {
     undercoverUserId: string
-    undercoverDisplayName: string
+    undercoverDisplayName?: string
     civilianWord: string
     undercoverWord: string
     voteCounts: Record<string, number>
@@ -334,8 +334,8 @@ export function UndercoverWordHeroView({
     return (
       <View className='undercover-hero'>
         <IdentityReveal
-          identity={results.undercoverDisplayName}
-          label='卧底身份曝光'
+          identity='卧底'
+          label='身份已揭晓'
           revealed={showSecret}
           spotlightColor={PHASE_ACCENTS.undercover_word?.accent}
         />
@@ -352,7 +352,7 @@ export function UndercoverWordHeroView({
 
         <PhaseHeroCard
           phase='undercover_word'
-          title={`卧底是：${results.undercoverDisplayName}`}
+          title='这一轮结束了'
           prompt={`平民词：${results.civilianWord} · 卧底词：${results.undercoverWord}`}
           statusText={results.caught ? '卧底被抓住了！' : '卧底成功隐藏！'}
           actions={

@@ -27,6 +27,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { logAdminAudit } from "../lib/adminAuditLogger";
 import { getFormationRate, resolveAdminRange } from "../lib/adminMetrics";
+import { applyConnectionSelection } from "./connectionSelectionRepo";
 
 /**
  * @deprecated Compatibility facade — do not add new query logic here.
@@ -74,7 +75,12 @@ export interface LegacyStorage {
   updateEventFeedbackDeep(userId: string, eventId: string, deepData: Record<string, any>): Promise<EventFeedback>;
 
   // Connection operations (WeChat ID exchange)
-  upsertConnection(eventId: string, currentUserId: string, targetUserId: string): Promise<any>;
+  upsertConnection(
+    eventId: string,
+    currentUserId: string,
+    targetUserId: string,
+    options?: { mutualSelectionV2Enabled?: boolean; revealAt?: Date | null },
+  ): Promise<any>;
   getMutualConnections(eventId: string, userId: string): Promise<any[]>;
   updateUserWechatId(userId: string, wechatContactId: string): Promise<void>;
 
@@ -350,76 +356,31 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   // Connection operations (WeChat ID exchange)
-  async upsertConnection(eventId: string, currentUserId: string, targetUserId: string): Promise<any> {
-    // Determine canonical ordering: userAId < userBId alphabetically for dedup
-    const [canonA, canonB] = currentUserId < targetUserId
-      ? [currentUserId, targetUserId]
-      : [targetUserId, currentUserId];
-
-    // Atomic insert — if a concurrent request beat us, ON CONFLICT DO NOTHING keeps the original row intact.
-    await db
-      .insert(connections)
-      .values({
-        eventId,
-        userAId: canonA,
-        userBId: canonB,
-        status: "pending",
-        initiatorId: currentUserId,
-      })
-      .onConflictDoNothing();
-
-    // Re-fetch the authoritative row (whether we just inserted or it already existed)
-    const [row] = await db
-      .select()
-      .from(connections)
-      .where(
-        and(
-          eq(connections.eventId, eventId),
-          eq(connections.userAId, canonA),
-          eq(connections.userBId, canonB)
-        )
-      );
-
-    if (!row) {
-      // This should never happen after the atomic insert above, but fail fast if it does
-      throw new Error(`[Connections] Row not found after insert for event=${eventId} userA=${canonA} userB=${canonB}`);
-    }
-
-    // If the row is already mutual, nothing more to do
-    if (row.status === "mutual") return row;
-
-    // Flip to mutual only when the OTHER user is calling (i.e. the initiator is NOT currentUserId).
-    // If the initiator IS currentUserId it means the same user re-submitted — keep it pending.
-    if (row.initiatorId !== currentUserId) {
-      // Fetch both users' wechat IDs in parallel for snapshot
-      const [userARows, userBRows] = await Promise.all([
-        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA)),
-        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB)),
-      ]);
-      const [userARecord] = userARows;
-      const [userBRecord] = userBRows;
-
-      // Drizzle .returning() returns an array; destructuring gives the first row or undefined
-      const [updated] = await db
-        .update(connections)
-        .set({
-          status: "mutual",
-          userAWechatId: userARecord?.wechatContactId ?? null,
-          userBWechatId: userBRecord?.wechatContactId ?? null,
-          revealedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(connections.id, row.id),
-            eq(connections.status, "pending") // guard against a concurrent mutual update
-          )
-        )
-        .returning();
-      // If the WHERE condition didn't match (concurrent update already set mutual), re-return the row we fetched
-      return updated ?? row;
-    }
-
-    return row;
+  async upsertConnection(
+    eventId: string,
+    currentUserId: string,
+    targetUserId: string,
+    options: {
+      /**
+       * Reveal-gated mutual selection (G0, 2026-11-10). When true the second
+       * side stops at `mutual_pending` and waits for the table reveal; when
+       * false (default) the legacy immediate `mutual` flip runs unchanged.
+       */
+      mutualSelectionV2Enabled?: boolean;
+      /** Table-wide reveal instant — required to reach `mutual_pending`. */
+      revealAt?: Date | null;
+    } = {},
+  ): Promise<any> {
+    // Delegates to the focused repository so there is exactly one
+    // implementation of "A selected B" (see connectionSelectionRepo.ts).
+    const result = await applyConnectionSelection(db, {
+      eventId,
+      callerId: currentUserId,
+      peerId: targetUserId,
+      mutualSelectionV2Enabled: options.mutualSelectionV2Enabled === true,
+      revealAt: options.revealAt ?? null,
+    });
+    return result.row;
   }
 
   async getMutualConnections(eventId: string, userId: string): Promise<any[]> {

@@ -24,9 +24,31 @@ export interface ConnectionsStepProps {
   participants: EventParticipantSummary[]
   participantsError: boolean
   selectedConnections: string[]
+  /** Server-owned cap mirrored in the UI; defaults to the six-seat table's five peers. */
+  maxSelections?: number
   onToggleConnection: (userId: string) => void
   onRetryParticipants: () => void
   onNext: () => void
+  /**
+   * G0 edit mode (2026-11-10): the page re-enters this step after a successful
+   * feedback submit while the selection window is still open. The primary CTA
+   * label is supplied by the caller (保存修改) and no other layout changes, so
+   * the prefilled grid is byte-identical to the first pass.
+   */
+  submitLabel?: string
+  /** Edit save in flight — CTA shows 正在保存… and stops accepting taps. */
+  isSaving?: boolean
+  /**
+   * Blocks the CTA without changing its copy. Used by replace-mode editing: an
+   * empty grid would otherwise PUT `[]` and wipe an existing selection.
+   */
+  submitDisabled?: boolean
+  /** Neutral caution line above the CTA (e.g. replace-mode overwrite warning). */
+  noticeMessage?: string
+  /** Coded server error from the edit PUT, shown above the CTA. */
+  errorMessage?: string
+  /** Edit-mode escape hatch — returns to the read-only post-submit state. */
+  onCancelEdit?: () => void
 }
 
 export default function ConnectionsStep({
@@ -34,10 +56,29 @@ export default function ConnectionsStep({
   participants,
   participantsError,
   selectedConnections,
+  maxSelections = 5,
   onToggleConnection,
   onRetryParticipants,
   onNext,
+  submitLabel,
+  isSaving = false,
+  submitDisabled = false,
+  noticeMessage,
+  errorMessage,
+  onCancelEdit,
 }: ConnectionsStepProps) {
+  const selectedCount = selectedConnections.length
+  const defaultSubmitLabel = selectedCount > 0 ? `已选 ${selectedCount} 人，下一步` : '下一步'
+  const primaryLabel = isSaving ? '正在保存…' : submitLabel ?? defaultSubmitLabel
+  const countSuffix = selectedCount > 0 ? `，已选 ${selectedCount} 人` : ''
+  const primaryAriaLabel = isSaving
+    ? '正在保存'
+    : submitLabel
+      ? `${submitLabel}${countSuffix}${submitDisabled ? '，请先选择同桌' : ''}`
+      : selectedCount > 0
+        ? `已选 ${selectedCount} 人，进入下一步`
+        : '进入下一步'
+
   return (
     <View className='event-feedback'>
       <View className='event-feedback__header'>
@@ -60,7 +101,7 @@ export default function ConnectionsStep({
               size={28}
               className='event-feedback__benefit-icon'
             />
-            <Text className='event-feedback__benefit-text'>互相选择后，即可看到对方的微信号</Text>
+            <Text className='event-feedback__benefit-text'>最多选 {maxSelections} 位。互相选择后，即可看到对方的微信号</Text>
           </View>
 
           <View className='event-feedback__card'>
@@ -158,18 +199,41 @@ export default function ConnectionsStep({
         {/* Batch C item 8: quiet selection count chip floating above the CTA. */}
         {selectedConnections.length > 0 && (
           <View className='event-feedback__selection-count'>
-            <Text className='event-feedback__selection-count-text'>已选 {selectedConnections.length} 位</Text>
+            <Text className='event-feedback__selection-count-text'>已选 {selectedConnections.length} 位 · 最多 {maxSelections} 位</Text>
           </View>
         )}
+        {/* Replace-mode caution (G0 re-entry): the old selection is invisible
+            before reveal, so the save overwrites it wholesale. Neutral tone —
+            reuses the shared hint style, no new selectors. */}
+        {noticeMessage ? (
+          <Text className='event-feedback__selection-count-text'>{noticeMessage}</Text>
+        ) : null}
+        {/* Edit-mode server error (G0): coded copy from the PUT, announced once.
+            Reuses the shared error-text style — no new selectors. */}
+        {errorMessage ? (
+          <View role='alert' aria-live='polite'>
+            <Text className='event-feedback__wechat-field-error'>{errorMessage}</Text>
+          </View>
+        ) : null}
         <Button
           className='event-feedback__submit'
           onClick={onNext}
-          ariaLabel={selectedConnections.length > 0 ? `已选 ${selectedConnections.length} 人，进入下一步` : '进入下一步'}
+          disabled={isSaving || submitDisabled}
+          ariaLabel={primaryAriaLabel}
         >
-          {selectedConnections.length > 0
-            ? `已选 ${selectedConnections.length} 人，下一步`
-            : '下一步'}
+          {primaryLabel}
         </Button>
+        {onCancelEdit ? (
+          <View
+            className='event-feedback__success-back'
+            hoverClass='event-feedback__success-back--pressed'
+            role='button'
+            aria-label='取消修改'
+            onClick={onCancelEdit}
+          >
+            <Text>取消修改</Text>
+          </View>
+        ) : null}
       </View>
     </View>
   )

@@ -78,7 +78,16 @@ export type ErrorCode =
   // POST /api/user/wechat-contact when the server-side revalidation rejects
   // the value. The detailed rule lives in the persistent field hint
   // (WECHAT_ID_FORMAT_HINT); the toast stays short.
-  | 'INVALID_WECHAT_CONTACT_ID';
+  | 'INVALID_WECHAT_CONTACT_ID'
+  // Reveal-gated mutual selection (G0, 2026-11-10). POST /feedback and
+  // PUT /connection-selection share these codes.
+  | 'TOO_MANY_SELECTIONS'
+  | 'SELECTION_WINDOW_CLOSED'
+  | 'SELECTION_UNAVAILABLE'
+  | 'INVALID_SELECTION'
+  // Tablemate authority (G0, 2026-11-10): the selection write path rejects any
+  // peer who is not on the viewer's own table/event roster.
+  | 'INVALID_TABLEMATE_SELECTION';
 
 interface ErrorTemplate {
   /** Surface type — determines tone mode */
@@ -331,6 +340,28 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   INVALID_WECHAT_CONTACT_ID: {
     surface: 'toast-error',
     default: '微信号格式不对，检查一下？',
+  },
+  // Reveal-gated mutual selection (G0, 2026-11-10). 6 人桌只有 5 位同桌，所以
+  // 超限只可能是客户端 bug 或恶意 payload —— 文案保持中性，不指责用户。
+  TOO_MANY_SELECTIONS: {
+    surface: 'toast-error',
+    default: '最多只能选 5 位同桌',
+  },
+  SELECTION_WINDOW_CLOSED: {
+    surface: 'toast-error',
+    default: '本轮互选已经结束',
+  },
+  SELECTION_UNAVAILABLE: {
+    surface: 'toast-error',
+    default: '这场活动暂时不能改选择',
+  },
+  INVALID_SELECTION: {
+    surface: 'toast-error',
+    default: '选择里有人不在本场活动',
+  },
+  INVALID_TABLEMATE_SELECTION: {
+    surface: 'toast-error',
+    default: '只能选择同桌的伙伴',
   },
 };
 

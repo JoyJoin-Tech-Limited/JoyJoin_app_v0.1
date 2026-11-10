@@ -182,8 +182,9 @@ export function injectConnectionsShellIntoCache(
     })
   }
 
-  // Connections: inject directly so list renders instantly.
-  queryClient.setQueryData(CONNECTIONS_QUERY_KEY, shell.connections)
+  // Connections: keep the envelope so the page can render the pending-reveal
+  // count without a second request. The page normalizes legacy array caches.
+  queryClient.setQueryData(CONNECTIONS_QUERY_KEY, shell)
 
   // Notification counts: inject for badge accuracy.
   queryClient.setQueryData(NOTIFICATION_COUNTS_QUERY_KEY, shell.notifications)

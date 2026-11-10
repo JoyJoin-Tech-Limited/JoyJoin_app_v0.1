@@ -355,6 +355,7 @@ import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
+import { quipAuthorToken } from '../lib/quipAnswerIdentity';
 import { getSingleTestMetaForSessionStart } from '../services/singleTestService';
 
 function createApp() {
@@ -2761,6 +2762,36 @@ describe.sequential('social icebreaker routes', () => {
         expect((await getSession(socialSessionId))?.quipBattleVotes).toContainEqual({
           voterId: 'qb-masked-bot-vote-host',
           answerId: 'internal-bot-user-1::prompt-1',
+          promptId: 'prompt-1',
+        });
+      });
+    });
+
+    it('accepts a vote that references an opaque G0 answerId', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'qb-opaque-vote-host');
+        const socialSessionId = await advanceToQuipBattle(baseUrl, hostCookie);
+        const state = await getSession(socialSessionId);
+        if (!state) throw new Error('Expected quip battle session');
+        state.quipBattleAnswers = [
+          { userId: 'answer-1', displayName: 'Answer 1', promptId: 'prompt-1', answerText: 'A' },
+        ];
+        await updateSession(socialSessionId, state);
+
+        // The sanitized payload replaces the author id with an opaque token;
+        // voting by that token must resolve and persist in the internal form.
+        const opaqueAnswerId = `${quipAuthorToken(socialSessionId, 'answer-1')}::prompt-1`;
+
+        const voteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/vote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ votes: [{ answerId: opaqueAnswerId, promptId: 'prompt-1' }] }),
+        });
+
+        expect(voteResponse.status).toBe(200);
+        expect((await getSession(socialSessionId))?.quipBattleVotes).toContainEqual({
+          voterId: 'qb-opaque-vote-host',
+          answerId: 'answer-1::prompt-1',
           promptId: 'prompt-1',
         });
       });

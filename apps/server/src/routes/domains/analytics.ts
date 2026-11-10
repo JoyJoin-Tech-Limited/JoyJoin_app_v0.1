@@ -185,6 +185,19 @@ const DISCOVER_EVENT_TYPES = [
   // revealed screen. eventId + matchCount metadata only — zero PII.
   "feedback_keepsake_save",
   "feedback_acknowledgment_submitted",
+  // G0 24h mutual-selection loop: aggregate counts + server window state only.
+  // Never accept selected peer IDs, names, or WeChat IDs in metadata.
+  "connection_selection_submitted",
+  "connection_pending_reveal_viewed",
+  "connection_wechat_copied",
+  // G0 reveal loop surfaces (2026-11-10): entry to the selection editor, an
+  // accepted edit (counts only), the reveal screen, and the honest
+  // 「这次没有互相选择」 empty state. Same metadata rule as above — enum/count
+  // only, never a peer identity or a per-user selection count.
+  "connection_selection_viewed",
+  "connection_selection_edited",
+  "connection_reveal_viewed",
+  "zero_mutual_viewed",
   "promo_banner_impression",
   "promo_banner_cta_tap",
   "promo_banner_image_error",

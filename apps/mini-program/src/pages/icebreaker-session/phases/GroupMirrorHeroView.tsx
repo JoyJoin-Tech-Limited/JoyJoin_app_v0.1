@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { RootPortal, View, Text } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import { ParticleBurst } from '../../../components/reveal'
 import { TapReaction } from '../../../components/gesture'
@@ -11,7 +11,6 @@ import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SocialContentStatus } from '@shared/socialIcebreaker'
 import { useGeneratingLiveCopy } from '../hooks/useGeneratingLiveCopy'
-import { buildGroupMirrorAnswerRows } from '../viewModels/phaseProgressionModels'
 import { formatAwayWaitSuffix } from '../viewModels/rejoinCatchUpModel'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
@@ -73,7 +72,6 @@ export function GroupMirrorHeroView({
   isHost,
   userId,
   questions = [],
-  answers = [],
   submittedUserIds = [],
   revealed = false,
   results,
@@ -101,7 +99,6 @@ export function GroupMirrorHeroView({
   const [questionIndex, setQuestionIndex] = useState(0)
   const [selectedReaction, setSelectedReaction] = useState<number | null>(null)
   const [showBurst, setShowBurst] = useState(false)
-  const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null)
 
   // One short firework on reveal. The wrapper unmounts after 900ms, leaving
   // only the stable one-sided result cards.
@@ -117,7 +114,6 @@ export function GroupMirrorHeroView({
       return () => clearTimeout(timer)
     } else if (!revealed) {
       setShowBurst(false)
-      setExpandedQuestionId(null)
     }
   }, [revealed, results])
 
@@ -211,20 +207,8 @@ export function GroupMirrorHeroView({
             <ParticleBurst trigger type='confetti' count={24} />
           </View>
         )}
-        {expandedQuestionId ? (
-          // Wave 2 (AC-12): RootPortal — the detail backdrop must cover the
-          // viewport, not the transform-keeping phase shell box.
-          <RootPortal>
-            <View
-              className='group-mirror-hero__detail-backdrop'
-              onClick={() => setExpandedQuestionId(null)}
-              aria-label='收起全部回答'
-            />
-          </RootPortal>
-        ) : null}
         <PhaseHeroCard
           phase='group_mirror'
-          className={expandedQuestionId ? 'group-mirror-hero__card--detail-open' : undefined}
           title='群像镜像 · 揭晓'
           statusText='看看大家眼中的彼此'
           actions={
@@ -236,62 +220,21 @@ export function GroupMirrorHeroView({
           }
         >
           <View className='group-mirror-hero__results'>
-            {results.map((r) => {
-              const expanded = expandedQuestionId === r.questionId
-              const answerRows = buildGroupMirrorAnswerRows({
-                questionId: r.questionId,
-                answers,
-                participants,
-              })
-              return (
-                <View
-                  key={r.questionId}
-                  className={`group-mirror-hero__result-item ${
-                    expanded ? 'group-mirror-hero__result-item--expanded' : ''
-                  }`}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <View className='group-mirror-hero__result-question-row'>
-                    <View className='group-mirror-hero__result-question-copy'>
-                      <Text className='group-mirror-hero__card-question'>{r.questionText}</Text>
-                    </View>
-                    <Button
-                      variant='secondary'
-                      onClick={() => setExpandedQuestionId(expanded ? null : r.questionId)}
-                    >
-                      {expanded ? '收起' : '全部回答'}
-                    </Button>
-                  </View>
-                  <View className='group-mirror-hero__result-winner-row'>
-                    <View className='group-mirror-hero__result-winner-copy'>
-                      <Text className='group-mirror-hero__card-winner'>
-                        {r.topTargetDisplayName}
-                      </Text>
-                    </View>
-                    <Text className='group-mirror-hero__card-votes'>
-                      {r.voteCount} / {r.totalVotes} 票
+            {results.map((r) => (
+              <View key={r.questionId} className='group-mirror-hero__result-item'>
+                <Text className='group-mirror-hero__card-question'>{r.questionText}</Text>
+                <View className='group-mirror-hero__result-winner-row'>
+                  <View className='group-mirror-hero__result-winner-copy'>
+                    <Text className='group-mirror-hero__card-winner'>
+                      {r.topTargetDisplayName}
                     </Text>
                   </View>
-                  {expanded ? (
-                    <View className='group-mirror-hero__answer-list'>
-                      {answerRows.map((row, index) => (
-                        <View
-                          key={`${r.questionId}-${row.targetUserId}-${index}`}
-                          className='group-mirror-hero__answer-row'
-                        >
-                          <Text className='group-mirror-hero__answer-voter'>
-                            {row.voterDisplayName}
-                          </Text>
-                          <View className='group-mirror-hero__answer-target'>
-                            <Text>{row.targetDisplayName}</Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
+                  <Text className='group-mirror-hero__card-votes'>
+                    {r.voteCount} / {r.totalVotes} 票
+                  </Text>
                 </View>
-              )
-            })}
+              </View>
+            ))}
           </View>
         </PhaseHeroCard>
       </View>

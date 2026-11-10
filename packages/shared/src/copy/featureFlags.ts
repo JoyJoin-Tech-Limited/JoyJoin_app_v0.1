@@ -156,6 +156,8 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
   aigcLabelsEnabled: 'content-compliance',
   industryCohortCountEnabled: 'content-compliance',
   wechatIdCollectionEnabled: 'content-compliance',
+  // 24h 互选（活动后关系闭环）：决定「谁选了谁」何时可被观察，属隐私姿态。
+  mutualSelectionV2Enabled: 'content-compliance',
 }
 
 export const FEATURE_FLAG_LABELS: Record<string, string> = {
@@ -275,6 +277,7 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
   aigcLabelsEnabled: 'AI 生成内容角标',
   industryCohortCountEnabled: '同行业同侪人数查询',
   wechatIdCollectionEnabled: '微信号收集',
+  mutualSelectionV2Enabled: '24h 待揭晓互选',
 }
 
 export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
@@ -466,4 +469,6 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
     '默认开启，为隐私查询的保险开关。开启后，可查询同城市同行业的人数规模（不足十人时返回空，保护个人）；关闭时接口直接返回空，不执行任何查询。',
   wechatIdCollectionEnabled:
     '默认关闭，待上线前基线数据拉取后开启。开启后，活动评价流程在选人后增加可选的微信号填写步骤，并在回顾页展示联系方式补救卡片；关闭时评价流程与现状完全一致。',
+  mutualSelectionV2Enabled:
+    '默认关闭。开启后进入 24h 待揭晓互选：每人最多选 5 位同桌，双方都选也只记为「待揭晓」（不换取微信号、不通知），到活动开始后 24h 的下一个 21:00（北京时间）统一揭晓；活动评价页/连接页只显示自己的选择数量与揭晓时间，不显示谁选了你。关闭后立即回到旧的即时互选行为（双方一选就互揭微信号），无需发版。',
 }

@@ -1,12 +1,14 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { ConnectionsShellResponse } from '@shared/api'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest, fetchConnectionsShell } from '../../lib/api/api'
 import { injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
 import { queryClient } from '../../lib/api/queryClient'
+import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
@@ -15,6 +17,7 @@ import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Card from '../../components/ui/Card'
+import ConnectionPendingCard, { formatConnectionRevealLabel } from './components/ConnectionPendingCard'
 import './index.scss'
 
 interface Connection {
@@ -44,14 +47,16 @@ export default function ConnectionsPage() {
     preloadPredictiveAssets('pages/connections/index')
   }, [])
 
-  const { data: connectionsData, isLoading, isError, refetch } = useQuery<Connection[]>({
+  type ConnectionsQueryData = Connection[] | ConnectionsShellResponse
+
+  const { data: connectionsData, isLoading, isError, refetch } = useQuery<ConnectionsQueryData>({
     queryKey: ['mini-program', 'connections'],
-    queryFn: async (): Promise<Connection[]> => {
+    queryFn: async (): Promise<ConnectionsQueryData> => {
       // Primary: composite endpoint — 1 request for all Connections data.
       try {
         const shell = await fetchConnectionsShell()
         injectConnectionsShellIntoCache(queryClient, shell)
-        return shell.connections
+        return shell
       } catch {
         // Composite unavailable — fall back to legacy endpoint.
       }
@@ -61,9 +66,28 @@ export default function ConnectionsPage() {
     staleTime: 30_000,
   })
 
-  // Runtime transport/cache data is not necessarily the declared array shape.
-  // A null payload means no renderable connections, not a blank-page crash.
-  const connections = Array.isArray(connectionsData) ? connectionsData : []
+  // Runtime transport/cache data is not necessarily the declared shape. A null
+  // payload means no renderable connections, not a blank-page crash. Legacy
+  // array caches are normalized alongside the composite envelope.
+  const shellData = connectionsData && !Array.isArray(connectionsData) ? connectionsData : null
+  const connections = Array.isArray(connectionsData)
+    ? connectionsData
+    : ((shellData?.connections as Connection[] | undefined) ?? [])
+  const pendingReveal = shellData?.pendingReveal ?? null
+
+  // G0: count-only pending-reveal exposure. Fire once per mount when the
+  // server-confirmed card actually renders; never send identities or counts of
+  // who selected the viewer.
+  const pendingRevealTrackedRef = useRef(false)
+  useEffect(() => {
+    if (pendingRevealTrackedRef.current) return
+    if (!pendingReveal || pendingReveal.count <= 0) return
+    pendingRevealTrackedRef.current = true
+    trackFeedbackEvent('connection_pending_reveal_viewed', {
+      count: pendingReveal.count,
+      hasRevealAt: Boolean(pendingReveal.revealAt),
+    })
+  }, [pendingReveal])
 
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
 
@@ -91,8 +115,17 @@ export default function ConnectionsPage() {
               size='md'
             />
           </View>
-        ) : connections.length > 0 ? (
-          connections.map((conn) => (
+        ) : (
+          <>
+            {pendingReveal && pendingReveal.count > 0 ? (
+              <ConnectionPendingCard
+                count={pendingReveal.count}
+                revealAtLabel={formatConnectionRevealLabel(pendingReveal.revealAt)}
+                className='connections-page__pending-reveal'
+              />
+            ) : null}
+            {connections.length > 0 ? (
+              connections.map((conn) => (
             <Card
               key={String(conn.id)}
               className='connections-page__card'
@@ -110,6 +143,7 @@ export default function ConnectionsPage() {
                   success: (res) => {
                     if (actions[res.tapIndex] === '复制微信号' && conn.wechatId) {
                       Taro.setClipboardData({ data: conn.wechatId })
+                      trackFeedbackEvent('connection_wechat_copied', { surface: 'connections' })
                     }
                   },
                 })
@@ -159,9 +193,9 @@ export default function ConnectionsPage() {
                 ) : null}
               </View>
             </Card>
-          ))
-        ) : (
-          <View className='connections-page__empty-state'>
+              ))
+            ) : (
+              <View className='connections-page__empty-state'>
             <XiaoyueEmptyState
               variant='editorial'
               emotion='curious'
@@ -206,7 +240,9 @@ export default function ConnectionsPage() {
                 </View>
               </View>
             </View>
-          </View>
+              </View>
+            )}
+          </>
         )}
         <View className='connections-page__spacer' />
       </ScrollView>

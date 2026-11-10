@@ -224,8 +224,22 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
  *   - the user is NOT the initiator (someone else initiated)
  *
  * N+1-free: single round-trip.
+ *
+ * Privacy (G0, 2026-11-10): under reveal-gated mutual selection
+ * (`mutualSelectionV2Enabled` ON) this list is a pre-reveal identity leak —
+ * its very length tells the caller how many people picked them — so it
+ * returns `[]`. The caller sees only their OWN selection state via
+ * `getOwnPendingReveal` ({ count, revealAt }). Flag OFF keeps the legacy
+ * behaviour above byte-identically.
  */
-export async function getUserPendingRequests(userId: string): Promise<PendingRequestSummary[]> {
+export async function getUserPendingRequests(
+  userId: string,
+  options: { mutualSelectionV2Enabled?: boolean } = {},
+): Promise<PendingRequestSummary[]> {
+  if (options.mutualSelectionV2Enabled === true) {
+    return [];
+  }
+
   const rows = await db
     .select({
       id: connections.id,

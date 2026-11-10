@@ -13,8 +13,49 @@ import { validateContentSafe, validateContentSafeAsync, contentViolationResponse
 import { recordViolation } from "../../abuseDetection";
 import { canonicalEventIdGuard } from "../../lib/resolveCanonicalEventId";
 import { resolveFeedbackState } from "../../lib/feedbackStateResolver";
+import { getFeatureFlag } from "../../lib/featureFlags";
+import {
+  MAX_CONNECTION_SELECTIONS,
+  buildConnectionSelectionSummary,
+  type ConnectionSelectionSummary,
+  type ConnectionSelectionWindow,
+} from "../../lib/connectionSelectionWindow";
+import {
+  getConnectionSelectionWindow,
+  getOwnSelectedPeerIds,
+  replaceConnectionSelection,
+} from "../../repositories/connectionSelectionRepo";
+import { validateTablemateSelection } from "../../repositories/eventTableRosterRepo";
 import { formatAge } from "@shared/utils";
 import { validateWechatContactId } from "@shared/wechatContactId";
+
+/**
+ * Normalise a raw `connections` / `selectedUserIds` payload (G0, 2026-11-10).
+ *
+ * Returns `null` when the payload is not an array of strings (callers map that
+ * to 400 INVALID_SELECTION), otherwise the de-duplicated peer list with the
+ * caller removed — a self-selection is a client bug, never a peer.
+ * Order is preserved so the caller's own list round-trips deterministically.
+ */
+export function normalizeConnectionSelection(
+  raw: unknown,
+  selfUserId: string,
+): string[] | null {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) return null;
+
+  const seen = new Set<string>();
+  const peers: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (trimmed.length === 0 || trimmed === selfUserId) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    peers.push(trimmed);
+  }
+  return peers;
+}
 
 /**
  * Visibility-gated identity fields for the feedback wrap-up row (2026-10-16).
@@ -393,7 +434,30 @@ export function registerSocialRoutes(app: Express): void {
         // canonicalEventIdGuard uses on sibling routes.
         return res.status(404).json({ message: "未找到对应的活动" });
       }
-      return res.json({ state: resolution.state });
+
+      // Reveal-gated mutual selection (G0, 2026-11-10): the client renders
+      // 已选 N/5 + 「明晚 21:00 揭晓」 from the server's own window and never
+      // derives one. The block is omitted when the flag is OFF, so the legacy
+      // payload stays byte-identical.
+      // The caller's OWN selected peer ids ride along (edit prefill) — the same
+      // narrow set the PUT/POST write paths accept, never a peer-facing list.
+      let connectionSelection: ConnectionSelectionSummary | undefined;
+      if (await getFeatureFlag('mutualSelectionV2Enabled')) {
+        if (resolution.canonicalEventId) {
+          const resolvedSelectionWindow = await getConnectionSelectionWindow(resolution.canonicalEventId);
+          if (resolvedSelectionWindow) {
+            connectionSelection = buildConnectionSelectionSummary(
+              resolvedSelectionWindow.window,
+              await getOwnSelectedPeerIds(resolution.canonicalEventId, userId),
+            );
+          }
+        }
+      }
+
+      return res.json({
+        state: resolution.state,
+        ...(connectionSelection ? { connectionSelection } : {}),
+      });
     } catch (error) {
       logger.error("Error resolving feedback state", { error: String(error), route: req.originalUrl });
       return res.status(500).json({ code: "server", message: "服务器有点忙，稍后再试" });
@@ -434,6 +498,73 @@ export function registerSocialRoutes(app: Express): void {
       }
       if (state === "submitted") {
         return res.status(409).json({ code: "FEEDBACK_ALREADY_SUBMITTED", message: "你已经评价过这场活动啦" });
+      }
+
+      // ── Connection selection authority (G0, 2026-11-10) ──────────────────
+      // The server owns the 0–5 cap unconditionally (W1 trust hardening: a
+      // six-seat table has five peers, so the cap can never reject a
+      // legitimate payload, and it is NOT gated by the V2 flag). The selection
+      // window only applies when `mutualSelectionV2Enabled` is ON — flag OFF
+      // keeps the legacy immediate-mutual write byte-identical.
+      // Ordering matters: both checks run BEFORE content moderation and BEFORE
+      // any write, so a rejected selection never burns the WeChat check budget
+      // and never half-persists a feedback row.
+      const mutualSelectionV2Enabled = await getFeatureFlag('mutualSelectionV2Enabled');
+      const selectionPayload = req.body?.connections;
+      if (
+        Array.isArray(selectionPayload) &&
+        selectionPayload.includes(userId) &&
+        mutualSelectionV2Enabled
+      ) {
+        logger.warn("[Connections] Self-selection dropped from payload", { eventId: canonicalEventId, userId });
+      }
+      const normalizedSelection = normalizeConnectionSelection(selectionPayload, userId);
+      if (!normalizedSelection) {
+        return res.status(400).json({ code: "INVALID_SELECTION", message: "选择数据格式不对" });
+      }
+      if (normalizedSelection.length > MAX_CONNECTION_SELECTIONS) {
+        return res.status(400).json({ code: "TOO_MANY_SELECTIONS", message: "最多只能选 5 位同桌" });
+      }
+      let selectionWindow: ConnectionSelectionWindow | null = null;
+      if (mutualSelectionV2Enabled) {
+        const resolvedSelectionWindow = await getConnectionSelectionWindow(canonicalEventId);
+        selectionWindow = resolvedSelectionWindow?.window ?? null;
+        // The cap is per USER+EVENT, not per request: `PUT /connection-selection`
+        // can already hold a selection when the feedback POST lands, so a
+        // payload-only check would let 5 + 5 through. PUT itself replaces the
+        // whole set, so it needs no such read.
+        if (normalizedSelection.length > 0) {
+          const alreadySelected = await getOwnSelectedPeerIds(canonicalEventId, userId);
+          const union = new Set([...alreadySelected, ...normalizedSelection]);
+          if (union.size > MAX_CONNECTION_SELECTIONS) {
+            return res.status(400).json({ code: "TOO_MANY_SELECTIONS", message: "最多只能选 5 位同桌" });
+          }
+        }
+        // Zero selections stays submit-able after the window closes (a user may
+        // still want to rate the event); carrying peers is what 409s.
+        if (normalizedSelection.length > 0 && selectionWindow?.state !== "open") {
+          return res.status(409).json({ code: "SELECTION_WINDOW_CLOSED", message: "本轮互选已经结束" });
+        }
+      }
+
+      // Tablemate authority (G0, 2026-11-10): every selected peer must belong to
+      // the viewer's own table/event roster (the exact source
+      // GET /api/events/:eventId/participants reads). Applies in BOTH flag
+      // states — accepting a stranger is a security defect, not a V2 product
+      // behaviour — and runs before moderation/writes, like the cap and window.
+      if (normalizedSelection.length > 0) {
+        const { invalidPeerIds } = await validateTablemateSelection({
+          canonicalEventId,
+          viewerId: userId,
+          peerIds: normalizedSelection,
+          route: "POST /api/events/:eventId/feedback",
+        });
+        if (invalidPeerIds.length > 0) {
+          return res.status(400).json({
+            code: "INVALID_TABLEMATE_SELECTION",
+            message: "只能选择同桌的伙伴",
+          });
+        }
       }
 
       const result = insertEventFeedbackSchema.safeParse({
@@ -545,14 +676,13 @@ export function registerSocialRoutes(app: Express): void {
         logger.error("Error awarding feedback XP", { error: String(xpError) });
       }
 
-      if (feedback.connections && feedback.connections.length > 0) {
-        for (const selectedUserId of feedback.connections) {
-          if (selectedUserId === userId) {
-            logger.warn(`[Connections] User ${userId} attempted self-selection — skipped`);
-            continue;
-          }
+      if (normalizedSelection.length > 0) {
+        for (const selectedUserId of normalizedSelection) {
           try {
-            await storage.upsertConnection(canonicalEventId, userId, selectedUserId);
+            await storage.upsertConnection(canonicalEventId, userId, selectedUserId, {
+              mutualSelectionV2Enabled,
+              revealAt: selectionWindow?.revealAt ?? null,
+            });
             shellCache.invalidateUser(userId);
             shellCache.invalidateUser(selectedUserId);
           } catch (connError) {
@@ -619,7 +749,26 @@ export function registerSocialRoutes(app: Express): void {
         })
       );
 
-      const responsePayload = { ...feedback, mutualMatches };
+      // Response prefill (G0): the caller's OWN selection AFTER the write. A
+      // feedback POST unions with whatever `PUT /connection-selection` already
+      // stored, so passing only `normalizedSelection` would under-report and
+      // disagree with the GET feedback-state summary. Omitted entirely when the
+      // flag is OFF or the event has no resolvable window (legacy payload).
+      const responseOwnSelectedPeerIds =
+        mutualSelectionV2Enabled && selectionWindow
+          ? await getOwnSelectedPeerIds(canonicalEventId, userId)
+          : [];
+
+      const responsePayload = {
+        ...feedback,
+        mutualMatches,
+        // Reveal-gated mutual selection (G0): the client renders 已选 N/5 +
+        // 明晚 21:00 揭晓 from the server's own window. Omitted when the flag is
+        // OFF (legacy payload) or when the event has no resolvable start.
+        ...(mutualSelectionV2Enabled && selectionWindow
+          ? { connectionSelection: buildConnectionSelectionSummary(selectionWindow, responseOwnSelectedPeerIds) }
+          : {}),
+      };
       const shadowRecommendationInput = {
         source: 'event_feedback',
         eventId: canonicalEventId,
@@ -658,6 +807,113 @@ export function registerSocialRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error creating feedback", { error: String(error) });
       res.status(500).json({ message: "Failed to create feedback" });
+    }
+  });
+
+  // PUT /api/events/:eventId/connection-selection — full replace of the
+  // caller's 0–5 selection inside the open window (G0, 2026-11-10).
+  //
+  // `POST /feedback` remains the FIRST write (it also awards feedback XP); this
+  // endpoint is edit/clear only and never touches XP, feedback rows or
+  // notifications. Idempotent: the same body twice converges on the same rows.
+  // Codes: 400 INVALID_SELECTION | TOO_MANY_SELECTIONS, 403 FEEDBACK_NOT_ELIGIBLE,
+  // 409 SELECTION_UNAVAILABLE (flag off) | SELECTION_WINDOW_CLOSED.
+  app.put('/api/events/:eventId/connection-selection', requireAuth, canonicalEventIdGuard(), async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const canonicalEventId = req.canonicalEventId as string;
+      if (!canonicalEventId) {
+        logger.warn("Connection selection event could not be resolved", { routeEventId: req.params.eventId, userId });
+        return res.status(404).json({ message: "未找到对应的活动" });
+      }
+
+      const mutualSelectionV2Enabled = await getFeatureFlag('mutualSelectionV2Enabled');
+      if (!mutualSelectionV2Enabled) {
+        // The reveal-gated model is the only writer of this endpoint; a
+        // flag-off caller is a stale/rogue client, never a legacy flow.
+        return res.status(409).json({ code: "SELECTION_UNAVAILABLE", message: "这场活动暂时不能改选择" });
+      }
+
+      const normalizedSelection = normalizeConnectionSelection(req.body?.selectedUserIds, userId);
+      if (!normalizedSelection || !Array.isArray(req.body?.selectedUserIds)) {
+        // A missing field is NOT "clear everything": only an explicit `[]`
+        // clears, so a buggy client cannot silently wipe a selection.
+        return res.status(400).json({ code: "INVALID_SELECTION", message: "选择数据格式不对" });
+      }
+      if (normalizedSelection.length > MAX_CONNECTION_SELECTIONS) {
+        return res.status(400).json({ code: "TOO_MANY_SELECTIONS", message: "最多只能选 5 位同桌" });
+      }
+
+      // Same eligibility resolver the feedback POST uses, so the two write
+      // paths can never disagree about who may select.
+      const feedbackState = await resolveFeedbackState(req.params.eventId, userId);
+      if (!feedbackState || feedbackState.state === "ineligible") {
+        return res.status(403).json({ code: "FEEDBACK_NOT_ELIGIBLE", message: "这场活动未成行，无法评价" });
+      }
+
+      const resolvedSelectionWindow = await getConnectionSelectionWindow(canonicalEventId);
+      if (!resolvedSelectionWindow || resolvedSelectionWindow.window.state !== "open") {
+        return res.status(409).json({ code: "SELECTION_WINDOW_CLOSED", message: "本轮互选已经结束" });
+      }
+
+      // Tablemate authority (G0, 2026-11-10): same roster gate as the feedback
+      // POST, before any write. A peer outside the viewer's table is a coded 400
+      // — never a silently-created `connections` row.
+      if (normalizedSelection.length > 0) {
+        const { invalidPeerIds } = await validateTablemateSelection({
+          canonicalEventId,
+          viewerId: userId,
+          peerIds: normalizedSelection,
+          route: "PUT /api/events/:eventId/connection-selection",
+        });
+        if (invalidPeerIds.length > 0) {
+          return res.status(400).json({
+            code: "INVALID_TABLEMATE_SELECTION",
+            message: "只能选择同桌的伙伴",
+          });
+        }
+      }
+
+      const result = await replaceConnectionSelection({
+        eventId: canonicalEventId,
+        callerId: userId,
+        peerIds: normalizedSelection,
+        revealAt: resolvedSelectionWindow.window.revealAt,
+      });
+
+      shellCache.invalidateUser(userId);
+      for (const peerId of normalizedSelection) {
+        shellCache.invalidateUser(peerId);
+      }
+
+      logger.info("connection-selection.replaced", {
+        request_id: req.requestId,
+        userId,
+        eventId: canonicalEventId,
+        selected_count: result.selectedCount,
+        withdrawn_count: result.withdrawn,
+        // A revealed connection is never revoked; count it so an unexpected
+        // volume is observable without logging any peer identity.
+        declined_revealed_count: result.declinedRevealed,
+        window_source: resolvedSelectionWindow.source,
+      });
+
+      return res.json({
+        // PUT is a full replace, so the payload IS the caller's own selection
+        // after the write — same shape the GET feedback-state summary returns.
+        connectionSelection: buildConnectionSelectionSummary(
+          resolvedSelectionWindow.window,
+          normalizedSelection,
+        ),
+      });
+    } catch (error) {
+      logger.error("Error replacing connection selection", {
+        request_id: req.requestId,
+        eventId: req.params.eventId,
+        userId: req.session?.userId,
+        error: String(error),
+      });
+      return res.status(500).json({ code: "server", message: "服务器有点忙，稍后再试" });
     }
   });
 

@@ -1,0 +1,63 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+// 24h mutual-selection pending card (G0 prototype, 2026-11-10).
+// Quiet single card: count + reveal moment, nothing else. Solid brand tokens
+// only — no gradient, no urgency colour, no decorative mascot art.
+.connection-pending-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  // Reserved shell height (8rpx rhythm): the card never grows/shrinks with the
+  // count digits or when the reveal label is absent, so the list around it
+  // does not shift.
+  min-height: 160rpx;
+  padding: $spacing-md $spacing-lg; // 24rpx / 40rpx
+  background: $color-surface;
+  border: 2rpx solid rgba($color-primary, 0.08);
+  border-radius: $card-radius-sm; // 24rpx
+  box-shadow: $shadow-sm;
+
+  &__count {
+    display: block;
+    font-size: $font-size-md; // 32rpx
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: $line-height-display;
+    @include text-truncate;
+  }
+
+  &__reveal {
+    display: block;
+    // Reserved single line box (8rpx rhythm) — empty label still holds height.
+    min-height: 32rpx;
+    margin-top: $spacing-xs; // 8rpx
+    font-size: $font-size-xs; // 22rpx
+    color: $color-text-secondary-on-light;
+    line-height: $line-height-normal;
+    @include text-truncate;
+  }
+
+  // Opt-in interactivity only: the card is a static surface until a caller
+  // supplies onTap. Height clears the 88rpx touch target either way.
+  &--tappable {
+    transition: transform 0.12s ease, opacity 0.12s ease;
+  }
+
+  &--pressed {
+    transform: scale(0.99);
+    opacity: 0.96;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &--tappable {
+      transition: none;
+    }
+
+    &--pressed {
+      transform: none;
+      opacity: 1;
+    }
+  }
+}

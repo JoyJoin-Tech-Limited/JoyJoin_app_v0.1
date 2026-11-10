@@ -31,6 +31,10 @@
     padding: 0 $container-padding;
   }
 
+  &__pending-reveal {
+    margin-bottom: $spacing-md;
+  }
+
   &__loading {
     display: flex;
     flex-direction: column;

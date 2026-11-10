@@ -220,9 +220,13 @@ export function selectWarmupTopicDeck(
   const requestedCount = input.targetCount ?? input.topics.length;
   const targetCount = requestedCount > 0 ? requestedCount : hasCandidates ? 1 : 0;
   const servedKeys = new Set(input.servedTopicKeys ?? []);
-  const arcEnabled = input.topics.some(
-    (topic) => topic.depthLevel !== undefined || topic.safety !== undefined,
-  );
+  // Arc metadata can live on any pool. A legacy primary deck without depth
+  // metadata must not force a deep curated fallback card to open the round.
+  const arcEnabled = [
+    ...input.topics,
+    ...(input.curatedFallbackCandidates ?? []),
+    ...(input.currentTopics ?? []),
+  ].some((topic) => topic.depthLevel !== undefined || topic.safety !== undefined);
 
   const unservedPool = buildPool(input, servedKeys, false, false);
   const unserved = arcEnabled

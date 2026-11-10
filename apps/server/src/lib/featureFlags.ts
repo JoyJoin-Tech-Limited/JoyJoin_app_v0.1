@@ -536,6 +536,17 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  200 + [] so guests never see an error page. Ships dark (default false).
    *  Env fallback: GUEST_EVENT_PREVIEW_ENABLED (default: false). */
   guestEventPreviewEnabled: "GUEST_EVENT_PREVIEW_ENABLED",
+  /** Reveal-gated mutual connection selection (G0, 2026-11-10 —
+   *  docs/strategy/2026-11-10-icebreaker-commercial-execution-plan.md §3.5).
+   *  ON  — 0–5 selection, second side stops at `mutual_pending`, identities +
+   *        WeChat snapshots are released only by the reveal sweep at the
+   *        window's revealAt (next 21:00 Asia/Shanghai at-or-after start+24h),
+   *        the shell returns only the caller's own `pendingReveal`.
+   *  OFF — legacy immediate `pending -> mutual` with an instant WeChat
+   *        snapshot, plus the legacy peer-facing pending-request list. This is
+   *        the default; rollback = flip the flag back to false (5s LRU).
+   *  Env fallback: MUTUAL_SELECTION_V2_ENABLED (default: false). */
+  mutualSelectionV2Enabled: "MUTUAL_SELECTION_V2_ENABLED",
 };
 
 /**
@@ -798,6 +809,9 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   flashTeaserHeroEnabled: false,
   /** 活动池预告条（W4 消费方尚未接线）— 调用点 false。 */
   poolTeaserEnabled: false,
+  /** 24h 待揭晓互选（G0, 2026-11-10）— 调用点 false；关闭即回到即时 mutual
+   *  旧行为（含对端 pending 请求列表）。 */
+  mutualSelectionV2Enabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

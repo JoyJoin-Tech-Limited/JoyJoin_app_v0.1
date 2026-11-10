@@ -240,9 +240,12 @@ interface RecapPhaseViewProps {
       completedBy: string[]
       passedBy: string[]
     }
+    /**
+     * G0 privacy: outcome only. The server strips the undercover player's
+     * identity from every viewer's payload, so the recap never learns a name.
+     */
     undercoverWord?: {
       caught: boolean
-      undercoverDisplayName: string
     }
   } | null
   summary: {
@@ -492,11 +495,8 @@ export function RecapPhaseView({
       lines.push(`共颁发 ${medals.length} 个奖项`)
     }
     if (recapData?.undercoverWord) {
-      lines.push(
-        recapData.undercoverWord.caught
-          ? `卧底 ${recapData.undercoverWord.undercoverDisplayName} 已被揪出`
-          : `卧底 ${recapData.undercoverWord.undercoverDisplayName} 成功隐藏`,
-      )
+      // G0 privacy: outcome only — never the player behind the role.
+      lines.push(recapData.undercoverWord.caught ? '卧底已被揪出' : '卧底成功隐藏')
     }
     if (recapData?.lieDetective && recapData.lieDetective.fooledEveryone > 0) {
       // Wave 2 (AC-06/AC-15): internal metric 「悦仔胜率」→ user language.
@@ -822,8 +822,8 @@ export function RecapPhaseView({
               </View>
               <Text className='icebreaker__recap-stat'>
                 {recapData.undercoverWord.caught
-                  ? <>卧底 {recapData.undercoverWord.undercoverDisplayName} 已被揪出 <JoyJoinIcon emoji='🎉' tier='reaction' size={24} /></>
-                  : <>卧底 {recapData.undercoverWord.undercoverDisplayName} 成功隐藏 <JoyJoinIcon emoji='😎' size={24} /></>}
+                  ? <>卧底已被揪出 <JoyJoinIcon emoji='🎉' tier='reaction' size={24} /></>
+                  : <>卧底成功隐藏 <JoyJoinIcon emoji='😎' size={24} /></>}
               </Text>
             </Card>
           ) : null}

@@ -251,13 +251,35 @@ export interface UndercoverWordVote {
 }
 
 export interface UndercoverWordResult {
+  /**
+   * Server-owned role owner. `undercoverDisplayName` is optional because the
+   * wire projection (`PublicUndercoverWordResult`) never carries either field —
+   * see `toPublicUndercoverWordResult` in
+   * `apps/server/src/routes/socialIcebreakerHelpers.ts`.
+   *
+   * G0 (2026-11-10) keeps `undercoverUserId` required here on purpose: this
+   * interface is also the mini-program's `state.undercoverWordResults`
+   * contract, and widening it to optional is a cross-surface type change.
+   * Every SERVER→CLIENT projection is typed with `PublicUndercoverWordResult`
+   * instead, so no read can rely on an identity the sanitizer strips.
+   */
   undercoverUserId: string;
-  undercoverDisplayName: string;
+  undercoverDisplayName?: string;
   civilianWord: string;
   undercoverWord: string;
   voteCounts: Record<string, number>;
   caught: boolean;
 }
+
+/**
+ * G0 privacy (2026-11-10): the ONLY shape of the undercover result that may
+ * cross the wire. Words + vote counts + `caught` are the table's shared
+ * outcome; the role owner's id/name are server-only.
+ */
+export type PublicUndercoverWordResult = Omit<
+  UndercoverWordResult,
+  'undercoverUserId' | 'undercoverDisplayName'
+>;
 
 // ─── Group Mirror (群像镜像) ───────────────────────────────────────────────
 
@@ -891,7 +913,21 @@ export interface SocialSessionState {
   // Quip Battle phase data
   quipBattlePrompts?: Array<{ id: string; promptText: string; category: string }>;
   quipBattlePromptsMeta?: AIResponseMeta;
-  quipBattleAnswers?: Array<{ userId: string; displayName: string; promptId: string; answerText: string }>;
+  /**
+   * G0 attribution privacy (2026-11-10): pre-reveal, another author's `userId`
+   * is an OPAQUE token (`q_…`, see apps/server/src/lib/quipAnswerIdentity.ts)
+   * and `answerId` is the value to vote/report by. After the host reveal both
+   * fields carry the real identity again. `answerId` is optional so a state row
+   * persisted by an older runtime still type-checks; the client falls back to
+   * `${userId}::${promptId}`, which the server still accepts.
+   */
+  quipBattleAnswers?: Array<{
+    userId: string;
+    displayName: string;
+    promptId: string;
+    answerText: string;
+    answerId?: string;
+  }>;
   quipBattleVotes?: Array<{ voterId: string; answerId: string; promptId: string }>;
   quipBattleSubmittedUserIds?: string[];
   quipBattleVotedUserIds?: string[];
@@ -974,6 +1010,14 @@ export interface SocialSessionState {
       hardestRound: number;
       fooledEveryone: number;
     };
+    /**
+     * Undercover word outcome. G0 privacy (2026-11-10): `caught` only — the
+     * server never writes the role owner's identity into the recap block, so
+     * the recap line can state the outcome without naming anyone.
+     */
+    undercoverWord?: {
+      caught: boolean;
+    };
   };
   /** Wave 3 Context Injector (sprint wave3-highlightsInjector): aggregate-only
    *  session highlight body (≤300 chars, NO 【本场高光】 header — the header is
@@ -1034,11 +1078,12 @@ export interface SocialSessionState {
       passedCount: number;
       completionRate: number;
     };
-    /** Undercover word game result. */
-    undercoverWordResult?: {
-      caught: boolean;
-      undercoverDisplayName: string;
-    };
+    /**
+     * Undercover word game outcome. G0 privacy (2026-11-10): outcome only —
+     * the role owner's id/displayName are server-only and never ship in this
+     * projection (see `toPublicUndercoverWordResult`).
+     */
+    undercoverWordResult?: PublicUndercoverWordResult;
     /** Micro challenge completion highlights. */
     microChallengeHighlights?: {
       completedCount: number;

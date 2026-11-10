@@ -121,6 +121,10 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`product/launch-risks.md`](./product/launch-risks.md)
 - [`product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md)
 
+### Research and insight logs
+
+- [`research/2026-11-10-t46-article-review.md`](./research/2026-11-10-t46-article-review.md) — T46 文章复盘：来源分级、PM/商业化 Agent 的 delta memo、统计功效与 30 天 hostless/互选实验建议
+
 ### Operations and runbooks
 
 - [`systems/observability.md`](./systems/observability.md)
@@ -130,6 +134,9 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`runbooks/alerting.md`](./runbooks/alerting.md)
 - [`runbooks/observability.md`](./runbooks/observability.md)
 - [`runbooks/mini-program-asset-delivery.md`](./runbooks/mini-program-asset-delivery.md) — bundled/CDN asset delivery protocol and 2026-08-17 incident retrospective
+- [`runbooks/connection-selection-v2-g0.md`](./runbooks/connection-selection-v2-g0.md) — 24h mutual-selection G0 migration, staging smoke, flag rollback, and gate checklist
+- [`runbooks/icebreaker-g1-pilot.md`](./runbooks/icebreaker-g1-pilot.md) — 3-table paper / first-arrival light-host rehearsal and manual mutual-loop protocol
+- [`runbooks/icebreaker-g1-pilot-kit.md`](./runbooks/icebreaker-g1-pilot-kit.md) — printable G1 ops kit: scripts, light-host card, 40-min run sheet, observer capture sheet, manual 24h loop, safety and readout templates
 
 ## Contributor resources outside this directory
 

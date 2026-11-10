@@ -133,6 +133,18 @@ export const ConnectionsShellResponseSchema = z.object({
   }),
   connections: z.array(z.any()),
   pendingRequests: z.array(z.any()),
+  /**
+   * Reveal-gated mutual selection (G0, 2026-11-10). The caller's OWN selection
+   * count + table reveal instant only — never a peer identity, never a peer
+   * count. `null`/absent = `mutualSelectionV2Enabled` OFF (legacy payload).
+   */
+  pendingReveal: z
+    .object({
+      count: z.number(),
+      revealAt: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
   connectionsContext: ConnectionsShellContextSchema.nullable(),
   notifications: z.object({
     discover: z.number(),

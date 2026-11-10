@@ -42,6 +42,7 @@ import {
   markPhaseContentFailed,
   logContentStatusTransition,
   computeNudgeIncompleteUserIds,
+  toPublicUndercoverWordResult,
 } from './socialIcebreakerHelpers';
 import { getPhaseModule } from '@shared/phaseRegistry';
 import { emitSocialGroupBeat, emitAuctionOutbidBeatRateLimited, claimNudgeIncompleteSlot, emitSocialNudgeBeat } from '../lib/socialGroupBeats';
@@ -1599,7 +1600,9 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
     medals: snapshot.medals,
     lieDetectiveV2Stats: snapshot.lieDetectiveV2Stats,
     personalityDiceHighlights: snapshot.personalityDiceHighlights,
-    undercoverWordResult: snapshot.undercoverWordResult,
+    undercoverWordResult: snapshot.undercoverWordResult
+      ? toPublicUndercoverWordResult(snapshot.undercoverWordResult)
+      : undefined,
     microChallengeHighlights: snapshot.microChallengeHighlights,
     groupMirrorHighlights: snapshot.groupMirrorHighlights,
     state: await buildClientState(state, userId),

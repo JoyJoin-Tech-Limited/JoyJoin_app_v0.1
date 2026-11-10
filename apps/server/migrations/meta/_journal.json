@@ -708,6 +708,13 @@
       "when": 1793012717072,
       "tag": "0100_drop_promotion_banners",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1794289041561,
+      "tag": "0101_connection_selection_windows",
+      "breakpoints": true
     }
   ]
 }

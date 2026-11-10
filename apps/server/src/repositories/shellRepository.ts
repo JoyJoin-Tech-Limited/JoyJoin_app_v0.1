@@ -32,6 +32,8 @@ import { paymentsRepo } from "./paymentsRepo";
 import { notificationsRepo } from "./notificationsRepo";
 import { getUserJoinedEventsSummary, getConnectionsContextEvents } from "./joinedEventsRepo";
 import { getUserConnections, getUserPendingRequests } from "./connectionsRepo";
+import { getOwnPendingReveal, projectConnectionPrivacy } from "./connectionSelectionRepo";
+import { getFeatureFlag } from "../lib/featureFlags";
 import { resolveConnectionsContext, type JoinedEventForContext } from "../lib/connectionsContextResolver";
 
 const SAMPLE_ARCHETYPE_COUNT = 5;
@@ -540,6 +542,13 @@ export interface ConnectionsShellQueryResult {
   user: { nextStep: string; primaryArchetype: string | null }
   connections: Awaited<ReturnType<typeof getUserConnections>>
   pendingRequests: Awaited<ReturnType<typeof getUserPendingRequests>>
+  /**
+   * Reveal-gated mutual selection (G0, 2026-11-10). Present only when
+   * `mutualSelectionV2Enabled` is ON: the caller's OWN selection count and the
+   * table reveal instant. Never a peer identity, never a peer count — under
+   * V2 `pendingRequests` is always empty.
+   */
+  pendingReveal: { count: number; revealAt: string | null } | null
   connectionsContext: ConnectionsShellContext | null
   notifications: Awaited<ReturnType<typeof notificationsRepo.getNotificationCounts>>
   meta: { cacheKey: string; serverTime: string }
@@ -558,12 +567,25 @@ export async function getConnectionsShellData(params: {
   }
 
   // 2. Connections + pending requests + notifications + lightweight joined events in parallel
+  // Reveal-gated mutual selection (G0): the peer-facing pending list is a
+  // pre-reveal identity leak, so it is suppressed under V2 and replaced by the
+  // caller's own { count, revealAt }.
+  const mutualSelectionV2Enabled = await getFeatureFlag("mutualSelectionV2Enabled");
   const [connections, pendingRequests, notifications, joinedEvents] = await Promise.all([
     getUserConnections(userId),
-    getUserPendingRequests(userId),
+    getUserPendingRequests(userId, { mutualSelectionV2Enabled }),
     notificationsRepo.getNotificationCounts(userId),
     getConnectionsContextEvents(userId),
   ])
+
+  const ownPendingReveal = mutualSelectionV2Enabled
+    ? await getOwnPendingReveal(userId, now)
+    : null
+  const privacySlice = projectConnectionPrivacy({
+    mutualSelectionV2Enabled,
+    pendingRequests,
+    ownPendingReveal,
+  })
 
   // 3. Feedback rows for joined events (1 round-trip, skipped if no events)
   const eventIds = joinedEvents.map((e) => e.id)
@@ -583,7 +605,8 @@ export async function getConnectionsShellData(params: {
       primaryArchetype: user.primaryArchetype ?? null,
     },
     connections,
-    pendingRequests,
+    pendingRequests: privacySlice.pendingRequests as typeof pendingRequests,
+    pendingReveal: privacySlice.pendingReveal,
     connectionsContext,
     notifications,
     meta: {

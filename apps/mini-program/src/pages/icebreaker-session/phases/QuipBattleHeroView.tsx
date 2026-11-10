@@ -43,6 +43,13 @@ interface QuipBattleAnswer {
   displayName: string
   answerText: string
   promptId: string
+  /**
+   * G0 attribution privacy (2026-11-10): the server's opaque vote/report key
+   * (`q_…::promptId` pre-reveal, `${userId}::${promptId}` after reveal). Votes
+   * must be sent with THIS value. Optional only so a state row persisted by an
+   * older runtime (or a partially sanitized payload) still type-checks.
+   */
+  answerId?: string
 }
 
 interface QuipBattleResult {
@@ -123,21 +130,62 @@ export function buildQuipBattleVotes(voteMap: Record<string, string>) {
   }))
 }
 
+/**
+ * The value a vote must be sent with (G0, 2026-11-10).
+ *
+ * Pre-reveal the sanitized state replaces other authors' `userId` with an opaque
+ * session token and publishes the canonical `answerId`; voting by the raw
+ * `${userId}::${promptId}` string would either guess at the token scheme or hit
+ * a stale payload. Prefer the server field, and fall back to the legacy
+ * composite only when it is missing (older runtime / partial payload) — the
+ * server still accepts that form.
+ */
+export function resolveQuipAnswerId(answer: {
+  answerId?: string
+  userId: string
+  promptId: string
+}): string {
+  const explicit = typeof answer.answerId === 'string' ? answer.answerId.trim() : ''
+  if (explicit) return explicit
+  return `${answer.userId}::${answer.promptId}`
+}
+
 // ── AC-03⑤ (sprint icebreaker-polish-p1): pre-submit vote preview step ────
 // The stack only walks forward, so a mis-swipe used to be irreversible. The
 // 汇总步 below lists every viewed card with its vote state; tapping a row
 // flips the vote before submission — swipe stays the fast path, the preview
 // is the correction path.
 
+/**
+ * Own-answer detection (G0, 2026-11-10).
+ *
+ * The sanitizer keeps the requester's OWN answer on their real `userId` and
+ * replaces everyone else's with an opaque `q_…` token, so a direct comparison is
+ * both safe and sufficient — an opaque token can never equal the viewer's id.
+ * Never widen this into name matching.
+ */
+export function isOwnQuipAnswer(answer: { userId: string } | null | undefined, viewerId?: string): boolean {
+  if (!viewerId || !answer?.userId) return false
+  return answer.userId === viewerId
+}
+
 export interface QuipVotePreviewItem {
-  /** voteMap key: `${answerUserId}::${promptId}`. */
+  /** voteMap key — the server's `answerId` (opaque pre-reveal). */
   key: string
-  /** E9 (AC-07): the answer author's userId — long-press report target. */
+  /** Same value as `key`; kept explicit so callers never re-derive it. */
+  answerId: string
+  /**
+   * E9 (AC-07): the answer author's id as the server exposed it — an opaque
+   * session token pre-reveal (the report route resolves it back), the real
+   * userId after reveal. Used only as a report target, never rendered.
+   */
   answerUserId: string
   promptId: string
   promptText: string
   displayName: string
   answerText: string
+  /** Viewer's own answer — safe `userId` comparison, never a name match. */
+  isOwn: boolean
   voted: boolean
 }
 
@@ -149,16 +197,21 @@ export interface QuipVotePreview {
 export function buildQuipVotePreview(
   stack: Array<{ prompt: QuipBattlePrompt; answer: QuipBattleAnswer }>,
   voteMap: Record<string, string>,
+  viewerId?: string,
 ): QuipVotePreview {
   const items = stack.map(({ prompt, answer }) => {
-    const key = `${answer.userId}::${prompt.id}`
+    // G0: the vote key IS the server's answerId — never a client-built composite
+    // when the server sent one.
+    const key = resolveQuipAnswerId(answer)
     return {
       key,
+      answerId: key,
       answerUserId: answer.userId,
       promptId: prompt.id,
       promptText: prompt.promptText,
       displayName: answer.displayName,
       answerText: answer.answerText,
+      isOwn: isOwnQuipAnswer(answer, viewerId),
       voted: Object.prototype.hasOwnProperty.call(voteMap, key),
     }
   })
@@ -456,7 +509,7 @@ export function QuipBattleHeroView({
 
     setVoteMap((prev) => ({
       ...prev,
-      [`${current.answer.userId}::${current.prompt.id}`]: current.prompt.id,
+      [resolveQuipAnswerId(current.answer)]: current.prompt.id,
     }))
 
     setBurstTrigger(true)
@@ -472,7 +525,10 @@ export function QuipBattleHeroView({
   }, [swipeStack.length, isVoting])
 
   // AC-03⑤: preview derivation + tap-to-flip correction path.
-  const votePreview = useMemo(() => buildQuipVotePreview(swipeStack, voteMap), [swipeStack, voteMap])
+  const votePreview = useMemo(
+    () => buildQuipVotePreview(swipeStack, voteMap, userId),
+    [swipeStack, voteMap, userId],
+  )
   const handleToggleVotePreview = useCallback(() => {
     haptics('light')
     setVotePreviewOpen((open) => !open)
@@ -612,7 +668,10 @@ export function QuipBattleHeroView({
               <SwipeCard onSwipeRight={handleSwipeRight} onSwipeLeft={handleSwipeLeft} threshold={0.35}>
                 <View className='quip-battle-hero__stack-card'>
                   <Text className='quip-battle-hero__stack-prompt'>{currentCard.prompt.promptText}</Text>
-                  <Text className='quip-battle-hero__stack-author'>{currentCard.answer.displayName}</Text>
+                  <Text className='quip-battle-hero__stack-author'>
+                    {currentCard.answer.displayName}
+                    {isOwnQuipAnswer(currentCard.answer, userId) ? '（我的）' : ''}
+                  </Text>
                   <Text className='quip-battle-hero__stack-answer'>“{currentCard.answer.answerText}”</Text>
                 </View>
               </SwipeCard>
@@ -673,7 +732,7 @@ export function QuipBattleHeroView({
                           {item.promptText}
                         </Text>
                         <Text className='quip-battle-hero__vote-preview-item-answer'>
-                          {item.displayName}：“{item.answerText}”
+                          {item.displayName}{item.isOwn ? '（我的）' : ''}：“{item.answerText}”
                         </Text>
                       </View>
                       <Text className='quip-battle-hero__vote-preview-item-state'>

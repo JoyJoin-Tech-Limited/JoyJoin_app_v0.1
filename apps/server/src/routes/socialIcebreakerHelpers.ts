@@ -4,6 +4,7 @@ import type {
   LieDetectivePlayer,
   SocialSessionParticipantSummary,
   AuctionLotResult,
+  PublicUndercoverWordResult,
 } from '@shared/socialIcebreaker';
 import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase, GENERATING_STALL_SUPPRESS_MS } from '@shared/socialIcebreaker';
 import {
@@ -28,6 +29,11 @@ import { getHostBriefRoleResults } from '../lib/hostBriefRoleResultsMemo';
 import { inferMicroChallengeEnergyArc } from '../lib/icebreakerRosterSignals';
 import { isCustomMode, computeSelectablePhases, generatePhaseSelectionId } from '../services/customModeService';
 import { mapBotUserIdsToBotIds, buildBotIdByUserId } from '../lib/socialIcebreakerClientIdMapper';
+import {
+  projectQuipAnswerIdForClient,
+  publicQuipAnswerId,
+  quipAuthorToken,
+} from '../lib/quipAnswerIdentity';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { curateMedals } from '../lib/medalCuration';
 import {
@@ -80,6 +86,24 @@ export function isUniqueConstraintError(error: unknown): boolean {
         (error as { message: string }).message.includes('unique constraint'))
     )
   );
+}
+
+/**
+ * G0 privacy (2026-11-10): the only shape of the undercover result that may
+ * cross the wire. The role owner's id and display name are server-only; the
+ * aggregate words, vote counts and `caught` flag are the table's shared
+ * outcome. Single projection helper so the recap route, the session
+ * sanitizer and the recap snapshot can never drift.
+ */
+export function toPublicUndercoverWordResult<T extends object>(
+  result: T,
+): Omit<T, 'undercoverUserId' | 'undercoverDisplayName'> {
+  const {
+    undercoverUserId: _userId,
+    undercoverDisplayName: _displayName,
+    ...publicResult
+  } = result as T & { undercoverUserId?: string; undercoverDisplayName?: string };
+  return publicResult as Omit<T, 'undercoverUserId' | 'undercoverDisplayName'>;
 }
 
 export interface SanitizeStateOptions {
@@ -160,6 +184,103 @@ export function sanitizeStateForClient(
     delete sanitized.miniScriptCandidateFramework;
     delete sanitized.miniScriptCandidateGeneratedAt;
     delete sanitized.miniScriptCandidateGeneratedByUserId;
+  }
+
+  // G0 attribution privacy (2026-11-10): no client may receive another
+  // player's ballot identity before the phase reveal. These projections are
+  // deliberately applied at the single sanitizer choke point so every polling
+  // surface, shell payload and error path inherits the same rule.
+  if (sanitized.votes) {
+    const lieRevealed = Boolean(sanitized.currentLieDetectiveReveal);
+    if (!lieRevealed) {
+      sanitized.votes = sanitized.votes.map((vote) => {
+        if (requestingUserId && vote.voterId === requestingUserId) return vote;
+        return {
+          voterId: '',
+          targetUserId: vote.targetUserId,
+          guessedStatementIndex: -1,
+        };
+      });
+    }
+  }
+
+  // Group mirror: a player may only see the answers they submitted. The
+  // aggregate `groupMirrorResults` remains available to everyone, so the
+  // table still gets the warm reveal without a voter→target graph.
+  if (sanitized.groupMirrorAnswers) {
+    sanitized.groupMirrorAnswers = requestingUserId
+      ? sanitized.groupMirrorAnswers.filter((answer) => answer.userId === requestingUserId)
+      : [];
+  }
+  if (sanitized.groupMirrorVotes) {
+    sanitized.groupMirrorVotes = requestingUserId
+      ? sanitized.groupMirrorVotes.filter((answer) => answer.userId === requestingUserId)
+      : [];
+  }
+
+  // Undercover: only the undercover player may know their own role. The
+  // aggregate result still carries the words, vote counts and caught flag,
+  // but never the role owner's identity.
+  if (sanitized.undercoverUserId && sanitized.undercoverUserId !== requestingUserId) {
+    delete (sanitized as Partial<SocialSessionState>).undercoverUserId;
+  }
+  if (sanitized.undercoverWordResults) {
+    sanitized.undercoverWordResults = toPublicUndercoverWordResult(
+      sanitized.undercoverWordResults,
+    ) as SocialSessionState['undercoverWordResults'];
+  }
+
+  // G0 (2026-11-10) follow-up: `recapSnapshot` is a second, independent copy of
+  // the same result — the dedicated GET .../recap route reads it directly, and
+  // it rides inside the polled session state. Strip the role owner's identity
+  // here too so no transport can carry it.
+  if (sanitized.recapSnapshot?.undercoverWordResult) {
+    sanitized.recapSnapshot = {
+      ...sanitized.recapSnapshot,
+      undercoverWordResult: toPublicUndercoverWordResult(
+        sanitized.recapSnapshot.undercoverWordResult,
+      ) as NonNullable<SocialSessionState['recapSnapshot']>['undercoverWordResult'],
+    };
+  }
+
+  // Quip battle (G0 attribution privacy, 2026-11-10): before the host reveal no
+  // player may correlate an answer with a real account. Authors are shown as
+  // 匿名同桌, their `userId` is replaced by an opaque session-scoped token, and
+  // `answerId` is the opaque vote/report key. The requester's OWN answer keeps
+  // its real `userId` (own-answer behaviour, e.g. the submitted-count model),
+  // and every identity is restored once `quipBattleRevealed` is true.
+  if (sanitized.quipBattleAnswers) {
+    const socialSessionId = sanitized.socialSessionId ?? '';
+    const revealed = sanitized.quipBattleRevealed === true;
+    sanitized.quipBattleAnswers = sanitized.quipBattleAnswers.map((answer) => {
+      const answerId = revealed
+        ? `${answer.userId}::${answer.promptId}`
+        : publicQuipAnswerId(socialSessionId, answer.userId, answer.promptId);
+      if (revealed) return { ...answer, answerId };
+      if (requestingUserId && answer.userId === requestingUserId) {
+        return { ...answer, answerId };
+      }
+      return {
+        ...answer,
+        userId: quipAuthorToken(socialSessionId, answer.userId),
+        displayName: '匿名同桌',
+        answerId,
+      };
+    });
+  }
+
+  // Quip ballots: pre-reveal a player sees only their own votes, and even those
+  // carry the opaque answer key — a voter→author graph is attribution regardless
+  // of whether the author name was masked.
+  if (sanitized.quipBattleVotes && sanitized.quipBattleRevealed !== true) {
+    const socialSessionId = sanitized.socialSessionId ?? '';
+    sanitized.quipBattleVotes = (requestingUserId
+      ? sanitized.quipBattleVotes.filter((vote) => vote.voterId === requestingUserId)
+      : []
+    ).map((vote) => ({
+      ...vote,
+      answerId: projectQuipAnswerIdForClient(socialSessionId, vote.answerId),
+    }));
   }
 
   // Strip server-only participant profiles + W5 interest hooks before sending
@@ -1124,7 +1245,7 @@ export function buildRecapHighlights(state: SocialSessionState, roster?: Array<{
   const highlights: Partial<{
     lieDetectiveV2Stats: { aiWinRate: number; hardestRound: number; fooledEveryone: number };
     personalityDiceHighlights: { completedCount: number; passedCount: number; completionRate: number };
-    undercoverWordResult: { caught: boolean; undercoverDisplayName: string };
+    undercoverWordResult: PublicUndercoverWordResult;
     microChallengeHighlights: { completedCount: number; totalCount: number; completionRate: number };
     groupMirrorHighlights: { topVotedDisplayName: string; questionText: string; voteCount: number };
   }> = {};
@@ -1145,10 +1266,11 @@ export function buildRecapHighlights(state: SocialSessionState, roster?: Array<{
   }
 
   if (state.undercoverWordResults) {
-    highlights.undercoverWordResult = {
-      caught: state.undercoverWordResults.caught,
-      undercoverDisplayName: state.undercoverWordResults.undercoverDisplayName,
-    };
+    // G0 privacy (2026-11-10): outcome + words only. The role owner's display
+    // name was previously shipped here as well as in
+    // `state.undercoverWordResults`, and this snapshot is not passed through
+    // sanitizeStateForClient's identity-stripping branch — drop it at source.
+    highlights.undercoverWordResult = toPublicUndercoverWordResult(state.undercoverWordResults);
   }
 
   if (state.challengeCompletedBy) {
@@ -1735,7 +1857,22 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
     }
   }
 
+  // G0 privacy (2026-11-10): capture the undercover OUTCOME before cleanup
+  // wipes the phase state, so the recap block can state 「卧底已被揪出 / 成功
+  // 隐藏」 without ever naming the role owner (plan W1: 不公开点名被投出者).
+  const undercoverCaughtOutcome = preCleanupState.undercoverWordResults?.caught;
+
   cleanupPhaseStateForNextPhase(state, currentPhase);
+
+  if (currentPhase === 'undercover_word' && typeof undercoverCaughtOutcome === 'boolean') {
+    preCleanupState.recapData = preCleanupState.recapData || {
+      topicsDiscussed: [],
+      challengesCompleted: 0,
+      funMoments: [],
+    };
+    preCleanupState.recapData.undercoverWord = { caught: undercoverCaughtOutcome };
+    state.recapData = preCleanupState.recapData;
+  }
 
   // O1: build the lie-detective V2 recap block on EVERY transition out of
   // lie_detective transition side effects.

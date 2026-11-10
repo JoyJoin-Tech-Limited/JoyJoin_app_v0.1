@@ -5,7 +5,7 @@ import ConnectionsPage from './index'
 
 const mocks = vi.hoisted(() => ({
   queryState: {
-    data: [] as Array<Record<string, unknown>> | null,
+    data: [] as unknown,
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -50,6 +50,7 @@ vi.mock('../../lib/utils/routePreloadAssets', () => ({
   preloadPredictiveAssets: vi.fn(),
 }))
 vi.mock('../../lib/utils/cdnAssets', () => ({ cdnAsset: (path: string) => path }))
+vi.mock('../../lib/analytics/feedbackAnalytics', () => ({ trackFeedbackEvent: vi.fn() }))
 
 vi.mock('../../components/mascot/ArchetypeHead', () => ({
   default: () => <div data-testid='connection-archetype' />,
@@ -69,7 +70,7 @@ vi.mock('../../components/ui/Card', () => ({
 }))
 
 function setQueryState(
-  connections: Array<Record<string, unknown>> | null,
+  connections: unknown,
   overrides: { isLoading?: boolean; isError?: boolean } = {},
 ) {
   mocks.queryState.data = connections
@@ -112,6 +113,20 @@ describe('ConnectionsPage editorial empty state', () => {
     expect(container.querySelector('.connections-page__card')).toBeInTheDocument()
     expect(screen.queryByTestId('connections-state')).not.toBeInTheDocument()
     expect(container.querySelector('.connections-page__flow-card')).toBeNull()
+  })
+
+  it('renders the pending-reveal count without peer identities', () => {
+    setQueryState({
+      connections: [],
+      pendingReveal: { count: 2, revealAt: '2026-11-11T13:00:00.000Z' },
+    })
+
+    render(<ConnectionsPage />)
+
+    expect(screen.getByText('有 2 个选择等待揭晓')).toBeInTheDocument()
+    expect(screen.getByText('11月11日 21:00 揭晓')).toBeInTheDocument()
+    expect(screen.queryByText(/p1|p2|阿团/)).not.toBeInTheDocument()
+    expect(screen.getByText('新的连接，从一场活动开始')).toBeInTheDocument()
   })
 
   it('keeps loading and error variants unchanged and retries through the existing query', () => {

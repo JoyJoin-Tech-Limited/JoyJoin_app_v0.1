@@ -50,6 +50,23 @@ export type FeedbackAnalyticsEventType =
   | 'feedback_keepsake_save'
   // acknowledgment-beat-v1 — optional felt-heard response after canonical save.
   | 'feedback_acknowledgment_submitted'
+  // G0 24h mutual-selection loop. Counts and server window state only — never
+  // selected target IDs, peer names, or WeChat IDs.
+  //
+  // Funnel: viewed (selection step rendered) → submitted (canonical POST) →
+  // edited (a saved selection was changed afterwards) → reveal_viewed XOR
+  // zero_mutual_viewed (reveal state opened) → pending_reveal_viewed (the
+  // count-only waiting card) → wechat_copied.
+  // `windowState` is optional everywhere: the client only knows the
+  // server-owned window after a write, so view events omit it rather than
+  // guess.
+  | 'connection_selection_viewed'
+  | 'connection_selection_submitted'
+  | 'connection_selection_edited'
+  | 'connection_reveal_viewed'
+  | 'zero_mutual_viewed'
+  | 'connection_pending_reveal_viewed'
+  | 'connection_wechat_copied'
 
 export function trackFeedbackEvent(
   eventType: FeedbackAnalyticsEventType,

@@ -97,4 +97,22 @@ describe("discover analytics allowlist contract", () => {
     expect(missingFromServer).toEqual([]);
     expect(missingFromClient).toEqual([]);
   });
+
+  it("accepts the G0 connection-selection events server-side", () => {
+    // Server-only registration (the client union is owned by the mini-program
+    // slice). Forward-only assertion: these names must never 400 as unknown.
+    const G0_CONNECTION_EVENTS = [
+      "connection_selection_viewed",
+      "connection_selection_edited",
+      "connection_reveal_viewed",
+      "zero_mutual_viewed",
+    ] as const;
+
+    const serverSource = readFileSync(SERVER_SOURCE, "utf-8");
+    const serverEventTypes = extractServerEventTypes(serverSource);
+
+    expect(G0_CONNECTION_EVENTS.filter((e) => !serverEventTypes.has(e))).toEqual([]);
+    // No light-host events were added in this slice.
+    expect(serverEventTypes.has("light_host_invite_sent")).toBe(false);
+  });
 });

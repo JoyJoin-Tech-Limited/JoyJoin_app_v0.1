@@ -1,6 +1,7 @@
 export {
   chatMessages,
   connections,
+  connectionSelectionWindows,
   insertChatMessageSchema,
 } from './_definitions.js';
 

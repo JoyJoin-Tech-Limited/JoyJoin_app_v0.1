@@ -31,6 +31,7 @@ import session from 'express-session';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 import type { UgcContentRef } from '@shared/api';
+import { quipAuthorToken } from '../lib/quipAnswerIdentity';
 
 const mockRecordViolation = vi.fn();
 const mockCheckTextWithMsgSecCheck = vi.fn();
@@ -701,6 +702,35 @@ describe('POST /api/social-icebreaker/:socialSessionId/report-content', () => {
       expect(response.status).toBe(403);
       expect(body.code).toBe('TARGET_NOT_A_PARTICIPANT');
       expect(dbCtx.insertedReports).toHaveLength(0);
+    });
+  });
+
+  it('G0 privacy: resolves an OPAQUE quip author token to the real reporter target', async () => {
+    const sid = 'social_ugc-quip-opaque';
+    storeCtx.sessions.set(sid, baseSession({
+      socialSessionId: sid,
+      quipBattleAnswers: [
+        { userId: 'target-1', displayName: 'T', promptId: 'p1', answerText: '被举报的那条回答' },
+      ],
+    }));
+    joinPair(sid);
+    const opaqueAuthor = quipAuthorToken(sid, 'target-1');
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'reporter-1');
+      const response = await postReport(baseUrl, cookie, sid, reportBody({
+        targetUserId: opaqueAuthor,
+        contentRef: { kind: 'quipAnswer', promptId: 'p1' },
+      }));
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(201);
+      expect(body.degraded).toBe(false);
+      // The stored row carries the REAL author id, not the opaque token.
+      expect(dbCtx.insertedReports).toHaveLength(1);
+      expect(dbCtx.insertedReports[0].reportedUserId).toBe('target-1');
+      expect(String(dbCtx.insertedReports[0].description)).toContain('被举报的那条回答');
+      expect(String(dbCtx.insertedReports[0].description)).not.toContain(opaqueAuthor);
     });
   });
 

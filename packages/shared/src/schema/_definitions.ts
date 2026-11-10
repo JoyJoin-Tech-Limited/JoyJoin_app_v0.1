@@ -807,11 +807,24 @@ export const connections = pgTable("connections", {
   eventId: varchar("event_id").notNull().references(() => events.id),
   userAId: varchar("user_a_id").notNull().references(() => users.id),
   userBId: varchar("user_b_id").notNull().references(() => users.id),
-  status: varchar("status").notNull().default("pending"), // "pending" | "mutual"
+  // "pending" | "mutual_pending" | "mutual"
+  //   pending        — exactly one side has selected the other
+  //   mutual_pending — both sides selected, waiting for the table reveal
+  //                    (only produced when `mutualSelectionV2Enabled` is ON)
+  //   mutual         — revealed; WeChat snapshots populated, `revealedAt` set
+  status: varchar("status").notNull().default("pending"),
   initiatorId: varchar("initiator_id").notNull().references(() => users.id), // who first selected
   userAWechatId: varchar("user_a_wechat_id"),   // snapshot at reveal time
   userBWechatId: varchar("user_b_wechat_id"),   // snapshot at reveal time
   revealedAt: timestamp("revealed_at"),
+  /**
+   * Reveal-gated mutual selection (G0, 2026-11-10): the table-wide reveal
+   * instant this pair is waiting for. Set on every V2 selection row (the
+   * caller's own `pendingReveal` countdown reads it before the second side
+   * arrives); cleared when a selection is withdrawn before reveal.
+   * NULL for every legacy (flag-off) row — legacy flips straight to `mutual`.
+   */
+  revealAt: timestamp("reveal_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow(),
   // Optional enrichment: per-user lightweight connection feedback.
   // Each user stores their own reasons and next-step preference independently
@@ -823,6 +836,24 @@ export const connections = pgTable("connections", {
 }, (table) => [
   unique("connections_event_pair_unique").on(table.eventId, table.userAId, table.userBId),
 ]);
+
+// Connection selection window — one row per event (G0, 2026-11-10).
+//
+// The window is *derived* from `events.date_time` by
+// `apps/server/src/lib/connectionSelectionWindow.ts` (opensAt = start + 3h,
+// revealAt = next 21:00 Asia/Shanghai after start + 24h, closesAt = revealAt).
+// This table only exists so ops can override a single table's timings without
+// a deploy and so the effective window is auditable. A missing row means
+// "use the derived default" — the server never lazily writes one.
+// All three instants are UTC (`timestamptz`).
+export const connectionSelectionWindows = pgTable("connection_selection_windows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().unique().references(() => events.id),
+  opensAt: timestamp("opens_at", { withTimezone: true }).notNull(),
+  closesAt: timestamp("closes_at", { withTimezone: true }).notNull(),
+  revealAt: timestamp("reveal_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
 
 // Schemas
 export const upsertUserSchema = createInsertSchema(users).pick({

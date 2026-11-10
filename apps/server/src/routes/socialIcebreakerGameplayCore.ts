@@ -48,6 +48,10 @@ import { validateContentSafeAsync, contentViolationResponse } from '../lib/conte
 import { recordViolation } from '../abuseDetection';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import {
+  buildQuipAnswerIdIndex,
+  internalQuipAnswerId,
+} from '../lib/quipAnswerIdentity';
+import {
   buildClientState,
   hydrateDerivedState,
   hasAllRosterParticipantsResponded,
@@ -1202,24 +1206,34 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
   const botUserIdByBotId = new Map(
     (state.singleTest?.botPersonas || []).map((persona) => [persona.botId, persona.userId]),
   );
-  const normalizedVotes = votes.map((vote) => {
-    const promptSuffix = `::${vote.promptId}`;
-    if (!vote.answerId.endsWith(promptSuffix)) return vote;
-    const clientUserId = vote.answerId.slice(0, -promptSuffix.length);
-    const internalUserId = botUserIdByBotId.get(clientUserId);
-    return internalUserId
-      ? { ...vote, answerId: `${internalUserId}${promptSuffix}` }
-      : vote;
-  });
-
-  // Validate answerIds against existing answers
-  const validAnswerIds = new Set(
-    (state.quipBattleAnswers || []).map((a: any) => `${a.userId}::${a.promptId}`)
-  );
-  for (const v of normalizedVotes) {
-    if (!validAnswerIds.has(v.answerId)) {
-      return res.status(400).json({ error: `Invalid answerId: ${v.answerId}` });
+  // G0 attribution privacy (2026-11-10): the client may send an OPAQUE answer id
+  // (the sanitized form it was given), the legacy internal `${userId}::${promptId}`
+  // form, or a single-test bot id. All three resolve through the session's own
+  // answers; every persisted vote is normalized back to the internal form so the
+  // results tally keeps its existing single key format.
+  const answerIndex = buildQuipAnswerIdIndex(state);
+  const normalizedVotes: Array<{ answerId: string; promptId: string }> = [];
+  for (const vote of votes) {
+    const rawAnswerId = typeof vote?.answerId === 'string' ? vote.answerId : '';
+    const promptSuffix =
+      typeof vote?.promptId === 'string' ? `::${vote.promptId}` : null;
+    const botNormalizedId =
+      promptSuffix && rawAnswerId.endsWith(promptSuffix)
+        ? (() => {
+            const clientUserId = rawAnswerId.slice(0, -promptSuffix.length);
+            const internalUserId = botUserIdByBotId.get(clientUserId);
+            return internalUserId ? `${internalUserId}${promptSuffix}` : rawAnswerId;
+          })()
+        : rawAnswerId;
+    const resolved =
+      answerIndex.get(botNormalizedId) ?? answerIndex.get(rawAnswerId) ?? null;
+    if (!resolved) {
+      return res.status(400).json({ error: `Invalid answerId: ${rawAnswerId}` });
     }
+    normalizedVotes.push({
+      answerId: internalQuipAnswerId(resolved.userId, resolved.promptId),
+      promptId: resolved.promptId,
+    });
   }
 
   if (operationId) {

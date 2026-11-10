@@ -80,7 +80,7 @@ export interface SessionPhaseViewsProps {
     funMoments: string[]
     lieDetective?: { aiWinRate: number; hardestRound: number; fooledEveryone: number }
     personalityDice?: { completedBy: string[]; passedBy: string[] }
-    undercoverWord?: { caught: boolean; undercoverDisplayName: string }
+    undercoverWord?: { caught: boolean; undercoverDisplayName?: string }
   } | null
   recapSummary: {
     headline?: string

@@ -43,6 +43,7 @@ import {
   buildIcebreakerUgcDescription,
   snapshotIcebreakerUgc,
 } from '../lib/icebreakerUgcReport';
+import { resolveQuipAuthorUserId } from '../lib/quipAnswerIdentity';
 
 const ugcReportLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -109,8 +110,22 @@ export function registerUgcReportRoutes(router: Router): void {
         return res.status(403).json({ error: 'Not a participant in this session', code: 'NOT_A_PARTICIPANT' });
       }
 
+      // G0 attribution privacy (2026-11-10): a quip answer reaches the client
+      // with an OPAQUE author token, so a report on that content arrives with the
+      // token as `targetUserId`. Resolve it back to the real author before the
+      // membership check + snapshot; a real user id passes through unchanged.
+      const resolvedTargetUserId =
+        resolveQuipAuthorUserId(state, targetUserId) ?? targetUserId;
+      if (resolvedTargetUserId !== targetUserId) {
+        logger.info('[SocialIcebreaker] UGC report target resolved from opaque token', {
+          request_id: req.requestId,
+          socialSessionId,
+          kind: contentRef.kind,
+        });
+      }
+
       // SEC-01: the reported user must be a member of the same session.
-      const targetParticipant = await getParticipant(socialSessionId, targetUserId);
+      const targetParticipant = await getParticipant(socialSessionId, resolvedTargetUserId);
       if (!targetParticipant) {
         return res.status(403).json({ error: 'Reported user is not in this session', code: 'TARGET_NOT_A_PARTICIPANT' });
       }
@@ -130,10 +145,10 @@ export function registerUgcReportRoutes(router: Router): void {
         state,
         [
           { userId, displayName: reporterParticipant.displayName },
-          { userId: targetUserId, displayName: targetParticipant.displayName },
+          { userId: resolvedTargetUserId, displayName: targetParticipant.displayName },
         ],
         contentRef,
-        targetUserId,
+        resolvedTargetUserId,
       );
 
       const relatedEventId = await resolveGroupEventId(state.icebreakerSessionId);
@@ -141,7 +156,7 @@ export function registerUgcReportRoutes(router: Router): void {
       const description = buildIcebreakerUgcDescription({
         phase,
         kind: contentRef.kind,
-        targetUserId,
+        targetUserId: resolvedTargetUserId,
         snapshot,
         note,
       });
@@ -150,7 +165,7 @@ export function registerUgcReportRoutes(router: Router): void {
         .insert(reports)
         .values({
           reporterId: userId,
-          reportedUserId: targetUserId,
+          reportedUserId: resolvedTargetUserId,
           category: UGC_REPORT_CATEGORY,
           description,
           relatedEventId,
@@ -164,7 +179,7 @@ export function registerUgcReportRoutes(router: Router): void {
         reportId: report.id,
         socialSessionId,
         reporterId: userId,
-        targetUserId,
+        targetUserId: resolvedTargetUserId,
         phase,
         kind: contentRef.kind,
         degraded: !snapshot.found,

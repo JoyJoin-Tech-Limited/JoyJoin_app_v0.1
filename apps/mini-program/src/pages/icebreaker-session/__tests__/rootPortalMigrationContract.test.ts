@@ -37,11 +37,9 @@ const PORTAL_TARGETS: Array<{ file: string; overlayClass: string; note: string }
     overlayClass: "className='icebreaker__moment-panel-backdrop'",
     note: 'recap moment panel',
   },
-  {
-    file: 'src/pages/icebreaker-session/phases/GroupMirrorHeroView.tsx',
-    overlayClass: "className='group-mirror-hero__detail-backdrop'",
-    note: 'group mirror detail backdrop',
-  },
+  // GroupMirrorHeroView's 「全部回答」 detail backdrop was removed with the
+  // G0 privacy change (2026-11-10 — no voter→target reveal surface), so it no
+  // longer owns a fixed overlay or a RootPortal mount.
   {
     file: 'src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx',
     overlayClass: "className='personality-dice-hero__fixed-action'",
