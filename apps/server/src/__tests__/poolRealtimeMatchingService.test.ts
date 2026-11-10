@@ -184,7 +184,7 @@ vi.mock('../repositories/matchingShadowExperimentsRepo', () => ({
 // ============================================================
 // Import the service under test
 // ============================================================
-const { scanPoolAndMatch, scanAllActivePools } = await import(
+const { scanPoolAndMatch, scanAllActivePools, evaluateEarlyMatchGate } = await import(
   '../poolRealtimeMatchingService'
 );
 
@@ -530,7 +530,8 @@ describe('poolRealtimeMatchingService', () => {
 
     it('matches when avg score >= decayed threshold (medium compatibility)', async () => {
       const mediumGroup = makeMatchGroup({ overallScore: 68 });
-      mockState.poolRows = [makePool()];
+      // 72h out → strictness 3/7 → 50 + 35 * (3/7) = 65, so 68 clears the bar.
+      mockState.poolRows = [makePool({ dateTime: new Date(Date.now() + 72 * 60 * 60 * 1000) })];
       mockState.thresholdConfigRows = [makeThresholdConfig({
         highCompatibilityThreshold: 85,
         mediumCompatibilityThreshold: 70,
@@ -654,14 +655,16 @@ describe('poolRealtimeMatchingService', () => {
 
       const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
 
-      // 48 hours = 2 days → decay = 2 * 5 = 10 → threshold = max(70-10, 50) = 60
+      // 48h = 2/7 天 → 50 + (85-50) * (2/7) ≈ 60
       expect(result.currentThreshold).toBe(60);
       expect(result.decision).toBe('matched');
     });
 
     it('does not decay below minThresholdAfterDecay', async () => {
+      // Event has already started: strictness 0, so the curve bottoms out at
+      // minThresholdAfterDecay instead of decaying below it.
       const pool = makePool({
-        dateTime: new Date(Date.now() + 240 * 60 * 60 * 1000),
+        dateTime: new Date(Date.now() - 60 * 60 * 1000),
       });
       const group = makeMatchGroup({ overallScore: 52 });
       mockState.poolRows = [pool];
@@ -678,7 +681,7 @@ describe('poolRealtimeMatchingService', () => {
 
       const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
 
-      // floor(240/24) = 10 days → 10 * 5 = 50, 70 - 50 = 20, max(20, 50) = 50
+      // 活动已开始 → strictness 0 → 阈值落到 minThresholdAfterDecay = 50
       expect(result.currentThreshold).toBe(50);
       expect(result.decision).toBe('matched');
     });
@@ -722,9 +725,9 @@ describe('poolRealtimeMatchingService', () => {
 
       const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
 
-      // hoursUntilEvent = max(0, floor(negative)) = 0, no decay
-      expect(result.currentThreshold).toBe(70);
-      expect(result.decision).toBe('matched'); // 72 >= 70
+      // hoursUntilEvent = max(0, negative) = 0 → strictness 0 → 阈值地板 = 50
+      expect(result.currentThreshold).toBe(50);
+      expect(result.decision).toBe('matched'); // 72 >= 50
     });
 
     it('correctly decays for events starting near the boundary (just under 24h)', async () => {
@@ -746,8 +749,8 @@ describe('poolRealtimeMatchingService', () => {
 
       const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
 
-      // floor(23.9/24) = 0, no decay
-      expect(result.currentThreshold).toBe(70);
+      // 23.9h → strictness = 23.9/24/7 ≈ 0.142 → 50 + 35 * 0.142 ≈ 55
+      expect(result.currentThreshold).toBe(55);
       expect(result.decision).toBe('matched');
     });
   });
@@ -760,16 +763,15 @@ describe('poolRealtimeMatchingService', () => {
       mockState.poolRows = [makePool()];
       mockState.thresholdConfigRows = [];
       setupSufficientRegistrations(6);
-      // Score 80 is >= default medium (67) but with 7 days of default decay (7*5=35, 67-35=32, max(32,50)=50)
-      // So threshold = 50, and 80 >= 50 → matched (medium compatibility path)
+      // 7 天后：阈值封顶到 highCompatibilityThreshold (85)，80 分还不够 → 继续等待
       mockMatchEventPool.mockResolvedValueOnce([makeMatchGroup({ overallScore: 80 })]);
       mockSaveMatchResults.mockResolvedValueOnce(undefined);
 
       const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
 
-      expect(result.decision).toBe('matched');
-      // Default medium: 67, minus default time decay for ~7 days → floor(7) * 5 = 35 → 67-35=32 → max(32,50)=50
-      expect(result.currentThreshold).toBe(50);
+      expect(result.decision).toBe('waiting');
+      // 默认 medium 67 + 5*7 → 封顶到默认 high 85
+      expect(result.currentThreshold).toBe(85);
     });
 
     it('uses default thresholds when no active config row exists', async () => {
@@ -781,7 +783,7 @@ describe('poolRealtimeMatchingService', () => {
 
       const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
 
-      expect(result.decision).toBe('matched');
+      expect(result.decision).toBe('waiting');
     });
   });
 
@@ -1221,4 +1223,75 @@ describe('poolRealtimeMatchingService', () => {
       expect(mockMatchEventPool).toHaveBeenCalledTimes(2);
     });
   });
+});
+
+// ============================================================
+// 排桌时机闸门 — a thin pool must not match early just because one
+// scan happened; it waits for a fuller portrait or the deadline window.
+// ============================================================
+describe('evaluateEarlyMatchGate', () => {
+  const now = new Date('2026-11-10T10:00:00+08:00');
+
+  function gate(overrides: Partial<any> = {}) {
+    return evaluateEarlyMatchGate({
+      triggeredBy: 'user_registration',
+      isTestPool: false,
+      pendingUsersCount: 3,
+      targetGroups: 1,
+      maxGroupSize: 6,
+      registrationDeadline: new Date(now.getTime() + 120 * 60 * 60 * 1000),
+      now,
+      ...overrides,
+    });
+  }
+
+  it('lets an admin manual run through', () => {
+    const result = gate({ triggeredBy: 'admin_manual' })
+    expect(result.allowed).toBe(true)
+    expect(result.reason).toContain('管理员手动排桌')
+  })
+
+  it('lets a test pool through so single-test flows still complete', () => {
+    const result = gate({ isTestPool: true })
+    expect(result.allowed).toBe(true)
+    expect(result.reason).toContain('测试池')
+  })
+
+  it('lets a pool without a registration deadline through', () => {
+    const result = gate({ registrationDeadline: null })
+    expect(result.allowed).toBe(true)
+    expect(result.hoursUntilRegistrationDeadline).toBeNull()
+  })
+
+  it('opens the window inside the last 48 hours', () => {
+    const result = gate({
+      registrationDeadline: new Date(now.getTime() + 10 * 60 * 60 * 1000),
+    })
+    expect(result.allowed).toBe(true)
+    expect(result.hoursUntilRegistrationDeadline).toBe(10)
+  })
+
+  it('allows an early run once the pool is 80% full', () => {
+    // capacity 6 → required ceil(6 * 0.8) = 5
+    const result = gate({ pendingUsersCount: 5 })
+    expect(result.allowed).toBe(true)
+    expect(result.requiredRegistrations).toBe(5)
+    expect(result.reason).toContain('报名画像足够完整')
+  })
+
+  it('holds a thin pool that is still far from its deadline', () => {
+    const result = gate()
+    expect(result.allowed).toBe(false)
+    expect(result.capacity).toBe(6)
+    expect(result.requiredRegistrations).toBe(5)
+    expect(result.reason).toContain('等待更多报名后再排桌')
+    expect(result.fillRatio).toBeCloseTo(0.5)
+  })
+
+  it('scales capacity by target groups', () => {
+    const result = gate({ targetGroups: 2, pendingUsersCount: 8 })
+    expect(result.capacity).toBe(12)
+    expect(result.requiredRegistrations).toBe(10)
+    expect(result.allowed).toBe(false)
+  })
 });

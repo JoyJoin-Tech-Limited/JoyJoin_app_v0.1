@@ -18,6 +18,7 @@ import { startPoolMatchingWatchdog } from "./lib/poolMatchingWatchdog";
 import { startVenueTbdRetryScheduler } from "./lib/venueTbdRetryScheduler";
 import { startSubscribeReminderScheduler } from "./lib/subscribeReminderScheduler";
 import { startPoolCompletionSweepScheduler } from "./lib/poolCompletionSweep";
+import { startPoolDeadlineMatchScheduler } from "./lib/poolDeadlineMatchScheduler";
 import { startConnectionRevealScheduler } from "./lib/connectionRevealScheduler";
 import { startSocialAgentEventsRetentionScheduler } from "./lib/socialAgentEventsRetention";
 import { validateConfig } from "./lib/configValidation";
@@ -206,6 +207,12 @@ app.use((req, res, next) => {
       // to completed at event start +3h — "event ended" no longer depends on
       // manual admin PATCH.
       startPoolCompletionSweepScheduler();
+      // Deadline backstop (2026-11-10): schedule matching is event-driven, so a
+      // pool that never crosses the quality threshold would otherwise sit in
+      // `active` past its registration deadline and only be swept at event+3h
+      // with no refund. This runs the same scan once the deadline passes and
+      // routes an unformable pool through the existing 场次未成行 refund path.
+      startPoolDeadlineMatchScheduler();
       // Reveal sweep (G0, 2026-11-10): flip due `mutual_pending` connections to
       // `mutual` at each table's reveal instant. Inert unless
       // `mutualSelectionV2Enabled` is ON (flag default false); a failure is

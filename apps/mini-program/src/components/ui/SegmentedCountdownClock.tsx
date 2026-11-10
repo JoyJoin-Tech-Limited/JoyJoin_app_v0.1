@@ -24,6 +24,11 @@ export interface SegmentedCountdownClockProps {
   clockId: string
   /** Compact vertical layout for the right info rail. */
   compact?: boolean
+  /**
+   * `segmented` (default) renders the four-cell clock; `human` renders a
+   * single readable phrase (还有 4 天 / 马上开始) for split card layouts.
+   */
+  variant?: 'segmented' | 'human'
   /** Optional externally-provided timestamp (ms). When set, the component does
    *  not read the shared CountdownTickProvider and instead derives the readout
    *  from this value. Useful when the consumer already owns a coarser tick. */
@@ -50,6 +55,7 @@ const SegmentedCountdownClock = React.memo(function SegmentedCountdownClock({
   accentColor,
   clockId,
   compact = false,
+  variant = 'segmented',
   externalNow,
   showDays = true,
   showHours = true,
@@ -118,6 +124,52 @@ const SegmentedCountdownClock = React.memo(function SegmentedCountdownClock({
   const clockStyle = accentColor
     ? ({ '--clock-accent': accentColor } as React.CSSProperties)
     : undefined
+
+  if (variant === 'human') {
+    if (hasStarted) {
+      return (
+        <View
+          id={clockId}
+          className='segmented-countdown-clock segmented-countdown-clock--human segmented-countdown-clock--human-started'
+          style={clockStyle}
+          aria-label='活动已开始'
+        >
+          <View className='segmented-countdown-clock__started-dot' />
+          <Text className='segmented-countdown-clock__human-started-label'>已开始</Text>
+        </View>
+      )
+    }
+
+    if (!segments) {
+      return null
+    }
+
+    const { days, hours, minutes, totalMs } = segments
+    const isImminent = totalMs < 60 * 1000
+    const unit = days > 0 ? '天' : hours > 0 ? '小时' : '分钟'
+    const value = days > 0 ? days : hours > 0 ? hours : Math.max(0, minutes)
+
+    return (
+      <View
+        id={clockId}
+        className='segmented-countdown-clock segmented-countdown-clock--human'
+        style={clockStyle}
+        aria-label={isImminent ? '即将开始' : `还有 ${value} ${unit}`}
+        aria-live={isLive ? 'polite' : undefined}
+        aria-atomic='true'
+      >
+        {isImminent ? (
+          <Text className='segmented-countdown-clock__human-imminent'>马上开始</Text>
+        ) : (
+          <>
+            <Text className='segmented-countdown-clock__human-prefix'>还有</Text>
+            <Text className='segmented-countdown-clock__human-value'>{value}</Text>
+            <Text className='segmented-countdown-clock__human-unit'>{unit}</Text>
+          </>
+        )}
+      </View>
+    )
+  }
 
   if (hasStarted) {
     return (

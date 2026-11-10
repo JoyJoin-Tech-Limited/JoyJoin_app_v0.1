@@ -210,15 +210,16 @@ export default React.memo(function OracleCard({
     }
   }, [pool, userArchetype])
 
-  // Skeleton fallback — mirrors the corner-stat footprint so the badge does
+  // Skeleton fallback — mirrors the status-rail footprint so the header does
   // not pop in abruptly when data hydrates.
 
   const hasEssentialData = pool.id && pool.title != null
   if (!hasEssentialData || !enabled) {
     return (
       <Card className='oracle-card oracle-card--skeleton'>
-        <View className='oracle-card__corner-stat oracle-card__corner-stat--skeleton'>
-          <View className='oracle-card__corner-stat-pill' />
+        <View className='oracle-card__status-rail'>
+          <View className='oracle-card__skeleton-line oracle-card__skeleton-line--status-pill' />
+          <View className='oracle-card__skeleton-line oracle-card__skeleton-line--status-chip' />
         </View>
         <View className='oracle-card__skeleton-line oracle-card__skeleton-line--hero' />
         <View className='oracle-card__skeleton-line oracle-card__skeleton-line--meta' />
@@ -266,11 +267,16 @@ export default React.memo(function OracleCard({
     `oracle-card--accent-${accentFamily}`,
     isPoolFull ? 'oracle-card--full' : '',
     isDegradation ? 'oracle-card--low-end' : '',
-    showCornerStat ? 'oracle-card--has-corner-stat' : '',
   ].filter(Boolean).join(' ')
 
   const eventTypeLabel = getEventTypeLabel(pool.eventType)
-  const titleLabel = (pool.title || '悦聚活动').trim()
+  const rawTitleLabel = (pool.title || '悦聚活动').trim()
+  // Pool titles usually read `主题 · 区域`. Split them so the area is stated
+  // once (in the where-line) instead of appearing in both the title and the
+  // location run — the same duplication fixed on the Footprint card.
+  const titleAreaMatch = rawTitleLabel.match(/^(.*)\s*·\s*(.+)$/)
+  const titleLabel = titleAreaMatch ? titleAreaMatch[1] : rawTitleLabel
+  const areaLabel = titleAreaMatch?.[2] || pool.district || ''
   const shouldShowTitle = titleLabel !== eventTypeLabel
   const cardAriaLabel = `${dateLabel} ${timeLabel} ${eventTypeLabel}${pool.city ? ' ' + pool.city : ''}${isPoolFull ? '，已满员' : currentParticipants > 0 ? `，已有 ${cornerStatDisplayCount}${currentParticipants >= CORNER_STAT_CAP ? ' 多位' : ' 人'}报名` : ''}，${heroMessage}`
 
@@ -300,50 +306,53 @@ export default React.memo(function OracleCard({
         />
       )}
 
-      {showCornerStat && (
-        <View
-          className='oracle-card__corner-stat'
-          aria-hidden='true'
-          style={{ animationDelay: isDegradation ? undefined : animDelay }}
-        >
+      {/* L2 Status rail: warmth on the left, the two decision facts (who is
+          already in, when it closes) share one chip on the right. Keeping them
+          in a single rail — instead of a floating corner badge plus a bare
+          countdown — makes them read as one card header rather than two
+          stickers that happen to sit nearby. */}
+      <View
+        className='oracle-card__status-rail'
+        style={{ animationDelay: isDegradation ? undefined : animDelay }}
+      >
+        <View className='oracle-card__status-pill'>
           <View
-            className={[
-              'oracle-card__corner-stat-pill',
-              !showCornerAsset ? 'oracle-card__corner-stat-pill--no-vignette' : '',
-            ].filter(Boolean).join(' ')}
-          >
-            <Text
-              className='oracle-card__corner-stat-number'
-              style={{ color: cornerStatColor }}
-            >
-              {String(cornerStatDisplayCount)}{currentParticipants >= CORNER_STAT_CAP ? '+' : ''}
-            </Text>
-            <Text className='oracle-card__corner-stat-label'>{cornerStatLabel}</Text>
-          </View>
-        </View>
-      )}
-
-      {/* L2 Topline: status + urgency */}
-      <View className='oracle-card__topline'>
-        <View className='oracle-card__pulse-pill'>
-          <View
-            className={`oracle-card__pulse-dot${isUrgent && !isPoolFull ? ' oracle-card__pulse-dot--urgent' : ''}`}
+            className={`oracle-card__status-dot${isUrgent && !isPoolFull ? ' oracle-card__status-dot--urgent' : ''}`}
             style={{ backgroundColor: familyColor }}
+            aria-hidden='true'
           />
           <Text
-            className='oracle-card__pulse-label'
+            className='oracle-card__status-label'
             style={{ color: familyColor }}
           >
             {momentumLabel}
           </Text>
         </View>
-        {!isPoolFull && countdownLabel && (
-          <Text
-            className={`oracle-card__countdown${isUrgent ? ' oracle-card__countdown--urgent' : ''}${isCritical ? ' oracle-card__countdown--critical' : ''}`}
-            style={isUrgent ? { color: familyColor } : undefined}
-          >
-            {countdownLabel}
-          </Text>
+        {(showCornerStat || (!isPoolFull && countdownLabel)) && (
+          <View className='oracle-card__status-chip'>
+            {showCornerStat && (
+              <View className='oracle-card__status-count'>
+                <Text
+                  className='oracle-card__status-count-number'
+                  style={{ color: cornerStatColor }}
+                >
+                  {String(cornerStatDisplayCount)}{currentParticipants >= CORNER_STAT_CAP ? '+' : ''}
+                </Text>
+                <Text className='oracle-card__status-count-label'>{cornerStatLabel}</Text>
+              </View>
+            )}
+            {showCornerStat && !isPoolFull && countdownLabel && (
+              <Text className='oracle-card__status-sep' aria-hidden='true'>·</Text>
+            )}
+            {!isPoolFull && countdownLabel && (
+              <Text
+                className={`oracle-card__status-deadline${isUrgent ? ' oracle-card__status-deadline--urgent' : ''}${isCritical ? ' oracle-card__status-deadline--critical' : ''}`}
+                style={isUrgent ? { color: familyColor } : undefined}
+              >
+                {countdownLabel}
+              </Text>
+            )}
+          </View>
         )}
       </View>
 
@@ -364,21 +373,12 @@ export default React.memo(function OracleCard({
           {timeLabel && (
             <Text className='oracle-card__fact-time'>{timeLabel}</Text>
           )}
-          {showCelebration && (
-            <View
-              className='oracle-card__celebration-badge'
-              style={{ backgroundColor: familyColor }}
-              aria-label={`${highChemistryCount} 个高默契对象`}
-            >
-              <Text>{highChemistryCount}位高默契</Text>
-            </View>
-          )}
         </View>
         <Text className='oracle-card__fact-what-where'>
           <Text className='oracle-card__fact-type'>{eventTypeLabel}</Text>
           {pool.city && (
             <Text className='oracle-card__fact-location'>
-              {'  ·  '}{pool.city}{pool.district ? ` ${pool.district}` : ''}
+              {'  ·  '}{pool.city}{areaLabel ? ` ${areaLabel}` : ''}
             </Text>
           )}
         </Text>
@@ -411,15 +411,30 @@ export default React.memo(function OracleCard({
         </View>
       )}
 
-      {/* L6 Action: presence strip + CTA */}
+      {/* L6 Action: presence strip + chemistry + CTA */}
       <View className='oracle-card__footer'>
-        <ParticipantPresenceStrip
-          pool={pool}
-          userArchetype={userArchetype}
-          accentColor={familyColor}
-          index={index}
-          maxParticipants={maxParticipants}
-        />
+        <View className='oracle-card__people-row'>
+          <ParticipantPresenceStrip
+            pool={pool}
+            userArchetype={userArchetype}
+            accentColor={familyColor}
+            index={index}
+            maxParticipants={maxParticipants}
+          />
+          {showCelebration && (
+            <View
+              className='oracle-card__celebration-badge'
+              style={{
+                backgroundColor: familyAlphaHex(familyColor, '14'),
+                borderColor: familyAlphaHex(familyColor, '33'),
+                color: familyColor,
+              }}
+              aria-label={`${highChemistryCount} 个和你合拍的人`}
+            >
+              <Text>{highChemistryCount} 人和你合拍</Text>
+            </View>
+          )}
+        </View>
 
         <View
           className={`oracle-card__cta${shouldPulseCta ? ' oracle-card__cta--pulse' : ''}`}

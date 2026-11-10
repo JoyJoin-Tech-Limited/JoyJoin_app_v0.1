@@ -36,7 +36,9 @@ import { getOwnPendingReveal, projectConnectionPrivacy } from "./connectionSelec
 import { getFeatureFlag } from "../lib/featureFlags";
 import { resolveConnectionsContext, type JoinedEventForContext } from "../lib/connectionsContextResolver";
 
-const SAMPLE_ARCHETYPE_COUNT = 5;
+// Ten so the Discover presence strip can render a face per seated member
+// instead of collapsing the rest into a `+N` counter (2026-11-10).
+const SAMPLE_ARCHETYPE_COUNT = 10;
 const DEFAULT_PAGE_LIMIT = 20;
 const MAX_PAGE_LIMIT = 20;
 

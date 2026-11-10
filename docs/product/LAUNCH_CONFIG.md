@@ -319,24 +319,24 @@ entitlements, fragments, or draw history during rollback.
 
 ### `ORACLE_CARD_CORNER_STAT_ENABLED`
 
-Controls whether the Discover `OracleCard` shows a **top-right registration-count badge** (`X 人已报名` and event-type-aware variants) on each pool card.
+Controls whether the Discover `OracleCard` shows the **participant-count segment of the header status rail** (`X 人已报名` and event-type-aware variants) on each pool card. Since 2026-11-10 the count is no longer a floating top-right badge: it shares one pill with the registration deadline (`5 人入座中 · 1 天后截止`), so both header facts read as a single unit.
 
 | Value | Behaviour |
 |---|---|
-| `true` (default) | Badge renders when `currentParticipants > 0` and the pool is not full. Copy adapts to event type: `饭局` → "X 人入座中", `酒局` → "X 人已入席", others → "X 位伙伴已加入". |
-| `false` | Badge is hidden; cards revert to the pre-badge visual layout. |
+| `true` (default) | Count segment renders when `currentParticipants > 0` and the pool is not full. Copy adapts to event type: `饭局` → "X 人入座中", `酒局` → "X 人已入席", others → "X 位伙伴已加入". |
+| `false` | Count segment is hidden; the status chip keeps only the deadline, and the footer presence strip still states capacity. |
 
 ```bash
-# Show the corner participant-count badge (default)
+# Show the participant-count segment in the status rail (default)
 ORACLE_CARD_CORNER_STAT_ENABLED=true
 
-# Hide the corner participant-count badge (kill switch)
+# Hide the participant-count segment (kill switch)
 ORACLE_CARD_CORNER_STAT_ENABLED=false
 ```
 
 **Client exposure:** The flag is exposed via `/api/auth/user` as `features.oracleCardCornerStatEnabled` and consumed by `pages/discover/index.tsx`, which forwards it to `OracleCard`. The component defaults to `true` if the flag is absent.
 
-**Analytics:** When enabled, the card emits `corner_badge_impression` once per mount (if count > 0) and `corner_badge_live_update` whenever the count changes while the card is mounted. The `pool_card_tap` event includes `hasCornerCount` and `cornerCount` context.
+**Analytics:** When enabled, the card emits `corner_badge_impression` once per mount (if count > 0) and `corner_badge_live_update` whenever the count changes while the card is mounted. The `pool_card_tap` event includes `hasCornerCount` and `cornerCount` context. Event names are kept for continuity — they track the count segment wherever it renders, which is now the status rail chip rather than a corner badge.
 
 ---
 

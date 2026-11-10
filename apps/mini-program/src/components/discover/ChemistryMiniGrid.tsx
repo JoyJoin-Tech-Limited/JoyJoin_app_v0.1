@@ -113,7 +113,7 @@ function ChemistryMiniGrid({ pool, userArchetype }: ChemistryMiniGridProps) {
 
       {pool.highChemistryCount != null && pool.highChemistryCount > 0 && (
         <Text className='chemistry-mini-grid__footer'>
-          这局有 {pool.highChemistryCount} 位高默契对象
+          这局有 {pool.highChemistryCount} 个和你合拍的人
         </Text>
       )}
     </View>

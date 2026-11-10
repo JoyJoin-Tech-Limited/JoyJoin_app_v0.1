@@ -213,14 +213,15 @@
   &__info-label {
     flex-shrink: 0;
     color: $color-text-secondary;
-    font-size: $font-size-sm;
+    // Phone-legibility pass (2026-11-10): matches the event-detail info rows.
+    font-size: $font-size-base;
   }
 
   &__info-value {
     flex: 1;
     text-align: right;
     color: $color-text-primary;
-    font-size: $font-size-sm;
+    font-size: $font-size-base;
     line-height: 1.6;
 
     &--tbd {

@@ -181,6 +181,14 @@ async function captureEventsPage() {
     await clearAndSeedStorage(page)
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForSelector('.events-page__list', { timeout: 10000 })
+    // Capture the matched card: it is the densest state (status, absolute
+    // date/time, countdown, assigned table, price) and the one users see
+    // right after 排桌完成.
+    await page.getByRole('tab', { name: '进行中' }).click()
+    await page.waitForFunction(() => {
+      const titles = Array.from(document.querySelectorAll('.footprint-oracle-card__title'))
+      return titles.some((title) => title.textContent?.includes('微醺夜话'))
+    }, undefined, { timeout: 10000 })
     await page.waitForFunction(() => {
       const images = Array.from(document.querySelectorAll('.footprint-oracle-card__type-corner img'))
       return images.length > 0 && images.every((image) => image.complete)
@@ -632,6 +640,24 @@ async function captureDiscoverAlangV17() {
   })
 }
 
+async function captureDiscoverOracleCards() {
+  return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/discover/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.oracle-card')
+    const card = page.locator('.oracle-card').first()
+    await card.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(800)
+
+    return screenshotViewport(page)
+  })
+}
+
 async function captureAlangSearchV17() {
   return withBrowserPage(V17_GEO_VIEWPORT, async (page) => {
     await page.goto(
@@ -799,6 +825,7 @@ async function captureLandingLegalHint() {
 }
 register('landing-legal-hint', captureLandingLegalHint)
 register('events-footprint-oracle-card', captureEventsPage)
+register('discover-oracle-cards', captureDiscoverOracleCards)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
 register('event-ticket-payment', captureEventTicketPayment)
@@ -2220,6 +2247,49 @@ register('invite-page', captureInvitePage)
 register('rewards-page', captureRewardsPage)
 register('blind-box-payment-welcome-banner', captureBlindBoxPaymentWelcomeBanner)
 
+
+const DIST_DIR = path.resolve(process.cwd(), 'apps/mini-program/dist')
+
+// The screenshot harness seeds state through the local mock server
+// (scripts/mock-h5-server.mjs). An H5 build that has TARO_APP_API_BASE_URL
+// pointed at staging redirects every page to `?auth=expired`, which shows up
+// as unrelated selector timeouts in whichever generator ran first. Fail fast
+// with the rebuild command instead.
+function assertLocalMockApiBuild() {
+  const usesLocalMock = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(H5_BASE_URL)
+  if (!usesLocalMock) return
+
+  const indexPath = path.join(DIST_DIR, 'index.html')
+  if (!fs.existsSync(indexPath)) {
+    throw new Error(
+      `H5 build missing at ${indexPath}.\n` +
+        `Run: TARO_APP_API_BASE_URL=${H5_BASE_URL} TARO_APP_ENABLE_STORY_MODE=true npm run build:h5 --workspace=mini-program`,
+    )
+  }
+
+  const jsDir = path.join(DIST_DIR, 'js')
+  const requiredBase = H5_BASE_URL.replace(/\/$/, '')
+  const bundleHasMockBase = fs.existsSync(jsDir)
+    ? fs
+        .readdirSync(jsDir)
+        .filter(name => name.endsWith('.js'))
+        .some(name => fs.readFileSync(path.join(jsDir, name), 'utf8').includes(requiredBase))
+    : false
+
+  if (!bundleHasMockBase) {
+    throw new Error(
+      `H5 build does not call the local mock API (${requiredBase}); screenshots would redirect to ?auth=expired.\n` +
+        `Rebuild: TARO_APP_API_BASE_URL=${H5_BASE_URL} TARO_APP_ENABLE_STORY_MODE=true npm run build:h5 --workspace=mini-program`,
+    )
+  }
+}
+
+try {
+  assertLocalMockApiBuild()
+} catch (err) {
+  console.error(`[screenshot-server] ${err.message}`)
+  process.exit(1)
+}
 
 const server = app.listen(PORT, '127.0.0.1', () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)

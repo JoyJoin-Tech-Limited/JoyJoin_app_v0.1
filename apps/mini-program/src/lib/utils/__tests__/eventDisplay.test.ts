@@ -1,6 +1,7 @@
 import type { JoinedEventSummary } from '@shared/api'
 import { describe, expect, it } from 'vitest'
 import {
+  formatEventDateParts,
   formatEventDateTime,
   formatEventDateTimeParts,
   formatEventFactDateTime,
@@ -213,6 +214,33 @@ describe('eventDisplay', () => {
       expect(getEventPoolStatusLabel(undefined)).toBe('')
       expect(getEventPoolStatusLabel('')).toBe('')
       expect(getEventPoolStatusLabel('some_future_status')).toBe('')
+    })
+  })
+
+  describe('formatEventDateParts (split Footprint when-column)', () => {
+    it('returns absolute month/day, weekday and 24h time', () => {
+      const parts = formatEventDateParts(new Date(new Date().getFullYear(), 10, 14, 0, 30))
+
+      expect(parts).not.toBeNull()
+      expect(parts?.yearLabel).toBe('')
+      expect(parts?.monthDay).toBe('11月14日')
+      expect(parts?.weekday).toMatch(/^周[日一二三四五六]$/)
+      expect(parts?.timeLabel).toBe('00:30')
+    })
+
+    it('only exposes the year when it differs from the current year', () => {
+      const future = formatEventDateParts(new Date(2126, 0, 2, 19, 5))
+
+      expect(future?.yearLabel).toBe('2126年')
+      expect(future?.monthDay).toBe('1月2日')
+      expect(future?.timeLabel).toBe('19:05')
+    })
+
+    it('returns null for missing or invalid values', () => {
+      expect(formatEventDateParts(null)).toBeNull()
+      expect(formatEventDateParts(undefined)).toBeNull()
+      expect(formatEventDateParts('')).toBeNull()
+      expect(formatEventDateParts('not-a-date')).toBeNull()
     })
   })
 })

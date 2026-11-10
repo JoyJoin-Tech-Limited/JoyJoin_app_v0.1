@@ -57,13 +57,26 @@ async function persistPredictiveRerankAutoDisable(reason: string) {
     .where(eq(matchingThresholds.isActive, true));
 }
 
+/** 时间衰减曲线在多少天内达到最严格（此后封顶，不再继续抬高门槛）。 */
+const EARLY_MATCH_STRICTNESS_DAYS = 7;
+
+/** 报名池达到容量的这个比例，视为报名画像足够完整，可以提前排桌。 */
+export const EARLY_MATCH_FILL_RATIO = 0.8;
+
+/** 距报名截止多少小时内进入排桌窗口，不再要求池满。 */
+export const EARLY_MATCH_WINDOW_HOURS = 48;
+
 /**
- * 计算时间衰减后的实际阈值
- * 
- * 逻辑：
- * - 距离活动开始越近，阈值越低（更容易匹配）
- * - 每24小时降低 timeDecayRate 分
- * - 最低不低于 minThresholdAfterDecay
+ * 计算随“距离活动开始的时间”变化的排桌阈值。
+ *
+ * 逻辑（2026-11-10 修正方向 —— 原实现把方向写反了）：
+ * - 离活动越远，门槛越高：提前排桌会让活动池离开 active，后面报名的人直接被
+ *   POOL_CLOSED 挡住，池子的最终画像停在触发那一刻，所以只有平均分接近
+ *   highCompatibilityThreshold 时才允许提前排桌。
+ * - 离活动越近，门槛越低：最后几天让位于“成局确定性”，逐日回落到
+ *   minThresholdAfterDecay，避免本来能成的局因为差几分而空转。
+ * - 曲线在 EARLY_MATCH_STRICTNESS_DAYS 天外封顶，且永不超过
+ *   highCompatibilityThreshold（该分数另有“高兼容立即成局”通道）。
  */
 function calculateDecayedThreshold(
   baseThreshold: number,
@@ -74,14 +87,111 @@ function calculateDecayedThreshold(
     return baseThreshold;
   }
 
-  const daysUntilEvent = hoursUntilEvent / 24;
-  const decay = Math.floor(daysUntilEvent + 1 / 86400) * config.timeDecayRate;
-  const decayedThreshold = Math.max(
-    baseThreshold - decay,
-    config.minThresholdAfterDecay
+  const daysUntilEvent = Math.max(0, hoursUntilEvent) / 24;
+  const ceiling = Math.max(
+    baseThreshold,
+    Math.min(
+      config.highCompatibilityThreshold,
+      baseThreshold + config.timeDecayRate * EARLY_MATCH_STRICTNESS_DAYS
+    )
   );
+  const strictness = Math.min(
+    1,
+    Math.max(0, daysUntilEvent / EARLY_MATCH_STRICTNESS_DAYS)
+  );
+  const threshold =
+    config.minThresholdAfterDecay +
+    (ceiling - config.minThresholdAfterDecay) * strictness;
 
-  return decayedThreshold;
+  return Math.round(
+    Math.min(ceiling, Math.max(config.minThresholdAfterDecay, threshold))
+  );
+}
+
+export interface EarlyMatchGateInput {
+  triggeredBy: string;
+  isTestPool: boolean;
+  pendingUsersCount: number;
+  targetGroups: number | null;
+  maxGroupSize: number | null;
+  registrationDeadline: Date | null;
+  now: Date;
+}
+
+export interface EarlyMatchGateDecision {
+  allowed: boolean;
+  reason: string;
+  hoursUntilRegistrationDeadline: number | null;
+  capacity: number;
+  requiredRegistrations: number;
+  fillRatio: number;
+}
+
+/**
+ * 排桌时机闸门：自动触发的扫描只有在“报名画像足够完整”或“进入截止窗口”时才排桌。
+ *
+ * 这是防止 day 2 用 6 个人把桌排掉、把 day 3 更合拍的 10 个人挡在 POOL_CLOSED 外的
+ * 核心保护。管理员手动排桌与测试池不受限制。
+ */
+export function evaluateEarlyMatchGate(
+  input: EarlyMatchGateInput
+): EarlyMatchGateDecision {
+  const capacity = Math.max(
+    1,
+    (input.targetGroups ?? 1) * (input.maxGroupSize ?? 6)
+  );
+  const requiredRegistrations = Math.max(
+    1,
+    Math.ceil(capacity * EARLY_MATCH_FILL_RATIO)
+  );
+  const fillRatio = input.pendingUsersCount / capacity;
+  const hoursUntilRegistrationDeadline = input.registrationDeadline
+    ? (new Date(input.registrationDeadline).getTime() - input.now.getTime()) /
+      (1000 * 60 * 60)
+    : null;
+
+  const base = {
+    hoursUntilRegistrationDeadline,
+    capacity,
+    requiredRegistrations,
+    fillRatio,
+  };
+
+  if (input.triggeredBy === "admin_manual") {
+    return { ...base, allowed: true, reason: "管理员手动排桌，跳过时机闸门" };
+  }
+
+  if (input.isTestPool) {
+    return { ...base, allowed: true, reason: "测试池，跳过时机闸门" };
+  }
+
+  if (hoursUntilRegistrationDeadline === null) {
+    return { ...base, allowed: true, reason: "未设置报名截止时间，跳过时机闸门" };
+  }
+
+  if (hoursUntilRegistrationDeadline <= EARLY_MATCH_WINDOW_HOURS) {
+    return {
+      ...base,
+      allowed: true,
+      reason: `距报名截止 ${Math.max(0, Math.round(hoursUntilRegistrationDeadline))} 小时，已进入排桌窗口`,
+    };
+  }
+
+  if (input.pendingUsersCount >= requiredRegistrations) {
+    return {
+      ...base,
+      allowed: true,
+      reason: `已报名 ${input.pendingUsersCount}/${capacity} 人，报名画像足够完整`,
+    };
+  }
+
+  return {
+    ...base,
+    allowed: false,
+    reason: `已报名 ${input.pendingUsersCount}/${capacity} 人（未达 ${requiredRegistrations} 人），距报名截止还有 ${Math.round(
+      hoursUntilRegistrationDeadline
+    )} 小时，等待更多报名后再排桌`,
+  };
 }
 
 /**
@@ -299,6 +409,48 @@ async function runScanPoolAndMatch(
         logger.warn("[PoolRealtimeMatching] Low registration notification failed", { error: String(err) });
       });
     }
+  }
+
+  // 6.5 排桌时机闸门（2026-11-10）：自动触发的扫描不再“人数够就排”。
+  // 报名池未满且距截止还远时提前排桌，会把后面更合拍的报名者挡在 POOL_CLOSED 之外，
+  // 池子的最终画像也就停在触发那一刻。手动排桌与测试池不受限制。
+  const earlyMatchGate = evaluateEarlyMatchGate({
+    triggeredBy,
+    isTestPool: pool.isTestPool === true,
+    pendingUsersCount,
+    targetGroups: pool.targetGroups,
+    maxGroupSize: pool.maxGroupSize,
+    registrationDeadline: pool.registrationDeadline
+      ? new Date(pool.registrationDeadline)
+      : null,
+    now,
+  });
+
+  if (!earlyMatchGate.allowed) {
+    await db.insert(poolMatchingLogs).values({
+      poolId,
+      scanType,
+      pendingUsersCount,
+      currentThreshold,
+      timeUntilEvent: hoursUntilEvent,
+      groupsFormed: 0,
+      usersMatched: 0,
+      avgGroupScore: 0,
+      decision: "waiting",
+      reason: earlyMatchGate.reason,
+      triggeredBy,
+    });
+
+    console.log(`[Realtime Matching] ⏳ 池 ${pool.title} 暂不排桌: ${earlyMatchGate.reason}`);
+
+    return {
+      decision: "waiting",
+      reason: earlyMatchGate.reason,
+      groupsFormed: 0,
+      usersMatched: 0,
+      avgGroupScore: 0,
+      currentThreshold,
+    };
   }
 
   // 7. 运行匹配算法（不保存，仅评估）

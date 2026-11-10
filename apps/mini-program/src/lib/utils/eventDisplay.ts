@@ -49,6 +49,42 @@ export function formatEventFactDateTime(value: string | Date | null | undefined,
   return `${year}${monthDay} ${weekday} ${hour}:${minute}`
 }
 
+export interface EventDateParts {
+  /** Empty unless the event falls outside the current calendar year. */
+  yearLabel: string
+  monthDay: string
+  weekday: string
+  timeLabel: string
+}
+
+/**
+ * Splits an absolute event date into display-sized parts for the Footprint
+ * split layout. Unlike `formatEventDateTime`, this never produces relative
+ * 今天/明天 labels — the right-hand "when" column needs a stable absolute date.
+ */
+export function formatEventDateParts(
+  value: string | Date | null | undefined,
+): EventDateParts | null {
+  if (value == null || value === '') return null
+
+  const parsed = value instanceof Date ? new Date(value.getTime()) : new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+
+  const now = new Date()
+  const yearLabel = parsed.getFullYear() !== now.getFullYear() ? `${parsed.getFullYear()}年` : ''
+  const monthDay = `${parsed.getMonth() + 1}月${parsed.getDate()}日`
+  const weekday = EVENT_WEEKDAY_LABELS[parsed.getDay()]
+  const hour = String(parsed.getHours()).padStart(2, '0')
+  const minute = String(parsed.getMinutes()).padStart(2, '0')
+
+  return {
+    yearLabel,
+    monthDay,
+    weekday,
+    timeLabel: `${hour}:${minute}`,
+  }
+}
+
 export function formatEventDateTime(dateTime?: string | null): string {
   if (!dateTime) return '时间待定'
   const parsed = new Date(dateTime)

@@ -121,6 +121,62 @@
     margin-top: 4rpx;
   }
 
+  // Human-readable variant: one phrase (还有 4 天 / 马上开始) instead of the
+  // four-cell readout. Used by the split Footprint "when" column.
+  &--human {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 4rpx;
+    max-width: none;
+    line-height: 1;
+  }
+
+  &--human-started {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $spacing-xs;
+  }
+
+  &__human-prefix {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+  }
+
+  &__human-value {
+    font-family: $font-en-brand, $font-mono;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    font-variant-numeric: tabular-nums;
+    color: var(--clock-accent, $color-primary);
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+
+  &__human-unit {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__human-imminent {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: var(--clock-accent, $color-primary);
+  }
+
+  &__human-started-label {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: var(--clock-accent, $color-text-secondary);
+  }
+
   &__separator {
     font-family: $font-mono;
     font-size: $font-size-sm;

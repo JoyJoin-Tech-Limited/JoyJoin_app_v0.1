@@ -18,8 +18,55 @@
  */
 
 import type { EventPoolSummary } from '@shared/api'
+import { ARCHETYPE_FAMILY_MAP } from '@shared/archetypeColors'
 
 const BANNED_WORDS = ['AI', '匹配']
+
+/**
+ * The teaser describes the pool, not the viewer. A room's "atmosphere" is the
+ * aggregate of everyone who registered, so we summarise the dominant archetype
+ * family instead of claiming the whole room resembles one person.
+ */
+const FAMILY_TEASER: Record<string, { line: string; word: string }> = {
+  warm: { line: '这桌自带热场体质', word: '热络' },
+  fire: { line: '这局有点小火花', word: '有火花' },
+  cool: { line: '松弛得很高级，不用急着表现', word: '松弛' },
+  calm: { line: '安静但不冷场，适合慢慢聊', word: '安静' },
+}
+
+/** No usable archetype sample — stay honest instead of inventing a vibe. */
+const TEASER_FALLBACK = '这局的气质还在长，等你来定个调'
+/** Only appended when a real compatible person is in the pool. */
+const CHEMISTRY_SUFFIX = ' · 其中几个跟你特别对得上'
+
+function resolvePoolFamily(pool: EventPoolSummary): string | null {
+  const tally: Record<string, number> = {}
+
+  const add = (archetype: string | null | undefined, weight: number) => {
+    if (!archetype) return
+    // Only trusted archetype ids contribute; unknown ids must not invent a vibe.
+    const family = ARCHETYPE_FAMILY_MAP[archetype]
+    if (!family) return
+    tally[family] = (tally[family] ?? 0) + weight
+  }
+
+  if (pool.topArchetypes?.length) {
+    pool.topArchetypes.forEach(({ archetype, count }) => add(archetype, Math.max(1, count ?? 1)))
+  } else if (pool.sampleArchetypes?.length) {
+    pool.sampleArchetypes.forEach((archetype) => add(archetype, 1))
+  }
+
+  let dominant: string | null = null
+  let dominantCount = 0
+  for (const [family, count] of Object.entries(tally)) {
+    if (count > dominantCount) {
+      dominant = family
+      dominantCount = count
+    }
+  }
+
+  return dominant
+}
 
 function guardBannedWords(text: string): string {
   for (const word of BANNED_WORDS) {
@@ -55,17 +102,23 @@ export function getTypeDensityTeaser(
     case 'rare':
       return guardBannedWords('同类不多，但恰好有几个频率相同的人')
 
-    case 'present':
-      if (highChemistryCount > 0) {
-        return guardBannedWords('这场局的氛围，已经有点像你了 · 有几个跟你很合拍的人也在这里')
-      }
-      return guardBannedWords('这场局的氛围，已经有点像你了')
+    case 'present': {
+      // Group portrait: describe what the room is like, not who the viewer is.
+      const family = resolvePoolFamily(pool)
+      const base = (family && FAMILY_TEASER[family]?.line) || TEASER_FALLBACK
+      return guardBannedWords(
+        highChemistryCount > 0 ? `${base}${CHEMISTRY_SUFFIX}` : base
+      )
+    }
 
-    case 'dominant':
-      if (highChemistryCount > 0) {
-        return guardBannedWords('这场局的气质，就是你 · 有几个跟你很合拍的人也在这里')
-      }
-      return guardBannedWords('这场局的气质，就是你')
+    case 'dominant': {
+      const family = resolvePoolFamily(pool)
+      const word = family ? FAMILY_TEASER[family]?.word : null
+      const base = word ? `这桌多半和你一个频道 · ${word}` : '这桌多半和你一个频道'
+      return guardBannedWords(
+        highChemistryCount > 0 ? `${base}${CHEMISTRY_SUFFIX}` : base
+      )
+    }
 
     default:
       if (userTypeCount > 0) {
@@ -165,18 +218,15 @@ export function getPresenceStripCountLabel({
   }
 
   if (state === 'almost_full') {
+    // 报名池口径：这里说的是“多少个名额已被报名占用”，不是桌位。
     const text = typeof max === 'number' && max > 0
-      ? `即将满员 · ${count}/${max}`
-      : `${count} 位已入座`
+      ? `${count} 人已报名 · 剩 ${max - count} 个名额`
+      : `${count} 人已报名`
     return guardBannedWords(text)
   }
 
   // partial
-  if (typeof max === 'number' && max > 0) {
-    return guardBannedWords(`${count}/${max}`)
-  }
-
-  return guardBannedWords(`${count} 位已入座`)
+  return guardBannedWords(`${count} 人已报名`)
 }
 
 /**
@@ -198,18 +248,16 @@ export function getPresenceStripAriaLabel({
 
   if (state === 'almost_full') {
     const text = typeof max === 'number' && max > 0
-      ? `即将满员，${count}/${max}`
-      : `即将满员，${count} 人已入池`
+      ? `${count} 人已报名，还剩 ${max - count} 个名额`
+      : `${count} 人已报名`
     return guardBannedWords(text)
   }
 
   // partial
-  const hasMax = typeof max === 'number' && max > 0
-  const seatText = hasMax ? `${count}/${max}` : `${count} 人已入池`
-  const text = hasUserArchetype
-    ? `${seatText} 已入池，包含你的类型`
-    : `${seatText} 已入池`
-  return guardBannedWords(text)
+  const text = `${count} 人已报名`
+  return guardBannedWords(
+    hasUserArchetype ? `${text}，包含你的类型` : text
+  )
 }
 
 /**

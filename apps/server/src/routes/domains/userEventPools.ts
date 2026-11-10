@@ -62,7 +62,9 @@ import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import * as schema from "@shared/schema";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-const SAMPLE_ARCHETYPE_COUNT = 5;
+// Ten so the Discover presence strip can render a face per seated member
+// instead of collapsing the rest into a `+N` counter (2026-11-10).
+const SAMPLE_ARCHETYPE_COUNT = 10;
 type DbTransaction = NodePgDatabase<typeof schema>;
 
 function createEmptyInsightsData() {

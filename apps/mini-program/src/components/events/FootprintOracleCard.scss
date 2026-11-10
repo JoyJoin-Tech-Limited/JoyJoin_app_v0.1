@@ -388,10 +388,20 @@
 
   &__location {
     display: block;
-    font-size: $font-size-sm;
+    font-size: 28rpx;
     font-weight: $font-weight-medium;
     color: $color-text-muted;
     line-height: 1.4;
+    @include text-truncate;
+  }
+
+  &__venue {
+    display: block;
+    font-size: 28rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    line-height: 1.4;
+    margin-top: 2rpx;
     @include text-truncate;
   }
 
@@ -402,7 +412,9 @@
     gap: $spacing-xs $spacing-md;
     margin-top: $spacing-md;
     color: $color-text-secondary;
-    font-size: $font-size-sm;
+    // Phone-legibility pass (2026-11-10): the table size and price are primary
+    // facts, not tertiary meta, so they sit at the 28rpx half-step.
+    font-size: 28rpx;
     line-height: 1.5;
   }
 
@@ -417,11 +429,116 @@
 
   &__waiting-hint {
     display: block;
-    font-size: $font-size-xs;
+    font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
     line-height: 1.5;
     margin-top: $spacing-xs;
+  }
+
+  // ── Split "when" layout (2026-11-10) ──────────────────────────
+  // The left column keeps the narrative (status → title → place); the right
+  // column owns a stable absolute date/time so the card no longer piles every
+  // fact on the left. Group size + price move to a full-width facts footer.
+  &--split {
+    min-height: 300rpx;
+
+    .footprint-oracle-card__type-corner {
+      top: 50%;
+      right: -24rpx;
+      width: 240rpx;
+      height: 240rpx;
+      transform: translateY(-50%);
+      opacity: 0.26;
+    }
+  }
+
+  &__side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    flex-shrink: 0;
+    width: 210rpx;
+    gap: 8rpx;
+    padding-top: 2rpx;
+    text-align: right;
+  }
+
+  &__side-date {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 2rpx;
+    font-family: $font-ui;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  &__side-district {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    margin-bottom: 2rpx;
+  }
+
+  &__side-year {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__side-month-day {
+    white-space: nowrap;
+  }
+
+  &__side-time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6rpx;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  &__side-weekday {
+    font-family: $font-ui;
+    font-size: 28rpx;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__side-time {
+    @include type-en-brand-numeric;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+  }
+
+  &__side .segmented-countdown-clock--human {
+    margin-top: 8rpx;
+  }
+
+  &__facts-footer {
+    margin-top: $spacing-md;
+    padding-top: $spacing-sm;
+    border-top: 1rpx solid rgba($color-border, 0.4);
+
+    .footprint-oracle-card__facts {
+      width: 100%;
+      margin-top: 0;
+      justify-content: space-between;
+      gap: $spacing-sm;
+    }
+
+    .footprint-oracle-card__fact--price {
+      margin-left: auto;
+    }
   }
 
   // ── Footer hint ───────────────────────────────────────────────

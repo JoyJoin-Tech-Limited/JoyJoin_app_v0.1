@@ -28,6 +28,16 @@ describe('SegmentedCountdownClock shared leaf', () => {
     expect(scssSource).toContain('@keyframes segmented-countdown-clock-block-pulse')
   })
 
+  it('supports a human-readable variant for split card layouts', () => {
+    expect(source).toContain("variant?: 'segmented' | 'human'")
+    expect(source).toContain("variant = 'segmented'")
+    expect(source).toContain('segmented-countdown-clock--human')
+    expect(source).toContain('segmented-countdown-clock__human-value')
+    expect(source).toContain('马上开始')
+    expect(source).toContain('已开始')
+    expect(scssSource).toContain('&--human {')
+  })
+
   it('does not import its own SCSS (styles are owned by consuming pages)', () => {
     expect(source).not.toContain("import './SegmentedCountdownClock.scss'")
   })

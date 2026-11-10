@@ -17,6 +17,7 @@ import './FootprintOracleCard.scss'
 // a configured formation target. It is meaningful only with an assigned group.
 const ASSIGNED_TABLE_VISIBLE_STATUSES = new Set([
   'matched',
+  'confirmed',
   'venue_unlocked',
   'completed',
   'attended',
@@ -86,7 +87,7 @@ export default React.memo(function FootprintOracleCard({
     && groupSize > 0
     && ASSIGNED_TABLE_VISIBLE_STATUSES.has(status)
   const groupSizeLabel = hasAssignedTable
-    ? ((status === 'matched' || status === 'venue_unlocked') && !isHistoricalNonterminal
+    ? ((status === 'matched' || status === 'confirmed' || status === 'venue_unlocked') && !isHistoricalNonterminal
         ? `已排进 ${groupSize} 人桌`
         : `${groupSize} 人桌`)
     : undefined
@@ -153,7 +154,7 @@ export default React.memo(function FootprintOracleCard({
       animationDelay={animDelay}
       isDegradation={effectiveDegradation}
       reduceMotion={reduceMotion}
-      compactCountdown
+      layout='split'
       titleAccessory={(
         <Text className='footprint-oracle-card__title-cue' aria-hidden='true'>›</Text>
       )}

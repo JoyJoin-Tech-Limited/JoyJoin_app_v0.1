@@ -9,6 +9,7 @@ import { usePageVisibility } from '../../hooks/usePageVisibility'
 import SegmentedCountdownClock from '../ui/SegmentedCountdownClock'
 import { getOracleCardCornerAsset } from '../discover/oracleCardAssets'
 import {
+  formatEventDateParts,
   formatEventDateTime,
   formatEventDateTimeParts,
   getJoinedEventStatusLabel,
@@ -95,6 +96,12 @@ export interface EventSummaryCardProps {
   metaAccessory?: React.ReactNode
   footerContent?: React.ReactNode
   compactCountdown?: boolean
+  /**
+   * `stacked` (default) keeps every fact in the left column. `split` moves the
+   * absolute date, time and countdown into a dedicated right "when" column so
+   * the card stays balanced instead of piling all narrative copy on the left.
+   */
+  layout?: 'stacked' | 'split'
   role?: string
   ariaLabel?: string
   animationDelay?: string
@@ -132,6 +139,7 @@ function EventSummaryCard({
   metaAccessory,
   footerContent,
   compactCountdown = false,
+  layout = 'stacked',
   role,
   ariaLabel,
   animationDelay,
@@ -162,6 +170,22 @@ function EventSummaryCard({
 
   const dateTimeText = formatEventDateTime(dateTime)
   const dateTimeParts = useMemo(() => formatEventDateTimeParts(dateTime), [dateTime])
+  const isSplit = layout === 'split'
+  const sideDateParts = useMemo(
+    () => (isSplit ? formatEventDateParts(dateTime) : null),
+    [isSplit, dateTime],
+  )
+  // `主题 · 区域` is parsed for every layout. The split layout renders only the
+  // theme and moves the area into the right-hand where/when column; the stacked
+  // layout keeps the full title but still knows the suffix so the geography run
+  // does not print the same area twice.
+  const titleParts = useMemo(() => {
+    const value = title ?? '悦聚活动'
+    const match = value.match(/^(.*)\s*·\s*(.+)$/)
+    return match
+      ? { primary: match[1], district: match[2], full: value }
+      : { primary: value, district: '', full: value }
+  }, [title])
 
   const locationLine = useMemo(() => {
     const parts: string[] = []
@@ -172,8 +196,10 @@ function EventSummaryCard({
 
     const locationParts: string[] = []
     if (city) locationParts.push(city)
-    if (district) locationParts.push(district)
-    if (showVenue && venueName) locationParts.push(venueName)
+    // The area already appears — in the split side column, or inside the stacked
+    // title suffix — so repeating it here reads as two different locations.
+    if (district && !titleParts.district) locationParts.push(district)
+    if (showVenue && venueName && !isSplit) locationParts.push(venueName)
     if (locationParts.length > 0) {
       parts.push(locationParts.join(' · '))
     } else if (location) {
@@ -181,7 +207,11 @@ function EventSummaryCard({
     }
 
     return parts.length > 0 ? parts.join('  ·  ') : null
-  }, [eventType, city, district, venueName, location, showVenue])
+  }, [eventType, city, district, venueName, location, showVenue, isSplit, titleParts.district])
+
+  // Split layout gives the disclosed venue its own line instead of gluing it
+  // onto the geography run, so "where" reads as type → city/district → place.
+  const venueLine = isSplit && showVenue && venueName ? venueName : null
 
   const cornerAssetSrc = getOracleCardCornerAsset(eventType)
   const showCornerAsset = cornerAssetSrc && !effectiveDegradation
@@ -216,6 +246,7 @@ function EventSummaryCard({
     isEnded ? 'footprint-oracle-card--terminal' : '',
     isMatched ? 'footprint-oracle-card--matched' : '',
     railMode ? 'footprint-oracle-card--rail' : '',
+    isSplit ? 'footprint-oracle-card--split' : '',
     effectiveDegradation ? 'footprint-oracle-card--low-end' : '',
     reduceMotion ? 'footprint-oracle-card--reduced-motion' : '',
     !isPageVisible ? 'footprint-oracle-card--page-hidden' : '',
@@ -257,7 +288,7 @@ function EventSummaryCard({
       <View className='footprint-oracle-card__content'>
         <View className='footprint-oracle-card__main'>
           <View className='footprint-oracle-card__body'>
-            {/* Non-rail cards keep their countdown beside the status in the topline. */}
+            {/* Non-rail, non-split cards keep their countdown beside the status. */}
             <View className='footprint-oracle-card__topline'>
               <View className='footprint-oracle-card__pulse-pill'>
                 <View
@@ -271,7 +302,7 @@ function EventSummaryCard({
                   {momentumLabel}
                 </Text>
               </View>
-              {!railMode && (
+              {!railMode && !isSplit && (
                 <SegmentedCountdownClock
                   target={dateTime ?? null}
                   enabled={clockEnabled}
@@ -285,26 +316,31 @@ function EventSummaryCard({
             {/* L1 Title: the only navigation cue lives beside the title. */}
             <View className='footprint-oracle-card__title-row'>
               <View className='footprint-oracle-card__title'>
-                {title ?? '悦聚活动'}
+                {isSplit ? titleParts.primary : titleParts.full}
               </View>
               {titleAccessory}
             </View>
 
             {/* L3 Date / time / location line */}
             <View className='footprint-oracle-card__meta'>
-              <Text className='footprint-oracle-card__date-time'>
-                <Text className='footprint-oracle-card__date-label'>{dateTimeParts.dateLabel}</Text>
-                {dateTimeParts.timeLabel && (
-                  <Text className='footprint-oracle-card__date-clock'>{dateTimeParts.timeLabel}</Text>
-                )}
-              </Text>
+              {!isSplit && (
+                <Text className='footprint-oracle-card__date-time'>
+                  <Text className='footprint-oracle-card__date-label'>{dateTimeParts.dateLabel}</Text>
+                  {dateTimeParts.timeLabel && (
+                    <Text className='footprint-oracle-card__date-clock'>{dateTimeParts.timeLabel}</Text>
+                  )}
+                </Text>
+              )}
               {locationLine && (
                 <Text className='footprint-oracle-card__location'>{locationLine}</Text>
+              )}
+              {venueLine && (
+                <Text className='footprint-oracle-card__venue'>{venueLine}</Text>
               )}
               {waitingCopy && (
                 <Text className='footprint-oracle-card__waiting-hint'>{waitingCopy}</Text>
               )}
-              {metaAccessory}
+              {!isSplit && metaAccessory}
             </View>
 
             {/* L4 Footer: structured actions or the legacy text hint. */}
@@ -315,12 +351,41 @@ function EventSummaryCard({
             )}
           </View>
 
+          {isSplit && sideDateParts && (
+            <View className='footprint-oracle-card__side'>
+              {titleParts.district && (
+                <Text className='footprint-oracle-card__side-district'>{titleParts.district}</Text>
+              )}
+              <View className='footprint-oracle-card__side-date'>
+                {sideDateParts.yearLabel && (
+                  <Text className='footprint-oracle-card__side-year'>{sideDateParts.yearLabel}</Text>
+                )}
+                <Text className='footprint-oracle-card__side-month-day'>{sideDateParts.monthDay}</Text>
+              </View>
+              <View className='footprint-oracle-card__side-time-row'>
+                <Text className='footprint-oracle-card__side-weekday'>{sideDateParts.weekday}</Text>
+                <Text className='footprint-oracle-card__side-time'>{sideDateParts.timeLabel}</Text>
+              </View>
+              <SegmentedCountdownClock
+                variant='human'
+                target={dateTime ?? null}
+                enabled={clockEnabled}
+                accentColor={familyColor}
+                clockId={`${uid}-human-clock`}
+              />
+            </View>
+          )}
+
           {railMode && rightRail && (
             <View className='footprint-oracle-card__rail'>
               {rightRail}
             </View>
           )}
         </View>
+
+        {isSplit && metaAccessory && (
+          <View className='footprint-oracle-card__facts-footer'>{metaAccessory}</View>
+        )}
       </View>
     </View>
   )

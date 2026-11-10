@@ -106,22 +106,77 @@ describe('FootprintOracleCard historical presentation integration', () => {
     const event = makeCardEvent({ groupId: 'group-1', groupSize: 6, price: 88, location: '深圳 · 南山区' })
     const { container } = render(<FootprintOracleCard event={event} />)
     const meta = container.querySelector('.footprint-oracle-card__meta')
+    const side = container.querySelector('.footprint-oracle-card__side')
 
-    const dateTime = meta?.querySelector('.footprint-oracle-card__date-time')
-    expect(dateTime).toBeInTheDocument()
-    expect(dateTime?.querySelector('.footprint-oracle-card__date-label')).not.toBeEmptyDOMElement()
-    expect(dateTime?.querySelector('.footprint-oracle-card__date-clock')).toHaveTextContent(/\d{2}:\d{2}/)
+    expect(container.querySelector('.footprint-oracle-card')).toHaveClass('footprint-oracle-card--split')
+    expect(meta?.querySelector('.footprint-oracle-card__date-time')).toBeNull()
+    expect(side?.querySelector('.footprint-oracle-card__side-month-day')).toHaveTextContent(/\d{1,2}月\d{1,2}日/)
+    expect(side?.querySelector('.footprint-oracle-card__side-weekday')).toHaveTextContent(/周[一二三四五六日]/)
+    expect(side?.querySelector('.footprint-oracle-card__side-time')).toHaveTextContent(/\d{2}:\d{2}/)
+    expect(side?.querySelector('.segmented-countdown-clock')).toBeInTheDocument()
     expect(meta?.querySelector('.footprint-oracle-card__location')).toHaveTextContent('深圳 · 南山区')
-    expect(meta?.contains(screen.getByText('已排进 6 人桌'))).toBe(true)
+    expect(meta?.contains(screen.getByText('已排进 6 人桌'))).toBe(false)
     expect(container.querySelector('.footprint-oracle-card--rail')).toBeNull()
     expect(container.querySelector('.footprint-oracle-card__rail')).toBeNull()
-    expect(screen.getByText('已排进 6 人桌').closest('.footprint-oracle-card__facts')).toBeInTheDocument()
-    expect(screen.getByText('¥88').closest('.footprint-oracle-card__facts')).toBeInTheDocument()
+    expect(screen.getByText('已排进 6 人桌').closest('.footprint-oracle-card__facts-footer')).toBeInTheDocument()
+    expect(screen.getByText('¥88').closest('.footprint-oracle-card__facts-footer')).toBeInTheDocument()
     expect(container.querySelectorAll('.footprint-oracle-card__title-cue')).toHaveLength(1)
-    expect(container.querySelector('.footprint-oracle-card__topline .segmented-countdown-clock')).toBeInTheDocument()
+    expect(container.querySelector('.footprint-oracle-card__topline .segmented-countdown-clock')).toBeNull()
+  })
+
+  it('splits the region suffix into the right-hand when column', () => {
+    const event = makeCardEvent({
+      title: '微醺夜话 · 福田',
+      eventType: '酒局',
+      city: '深圳',
+      district: '福田',
+    })
+    const { container } = render(<FootprintOracleCard event={event} />)
+
+    expect(container.querySelector('.footprint-oracle-card__title')).toHaveTextContent('微醺夜话')
+    expect(container.querySelector('.footprint-oracle-card__title')).not.toHaveTextContent('福田')
+    expect(container.querySelector('.footprint-oracle-card__side-district')).toHaveTextContent('福田')
+    // The district already lives in the right column — repeating it in the
+    // geography run reads as two different locations.
+    expect(container.querySelector('.footprint-oracle-card__location')).toHaveTextContent('酒局 · 深圳')
+    expect(container.querySelector('.footprint-oracle-card__location')).not.toHaveTextContent('福田')
+  })
+
+  it('gives a disclosed venue its own line without duplicating it in the location run', () => {
+    const event = makeCardEvent({
+      title: '今晚即兴饭局 · 罗湖',
+      status: 'confirmed',
+      displayStatus: 'confirmed',
+      eventType: '饭局',
+      city: '深圳',
+      district: '罗湖',
+      venueName: '老街大排档',
+      groupId: 'group-urgent-001',
+      groupSize: 6,
+    })
+    const { container } = render(<FootprintOracleCard event={event} />)
+    const location = container.querySelector('.footprint-oracle-card__location')
+    const venue = container.querySelector('.footprint-oracle-card__venue')
+
+    expect(location).toHaveTextContent('饭局 · 深圳')
+    expect(location).not.toHaveTextContent('老街大排档')
+    expect(venue).toHaveTextContent('老街大排档')
+    expect(screen.getByText('已确认')).toBeInTheDocument()
+    expect(screen.getByText('已排进 6 人桌')).toBeInTheDocument()
   })
 
   it('keeps assigned-table size distinct from registration count across terminal and missing-group states', () => {
+    const confirmed = render(
+      <FootprintOracleCard event={makeCardEvent({
+        status: 'confirmed',
+        displayStatus: 'confirmed',
+        groupId: 'group-1',
+        groupSize: 6,
+      })} />,
+    )
+    expect(confirmed.getByText('已排进 6 人桌')).toBeInTheDocument()
+    confirmed.unmount()
+
     const completed = render(
       <FootprintOracleCard event={makeCardEvent({
         status: 'completed',

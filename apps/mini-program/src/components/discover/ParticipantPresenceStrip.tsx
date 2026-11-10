@@ -17,7 +17,11 @@ import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 // ─── Constants ─────────────────────────────────────────────────
 
 const COIN_SIZE = 40
-const MAX_VISIBLE_COINS = 4
+// Show every seat we know a face for, up to a full ten-seat table. The strip
+// used to cap at 4, which left a `+N` counter sitting next to a truthful `5/8`
+// readout — two numbers describing the same people. The server samples ten
+// archetypes per pool, so the overflow coin is now only for real overflow.
+const MAX_VISIBLE_COINS = 10
 const HIGH_FILL_PCT = 75
 const MAX_ANIMATION_INDEX = 5
 const ANIMATION_STAGGER_MS = 40
@@ -98,7 +102,12 @@ export default React.memo(function ParticipantPresenceStrip({
   }, [pool.sampleArchetypes])
 
   const totalPresence = pool.currentParticipants ?? pool.registrationCount ?? sampleArchetypes.length
-  const visibleArchetypes = state === 'empty' ? [] : sampleArchetypes.slice(0, MAX_VISIBLE_COINS)
+  // Never render more faces than there are people: the sample can be longer than
+  // the real headcount (e.g. a fixture or a stale cache), and phantom faces next
+  // to a truthful `5/8` readout make the card lie about who is at the table.
+  const visibleArchetypes = state === 'empty'
+    ? []
+    : sampleArchetypes.slice(0, Math.min(MAX_VISIBLE_COINS, totalPresence))
   const overflowCount = Math.max(0, totalPresence - visibleArchetypes.length)
   const hasCoins = visibleArchetypes.length > 0
   const isFull = state === 'full'

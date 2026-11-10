@@ -372,8 +372,6 @@
 
 // Decorative corner vignette size.
 $oracle-corner-vignette-size: 280rpx;
-// Minimum horizontal clearance for the solid corner-stat badge on the topline.
-$oracle-badge-clearance: 120rpx;
 
 .oracle-card {
   @include card;
@@ -435,6 +433,18 @@ $oracle-badge-clearance: 120rpx;
       animation: shimmer-slide 1.5s ease-in-out infinite;
     }
 
+    &--status-pill {
+      width: 200rpx;
+      height: 48rpx;
+      border-radius: 999rpx;
+    }
+
+    &--status-chip {
+      width: 240rpx;
+      height: 48rpx;
+      border-radius: 999rpx;
+    }
+
     &--hero {
       width: 70%;
       height: 40rpx;
@@ -474,147 +484,52 @@ $oracle-badge-clearance: 120rpx;
     border-top-right-radius: $card-radius-sm;
   }
 
-  // ── Corner registration count ─────────────────────────────────
-  // Surfaces the real participant count in the top-right corner, overlapping
-  // the decorative vignette. Warm, card-contextual palette so it reads as
-  // JoyJoin metadata rather than a marketplace urgency sticker.
-  // The light vignette is allowed to sit behind all text; only the solid
-  // badge gets a small clearance on the topline row so the countdown stays
-  // readable. Lower text layers flow full-width under the vignette.
-  &--has-corner-stat {
-    .oracle-card__topline {
-      padding-right: $oracle-badge-clearance;
-    }
-  }
-
-  &__corner-stat {
-    position: absolute;
-    top: 12rpx;
-    right: 12rpx;
-    z-index: 2;
-    min-width: 88rpx;
-    min-height: 88rpx;
-    padding: 12rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transform: translateY(18rpx) scale(0.96);
-    animation: corner-stat-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-
-    &--skeleton {
-      animation: none;
-      opacity: 1;
-      transform: none;
-    }
-  }
-
-  &__corner-stat-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8rpx;
-    min-width: 96rpx;
-    max-width: 200rpx;
-    padding: 8rpx 16rpx;
-    border-radius: $card-radius-sm;
-    background: $color-bg-warm-mid;
-    border: 1rpx solid rgba($color-text-primary, 0.06);
-    box-shadow: 0 4rpx 16rpx rgba($color-text-primary, 0.06);
-    color: $color-text-primary;
-    white-space: nowrap;
-    overflow: hidden;
-
-    &--no-vignette {
-      background: $color-surface;
-      border-color: rgba($color-text-primary, 0.08);
-    }
-  }
-
-  &__corner-stat-number {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    line-height: 1.2;
-    flex-shrink: 0;
-  }
-
-  &__corner-stat-label {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    line-height: 1.4;
-    color: rgba($color-text-primary, 0.72);
-    flex-shrink: 0;
-  }
-
-  // Skeleton shimmer for the corner-stat pill.
-  &--skeleton &__corner-stat-pill {
-    width: 96rpx;
-    height: 44rpx;
-    background: $color-divider;
-    border-color: transparent;
-    box-shadow: none;
-    overflow: hidden;
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba($color-surface, 0.5) 50%,
-        transparent 100%
-      );
-      transform: translateX(-100%);
-      animation: shimmer-slide 1.5s ease-in-out infinite;
-    }
-  }
-
-  @keyframes corner-stat-enter {
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  // Reduced motion / low-end: render badge instantly, skip entrance animation.
-  &--low-end &__corner-stat {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &__corner-stat {
-      animation: none;
-      opacity: 1;
-      transform: none;
-    }
-  }
-
-  // ── Topline (live pulse + countdown) ──────────────────────────
-  &__topline {
+  // ── Status rail ───────────────────────────────────────────────
+  // Momentum sits on the left; the two decision facts (how many people are
+  // already in, when sign-up closes) share one chip on the right. Both chips
+  // wear the same shell so the row reads as a single card header, instead of a
+  // corner badge pinned to the vignette plus a bare countdown floating beside
+  // it. The count stays factual — no urgency colours, no scarcity framing.
+  &__status-rail {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: $spacing-xs;
+    gap: 12rpx;
+    min-height: 48rpx;
+    margin-bottom: $spacing-sm;
+    opacity: 0;
+    animation: oracle-status-enter 0.34s ease-out both;
   }
 
-  &__pulse-pill {
+  &__status-pill,
+  &__status-chip {
     display: inline-flex;
     align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
+    box-sizing: border-box;
+    height: 48rpx;
+    padding: 0 18rpx;
     border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
+    background: rgba($color-surface, 0.72);
+    border: 1rpx solid rgba($color-text-primary, 0.06);
+    white-space: nowrap;
   }
 
-  &__pulse-dot {
+  &__status-pill {
+    gap: $spacing-xs;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  &__status-chip {
+    gap: 6rpx;
+    flex-shrink: 0;
+  }
+
+  &__status-dot {
     width: 10rpx;
     height: 10rpx;
     border-radius: 50%;
+    flex-shrink: 0;
     animation: pulse-dot 2s ease-in-out infinite;
 
     &--urgent {
@@ -622,15 +537,41 @@ $oracle-badge-clearance: 120rpx;
     }
   }
 
-  &__pulse-label {
+  &__status-label {
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
+    @include text-truncate;
   }
 
-  &__countdown {
+  &__status-count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4rpx;
+    flex-shrink: 0;
+  }
+
+  &__status-count-number {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    line-height: 1.1;
+  }
+
+  &__status-count-label {
     font-size: $font-size-sm;
-    color: $color-text-muted;
     font-weight: $font-weight-medium;
+    color: rgba($color-text-primary, 0.72);
+  }
+
+  &__status-sep {
+    font-size: $font-size-sm;
+    line-height: 1;
+    color: rgba($color-text-primary, 0.28);
+  }
+
+  &__status-deadline {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
 
     &--urgent {
       font-weight: $font-weight-bold;
@@ -639,6 +580,31 @@ $oracle-badge-clearance: 120rpx;
     &--critical {
       color: $color-error !important;
     }
+  }
+
+  @keyframes oracle-status-enter {
+    to {
+      opacity: 1;
+    }
+  }
+
+  // Reduced motion / low-end: settle instantly instead of easing in.
+  &--low-end &__status-rail {
+    animation: none;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__status-rail {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
+  // Skeleton: no entrance ease, the shimmering bars are the placeholder.
+  &--skeleton &__status-rail {
+    animation: none;
+    opacity: 1;
   }
 
   // ── Hero (personalized message) ───────────────────────────────
@@ -679,9 +645,10 @@ $oracle-badge-clearance: 120rpx;
   }
 
   &__fact-time {
-    font-family: $font-cn-display;
+    // Numeric time is a brand moment, not body copy — match the Footprint
+    // card's Quicksand numeric run instead of the Chinese display face.
+    @include type-en-brand-numeric;
     font-size: $font-size-md;
-    font-weight: $font-weight-bold;
     color: $color-text-secondary;
   }
 
@@ -700,7 +667,7 @@ $oracle-badge-clearance: 120rpx;
   }
 
   &__fact-location {
-    font-size: 26rpx; // Intentional: between-step location meta under the 30rpx fact-type
+    font-size: 28rpx; // Phone-legibility pass (2026-11-10): location is a deciding fact, not fine print
     font-weight: $font-weight-medium;
     color: $color-text-muted;
   }
@@ -712,9 +679,9 @@ $oracle-badge-clearance: 120rpx;
 
   &__title {
     display: block;
-    font-size: 26rpx; // Intentional: between-step card title under the 30rpx fact-type
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
+    font-size: 30rpx; // Phone-legibility pass (2026-11-10): the event name must not be the smallest text on the card
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
     line-height: 1.4;
     @include text-truncate;
   }
@@ -801,30 +768,39 @@ $oracle-badge-clearance: 120rpx;
     color: $color-text-muted;
   }
 
-  &--full &__pulse-dot {
+  &--full &__status-dot {
     background: $color-text-muted !important;
     animation: none;
   }
 
-  &--full &__pulse-label {
+  &--full &__status-label {
     color: $color-text-muted !important;
+  }
+
+  // ── People row: faces + seat count, then the chemistry fact ───
+  // Chemistry counts people, so it sits beside the seat count instead of on
+  // the date line — same-row logic, one place for "who is in this table".
+  &__people-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-width: 0;
   }
 
   // ── High-chemistry celebration badge ──────────────────────────
   &__celebration-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6rpx;
-    margin-left: $spacing-xs;
     padding: 4rpx 14rpx;
+    border: 1rpx solid transparent; // colour comes from the inline family tint
     border-radius: 999rpx;
     font-family: $font-cn-display;
-    font-size: $font-size-xs;
+    font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    color: $color-text-white;
+    white-space: nowrap;
+    flex-shrink: 0;
     opacity: 0;
     transform: translateY(4rpx);
-    white-space: nowrap;
     animation: celebration-badge-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
   }
 
@@ -844,7 +820,7 @@ $oracle-badge-clearance: 120rpx;
     transform: none;
   }
 
-  &--low-end &__pulse-dot {
+  &--low-end &__status-dot {
     animation: none;
     opacity: 1;
   }
@@ -996,13 +972,13 @@ $oracle-badge-clearance: 120rpx;
     transform: none;
   }
 
-  .oracle-card__pulse-dot {
+  .oracle-card__status-dot {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
-  .oracle-card__pulse-dot--urgent {
+  .oracle-card__status-dot--urgent {
     animation: none;
     opacity: 1;
     transform: none;
