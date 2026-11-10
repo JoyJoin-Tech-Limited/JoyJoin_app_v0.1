@@ -550,6 +550,23 @@ grep -n "<key line>" <file>  # confirm the new content exists
 
 **Do not** skip this step, even for trivial one-liners. A false "success" wastes hours on phantom bugs that don't exist in source but appear in the stale build output. **This rule applies to all sessions, all agents, all edit calls — permanent.**
 
+## 12. Engineering Practice Record (weekly retro)
+
+> Full record: `docs/deliberations/2026-11-10-weekly-practice-retro.md`. Read it when starting event-card, matching-timing, or docs work. The rules below are the ones that keep repeating.
+
+- **Directional formulas need a table test.** Never trust `base - decay`-style arithmetic to encode "stricter earlier / looser later". Lock (distance → value) rows in the test file. Origin: the inverted 排桌 threshold curve (2026-11-10).
+- **Verify the mechanism before the copy claims it.** If a sentence promises a schedule, a trigger, or an outcome, read the service that owns it first; if it cannot be proven, ship the weaker true sentence or nothing. Origin: 「截止后即排桌」 was false — matching is event-driven.
+- **Every state that branches in JSX gets rendered once.** Happy-path screenshots are not coverage. Ended, cancelled, urgent, empty, and long-text states each need a generator or a captured frame. Origin: empty countdown pill on ended cards; price-only band on cancelled cards.
+- **One fact, one home.** Parse compound values (`主题 · 区域`) before rendering a neighbouring field; if a fact appears twice on a card, fix the shared component, not the page.
+- **No absolute positioning for primary facts.** Badges drift out of flow and stop reading as part of the card; join a rail instead.
+- **Sample arrays are capped by truth, not by the visual cap** (`Math.min(cap, authoritativeCount)`). Origin: 10 faces beside `5/8`.
+- **Contrast is measured, not eyeballed.** Text on a tinted or translucent surface needs ≥4.5:1; never use the muted token inside pills for the first-read word.
+- **8rpx grid or a token.** No 2rpx nudges, no 210rpx widths. A 1rpx hairline and typographic line-height are the only exceptions.
+- **One rule per card.** A second hairline turns a card into a filing cabinet.
+- **Deleting an identifier is a repo-wide edit.** Grep `src/`, `docs/`, `.github/skills/`, and `AGENTS.md` for the class/mixin/variable name in the same commit — stale doc references are how the next agent rebuilds the thing you removed.
+- **Comments that name a trigger, schedule, or owner are contract text.** Update them with the code, or they become folklore (origin: `preference_lock_at` claim in the completion sweep).
+- **Change the source-lock assertion in the same edit as the structure**, then run the focused file before moving on.
+
 ## Street Blind Box NPC Catalog Override (2026-07-30)
 
 - The formal admin/product name is `街头盲盒运营`; `flash`, `/admin/alang`, and the separate `/admin/flash-ops` surface remain internal identifiers.

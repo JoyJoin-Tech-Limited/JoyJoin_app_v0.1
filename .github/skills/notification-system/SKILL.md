@@ -38,7 +38,7 @@ Trigger (event status, match, admin action)
   └──► wsService.broadcastToUser() / broadcastToEvent() ──► WebSocket (best-effort)
 ```
 
-**Categories:** `discover`, `activities`, `chat`. **Types:** `event_reminder`, `system_alert`, `mutual_match`, `match_success`, `pool_full`, `new_message`, `admin_announcement`, etc. **2026-06-28 additions:** `match_success` is created for every group member after `poolMatchingService` commits groups; `pool_full` is created for all registered users when a pool reaches capacity.
+**Categories:** `discover`, `activities`, `chat`. **Types:** `event_reminder`, `system_alert`, `mutual_match`, `mutual_match_expired`, `match_success`, `pool_full`, `new_message`, `admin_announcement`, etc. `mutual_match_expired` (2026-11-11) tells the initiator of an expired `mutual_pending` pair — one neutral line, no peer identity, no reason — and maps to the Connections tab like `mutual_match`. **2026-06-28 additions:** `match_success` is created for every group member after `poolMatchingService` commits groups; `pool_full` is created for all registered users when a pool reaches capacity.
 
 **Key invariant:** Unread counts are computed from the database (`isRead = false`), not WebSocket state. Clients poll `/api/notifications/counts` every 30s as fallback.
 

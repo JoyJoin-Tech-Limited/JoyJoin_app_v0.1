@@ -125,6 +125,10 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 
 - [`research/2026-11-10-t46-article-review.md`](./research/2026-11-10-t46-article-review.md) — T46 文章复盘：来源分级、PM/商业化 Agent 的 delta memo、统计功效与 30 天 hostless/互选实验建议
 
+### Practice records and retrospectives
+
+- [`deliberations/2026-11-10-weekly-practice-retro.md`](./deliberations/2026-11-10-weekly-practice-retro.md) — 2026-11-04 → 11-10 周复盘：23 个提交的文档覆盖核对、做对的 9 条实践、13 个错误的复发锁（阈值方向、文案主语、采样截断、边态渲染、对比度、8rpx 网格等）
+
 ### Operations and runbooks
 
 - [`systems/observability.md`](./systems/observability.md)
