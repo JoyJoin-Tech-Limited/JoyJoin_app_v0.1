@@ -19,6 +19,7 @@ import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
+import EventStatusTabs, { type EventStatusTabKey } from '../../components/events/EventStatusTabs'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { isLongListRowCount, MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD } from '../../lib/utils/longListThreshold'
 import { logWarn } from '../../lib/utils/logger'
@@ -30,7 +31,7 @@ import './index.scss'
 
 const FIRST_EVENT_HERO_STATUSES = new Set(['upcoming', 'pending', 'registered', 'matched', 'confirmed', 'venue_unlocked'])
 
-type TabKey = 'ongoing' | 'upcoming' | 'completed'
+type TabKey = EventStatusTabKey
 
 const EMPTY_STATE_COPY: Record<TabKey, { title: string; description: string }> = {
   ongoing: {
@@ -180,6 +181,7 @@ export default function EventsPage() {
     && FIRST_EVENT_HERO_STATUSES.has(firstEventStatus)
 
   const handleTabChange = (tab: TabKey) => {
+    if (tab === resolvedActiveTab) return
     haptics('light')
     setHasManualTabSelection(true)
     setActiveTab(tab)
@@ -198,36 +200,7 @@ export default function EventsPage() {
 
   return renderGate(
     <View className={`events-page ${tabEntranceClass}`}>
-      {/* Tabs */}
-      <View className='events-page__tabs' role='tablist'>
-        <View
-          className={`events-page__tab ${resolvedActiveTab === 'ongoing' ? 'events-page__tab--active' : ''}`}
-          role='tab'
-          aria-selected={resolvedActiveTab === 'ongoing'}
-          hoverClass='events-page__tab--pressed'
-          onClick={() => handleTabChange('ongoing')}
-        >
-          <Text className='events-page__tab-text'>进行中</Text>
-        </View>
-        <View
-          className={`events-page__tab ${resolvedActiveTab === 'upcoming' ? 'events-page__tab--active' : ''}`}
-          role='tab'
-          aria-selected={resolvedActiveTab === 'upcoming'}
-          hoverClass='events-page__tab--pressed'
-          onClick={() => handleTabChange('upcoming')}
-        >
-          <Text className='events-page__tab-text'>待开始</Text>
-        </View>
-        <View
-          className={`events-page__tab ${resolvedActiveTab === 'completed' ? 'events-page__tab--active' : ''}`}
-          role='tab'
-          aria-selected={resolvedActiveTab === 'completed'}
-          hoverClass='events-page__tab--pressed'
-          onClick={() => handleTabChange('completed')}
-        >
-          <Text className='events-page__tab-text'>已结束</Text>
-        </View>
-      </View>
+      <EventStatusTabs activeTab={resolvedActiveTab} onChange={handleTabChange} />
 
       {/* D1 — First event celebration hero (Batch D): only for an active first event. */}
       {showFirstEventHero && (

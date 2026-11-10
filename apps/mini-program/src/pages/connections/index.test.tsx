@@ -5,7 +5,7 @@ import ConnectionsPage from './index'
 
 const mocks = vi.hoisted(() => ({
   queryState: {
-    data: [] as Array<Record<string, unknown>>,
+    data: [] as Array<Record<string, unknown>> | null,
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -69,7 +69,7 @@ vi.mock('../../components/ui/Card', () => ({
 }))
 
 function setQueryState(
-  connections: Array<Record<string, unknown>>,
+  connections: Array<Record<string, unknown>> | null,
   overrides: { isLoading?: boolean; isError?: boolean } = {},
 ) {
   mocks.queryState.data = connections
@@ -95,6 +95,13 @@ describe('ConnectionsPage editorial empty state', () => {
     fireEvent.click(screen.getByRole('button', { name: '去探索活动' }))
     expect(mocks.switchTab).toHaveBeenCalledTimes(1)
     expect(mocks.switchTab).toHaveBeenCalledWith({ url: '/pages/discover/index' })
+  })
+
+  it('treats a runtime null payload as the branded empty state instead of crashing', () => {
+    setQueryState(null)
+
+    expect(() => render(<ConnectionsPage />)).not.toThrow()
+    expect(screen.getByText('新的连接，从一场活动开始')).toBeInTheDocument()
   })
 
   it('keeps non-empty connection content and removes the empty-only flow card', () => {

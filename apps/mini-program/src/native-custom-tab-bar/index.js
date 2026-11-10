@@ -6,11 +6,11 @@ Component({
 
   // Internal debounce / diff state (not reactive)
   _syncTimer: null,
-  _showTimer: null,
   _lastBadgesKey: '',
   _lastSelected: -1,
   _lastCenterUrl: '',
-  // Last selection confirmed by syncState (authoritative) — used for rollback
+  // Last selection confirmed by the visible route — used only as a fallback
+  // when the runtime cannot expose a route during a failed switch.
   _confirmedSelected: 0,
   _platform: '',
   _isLowEnd: false,
@@ -19,8 +19,12 @@ Component({
   _networkStatusHandler: null,
   _pendingSyncState: null,
   _isDetached: false,
-  // Tab switch in-flight guard
+  // Latest-intent switching: one active native request plus one replaceable
+  // pending destination. A bounded watchdog releases a callback-less request.
   _switchInFlight: false,
+  _switchRequestId: 0,
+  _activeSwitchRequestId: 0,
+  _pendingSwitch: null,
   _switchTimer: null,
   // Screen-reader announcement timer
   _announcementTimer: null,
@@ -138,6 +142,11 @@ Component({
 
       // Preserve selection across re-attachment (e.g., tab bar re-created).
       this._confirmedSelected = Number(this.data.selected) || 0
+      this._switchInFlight = false
+      this._switchRequestId = 0
+      this._activeSwitchRequestId = 0
+      this._pendingSwitch = null
+      clearTimeout(this._switchTimer)
 
       // Hide by default; setSelected will reveal on tab pages.
       var shouldHide = this._shouldHideOnPage()
@@ -171,9 +180,12 @@ Component({
     detached: function () {
       this._isDetached = true
       clearTimeout(this._syncTimer)
-      clearTimeout(this._showTimer)
-      clearTimeout(this._switchTimer)
       clearTimeout(this._announcementTimer)
+      clearTimeout(this._switchTimer)
+      this._switchRequestId += 1
+      this._activeSwitchRequestId = 0
+      this._pendingSwitch = null
+      this._switchInFlight = false
       if (this._networkStatusHandler && wx.offNetworkStatusChange) {
         wx.offNetworkStatusChange(this._networkStatusHandler)
       }
@@ -181,19 +193,10 @@ Component({
   },
 
   pageLifetimes: {
-    // Safety net: if an optimistic update left selected in a wrong state
-    // after swipe-back, reset to the last confirmed value after syncState
-    // has had time to fire (syncState debounce = 50ms).
+    // The visible route is the only durable selection authority. Reconcile
+    // synchronously so a late callback or swipe-back cannot leave stale color.
     show: function () {
-      var self = this
-      clearTimeout(this._showTimer)
       this._syncSelectionWithCurrentRoute()
-      this._showTimer = setTimeout(function () {
-        self._syncSelectionWithCurrentRoute()
-        if (self.data.selected !== self._confirmedSelected) {
-          self.setData({ selected: self._confirmedSelected })
-        }
-      }, 100)
     },
   },
 
@@ -221,10 +224,9 @@ Component({
         var update = {}
         var hasChange = false
 
-        // Note: `selected` is NEVER passed by the hook.
-        // handleTabTap/handleCenterTap are the sole authorities.
-        // If selected ever drifts, pageLifetimes.show safety net
-        // reverts it to _confirmedSelected.
+        // Note: `selected` is NEVER passed by syncState. Selection is
+        // optimistic during a tap, then reconciled from the visible route
+        // by setSelected/pageLifetimes.show.
 
         // Center: shallow-compare key fields to avoid re-rendering identical state
         if (state.center) {
@@ -321,111 +323,144 @@ Component({
     },
 
     handleTabTap: function (e) {
-      var index = Number(e.currentTarget.dataset.index)
-      var url = e.currentTarget.dataset.url
-      var tabKey = e.currentTarget.dataset.tab
-      var previousSelected = this._confirmedSelected
-      var self = this
-
-      // Ignore re-taps on the current tab and rapid taps while switching.
-      if (index === this._confirmedSelected || this._switchInFlight) {
-        return
-      }
-
-      // Optimistic UI update: highlight the tapped tab immediately.
-      this._confirmedSelected = index
-      this.setData({ selected: index, hidden: false })
-
-      this._switchInFlight = true
-      clearTimeout(this._switchTimer)
-      this._switchTimer = setTimeout(function () {
-        self._switchInFlight = false
-      }, 2000)
-
-      wx.switchTab({
-        url: url,
-        success: function () {
-          self._releaseSwitchGuard()
-          self._confirmedSelected = index
-          self._setAnnouncement(self._getTabAnnouncement(index))
-        },
-        fail: function (err) {
-          self._releaseSwitchGuard()
-          console.warn('[TabBar] switchTab failed for tab ' + tabKey + ':', err)
-          self._confirmedSelected = previousSelected
-          self.setData({ selected: previousSelected })
-          self.trackTabBarEvent('mini_program_tab_bar_switch_fail', {
-            tab: tabKey || 'unknown',
-            index: index,
-          })
-          if (wx.showToast) {
-            wx.showToast({ title: '切换失败，请重试', icon: 'none' })
-          }
-        },
-      })
-
-      this.trackTabBarEvent('mini_program_tab_bar_tap', {
-        tab: tabKey || 'unknown',
-        index: index,
-      })
-
-      this._triggerHaptic()
+      this._switchToIndex(
+        Number(e.currentTarget.dataset.index),
+        e.currentTarget.dataset.url,
+        { tabKey: e.currentTarget.dataset.tab }
+      )
     },
 
     handleCenterTap: function () {
       var action = this.data.center.action
-      var previousSelected = this._confirmedSelected
-      var self = this
+      this._switchToIndex(4, action.url, { isCenter: true, action: action })
+    },
 
-      // Ignore re-taps and rapid taps while switching.
-      if (this._confirmedSelected === 4 || this._switchInFlight) {
+    _switchToIndex: function (index, url, meta) {
+      if (!url || !Number.isFinite(index)) return
+
+      var currentRouteIndex = this._routeToIndex[this._getCurrentRoute()]
+      if (currentRouteIndex === index && !this._switchInFlight) {
+        this.setSelected(index)
         return
       }
 
-      // Optimistic UI update.
-      this._confirmedSelected = 4
-      this.setData({ selected: 4, hidden: false })
+      var request = {
+        requestId: ++this._switchRequestId,
+        index: index,
+        url: url,
+        meta: meta,
+        previousSelected: typeof currentRouteIndex === 'number'
+          ? currentRouteIndex
+          : this._confirmedSelected,
+      }
+      var isCenter = !!(meta && meta.isCenter)
+      var tabKey = meta && meta.tabKey
+      var action = meta && meta.action
 
-      this._switchInFlight = true
-      clearTimeout(this._switchTimer)
-      this._switchTimer = setTimeout(function () {
-        self._switchInFlight = false
-      }, 2000)
-
-      wx.switchTab({
-        url: action.url,
-        success: function () {
-          self._releaseSwitchGuard()
-          self._confirmedSelected = 4
-          self._setAnnouncement('已切换到中心入口')
-        },
-        fail: function (err) {
-          self._releaseSwitchGuard()
-          console.warn('[TabBar] switchTab failed for center:', err)
-          self._confirmedSelected = previousSelected
-          self.setData({ selected: previousSelected })
-          self.trackTabBarEvent('mini_program_center_button_switch_fail', {
-            action_kind: action.kind || 'unknown',
-            navigation: action.navigation || 'unknown',
-          })
-          if (wx.showToast) {
-            wx.showToast({ title: '切换失败，请重试', icon: 'none' })
-          }
-        },
-      })
-
-      this.trackTabBarEvent('mini_program_center_button_tap', {
-        action_kind: action.kind || 'unknown',
-        navigation: action.navigation || 'unknown',
-      })
-
+      // Every tap updates the intended color immediately, but native requests
+      // are bounded: only the newest destination waits behind the active one.
+      this.setData({ selected: index, hidden: false })
+      this.trackTabBarEvent(
+        isCenter ? 'mini_program_center_button_tap' : 'mini_program_tab_bar_tap',
+        isCenter
+          ? {
+              action_kind: (action && action.kind) || 'unknown',
+              navigation: (action && action.navigation) || 'unknown',
+            }
+          : { tab: tabKey || 'unknown', index: index }
+      )
       this._triggerHaptic()
+
+      if (this._switchInFlight) {
+        this._pendingSwitch = request
+        return
+      }
+      this._startSwitch(request)
     },
 
-    _releaseSwitchGuard: function () {
-      this._switchInFlight = false
+    _startSwitch: function (request) {
+      var self = this
+      var requestId = request.requestId
+      var index = request.index
+      var meta = request.meta
+      var isCenter = !!(meta && meta.isCenter)
+      var tabKey = meta && meta.tabKey
+      var action = meta && meta.action
+
+      this._switchInFlight = true
+      this._activeSwitchRequestId = requestId
+      clearTimeout(this._switchTimer)
+      this._switchTimer = setTimeout(function () {
+        if (self._activeSwitchRequestId !== requestId || self._isDetached) return
+        // Some native runtimes never invoke either callback. Expire only the
+        // platform wait, then release the newest pending intent; never drop it.
+        self._activeSwitchRequestId = 0
+        self._switchInFlight = false
+        self._switchTimer = null
+        if (self._pendingSwitch) {
+          self._flushPendingSwitch()
+        } else {
+          self._syncSelectionWithCurrentRoute()
+        }
+      }, 400)
+
+      wx.switchTab({
+        url: request.url,
+        success: function () {
+          if (!self._settleSwitch(requestId) || self._isDetached) return
+          if (requestId === self._switchRequestId) {
+            self._syncSelectionWithCurrentRoute()
+            if (self._routeToIndex[self._getCurrentRoute()] === index) {
+              self._setAnnouncement(isCenter ? '已切换到中心入口' : self._getTabAnnouncement(index))
+            }
+          }
+          self._flushPendingSwitch()
+        },
+        fail: function (err) {
+          var isLatest = requestId === self._switchRequestId
+          console.warn('[TabBar] switchTab failed for ' + (isCenter ? 'center' : 'tab ' + tabKey) + ':', err)
+          self.trackTabBarEvent(
+            isCenter ? 'mini_program_center_button_switch_fail' : 'mini_program_tab_bar_switch_fail',
+            isCenter
+              ? {
+                  action_kind: (action && action.kind) || 'unknown',
+                  navigation: (action && action.navigation) || 'unknown',
+                  stale: !isLatest,
+                }
+              : { tab: tabKey || 'unknown', index: index, stale: !isLatest }
+          )
+          if (!self._settleSwitch(requestId) || self._isDetached) return
+
+          if (isLatest) {
+            if (typeof self._routeToIndex[self._getCurrentRoute()] === 'number') {
+              self._syncSelectionWithCurrentRoute()
+            } else {
+              self._confirmedSelected = request.previousSelected
+              self.setData({ selected: request.previousSelected })
+            }
+            if (wx.showToast) {
+              wx.showToast({ title: '切换失败，请重试', icon: 'none' })
+            }
+          }
+          self._flushPendingSwitch()
+        },
+      })
+    },
+
+    _settleSwitch: function (requestId) {
+      if (this._activeSwitchRequestId !== requestId) return false
       clearTimeout(this._switchTimer)
       this._switchTimer = null
+      this._activeSwitchRequestId = 0
+      this._switchInFlight = false
+      return true
+    },
+
+    _flushPendingSwitch: function () {
+      if (this._switchInFlight || this._isDetached || !this._pendingSwitch) return
+      var pending = this._pendingSwitch
+      this._pendingSwitch = null
+      this._startSwitch(pending)
     },
 
     _setAnnouncement: function (text) {

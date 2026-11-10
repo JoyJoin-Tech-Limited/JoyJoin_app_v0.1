@@ -181,6 +181,10 @@ async function captureEventsPage() {
     await clearAndSeedStorage(page)
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForSelector('.events-page__list', { timeout: 10000 })
+    await page.waitForFunction(() => {
+      const images = Array.from(document.querySelectorAll('.footprint-oracle-card__type-corner img'))
+      return images.length > 0 && images.every((image) => image.complete)
+    }, undefined, { timeout: 10000 })
     await page.waitForTimeout(1500)
     return screenshotPage(page)
   })
@@ -531,6 +535,15 @@ async function captureProfileV17() {
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
     await waitForContent(page, '.profile-page__identity-stage--entered')
+    // The stage shell enters before its scene/content reveal deadline (1.5s).
+    // Waiting only for the shell can capture a structurally valid but blank card.
+    await page.waitForSelector('.identity-stage__viewport--revealed', { state: 'visible', timeout: 5000 })
+    await page.waitForFunction(() => {
+      const stage = document.querySelector('.profile-page__identity-stage')
+      const images = Array.from(stage?.querySelectorAll('img') ?? [])
+      const avatar = stage?.querySelector('.pixel-avatar-composite__body img')
+      return Boolean(avatar?.complete) && images.every((image) => image.complete)
+    }, undefined, { timeout: 10000 })
     await page.waitForSelector('.profile-page__story-card', { state: 'visible', timeout: 10000 })
     await page.waitForFunction(() => {
       const growth = document.querySelector('.profile-page__growth-value')?.textContent?.trim()

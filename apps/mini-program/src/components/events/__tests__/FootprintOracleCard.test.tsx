@@ -14,11 +14,13 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, hoverStartTime: _hoverStartTime, hoverStayTime: _hoverStayTime, ...props }: React.HTMLAttributes<HTMLDivElement> & { hoverClass?: string; hoverStartTime?: number; hoverStayTime?: number }) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => <span {...props}>{children}</span>,
-  Image: ({ lazyLoad: _lazyLoad, mode: _mode, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { lazyLoad?: boolean; mode?: string }) => <img {...props} />,
+  Image: ({ lazyLoad = false, mode: _mode, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { lazyLoad?: boolean; mode?: string }) => <img data-lazy-load={String(lazyLoad)} {...props} />,
 }))
 
 vi.mock('../../ui/SegmentedCountdownClock', () => ({
-  default: ({ clockId }: { clockId: string }) => <div data-testid='countdown-clock' id={clockId} />,
+  default: ({ clockId, enabled }: { clockId: string; enabled: boolean }) => enabled
+    ? <div className='segmented-countdown-clock' data-testid='countdown-clock' id={clockId} />
+    : null,
 }))
 
 vi.mock('../../../hooks/useDeviceTier', () => ({
@@ -34,7 +36,7 @@ vi.mock('../../../lib/utils/accessibility', () => ({
 }))
 
 vi.mock('../../discover/oracleCardAssets', () => ({
-  getOracleCardCornerAsset: () => undefined,
+  getOracleCardCornerAsset: (eventType?: string) => eventType ? `https://cdn.test/${eventType}.webp` : undefined,
 }))
 
 vi.mock('../../../lib/analytics/feedbackAnalytics', () => ({
@@ -68,10 +70,86 @@ describe('FootprintOracleCard historical presentation integration', () => {
     const { container } = render(<FootprintOracleCard event={event} />)
 
     expect(screen.getByText('排桌完成')).toBeInTheDocument()
-    expect(screen.getByText('排桌完成，场地安排中')).toBeInTheDocument()
+    expect(screen.getByText('场地安排中')).toBeInTheDocument()
+    expect(screen.queryByText('排桌完成，场地安排中')).not.toBeInTheDocument()
     expect(screen.getByTestId('countdown-clock')).toBeInTheDocument()
     expect(container.querySelector('.footprint-oracle-card__pulse-dot--live')).toBeInTheDocument()
     expect(container.querySelector('.footprint-oracle-card')).not.toHaveClass('footprint-oracle-card--terminal')
+  })
+
+  it('keeps the Discover dining scene visible without repeating the upcoming status as waiting copy', () => {
+    const event = makeCardEvent({ status: 'upcoming', displayStatus: 'upcoming' })
+    const { container } = render(<FootprintOracleCard event={event} />)
+
+    expect(container.querySelector('.footprint-oracle-card__type-corner')).toHaveAttribute(
+      'src',
+      'https://cdn.test/dining.webp',
+    )
+    expect(container.querySelector('.footprint-oracle-card__type-corner')).toHaveAttribute('data-lazy-load', 'false')
+    expect(screen.getByText('即将开始')).toBeInTheDocument()
+    expect(container.querySelector('.footprint-oracle-card__waiting-hint')).toBeNull()
+  })
+
+  it('retains quieter event-type recognition for terminal cards without reviving the countdown', () => {
+    const event = makeCardEvent({ status: 'completed', displayStatus: 'completed' })
+    const { container } = render(<FootprintOracleCard event={event} isHistorical />)
+
+    expect(container.querySelector('.footprint-oracle-card')).toHaveClass('footprint-oracle-card--terminal')
+    expect(container.querySelector('.footprint-oracle-card__type-corner')).toHaveAttribute(
+      'src',
+      'https://cdn.test/dining.webp',
+    )
+    expect(screen.queryByTestId('countdown-clock')).not.toBeInTheDocument()
+  })
+
+  it('integrates party facts and one navigation cue into the main card body', () => {
+    const event = makeCardEvent({ groupId: 'group-1', groupSize: 6, price: 88, location: '深圳 · 南山区' })
+    const { container } = render(<FootprintOracleCard event={event} />)
+    const meta = container.querySelector('.footprint-oracle-card__meta')
+
+    const dateTime = meta?.querySelector('.footprint-oracle-card__date-time')
+    expect(dateTime).toBeInTheDocument()
+    expect(dateTime?.querySelector('.footprint-oracle-card__date-label')).not.toBeEmptyDOMElement()
+    expect(dateTime?.querySelector('.footprint-oracle-card__date-clock')).toHaveTextContent(/\d{2}:\d{2}/)
+    expect(meta?.querySelector('.footprint-oracle-card__location')).toHaveTextContent('深圳 · 南山区')
+    expect(meta?.contains(screen.getByText('已排进 6 人桌'))).toBe(true)
+    expect(container.querySelector('.footprint-oracle-card--rail')).toBeNull()
+    expect(container.querySelector('.footprint-oracle-card__rail')).toBeNull()
+    expect(screen.getByText('已排进 6 人桌').closest('.footprint-oracle-card__facts')).toBeInTheDocument()
+    expect(screen.getByText('¥88').closest('.footprint-oracle-card__facts')).toBeInTheDocument()
+    expect(container.querySelectorAll('.footprint-oracle-card__title-cue')).toHaveLength(1)
+    expect(container.querySelector('.footprint-oracle-card__topline .segmented-countdown-clock')).toBeInTheDocument()
+  })
+
+  it('keeps assigned-table size distinct from registration count across terminal and missing-group states', () => {
+    const completed = render(
+      <FootprintOracleCard event={makeCardEvent({
+        status: 'completed',
+        displayStatus: 'completed',
+        groupId: 'group-1',
+        groupSize: 6,
+      })} />,
+    )
+    expect(completed.getByText('6 人桌')).toBeInTheDocument()
+    expect(completed.queryByText('已报名 6 人')).not.toBeInTheDocument()
+    expect(completed.container.querySelector('[aria-label]')?.getAttribute('aria-label')).toContain('6 人桌')
+    completed.unmount()
+
+    const cancelled = render(
+      <FootprintOracleCard event={makeCardEvent({
+        status: 'cancelled',
+        displayStatus: 'cancelled',
+        groupId: 'group-1',
+        groupSize: 6,
+      })} />,
+    )
+    expect(cancelled.queryByText(/人桌|已报名/)).not.toBeInTheDocument()
+    cancelled.unmount()
+
+    const missingGroup = render(
+      <FootprintOracleCard event={makeCardEvent({ groupSize: 6 })} />,
+    )
+    expect(missingGroup.queryByText(/人桌|已报名/)).not.toBeInTheDocument()
   })
 
   it('renders a historical nonterminal as neutral ended without changing the DTO', () => {
@@ -124,6 +202,9 @@ describe('FootprintOracleCard historical presentation integration', () => {
     expect(screen.getByText('圆满结束')).toBeInTheDocument()
     expect(container.querySelector('.footprint-oracle-card')).toHaveClass('footprint-oracle-card--terminal')
     expect(screen.queryByTestId('countdown-clock')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '去评价这场活动' }).closest('.footprint-oracle-card__footer')).toBeInTheDocument()
+    expect(container.querySelectorAll('.footprint-oracle-card__title-cue')).toHaveLength(1)
+    expect(container.querySelector('.footprint-oracle-card__rail-cue')).toBeNull()
     expect(trackFeedbackEvent).toHaveBeenCalledWith('feedback_entry_shown', {
       eventId: 'terminal-feedback',
       state: 'open',

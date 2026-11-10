@@ -73,6 +73,7 @@ import {
 } from './profileConstants'
 import { useProfileScroll } from './useProfileScroll'
 import ProfilePartnerVisual, { EquipmentPreviewArtwork } from './ProfilePartnerVisual'
+import ProfileGrowthCard from './ProfileGrowthCard'
 import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 
 // P1-3 (UIUX memo §9): the four profile numbers count 0→N once on first
@@ -716,7 +717,8 @@ export default function ProfilePage() {
     }
     try {
       await Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.profileSettings })
-    } catch {
+    } catch (error) {
+      logError('profile:open_settings_fail', { error: String(error) })
       try {
         await Taro.showToast({
           title: '设置没有打开，请稍后再试',
@@ -868,7 +870,7 @@ export default function ProfilePage() {
         </View>
         {profileV17Enabled ? (
           <View
-            className={`profile-page__identity-stage${hasEntered ? ' profile-page__identity-stage--entered' : ''}`}
+            className={`profile-page__identity-stage${hasEntered ? ' profile-page__identity-stage--entered' : ''}${pixelAvatarEnabled ? '' : ' profile-page__identity-stage--no-equipment'}`}
             style={identityStageFoilStyle}
             data-testid='profile-v4'
           >
@@ -981,78 +983,6 @@ export default function ProfilePage() {
                   </View>
                 )}
               </View>
-
-              {/* Readable glass card for growth stats (bottom-left) */}
-              <View className='profile-page__growth-card'>
-                <View
-                  className='profile-page__growth'
-                  aria-label={gamificationQuery.isLoading
-                    ? '潮流值正在加载'
-                    : `潮流值 ${growth.current}，${visibleGrowthProgress}%`}
-                >
-                  <View className='profile-page__growth-heading'>
-                    <Text className='profile-page__growth-label'>潮流值</Text>
-                    {gamificationQuery.isLoading ? (
-                      <Text className='profile-page__growth-value'>—</Text>
-                    ) : (
-                      <CountUpText
-                        className='profile-page__growth-value'
-                        value={growth.current}
-                        {...PROFILE_COUNT_UP_OPTS}
-                      />
-                    )}
-                    {!gamificationQuery.isLoading && growth.nextTarget !== null && (
-                      <Text className='profile-page__growth-target'>/{growth.nextTarget}</Text>
-                    )}
-                  </View>
-                  <View className='profile-page__growth-progress'>
-                    <View
-                      className='profile-page__growth-progress-bar'
-                      style={{
-                        transform: `scaleX(${visibleGrowthProgress / 100})`,
-                      }}
-                    >
-                      <View className='profile-page__growth-progress-sheen' aria-hidden='true' />
-                    </View>
-                  </View>
-                  {/* Level plate doubles as the gamification error surface:
-                      error copy stays a plain text line, never on the plate. */}
-                  {gamificationQuery.isError ? (
-                    <Text className='profile-page__growth-level'>成长记录稍后会自动刷新</Text>
-                  ) : (
-                    <View className='profile-page__growth-foot'>
-                      <View className='profile-page__level-plate'>
-                        <View className='profile-page__level-plate-spark' aria-hidden='true' />
-                        <Text className='profile-page__level-plate-text'>{growthLevelLabel}</Text>
-                      </View>
-                      {activityStreak > 0 && (
-                        <View
-                          className={`profile-page__streak-capsule${streakTeaser || streakContinuationTarget != null ? ' profile-page__streak-capsule--near-milestone' : ''}`}
-                          data-testid='profile-streak-capsule'
-                          hoverClass='profile-page__streak-capsule--pressed'
-                          onClick={() => {
-                            haptics('light')
-                            profileAnalytics.track('profile_streak_capsule_tap', { streakWeeks: activityStreak })
-                            void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
-                          }}
-                          role='button'
-                          aria-label={`连续 ${activityStreak} 周，去活动页保持连击`}
-                        >
-                          <View className='profile-page__streak-main'>
-                            <JoyJoinIcon emoji='🔥' tier='chemistry' size={28} className='profile-page__streak-icon' />
-                            <Text className='profile-page__streak-text'>连续 {activityStreak} 周</Text>
-                          </View>
-                          {streakContinuationTarget != null ? (
-                            <Text className='profile-page__streak-hint'>再 1 场续到 {streakContinuationTarget} 周</Text>
-                          ) : streakTeaser ? (
-                            <Text className='profile-page__streak-hint'>再 1 周，潮流值 +{streakTeaser.xp}</Text>
-                          ) : null}
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
-              </View>
               </View>
 
               {/* Avatar anchored on the plaza with a warm platform shadow.
@@ -1064,35 +994,47 @@ export default function ProfilePage() {
                   className={`profile-page__partner-platform${deviceTier.isDegradation || !pageVisible ? ' profile-page__partner-platform--no-pulse' : ''}`}
                   aria-hidden='true'
                 />
-              <View
-                className='profile-page__partner-touch'
-                onClick={handlePartnerTap}
-                role='button'
-                aria-label='和搭子打个招呼'
-                data-testid='profile-partner-touch'
-              >
-                <View className='profile-page__partner-halo' aria-hidden='true' />
-              <View
-                className={`profile-page__partner-breath${deviceTier.isDegradation || !pageVisible ? ' profile-page__partner-breath--no-breath' : ''}`}
-                data-testid='profile-partner-breath'
-              >
-                <ProfilePartnerVisual
-                  key={archetype ?? 'profile-partner-fallback'}
-                  archetype={archetype}
-                  archetypeName={archetypeName}
-                  displayName={displayName}
-                  pixelEnabled={pixelAvatarEnabled}
-                  equipmentState={equipmentState}
-                  outfit={outfit}
-                  itemsById={equipmentItemsById}
-                  onRetryEquipment={() => {
-                    setEquipmentRetryNonce((nonce) => nonce + 1)
-                    void equipmentQuery.refetch()
-                  }}
-                />
+                <View
+                  className='profile-page__partner-touch'
+                  onClick={handlePartnerTap}
+                  role='button'
+                  aria-label='和搭子打个招呼'
+                  data-testid='profile-partner-touch'
+                >
+                  <View className='profile-page__partner-halo' aria-hidden='true' />
+                  <View
+                    className={`profile-page__partner-breath${deviceTier.isDegradation || !pageVisible ? ' profile-page__partner-breath--no-breath' : ''}`}
+                    data-testid='profile-partner-breath'
+                  >
+                    <ProfilePartnerVisual
+                      key={archetype ?? 'profile-partner-fallback'}
+                      archetype={archetype}
+                      archetypeName={archetypeName}
+                      displayName={displayName}
+                      pixelEnabled={pixelAvatarEnabled}
+                      outfit={outfit}
+                      itemsById={equipmentItemsById}
+                    />
+                  </View>
+                </View>
               </View>
-              </View>
-              </View>
+
+              {/* Growth is a full-width stage row, not a second floating rail card. */}
+              <ProfileGrowthCard
+                isLoading={gamificationQuery.isLoading}
+                isError={gamificationQuery.isError}
+                growth={growth}
+                visibleGrowthProgress={visibleGrowthProgress}
+                growthLevelLabel={growthLevelLabel}
+                activityStreak={activityStreak}
+                streakTeaser={streakTeaser}
+                streakContinuationTarget={streakContinuationTarget}
+                onStreakTap={() => {
+                  haptics('light')
+                  profileAnalytics.track('profile_streak_capsule_tap', { streakWeeks: activityStreak })
+                  void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
+                }}
+              />
 
               {pixelAvatarEnabled && (
                 <View
@@ -1217,8 +1159,30 @@ export default function ProfilePage() {
                       </View>
                       )
                     ) : equipmentState === 'loading' ? (
-                      <Text className='profile-page__equipment-state-copy'>同步中…</Text>
-                    ) : null}
+                      <View className='profile-page__equipment-state-copy' role='status' aria-live='polite'>
+                        <Text>装备同步中…</Text>
+                      </View>
+                    ) : (
+                      <View className='profile-page__equipment-error' role='alert' aria-live='polite'>
+                        <Text className='profile-page__equipment-state-copy profile-page__equipment-state-copy--error'>
+                          装备暂未同步
+                        </Text>
+                        <View
+                          className='profile-page__equipment-retry'
+                          hoverClass='profile-page__equipment-retry--pressed'
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            haptics('light')
+                            setEquipmentRetryNonce((nonce) => nonce + 1)
+                            void equipmentQuery.refetch()
+                          }}
+                          role='button'
+                          aria-label='重新同步装备'
+                        >
+                          <Text>重试</Text>
+                        </View>
+                      </View>
+                    )}
                   </View>
                   <View className='profile-page__partner-entry-action'>
                     <Text className='profile-page__partner-entry-action-text'>我的形象</Text>

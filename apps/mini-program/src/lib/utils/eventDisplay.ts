@@ -83,6 +83,16 @@ export function formatEventDateTime(dateTime?: string | null): string {
   return datePrefix ? `${datePrefix} ${timePart}` : `${datePart} ${timePart}`
 }
 
+export function formatEventDateTimeParts(dateTime?: string | null): {
+  dateLabel: string
+  timeLabel: string
+} {
+  const formatted = formatEventDateTime(dateTime)
+  const match = /^(.*)\s+(\d{2}:\d{2})$/.exec(formatted)
+  if (!match) return { dateLabel: formatted, timeLabel: '' }
+  return { dateLabel: match[1], timeLabel: match[2] }
+}
+
 export function formatEventDateShort(dateTime?: string | null): string {
   if (!dateTime) return '时间待定'
   const parsed = new Date(dateTime)

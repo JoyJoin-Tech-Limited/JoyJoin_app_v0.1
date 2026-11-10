@@ -10,6 +10,7 @@ import SegmentedCountdownClock from '../ui/SegmentedCountdownClock'
 import { getOracleCardCornerAsset } from '../discover/oracleCardAssets'
 import {
   formatEventDateTime,
+  formatEventDateTimeParts,
   getJoinedEventStatusLabel,
   isJoinedEventTerminal,
 } from '../../lib/utils/eventDisplay'
@@ -55,7 +56,7 @@ const STATUS_WAITING_COPY: Record<string, string> = {
   pending: '系统正在安排本场同桌，请耐心等待',
   registered: '报名成功，等待排桌',
   upcoming: '报名成功，活动即将开始',
-  matched: '排桌完成，场地安排中',
+  matched: '场地安排中',
   confirmed: '已确认，期待见面',
   venue_unlocked: '场地已解锁，期待见面',
 }
@@ -89,12 +90,17 @@ export interface EventSummaryCardProps {
   hoverClass?: string
   /** Optional footer hint rendered below the meta line. */
   footerHint?: string
+  /** Optional structured content for integrated card compositions. */
+  titleAccessory?: React.ReactNode
+  metaAccessory?: React.ReactNode
+  footerContent?: React.ReactNode
+  compactCountdown?: boolean
   role?: string
   ariaLabel?: string
   animationDelay?: string
   /**
-   * Right-side info rail. When provided, the card renders a two-rail layout
-   * with `rightRail` pinned to the right. Used by FootprintOracleCard.
+   * Optional right rail for read-only summary surfaces. When provided, the card
+   * renders a two-rail layout with `rightRail` pinned to the right.
    */
   rightRail?: React.ReactNode
   /** When true, the card renders in a two-rail layout mode. */
@@ -122,6 +128,10 @@ function EventSummaryCard({
   onClick,
   hoverClass,
   footerHint,
+  titleAccessory,
+  metaAccessory,
+  footerContent,
+  compactCountdown = false,
   role,
   ariaLabel,
   animationDelay,
@@ -151,6 +161,7 @@ function EventSummaryCard({
   const isMatched = !isHistoricalNonterminal && status === 'matched'
 
   const dateTimeText = formatEventDateTime(dateTime)
+  const dateTimeParts = useMemo(() => formatEventDateTimeParts(dateTime), [dateTime])
 
   const locationLine = useMemo(() => {
     const parts: string[] = []
@@ -173,7 +184,7 @@ function EventSummaryCard({
   }, [eventType, city, district, venueName, location, showVenue])
 
   const cornerAssetSrc = getOracleCardCornerAsset(eventType)
-  const showCornerAsset = cornerAssetSrc && !effectiveDegradation && !isEnded
+  const showCornerAsset = cornerAssetSrc && !effectiveDegradation
 
   const [cornerLoadFailed, setCornerLoadFailed] = React.useState(false)
   const { isPageVisible } = usePageVisibility()
@@ -193,7 +204,11 @@ function EventSummaryCard({
     [title, statusLabel, dateTimeText, locationLine, footerHint, railAriaLabel],
   )
 
-  const waitingCopy = isHistoricalNonterminal ? undefined : STATUS_WAITING_COPY[status]
+  // Upcoming already says 即将开始 in the status pill; repeating it as a
+  // waiting sentence flattens the title/date hierarchy without adding truth.
+  const waitingCopy = isHistoricalNonterminal || status === 'upcoming'
+    ? undefined
+    : STATUS_WAITING_COPY[status]
 
   const cardClass = [
     'footprint-oracle-card',
@@ -232,7 +247,9 @@ function EventSummaryCard({
           src={cornerAssetSrc}
           mode='aspectFill'
           aria-hidden='true'
-          lazyLoad
+          // The Footprint list is short and above-the-fold art is part of the
+          // card identity; lazy loading left cached route transitions imageless.
+          lazyLoad={false}
           onError={() => setCornerLoadFailed(true)}
         />
       )}
@@ -240,7 +257,7 @@ function EventSummaryCard({
       <View className='footprint-oracle-card__content'>
         <View className='footprint-oracle-card__main'>
           <View className='footprint-oracle-card__body'>
-            {/* L2 Topline: status pill only when railMode (clock lives in right rail) */}
+            {/* Non-rail cards keep their countdown beside the status in the topline. */}
             <View className='footprint-oracle-card__topline'>
               <View className='footprint-oracle-card__pulse-pill'>
                 <View
@@ -260,30 +277,40 @@ function EventSummaryCard({
                   enabled={clockEnabled}
                   accentColor={familyColor}
                   clockId={`${uid}-clock`}
+                  compact={compactCountdown}
                 />
               )}
             </View>
 
-            {/* L1 Title */}
-            <View className='footprint-oracle-card__title'>
-              {title ?? '悦聚活动'}
+            {/* L1 Title: the only navigation cue lives beside the title. */}
+            <View className='footprint-oracle-card__title-row'>
+              <View className='footprint-oracle-card__title'>
+                {title ?? '悦聚活动'}
+              </View>
+              {titleAccessory}
             </View>
 
             {/* L3 Date / time / location line */}
             <View className='footprint-oracle-card__meta'>
-              <Text className='footprint-oracle-card__date-time'>{dateTimeText}</Text>
+              <Text className='footprint-oracle-card__date-time'>
+                <Text className='footprint-oracle-card__date-label'>{dateTimeParts.dateLabel}</Text>
+                {dateTimeParts.timeLabel && (
+                  <Text className='footprint-oracle-card__date-clock'>{dateTimeParts.timeLabel}</Text>
+                )}
+              </Text>
               {locationLine && (
                 <Text className='footprint-oracle-card__location'>{locationLine}</Text>
               )}
               {waitingCopy && (
                 <Text className='footprint-oracle-card__waiting-hint'>{waitingCopy}</Text>
               )}
+              {metaAccessory}
             </View>
 
-            {/* L4 Footer hint (kept for non-rail consumers) */}
-            {footerHint && (
+            {/* L4 Footer: structured actions or the legacy text hint. */}
+            {(footerContent != null || footerHint) && (
               <View className='footprint-oracle-card__footer'>
-                <Text className='footprint-oracle-card__footer-hint'>{footerHint}</Text>
+                {footerContent ?? <Text className='footprint-oracle-card__footer-hint'>{footerHint}</Text>}
               </View>
             )}
           </View>

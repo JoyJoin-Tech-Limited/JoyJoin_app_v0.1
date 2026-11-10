@@ -327,9 +327,9 @@ apps/mini-program/
 │       │   ├── rating-faces/      # Rating / evaluation faces (CDN-only; emoji fallback)
 │       │   ├── phase-icons/       # Icebreaker phase emblems (CDN)
 │       │   └── ui/                # Profile / settings list icons (bundled locally)
-│       ├── fonts/                 # Brand fonts (partially bundled, partially CDN)
-│       │   ├── Quicksand/         # English brand font (~124KB, bundled)
-│       │   └── Alimama/           # Chinese display font — minimal subset bundled, full from CDN
+│       ├── fonts/                 # Brand font sources for CDN upload only (not bundled)
+│       │   ├── Quicksand/         # English brand font source (~16KB WOFF2)
+│       │   └── Alimama/           # Chinese display font — minimal + full source files; both CDN at runtime
 │       ├── tab-icons/             # Bottom tab icons (bundled)
 │       └── joyjoin-logo.webp      # Brand logo (bundled for native tab bar)
 ├── config/                        # Taro build config

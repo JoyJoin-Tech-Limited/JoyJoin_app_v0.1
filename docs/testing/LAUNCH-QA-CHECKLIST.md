@@ -229,7 +229,8 @@
 - [ ] 真机：iOS + Android 各一台走完「落地→测评→报名→支付」；低端机（benchmark ≤15）tab bar/动效降级生效
 - [ ] `prefers-reduced-motion` 全局生效；ScrollView 内 `scrollIntoView` 错误滚动正确；swipe-back 后 CTA 不卡死（`useResetOnShow`）
 - [ ] 关键页截图归档：`npm run screenshot:landing` / `screenshot:discover-area` / `screenshot:pool-registration` / `screenshot:event-ticket-payment` / `screenshot:gathering-room`（对照基线无回归）
-- [ ] 字体两级加载正确（minimal 66KB 本地 + full 621KB CDN 500ms defer，family 名不同 — 与 §9 真机项联动）
+- [ ] 字体两级加载正确（minimal 66KB + full 621KB 均从 CDN 立即加载；字体源文件不进主包；family 名不同 — 与 §9 真机项联动）
+- [ ] 真机冷启动字体时序：首屏品牌标题无 Alimama/PingFang 中段混排；完整字体就绪后整行统一，无持续粗细跳变
 - [ ] **弱网（新增）：** 2G/offline 下 `preloadOnboardingAssets` 跳过、落地页不白屏、支付失败可重试
 
 ## §16 P1 — 内容与文案 QA

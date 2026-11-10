@@ -210,9 +210,9 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/assets/icons/reveal-icons` (~156KB source)
 - `src/assets/icons/achievement-badges` (~144KB source)
 
-*Fonts:*
-- `src/assets/fonts/Quicksand` (~256KB, English brand font)
-- `src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` (~66KB, minimal Chinese display font; full 621KB font loads from CDN)
+*Fonts (CDN-upload sources only; not copied into the mini-program package):*
+- `src/assets/fonts/Quicksand/Quicksand-VariableFont_wght.woff2` (~16KB, English brand font source)
+- `src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` (~66KB, minimal Chinese display font source; both Alimama tiers load from CDN at runtime because WeChat `loadFontFace` requires network URLs)
 
 *First-impression & empty states:*
 - `src/assets/landing-phase-icons/phase-*.webp` → `dist/assets/landing-phase-icons/` (~80KB, 6 landing page icons)

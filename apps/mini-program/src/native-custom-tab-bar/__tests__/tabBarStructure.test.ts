@@ -56,6 +56,10 @@ describe('native custom tab bar structure', () => {
     expect(wxml.trim()).toMatch(/^<view\s+/)
   })
 
+  it('actually hides the native bar for non-tab routes and open sheets', () => {
+    expect(wxml).toContain('wx:if="{{!hidden && !sheetOpen}}"')
+  })
+
   it('keeps the anti-regression comment about cover-view pitfalls', () => {
     expect(wxml).toContain('Do NOT wrap children in <cover-view>/<cover-image>')
     expect(wxml).toContain('causing blank tab icons')

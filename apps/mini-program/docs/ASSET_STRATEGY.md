@@ -87,9 +87,9 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Brand Fonts
 | Font | Path | Size | Load strategy |
 |------|------|------|---------------|
-| Alimama minimal | `fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` | ~68KB | Instant (bundle) |
-| Quicksand | `fonts/Quicksand/Quicksand-VariableFont_wght.ttf` | ~127KB | Instant (bundle) |
-| Alimama full | `fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2` | ~636KB | **CDN** (deferred 500ms) |
+| Alimama minimal | `fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` | ~68KB | **CDN immediate** (source only; not bundled) |
+| Quicksand | `fonts/Quicksand/Quicksand-VariableFont_wght.woff2` | ~16KB | **CDN immediate** (source only; not bundled) |
+| Alimama full | `fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2` | ~636KB | **CDN immediate** |
 
 ### Onboarding Subpackage
 | Asset | Path | Size | Used in |
@@ -152,7 +152,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Miniscript heroes** | `assets/miniscript/*-hero.webp` | ~590KB | Mini-script phase selection |
 | **Interest illustrations** | `images/interests/*.webp` | ~850KB | 48 interest cards across 6 macro categories (`InterestChipCloud`, extended-data picker, profile-review) |
 | **Category icons (refreshed)** | `images/icons/category-icons/*.webp` | ~38KB | 4 refreshed bundled category icons + CDN fallback copies |
-| **Alimama full font** | `assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2` | ~621KB | Chinese display font (deferred 500ms load) |
+| **Alimama full font** | `assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2` | ~621KB | Chinese display font (CDN immediate; source only; not bundled) |
 
 ---
 
@@ -368,7 +368,7 @@ src/assets/
 ├── badges/                    ❌ CDN (source kept for upload, not bundled)
 ├── empty-state/               ✅ bundled (local)
 ├── qr/                        ✅ bundled (local)
-├── fonts/                     ✅ bundled (local) [Quicksand + minimal Alimama subset]
+├── fonts/                     ❌ not bundled [Quicksand + Alimama source files for CDN upload only; runtime loads CDN URLs]
 ├── tab-icons/                 ✅ bundled (local)
 └── joyjoin-logo*.webp/png     ✅ bundled (local)
 ```

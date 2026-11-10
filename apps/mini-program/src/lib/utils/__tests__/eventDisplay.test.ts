@@ -2,6 +2,7 @@ import type { JoinedEventSummary } from '@shared/api'
 import { describe, expect, it } from 'vitest'
 import {
   formatEventDateTime,
+  formatEventDateTimeParts,
   formatEventFactDateTime,
   getEventPoolStatusLabel,
   getJoinedEventDisplayDateTime,
@@ -111,6 +112,21 @@ describe('eventDisplay', () => {
       const formatted = formatEventDateTime(date)
       expect(formatted).not.toMatch(/^(今天|明天|后天) /)
       expect(formatted).not.toContain(String(future.getFullYear()))
+    })
+  })
+
+  describe('formatEventDateTimeParts', () => {
+    it('separates the numeric time run without changing the formatted value', () => {
+      const value = '2026-04-12T19:30:00+08:00'
+      const formatted = formatEventDateTime(value)
+      const parts = formatEventDateTimeParts(value)
+      expect(parts.timeLabel).toMatch(/^\d{2}:\d{2}$/)
+      expect(`${parts.dateLabel} ${parts.timeLabel}`).toBe(formatted)
+    })
+
+    it('keeps an invalid or missing date wholly in the label slot', () => {
+      expect(formatEventDateTimeParts('not-a-date')).toEqual({ dateLabel: '时间待定', timeLabel: '' })
+      expect(formatEventDateTimeParts(undefined)).toEqual({ dateLabel: '时间待定', timeLabel: '' })
     })
   })
 

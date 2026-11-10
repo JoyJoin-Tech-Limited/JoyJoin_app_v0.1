@@ -8,6 +8,7 @@ import { navigateToEventCard } from '../../lib/utils/eventCardNavigation'
 import { queryClient } from '../../lib/api/queryClient'
 import { JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
+import { haptics } from '../../lib/utils/haptics'
 
 const mocks = vi.hoisted(() => ({
   queryState: {
@@ -199,13 +200,13 @@ function renderEvents(events: JoinedEventSummary[]) {
 }
 
 function getTab(label: string): HTMLElement {
-  const tab = screen.getByText(label).closest('.events-page__tab')
+  const tab = screen.getByText(label).closest('.event-status-tabs__tab')
   if (!tab) throw new Error(`Missing Events tab: ${label}`)
   return tab as HTMLElement
 }
 
 function expectActiveTab(label: string) {
-  expect(getTab(label).className).toContain('events-page__tab--active')
+  expect(getTab(label).className).toContain('event-status-tabs__tab--active')
 }
 
 describe('EventsPage three-bucket IA', () => {
@@ -230,14 +231,35 @@ describe('EventsPage three-bucket IA', () => {
       makeEvent('ongoing', 'matched', '2026-04-14T19:30:00+08:00'),
     ])
 
-    expect(container.querySelector('.events-page__tabs')?.textContent).toBe('进行中待开始已结束')
-    expect(container.querySelector('.events-page__tabs')).toHaveAttribute('role', 'tablist')
+    expect(container.querySelector('.event-status-tabs')?.textContent).toBe('进行中待开始已结束')
+    expect(container.querySelector('.event-status-tabs')).toHaveAttribute('role', 'tablist')
     expect(getTab('待开始')).toHaveAttribute('role', 'tab')
     expect(getTab('待开始')).toHaveAttribute('aria-selected', 'true')
     expect(getTab('进行中')).toHaveAttribute('aria-selected', 'false')
     expectActiveTab('待开始')
     expect(screen.getByTestId('event-card-upcoming')).toBeInTheDocument()
     expect(screen.queryByTestId('event-card-ongoing')).not.toBeInTheDocument()
+  })
+
+  it('moves one segmented active surface and ignores reselection without duplicate haptics', () => {
+    const { container } = renderEvents([
+      makeEvent('upcoming', 'confirmed', '2026-04-14T19:30:00+08:00'),
+      makeEvent('ongoing', 'matched', '2026-04-14T19:30:00+08:00'),
+    ])
+    const indicator = container.querySelector('.event-status-tabs__tab-indicator')
+
+    expect(indicator).toHaveAttribute('data-active-tab', 'upcoming')
+    expect(container.querySelector('.event-status-tabs')).toHaveAttribute('aria-label', '活动记录状态')
+    vi.mocked(haptics).mockClear()
+    fireEvent.click(getTab('待开始'))
+    expect(haptics).not.toHaveBeenCalled()
+    expect(mocks.track).not.toHaveBeenCalledWith('events_tab_switch', { tab: 'upcoming' })
+
+    fireEvent.click(getTab('进行中'))
+    expect(haptics).toHaveBeenCalledTimes(1)
+    expect(haptics).toHaveBeenCalledWith('light')
+    expect(indicator).toHaveAttribute('data-active-tab', 'ongoing')
+    expect(getTab('进行中')).toHaveAttribute('aria-selected', 'true')
   })
 
   it('falls back to ongoing when upcoming is empty and preserves the first-event hero', () => {

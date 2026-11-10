@@ -6,7 +6,7 @@
 > **Audience:** Frontend engineers and QA validating `apps/mini-program` in
 > WeChat DevTools or on a real device.
 >
-> **Last updated:** 2026-06-23
+> **Last updated:** 2026-11-09
 
 ---
 
@@ -34,14 +34,16 @@ This smoke proves:
 From the repo root:
 
 ```bash
-npx vitest run apps/mini-program/src/native-custom-tab-bar/__tests__/tabBarBehavior.test.ts
+npm run test -w mini-program -- \
+  src/native-custom-tab-bar/__tests__/tabBarBehavior.test.ts \
+  src/native-custom-tab-bar/__tests__/tabBarStructure.test.ts
 npm run typecheck -w mini-program
 npm run build:weapp -w mini-program
 ```
 
 Expected result:
 
-- All tab-bar behavior tests pass (35 tests as of 2026-06-30).
+- All tab-bar behavior and structure tests pass. Use the workspace invocation above; root `npx vitest` does not reliably resolve mini-program aliases.
 - Mini-program typecheck passes.
 - WeChat build succeeds and refreshes `apps/mini-program/dist`.
 
@@ -159,13 +161,18 @@ On a tab page:
    background pill.
 2. Tap the center button. The side highlight should disappear and the center
    button should show its selected state.
-3. Rapidly tap two different side tabs. Only one `wx.switchTab` should fire; the
-   second tap is ignored while in-flight.
-4. Collapse / expand the bar (e.g., by calling `getTabBar().setCollapsed(true)`
+3. Rapidly tap three different side tabs. Only one native `wx.switchTab` may be
+   active; only the newest destination waits behind it. After the first settles,
+   the final destination dispatches and becomes highlighted. A superseded
+   callback must not roll back or toast over the latest destination.
+4. Delay or omit a native callback. After the 400ms watchdog, the newest pending
+   destination still dispatches; with no pending destination, the highlight
+   returns to the visible route.
+5. Collapse / expand the bar (e.g., by calling `getTabBar().setCollapsed(true)`
    from a page that supports it). The bar should animate to a collapsed state,
    the announcement text should read `标签栏已收起`, and the bar should expand
    again with `setCollapsed(false)`.
-5. Toggle the device network to **offline** and tap a tab. The bar should remain
+6. Toggle the device network to **offline** and tap a tab. The bar should remain
    responsive because tab switches are local; `syncState` calls should be queued
    and replayed when the network returns.
 

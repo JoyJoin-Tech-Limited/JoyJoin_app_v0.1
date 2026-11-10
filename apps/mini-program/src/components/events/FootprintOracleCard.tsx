@@ -10,9 +10,17 @@ import {
   getJoinedEventDisplayDateTime,
   isJoinedEventTerminal,
 } from '../../lib/utils/eventDisplay'
-import SegmentedCountdownClock from '../ui/SegmentedCountdownClock'
 import EventSummaryCard from './EventSummaryCard'
 import './FootprintOracleCard.scss'
+
+// groupSize is the viewer's assigned table size, never pool registrations or
+// a configured formation target. It is meaningful only with an assigned group.
+const ASSIGNED_TABLE_VISIBLE_STATUSES = new Set([
+  'matched',
+  'venue_unlocked',
+  'completed',
+  'attended',
+])
 
 export interface FootprintOracleCardProps {
   event: JoinedEventSummary
@@ -73,82 +81,56 @@ export default React.memo(function FootprintOracleCard({
   const displayDateTime = getJoinedEventDisplayDateTime(event)
   const groupSize = typeof event.groupSize === 'number' ? event.groupSize : undefined
   const price = typeof event.price === 'number' ? event.price : undefined
+  const hasAssignedTable = Boolean(event.groupId)
+    && groupSize != null
+    && groupSize > 0
+    && ASSIGNED_TABLE_VISIBLE_STATUSES.has(status)
+  const groupSizeLabel = hasAssignedTable
+    ? ((status === 'matched' || status === 'venue_unlocked') && !isHistoricalNonterminal
+        ? `已排进 ${groupSize} 人桌`
+        : `${groupSize} 人桌`)
+    : undefined
 
   const railAriaParts = useMemo(() => {
     const parts: string[] = []
     if (!isHistoricalNonterminal && !isTerminal && Boolean(event.dateTime || event.finalDateTime)) {
       parts.push('含活动倒计时')
     }
-    if (groupSize != null && groupSize > 0) {
-      parts.push(
-        status === 'matched' || status === 'confirmed' || status === 'venue_unlocked'
-          ? `${groupSize} 人小队`
-          : `已报名 ${groupSize} 人`,
-      )
+    if (groupSizeLabel) {
+      parts.push(groupSizeLabel)
     }
     if (price != null) {
       parts.push(price > 0 ? `费用 ¥${price}` : '免费')
     }
     return parts
-  }, [event.dateTime, event.finalDateTime, groupSize, isHistoricalNonterminal, isTerminal, price, status])
+  }, [event.dateTime, event.finalDateTime, groupSizeLabel, isHistoricalNonterminal, isTerminal, price])
 
   const railAriaLabel = railAriaParts.length > 0 ? railAriaParts.join('，') : undefined
 
-  // ─── Right-side info rail ──────────────────────────────────────
-  const rightRail = useMemo(() => {
-    const hasCountdown = !isHistoricalNonterminal && !isTerminal && Boolean(event.dateTime || event.finalDateTime)
-    const hasGroupSize = groupSize != null && groupSize > 0
-    const hasPrice = price != null
-    const isSparse = !hasCountdown && !hasGroupSize && !hasPrice
+  const hasPrice = price != null
 
-    return (
-      <>
-        {hasCountdown && (
-          <SegmentedCountdownClock
-            target={displayDateTime ?? null}
-            enabled={hasCountdown}
-            clockId={`footprint-rail-clock-${event.id}`}
-            compact
-          />
-        )}
-        {showFeedbackPill && (
-          <View
-            className='footprint-oracle-card__feedback-pill'
-            hoverClass='footprint-oracle-card__feedback-pill--pressed'
-            role='button'
-            aria-label='去评价这场活动'
-            onClick={handleFeedbackPillTap}
-          >
-            <Text className='footprint-oracle-card__feedback-pill-label'>去评价</Text>
-          </View>
-        )}
-        {hasGroupSize && (
-          <Text className='footprint-oracle-card__rail-hint'>
-            {status === 'matched' || status === 'confirmed' || status === 'venue_unlocked'
-              ? `${groupSize} 人小队`
-              : `已报名 ${groupSize} 人`}
-          </Text>
-        )}
-        {hasPrice && (
-          <Text className='footprint-oracle-card__rail-price'>
-            {price > 0 ? `¥${price}` : '免费'}
-          </Text>
-        )}
-        {isSparse && !showFeedbackPill && !isHistoricalNonterminal && (
-          <Text className='footprint-oracle-card__rail-hint footprint-oracle-card__rail-hint--placeholder'>
-            待公布
-          </Text>
-        )}
-        {/* The generic › cue is superseded when the pill is present — the pill
-            IS the affordance; stacking both reads as two competing CTAs. */}
-        {!showFeedbackPill && (
-          <Text className='footprint-oracle-card__rail-cue' aria-hidden='true'>
-            ›
-          </Text>
-        )}
-      </>
-    )
-  }, [displayDateTime, event.dateTime, event.finalDateTime, event.id, groupSize, handleFeedbackPillTap, isHistoricalNonterminal, isTerminal, price, showFeedbackPill, status])
+  const metaAccessory = groupSizeLabel || hasPrice ? (
+    <View className='footprint-oracle-card__facts'>
+      {groupSizeLabel && <Text className='footprint-oracle-card__fact'>{groupSizeLabel}</Text>}
+      {hasPrice && (
+        <Text className='footprint-oracle-card__fact footprint-oracle-card__fact--price'>
+          {price > 0 ? `¥${price}` : '免费'}
+        </Text>
+      )}
+    </View>
+  ) : undefined
+
+  const footerContent = showFeedbackPill ? (
+    <View
+      className='footprint-oracle-card__feedback-pill'
+      hoverClass='footprint-oracle-card__feedback-pill--pressed'
+      role='button'
+      aria-label='去评价这场活动'
+      onClick={handleFeedbackPillTap}
+    >
+      <Text className='footprint-oracle-card__feedback-pill-label'>去评价</Text>
+    </View>
+  ) : undefined
 
   return (
     <EventSummaryCard
@@ -171,8 +153,12 @@ export default React.memo(function FootprintOracleCard({
       animationDelay={animDelay}
       isDegradation={effectiveDegradation}
       reduceMotion={reduceMotion}
-      railMode
-      rightRail={rightRail}
+      compactCountdown
+      titleAccessory={(
+        <Text className='footprint-oracle-card__title-cue' aria-hidden='true'>›</Text>
+      )}
+      metaAccessory={metaAccessory}
+      footerContent={footerContent}
     />
   )
 })

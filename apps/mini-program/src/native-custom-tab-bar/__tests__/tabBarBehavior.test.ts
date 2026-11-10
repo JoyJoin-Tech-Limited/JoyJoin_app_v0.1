@@ -87,6 +87,7 @@ function makeEvent(index: number, url: string, tab: string) {
 
 function setupMocks(opts: { switchTabResult?: 'success' | 'fail'; offline?: boolean; networkType?: string } = {}) {
   const networkHandlers: Array<(res: { isConnected: boolean }) => void> = []
+  global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/discover/index' }])
   const wxMocks = {
     getSystemInfoSync: vi.fn().mockReturnValue({
       platform: 'devtools',
@@ -104,13 +105,14 @@ function setupMocks(opts: { switchTabResult?: 'success' | 'fail'; offline?: bool
       const idx = networkHandlers.indexOf(handler)
       if (idx >= 0) networkHandlers.splice(idx, 1)
     }),
-    switchTab: vi.fn().mockImplementation(({ success, fail }: { success?: Function; fail?: Function }) => {
+    switchTab: vi.fn().mockImplementation(({ url, success, fail }: { url: string; success?: Function; fail?: Function }) => {
       // WeChat invokes success/fail asynchronously; use setTimeout so tests
-      // can observe the optimistic update before rollback.
+      // can observe the optimistic update before route reconciliation.
       setTimeout(() => {
         if (opts.switchTabResult === 'fail') {
           fail?.({ errMsg: 'switchTab:fail page not found' })
         } else {
+          global.getCurrentPages = vi.fn().mockReturnValue([{ route: url.replace(/^\//, '') }])
           success?.({})
         }
       }, 0)
@@ -206,7 +208,6 @@ describe('native custom tab bar behavior', () => {
     component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
 
     expect(component.data.selected).toBe(1)
-    expect(component._confirmedSelected).toBe(1)
   })
 
   it('selects the center hub when the center button is tapped', async () => {
@@ -217,7 +218,6 @@ describe('native custom tab bar behavior', () => {
     component.handleCenterTap()
 
     expect(component.data.selected).toBe(CENTER_TAB_INDEX)
-    expect(component._confirmedSelected).toBe(CENTER_TAB_INDEX)
   })
 
   it('updates the active highlight via setSelected', async () => {
@@ -239,7 +239,6 @@ describe('native custom tab bar behavior', () => {
     component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
 
     expect(component.data.selected).toBe(1)
-    expect(component._confirmedSelected).toBe(1)
     expect(global.wx.switchTab).toHaveBeenCalledWith(
       expect.objectContaining({ url: '/pages/events/index' })
     )
@@ -269,6 +268,7 @@ describe('native custom tab bar behavior', () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/center-hub/index' }])
     component.setSelected(CENTER_TAB_INDEX)
 
     component.handleCenterTap()
@@ -285,7 +285,6 @@ describe('native custom tab bar behavior', () => {
 
     // Optimistic update happens synchronously.
     expect(component.data.selected).toBe(2)
-    expect(component._confirmedSelected).toBe(2)
 
     // Failure callback runs asynchronously.
     await vi.advanceTimersByTimeAsync(0)
@@ -301,39 +300,122 @@ describe('native custom tab bar behavior', () => {
     )
   })
 
-  it('ignores rapid taps while a switchTab is already in flight', async () => {
-    setupMocks({ switchTabResult: 'success' })
+  it('coalesces rapid taps to one active request and one latest pending destination', async () => {
+    setupMocks()
     const component = await loadComponent()
     component.attached()
+    const callbacks: Array<{ success?: Function; fail?: Function }> = []
+    global.wx.switchTab = vi.fn((options) => callbacks.push(options))
 
     component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
     component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+    component.handleTabTap(makeEvent(3, '/pages/profile/index', 'profile'))
 
-    // Only the first tap should trigger switchTab.
     expect(global.wx.switchTab).toHaveBeenCalledTimes(1)
-    expect(component.data.selected).toBe(1)
+    expect(component.data.selected).toBe(3)
+    expect(component._pendingSwitch.index).toBe(3)
 
-    // After the in-flight switch completes, a new tap works.
-    await vi.advanceTimersByTimeAsync(0)
-    component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+    callbacks[0].success?.({})
     expect(global.wx.switchTab).toHaveBeenCalledTimes(2)
-    expect(component.data.selected).toBe(2)
+    expect(global.wx.switchTab).toHaveBeenLastCalledWith(
+      expect.objectContaining({ url: '/pages/profile/index' })
+    )
+
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/profile/index' }])
+    callbacks[1].success?.({})
+    expect(component.data.selected).toBe(3)
+    expect(component._confirmedSelected).toBe(3)
+    expect(component._pendingSwitch).toBeNull()
   })
 
-
-  it('releases a stuck in-flight guard after the safety timeout', async () => {
-    setupMocks({ switchTabResult: 'success' })
+  it('releases the latest pending destination when the previous switch never calls back', async () => {
+    setupMocks()
     const component = await loadComponent()
     component.attached()
+    global.wx.switchTab = vi.fn()
 
     component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
-    // Mock never advances timers, so success/fail never runs.
     component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
-    expect(global.wx.switchTab).toHaveBeenCalledTimes(1)
 
-    await vi.advanceTimersByTimeAsync(2000)
-    component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+    expect(global.wx.switchTab).toHaveBeenCalledTimes(1)
+    expect(component.data.selected).toBe(2)
+    await vi.advanceTimersByTimeAsync(400)
     expect(global.wx.switchTab).toHaveBeenCalledTimes(2)
+    expect(global.wx.switchTab).toHaveBeenLastCalledWith(
+      expect.objectContaining({ url: '/pages/connections/index' })
+    )
+  })
+
+  it('restores visible-route selection when a lone request never calls back', async () => {
+    const component = await loadComponent()
+    component.attached()
+    global.wx.switchTab = vi.fn()
+
+    component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+    expect(component.data.selected).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(400)
+    expect(component._switchInFlight).toBe(false)
+    expect(component.data.selected).toBe(0)
+    expect(component._confirmedSelected).toBe(0)
+
+    component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+    expect(global.wx.switchTab).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores a stale failure after the latest destination succeeds', async () => {
+    setupMocks()
+    const component = await loadComponent()
+    component.attached()
+    const callbacks: Array<{ success?: Function; fail?: Function }> = []
+    global.wx.switchTab = vi.fn((options) => callbacks.push(options))
+
+    component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+    component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+    await vi.advanceTimersByTimeAsync(400)
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+    callbacks[1].success?.({})
+    callbacks[0].fail?.({ errMsg: 'switchTab:fail stale request' })
+
+    expect(component.data.selected).toBe(2)
+    expect(component._confirmedSelected).toBe(2)
+    expect(global.wx.showToast).not.toHaveBeenCalled()
+  })
+
+  it('ignores a stale success after the latest destination succeeds', async () => {
+    setupMocks()
+    const component = await loadComponent()
+    component.attached()
+    const callbacks: Array<{ success?: Function; fail?: Function }> = []
+    global.wx.switchTab = vi.fn((options) => callbacks.push(options))
+
+    component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+    component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+    await vi.advanceTimersByTimeAsync(400)
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+    callbacks[1].success?.({})
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+    callbacks[0].success?.({})
+
+    expect(component.data.selected).toBe(2)
+    expect(component._confirmedSelected).toBe(2)
+    expect(component.data.announcement).toBe('已切换到连接')
+  })
+
+  it('lets route truth win over a stale selected index on re-tap', async () => {
+    setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/profile/index' }])
+    const component = await loadComponent()
+    component.attached()
+    component.setData({ selected: 3, hidden: false })
+    component._confirmedSelected = 0
+
+    component.handleTabTap(makeEvent(3, '/pages/profile/index', 'profile'))
+
+    expect(global.wx.switchTab).not.toHaveBeenCalled()
+    expect(component.data.selected).toBe(3)
+    expect(component._confirmedSelected).toBe(3)
   })
 
   it('switches to center hub and highlights the center index', async () => {
@@ -344,12 +426,12 @@ describe('native custom tab bar behavior', () => {
     component.handleCenterTap()
 
     expect(component.data.selected).toBe(CENTER_TAB_INDEX)
-    expect(component._confirmedSelected).toBe(CENTER_TAB_INDEX)
     expect(global.wx.switchTab).toHaveBeenCalledWith(
       expect.objectContaining({ url: '/pages/center-hub/index' })
     )
 
     await vi.advanceTimersByTimeAsync(0)
+    expect(component._confirmedSelected).toBe(CENTER_TAB_INDEX)
     expect(component.data.announcement).toBe('已切换到中心入口')
   })
 
@@ -359,6 +441,7 @@ describe('native custom tab bar behavior', () => {
     component.attached()
 
     // Start on the events tab so we can verify selection rolls back to it.
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
     component.setSelected(1)
 
     component.handleCenterTap()

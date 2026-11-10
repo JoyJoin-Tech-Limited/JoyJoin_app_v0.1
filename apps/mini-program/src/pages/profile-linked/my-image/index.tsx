@@ -13,6 +13,7 @@ import {
   saveMyEquipmentOutfit,
   type EquipmentDrawResponse,
   type EquipmentItem,
+  type EquipmentMeResponse,
   type EquipmentOutfit,
   type EquipmentSlot,
 } from '../../../lib/profile/equipmentApi'
@@ -24,6 +25,7 @@ import {
 import { EQUIPMENT_ME_QUERY_KEY } from '../../../lib/profile/equipmentQueryKeys'
 import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import { haptics } from '../../../lib/utils/haptics'
+import { logError } from '../../../lib/utils/logger'
 import { BRAND_COLORS } from '../../../styles/colors'
 import './index.scss'
 
@@ -197,9 +199,17 @@ export default function MyImagePage() {
         expectedVersion: safeOutfit.version,
       })
     },
-    onSuccess: async (response) => {
+    onSuccess: (response) => {
       setDraftOutfit(response.outfit)
-      await queryClient.invalidateQueries({ queryKey: EQUIPMENT_QUERY_KEY })
+      queryClient.setQueryData<EquipmentMeResponse>(EQUIPMENT_QUERY_KEY, (current) => (
+        current ? { ...current, outfit: response.outfit } : current
+      ))
+      void queryClient.refetchQueries(
+        { queryKey: EQUIPMENT_QUERY_KEY },
+        { throwOnError: true },
+      ).catch((error: unknown) => {
+        logError('[MyImage] Failed to reconcile equipment after save', { error })
+      })
       haptics('success')
       Taro.showToast({ title: '形象已保存', icon: 'success' })
     },

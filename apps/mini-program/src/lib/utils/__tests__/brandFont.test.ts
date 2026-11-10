@@ -31,6 +31,16 @@ describe('brand font two-tier family contract', () => {
     expect(fullBody).not.toContain('family: BRAND_DISPLAY_FONT_FAMILY,')
   })
 
+  it('starts the complete font immediately so dynamic titles do not mix glyph sources', () => {
+    const loadBody = brandFontSrc.slice(
+      brandFontSrc.indexOf('export function loadBrandDisplayFont(): void'),
+      brandFontSrc.indexOf('export function loadBrandFonts(): void'),
+    )
+    expect(loadBody).toContain('loadBrandDisplayFontMinimal()')
+    expect(loadBody).toContain('loadBrandDisplayFontFull()')
+    expect(loadBody).not.toContain('setTimeout(() => loadBrandDisplayFontFull(), 500)')
+  })
+
   it('$font-cn-display prefers the full family, then the minimal subset', () => {
     const stackLine = variablesSrc
       .split('\n')

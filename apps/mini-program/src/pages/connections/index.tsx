@@ -44,7 +44,7 @@ export default function ConnectionsPage() {
     preloadPredictiveAssets('pages/connections/index')
   }, [])
 
-  const { data: connections = [], isLoading, isError, refetch } = useQuery<Connection[]>({
+  const { data: connectionsData, isLoading, isError, refetch } = useQuery<Connection[]>({
     queryKey: ['mini-program', 'connections'],
     queryFn: async (): Promise<Connection[]> => {
       // Primary: composite endpoint — 1 request for all Connections data.
@@ -60,6 +60,10 @@ export default function ConnectionsPage() {
     enabled: !authLoading,
     staleTime: 30_000,
   })
+
+  // Runtime transport/cache data is not necessarily the declared array shape.
+  // A null payload means no renderable connections, not a blank-page crash.
+  const connections = Array.isArray(connectionsData) ? connectionsData : []
 
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
 

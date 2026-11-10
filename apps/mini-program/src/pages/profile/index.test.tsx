@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { haptics } from '../../lib/utils/haptics'
+import { logError } from '../../lib/utils/logger'
 import { getDailyGreeting } from './profileConstants'
 import ProfilePage from './index'
 
@@ -306,11 +307,13 @@ describe('Profile approved V4 layout', () => {
       isError: false,
     })
 
-    const { container, getByText, queryByText } = render(<ProfilePage />)
+    const { container, getByText, getByTestId, queryByText } = render(<ProfilePage />)
 
-    expect(getByText('装备同步中…')).toBeTruthy()
+    const status = getByText('装备同步中…')
     expect(queryByText('0 件')).toBeNull()
     expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    expect(container.querySelector('.profile-page__partner-equipment-state-panel')).toBeNull()
+    expect(getByTestId('profile-partner-equipment-entry').contains(status)).toBe(true)
     expect(container.querySelector('.profile-page__partner-equipment-placeholder-bar')).toBeNull()
   })
 
@@ -347,9 +350,12 @@ describe('Profile approved V4 layout', () => {
       isError: true,
     })
 
-    const { container, getByRole, getByText, queryByText } = render(<ProfilePage />)
+    const { container, getByRole, getByText, getByTestId, queryByText } = render(<ProfilePage />)
 
-    expect(getByText('装备暂未同步')).toBeTruthy()
+    const status = getByText('装备暂未同步')
+    expect(getByRole('alert').contains(status)).toBe(true)
+    expect(getByTestId('profile-partner-equipment-entry').contains(status)).toBe(true)
+    expect(container.querySelector('.profile-page__partner-equipment-state-panel')).toBeNull()
     expect(queryByText('0 件')).toBeNull()
     expect(queryByText('待重试')).toBeNull()
     expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
@@ -470,6 +476,9 @@ describe('Profile approved V4 layout', () => {
       title: '设置没有打开，请稍后再试',
       icon: 'none',
     }))
+    expect(logError).toHaveBeenCalledWith('profile:open_settings_fail', {
+      error: 'Error: subpackage unavailable',
+    })
   })
 
   it('keeps the archetype circle icon visible in pixel mode', () => {
@@ -485,6 +494,20 @@ describe('Profile approved V4 layout', () => {
     // Pixel-on: grounded above the equipment bar — no --no-entry modifiers.
     expect(container.querySelector('.profile-page__partner-visual--no-entry')).toBeNull()
     expect(container.querySelector('.profile-page__identity-rail--no-entry')).toBeNull()
+  })
+
+  it('composes identity, avatar, growth and equipment as one scenic stage', () => {
+    const { container, getByTestId } = render(<ProfilePage />)
+    const partner = container.querySelector('.profile-page__partner-visual')
+    const growth = container.querySelector('.profile-page__growth-card')
+    const entry = getByTestId('profile-partner-equipment-entry')
+
+    expect(partner).toBeTruthy()
+    expect(growth).toBeTruthy()
+    expect(growth?.parentElement).toBe(partner?.parentElement)
+    expect(partner!.compareDocumentPosition(growth!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(growth!.compareDocumentPosition(entry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(container.querySelector('.profile-page__identity-copy-card')?.contains(growth!)).toBe(false)
   })
 
   it('opens the personality report when tapping the identity copy card', () => {

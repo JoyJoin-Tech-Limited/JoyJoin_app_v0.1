@@ -45,7 +45,7 @@
 | 2 | `taro.js` | 212,611 | JS runtime | Taro 核心，不能迁移 |
 | 3 | `common.wxss` | 138,223 | 共享样式 | 多主包页面真实依赖；按页面拆样式，不能整体复制到子包 |
 | 4 | `vendors.js` | 100,941 | JS runtime | React/Taro 等依赖，不能直接迁移 |
-| 5 | `assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` | 68,032 | 字体 | `app.ts -> loadBrandFonts()` 首屏真实依赖；深度方案可评估 CDN/更小字形集 |
+| — | ~~`assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2`~~ | 0 | 已移除 | 2026-11-10 起字体源文件仅用于 CDN 上传，不再复制进主包 |
 | 6 | `base.wxml` | 66,570 | 共享模板 | Taro 基础模板，不能直接迁移 |
 | 7 | `assets/mascot/xiaoyue-coach.webp` | 65,182 | 图片 | 主包 `city-unlock` 使用 coach 状态；不能直接迁移 |
 | 8 | `pages/discover/index.js` | 65,168 | JS | tabBar 页面，必须在主包；应拆除不必要的静态依赖 |

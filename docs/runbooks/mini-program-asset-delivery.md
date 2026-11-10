@@ -180,7 +180,7 @@ Every `(tier, assetKey)` pair in `packages/shared/src/iconSystem/emojiToIconMap.
 | Use `cdnAsset()` | Use `localAsset()` |
 |------------------|--------------------|
 | CDN-only assets (large Lovart illustrations, archetype full bodies, interest taxonomy) | Anything copied into the package by `config/index.ts` |
-| Assets with a bundled mirror used only as offline fallback | Tab icons, logos, fonts, empty states, bundled icon tiers |
+| Assets with a bundled mirror used only as offline fallback | Tab icons, logos, empty states, bundled icon tiers (fonts are CDN-source assets only and are not bundled) |
 | Paths declared in `cdn-asset-manifest.json` | The gathering-room composite scene (bundled) |
 
 Rule of thumb: **if the file is in `dist/assets/` after build, load it with `localAsset()`**. CDN-first for a bundled file is a failure mode, not an optimization.

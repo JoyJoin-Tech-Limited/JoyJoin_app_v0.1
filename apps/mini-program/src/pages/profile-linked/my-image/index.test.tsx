@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EquipmentMeResponse } from '../../../lib/profile/equipmentApi'
+import { EQUIPMENT_ME_QUERY_KEY } from '../../../lib/profile/equipmentQueryKeys'
+import { logError } from '../../../lib/utils/logger'
 import MyImagePage from './index'
 
 const mocks = vi.hoisted(() => ({
@@ -411,6 +413,29 @@ describe('MyImagePage', () => {
       accessoryItemId: null,
       expectedVersion: 7,
     }))
+  })
+
+  it('publishes the server-confirmed outfit before background reconciliation fails', async () => {
+    mocks.fetchMyEquipment
+      .mockResolvedValueOnce(baseEquipment)
+      .mockRejectedValueOnce(new Error('reconciliation unavailable'))
+    const { queryClient } = renderPage(baseEquipment, false)
+
+    fireEvent.click(await screen.findByRole('button', { name: '穿上星夜夹克' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存形象' }))
+
+    await waitFor(() => expect(mocks.showToast).toHaveBeenCalledWith({
+      title: '形象已保存',
+      icon: 'success',
+    }))
+    expect(queryClient.getQueryData<EquipmentMeResponse>(EQUIPMENT_ME_QUERY_KEY)?.outfit)
+      .toEqual(expect.objectContaining({ topItemId: topItem.id, version: 8 }))
+    await waitFor(() => expect(logError).toHaveBeenCalledWith(
+      '[MyImage] Failed to reconcile equipment after save',
+      { error: expect.any(Error) },
+    ))
+    expect(queryClient.getQueryData<EquipmentMeResponse>(EQUIPMENT_ME_QUERY_KEY)?.outfit)
+      .toEqual(expect.objectContaining({ topItemId: topItem.id, version: 8 }))
   })
 
   it('keeps unpublished equipment disabled and never persists its item id', async () => {

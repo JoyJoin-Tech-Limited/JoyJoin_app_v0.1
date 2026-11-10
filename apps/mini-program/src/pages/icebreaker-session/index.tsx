@@ -1165,6 +1165,12 @@ export default function IcebreakerSessionPage() {
     resetMiniScriptGeneration()
   }, [resetMiniScriptGeneration])
 
+  // Hooks stay above every session loading/error early return: a late-mounted
+  // callback changes hook count during the loading → live transition.
+  const handleWarmupOverlayVisibilityChange = useCallback((visible: boolean) => {
+    setWarmupRitualActive(visible)
+  }, [])
+
   // PR1 壳层 (calm-by-default): once a session is live, a failed 3s poll no longer
   // routes to the full-page error — the sync-loss dot + reconnect toast own that state.
   // Poll errors only become pageError when there is no session to render yet.
@@ -1235,12 +1241,6 @@ export default function IcebreakerSessionPage() {
       </View>
     )
   }
-
-  // Keep this callback above `phaseHeader` so the page's hook order stays
-  // before the render/jSX boundary (hostActionFlowContract).
-  const handleWarmupOverlayVisibilityChange = useCallback((visible: boolean) => {
-    setWarmupRitualActive(visible)
-  }, [])
 
   const phaseHeader = (
     <XiaoyueSessionShell

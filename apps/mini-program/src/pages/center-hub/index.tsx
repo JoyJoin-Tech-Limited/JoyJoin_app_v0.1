@@ -14,6 +14,7 @@ import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
+import EventStatusTabs, { type EventStatusTabKey } from '../../components/events/EventStatusTabs'
 import { CountdownTickProvider } from '../../hooks/useCountdownTick'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
@@ -22,7 +23,7 @@ import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { partitionJoinedEventsByDateTime } from '../events/eventPartition'
 import './index.scss'
 
-type TabKey = 'ongoing' | 'upcoming' | 'completed'
+type TabKey = EventStatusTabKey
 
 const EMPTY_STATE_COPY: Record<TabKey, { title: string; subtitle: string }> = {
   ongoing: {
@@ -191,35 +192,7 @@ export default function CenterHubPage() {
       loading={<LoadingScreen message='正在加载你的活动…' />}
       content={
         <View className={`center-hub ${tabEntranceClass}`}>
-          <View className='center-hub__tabs' role='tablist'>
-            <View
-              className={`center-hub__tab ${activeTab === 'ongoing' ? 'center-hub__tab--active' : ''}`}
-              role='tab'
-              aria-selected={activeTab === 'ongoing'}
-              hoverClass='center-hub__tab--pressed'
-              onClick={() => handleTabChange('ongoing')}
-            >
-              <Text className='center-hub__tab-text'>进行中</Text>
-            </View>
-            <View
-              className={`center-hub__tab ${activeTab === 'upcoming' ? 'center-hub__tab--active' : ''}`}
-              role='tab'
-              aria-selected={activeTab === 'upcoming'}
-              hoverClass='center-hub__tab--pressed'
-              onClick={() => handleTabChange('upcoming')}
-            >
-              <Text className='center-hub__tab-text'>待开始</Text>
-            </View>
-            <View
-              className={`center-hub__tab ${activeTab === 'completed' ? 'center-hub__tab--active' : ''}`}
-              role='tab'
-              aria-selected={activeTab === 'completed'}
-              hoverClass='center-hub__tab--pressed'
-              onClick={() => handleTabChange('completed')}
-            >
-              <Text className='center-hub__tab-text'>已结束</Text>
-            </View>
-          </View>
+          <EventStatusTabs activeTab={activeTab} onChange={handleTabChange} />
           <CenterHubContent
             events={displayEvents}
             activeTab={activeTab}

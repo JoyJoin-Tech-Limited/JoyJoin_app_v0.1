@@ -9,44 +9,6 @@
   min-height: 100dvh;
   background: $color-bg-gradient;
 
-  &__tabs {
-    display: flex;
-    gap: $spacing-sm;
-    padding: $spacing-md $container-padding 0;
-    margin-bottom: $spacing-md;
-  }
-
-  &__tab {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 88rpx;
-    padding: $spacing-sm $spacing-lg;
-    border-radius: 40rpx;
-    background: $color-surface;
-    border: 2rpx solid $color-border;
-    transition: background 0.12s ease, border-color 0.12s ease;
-
-    &--active {
-      background: rgba($color-primary, 0.08);
-      border-color: rgba($color-primary, 0.12);
-
-      .events-page__tab-text {
-        color: $color-primary;
-      }
-    }
-
-    &--pressed {
-      transform: scale(0.96);
-    }
-  }
-
-  &__tab-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-  }
-
   &__list {
     flex: 1;
     min-height: 0;
@@ -192,10 +154,6 @@
   .events-page__refresh-indicator {
     animation: none;
     opacity: 0.6;
-  }
-
-  .events-page__tab--pressed {
-    transform: none;
   }
 
   .events-page__first-event-hero-img,

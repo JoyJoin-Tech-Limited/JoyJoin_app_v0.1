@@ -50,6 +50,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`MOBILE_UI_IMPLEMENTATION_SUMMARY.md`](./architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
 - [`design/button-design.md`](./design/button-design.md)
 - [`design/empty-state-visual-strategy-20261109.md`](./design/empty-state-visual-strategy-20261109.md) — no-data editorial empty-state decision tree, component governance, and render/native gates
+- [`design/mini-program-visual-consistency-audit-20261110.md`](./design/mini-program-visual-consistency-audit-20261110.md) — 47-route consistency/render audit, shared contracts, fixes and remaining native gates
 - [`design/lovart-brief-gathering-room.md`](./design/lovart-brief-gathering-room.md)
 - [`reference/ui-matching-reveal-improvements.md`](./reference/ui-matching-reveal-improvements.md)
 

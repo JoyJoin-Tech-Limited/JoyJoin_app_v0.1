@@ -84,6 +84,14 @@ describe('Quiet Concierge — guidance and host brief wiring', () => {
     expect(phaseViewsSource).toContain('onOverlayVisibilityChange={props.onWarmupOverlayVisibilityChange}')
   })
 
+  it('keeps every React hook above session loading/error early returns', () => {
+    const pageSource = read('apps/mini-program/src/pages/icebreaker-session/index.tsx')
+    const firstEarlyReturn = pageSource.indexOf('  if (sessionExpired) {')
+
+    expect(firstEarlyReturn).toBeGreaterThan(0)
+    expect(pageSource.slice(firstEarlyReturn)).not.toMatch(/const\s+\w+\s*=\s*use[A-Z]\w*\(/)
+  })
+
   it('keeps the DTO phaseKey, not the removed revision', () => {
     const pageSource = read('apps/mini-program/src/pages/icebreaker-session/index.tsx')
     expect(pageSource).toContain('hostTableBrief?.phaseKey')

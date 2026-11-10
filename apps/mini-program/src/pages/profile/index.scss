@@ -939,17 +939,25 @@
     // `min-height` (they fall back to `auto` → the scene collapses to 0 and
     // its overflow:hidden clips the whole identity card). Mirrors the proven
     // `my-image__stage` pattern (`height` + `min-height`).
-    // 792rpx (raised 2026-10-24 render pass): the left rail must fit the
-    // tallest identity card (name + up to 3 whole-pill tag rows + bio +
-    // affordance ≈ 333rpx) + 16rpx gap + the growth card with its two-row
-    // heading and the streak capsule wrapped onto its own foot row
-    // (≈260rpx), keeping the 152rpx equipment-bar reservation:
-    // 24 + 333 + 16 + 260 + 152 = 785 → 792 on the 8rpx grid.
-    // The old 560rpx stage made the two cards overlap in render
-    // (text-on-text, 2026-08-01 audit); 728rpx clipped the streak
-    // continuation behind the equipment strip (2026-10-24 capture).
-    height: 792rpx;
-    min-height: 792rpx;
+    // One continuous composition: identity → grounded partner → full-width
+    // growth → attached equipment dock. Explicit height is still required by
+    // IdentityStageScene; 992rpx accommodates wrapped identity tags and the
+    // complete growth row without independent absolute-card reservations.
+    height: 992rpx;
+    min-height: 992rpx;
+
+    &--no-equipment {
+      height: 864rpx;
+      min-height: 864rpx;
+    }
+
+    .identity-stage__content {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-md;
+      padding: $spacing-lg;
+      box-sizing: border-box;
+    }
     // P2-1: 40rpx act gap below the stage (Act 1 我是谁 → Act 2 我有什么);
     // 24rpx remains the intra-act rhythm everywhere else.
     margin: $spacing-md $container-padding $spacing-lg;
@@ -1013,22 +1021,13 @@
   }
 
   &__identity-rail {
-    position: absolute;
+    position: relative;
     z-index: 4;
-    top: 24rpx;
-    left: 24rpx;
-    // Coupled to the equipment bar below: bar bottom (24rpx) + bar min-height
-    // (112rpx) + 32rpx group gap = 168rpx. Keep these three values in sync.
-    bottom: 168rpx;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 16rpx;
+    width: 100%;
+    flex-shrink: 0;
 
-    // No equipment bar when the pixel avatar is off — drop to the stage
-    // floor so the avatar and the cards share the same grounded horizon.
     &--no-entry {
-      bottom: 32rpx;
+      bottom: auto;
     }
   }
 
@@ -1043,7 +1042,8 @@
   }
 
   &__identity-copy-card {
-    max-width: 360rpx;
+    width: 100%;
+    max-width: none;
     padding: $spacing-md;
     transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
 
@@ -1054,10 +1054,10 @@
   }
 
   &__growth-card {
-    // Explicit cap (was shrink-to-fit): shares the bottom band with the
-    // 352rpx partner visual — 24 + 280 + 352 + 8 = 664 ≤ 670rpx stage width.
-    max-width: 280rpx;
+    width: 100%;
+    max-width: none;
     padding: $spacing-md;
+    flex-shrink: 0;
   }
 
   &__identity-copy {
@@ -1106,7 +1106,7 @@
 
   &__identity-name {
     display: block;
-    max-width: 200rpx;
+    max-width: 100%;
     font-family: $font-cn-display;
     font-size: $font-size-xl;
     line-height: 1.4;
@@ -1156,7 +1156,7 @@
 
   &__identity-bio {
     display: block;
-    max-width: 200rpx;
+    max-width: 100%;
     font-family: $font-ui;
     font-size: $font-size-2xs;
     line-height: $line-height-normal;
@@ -1296,24 +1296,19 @@
   }
 
   &__partner-visual {
-    position: absolute;
+    position: relative;
     z-index: 3;
-    // Bottom-anchored so the avatar stands on the stage floor (platform
-    // ellipse at the box bottom) instead of floating mid-scene, and leans
-    // into the bottom-right corner. Its lower baseline shares the identity
-    // rail's 168rpx reservation above the equipment navigation strip.
-    right: 8rpx;
-    bottom: 168rpx;
-    width: 352rpx;
-    height: 352rpx;
+    align-self: flex-end;
+    width: 320rpx;
+    height: 280rpx;
+    margin-top: -$spacing-xs;
+    flex-shrink: 0;
     display: flex;
     align-items: flex-end;
     justify-content: center;
 
-    // No equipment bar when the pixel avatar is off — ground on the stage
-    // floor directly.
     &--no-entry {
-      bottom: 32rpx;
+      bottom: auto;
     }
   }
 
@@ -1497,65 +1492,6 @@
   &__partner-pixel-composite {
     width: 100%;
     height: 100%;
-  }
-
-  &__partner-equipment-state {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-
-  &__partner-equipment-state-panel {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    box-sizing: border-box;
-    padding: $spacing-sm $spacing-md;
-    @include profile-stage-glass;
-    border-radius: 24rpx;
-    text-align: center;
-  }
-
-  &__partner-equipment-state--error &__partner-equipment-state-panel {
-    border-color: rgba($color-secondary, 0.42);
-  }
-
-  &__partner-equipment-state-title,
-  &__partner-equipment-state-copy {
-    display: block;
-    font-family: $font-ui;
-  }
-
-  &__partner-equipment-state-title {
-    color: $color-text-primary;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    line-height: 1.4;
-  }
-
-  &__partner-equipment-state-copy {
-    margin-top: $spacing-xs;
-    color: $color-text-secondary;
-    font-size: $font-size-2xs;
-    line-height: 1.6;
-  }
-
-  &__partner-equipment-retry {
-    display: flex;
-    min-width: 108rpx;
-    min-height: $cta-min-tap;
-    margin-top: $spacing-xs;
-    padding: 0 20rpx;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: center;
-    border-radius: $radius-pill;
-    background: $color-primary-light;
-    color: $color-primary-dark;
-    font-family: $font-ui;
-    font-size: $font-size-2xs;
-    font-weight: $font-weight-semibold;
   }
 
   &__partner-fallback {
@@ -1768,21 +1704,23 @@
   }
 
   &__partner-entry {
-    position: absolute;
+    position: relative;
     z-index: 7;
-    left: 24rpx;
-    right: 24rpx;
-    bottom: 24rpx;
+    width: auto;
     min-height: 112rpx;
-    padding: 0 $spacing-sm;
+    margin: 0 (-$spacing-lg) (-$spacing-lg);
+    padding: 0 $spacing-lg;
     box-sizing: border-box;
-    border-radius: $card-radius-sm;
+    border-radius: 0;
     display: flex;
     align-items: center;
     gap: $spacing-sm;
+    flex-shrink: 0;
     @include profile-stage-glass;
-    // 2rpx bottom gold edge — pressable affordance, echoes the stage rim-light.
-    border-bottom: 2rpx solid rgba($color-landed-gold, 0.55);
+    background: rgba($color-surface, 0.78);
+    border-bottom: 0;
+    border-top: 1rpx solid rgba($color-primary, 0.1);
+    box-shadow: none;
     transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
 
     &--pressed {
@@ -1834,10 +1772,44 @@
     }
   }
 
+  &__equipment-error {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    min-width: 0;
+  }
+
+  &__equipment-retry {
+    min-width: 88rpx;
+    min-height: 88rpx;
+    padding: 0 $spacing-sm;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-pill;
+    color: $color-primary-dark;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    transition: background 0.12s ease, transform 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.08);
+      transform: scale(0.97);
+    }
+  }
+
   &__equipment-slots {
     display: flex;
     flex-shrink: 0;
     gap: 8rpx;
+
+    // Narrow screens keep the claim/status text and full-height My Image entry
+    // legible; the complete four-slot detail remains available inside My Image.
+    @media (max-width: 340px) {
+      display: none;
+    }
   }
 
   &__equipment-slot {
@@ -2864,12 +2836,13 @@
 // Scale both inwards so the two focal elements remain clearly separated.
 @media (max-width: 340px) {
   .profile-page__identity-copy-card {
-    max-width: 300rpx;
+    width: 100%;
+    max-width: none;
   }
 
   .profile-page__identity-name,
   .profile-page__identity-bio {
-    max-width: 160rpx;
+    max-width: 100%;
   }
 
   // P0-3: the daily greeting keeps its full-width 2-line clamp even here —
@@ -2915,13 +2888,13 @@
   }
 
   .profile-page__partner-visual {
-    right: 4rpx;
-    bottom: 168rpx;
-    width: 300rpx;
-    height: 300rpx;
+    right: auto;
+    bottom: auto;
+    width: 280rpx;
+    height: 240rpx;
 
     &--no-entry {
-      bottom: 28rpx;
+      bottom: auto;
     }
   }
 
@@ -2949,7 +2922,7 @@
   }
 
   .profile-page__identity-name {
-    max-width: 200rpx;
+    max-width: 100%;
     font-size: 28rpx;
   }
 
@@ -2989,7 +2962,8 @@
   //    320px (growth right 160.9 vs partner left 146.5). 224rpx leaves a
   //    real gap; 390/414px were already clean and are untouched.
   .profile-page__growth-card {
-    max-width: 224rpx;
+    width: 100%;
+    max-width: none;
   }
 
   // 2) identity column stacked 7 rows (name + 4 pills + bio + affordance).

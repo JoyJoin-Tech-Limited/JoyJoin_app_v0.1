@@ -99,6 +99,10 @@
       opacity: 0.78;
     }
 
+    .footprint-oracle-card__type-corner {
+      opacity: 0.28;
+    }
+
     .footprint-oracle-card__pulse-pill {
       background: rgba($color-text-primary, 0.06);
     }
@@ -201,6 +205,13 @@
     justify-content: space-between;
     margin-bottom: $spacing-sm;
     gap: $spacing-sm;
+
+    // Compact was originally width:100% for the removed Footprint rail.
+    // In the shared topline it must shrink to its digits beside the status.
+    .segmented-countdown-clock--compact {
+      width: auto;
+      max-width: 60%;
+    }
   }
 
   &__pulse-pill {
@@ -288,7 +299,7 @@
   // — the card itself stays the primary touch surface; the pill is the
   // persistent recall affordance on terminal events awaiting feedback.
   &__feedback-pill {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: $button-height-sm;
@@ -316,16 +327,29 @@
   }
 
   // ── Title ─────────────────────────────────────────────────────
-  &__title {
-    @include font-cn-display;
-    display: -webkit-box;
-    width: 100%;
-    max-width: 100%;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: 1.4;
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
     margin-bottom: $spacing-sm;
+  }
+
+  &__title-cue {
+    flex-shrink: 0;
+    font-size: 32rpx;
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+    line-height: 1;
+  }
+
+  &__title {
+    @include type-heading;
+    display: -webkit-box;
+    width: auto;
+    max-width: 100%;
+    line-height: 1.4;
+    flex: 1;
+    min-width: 0;
     word-break: keep-all;
     overflow-wrap: break-word;
     white-space: normal;
@@ -341,12 +365,25 @@
   }
 
   &__date-time {
-    display: block;
-    font-size: $font-size-sm;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-xs;
+    font-family: $font-ui;
+    font-size: $font-size-md;
     font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-    line-height: 1.5;
-    margin-bottom: 4rpx;
+    color: $color-text-primary;
+    line-height: 1.4;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__date-label {
+    word-break: keep-all;
+  }
+
+  &__date-clock {
+    @include type-en-brand-numeric;
+    white-space: nowrap;
   }
 
   &__location {
@@ -356,6 +393,26 @@
     color: $color-text-muted;
     line-height: 1.4;
     @include text-truncate;
+  }
+
+  &__facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-xs $spacing-md;
+    margin-top: $spacing-md;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+  }
+
+  &__fact {
+    flex-shrink: 0;
+
+    &--price {
+      @include type-en-brand-numeric;
+      color: $color-text-primary;
+    }
   }
 
   &__waiting-hint {

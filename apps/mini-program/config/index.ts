@@ -207,17 +207,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // usage for flow-icons).
         // Do NOT copy them into the main package — JoyJoinIcon / cdnAsset()
         // resolves them from the CDN at runtime.
-        // Quicksand English brand font (~124KB).
-        {
-          from: 'src/assets/fonts/Quicksand',
-          to: 'dist/assets/fonts/Quicksand',
-        },
-        // Alimama minimal subset — landing + onboarding instant display (~66KB).
-        // Full font (621KB) loads from CDN in background.
-        {
-          from: 'src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2',
-          to: 'dist/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2',
-        },
         // Archetype head icons — tiny (~45KB total), used everywhere for avatars.
         {
           from: 'src/assets/icons/archetype',

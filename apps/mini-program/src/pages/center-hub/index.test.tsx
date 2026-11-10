@@ -156,13 +156,13 @@ function renderCenterHub(events: JoinedEventSummary[]) {
 }
 
 function getTab(label: string): HTMLElement {
-  const tab = screen.getByText(label).closest('.center-hub__tab')
+  const tab = screen.getByText(label).closest('.event-status-tabs__tab')
   if (!tab) throw new Error(`Missing Center Hub tab: ${label}`)
   return tab as HTMLElement
 }
 
 function expectActiveTab(label: string) {
-  expect(getTab(label).className).toContain('center-hub__tab--active')
+  expect(getTab(label).className).toContain('event-status-tabs__tab--active')
 }
 
 describe('CenterHubPage three-bucket IA', () => {
@@ -183,8 +183,8 @@ describe('CenterHubPage three-bucket IA', () => {
       makeEvent('upcoming', 'confirmed', '2026-04-14T19:30:00+08:00'),
     ])
 
-    expect(container.querySelector('.center-hub__tabs')?.textContent).toBe('进行中待开始已结束')
-    expect(container.querySelector('.center-hub__tabs')).toHaveAttribute('role', 'tablist')
+    expect(container.querySelector('.event-status-tabs')?.textContent).toBe('进行中待开始已结束')
+    expect(container.querySelector('.event-status-tabs')).toHaveAttribute('role', 'tablist')
     expect(getTab('进行中')).toHaveAttribute('role', 'tab')
     expect(getTab('进行中')).toHaveAttribute('aria-selected', 'true')
     expect(getTab('待开始')).toHaveAttribute('aria-selected', 'false')

@@ -7,7 +7,7 @@ import { logInfo, logWarn } from './logger'
  * Must match `$font-cn-display` family names in `styles/_variables.scss`.
  *
  * Two-tier loading:
- *   1. Minimal subset (66KB, bundled) — instant display on landing + onboarding.
+ *   1. Minimal subset (66KB; source file kept for CDN upload) — instant display on landing + onboarding.
  *   2. Full font (621KB, CDN) — loads in background under a DISTINCT family
  *      name; the font stack prefers it per-glyph once ready.
  */
@@ -126,16 +126,17 @@ export function loadEnglishBrandFont(): void {
 /**
  * Two-tier font loading:
  *   1. Minimal subset instantly (family `AlimamaFangYuanTiVF`).
- *   2. Full font deferred by 500ms (family `AlimamaFangYuanTiVF-Full`) so it
- *      doesn't compete with first paint; `$font-cn-display` prefers it once
- *      loaded via per-glyph fallback.
+ *   2. Full font starts immediately too (family `AlimamaFangYuanTiVF-Full`) —
+ *      the 236-glyph minimal subset cannot cover dynamic titles, and delaying
+ *      the complete set exposes mid-string fallback;
+ *      `$font-cn-display` prefers the complete family per glyph once ready.
  *
  * Call this on app launch and on every early-stage screen mount.
  * The module-level guards prevent redundant `loadFontFace` calls.
  */
 export function loadBrandDisplayFont(): void {
   loadBrandDisplayFontMinimal()
-  setTimeout(() => loadBrandDisplayFontFull(), 500)
+  loadBrandDisplayFontFull()
 }
 
 /**
