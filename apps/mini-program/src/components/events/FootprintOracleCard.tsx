@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import type { JoinedEventSummary } from '@shared/api'
+import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { haptics } from '../../lib/utils/haptics'
 import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
@@ -11,6 +12,7 @@ import {
   isJoinedEventTerminal,
 } from '../../lib/utils/eventDisplay'
 import EventSummaryCard from './EventSummaryCard'
+import ArchetypeHead from '../mascot/ArchetypeHead'
 import './FootprintOracleCard.scss'
 
 // groupSize is the viewer's assigned table size, never pool registrations or
@@ -109,9 +111,48 @@ export default React.memo(function FootprintOracleCard({
   const railAriaLabel = railAriaParts.length > 0 ? railAriaParts.join('，') : undefined
 
   const hasPrice = price != null
+  const tableFaces = Array.isArray(event.memberArchetypes)
+    ? event.memberArchetypes.filter((archetype) => typeof archetype === 'string' && archetype.length > 0).slice(0, 6)
+    : []
+  const themePill = typeof event.theme === 'string' && event.theme.trim() ? event.theme.trim() : undefined
+  // Phase 3 (2026-11-10): a state-aware affordance line. The card has no button,
+  // so the footer carries the next step instead of inventing a fake CTA. The
+  // row above already shows the faces, so the hint promises the layer the faces
+  // cannot: who they are and how well you fit (designer B2).
+  const ctaHint = status === 'completed' || status === 'attended'
+    ? '翻翻这场回顾'
+    : hasAssignedTable
+      ? '看看这桌的合拍度'
+      : undefined
 
-  const metaAccessory = groupSizeLabel || hasPrice ? (
+  // The facts band's grammar is "left cluster ⇄ right number": faces illustrate
+  // the table count, so without a count they are a dangling cluster, and a
+  // price with no left fact reads as unloaded content. The band exists only
+  // when the table count does (designer B1/B2, 2026-11-10).
+  const metaAccessory = groupSizeLabel ? (
     <View className='footprint-oracle-card__facts'>
+      {tableFaces.length > 0 && (
+        <View className='footprint-oracle-card__table-faces' aria-hidden='true'>
+          {tableFaces.map((archetype, faceIndex) => {
+            const token = getArchetypeTokens(archetype)
+            return (
+              <View
+                key={`${event.id}-face-${faceIndex}`}
+                className='footprint-oracle-card__table-face'
+                style={{ borderColor: token.primary }}
+              >
+                <ArchetypeHead
+                  archetype={archetype}
+                  size={40}
+                  variant='head'
+                  fallback='initial'
+                  fallbackText={archetype.charAt(0).toUpperCase()}
+                />
+              </View>
+            )
+          })}
+        </View>
+      )}
       {groupSizeLabel && <Text className='footprint-oracle-card__fact'>{groupSizeLabel}</Text>}
       {hasPrice && (
         <Text className='footprint-oracle-card__fact footprint-oracle-card__fact--price'>
@@ -155,6 +196,8 @@ export default React.memo(function FootprintOracleCard({
       isDegradation={effectiveDegradation}
       reduceMotion={reduceMotion}
       layout='split'
+      themePill={themePill}
+      footerHint={ctaHint}
       titleAccessory={(
         <Text className='footprint-oracle-card__title-cue' aria-hidden='true'>›</Text>
       )}

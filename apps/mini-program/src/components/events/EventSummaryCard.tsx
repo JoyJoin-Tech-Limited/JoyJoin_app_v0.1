@@ -58,7 +58,7 @@ const STATUS_WAITING_COPY: Record<string, string> = {
   registered: '报名成功，等待排桌',
   upcoming: '报名成功，活动即将开始',
   matched: '场地安排中',
-  confirmed: '已确认，期待见面',
+  confirmed: '期待见面',
   venue_unlocked: '场地已解锁，期待见面',
 }
 
@@ -91,6 +91,11 @@ export interface EventSummaryCardProps {
   hoverClass?: string
   /** Optional footer hint rendered below the meta line. */
   footerHint?: string
+  /**
+   * Match-time table theme. Rendered as a pill under the title so a formed
+   * table keeps the identity it was created around (pool/Footprint cards).
+   */
+  themePill?: string
   /** Optional structured content for integrated card compositions. */
   titleAccessory?: React.ReactNode
   metaAccessory?: React.ReactNode
@@ -146,6 +151,7 @@ function EventSummaryCard({
   rightRail,
   railMode = false,
   railAriaLabel,
+  themePill,
 }: EventSummaryCardProps) {
   const { isDegradation: deviceIsDegradation } = useDeviceTier()
   const effectiveDegradation = isDegradationProp || deviceIsDegradation
@@ -257,6 +263,11 @@ function EventSummaryCard({
 
   const clockEnabled = !isEnded && Boolean(dateTime)
 
+  // Within a day of start the chip gets the family tint so a T-44min card
+  // cannot render identically to a T-4day card (designer P1, 2026-11-10).
+  const hoursUntilStart = dateTime ? (new Date(dateTime).getTime() - Date.now()) / 3_600_000 : null
+  const isStartingSoon = hoursUntilStart != null && hoursUntilStart > 0 && hoursUntilStart <= 24
+
   return (
     <View
       id={uid}
@@ -295,34 +306,65 @@ function EventSummaryCard({
                   className={`footprint-oracle-card__pulse-dot${isLiveStatus ? ' footprint-oracle-card__pulse-dot--live' : ''}`}
                   style={{ backgroundColor: familyColor }}
                 />
-                <Text
-                  className='footprint-oracle-card__pulse-label'
-                  style={{ color: familyColor }}
-                >
-                  {momentumLabel}
-                </Text>
+                <Text className='footprint-oracle-card__pulse-label'>{momentumLabel}</Text>
               </View>
-              {!railMode && !isSplit && (
-                <SegmentedCountdownClock
-                  target={dateTime ?? null}
-                  enabled={clockEnabled}
-                  accentColor={familyColor}
-                  clockId={`${uid}-clock`}
-                  compact={compactCountdown}
-                />
+              {!railMode && (
+                isSplit ? (
+                  // Gate on the clock's own enablement: an ended card renders no
+                  // digits, and a bare chip would show as an empty pill beside
+                  // the status (render-caught 2026-11-10).
+                  clockEnabled ? (
+                    <View
+                      className={`footprint-oracle-card__countdown-chip${isStartingSoon ? ' footprint-oracle-card__countdown-chip--urgent' : ''}`}
+                      style={isStartingSoon
+                        ? { borderColor: `${familyColor}47` }
+                        : undefined}
+                    >
+                      <SegmentedCountdownClock
+                        variant='human'
+                        target={dateTime ?? null}
+                        enabled={clockEnabled}
+                        accentColor={familyColor}
+                        clockId={`${uid}-human-clock`}
+                      />
+                    </View>
+                  ) : null
+                ) : (
+                  <SegmentedCountdownClock
+                    target={dateTime ?? null}
+                    enabled={clockEnabled}
+                    accentColor={familyColor}
+                    clockId={`${uid}-clock`}
+                    compact={compactCountdown}
+                  />
+                )
               )}
             </View>
 
             {/* L1 Title: the only navigation cue lives beside the title. */}
-            <View className='footprint-oracle-card__title-row'>
+            <View
+              className={`footprint-oracle-card__title-row${themePill ? ' footprint-oracle-card__title-row--with-theme' : ''}`}
+            >
               <View className='footprint-oracle-card__title'>
                 {isSplit ? titleParts.primary : titleParts.full}
               </View>
               {titleAccessory}
             </View>
 
+            {/* Table theme reads as annotated identity, not a third badge: it
+                belongs to the title, so it hugs the title and opens space to
+                the geography line below (designer C1/H1, 2026-11-10). */}
+            {themePill && (
+              <View className='footprint-oracle-card__theme-row'>
+                <Text className='footprint-oracle-card__theme-label'>主题</Text>
+                <Text className='footprint-oracle-card__theme-text'>{themePill}</Text>
+              </View>
+            )}
+
             {/* L3 Date / time / location line */}
-            <View className='footprint-oracle-card__meta'>
+            <View
+              className={`footprint-oracle-card__meta${themePill ? ' footprint-oracle-card__meta--after-theme' : ''}`}
+            >
               {!isSplit && (
                 <Text className='footprint-oracle-card__date-time'>
                   <Text className='footprint-oracle-card__date-label'>{dateTimeParts.dateLabel}</Text>
@@ -343,12 +385,6 @@ function EventSummaryCard({
               {!isSplit && metaAccessory}
             </View>
 
-            {/* L4 Footer: structured actions or the legacy text hint. */}
-            {(footerContent != null || footerHint) && (
-              <View className='footprint-oracle-card__footer'>
-                {footerContent ?? <Text className='footprint-oracle-card__footer-hint'>{footerHint}</Text>}
-              </View>
-            )}
           </View>
 
           {isSplit && sideDateParts && (
@@ -366,13 +402,6 @@ function EventSummaryCard({
                 <Text className='footprint-oracle-card__side-weekday'>{sideDateParts.weekday}</Text>
                 <Text className='footprint-oracle-card__side-time'>{sideDateParts.timeLabel}</Text>
               </View>
-              <SegmentedCountdownClock
-                variant='human'
-                target={dateTime ?? null}
-                enabled={clockEnabled}
-                accentColor={familyColor}
-                clockId={`${uid}-human-clock`}
-              />
             </View>
           )}
 
@@ -385,6 +414,14 @@ function EventSummaryCard({
 
         {isSplit && metaAccessory && (
           <View className='footprint-oracle-card__facts-footer'>{metaAccessory}</View>
+        )}
+
+        {/* L4 Footer: structured actions or the legacy text hint. Sits below the
+            facts footer so the next step reads after the table identity. */}
+        {(footerContent != null || footerHint) && (
+          <View className='footprint-oracle-card__footer'>
+            {footerContent ?? <Text className='footprint-oracle-card__footer-hint'>{footerHint}</Text>}
+          </View>
         )}
       </View>
     </View>

@@ -13,7 +13,7 @@
 
 import { eq, desc, and, inArray, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { events, eventAttendance, eventFeedback, eventPools, eventPoolRegistrations, eventPoolGroups } from "@shared/schema";
+import { events, eventAttendance, eventFeedback, eventPools, eventPoolRegistrations, eventPoolGroups, users } from "@shared/schema";
 import type { JoinedEventSummary } from "@shared/api";
 import { POOL_COMPLETION_BUFFER_MS } from "../lib/poolCompletionSweep";
 import { FEEDBACK_ELIGIBLE_MATCH_STATUSES } from "../lib/feedbackStateResolver";
@@ -208,6 +208,9 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       finalDateTime: eventPoolGroups.finalDateTime,
       venueAssignmentStatus: eventPoolGroups.venueAssignmentStatus,
       memberCount: eventPoolGroups.memberCount,
+      theme: eventPoolGroups.theme,
+      themeVibe: eventPoolGroups.vibe,
+      overallScore: eventPoolGroups.overallScore,
       // Canonical events.id of the matched group — the event_feedback FK
       // target. Needed to derive feedbackPending without the
       // connectionsContextResolver id-family mismatch (plan §2.1).
@@ -227,6 +230,40 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       )
     )
     .orderBy(desc(eventPools.dateTime));
+
+  // 2.5 Tablemate archetypes for the 同桌 face row — one batched query over the
+  //     matched groups (4-6 people each, so the payload stays tiny). No masking:
+  //     the viewer is a member of the table and the group page already shows
+  //     these same faces.
+  const groupIds: string[] = [];
+  poolRows.forEach((row: typeof poolRows[number]) => {
+    const groupId = row.assignedGroupId as string | null | undefined;
+    if (groupId && !groupIds.includes(groupId)) groupIds.push(groupId);
+  });
+  const groupArchetypes = new Map<string, string[]>();
+  if (groupIds.length > 0) {
+    const memberRows = await db
+      .select({
+        groupId: eventPoolRegistrations.assignedGroupId,
+        archetype: users.archetype,
+      })
+      .from(eventPoolRegistrations)
+      .leftJoin(users, eq(eventPoolRegistrations.userId, users.id))
+      .where(
+        and(
+          inArray(eventPoolRegistrations.assignedGroupId, groupIds),
+          inArray(eventPoolRegistrations.matchStatus, ["matched", "completed"]),
+        ),
+      );
+    for (const row of memberRows) {
+      const groupId = row.groupId;
+      if (!groupId || !row.archetype) continue;
+      const faces = groupArchetypes.get(groupId) ?? [];
+      if (faces.length >= 6) continue;
+      faces.push(row.archetype);
+      groupArchetypes.set(groupId, faces);
+    }
+  }
 
   // 3. feedbackPending derivation — batch existence check over the eligible
   //    candidates (1 extra round-trip). Candidate = eligible + window passed,
@@ -289,6 +326,12 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     finalDateTime: row.finalDateTime?.toISOString?.() ?? undefined,
     venueAssignmentStatus: row.venueAssignmentStatus ?? undefined,
     groupSize: row.memberCount ?? undefined,
+    theme: row.theme ?? undefined,
+    themeVibe: row.themeVibe ?? undefined,
+    matchScore: row.overallScore ?? undefined,
+    memberArchetypes: row.assignedGroupId
+      ? groupArchetypes.get(row.assignedGroupId)
+      : undefined,
     displayStatus: derivePoolDisplayStatus(
       row.matchStatus,
       row.venueAssignmentStatus,

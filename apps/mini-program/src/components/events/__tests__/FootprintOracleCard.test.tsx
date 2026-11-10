@@ -113,7 +113,9 @@ describe('FootprintOracleCard historical presentation integration', () => {
     expect(side?.querySelector('.footprint-oracle-card__side-month-day')).toHaveTextContent(/\d{1,2}月\d{1,2}日/)
     expect(side?.querySelector('.footprint-oracle-card__side-weekday')).toHaveTextContent(/周[一二三四五六日]/)
     expect(side?.querySelector('.footprint-oracle-card__side-time')).toHaveTextContent(/\d{2}:\d{2}/)
-    expect(side?.querySelector('.segmented-countdown-clock')).toBeInTheDocument()
+    // Phase 1 (2026-11-10): the countdown left the side column and joined the
+    // status rail, so lifecycle + time read as one header line.
+    expect(side?.querySelector('.segmented-countdown-clock')).toBeNull()
     expect(meta?.querySelector('.footprint-oracle-card__location')).toHaveTextContent('深圳 · 南山区')
     expect(meta?.contains(screen.getByText('已排进 6 人桌'))).toBe(false)
     expect(container.querySelector('.footprint-oracle-card--rail')).toBeNull()
@@ -121,7 +123,11 @@ describe('FootprintOracleCard historical presentation integration', () => {
     expect(screen.getByText('已排进 6 人桌').closest('.footprint-oracle-card__facts-footer')).toBeInTheDocument()
     expect(screen.getByText('¥88').closest('.footprint-oracle-card__facts-footer')).toBeInTheDocument()
     expect(container.querySelectorAll('.footprint-oracle-card__title-cue')).toHaveLength(1)
-    expect(container.querySelector('.footprint-oracle-card__topline .segmented-countdown-clock')).toBeNull()
+    const topline = container.querySelector('.footprint-oracle-card__topline')
+    expect(topline?.querySelector('.footprint-oracle-card__pulse-pill')).toBeInTheDocument()
+    expect(
+      topline?.querySelector('.footprint-oracle-card__countdown-chip .segmented-countdown-clock'),
+    ).toBeInTheDocument()
   })
 
   it('splits the region suffix into the right-hand when column', () => {
@@ -277,5 +283,52 @@ describe('FootprintOracleCard historical presentation integration', () => {
     })
     expect(onClick).not.toHaveBeenCalled()
     expect(event).toEqual(originalEvent)
+  })
+})
+
+describe('FootprintOracleCard table identity (Phase 2 + 3)', () => {
+  it('renders one face per matched tablemate without masking', () => {
+    const event = makeCardEvent({
+      groupId: 'group-1',
+      groupSize: 4,
+      memberArchetypes: ['corgi', 'fox', 'owl', 'koala'],
+    })
+    const { container } = render(<FootprintOracleCard event={event} />)
+
+    expect(container.querySelectorAll('.footprint-oracle-card__table-face')).toHaveLength(4)
+    // Faces are decorative on top of the text label, never the only signal.
+    expect(container.querySelector('.footprint-oracle-card__table-faces')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByText('已排进 4 人桌')).toBeInTheDocument()
+  })
+
+  it('caps the face row at a six-seat table', () => {
+    const event = makeCardEvent({
+      groupId: 'group-1',
+      groupSize: 8,
+      memberArchetypes: ['corgi', 'fox', 'owl', 'koala', 'octopus', 'spider', 'turtle', 'cat'],
+    })
+    const { container } = render(<FootprintOracleCard event={event} />)
+
+    expect(container.querySelectorAll('.footprint-oracle-card__table-face')).toHaveLength(6)
+  })
+
+  it('renders the match-time theme as a pill under the title', () => {
+    const event = makeCardEvent({ theme: '高能充电站·周日晚风' })
+    const { container } = render(<FootprintOracleCard event={event} />)
+
+    expect(container.querySelector('.footprint-oracle-card__theme-row')).toHaveTextContent('高能充电站·周日晚风')
+  })
+
+  it('points at the next step from the footer, and flips it for a finished table', () => {
+    const upcoming = render(<FootprintOracleCard event={makeCardEvent({ groupId: 'group-1', groupSize: 4 })} />)
+    expect(upcoming.container.querySelector('.footprint-oracle-card__footer-hint')).toHaveTextContent('看看这桌的合拍度')
+    upcoming.unmount()
+
+    const finished = render(
+      <FootprintOracleCard
+        event={makeCardEvent({ groupId: 'group-2', groupSize: 4, displayStatus: 'completed', status: 'completed' })}
+      />,
+    )
+    expect(finished.container.querySelector('.footprint-oracle-card__footer-hint')).toHaveTextContent('翻翻这场回顾')
   })
 })

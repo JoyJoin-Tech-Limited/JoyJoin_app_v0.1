@@ -72,6 +72,20 @@ export interface JoinedEventSummary {
    */
   groupSize?: number
   /**
+   * Match-time table theme (pool events only). Rendered as the theme pill above
+   * the card body so a finished table keeps the identity it was formed around.
+   */
+  theme?: string
+  /** Short vibe label for the matched table (e.g. 超高能). */
+  themeVibe?: string
+  /** Overall table chemistry score 0-100 (pool events only). */
+  matchScore?: number
+  /**
+   * Archetype ids of the matched table, capped at 6. Powers the 同桌 face row —
+   * the viewer is already a member, so no masking is applied.
+   */
+  memberArchetypes?: string[]
+  /**
    * Derived user-facing status that reflects the full matching + venue lifecycle.
    * Prefer this over `status` when rendering event cards.
    */

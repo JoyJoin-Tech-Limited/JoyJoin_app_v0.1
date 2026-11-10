@@ -621,3 +621,19 @@ $onboarding-stage-shift-ids: (
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+// ─── Card pill (shared status-rail / fact-chip shell) ─────────────
+// Discover and Footprint both render small factual chips over a tinted
+// gradient card. One geometry keeps them reading as the same product
+// instead of two cards inventing their own badge styling.
+@mixin card-pill {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 48rpx;
+  padding: 0 18rpx;
+  border-radius: 999rpx;
+  background: rgba($color-surface, 0.72);
+  border: 1rpx solid rgba($color-text-primary, 0.06);
+  white-space: nowrap;
+}

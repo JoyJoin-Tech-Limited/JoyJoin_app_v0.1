@@ -368,6 +368,9 @@ app.get('/api/events/joined', (req, res) => {
       groupSize: 6,
       finalDateTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
       price: 128,
+      theme: '高能充电站·深夜频道',
+      matchScore: 87,
+      memberArchetypes: ['corgi', 'fox', 'owl', 'koala', 'octopus', 'spider'],
     },
     {
       id: 'event-urgent-001',
@@ -381,6 +384,9 @@ app.get('/api/events/joined', (req, res) => {
       district: '罗湖',
       venueName: '老街大排档',
       price: 66,
+      theme: '热锅边的小宇宙',
+      matchScore: 82,
+      memberArchetypes: ['rooster', 'hamster_praise', 'dolphin_calm', 'elephant', 'koala', 'fox'],
     },
     {
       id: 'event-completed-001',
@@ -392,6 +398,11 @@ app.get('/api/events/joined', (req, res) => {
       district: '宝安',
       venueName: '天台烤场',
       price: 99,
+      theme: '天台风与慢热的人',
+      matchScore: 79,
+      memberArchetypes: ['turtle', 'cat', 'elephant', 'corgi'],
+      groupId: 'group-completed-001',
+      groupSize: 5,
     },
     {
       id: 'event-cancelled-001',
@@ -458,6 +469,11 @@ app.get('/api/shell/events', (req, res) => {
         district: '宝安',
         venueName: '天台烤场',
         price: 99,
+        theme: '天台风与慢热的人',
+        matchScore: 79,
+        memberArchetypes: ['turtle', 'cat', 'elephant', 'corgi'],
+        groupId: 'group-completed-001',
+        groupSize: 5,
       },
       {
         id: 'event-cancelled-001',

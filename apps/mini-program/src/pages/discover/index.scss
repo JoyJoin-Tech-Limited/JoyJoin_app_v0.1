@@ -571,7 +571,9 @@ $oracle-corner-vignette-size: 280rpx;
   &__status-deadline {
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
-    color: $color-text-muted;
+    // Secondary keeps the deadline legible on the warm card gradient
+    // (muted measured ≈2.5:1 against the pill fill).
+    color: $color-text-secondary;
 
     &--urgent {
       font-weight: $font-weight-bold;

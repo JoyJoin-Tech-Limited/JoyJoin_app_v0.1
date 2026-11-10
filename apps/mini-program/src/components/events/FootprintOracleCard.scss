@@ -29,6 +29,8 @@
   &__content {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
   }
 
   // Two-rail layout wrapper for the Option A prototype.
@@ -94,8 +96,15 @@
     .footprint-oracle-card__title,
     .footprint-oracle-card__date-time,
     .footprint-oracle-card__location,
+    .footprint-oracle-card__theme-text,
     .footprint-oracle-card__waiting-hint,
     .footprint-oracle-card__footer-hint {
+      opacity: 0.78;
+    }
+
+    // A finished card must not keep a full-strength table row above 翻翻这场回顾:
+    // the facts row (and the faces inside it) dims once, together.
+    .footprint-oracle-card__facts {
       opacity: 0.78;
     }
 
@@ -199,12 +208,21 @@
   }
 
   // ── Topline (status pill + countdown) ─────────────────────────
+  // ── Topline (status pill + countdown chip) ────────────────────
+  // One rail, two pills: lifecycle on the left, time on the right. The
+  // countdown used to float at the bottom of the side column while the status
+  // sat alone at the top, which read as two unrelated badges (2026-11-10).
   &__topline {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    align-items: center;
+    // Cluster, do not bookend: the body column is ~200rpx narrower than the
+    // card because the date column takes the right edge. `space-between` here
+    // parked the countdown almost as close to the date column as to the
+    // status pill, so the merged rail never read as one unit (2026-11-10).
+    justify-content: flex-start;
     margin-bottom: $spacing-sm;
     gap: $spacing-sm;
+    min-height: 48rpx;
 
     // Compact was originally width:100% for the removed Footprint rail.
     // In the shared topline it must shrink to its digits beside the status.
@@ -214,16 +232,49 @@
     }
   }
 
-  &__pulse-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
+  &__pulse-pill,
+  &__countdown-chip {
+    @include card-pill;
     flex-shrink: 0;
+  }
+
+  &__pulse-pill {
+    gap: $spacing-xs;
     max-width: 52%;
-    min-height: 44rpx;
+  }
+
+  &__countdown-chip {
+    // Inherits the shell padding so both pills share one interior; a local
+    // 16rpx override made the pair look assembled from two components.
+    .segmented-countdown-clock--human {
+      height: auto;
+      gap: 4rpx;
+    }
+
+    .segmented-countdown-clock__human-prefix,
+    .segmented-countdown-clock__human-unit,
+    .segmented-countdown-clock__human-imminent,
+    .segmented-countdown-clock__human-started-label {
+      font-size: $font-size-sm;
+      line-height: 1;
+    }
+
+    // The numeral is the payload of this chip — keep it a step above the
+    // 24rpx CJK runs around it (Discover runs 32:24). Colour is stated here
+    // rather than inherited from the clock's `var(--clock-accent)`: custom
+    // properties are unreliable in the WeChat runtime and the family amber
+    // only reaches ~2.2:1 on the chip fill.
+    .segmented-countdown-clock__human-value {
+      font-size: $font-size-md;
+      line-height: 1;
+      color: $color-text-primary;
+    }
+
+    &--urgent {
+      // Escalate on the ring only: a tinted fill costs contrast on the
+      // supporting tokens and blurs the pill/chip separation.
+      border-color: rgba($color-primary, 0.24);
+    }
   }
 
   &__pulse-dot {
@@ -330,8 +381,15 @@
   &__title-row {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
+    gap: $spacing-xs;
     margin-bottom: $spacing-sm;
+
+    // With a theme line below, the title hands its bottom margin to the theme
+    // block: title → theme stays tight (8rpx) while theme → geography opens up
+    // (24rpx), so the theme groups with the title it describes (designer C1).
+    &--with-theme {
+      margin-bottom: $spacing-xs;
+    }
   }
 
   &__title-cue {
@@ -348,7 +406,9 @@
     width: auto;
     max-width: 100%;
     line-height: 1.4;
-    flex: 1;
+    // Size to the text so the navigation cue sits beside the title instead of
+    // being pushed to the column edge and reading as the countdown chip's tail.
+    flex: 0 1 auto;
     min-width: 0;
     word-break: keep-all;
     overflow-wrap: break-word;
@@ -362,6 +422,12 @@
   // ── Date / time / location meta ───────────────────────────────
   &__meta {
     margin-bottom: $spacing-sm;
+
+    // The theme line belongs to the title above; keep clear air below it so the
+    // theme and the geography run never read as one sentence.
+    &--after-theme {
+      margin-top: $spacing-md;
+    }
   }
 
   &__date-time {
@@ -390,7 +456,10 @@
     display: block;
     font-size: 28rpx;
     font-weight: $font-weight-medium;
-    color: $color-text-muted;
+    // Geography is a deciding fact, not fine print: muted sits below body
+    // contrast on the warm card and now reads paler than the theme line above
+    // (designer K1).
+    color: $color-text-secondary;
     line-height: 1.4;
     @include text-truncate;
   }
@@ -401,7 +470,65 @@
     font-weight: $font-weight-semibold;
     color: $color-text-secondary;
     line-height: 1.4;
-    margin-top: 2rpx;
+    // No extra offset: stacked geography lines keep their line-height leading
+    // so every gap on the card is a multiple of 8rpx (2026-11-10).
+    margin-top: 0;
+    @include text-truncate;
+  }
+
+  // 同桌 face row (Phase 2, 2026-11-10): the real archetype heads of the
+  // matched table, reusing the Discover face language. The viewer is a member,
+  // so no masking — these are the same faces the group page shows.
+  &__table-faces {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  &__table-face {
+    box-sizing: border-box;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    border: 2rpx solid;
+    overflow: hidden;
+    background: $color-surface;
+    flex-shrink: 0;
+
+    &:not(:first-child) {
+      // One overlap step product-wide: the Discover presence strip uses the
+      // same -16rpx for 40rpx faces, so a table cluster reads as one group on
+      // both surfaces (designer C4).
+      margin-left: -16rpx;
+    }
+  }
+
+  // 主题行 (Phase 3, 2026-11-10): the match-time table theme, kept under the
+  // title so a formed table keeps the identity it was created around. It is
+  // annotated identity text, not a third capsule — the rail already owns the
+  // card's capsule chrome (designer H1).
+  &__theme-row {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-xs;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  &__theme-label {
+    flex-shrink: 0;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    // A label nobody can read is decoration: keep it at the secondary ink so
+    // it clears body contrast even on the dimmed terminal card (designer B4).
+    color: $color-text-secondary;
+    letter-spacing: 0.04em;
+  }
+
+  &__theme-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
     @include text-truncate;
   }
 
@@ -418,12 +545,17 @@
     line-height: 1.5;
   }
 
+  // The table is this row's payload — the price is already settled by the time
+  // a formed table is being read, so it steps back one rank (designer H2).
   &__fact {
     flex-shrink: 0;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
 
     &--price {
       @include type-en-brand-numeric;
-      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+      color: $color-text-secondary;
     }
   }
 
@@ -459,9 +591,13 @@
     align-items: flex-end;
     justify-content: flex-start;
     flex-shrink: 0;
-    width: 210rpx;
+    // 8rpx grid: 208 = 26 × 8. The column previously used 210rpx with a 2rpx
+    // top nudge, which left the date block off the shared grid and 2rpx below
+    // the status rail's top edge. Both are snapped so the right column starts
+    // on the same 24rpx content line as the left column.
+    width: 208rpx;
     gap: 8rpx;
-    padding-top: 2rpx;
+    padding-top: 0;
     text-align: right;
   }
 
@@ -485,7 +621,9 @@
     color: $color-primary;
     letter-spacing: 0.04em;
     line-height: 1.2;
-    margin-bottom: 2rpx;
+    // No extra offset: the district must start on the card's 24rpx content
+    // line like the status rail beside it (grid alignment, 2026-11-10).
+    margin-bottom: 0;
   }
 
   &__side-year {
@@ -520,10 +658,6 @@
     color: $color-text-primary;
   }
 
-  &__side .segmented-countdown-clock--human {
-    margin-top: 8rpx;
-  }
-
   &__facts-footer {
     margin-top: $spacing-md;
     padding-top: $spacing-sm;
@@ -542,16 +676,20 @@
   }
 
   // ── Footer hint ───────────────────────────────────────────────
+  // One hairline per card: the facts footer already closes the narrative, so
+  // the hint rides below it as a closing line instead of opening a second,
+  // identically framed band (designer C2).
   &__footer {
-    margin-top: $spacing-md;
-    padding-top: $spacing-sm;
-    border-top: 1rpx solid rgba($color-border, 0.4);
+    margin-top: $spacing-sm;
   }
 
   &__footer-hint {
     display: block;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
+    // Phase 3: the footer carries the next step (看看同桌是谁 / 翻翻回顾), so it
+    // sits at body size instead of the old 20rpx meta tier.
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
     line-height: 1.4;
   }
 }

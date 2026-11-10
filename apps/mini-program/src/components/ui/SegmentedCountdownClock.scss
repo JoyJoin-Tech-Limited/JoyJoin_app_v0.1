@@ -143,7 +143,9 @@
     font-family: $font-ui;
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
-    color: $color-text-muted;
+    // Secondary, not muted: the prefix is the first thing read in the card
+    // header chip and must clear the 4.5:1 body-text floor (2026-11-10).
+    color: $color-text-secondary;
   }
 
   &__human-value {

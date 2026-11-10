@@ -79,3 +79,17 @@ describe('EventSummaryCard area de-duplication', () => {
     expect(screen.queryByText('老街大排档')).not.toBeInTheDocument()
   })
 })
+
+describe('EventSummaryCard theme pill', () => {
+  it('renders the match-time table theme under the title', () => {
+    const { container } = renderCard({ themePill: '高能充电站·周日晚风' })
+
+    expect(container.querySelector('.footprint-oracle-card__theme-row')).toHaveTextContent('高能充电站·周日晚风')
+  })
+
+  it('renders no pill when the table has no theme yet', () => {
+    const { container } = renderCard()
+
+    expect(container.querySelector('.footprint-oracle-card__theme-row')).toBeNull()
+  })
+})

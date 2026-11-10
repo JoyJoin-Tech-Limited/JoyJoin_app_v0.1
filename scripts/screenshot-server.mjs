@@ -198,6 +198,22 @@ async function captureEventsPage() {
   })
 }
 
+async function captureEventsTerminal() {
+  return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/events/index`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForSelector('.events-page__list', { timeout: 10000 })
+    await page.getByRole('tab', { name: '已结束' }).click()
+    await page.waitForSelector('.footprint-oracle-card--terminal', { timeout: 10000 })
+    await page.waitForTimeout(1200)
+    return screenshotPage(page)
+  })
+}
+
 async function captureTierSelector() {
   return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
     await page.goto(
@@ -825,6 +841,7 @@ async function captureLandingLegalHint() {
 }
 register('landing-legal-hint', captureLandingLegalHint)
 register('events-footprint-oracle-card', captureEventsPage)
+register('events-footprint-terminal', captureEventsTerminal)
 register('discover-oracle-cards', captureDiscoverOracleCards)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
