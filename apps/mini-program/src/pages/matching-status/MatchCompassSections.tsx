@@ -594,7 +594,7 @@ export function MatchCompassShell({
       <Card className='match-compass__error'>
         <ArchetypeHead archetype={viewerArchetype ?? 'corgi'} size={32} className='match-compass__error-icon' variant='head' />
         <Text className='match-compass__error-title'>偏好数据暂时不可用</Text>
-        <Text className='match-compass__error-text'>匹配偏好加载超时，正在重试中</Text>
+        <Text className='match-compass__error-text'>排桌偏好加载超时，正在重试中</Text>
       </Card>
     )
   }
@@ -703,7 +703,7 @@ function MatchCompassDashboard({
           <View className='match-compass__header-left'>
             <View className='match-compass__title-row'>
               <JoyJoinIcon emoji='🧭' size={28} className='match-compass__title-icon' />
-              <Text className='match-compass__title'>匹配罗盘</Text>
+              <Text className='match-compass__title'>排桌罗盘</Text>
             </View>
             <Text className='match-compass__subtitle'>
               调整偏好，让{data.primaryArchetype ? `「${data.primaryArchetype}」` : '你'}遇到更对味的人

@@ -79,7 +79,17 @@ function createTxHarness(options: {
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: vi.fn(() => ({
-          limit: vi.fn(async () => selectResults.shift() ?? []),
+          limit: vi.fn(() => {
+            // Real drizzle's `.limit()` returns a builder that also supports
+            // `.for('update')`; the payment fulfillment path takes a row lock on
+            // the pool, so the mock must stay awaitable AND chainable.
+            const rows = selectResults.shift() ?? [];
+            const thenable = Promise.resolve(rows) as Promise<unknown[]> & {
+              for: () => Promise<unknown[]>;
+            };
+            thenable.for = vi.fn(async () => rows);
+            return thenable;
+          }),
         })),
       })),
     })),

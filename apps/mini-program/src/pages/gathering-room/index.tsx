@@ -457,11 +457,16 @@ export default function GatheringRoomPage() {
               <JoyJoinIcon emoji='📍' size={24} />
               <Text className='gathering-room__fact-label'>地点</Text>
             </View>
-            <Text className='gathering-room__fact-venue'>
+            <Text
+              className={`gathering-room__fact-venue${venueReady && venueName ? '' : ' gathering-room__fact-venue--tbd'}`}
+            >
               {venueReady && venueName ? venueName : '地点待定'}
             </Text>
+            {/* An ended event can no longer resolve its venue, so the promise
+                has to stop pretending it might. */}
             <Text className='gathering-room__fact-address'>
-              {venueAddress || '地点确定后在这里更新'}
+              {venueAddress
+                || (venueReady && venueName ? '' : eventPhase === 'ended' ? '地点未公布' : '地点确定后在这里更新')}
             </Text>
           </View>
         </View>
@@ -475,6 +480,20 @@ export default function GatheringRoomPage() {
             loading={isSubmitting || confirmPending}
           >
             {isSubmitting || confirmPending ? '确认中…' : '确认出席'}
+          </Button>
+        ) : null}
+
+        {/* A commitment you cannot take back is a trap (D-I1B, 2026-11-11): the
+            RSVP stays reversible until the event starts, so the primary slot
+            never empties on the user who just tapped it. */}
+        {controller.canReleaseAttendance ? (
+          <Button
+            className='gathering-room__release-btn'
+            onClick={controller.handleReleaseAttendance}
+            disabled={isSubmitting || controller.releasePending}
+            loading={isSubmitting || controller.releasePending}
+          >
+            {controller.releasePending ? '取消中…' : '改主意，先不确认'}
           </Button>
         ) : null}
 

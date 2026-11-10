@@ -141,7 +141,7 @@ export default function UnifiedRevealCard({
 
       {aigcLabelsEnabled ? (
         <AIContentReportButton
-          options={{ reason: '举报匹配解读内容', relatedEventId }}
+          options={{ reason: '举报合拍解读内容', relatedEventId }}
           className='unified-reveal__report-button'
         />
       ) : null}

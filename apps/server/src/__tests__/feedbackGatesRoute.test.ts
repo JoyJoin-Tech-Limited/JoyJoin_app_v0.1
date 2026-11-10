@@ -160,7 +160,7 @@ describe("POST /api/events/:eventId/feedback activation gates", () => {
     });
   });
 
-  it("closed (reserved state) maps to 403 FEEDBACK_NOT_OPEN", async () => {
+  it("closed window maps to 409 FEEDBACK_WINDOW_CLOSED", async () => {
     mockResolveFeedbackState.mockResolvedValue({ state: "closed", canonicalEventId: "event-1" });
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl, "tester-1");
@@ -171,8 +171,8 @@ describe("POST /api/events/:eventId/feedback activation gates", () => {
       });
       const body = await response.json() as any;
 
-      expect(response.status).toBe(403);
-      expect(body.code).toBe("FEEDBACK_NOT_OPEN");
+      expect(response.status).toBe(409);
+      expect(body.code).toBe("FEEDBACK_WINDOW_CLOSED");
       expect(storageCtx.createEventFeedback).not.toHaveBeenCalled();
     });
   });

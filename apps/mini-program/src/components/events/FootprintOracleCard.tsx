@@ -93,6 +93,11 @@ export default React.memo(function FootprintOracleCard({
         ? `已排进 ${groupSize} 人桌`
         : `${groupSize} 人桌`)
     : undefined
+  // The table identity carries the chemistry number too: the closing line only
+  // says what is behind the card, so the actual score has to be readable here.
+  const tableScoreLabel = typeof event.matchScore === 'number' && event.matchScore > 0
+    ? `合拍度 ${event.matchScore}`
+    : undefined
 
   const railAriaParts = useMemo(() => {
     const parts: string[] = []
@@ -102,11 +107,14 @@ export default React.memo(function FootprintOracleCard({
     if (groupSizeLabel) {
       parts.push(groupSizeLabel)
     }
+    if (tableScoreLabel) {
+      parts.push(tableScoreLabel)
+    }
     if (price != null) {
       parts.push(price > 0 ? `费用 ¥${price}` : '免费')
     }
     return parts
-  }, [event.dateTime, event.finalDateTime, groupSizeLabel, isHistoricalNonterminal, isTerminal, price])
+  }, [event.dateTime, event.finalDateTime, groupSizeLabel, tableScoreLabel, isHistoricalNonterminal, isTerminal, price])
 
   const railAriaLabel = railAriaParts.length > 0 ? railAriaParts.join('，') : undefined
 
@@ -153,7 +161,12 @@ export default React.memo(function FootprintOracleCard({
           })}
         </View>
       )}
-      {groupSizeLabel && <Text className='footprint-oracle-card__fact'>{groupSizeLabel}</Text>}
+      {groupSizeLabel && (
+        <Text className='footprint-oracle-card__fact'>
+          {groupSizeLabel}
+          {tableScoreLabel ? ` · ${tableScoreLabel}` : ''}
+        </Text>
+      )}
       {hasPrice && (
         <Text className='footprint-oracle-card__fact footprint-oracle-card__fact--price'>
           {price > 0 ? `¥${price}` : '免费'}

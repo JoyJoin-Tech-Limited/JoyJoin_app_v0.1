@@ -653,6 +653,11 @@ export async function finalizeConnectionReveals(
 export interface ExpiredRevealSelectionsResult {
   /** Due `mutual_pending` rows deleted because a side was no longer eligible. */
   expired: number;
+  /**
+   * The dropped pairs, so the scheduler can tell the initiator without ever
+   * naming the other side. Bounded — one sweep cannot produce an unbounded list.
+   */
+  expiredPairs: Array<{ id: string; initiatorId: string | null }>;
 }
 
 /**
@@ -688,10 +693,10 @@ export async function expireIneligibleRevealSelections(
       AND reveal_at IS NOT NULL
       AND reveal_at <= ${now}
       AND NOT ${connectionPairRevealEligibleSql}
-    RETURNING id
+    RETURNING id, initiator_id
   `);
 
-  const rows = (result?.rows ?? []) as Array<{ id: string }>;
+  const rows = (result?.rows ?? []) as Array<{ id: string; initiator_id: string | null }>;
   if (rows.length > 0) {
     // Counts only — a pair must not survive in the log.
     logger.info("[Connections] expired ineligible reveal selections", {
@@ -700,7 +705,7 @@ export async function expireIneligibleRevealSelections(
     });
   }
 
-  return { expired: rows.length };
+  return { expired: rows.length, expiredPairs: rows.slice(0, 200).map((row) => ({ id: row.id, initiatorId: row.initiator_id })) };
 }
 
 /** How long a non-mutual selection row is kept after its reveal window closed. */

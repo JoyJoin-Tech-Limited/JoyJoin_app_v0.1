@@ -213,6 +213,12 @@
     font-weight: 600;
     line-height: 1.5;
     color: $color-text-primary-warm;
+
+    // Same amber signal the group-detail card uses, so "venue not locked yet"
+    // reads as one state across the two surfaces instead of plain body text.
+    &--tbd {
+      color: $color-amber-700;
+    }
   }
 
   &__fact-address {
@@ -246,6 +252,26 @@
   &__confirm-btn {
     width: 100%;
     min-height: 96rpx;
+  }
+
+  // Secondary affordance beside the confirmed state: quiet enough that it never
+  // competes with the promise, explicit enough to be found (D-I1B, 2026-11-11).
+  &__release-btn {
+    width: 100%;
+    min-height: 72rpx;
+    margin-top: $spacing-xs;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-size: 24rpx;
+    font-weight: $font-weight-medium;
+    line-height: 72rpx;
+    color: $color-text-secondary;
+    text-align: center;
+
+    &::after {
+      border: 0;
+    }
   }
 
   &__confirm-error {

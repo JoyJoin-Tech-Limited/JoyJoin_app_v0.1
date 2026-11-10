@@ -16,6 +16,7 @@ const MAPPED_NOTIFICATION_TYPES = new Set([
   'venue_tbd',
   'feedback_invite',
   'mutual_match',
+  'mutual_match_expired',
   'event_reminder',
   'pool_full',
   'subscription_activated',
@@ -93,6 +94,7 @@ export async function resolveNotificationDestination(
       }
     }
     case 'mutual_match':
+    case 'mutual_match_expired':
       return { method: 'switchTab', url: MINI_PROGRAM_ROUTES.connections }
     case 'event_reminder':
     case 'pool_full':

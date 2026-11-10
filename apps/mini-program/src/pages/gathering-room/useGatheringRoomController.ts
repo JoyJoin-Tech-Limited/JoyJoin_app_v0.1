@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   confirmPoolGroupAttendance,
+  releasePoolGroupAttendance,
   getPoolGroupAnalysis,
   getPoolGroupRoomState,
   type GatheringRoomMember,
@@ -444,6 +445,8 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
   const ownAttendanceStatus = ownMember?.attendanceStatus ?? 'pending'
   const ownConfirmed =
     ownAttendanceStatus === 'confirmed' || ownAttendanceStatus === 'late'
+  // A released RSVP must be allowed only while the event has not started.
+  const eventPhaseEnded = (roomState?.eventPhase ?? 'upcoming') === 'ended'
 
   // Presence is an online-only signal from WS. Confirmation is the persistent
   // attendance promise from the server — never mix the two in the header.
@@ -576,6 +579,40 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     confirmAttendanceMutation.mutate()
   }, [confirmAttendanceMutation, isSubmitting, ownConfirmed])
 
+  // ── Release attendance (D-I1B, 2026-11-11) ───────────────────────────────
+  // A confirmation that cannot be undone is a trap; users then avoid tapping at
+  // all. Only a self-reported `confirmed` before the event start can be released.
+  const canReleaseAttendance = ownAttendanceStatus === 'confirmed'
+  const releaseAttendanceMutation = useMutation({
+    mutationFn: () => releasePoolGroupAttendance(apiRequest, groupId),
+    onSuccess: (response) => {
+      logInfo('[GatheringRoom] Attendance released', { groupId, blindBoxEventId: response.blindBoxEventId })
+      gatheringRoomAnalytics.track('room_confirm_attendance', {
+        poolId: roomState?.poolId,
+        groupId,
+        screen: 'gathering-room',
+        blindBoxEventId: response.blindBoxEventId,
+        attendanceStatus: 'pending',
+        eventPhase: roomState?.eventPhase,
+      })
+      setConfirmError(null)
+      haptics('light')
+      Taro.showToast({ title: '已取消，出发前再确认一次就好', icon: 'none', duration: TOAST_SHORT_MS })
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })
+    },
+    onError: (mutationError) => {
+      logWarn('[GatheringRoom] Attendance release failed', { groupId, error: String(mutationError) })
+      setConfirmError('暂时改不了，稍后再试一次')
+    },
+  })
+
+  const handleReleaseAttendance = useCallback(() => {
+    if (isSubmitting || releaseAttendanceMutation.isPending || !canReleaseAttendance || eventPhaseEnded) return
+    setConfirmError(null)
+    setIsSubmitting(true)
+    releaseAttendanceMutation.mutate()
+  }, [isSubmitting, releaseAttendanceMutation, canReleaseAttendance, eventPhaseEnded])
+
   const lateMutation = useMutation({
     mutationFn: async (estimatedLateMinutes: number) => {
       if (!blindBoxEventId) {
@@ -657,6 +694,9 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     confirmError,
     isReportingLate: lateMutation.isPending,
     confirmPending: confirmAttendanceMutation.isPending,
+    canReleaseAttendance: canReleaseAttendance && !eventPhaseEnded,
+    releasePending: releaseAttendanceMutation.isPending,
+    handleReleaseAttendance,
     canReportLate,
     handleReportLate,
     viewerPairByMemberId,

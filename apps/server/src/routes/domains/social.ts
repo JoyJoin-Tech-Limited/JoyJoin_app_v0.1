@@ -494,7 +494,10 @@ export function registerSocialRoutes(app: Express): void {
       if (state === "ineligible") {
         return res.status(403).json({ code: "FEEDBACK_NOT_ELIGIBLE", message: "这场活动未成行，无法评价" });
       }
-      if (state === "locked" || state === "closed") {
+      if (state === "closed") {
+        return res.status(409).json({ code: "FEEDBACK_WINDOW_CLOSED", message: "评价窗口已关闭，下次活动再来聊聊感受吧" });
+      }
+      if (state === "locked") {
         return res.status(403).json({ code: "FEEDBACK_NOT_OPEN", message: "活动还没结束，结束后再来聊聊感受吧" });
       }
       if (state === "submitted") {

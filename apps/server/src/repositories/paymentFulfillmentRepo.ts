@@ -138,7 +138,14 @@ export const paymentFulfillmentRepo = {
   async finalizeConfirmedPayment(
     params: FinalizeConfirmedPaymentParams
   ): Promise<FinalizeConfirmedPaymentResult> {
-    return db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
+    // Set when the pool left `active` before this payment landed (matched,
+    // completed, or cancelled by the deadline sweep). The registration is still
+    // written so credit reversal and the user's history stay coherent, but it is
+    // reconciled and refunded right after commit instead of waiting for a 排桌
+    // run that can no longer see this pool.
+    let lateClosedPoolId: string | null = null;
+
+    const result = await db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
       logger.info("Starting payment fulfillment transaction", {
         wechat_order_id: params.wechatOrderId,
         transaction_id: params.transactionId,
@@ -327,11 +334,16 @@ export const paymentFulfillmentRepo = {
           has_event_registration_payload: !!updatedPayment.eventRegistrationPayload,
           budget_range: eventRegistrationPayload?.budgetRange,
         });
+        // Row lock: a match run or the deadline sweep may be flipping this pool
+        // to `matching`/`cancelled` while the WeChat webhook is in flight.
+        // Reading the status under FOR UPDATE makes the late-arrival decision
+        // race-free instead of a check-then-write window.
         const [pool] = await tx
-          .select({ id: eventPools.id })
+          .select({ id: eventPools.id, status: eventPools.status })
           .from(eventPools)
           .where(eq(eventPools.id, updatedPayment.relatedId))
-          .limit(1);
+          .limit(1)
+          .for("update");
 
         if (!pool) {
           logger.error("Event pool not found during payment fulfillment", {
@@ -339,6 +351,22 @@ export const paymentFulfillmentRepo = {
             pool_id: updatedPayment.relatedId,
           });
           throw new Error(`Event pool ${updatedPayment.relatedId} not found`);
+        }
+
+        if (pool.status !== "active") {
+          // The user paid for a pool that already committed its 排桌 or was
+          // cancelled. 报名 closed in every user-visible sense, so this row
+          // must be refunded rather than left pending forever.
+          lateClosedPoolId = pool.id;
+          logger.warn(
+            "Payment landed after the pool left active; registration will be reconciled and refunded",
+            {
+              payment_id: updatedPayment.id,
+              pool_id: pool.id,
+              pool_status: pool.status,
+              user_id: updatedPayment.userId,
+            },
+          );
         }
 
         const [user] = await tx
@@ -499,6 +527,24 @@ export const paymentFulfillmentRepo = {
 
       return { payment: updatedPayment, alreadyCompleted: false };
     });
+
+    if (lateClosedPoolId) {
+      try {
+        const { reconcileOrphanRegistrationsForPool } = await import(
+          "../lib/poolOrphanRegistrationReconciler"
+        );
+        await reconcileOrphanRegistrationsForPool(lateClosedPoolId);
+      } catch (error) {
+        // The 15-minute orphan sweep is the backstop if this in-request refund
+        // fails, so a failure here costs latency, never the refund itself.
+        logger.error("Late payment reconciliation failed; the orphan sweep will retry", {
+          pool_id: lateClosedPoolId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return result;
   },
 
   async finalizeRefundedPayment(

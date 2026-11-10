@@ -246,3 +246,21 @@ describe('notifyRevealedConnections', () => {
     ).resolves.toMatchObject({ notifiedUsers: 0 });
   });
 });
+
+describe('expired reveal notification (2026-11-11, P2-5)', () => {
+  it('tells the initiator without naming the peer or the reason', async () => {
+    const { notifyExpiredRevealSelections } = await import('../lib/connectionRevealNotifications');
+    const { executor, statements } = createExecutor([[{ id: 'notif-1' }]]);
+
+    const result = await notifyExpiredRevealSelections(
+      [{ id: 'conn-1', initiatorId: 'user-1' }],
+      { executor: executor as never },
+    );
+
+    expect(result.notified).toBe(1);
+    expect(statements).toHaveLength(1);
+    expect(statements[0].text).toContain('mutual_match_expired');
+    expect(statements[0].text).toContain('user-1');
+    expect(statements[0].text).not.toContain('user-2');
+  });
+});

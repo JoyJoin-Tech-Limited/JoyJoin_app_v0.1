@@ -63,7 +63,7 @@ const STATUS_WAITING_COPY: Record<string, string> = {
 }
 
 // Venue is only disclosed once the group has been assigned a venue.
-const VENUE_VISIBLE_STATUSES = new Set(['confirmed', 'venue_unlocked'])
+const VENUE_VISIBLE_STATUSES = new Set(['confirmed', 'venue_unlocked', 'completed'])
 
 // ─── Presentational Event Summary Card ─────────────────────────
 // Shared visual base for FootprintOracleCard and any read-only

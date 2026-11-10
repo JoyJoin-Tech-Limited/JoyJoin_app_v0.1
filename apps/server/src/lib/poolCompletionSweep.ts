@@ -85,6 +85,24 @@ export async function sweepCompletedPools(now: Date = new Date()): Promise<PoolC
     return flipped.length;
   });
 
+  // Orphan guard (2026-11-11): closing a pool must never leave a paid
+  // registration stranded in `pending` with nobody to refund it. Reconcile each
+  // pool we just completed — idempotent, and the same backstop the 15-minute
+  // orphan sweep uses for payments that land after 排桌.
+  const { reconcileOrphanRegistrationsForPool } = await import(
+    "./poolOrphanRegistrationReconciler"
+  );
+  for (const poolId of poolIds) {
+    try {
+      await reconcileOrphanRegistrationsForPool(poolId);
+    } catch (error) {
+      logger.warn("[PoolCompletionSweep] orphan reconciliation failed", {
+        poolId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   logger.info("[PoolCompletionSweep] completed stale pools", {
     completedPools: poolIds.length,
     completedRegistrations,

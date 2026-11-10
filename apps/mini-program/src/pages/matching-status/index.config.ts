@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: '匹配状态',
+  navigationBarTitleText: '排桌状态',
 })

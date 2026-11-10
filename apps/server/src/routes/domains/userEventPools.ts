@@ -2109,6 +2109,99 @@ export function registerUserEventPoolRoutes(app: Express): void {
         res.status(500).json({ message: "Failed to confirm attendance" });
       }
     });
+
+    // Release attendance (2026-11-11, D-I1B): RSVP must stay reversible until the
+    // event starts, otherwise a user rationally avoids confirming at all. Only a
+    // self-reported `confirmed` can be released; `late`/`absent` are facts written
+    // by an operator and are never downgraded from the client.
+    app.post("/api/pool-groups/:groupId/release-attendance", requireAuth, async (req, res) => {
+      const groupId = req.params.groupId;
+      const session = req.session as any;
+      const userId = session?.userId;
+
+      try {
+        if (!userId) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+          where: (regs: any, { eq, and }: any) =>
+            and(eq(regs.assignedGroupId, groupId), eq(regs.userId, userId)),
+        });
+
+        if (!userRegistration) {
+          return res.status(403).json({ message: "You are not a member of this group" });
+        }
+
+        const group = await db.query.eventPoolGroups.findFirst({
+          where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+        });
+
+        let blindBoxEventId: string | null = group?.blindBoxEventId ?? null;
+        if (!blindBoxEventId && group?.poolId) {
+          const linkedEvent = await db
+            .select({ id: blindBoxEvents.id })
+            .from(blindBoxEvents)
+            .where(eq(blindBoxEvents.poolId, group.poolId))
+            .limit(1);
+          if (linkedEvent.length > 0) {
+            blindBoxEventId = linkedEvent[0].id;
+          }
+        }
+
+        if (!blindBoxEventId) {
+          return res.status(409).json({
+            message: "当前活动暂未开放出席确认，请稍后再试",
+            code: "ATTENDANCE_NOT_READY",
+          });
+        }
+
+        // The RSVP window closes when the event starts; a release afterwards
+        // would silently rewrite what the host already planned around.
+        if (group?.poolId) {
+          const [poolTiming] = await db
+            .select({ dateTime: eventPools.dateTime })
+            .from(eventPools)
+            .where(eq(eventPools.id, group.poolId))
+            .limit(1);
+          const eventStart = group.finalDateTime ?? poolTiming?.dateTime ?? null;
+          if (eventStart && new Date(eventStart).getTime() <= Date.now()) {
+            return res.status(409).json({
+              message: "活动已开始，无法再更改出席确认",
+              code: "ATTENDANCE_WINDOW_CLOSED",
+            });
+          }
+        }
+
+        const currentAttendance = await storage.getAttendanceStatus(blindBoxEventId, userId);
+        if (currentAttendance?.status === 'late') {
+          return res.status(409).json({
+            message: "已记录为晚到，无法撤销",
+            code: "ATTENDANCE_NOT_RELEASABLE",
+          });
+        }
+
+        // Idempotent: nothing to release, still a success for the client.
+        if (currentAttendance?.status !== 'confirmed') {
+          return res.json({
+            success: true,
+            blindBoxEventId,
+            attendanceStatus: currentAttendance?.status ?? 'pending',
+          });
+        }
+
+        await storage.updateAttendanceStatus(blindBoxEventId, userId, 'pending');
+
+        const user = await storage.getUser(userId);
+        const displayName = getUserDisplayName(user);
+        broadcastAttendanceStatusUpdated(blindBoxEventId, userId, displayName, 'pending');
+
+        res.json({ success: true, blindBoxEventId, attendanceStatus: 'pending' });
+      } catch (error) {
+        logger.error("Error releasing pool group attendance:", { error: String(error), groupId, userId });
+        res.status(500).json({ message: "Failed to release attendance" });
+      }
+    });
     app.get("/api/admin/finance/stats", requireAdmin, async (req, res) => {
       try {
         const stats = await storage.getFinanceStats();

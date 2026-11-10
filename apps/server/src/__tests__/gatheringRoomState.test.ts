@@ -388,3 +388,71 @@ describe("GET /api/pool-groups/:groupId/room-state", () => {
     });
   });
 });
+
+describe("POST /api/pool-groups/:groupId/release-attendance (D-I1B)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUserId = "user-1";
+    selectQueue = [];
+    mockSelect.mockImplementation(createSelectChain);
+    mockFindPool.mockResolvedValue(POOL);
+    mockFindRegistration.mockResolvedValue({ id: "reg-1", userId: "user-1", assignedGroupId: "group-1" });
+  });
+
+  it("releases a self-reported confirmation back to pending", async () => {
+    const { storage: storageMock } = await import("../storage");
+    mockFindGroup.mockResolvedValue({ id: "group-1", blindBoxEventId: "bbe-1" });
+    (storageMock.getAttendanceStatus as any).mockResolvedValue({ status: "confirmed" });
+
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/release-attendance`, { method: "POST" });
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.attendanceStatus).toBe("pending");
+      expect(storageMock.updateAttendanceStatus).toHaveBeenCalledWith("bbe-1", "user-1", "pending");
+    });
+  });
+
+  it("never downgrades an operator-written late RSVP", async () => {
+    const { storage: storageMock } = await import("../storage");
+    mockFindGroup.mockResolvedValue({ id: "group-1", blindBoxEventId: "bbe-1" });
+    (storageMock.getAttendanceStatus as any).mockResolvedValue({ status: "late" });
+
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/release-attendance`, { method: "POST" });
+      expect(res.status).toBe(409);
+      const body: any = await res.json();
+      expect(body.code).toBe("ATTENDANCE_NOT_RELEASABLE");
+      expect(storageMock.updateAttendanceStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  it("closes the RSVP window once the event has started", async () => {
+    const { storage: storageMock } = await import("../storage");
+    mockFindGroup.mockResolvedValue({ id: "group-1", poolId: "pool-1", blindBoxEventId: "bbe-1" });
+    selectQueue = [[{ dateTime: new Date(Date.now() - 60 * 60 * 1000) }]];
+    (storageMock.getAttendanceStatus as any).mockResolvedValue({ status: "confirmed" });
+
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/release-attendance`, { method: "POST" });
+      expect(res.status).toBe(409);
+      const body: any = await res.json();
+      expect(body.code).toBe("ATTENDANCE_WINDOW_CLOSED");
+      expect(storageMock.updateAttendanceStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  it("is idempotent when nothing is confirmed", async () => {
+    const { storage: storageMock } = await import("../storage");
+    mockFindGroup.mockResolvedValue({ id: "group-1", blindBoxEventId: "bbe-1" });
+    (storageMock.getAttendanceStatus as any).mockResolvedValue({ status: "pending" });
+
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/api/pool-groups/group-1/release-attendance`, { method: "POST" });
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.attendanceStatus).toBe("pending");
+      expect(storageMock.updateAttendanceStatus).not.toHaveBeenCalled();
+    });
+  });
+});

@@ -177,7 +177,6 @@ export default function MatchingStatusPage() {
           <View className={`matching-status__error ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
             <StatusCard
               tone='info'
-              icon='😕'
               title='没有找到报名记录'
               action={{
                 label: '返回',
@@ -359,7 +358,7 @@ export default function MatchingStatusPage() {
                 <Text className='matching-status__full-pool-title'>这一桌已经满员</Text>
               </View>
               <Text className='matching-status__full-pool-text'>
-                名额已满，悦仔正在完成最后的成桌确认，匹配结果会第一时间通知你。
+                名额已满，悦仔正在完成最后的成桌确认，排桌结果会第一时间通知你。
               </Text>
             </View>
             <Button
@@ -407,7 +406,7 @@ export default function MatchingStatusPage() {
           district={currentRegistration.poolDistrict ?? undefined}
           venueName={effectiveGroupDetails?.group.venueName || currentRegistration.venueName || undefined}
           status={currentRegistration.matchStatus ?? undefined}
-          footerHint={currentRegistration.matchScore != null ? `合拍分 ${currentRegistration.matchScore}` : undefined}
+          footerHint={currentRegistration.matchScore != null ? `合拍度 ${currentRegistration.matchScore}分` : undefined}
           reduceMotion={shouldReduceMotion}
           animationDelay={shouldReduceMotion ? undefined : '120ms'}
         />
@@ -478,7 +477,7 @@ export default function MatchingStatusPage() {
             className='matching-status__secondary-btn'
             onClick={handleRefreshWaitingState}
           >
-            刷新匹配进度
+            刷新排桌进度
           </Button>
         ) : null}
 

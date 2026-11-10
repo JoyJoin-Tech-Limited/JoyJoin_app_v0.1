@@ -16,6 +16,8 @@ import {
  */
 const dbState = vi.hoisted(() => ({
   selectQueue: [] as unknown[][],
+  /** Rows returned by `db.execute` (the absence lookup). Empty = nobody absent. */
+  executeRows: [] as unknown[],
 }));
 
 vi.mock("../db", () => ({
@@ -30,6 +32,7 @@ vi.mock("../db", () => ({
         }),
       })),
     })),
+    execute: vi.fn(async () => ({ rows: dbState.executeRows })),
   },
 }));
 
@@ -144,6 +147,7 @@ describe("subscribe reminder tick — recap fan-out", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbState.selectQueue = [];
+    dbState.executeRows = [];
   });
 
   it("recap tick sends the push and fans out in-app feedback invites to all matched+completed members", async () => {
@@ -173,6 +177,29 @@ describe("subscribe reminder tick — recap fan-out", () => {
     expect(deps.createFeedbackInvites).toHaveBeenCalledTimes(1);
     expect(deps.createFeedbackInvites).toHaveBeenCalledWith("pool-1", ["user-a", "user-b"]);
     expect(deps.sendEventDay).not.toHaveBeenCalled();
+  });
+
+it("drops an explicitly absent attendee from the recap push and the in-app invite", async () => {
+    dbState.selectQueue = [
+      [{ id: "pool-1", title: "周五夜聊酒局", dateTime: POOL_TIME }],
+      [
+        { userId: "user-a", assignedGroupId: "group-1" },
+        { userId: "user-b", assignedGroupId: "group-1" },
+      ],
+    ];
+    // user-b told us they could not come: the on-screen feedback entry is
+    // already ineligible, so the reminder must not summon them either.
+    dbState.executeRows = [{ user_id: "user-b" }];
+    const deps = makeDeps();
+    const scheduler = createSubscribeReminderScheduler(deps);
+
+    await scheduler.run();
+
+    expect(deps.sendRecap).toHaveBeenCalledWith(
+      ["user-a"],
+      expect.objectContaining({ poolId: "pool-1" }),
+    );
+    expect(deps.createFeedbackInvites).toHaveBeenCalledWith("pool-1", ["user-a"]);
   });
 
   it("a pool scan with no eligible pools (e.g. test pools excluded by SQL) produces zero sends and zero invites", async () => {

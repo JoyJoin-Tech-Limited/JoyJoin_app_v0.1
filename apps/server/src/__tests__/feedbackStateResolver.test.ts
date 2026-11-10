@@ -17,13 +17,22 @@ import {
  *   events.id     → eventPools ✗, events, eventPoolGroups(by eventId), …
  *   blind-box id  → eventPools ✗, events ✗, eventPoolGroups(by blindBoxEventId), …
  */
-function createDbMock(results: unknown[][]) {
+function createDbMock(
+  results: unknown[][],
+  absence: { group?: unknown[]; attendance?: unknown[] } = {},
+) {
   const queue = [...results];
   return {
-    select: vi.fn(() => ({
+    select: vi.fn((fields: Record<string, unknown> = {}) => ({
       from: vi.fn(() => ({
         where: vi.fn(() => ({
-          limit: vi.fn(async () => queue.shift() ?? []),
+          limit: vi.fn(async () => {
+            // The explicit-absence probe (intent rows, D-I2) is answered here so
+            // the positional queue keeps describing only the eligibility chain.
+            if ("blindBoxEventId" in fields) return absence.group ?? [];
+            if ("attendanceStatus" in fields) return absence.attendance ?? [];
+            return queue.shift() ?? [];
+          }),
         })),
       })),
     })),
@@ -297,5 +306,57 @@ describe("resolveFeedbackState — unknown ids", () => {
       database: db as never,
     });
     expect(result).toBeNull();
+  });
+});
+
+describe("resolveFeedbackState — explicit absence (D-I2)", () => {
+  const ABSENCE_GROUP = [{ blindBoxEventId: "bb-1" }];
+
+  it("makes an explicitly absent attendee ineligible", async () => {
+    const db = createDbMock(
+      [[MATCHED_POOL], [MATCHED_REGISTRATION], [GROUP_WITH_EVENT], []],
+      { group: ABSENCE_GROUP, attendance: [{ attendanceStatus: "absent" }] },
+    );
+    const result = await resolveFeedbackState("pool-1", "user-1", {
+      now: new Date(OPENS_AT + 60_000),
+      database: db as never,
+    });
+    expect(result?.state).toBe("ineligible");
+  });
+
+  it("keeps a pending RSVP eligible — silence is never read as absence", async () => {
+    const db = createDbMock(
+      [[MATCHED_POOL], [MATCHED_REGISTRATION], [GROUP_WITH_EVENT], []],
+      { group: ABSENCE_GROUP, attendance: [{ attendanceStatus: "pending" }] },
+    );
+    const result = await resolveFeedbackState("pool-1", "user-1", {
+      now: new Date(OPENS_AT + 60_000),
+      database: db as never,
+    });
+    expect(result?.state).toBe("open");
+  });
+
+  it("keeps a self-reported confirmed RSVP eligible", async () => {
+    const db = createDbMock(
+      [[MATCHED_POOL], [MATCHED_REGISTRATION], [GROUP_WITH_EVENT], []],
+      { group: ABSENCE_GROUP, attendance: [{ attendanceStatus: "confirmed" }] },
+    );
+    const result = await resolveFeedbackState("pool-1", "user-1", {
+      now: new Date(OPENS_AT + 60_000),
+      database: db as never,
+    });
+    expect(result?.state).toBe("open");
+  });
+
+  it("stays eligible when no attendance row exists at all", async () => {
+    const db = createDbMock(
+      [[MATCHED_POOL], [MATCHED_REGISTRATION], [GROUP_WITH_EVENT], []],
+      { group: ABSENCE_GROUP, attendance: [] },
+    );
+    const result = await resolveFeedbackState("pool-1", "user-1", {
+      now: new Date(OPENS_AT + 60_000),
+      database: db as never,
+    });
+    expect(result?.state).toBe("open");
   });
 });

@@ -248,8 +248,10 @@ export function getPaidAttendanceExclusion(fact: PaidAttendanceFact): PaidAttend
   if (fact.accessKind === "free_or_unpaid" || fact.paymentState !== "completed") return "not_paid";
   if (fact.lifecycleStatus === "cancelled" || fact.attendanceStatus === "absent") return "unattended";
 
+  // `confirmed` is the user's own RSVP, not an arrival fact. Counting it as
+  // attendance inflates the repeat-attendance KPI with people who said they
+  // would come, so only operator/check-in written states count here.
   const attended = fact.lifecycleStatus === "attended"
-    || fact.attendanceStatus === "confirmed"
     || fact.attendanceStatus === "late";
   return attended ? null : "unattended";
 }

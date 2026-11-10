@@ -418,6 +418,21 @@ export function confirmPoolGroupAttendance(
   })
 }
 
+/**
+ * Release a self-reported RSVP (2026-11-11, D-I1B). Confirming attendance is a
+ * commitment, not a one-way switch — the server only accepts this before the
+ * event starts and never downgrades an operator-written `late`/`absent`.
+ */
+export function releasePoolGroupAttendance(
+  api: ApiTransport,
+  groupId: string
+): Promise<ConfirmPoolGroupAttendanceResponse> {
+  return api<ConfirmPoolGroupAttendanceResponse>({
+    path: `/api/pool-groups/${encodeURIComponent(groupId)}/release-attendance`,
+    method: 'POST',
+  })
+}
+
 export function getPoolPersonaSnapshot(
   api: ApiTransport,
   poolId: string

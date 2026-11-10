@@ -8,7 +8,7 @@
  *   open       — window open, nothing submitted yet
  *   submitted  — this user already submitted feedback for the event
  *   ineligible — 未成行 / refunded / cancelled / collapsed / never joined
- *   closed     — reserved for a future window close; never emitted today (D2)
+ *   closed     — window shut (start + 7 days); POST answers 409
  *
  * Shared by the POST /api/events/:eventId/feedback gate (403/409 coded
  * rejections) and GET /api/events/:eventId/feedback-state (the client button
@@ -40,8 +40,10 @@
  *                        'unmatched' — both land on ineligible.
  *   - blind-box/legacy — a non-cancelled event_attendance row, and the event
  *                        itself is not cancelled.
- *   no-show (attendanceStatus='absent') stays eligible this iteration —
- *   attendance-gating is an explicit follow-up (plan §6).
+ *   An explicitly written `absent` (self-report or admin override) is
+ *   ineligible — a person who said they are not coming has nothing to
+ *   review. `pending`, `confirmed`, `late` and a missing row stay eligible:
+ *   silence is never read as absence (PM decision 2026-11-11).
  */
 
 import { and, eq, ne } from "drizzle-orm";
@@ -60,6 +62,9 @@ import { POOL_COMPLETION_BUFFER_MS } from "./poolCompletionSweep";
 
 /** Feedback opens when the event has (very likely) wrapped up: start + 3h. */
 export const FEEDBACK_OPEN_OFFSET_MS = POOL_COMPLETION_BUFFER_MS;
+/** Feedback closes this long after the start — same seven-day rule seen by
+ *  the GET state, the POST gate, and the recap reminder scheduler. */
+export const FEEDBACK_CLOSE_OFFSET_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** D5: pool-side eligibility = the user was actually placed at a table. */
 export const FEEDBACK_ELIGIBLE_MATCH_STATUSES: readonly string[] = ["matched", "completed"];
@@ -197,6 +202,39 @@ export async function resolveFeedbackState(
 }
 
 /**
+ * Did the viewer explicitly tell us they were not coming? `absent` is only
+ * ever written by a self-report or an admin override — never by a clock — so
+ * a missing row can never be read as absence.
+ */
+async function hasExplicitAbsence(
+  database: FeedbackDb,
+  assignedGroupId: string | null | undefined,
+  userId: string,
+): Promise<boolean> {
+  if (!assignedGroupId) return false;
+
+  const [group] = await database
+    .select({ blindBoxEventId: eventPoolGroups.blindBoxEventId })
+    .from(eventPoolGroups)
+    .where(eq(eventPoolGroups.id, assignedGroupId))
+    .limit(1);
+  if (!group?.blindBoxEventId) return false;
+
+  const [attendance] = await database
+    .select({ attendanceStatus: eventAttendance.attendanceStatus })
+    .from(eventAttendance)
+    .where(
+      and(
+        eq(eventAttendance.blindBoxEventId, group.blindBoxEventId),
+        eq(eventAttendance.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  return attendance?.attendanceStatus === "absent";
+}
+
+/**
  * Pool-family rule set (D5 + D1): pool not cancelled/archived, registration
  * in an eligible match status, then submitted/window on the canonical event.
  * `canonicalEventIdOverride` covers callers that already hold the derived
@@ -227,6 +265,15 @@ async function resolvePoolFeedbackState(
     )
     .limit(1);
   if (!registration || !registration.matchStatus || !FEEDBACK_ELIGIBLE_MATCH_STATUSES.includes(registration.matchStatus)) {
+    return { state: "ineligible", canonicalEventId: canonicalEventIdOverride ?? null };
+  }
+
+  // Explicit absence loses the right to review (PM decision 2026-11-11).
+  // Someone who told us they are not coming cannot score the table they did
+  // not sit at — and their rating would be fake signal for venue/table
+  // quality. Only an explicitly written 'absent' row counts: pending,
+  // confirmed, late and a missing row all stay eligible (fail-open).
+  if (await hasExplicitAbsence(database, registration.assignedGroupId, userId)) {
     return { state: "ineligible", canonicalEventId: canonicalEventIdOverride ?? null };
   }
 
@@ -302,5 +349,17 @@ async function resolveSubmittedOrWindow(
     return { state: "locked", canonicalEventId };
   }
   const opensAtMs = eventDateTime.getTime() + FEEDBACK_OPEN_OFFSET_MS;
-  return { state: now.getTime() >= opensAtMs ? "open" : "locked", canonicalEventId };
+  if (now.getTime() < opensAtMs) {
+    return { state: "locked", canonicalEventId };
+  }
+  // Window close (2026-11-11): a review of a night two months old is a
+  // different signal from a next-morning one, and an unbounded window let
+  // submissions land after the 30-day connection cleanup that they were
+  // supposed to feed. Seven days after the start is long enough for the
+  // weekend crowd and short enough to keep the signal honest.
+  const closesAtMs = eventDateTime.getTime() + FEEDBACK_CLOSE_OFFSET_MS;
+  if (now.getTime() >= closesAtMs) {
+    return { state: "closed", canonicalEventId };
+  }
+  return { state: "open", canonicalEventId };
 }

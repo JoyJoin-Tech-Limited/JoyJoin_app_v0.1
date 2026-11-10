@@ -142,3 +142,90 @@ export async function notifyRevealedConnections(
 
   return result;
 }
+
+/**
+ * Expired reveal notification (2026-11-11, tier 2 P2-5).
+ *
+ * `expireIneligibleRevealSelections()` drops a due `mutual_pending` pair when a
+ * side is no longer seated (refunded / cancelled / no-show). Before this, the
+ * initiator waited for a reveal that could never happen — silent failure, the
+ * worst kind of dead end. One neutral line closes the loop.
+ *
+ * Copy rules: never the peer's name, never the reason, never blame. The user is
+ * told only that this pairing did not land and that the next one can.
+ */
+export const CONNECTION_EXPIRED_NOTIFICATION = {
+  category: "chat",
+  type: "mutual_match_expired",
+  title: "这次没对上",
+  message: "你等的那位这次先没能坐过来，下次还有机会",
+} as const;
+
+export interface ExpiredRevealNotificationResult {
+  notified: number;
+  skippedDuplicates: number;
+  failed: number;
+}
+
+/**
+ * Insert one notification for the initiator of each expired pair.
+ *
+ * Idempotent by the same `WHERE NOT EXISTS (user + type + related_resource_id)`
+ * guard the reveal fan-out uses, so a retried tick cannot double-send.
+ */
+export async function notifyExpiredRevealSelections(
+  pairs: ReadonlyArray<{ id: string; initiatorId: string | null }>,
+  options: {
+    executor?: RevealNotificationExecutor;
+    limit?: number;
+  } = {},
+): Promise<ExpiredRevealNotificationResult> {
+  const executor: RevealNotificationExecutor = options.executor ?? db;
+  const limit = Math.max(
+    0,
+    Math.min(options.limit ?? REVEAL_NOTIFICATION_BATCH_LIMIT, REVEAL_NOTIFICATION_BATCH_LIMIT),
+  );
+
+  const result: ExpiredRevealNotificationResult = { notified: 0, skippedDuplicates: 0, failed: 0 };
+
+  for (const pair of pairs.slice(0, limit)) {
+    if (!pair.id || !pair.initiatorId) continue;
+    try {
+      const inserted = await executor.execute(sql`
+        INSERT INTO notifications (user_id, category, type, title, message, related_resource_id, is_read)
+        SELECT ${pair.initiatorId}, ${CONNECTION_EXPIRED_NOTIFICATION.category}, ${CONNECTION_EXPIRED_NOTIFICATION.type}, ${CONNECTION_EXPIRED_NOTIFICATION.title}, ${CONNECTION_EXPIRED_NOTIFICATION.message}, ${pair.id}, false
+        WHERE NOT EXISTS (
+          SELECT 1 FROM notifications n
+          WHERE n.user_id = ${pair.initiatorId}
+            AND n.type = ${CONNECTION_EXPIRED_NOTIFICATION.type}
+            AND n.related_resource_id = ${pair.id}
+        )
+        ON CONFLICT DO NOTHING
+        RETURNING id
+      `);
+
+      if (Array.isArray(inserted?.rows) && inserted.rows.length > 0) {
+        result.notified += 1;
+      } else {
+        result.skippedDuplicates += 1;
+      }
+    } catch (error) {
+      result.failed += 1;
+      logger.warn("[Connections] Expired-selection notification failed", {
+        connectionId: pair.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  if (result.notified > 0 || result.failed > 0) {
+    // Counts only — never a user id, never a pair.
+    logger.info("[Connections] Expired-selection notifications dispatched", {
+      notified: result.notified,
+      skipped_duplicates: result.skippedDuplicates,
+      failed: result.failed,
+    });
+  }
+
+  return result;
+}

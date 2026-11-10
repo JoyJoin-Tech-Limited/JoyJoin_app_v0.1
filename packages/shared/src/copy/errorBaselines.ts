@@ -73,6 +73,13 @@ export type ErrorCode =
   | 'FEEDBACK_NOT_OPEN'
   | 'FEEDBACK_NOT_ELIGIBLE'
   | 'FEEDBACK_ALREADY_SUBMITTED'
+  // Window close (2026-11-11): the seven-day window shut; the run was recorded
+  // but the conversation can no longer be re-scored.
+  | 'FEEDBACK_WINDOW_CLOSED'
+  // Attendance RSVP release (2026-11-11, D-I1B): the only two ways a release
+  // request can be refused — the window shut, or the state is an operator fact.
+  | 'ATTENDANCE_WINDOW_CLOSED'
+  | 'ATTENDANCE_NOT_RELEASABLE'
   // WeChat contact-ID collection (2026-10-16, spec
   // docs/design/wechat-id-collection-spec-20261016.md): emitted by
   // POST /api/user/wechat-contact when the server-side revalidation rejects
@@ -324,6 +331,18 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   FEEDBACK_NOT_OPEN: {
     surface: 'toast-error',
     default: '活动还没结束，结束后再来聊聊感受吧',
+  },
+  FEEDBACK_WINDOW_CLOSED: {
+    surface: 'toast-error',
+    default: '评价窗口已关闭，下次活动再来聊聊感受吧',
+  },
+  ATTENDANCE_WINDOW_CLOSED: {
+    surface: 'toast-error',
+    default: '活动已开始，无法再更改出席确认',
+  },
+  ATTENDANCE_NOT_RELEASABLE: {
+    surface: 'toast-error',
+    default: '已记录为晚到，无法撤销',
   },
   FEEDBACK_NOT_ELIGIBLE: {
     surface: 'toast-error',

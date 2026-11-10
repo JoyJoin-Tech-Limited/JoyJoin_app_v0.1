@@ -42,7 +42,7 @@ import {
   finalizeConnectionReveals,
   purgeClosedConnectionSelections,
 } from "../repositories/connectionSelectionRepo";
-import { notifyRevealedConnections } from "./connectionRevealNotifications";
+import { notifyRevealedConnections, notifyExpiredRevealSelections } from "./connectionRevealNotifications";
 
 /** One minute: the reveal instant is minute-granular, so this bounds the delay. */
 export const CONNECTION_REVEAL_INTERVAL_MS = 60_000;
@@ -101,6 +101,20 @@ export async function runConnectionRevealTick(
     try {
       const expiredResult = await expireIneligibleRevealSelections({ now });
       expired = expiredResult.expired;
+      // Close the loop with the initiator (P2-5): the pair is gone, so a silent
+      // delete would leave them waiting on a reveal that can never arrive.
+      if (expiredResult.expiredPairs.length > 0) {
+        try {
+          await notifyExpiredRevealSelections(expiredResult.expiredPairs);
+        } catch (expiredNotifyError) {
+          logger.warn("[Connections] Expired-selection notification fan-out failed", {
+            error:
+              expiredNotifyError instanceof Error
+                ? expiredNotifyError.message
+                : String(expiredNotifyError),
+          });
+        }
+      }
     } catch (expireError) {
       logger.warn("[Connections] ineligible reveal expiration failed", {
         error: expireError instanceof Error ? expireError.message : String(expireError),

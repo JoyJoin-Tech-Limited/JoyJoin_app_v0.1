@@ -43,8 +43,11 @@ function fact(overrides: Partial<PaidAttendanceFact> = {}): PaidAttendanceFact {
     eventStartAt: atShanghai("2026-01-01"),
     accessKind: "single_event_payment",
     paymentState: "completed",
+    // Default fixture is an arrived attendee: the event lifecycle says attended.
+    // A self-reported RSVP (`lifecycleStatus: "confirmed"`) is explicitly not
+    // attendance — see the dedicated case below.
     attendanceStatus: "confirmed",
-    lifecycleStatus: "confirmed",
+    lifecycleStatus: "attended",
     isStaff: false,
     isBot: false,
     isTestPool: false,
@@ -112,12 +115,25 @@ describe("eligible paid-attendance classification", () => {
     ["refund-pending payment", { paymentState: "refund_pending" }, "not_paid"],
     ["free/unpaid access", { accessKind: "free_or_unpaid" }, "not_paid"],
     ["ops-marked no-show", { attendanceStatus: "absent" }, "unattended"],
-    ["unattended/pending intent", { attendanceStatus: "pending" }, "unattended"],
+    ["unattended/pending intent", { attendanceStatus: "pending", lifecycleStatus: null }, "unattended"],
     ["cancelled attendance", { lifecycleStatus: "cancelled" }, "unattended"],
+    [
+      "self-reported RSVP without an arrival fact",
+      { attendanceStatus: "confirmed", lifecycleStatus: "confirmed" },
+      "unattended",
+    ],
   ] as const)("excludes %s", (_label, overrides, reason) => {
     const candidate = fact(overrides);
     expect(getPaidAttendanceExclusion(candidate)).toBe(reason);
     expect(isEligiblePaidAttendance(candidate)).toBe(false);
+  });
+
+  it("treats a self-reported RSVP as intent, not attendance", () => {
+    // The KPI must not be inflated by people who merely said they would come:
+    // only operator/check-in written arrival (`attended`) or `late` counts.
+    const rsvpOnly = fact({ attendanceStatus: "confirmed", lifecycleStatus: "confirmed" });
+    expect(isEligiblePaidAttendance(rsvpOnly)).toBe(false);
+    expect(isEligiblePaidAttendance({ ...rsvpOnly, lifecycleStatus: "attended" })).toBe(true);
   });
 });
 

@@ -714,7 +714,7 @@ describe('finalizeConnectionReveals — seat eligibility gate', () => {
 
     await expect(
       expireIneligibleRevealSelections({ now: REVEAL_AT, executor: { execute } as any }),
-    ).resolves.toEqual({ expired: 0 });
+    ).resolves.toEqual({ expired: 0, expiredPairs: [] });
   });
 });
 

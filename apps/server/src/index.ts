@@ -19,6 +19,7 @@ import { startVenueTbdRetryScheduler } from "./lib/venueTbdRetryScheduler";
 import { startSubscribeReminderScheduler } from "./lib/subscribeReminderScheduler";
 import { startPoolCompletionSweepScheduler } from "./lib/poolCompletionSweep";
 import { startPoolDeadlineMatchScheduler } from "./lib/poolDeadlineMatchScheduler";
+import { startPoolOrphanRegistrationScheduler } from "./lib/poolOrphanRegistrationReconciler";
 import { startConnectionRevealScheduler } from "./lib/connectionRevealScheduler";
 import { startSocialAgentEventsRetentionScheduler } from "./lib/socialAgentEventsRetention";
 import { validateConfig } from "./lib/configValidation";
@@ -213,6 +214,9 @@ app.use((req, res, next) => {
       // with no refund. This runs the same scan once the deadline passes and
       // routes an unformable pool through the existing 场次未成行 refund path.
       startPoolDeadlineMatchScheduler();
+      // Backstop for payments that land after 排桌 committed / the pool was
+      // cancelled: stranded `pending` registrations get refunded within 15 min.
+      startPoolOrphanRegistrationScheduler();
       // Reveal sweep (G0, 2026-11-10): flip due `mutual_pending` connections to
       // `mutual` at each table's reveal instant. Inert unless
       // `mutualSelectionV2Enabled` is ON (flag default false); a failure is

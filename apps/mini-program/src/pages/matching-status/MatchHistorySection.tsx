@@ -76,7 +76,7 @@ export default function MatchHistorySection({
             {match.matchScore ? (
               <View className='matching-status__history-card-score'>
                 <Text className='matching-status__history-score-value'>{match.matchScore}</Text>
-                <Text className='matching-status__history-score-label'>合拍分</Text>
+                <Text className='matching-status__history-score-label'>合拍度</Text>
               </View>
             ) : null}
             <View className='matching-status__history-card-arrow'>

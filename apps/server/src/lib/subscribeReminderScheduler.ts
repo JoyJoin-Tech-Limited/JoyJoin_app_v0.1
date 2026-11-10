@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNotNull, lte, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
 import { eventPoolGroups, eventPoolRegistrations, eventPools, notifications } from "@shared/schema";
 import { db } from "../db";
 import { getFeatureFlag } from "./featureFlags";
@@ -142,6 +142,41 @@ async function findMatchedMembers(poolId: string): Promise<MatchedMemberRow[]> {
   return rows;
 }
 
+/**
+ * Users who explicitly said they could not make it (D-I2 delivery parity,
+ * 2026-11-11). `feedbackStateResolver` already makes them ineligible on screen;
+ * without this filter the T+1 recap push would still summon them to review an
+ * event they did not attend — the exact "wrong twice" the product rejects.
+ *
+ * Fail-open by contract: a lookup error returns an empty set (send everyone),
+ * because a missing recap is worse than one extra nudge.
+ */
+async function findExplicitlyAbsentUsers(poolId: string): Promise<Set<string>> {
+  try {
+    const result = await db.execute(sql`
+      SELECT DISTINCT ea.user_id AS user_id
+      FROM event_attendance ea
+      JOIN blind_box_events bbe ON bbe.id = ea.blind_box_event_id
+      WHERE bbe.pool_id = ${poolId}
+        AND ea.attendance_status = 'absent'
+    `);
+    const rows = (Array.isArray((result as { rows?: unknown[] })?.rows)
+      ? (result as { rows: Array<{ user_id?: string | null }> }).rows
+      : []);
+    const absent = new Set<string>();
+    for (const row of rows) {
+      if (row?.user_id) absent.add(row.user_id);
+    }
+    return absent;
+  } catch (error) {
+    logger.warn("[SubscribeReminder] absence lookup failed; sending to everyone", {
+      poolId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return new Set();
+  }
+}
+
 async function findGroupVenues(poolId: string): Promise<Map<string, string>> {
   const rows: Array<{ id: string; venueName: string | null }> = await db
     .select({ id: eventPoolGroups.id, venueName: eventPoolGroups.venueName })
@@ -282,7 +317,10 @@ export function createSubscribeReminderScheduler(
             });
           }
         } else {
-          const members = await findMatchedMembers(pool.id);
+          const absentUsers = await findExplicitlyAbsentUsers(pool.id);
+          const members = (await findMatchedMembers(pool.id)).filter(
+            (member) => !absentUsers.has(member.userId),
+          );
           if (members.length === 0) continue;
           const memberIds = members.map((member) => member.userId);
           await dependencies.sendRecap(
