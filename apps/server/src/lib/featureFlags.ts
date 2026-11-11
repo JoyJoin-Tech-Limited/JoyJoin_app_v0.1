@@ -170,6 +170,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  approve or reject the formed groups. Default: true. Env fallback:
    *  MATCHING_OPERATOR_REVIEW_ENABLED. */
   matchingOperatorReviewEnabled: "MATCHING_OPERATOR_REVIEW_ENABLED",
+  /** D3: time-decayed per-person admission floor. Default false; staged
+   *  pilot/global rollout via PAIR_FLOOR_CURVE_ROLLOUT_SCOPE. Env fallback:
+   *  PAIR_FLOOR_CURVE_ENABLED (default: false). */
+  pairFloorCurveEnabled: "PAIR_FLOOR_CURVE_ENABLED",
   /** Magnetism Engine Phase 0 / W2: hard-skip (-1 sentinel) for pairs whose
    *  match_history says either member would NOT meet again. Policy-pending
    *  (docs/systems/MAGNETISM_ENGINE.md §7) — default false so writing real
@@ -570,6 +574,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  （通知 / 场地分配 / 邀请奖励）全部不执行，用户看到的是「排桌中」卡死。
    *  冷启动阶段没有值班运营，必须显式关；要做人工复核时连同 SOP + 告警一起开。 */
   matchingOperatorReviewEnabled: false,
+  /** D3 临期准入曲线 — default OFF; pilot/global rollout is a separate scope. */
+  pairFloorCurveEnabled: false,
   /** Auto-refund pipeline (2026-08-05) — default ON; ops kill switch. */
   autoRefundEnabled: true,
   /** 双人成行 — default ON; ships enabled. */

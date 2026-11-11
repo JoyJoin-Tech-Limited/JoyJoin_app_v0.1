@@ -32,6 +32,7 @@ import {
 import { resolveDuoBindingAvailability } from "../../repositories/duoBindingRepo";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
+import { findPoolOverflowAlternatives } from "../../lib/poolOverflowAlternatives";
 import { resolveEntitlementMode } from "../../lib/entitlement";
 import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
 import { attendanceRepo } from "../../repositories/attendanceRepo";
@@ -704,9 +705,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
       );
 
       if (!availability.allowed) {
+        const alternatives =
+          availability.code === "POOL_FULL"
+            ? await findPoolOverflowAlternatives(poolId)
+            : [];
         return res.status(availability.status).json({
           message: availability.message,
           code: availability.code,
+          ...(alternatives.length > 0 ? { alternatives } : {}),
         });
       }
 
@@ -1124,9 +1130,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
           REGISTRATION_DEADLINE_PASSED: "报名已截止",
           POOL_FULL: "该活动已满员",
         };
+        const alternatives =
+          availability.code === "POOL_FULL"
+            ? await findPoolOverflowAlternatives(poolId)
+            : [];
         return res.status(availability.status).json({
           message: messageMap[availability.code] ?? availability.message,
           code: availability.code,
+          ...(alternatives.length > 0 ? { alternatives } : {}),
         });
       }
 

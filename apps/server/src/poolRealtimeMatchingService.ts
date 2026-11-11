@@ -23,6 +23,8 @@ import {
   getMatchingThresholdConfig,
   type MatchingThresholdsConfig,
 } from "./lib/matchingThresholds";
+import { resolvePairFloorForPool } from "./lib/pairFloorRollout";
+import { calculateDecayedThreshold } from "./matching/matchingCurve";
 import { notifyLowRegistration } from "./lib/wecomNotifications";
 import {
   countMatchingShadowExperimentPools,
@@ -57,56 +59,13 @@ async function persistPredictiveRerankAutoDisable(reason: string) {
     .where(eq(matchingThresholds.isActive, true));
 }
 
-/** 时间衰减曲线在多少天内达到最严格（此后封顶，不再继续抬高门槛）。 */
-const EARLY_MATCH_STRICTNESS_DAYS = 7;
-
 /** 报名池达到容量的这个比例，视为报名画像足够完整，可以提前排桌。 */
 export const EARLY_MATCH_FILL_RATIO = 0.8;
 
 /** 距报名截止多少小时内进入排桌窗口，不再要求池满。 */
 export const EARLY_MATCH_WINDOW_HOURS = 48;
 
-/**
- * 计算随“距离活动开始的时间”变化的排桌阈值。
- *
- * 逻辑（2026-11-10 修正方向 —— 原实现把方向写反了）：
- * - 离活动越远，门槛越高：提前排桌会让活动池离开 active，后面报名的人直接被
- *   POOL_CLOSED 挡住，池子的最终画像停在触发那一刻，所以只有平均分接近
- *   highCompatibilityThreshold 时才允许提前排桌。
- * - 离活动越近，门槛越低：最后几天让位于“成局确定性”，逐日回落到
- *   minThresholdAfterDecay，避免本来能成的局因为差几分而空转。
- * - 曲线在 EARLY_MATCH_STRICTNESS_DAYS 天外封顶，且永不超过
- *   highCompatibilityThreshold（该分数另有“高兼容立即成局”通道）。
- */
-function calculateDecayedThreshold(
-  baseThreshold: number,
-  hoursUntilEvent: number,
-  config: MatchingThresholdsConfig
-): number {
-  if (!config.timeDecayEnabled) {
-    return baseThreshold;
-  }
-
-  const daysUntilEvent = Math.max(0, hoursUntilEvent) / 24;
-  const ceiling = Math.max(
-    baseThreshold,
-    Math.min(
-      config.highCompatibilityThreshold,
-      baseThreshold + config.timeDecayRate * EARLY_MATCH_STRICTNESS_DAYS
-    )
-  );
-  const strictness = Math.min(
-    1,
-    Math.max(0, daysUntilEvent / EARLY_MATCH_STRICTNESS_DAYS)
-  );
-  const threshold =
-    config.minThresholdAfterDecay +
-    (ceiling - config.minThresholdAfterDecay) * strictness;
-
-  return Math.round(
-    Math.min(ceiling, Math.max(config.minThresholdAfterDecay, threshold))
-  );
-}
+/** 时间衰减阈值实现已移至 ./matching/matchingCurve（D3 单一尺子）。 */
 
 export interface EarlyMatchGateInput {
   triggeredBy: string;
@@ -335,6 +294,13 @@ async function runScanPoolAndMatch(
     config
   );
 
+  // D3: resolve the per-person floor once per scan; the formation core never
+  // receives a clock or config it could use to recompute it.
+  const pairFloorResolution = await resolvePairFloorForPool(pool, {
+    config,
+    hoursUntilEvent,
+  });
+
   // 6. 检查是否有足够的人数
   const minGroupSize = config.minGroupSizeForMatch || pool.minGroupSize || 4;
   if (pendingUsersCount < minGroupSize) {
@@ -370,6 +336,7 @@ async function runScanPoolAndMatch(
         scanType,
         pendingUsersCount,
         currentThreshold,
+        pairFloor: pairFloorResolution.pairFloor,
         timeUntilEvent: hoursUntilEvent,
         groupsFormed: 0,
         usersMatched: 0,
@@ -436,6 +403,7 @@ async function runScanPoolAndMatch(
       scanType,
       pendingUsersCount,
       currentThreshold,
+      pairFloor: pairFloorResolution.pairFloor,
       timeUntilEvent: hoursUntilEvent,
       groupsFormed: 0,
       usersMatched: 0,
@@ -463,7 +431,7 @@ async function runScanPoolAndMatch(
   let predictiveDecisionArm: SaveMatchResultsOptions["predictiveExperimentArm"] | undefined;
   let predictiveRerankApplied = false;
   try {
-    groups = await matchEventPool(poolId);
+    groups = await matchEventPool(poolId, pairFloorResolution.pairFloor);
     const overrideForceEnabled = pool.predictiveRerankEnabledOverride === true;
     const predictiveRerankEligibleForEvaluation =
       pool.predictiveRerankEnabledOverride !== false &&
@@ -526,6 +494,7 @@ async function runScanPoolAndMatch(
       scanType,
       pendingUsersCount,
       currentThreshold,
+      pairFloor: pairFloorResolution.pairFloor,
       timeUntilEvent: hoursUntilEvent,
       groupsFormed: 0,
       usersMatched: 0,
@@ -581,6 +550,7 @@ async function runScanPoolAndMatch(
         scanType,
         pendingUsersCount,
         currentThreshold,
+        pairFloor: pairFloorResolution.pairFloor,
         timeUntilEvent: hoursUntilEvent,
         groupsFormed: groups.length,
         usersMatched,
@@ -611,6 +581,7 @@ async function runScanPoolAndMatch(
       scanType,
       pendingUsersCount,
       currentThreshold,
+      pairFloor: pairFloorResolution.pairFloor,
       timeUntilEvent: hoursUntilEvent,
       groupsFormed: 0,
       usersMatched: 0,

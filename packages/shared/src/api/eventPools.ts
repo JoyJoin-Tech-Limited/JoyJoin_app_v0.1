@@ -463,6 +463,36 @@ export type GuestEventPreviewItem = z.infer<typeof guestEventPreviewItemSchema>
 
 export const guestEventPreviewResponseSchema = z.array(guestEventPreviewItemSchema)
 
+/**
+ * 撞满后的改签出口（D4, 2026-11-11）。
+ *
+ * 满员响应里附带的「还有空位的场」：同城、尽量同区、近 7 天内、`spotsLeft > 0`，
+ * 最多 3 个。客户端只把它渲染成「换一场」，绝不自动替用户改签。
+ */
+export interface PoolOverflowAlternative {
+  poolId: string
+  title: string
+  eventType: string | null
+  dateTime: string
+  city: string | null
+  district: string | null
+  price: number | null
+  spotsLeft: number
+}
+
+export const poolOverflowAlternativeSchema = z.object({
+  poolId: z.string(),
+  title: z.string(),
+  eventType: z.string().nullable(),
+  dateTime: z.string(),
+  city: z.string().nullable(),
+  district: z.string().nullable(),
+  price: z.number().nullable(),
+  spotsLeft: z.number().int().min(0),
+})
+
+export const poolOverflowAlternativesSchema = z.array(poolOverflowAlternativeSchema)
+
 export function getGuestEventPreview(
   api: ApiTransport,
   city?: string

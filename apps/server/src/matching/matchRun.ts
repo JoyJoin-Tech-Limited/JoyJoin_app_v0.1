@@ -17,6 +17,7 @@ import {
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { getFeatureFlag } from "../lib/featureFlags";
+import { resolvePairFloorForPool } from "../lib/pairFloorRollout";
 import {
   buildSemanticProfileCache,
   isAdaptiveWeightsEnabled,
@@ -43,7 +44,10 @@ import type { MatchGroup, UserWithProfile } from "./poolMatchingTypes";
  * 2. 贪婪地组建小组，确保每个小组质量
  * 3. 优化：调整边界成员以提升整体分数
  */
-export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
+export async function matchEventPool(
+  poolId: string,
+  pairFloorOverride?: number | null,
+): Promise<MatchGroup[]> {
   // 1. 获取活动池配置
   const pool = await db.query.eventPools.findFirst({
     where: eq(eventPools.id, poolId)
@@ -52,6 +56,13 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   if (!pool) {
     throw new Error("活动池不存在");
   }
+
+  // D3: the scan resolves the floor once and passes it in; direct callers
+  // (admin re-match, single-test, scripts) resolve it here. An explicit `null`
+  // means "flag off" and must not be re-resolved.
+  const pairFloor = pairFloorOverride === undefined
+    ? (await resolvePairFloorForPool(pool)).pairFloor
+    : pairFloorOverride;
   
   // 2. 获取所有报名者 + 用户资料
   const registrations = (await db
@@ -371,5 +382,6 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     tableViabilityFloorEnabled,
     matchHistoryNoveltyEnabled,
     xVarianceDispersionEnabled,
+    pairFloor,
   );
 }

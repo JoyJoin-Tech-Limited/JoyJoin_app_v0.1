@@ -114,6 +114,7 @@ export async function runGreedyPoolMatchingCore(
   // direct-core call sites (unit tests, other services) byte-identical;
   // matchEventPool threads the env-resolved default (ON).
   xVarianceDispersionEnabled = false,
+  pairFloor: number | null = null,
 ): Promise<MatchGroup[]> {
   // 4. 贪婪分组算法（优先处理邀请关系）
   const groups: MatchGroup[] = [];
@@ -198,6 +199,11 @@ export async function runGreedyPoolMatchingCore(
 
   // allowOverflow: relaxed mode permits soft overflow during redistribution
   const allowOverflow = effectiveStrictness <= 0 && isStrictnessEnabled;
+
+  // D3: near the event, the admission floor and R1 both follow the same
+  // time-decayed pair floor. `null` keeps the legacy strictness-derived values.
+  const effectiveMinPairScore = pairFloor ?? minPairScore;
+  const strongTieThreshold = pairFloor ?? MAGNETISM_STRONG_TIE_THRESHOLD;
 
   // 计算所有可能的配对分数，并为邀请关系加权
   const pairScores: { user1: UserWithProfile; user2: UserWithProfile; score: number; isInvited: boolean }[] = [];
@@ -351,7 +357,7 @@ export async function runGreedyPoolMatchingCore(
     strongTieDeficitExempt = true;
     outer: for (let i = 0; i < eligibleUsers.length; i++) {
       for (let j = i + 1; j < eligibleUsers.length; j++) {
-        if ((await getR1PairScore(eligibleUsers[i] as UserWithProfile, eligibleUsers[j] as UserWithProfile)) >= MAGNETISM_STRONG_TIE_THRESHOLD) {
+        if ((await getR1PairScore(eligibleUsers[i] as UserWithProfile, eligibleUsers[j] as UserWithProfile)) >= strongTieThreshold) {
           strongTieDeficitExempt = false;
           break outer;
         }
@@ -550,7 +556,7 @@ export async function runGreedyPoolMatchingCore(
         }
       }
 
-      if (bestCandidate && bestAvgScore >= minPairScore) { // 最低质量门槛（Match Compass可调节）
+      if (bestCandidate && bestAvgScore >= effectiveMinPairScore) { // 最低质量门槛（Match Compass可调节；D3 flag 开启时改用时间衰减下限）
         groupMembers.push(bestCandidate);
         used.add(bestCandidate.userId);
         // [DUO] Atomic admission: partner joins in the same step — a duo can
@@ -588,7 +594,7 @@ export async function runGreedyPoolMatchingCore(
     if (magnetismGroupRulesEnabled && groupMembers.length >= minGroupSize && genderFloorSatisfied) {
       // [DUO] R1 uses getR1PairScore so the duo-internal pair never counts as
       // a strong tie — each duo member individually needs a non-duo strong tie.
-      const strongTieSatisfied = await groupSatisfiesStrongTieRule(groupMembers, getR1PairScore);
+      const strongTieSatisfied = await groupSatisfiesStrongTieRule(groupMembers, getR1PairScore, strongTieThreshold);
       // R2 is skipped entirely when the pool has no energizer (see above).
       const energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(groupMembers);
       const topicAnchorSatisfied = groupHasTopicAnchor(groupMembers, interestsCache);
@@ -632,7 +638,7 @@ export async function runGreedyPoolMatchingCore(
     let tableViabilitySatisfied = true;
     if (tableViabilityActive && groupMembers.length >= minGroupSize && genderFloorSatisfied) {
       const noIsolateSatisfied = strongTieDeficitExempt ||
-        (await groupSatisfiesStrongTieRule(groupMembers, getR1PairScore));
+        (await groupSatisfiesStrongTieRule(groupMembers, getR1PairScore, strongTieThreshold));
       const energizerSatisfied = groupSatisfiesEnergizerRule(groupMembers, energizerDeficitExempt);
       tableViabilitySatisfied = noIsolateSatisfied && energizerSatisfied;
       if (!tableViabilitySatisfied) {
@@ -695,7 +701,8 @@ export async function runGreedyPoolMatchingCore(
         communicationBalance: communicationBalance,
         overallScore: overall,
         temperatureLevel: temperatureLevel,
-        explanation: ""
+        explanation: "",
+        pairFloorPolicy: pairFloor != null ? "curve_v1" : "legacy",
       };
 
       group.explanation = generateGroupExplanation(group);
@@ -731,7 +738,7 @@ export async function runGreedyPoolMatchingCore(
     let topicAnchorSatisfied = true;
     if (magnetismGroupRulesEnabled) {
       // [DUO] R1 excludes duo-internal ties (same wrapper as the commit gate).
-      strongTieSatisfied = await groupSatisfiesStrongTieRule(members, getR1PairScore);
+      strongTieSatisfied = await groupSatisfiesStrongTieRule(members, getR1PairScore, strongTieThreshold);
       energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(members);
       topicAnchorSatisfied = groupHasTopicAnchor(members, interestsCache);
     }
@@ -760,7 +767,7 @@ export async function runGreedyPoolMatchingCore(
     let tableEnergizerSatisfied = true;
     if (tableViabilityActive) {
       noIsolateSatisfied = strongTieDeficitExempt ||
-        (await groupSatisfiesStrongTieRule(members, getR1PairScore));
+        (await groupSatisfiesStrongTieRule(members, getR1PairScore, strongTieThreshold));
       tableEnergizerSatisfied = groupSatisfiesEnergizerRule(members, energizerDeficitExempt);
       tableViabilitySatisfied = noIsolateSatisfied && tableEnergizerSatisfied;
       if (!tableViabilitySatisfied) {

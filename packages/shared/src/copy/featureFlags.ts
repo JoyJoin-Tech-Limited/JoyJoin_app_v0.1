@@ -84,6 +84,7 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
   matchingLiveReveal: 'matching',
   matchingPuzzlePreludeEnabled: 'matching',
   matchingOperatorReviewEnabled: 'matching',
+  pairFloorCurveEnabled: 'matching',
   matchNeverMeetSentinel: 'matching',
   magnetismGroupRulesEnabled: 'matching',
   magnetismWeightProfileV2Enabled: 'matching',
@@ -194,6 +195,7 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
   matchingLiveReveal: '匹配结果实时揭晓',
   matchingPuzzlePreludeEnabled: '揭晓前拼图悬念',
   matchingOperatorReviewEnabled: '匹配结果人工复核',
+  pairFloorCurveEnabled: '临期准入曲线',
   matchNeverMeetSentinel: '不愿再见硬排除',
   magnetismGroupRulesEnabled: '惊艳开局组队规则',
   magnetismWeightProfileV2Enabled: '契合权重新方案',
@@ -332,6 +334,8 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
     '默认关闭。开启后，匹配状态页的实时揭晓阶段先展示抽象拼图悬念，再进入桌友身份展示；真实身份揭晓仍在桌友揭晓环节。【2026-10-22 停放】客户端已接线（useMatchingStatusController → MatchingStatusSections），但无 owner 与验收前置：开启前需在真机确认拼图悬念与桌友揭晓的时序衔接。',
   matchingOperatorReviewEnabled:
     '默认关闭。开启后，匹配结果先进入运营人工复核状态，确认后才通知用户并分配场地；关闭时匹配完成后立即自动通知与派场。冷启动阶段必须保持关闭——没有值班运营时开启会让排桌停在待复核，通知、场地分配、邀请奖励全部不执行。',
+  pairFloorCurveEnabled:
+    '默认关闭。开启后，临近活动的逐人准入下限按同一时间曲线下调（最低 45），无孤立者规则同步；关闭时沿用原固定门槛。先在 staging 与单个生产活动验证。',
   matchNeverMeetSentinel:
     '默认关闭，策略待审定，谨慎开启：开启后，历史记录中标记「不愿再见」的任意一方会被硬性排除出同桌；关闭时仅保留重逢加分，不做硬性排除。',
   magnetismGroupRulesEnabled:

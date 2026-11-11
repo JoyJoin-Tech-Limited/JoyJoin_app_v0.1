@@ -30,6 +30,7 @@ import {
   countUnassignedUpcomingVenues,
   getApprovalLatencyHours,
   getKpiSeries,
+  getMatchingQualityCohorts,
   getMatchLatencyHours,
   getUnderfilledPoolsClosingSoon,
   previousAdminRange,
@@ -236,6 +237,32 @@ async function buildActionQueue(): Promise<ActionQueueRow[]> {
 }
 
 export function registerAdminConsoleRoutes(app: Express): void {
+  /**
+   * GET /api/admin/matching-quality?from&to&days
+   *
+   * D3 counter-metrics: daily cohorts by pair-floor policy. Read-only, on
+   * demand (no dashboard fan-out). `share_below_50` is monitoring only.
+   */
+  app.get("/api/admin/matching-quality", requireAdmin, async (req, res) => {
+    try {
+      const parsed = rangeQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ code: "INVALID_RANGE", message: "时间范围参数无效" });
+      }
+
+      const data = await getMatchingQualityCohorts(resolveAdminRange(parsed.data));
+      return res.json(data);
+    } catch (error) {
+      logger.error("[Admin Console] matching-quality failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return res.status(500).json({
+        code: "MATCHING_QUALITY_FAILED",
+        message: "读取排桌质量数据失败",
+      });
+    }
+  });
+
   /**
    * GET /api/admin/kpi?from&to&days
    *

@@ -81,6 +81,7 @@ export interface MatchGroup {
   overallScore: number;  // 综合分数 = avgPairScore × 0.6 + diversityScore × 0.25 + communicationBalance × 0.15
   temperatureLevel: string;  // 化学反应温度等级：fire(🔥炽热85+) | warm(🌡️温暖70-84) | mild(🌤️适宜55-69) | cold(❄️冷淡<55)
   explanation: string;
+  pairFloorPolicy?: "legacy" | "curve_v1";
 }
 
 export interface SaveMatchResultsOptions {
@@ -101,6 +102,7 @@ export interface SaveMatchResultsOptions {
     reason?: string;
     autoDisabledReason?: string | null;
   };
+  pairFloorPolicy?: "legacy" | "curve_v1";
 }
 
 /**

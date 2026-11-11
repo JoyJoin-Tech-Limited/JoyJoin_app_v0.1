@@ -22,7 +22,7 @@
 
 import { db } from "../db";
 import { randomUUID } from "node:crypto";
-import { users, eventPools, eventPoolRegistrations, eventPoolGroups, userInterests } from "@joyjoin/shared";
+import { users, eventPools, eventPoolRegistrations, eventPoolGroups, userInterests, BUDGET_TIERS } from "@joyjoin/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import { scanPoolAndMatch } from "../poolRealtimeMatchingService";
 import { resolveVenueTbdAction } from "../lib/venueTbdRetryScheduler";
@@ -30,6 +30,16 @@ import { cascadeDeleteByIds } from "../lib/fkCascadeDelete";
 
 const RUN_TAG = `SIM100-${Date.now().toString(36)}`;
 const HOUR = 60 * 60 * 1000;
+
+/** Resolve a canonical budget tier by its numerical range, so this dev-only
+ *  simulation never re-types a tier id that the registry owns. */
+const budgetTierId = (eventType: "饭局" | "酒局", min: number, max: number): string => {
+  const tier = BUDGET_TIERS.find(
+    (candidate) => candidate.eventType === eventType && candidate.min === min && candidate.max === max,
+  );
+  if (!tier) throw new Error(`Unknown budget tier: ${eventType} ${min}-${max}`);
+  return tier.id;
+};
 
 const ARCHETYPES = [
   "corgi", "rooster", "hamster_praise", "fox", "dolphin_calm", "spider",
@@ -80,17 +90,17 @@ interface PoolSpec {
 }
 
 const POOL_SPECS: PoolSpec[] = [
-  { key: "P1", title: "南山周五晚餐", district: "南山区", eventType: "饭局", eventInHours: 72, deadlineInHours: 48, targetGroups: 1, maxGroupSize: 6, attempts: 12, budgetTier: "dining_200_300", archetypeBias: ["corgi", "rooster", "hamster_praise", "koala", "fox", "dolphin_calm"] },
-  { key: "P2", title: "福田小酒馆", district: "福田区", eventType: "酒局", eventInHours: 48, deadlineInHours: 30, targetGroups: 1, maxGroupSize: 6, attempts: 10, budgetTier: "drinks_80_150", archetypeBias: ["fox", "octopus", "owl", "cat", "dolphin_calm", "spider"] },
-  { key: "P3", title: "罗湖烟火气", district: "罗湖区", eventType: "饭局", eventInHours: 72, deadlineInHours: 48, targetGroups: 1, maxGroupSize: 6, attempts: 9, budgetTier: "dining_150_200", archetypeBias: ["corgi", "koala", "elephant", "turtle", "rooster", "hamster_praise"] },
-  { key: "P4", title: "南山慢聊局", district: "南山区", eventType: "饭局", eventInHours: 168, deadlineInHours: 120, targetGroups: 1, maxGroupSize: 6, attempts: 3, budgetTier: "dining_200_300", archetypeBias: ["owl", "turtle", "cat"] },
-  { key: "P5", title: "南山双桌夜", district: "南山区", eventType: "饭局", eventInHours: 96, deadlineInHours: 72, targetGroups: 2, maxGroupSize: 6, attempts: 14, budgetTier: "dining_200_300", archetypeBias: ["corgi", "fox", "koala", "owl", "rooster", "octopus", "elephant", "dolphin_calm"] },
-  { key: "P6", title: "南山酒吧夜", district: "南山区", eventType: "酒局", eventInHours: 50, deadlineInHours: 26, targetGroups: 1, maxGroupSize: 6, attempts: 8, budgetTier: "drinks_80_150", archetypeBias: ["fox", "octopus", "spider", "cat", "owl", "koala"] },
-  { key: "P7", title: "福田临期局", district: "福田区", eventType: "饭局", eventInHours: 30, deadlineInHours: 20, targetGroups: 1, maxGroupSize: 6, attempts: 8, budgetTier: "dining_150_200", archetypeBias: ["corgi", "rooster", "hamster_praise", "koala", "fox", "elephant"] },
-  { key: "P8", title: "罗湖夜话", district: "罗湖区", eventType: "酒局", eventInHours: 80, deadlineInHours: 56, targetGroups: 1, maxGroupSize: 6, attempts: 9, budgetTier: "drinks_80_150", archetypeBias: ["fox", "octopus", "owl", "cat", "spider", "dolphin_calm"] },
-  { key: "P9", title: "福田早鸟饭", district: "福田区", eventType: "饭局", eventInHours: 60, deadlineInHours: 36, targetGroups: 1, maxGroupSize: 6, attempts: 8, budgetTier: "dining_200_300", archetypeBias: ["rooster", "corgi", "elephant", "turtle", "koala", "hamster_praise"] },
-  { key: "P10", title: "南山已截止", district: "南山区", eventType: "饭局", eventInHours: 40, deadlineInHours: -2, targetGroups: 1, maxGroupSize: 6, attempts: 6, budgetTier: "dining_200_300", archetypeBias: ["corgi", "fox", "owl", "koala", "cat", "turtle"] },
-  { key: "P11", title: "福田周五酒", district: "福田区", eventType: "酒局", eventInHours: 90, deadlineInHours: 64, targetGroups: 1, maxGroupSize: 6, attempts: 13, budgetTier: "drinks_80_150", archetypeBias: ["fox", "octopus", "dolphin_calm", "owl", "spider", "cat"] },
+  { key: "P1", title: "南山周五晚餐", district: "南山区", eventType: "饭局", eventInHours: 72, deadlineInHours: 48, targetGroups: 1, maxGroupSize: 6, attempts: 12, budgetTier: budgetTierId("饭局", 200, 300), archetypeBias: ["corgi", "rooster", "hamster_praise", "koala", "fox", "dolphin_calm"] },
+  { key: "P2", title: "福田小酒馆", district: "福田区", eventType: "酒局", eventInHours: 48, deadlineInHours: 30, targetGroups: 1, maxGroupSize: 6, attempts: 10, budgetTier: budgetTierId("酒局", 80, 150), archetypeBias: ["fox", "octopus", "owl", "cat", "dolphin_calm", "spider"] },
+  { key: "P3", title: "罗湖烟火气", district: "罗湖区", eventType: "饭局", eventInHours: 72, deadlineInHours: 48, targetGroups: 1, maxGroupSize: 6, attempts: 9, budgetTier: budgetTierId("饭局", 150, 200), archetypeBias: ["corgi", "koala", "elephant", "turtle", "rooster", "hamster_praise"] },
+  { key: "P4", title: "南山慢聊局", district: "南山区", eventType: "饭局", eventInHours: 168, deadlineInHours: 120, targetGroups: 1, maxGroupSize: 6, attempts: 3, budgetTier: budgetTierId("饭局", 200, 300), archetypeBias: ["owl", "turtle", "cat"] },
+  { key: "P5", title: "南山双桌夜", district: "南山区", eventType: "饭局", eventInHours: 96, deadlineInHours: 72, targetGroups: 2, maxGroupSize: 6, attempts: 14, budgetTier: budgetTierId("饭局", 200, 300), archetypeBias: ["corgi", "fox", "koala", "owl", "rooster", "octopus", "elephant", "dolphin_calm"] },
+  { key: "P6", title: "南山酒吧夜", district: "南山区", eventType: "酒局", eventInHours: 50, deadlineInHours: 26, targetGroups: 1, maxGroupSize: 6, attempts: 8, budgetTier: budgetTierId("酒局", 80, 150), archetypeBias: ["fox", "octopus", "spider", "cat", "owl", "koala"] },
+  { key: "P7", title: "福田临期局", district: "福田区", eventType: "饭局", eventInHours: 30, deadlineInHours: 20, targetGroups: 1, maxGroupSize: 6, attempts: 8, budgetTier: budgetTierId("饭局", 150, 200), archetypeBias: ["corgi", "rooster", "hamster_praise", "koala", "fox", "elephant"] },
+  { key: "P8", title: "罗湖夜话", district: "罗湖区", eventType: "酒局", eventInHours: 80, deadlineInHours: 56, targetGroups: 1, maxGroupSize: 6, attempts: 9, budgetTier: budgetTierId("酒局", 80, 150), archetypeBias: ["fox", "octopus", "owl", "cat", "spider", "dolphin_calm"] },
+  { key: "P9", title: "福田早鸟饭", district: "福田区", eventType: "饭局", eventInHours: 60, deadlineInHours: 36, targetGroups: 1, maxGroupSize: 6, attempts: 8, budgetTier: budgetTierId("饭局", 200, 300), archetypeBias: ["rooster", "corgi", "elephant", "turtle", "koala", "hamster_praise"] },
+  { key: "P10", title: "南山已截止", district: "南山区", eventType: "饭局", eventInHours: 40, deadlineInHours: -2, targetGroups: 1, maxGroupSize: 6, attempts: 6, budgetTier: budgetTierId("饭局", 200, 300), archetypeBias: ["corgi", "fox", "owl", "koala", "cat", "turtle"] },
+  { key: "P11", title: "福田周五酒", district: "福田区", eventType: "酒局", eventInHours: 90, deadlineInHours: 64, targetGroups: 1, maxGroupSize: 6, attempts: 13, budgetTier: budgetTierId("酒局", 80, 150), archetypeBias: ["fox", "octopus", "dolphin_calm", "owl", "spider", "cat"] },
 ];
 
 interface PoolRuntime extends PoolSpec {

@@ -47,6 +47,10 @@ vi.mock('@shared/schema', () => ({
   eventPoolRegistrations: eventPoolRegistrationsTableSym,
   matchingThresholds: matchingThresholdsTableSym,
   poolMatchingLogs: poolMatchingLogsTableSym,
+  // D3: the scan now resolves `pairFloorCurveEnabled` once per scan. Without a
+  // table symbol the resolver throws and logs a DB-lookup warn on every scan
+  // test; an unmatched symbol resolves to "no row" → env fallback (default).
+  featureFlags: Symbol('featureFlags'),
 }));
 
 // ============================================================
@@ -380,7 +384,9 @@ describe('poolRealtimeMatchingService', () => {
         ]),
         minGroupSize: 4,
       });
-      expect(mockMatchEventPool).toHaveBeenCalledWith('pool-1');
+      // D3: the scan threads the resolved pair floor as the 2nd argument;
+      // the flag is off here, so the explicit legacy value is null.
+      expect(mockMatchEventPool).toHaveBeenCalledWith('pool-1', null);
       expect(mockSaveMatchResults).toHaveBeenCalledWith('pool-1', [filledGroup]);
       expect(result.decision).toBe('matched');
       expect(result.usersMatched).toBe(4);
