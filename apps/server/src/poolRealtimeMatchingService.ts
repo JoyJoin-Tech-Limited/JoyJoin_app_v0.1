@@ -317,11 +317,15 @@ async function runScanPoolAndMatch(
   let config = await getMatchingThresholdConfig();
 
   // 4. 计算距离活动开始的小时数
+  //    `pool_matching_logs.time_until_event` is an integer column, and the scan
+  //    persists this value on every decision. An unrounded float made the log
+  //    insert fail with `22P02 invalid input syntax for type integer`, which
+  //    aborted the whole scan (matching never completed, nothing was logged).
   const now = new Date();
   const eventTime = new Date(pool.dateTime);
   const hoursUntilEvent = Math.max(
     0,
-    (eventTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    Math.round((eventTime.getTime() - now.getTime()) / (1000 * 60 * 60))
   );
 
   // 5. 计算当前阈值（考虑时间衰减）
