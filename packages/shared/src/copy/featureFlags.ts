@@ -99,6 +99,7 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
   squadUnboxingTeaseV2Enabled: 'squad-unboxing',
   socialSquadComposedHeroEnabled: 'squad-unboxing',
   squadUnboxingPocketDeckEnabled: 'squad-unboxing',
+  eventCardOpenBoxEntryEnabled: 'squad-unboxing',
 
   // 场地分配
   venueAssignmentEnabled: 'venue',
@@ -253,6 +254,7 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
   squadUnboxingTeaseV2Enabled: '揭晓前预告文案池',
   socialSquadComposedHeroEnabled: '揭晓页组合主视觉',
   squadUnboxingPocketDeckEnabled: '桌友卡收起',
+  eventCardOpenBoxEntryEnabled: '足迹卡片开箱入口',
 
   // ── 集结房间 ──────────────────────────────────────
   gatheringRoomEnabled: '集结房间',
@@ -433,6 +435,8 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
     '默认关闭。开启后，桌友揭晓页使用悦仔与礼物组合主视觉（单击手势 + 隐藏拖拽彩蛋）；关闭时保持现有头图加拖拽丝带布局。',
   squadUnboxingPocketDeckEnabled:
     '默认开启。开启后，桌友揭晓页支持收起卡组；关闭时隐藏收起按钮，卡组保持展开扇形，已收起的用户保持收起状态。',
+  eventCardOpenBoxEntryEnabled:
+    '默认开启。开启后，已排桌但未开箱的活动在「足迹」以封着的桌呈现（叠封 +「开箱看桌友」按钮），点击直接进入桌友揭晓，不再经过等待页；关闭时恢复原卡片与等待页路径。',
 
   // ── 集结房间 ──────────────────────────────────────
   gatheringRoomEnabled:

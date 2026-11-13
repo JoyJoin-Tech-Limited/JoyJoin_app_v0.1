@@ -108,6 +108,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  the presence WS flow are device-verified.
    *  Env fallback: GATHERING_ROOM_ENABLED (default: false). */
   gatheringRoomEnabled: "GATHERING_ROOM_ENABLED",
+  /** Events-card open-box entry: a matched-but-unopened table renders as a
+   *  sealed card (seal stack + 「开箱看桌友」 capsule) and taps go straight to
+   *  the reveal ceremony instead of the waiting room. Guards BOTH the capsule
+   *  and the card route so promise and destination cannot diverge.
+   *  Env fallback: EVENT_CARD_OPEN_BOX_ENTRY_ENABLED (default: true). */
+  eventCardOpenBoxEntryEnabled: "EVENT_CARD_OPEN_BOX_ENTRY_ENABLED",
   /** Server-authoritative equipment economy switch. No payment path exists. */
   equipmentRewardsEnabled: "EQUIPMENT_REWARDS_ENABLED",
   /** Private append-only personal story generation and reading surface. */
@@ -617,6 +623,9 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   profilePixelAvatarEnabled: false,
   /** Gathering room ships dark until room art + presence flow are verified. */
   gatheringRoomEnabled: false,
+  /** Events-card open-box entry ships ON: the sealed card is the entry the
+   *  reveal ceremony was missing, and one flip reverts both it and the route. */
+  eventCardOpenBoxEntryEnabled: true,
   /** Share poster mini-program code ships ON (2026-10-14) — primary
    *  friend-conversion lever on the personality share card; every failure
    *  mode fails open to a copy-only CTA band. Kill switch for WeChat API

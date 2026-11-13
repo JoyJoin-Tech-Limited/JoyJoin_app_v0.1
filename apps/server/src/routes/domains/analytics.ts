@@ -579,6 +579,9 @@ const EVENTS_EVENT_TYPES = [
   "events_view",
   "events_tab_switch",
   "events_card_tap",
+  // Sealed-table entry experiment (2026-11-11): exposes the local reveal flag
+  // cohort so reveal-per-opportunity is readable without server-side flags.
+  "events_card_impression",
   "events_empty_state_cta_tap",
   "events_pull_refresh",
   // Native WeChat customer-service session taps (2026-07-28).

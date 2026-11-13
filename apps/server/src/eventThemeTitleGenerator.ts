@@ -26,6 +26,7 @@ import { logAITrace } from './lib/aiTraceLogger';
 import { logger } from './lib/logger';
 import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import { moderateGeneratedContent } from './lib/aiContentModeration';
+import { clampThemeTitle, THEME_TAGLINE_MAX_GRAPHEMES } from './lib/themeTitleClamp';
 
 // Validate API keys at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
@@ -286,8 +287,14 @@ async function saveGroupTheme(
 ): Promise<void> {
   await db.update(eventPoolGroups)
     .set({
-      theme: result.eventThemeTitle,
-      subtitle: result.themeTagline,
+      // The prompt asks for 4-8 characters, but an LLM is not a constraint
+      // engine and this row is read straight into a 28rpx display-size theme
+      // row. Clamp at the write so every downstream surface (events card,
+      // pool-group-detail) inherits a title that renders without an ellipsis.
+      theme: clampThemeTitle(result.eventThemeTitle),
+      subtitle: result.themeTagline
+        ? clampThemeTitle(result.themeTagline, THEME_TAGLINE_MAX_GRAPHEMES)
+        : result.themeTagline,
       themeEmoji: result.themeEmoji,
       themeHighlights: result.themeHighlights,
       vibe: result.themeVibe,
@@ -459,8 +466,8 @@ function buildEventThemeTitlePrompt(context: EventThemeTitleContext): string {
 - 化学反应温度：${temperatureLevel} ${temperatureLevel === 'fire' ? '🔥炽热' : temperatureLevel === 'warm' ? '🌡️温暖' : temperatureLevel === 'mild' ? '🌤️适宜' : '❄️冷淡'}
 
 **要求：**
-1. 盲盒主题标题要简洁有力（4-8个字）
-2. 标语要鼓舞人心、积极向上（不超过20字）
+1. 盲盒主题标题要简洁有力（4-8个字），不要用冒号、「·」或破折号拼接成复合结构
+2. 标语要鼓舞人心、积极向上（不超过13字）
 3. 主题亮点要体现小组特点（3-4个词）
 4. 氛围风格要符合小组特质
 5. 使用一个合适的emoji代表主题

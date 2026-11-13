@@ -59,10 +59,24 @@ export interface JoinedEventSummary {
   district?: string
   venueName?: string
   venueAddress?: string
+  /**
+   * Venue coordinates, joined from the canonical `venues` row. Present only
+   * once a venue is assigned AND geocoded; the card uses them for real map
+   * navigation and falls back to copying the address when absent.
+   */
+  venueLatitude?: number
+  venueLongitude?: number
   registrationDeadline?: string
   price?: number
   matchedAt?: string
   groupId?: string
+  /**
+   * When THIS viewer opened the formed table (拆盒), server-owned. Null or
+   * absent means the table is still sealed for them, so the Events card offers
+   * the ceremony instead of the settled view. A device-local flag used to stand
+   * in for this and re-offered the ceremony on every new device.
+   */
+  revealedAt?: string | null
   finalDateTime?: string
   /** Pool registration ID, present only for pool-based events. */
   registrationId?: string
@@ -78,6 +92,17 @@ export interface JoinedEventSummary {
   theme?: string
   /** Short vibe label for the matched table (e.g. 超高能). */
   themeVibe?: string
+  /**
+   * Theme tagline (15-25 chars) generated alongside the theme title. Used as
+   * the events-card rationale line, which answers "why this theme" with the
+   * table's own traits instead of a machine-provenance sentence.
+   */
+  themeSubtitle?: string
+  /**
+   * 3-4 short group traits the theme was generated around (e.g. 咖啡脑暴).
+   * Rendered as the rationale line when `themeSubtitle` is absent.
+   */
+  themeHighlights?: string[]
   /** Overall table chemistry score 0-100 (pool events only). */
   matchScore?: number
   /**

@@ -144,12 +144,12 @@ vi.mock('../../components/mascot/XiaoyueEmptyState', () => ({
 }))
 
 vi.mock('../../components/events/FootprintOracleCard', () => ({
-  default: ({ event, onClick, isHistorical = false }: { event: JoinedEventSummary; onClick: (event: JoinedEventSummary) => void; isHistorical?: boolean }) => (
+  default: ({ event, onClick, isHistorical = false }: { event: JoinedEventSummary; onClick: (event: JoinedEventSummary, entry: 'sealed' | 'revealed' | 'none') => void; isHistorical?: boolean }) => (
     <button
       type='button'
       data-testid={`event-card-${event.id}`}
       data-is-historical={isHistorical ? 'true' : 'false'}
-      onClick={() => onClick(event)}
+      onClick={() => onClick(event, 'none')}
     >
       {event.title}
     </button>
@@ -398,8 +398,8 @@ describe('EventsPage three-bucket IA', () => {
 
     fireEvent.click(screen.getByTestId('event-card-ongoing'))
 
-    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'ongoing')
-    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: false })
+    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'ongoing', 'none')
+    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: false, tableEntryState: 'none' })
   })
 
   it('passes historical context for a past-day nonterminal completed card', () => {
@@ -415,8 +415,8 @@ describe('EventsPage three-bucket IA', () => {
     expect(container.querySelector('.events-page__first-event-hero')).not.toBeInTheDocument()
     fireEvent.click(card)
 
-    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'completed')
-    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: true })
+    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'completed', 'none')
+    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: true, tableEntryState: 'none' })
     expect(event).toEqual(originalEvent)
   })
 

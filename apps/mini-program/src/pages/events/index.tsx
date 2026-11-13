@@ -25,7 +25,9 @@ import { isLongListRowCount, MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD } from '../../
 import { logWarn } from '../../lib/utils/logger'
 import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { partitionJoinedEventsByDateTime } from './eventPartition'
-import { navigateToEventCard } from '../../lib/utils/eventCardNavigation'
+import { navigateToEventCard, resolveTableEntryState } from '../../lib/utils/eventCardNavigation'
+import type { TableEntryState } from '../../lib/utils/eventCardNavigation'
+import { useAuth } from '../../hooks/useAuth'
 import { isJoinedEventTerminal } from '../../lib/utils/eventDisplay'
 import './index.scss'
 
@@ -156,6 +158,8 @@ export default function EventsPage() {
   }, [authLoading, isLoading, events.length])
 
   const partitionedEvents = useMemo(() => partitionJoinedEventsByDateTime(events), [events])
+  const { user: currentUser } = useAuth()
+  const openBoxEntryEnabled = currentUser?.features?.eventCardOpenBoxEntryEnabled ?? true
   let resolvedActiveTab = activeTab
 
   if (!hasManualTabSelection) {
@@ -170,7 +174,32 @@ export default function EventsPage() {
     }
   }
 
-  const displayEvents = partitionedEvents[resolvedActiveTab]
+  // A card carrying a pending action must not sit behind settled records: the
+  // sealed table is the only row on this tab that is asking for something, so it
+  // leads its bucket. Order inside each group is otherwise preserved.
+  const displayEvents = useMemo(() => {
+    const bucket = partitionedEvents[resolvedActiveTab]
+    if (!openBoxEntryEnabled || bucket.length < 2) {
+      return bucket
+    }
+    const sealed: JoinedEventSummary[] = []
+    const rest: JoinedEventSummary[] = []
+    for (const event of bucket) {
+      // Float on the same predicate the card resolves with, so the list can
+      // never promote a card the card itself would not seal.
+      if (
+        resolveTableEntryState(event, {
+          openBoxEntryEnabled,
+          isHistorical: resolvedActiveTab === 'completed',
+        }) === 'sealed'
+      ) {
+        sealed.push(event)
+      } else {
+        rest.push(event)
+      }
+    }
+    return sealed.length === 0 ? bucket : [...sealed, ...rest]
+  }, [partitionedEvents, resolvedActiveTab, openBoxEntryEnabled])
   const emptyCopy = EMPTY_STATE_COPY[resolvedActiveTab]
   const firstEvent = events.length === 1 ? events[0] : undefined
   const firstEventStatus = firstEvent?.displayStatus ?? firstEvent?.status ?? ''
@@ -188,9 +217,12 @@ export default function EventsPage() {
     eventsAnalytics.track('events_tab_switch', { tab })
   }
 
-  const handleEventTap = useCallback((event: JoinedEventSummary) => {
-    eventsAnalytics.trackCardTap(event, resolvedActiveTab)
-    navigateToEventCard(event, { isHistorical: resolvedActiveTab === 'completed' })
+  const handleEventTap = useCallback((event: JoinedEventSummary, tableEntryState: TableEntryState) => {
+    eventsAnalytics.trackCardTap(event, resolvedActiveTab, tableEntryState)
+    navigateToEventCard(event, {
+      isHistorical: resolvedActiveTab === 'completed',
+      tableEntryState,
+    })
   }, [resolvedActiveTab])
 
   const navigateToDiscover = () => {

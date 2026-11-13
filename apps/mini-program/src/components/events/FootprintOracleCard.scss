@@ -71,10 +71,12 @@
   }
 
   // Matched-state celebration micro-moment: warmer shadow + subtle shimmer.
+  // 2026-11-11: the shimmer is retired while the table is sealed — the seal
+  // stack owns the card's one looping animation (one moving object per card).
   &--matched {
     box-shadow: 0 12rpx 40rpx rgba($color-archetype-fire, 0.16);
 
-    &::after {
+    &:not(.footprint-oracle-card--sealed)::after {
       content: '';
       position: absolute;
       inset: 0;
@@ -97,9 +99,27 @@
     .footprint-oracle-card__date-time,
     .footprint-oracle-card__location,
     .footprint-oracle-card__theme-text,
+    .footprint-oracle-card__theme-why,
     .footprint-oracle-card__waiting-hint,
+    .footprint-oracle-card__place-primary,
+    .footprint-oracle-card__place-secondary,
     .footprint-oracle-card__footer-hint {
       opacity: 0.78;
+    }
+
+    // The place field's tint and bar step back with the rest of the record, so a
+    // finished card does not keep a bright "held place" plate on it.
+    .footprint-oracle-card__place {
+      background: transparent;
+      border-color: transparent;
+    }
+
+    .footprint-oracle-card__place--revealed {
+      animation: none;
+    }
+
+    .footprint-oracle-card__place-bar {
+      background: rgba($color-text-primary, 0.1);
     }
 
     // A finished card must not keep a full-strength table row above 翻翻这场回顾:
@@ -144,6 +164,17 @@
       display: none;
     }
 
+    // The seal is the card's one loop, so it is the last thing to keep on a
+    // mid-tier device — but it must not be the only thing running. Drop it with
+    // the rest so a low-end device pays nothing for the sealed state.
+    .footprint-oracle-card__seal-disc,
+    .footprint-oracle-card__place--revealed,
+    .footprint-oracle-card__table-face {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
     .segmented-countdown-clock__progress-block {
       transition: none;
     }
@@ -160,6 +191,9 @@
     }
 
     .footprint-oracle-card__pulse-dot--live,
+    .footprint-oracle-card__seal-disc,
+    .footprint-oracle-card__place--revealed,
+    .footprint-oracle-card__table-face,
     .segmented-countdown-clock__progress-block--urgent,
     .segmented-countdown-clock__started-dot {
       animation: none !important;
@@ -176,6 +210,7 @@
   // frame-continuous (animation-play-state preserves negative delays).
   &--page-hidden {
     .footprint-oracle-card__matched-shimmer,
+    .footprint-oracle-card__seal-disc,
     .footprint-oracle-card__pulse-dot--live,
     .segmented-countdown-clock__started-dot,
     .segmented-countdown-clock__progress-block--urgent {
@@ -464,18 +499,6 @@
     @include text-truncate;
   }
 
-  &__venue {
-    display: block;
-    font-size: 28rpx;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-    line-height: 1.4;
-    // No extra offset: stacked geography lines keep their line-height leading
-    // so every gap on the card is a multiple of 8rpx (2026-11-10).
-    margin-top: 0;
-    @include text-truncate;
-  }
-
   // 同桌 face row (Phase 2, 2026-11-10): the real archetype heads of the
   // matched table, reusing the Discover face language. The viewer is a member,
   // so no masking — these are the same faces the group page shows.
@@ -503,6 +526,50 @@
     }
   }
 
+  // 封着的桌 (2026-11-11): the table is formed but the box is still closed, so
+  // the real faces are withheld — showing them here pre-spoils the ceremony
+  // this same card opens. Three IDENTICAL discs read as one deck; three
+  // different tints would read as three people, which is a lie about the table.
+  // The count is already stated in 「已排进 N 人桌」, so nothing is hidden.
+  &__seal {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  &__seal-disc {
+    box-sizing: border-box;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    border: 1rpx solid rgba($color-primary, 0.24);
+    flex-shrink: 0;
+    // Opacity only: the loop must stay on the compositor (no layout, no paint).
+    animation: footprint-oracle-seal-breathe 2.6s ease-in-out infinite;
+
+    &:not(:first-child) {
+      // Tighter than the face row's -16rpx: a stack, not a row.
+      margin-left: -20rpx;
+    }
+
+    // Painting order is left→right, so the last disc is the top of the stack
+    // and carries the strongest fill. The stagger runs front→back.
+    &--d0 {
+      background: rgba($color-primary, 0.09);
+      animation-delay: 180ms;
+    }
+
+    &--d1 {
+      background: rgba($color-primary, 0.13);
+      animation-delay: 90ms;
+    }
+
+    &--d2 {
+      background: rgba($color-primary, 0.18);
+      animation-delay: 0ms;
+    }
+  }
+
   // 主题行 (Phase 3, 2026-11-10): the match-time table theme, kept under the
   // title so a formed table keeps the identity it was created around. It is
   // annotated identity text, not a third capsule — the rail already owns the
@@ -517,18 +584,74 @@
 
   &__theme-label {
     flex-shrink: 0;
+    // Fixed 44rpx box (2 × 22rpx) so the value always starts at 52rpx. Without
+    // it, `letter-spacing` adds a trailing track after the last glyph and pushes
+    // the theme ~3.5rpx right of the rationale that hangs under it — a stagger
+    // that reads as a bug (designer B1).
+    width: 44rpx;
     font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    // A label nobody can read is decoration: keep it at the secondary ink so
-    // it clears body contrast even on the dimmed terminal card (designer B4).
+    // The label is a signpost, not a word. It recedes by weight and tracking so
+    // the table's own name can carry the line — never by ink: 22rpx tertiary
+    // drops under body contrast on the warm card, and a label nobody can read
+    // is decoration (designer B4).
+    font-weight: $font-weight-normal;
     color: $color-text-secondary;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
   }
 
   &__theme-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
+    // The theme is the table's name, not a third meta run. Setting it in the
+    // brand display family at the 28rpx half-step gives the card an authored
+    // identity under the title, while semibold-below-bold + 28-below-40 keeps
+    // it strictly subordinate to the title (never a second L1).
+    @include font-cn-display;
+    font-size: 28rpx;
+    font-weight: $font-weight-semibold;
     color: $color-text-primary;
+    line-height: 1.35;
+    @include text-truncate;
+  }
+
+  // Why this theme. Hangs off the value it explains: text starts at the same x
+  // as the theme value (52rpx = 44rpx label box + 8rpx gap), with a 4rpx tick
+  // sitting 8rpx before it in the gutter. Quieter than the value on every axis
+  // (size, weight, ink) so it can never outrank it.
+  &__theme-why {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    // 40rpx, not 52rpx: the tick occupies 40-44 so the TEXT lands on 52 and
+    // aligns with the theme value above it.
+    margin-left: 40rpx;
+    // 0, not 8rpx: with an 8rpx step the theme sat 20.9rpx from the title and
+    // 17.3rpx from its own evidence — equidistant, so the identity block read as
+    // a flat 4-line stack. Grouping the why under its value is what gives the
+    // block a shape (designer B2).
+    margin-top: 0;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  &__theme-why-tick {
+    flex-shrink: 0;
+    width: 4rpx;
+    height: 24rpx;
+    border-radius: 2rpx;
+    background: rgba($color-primary, 0.22);
+  }
+
+  &__theme-why-text {
+    flex: 1;
+    min-width: 0;
+    // 24rpx, not 22: this is a clause, not a signpost. Subordination is already
+    // carried by indent + tick + weight + secondary ink; the extra 2rpx only
+    // made the founder's "premium label" the least legible line on the card.
+    font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
+    // Quiet is achieved by indent + weight, never by a failing ink: 22rpx muted
+    // on the warm card drops under body contrast.
+    color: $color-text-secondary;
+    line-height: 1.4;
     @include text-truncate;
   }
 
@@ -566,6 +689,125 @@
     color: $color-text-secondary;
     line-height: 1.5;
     margin-top: $spacing-xs;
+  }
+
+  // ── Place field (2026-11-11) ─────────────────────────────────
+  // One field, two faces: pending (awaiting a venue) and resolved (venue +
+  // address + action). Same footprint in both, so the card does not reflow when
+  // the venue lands. The 4rpx leading bar is the element's identity across
+  // states — it changes hue, never position.
+  &__place {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 88rpx;
+    padding: 8rpx 16rpx;
+    border-radius: $radius-md;
+    // The field is a field in BOTH faces: the state delta is hue, not presence.
+    // Dropping the boundary on resolve made the card go quiet at the exact
+    // moment it became actionable (designer A2). Reserved as a real border so
+    // the pending tint cannot shift the resolved face by 2rpx.
+    border: 1rpx solid rgba($color-primary, 0.12);
+    // The geography block above already closes with its own 16rpx step; a second
+    // offset here would read as a gap between unrelated sections.
+    margin-top: 0;
+    // One clock with the reveal animation below, so the tint and the content do
+    // not settle 340ms apart (designer C3).
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  // A held place, not an empty form field. The neutral 0.55 white wash that
+  // shipped first was invisible at device scale on the warm gradient, so
+  // "not arranged yet" still scanned as body text. The family tint arrives
+  // inline from `familyColor` at 0.12 fill / 0.32 border — the fill carries the
+  // signal, because a 1rpx hairline alone is the primitive that disappears at
+  // some Android DPRs. The neutral wash below is only the no-family fallback.
+  &__place--pending {
+    background: rgba($color-surface, 0.32);
+  }
+
+  // The one beat this card was missing: when the venue lands (poll refresh
+  // flips pending → resolved in place), the field announces itself once. Pure
+  // transform + opacity, one-shot, never on mount — `FootprintOracleCard`
+  // only sets this after it has seen the transition. 300ms, not 520: the card's
+  // own entrance is 400ms, and a slower beat than the entrance reads as lag.
+  &__place--revealed {
+    animation: footprint-place-reveal 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  // The whole row is the hit target, so the pressed state belongs to the row.
+  &__place--pressed {
+    background-color: rgba($color-primary, 0.06);
+    // Press must land, not fade in. The row's own 0.3s transition exists for the
+    // pending→resolved STATE change; inheriting it here meant an 80ms
+    // `hoverStayTime` released long before the tint reached full alpha, so a tap
+    // read as a barely-there flash (designer, second pass). Entry is fast; the
+    // release falls back to the row's 0.3s, which reads as a soft let-go.
+    transition-duration: 0.08s;
+  }
+
+  &__place-bar {
+    flex-shrink: 0;
+    align-self: stretch;
+    width: 4rpx;
+    border-radius: 2rpx;
+    background: rgba($color-primary, 0.18);
+  }
+
+  &__place-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__place-primary {
+    font-size: 28rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.4;
+    @include text-truncate;
+  }
+
+  &__place-secondary {
+    // 24rpx, not 22: this is a street address — the one string a user reads
+    // aloud to a driver. Contrast does not vary with font size, so 4.48:1 is
+    // this token's ceiling on the lower tint at any size; the point of going to
+    // 24rpx was legibility, not ratio (designer, second pass).
+    font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
+    color: $color-text-secondary;
+    line-height: 1.4;
+    @include text-truncate;
+  }
+
+  // Capability-matched: `导航` only when coordinates exist, otherwise
+  // `复制地址`. A chevron next to a clipboard would be a lie about the machine.
+  // No tap handler here — the field row owns the hit area (44pt), this is the
+  // visual verb. Ink is primary-dark, not primary: #8B5CF6 measured 4.0:1 on
+  // the card's lower surface, and an action the user must find is the last
+  // place to fail AA (designer P1).
+  &__place-action {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 2rpx;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    line-height: 1.4;
+  }
+
+  &__place-action-chevron {
+    font-size: $font-size-sm;
+    line-height: 1;
+  }
+
+  &__place-action-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
   }
 
   // ── Split "when" layout (2026-11-10) ──────────────────────────
@@ -683,6 +925,70 @@
     margin-top: $spacing-sm;
   }
 
+  // The capsule is the card's only filled-purple object and its only action.
+  // Self-sized, not full width: a full-width bar inside a card reads as a page
+  // CTA pasted in and would demand a second band.
+  &__capsule {
+    display: inline-flex;
+    align-items: center;
+    min-height: $button-height-sm;
+    // 32rpx horizontal padding (designer A-spec) — the token scale jumps 24→40,
+    // and the wider value made the capsule read as a page CTA pasted in.
+    padding: 0 32rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.26);
+    transition:
+      transform 90ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 90ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--pressed {
+      transform: scale(0.97);
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.26);
+    }
+  }
+
+  &__capsule-label {
+    font-size: 28rpx;
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+    color: $color-text-white;
+  }
+
+  &__capsule-chevron {
+    margin-left: $spacing-xs;
+    font-size: 20rpx;
+    line-height: 1;
+    color: rgba($color-text-white, 0.72);
+  }
+
+  &--sealed {
+    // The seal needs air under the hairline; the text hint it replaced sat
+    // tighter to the facts row.
+    .footprint-oracle-card__footer {
+      margin-top: $spacing-md;
+    }
+  }
+
+  // Receipt (2026-11-11): the first card mount after the ceremony hands the
+  // seal over to the real faces. Bounded to a 15s window in the component, so
+  // this never replays on a later tab visit.
+  // Low-end must win over the stagger (both are 0,2,0 and the receipt rule
+  // sits later in this file, so order alone would let the stagger play on a
+  // low-end device). Reduced-motion carries !important, but the guard keeps
+  // the intent explicit in one place.
+  &--receipt:not(.footprint-oracle-card--low-end):not(.footprint-oracle-card--reduced-motion) {
+    .footprint-oracle-card__table-face {
+      animation: footprint-oracle-face-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+      &:nth-child(2) { animation-delay: 92ms; }
+      &:nth-child(3) { animation-delay: 184ms; }
+      &:nth-child(4) { animation-delay: 276ms; }
+      &:nth-child(5) { animation-delay: 368ms; }
+      &:nth-child(6) { animation-delay: 460ms; }
+    }
+  }
+
   &__footer-hint {
     display: block;
     // Phase 3: the footer carries the next step (看看同桌是谁 / 翻翻回顾), so it
@@ -706,9 +1012,18 @@
   }
 }
 
-@keyframes footprint-oracle-pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.3); }
+// The place field filling in. Starts already visible (0.35, not 0) because this
+// is a fact arriving, not a surface appearing — the card must not look like it
+// re-mounted when the poll returns a venue.
+@keyframes footprint-place-reveal {
+  from {
+    opacity: 0.35;
+    transform: translateY(6rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes footprint-oracle-pulse-dot {
@@ -719,6 +1034,22 @@
 @keyframes footprint-oracle-matched-shimmer {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.55; }
+}
+
+@keyframes footprint-oracle-seal-breathe {
+  0%, 100% { opacity: 0.88; }
+  50% { opacity: 1; }
+}
+
+@keyframes footprint-oracle-face-in {
+  from {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 // ─── Reduced motion ──────────────────────────────────────────────
@@ -735,10 +1066,15 @@
   }
 
   .footprint-oracle-card__pulse-dot--live,
+  .footprint-oracle-card__seal-disc,
+  .footprint-oracle-card__place--revealed,
+  .footprint-oracle-card__table-face,
   .segmented-countdown-clock__started-dot,
   .segmented-countdown-clock__progress-block--urgent,
   .segmented-countdown-clock__value--pulse {
     animation: none !important;
+    opacity: 1;
+    transform: none;
   }
 
   .segmented-countdown-clock__progress-block {

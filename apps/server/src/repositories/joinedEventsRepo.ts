@@ -13,10 +13,11 @@
 
 import { eq, desc, and, inArray, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { events, eventAttendance, eventFeedback, eventPools, eventPoolRegistrations, eventPoolGroups, users } from "@shared/schema";
+import { events, eventAttendance, eventFeedback, eventPools, eventPoolRegistrations, eventPoolGroups, users, venues } from "@shared/schema";
 import type { JoinedEventSummary } from "@shared/api";
 import { POOL_COMPLETION_BUFFER_MS } from "../lib/poolCompletionSweep";
 import { FEEDBACK_ELIGIBLE_MATCH_STATUSES } from "../lib/feedbackStateResolver";
+import { clampThemeTitle, THEME_TAGLINE_MAX_GRAPHEMES } from "../lib/themeTitleClamp";
 
 /**
  * Derive a user-facing status for pool events from the matching + venue lifecycle.
@@ -203,13 +204,29 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       matchedAt: eventPools.matchedAt,
       matchStatus: eventPoolRegistrations.matchStatus,
       assignedGroupId: eventPoolRegistrations.assignedGroupId,
+      // Viewer-scoped reveal fact. Null = this table is still sealed for them,
+      // which is what lets the Events card offer the ceremony without a
+      // per-card request.
+      revealedAt: eventPoolRegistrations.revealedAt,
       venueName: eventPoolGroups.venueName,
       venueAddress: eventPoolGroups.venueAddress,
+      // Coordinates come from the canonical venue row, not the denormalized
+      // snapshot: the snapshot has the human address but never lat/lng, and
+      // `openLocation` needs numbers. Null-safe — the card degrades to
+      // copying the address when a venue was never geocoded.
+      venueLatitude: venues.latitude,
+      venueLongitude: venues.longitude,
       finalDateTime: eventPoolGroups.finalDateTime,
       venueAssignmentStatus: eventPoolGroups.venueAssignmentStatus,
       memberCount: eventPoolGroups.memberCount,
       theme: eventPoolGroups.theme,
       themeVibe: eventPoolGroups.vibe,
+      // The theme's rationale lives with the theme: `subtitle` is the tagline
+      // and `themeHighlights` are the 3-4 group traits the generator built it
+      // around. Both are already user-facing on matching-status; the events
+      // card simply never requested them.
+      themeSubtitle: eventPoolGroups.subtitle,
+      themeHighlights: eventPoolGroups.themeHighlights,
       overallScore: eventPoolGroups.overallScore,
       // Canonical events.id of the matched group — the event_feedback FK
       // target. Needed to derive feedbackPending without the
@@ -219,6 +236,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     .from(eventPoolRegistrations)
     .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
     .leftJoin(eventPoolGroups, eq(eventPoolRegistrations.assignedGroupId, eventPoolGroups.id))
+    .leftJoin(venues, eq(venues.id, eventPoolGroups.venueId))
     .where(
       and(
         eq(eventPoolRegistrations.userId, userId),
@@ -319,15 +337,35 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     district: row.district ?? undefined,
     venueName: row.venueName ?? undefined,
     venueAddress: row.venueAddress ?? undefined,
+    venueLatitude: typeof row.venueLatitude === 'number' ? row.venueLatitude : undefined,
+    venueLongitude: typeof row.venueLongitude === 'number' ? row.venueLongitude : undefined,
     registrationDeadline: row.registrationDeadline?.toISOString?.() ?? undefined,
     price: row.price ?? undefined,
     matchedAt: row.matchedAt?.toISOString?.() ?? undefined,
     groupId: row.assignedGroupId ?? undefined,
+    // Server-owned reveal fact for this viewer (2026-11-11): the sealed table
+    // entry used to read a device-local `jj_revealed_<groupId>` flag, so a new
+    // phone re-offered a ceremony that had already happened.
+    revealedAt: row.revealedAt ? row.revealedAt.toISOString() : null,
     finalDateTime: row.finalDateTime?.toISOString?.() ?? undefined,
     venueAssignmentStatus: row.venueAssignmentStatus ?? undefined,
     groupSize: row.memberCount ?? undefined,
-    theme: row.theme ?? undefined,
+    // Clamped again on read: rows written before the write-side clamp (and the
+    // rule-based generator, which cuts with a bare `substring`) can still be up
+    // to 20 characters, and the events card renders this at 28rpx display size
+    // where 12 is the hard ceiling before an ellipsis.
+    theme: row.theme ? clampThemeTitle(row.theme) : undefined,
     themeVibe: row.themeVibe ?? undefined,
+    themeSubtitle:
+      (row.themeSubtitle
+        ? clampThemeTitle(row.themeSubtitle, THEME_TAGLINE_MAX_GRAPHEMES)
+        : '') || undefined,
+    themeHighlights: Array.isArray(row.themeHighlights)
+      ? (row.themeHighlights as string[])
+          .filter((item: string) => typeof item === 'string' && item.trim().length > 0)
+          .map((item: string) => item.trim())
+          .slice(0, 4)
+      : undefined,
     matchScore: row.overallScore ?? undefined,
     memberArchetypes: row.assignedGroupId
       ? groupArchetypes.get(row.assignedGroupId)

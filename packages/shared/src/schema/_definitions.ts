@@ -494,6 +494,13 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   matchStatus: varchar("match_status").default("pending"), // pending | matched | unmatched
   assignedGroupId: varchar("assigned_group_id"), // 分配到的组ID（如果匹配成功）
   matchScore: integer("match_score"), // 匹配分数
+  /**
+   * When this member opened the formed table (拆盒). Grain is one user × one
+   * group, which is exactly the reveal fact. Server-owned so a new device does
+   * not re-offer a ceremony that already happened; the mini-program keeps a
+   * local cache of the same fact for offline re-renders.
+   */
+  revealedAt: timestamp("revealed_at"),
   
   // 元数据
   registeredAt: timestamp("registered_at").defaultNow(),

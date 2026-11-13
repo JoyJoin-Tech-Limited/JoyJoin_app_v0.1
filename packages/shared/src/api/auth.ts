@@ -141,6 +141,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** Enables the gathering room (集结房间): entry CTAs on pool-group-detail /
      *  squad-unboxing and the room page itself. Default: false. */
     gatheringRoomEnabled?: boolean
+    /** Enables the Events-card open-box entry: a matched-but-unopened table
+     *  renders as a sealed card whose capsule goes straight to the reveal
+     *  ceremony. Gates both the capsule and the card route. Default: true. */
+    eventCardOpenBoxEntryEnabled?: boolean
     icebreakerAcknowledgmentBeatEnabled?: boolean
     feedbackAcknowledgmentItemEnabled?: boolean
     /** Enables the event-feedback WeChat contact-ID collection (conditional

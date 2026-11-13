@@ -52,6 +52,7 @@ export type ErrorCode =
   | 'REGISTRATION_DISABLED'
   | 'PAYMENTS_DISABLED'
   | 'POOL_NOT_FOUND'
+  | 'NOT_GROUP_MEMBER'
   | 'ATTENDANCE_NOT_READY'
   | 'GATHERING_ROOM_DISABLED'
   | 'INVALID_COUPON'
@@ -275,6 +276,15 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   POOL_NOT_FOUND: {
     surface: 'toast-error',
     default: '活动不存在或已下架',
+  },
+  // `POST /api/pool-groups/:groupId/reveal` 404s a stranger rather than
+  // answering "already opened", so an outsider is never told what a table they
+  // aren't in has done. The route shipped in the 2026-11-11 sealed-table batch
+  // without a template, so the toast fell through to the generic
+  // "出了点问题，稍后再试" instead of naming the real condition.
+  NOT_GROUP_MEMBER: {
+    surface: 'toast-error',
+    default: '你还不在这一桌里',
   },
   ATTENDANCE_NOT_READY: {
     surface: 'toast-error',

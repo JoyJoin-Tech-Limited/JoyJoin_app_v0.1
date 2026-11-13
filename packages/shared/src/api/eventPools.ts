@@ -213,6 +213,12 @@ export interface PoolGroupDetailsResponse {
   group: PoolGroupSummary
   pool: PoolGroupSourceSummary
   members: PoolGroupMemberSummary[]
+  /**
+   * Reveal fact for the viewer of this response: when they opened this table,
+   * or null while it is still sealed for them. Server-owned so a second device
+   * does not re-offer a ceremony that already happened.
+   */
+  viewer?: { revealedAt: string | null }
 }
 
 export interface ConfirmPoolGroupAttendanceResponse {
@@ -325,6 +331,21 @@ export function getPoolGroupDetails(
 ): Promise<PoolGroupDetailsResponse> {
   return api<PoolGroupDetailsResponse>({
     path: `/api/pool-groups/${encodeURIComponent(groupId)}`,
+  })
+}
+
+/**
+ * Claim the reveal for this viewer. Idempotent on the server: the first call
+ * stamps the time, later calls return that same timestamp, so the receipt
+ * window cannot be restarted by a retry.
+ */
+export function markPoolGroupRevealed(
+  api: ApiTransport,
+  groupId: string
+): Promise<{ revealedAt: string | null }> {
+  return api<{ revealedAt: string | null }>({
+    path: `/api/pool-groups/${encodeURIComponent(groupId)}/reveal`,
+    method: 'POST',
   })
 }
 
