@@ -416,6 +416,18 @@
       "justification": "Historical venues.budget_categories COMMENT in legacy vocabulary — plan §7.7 flags this exact comment as a residual second source of truth; burns down with the T1 comment update."
     },
     {
+      "file": "apps/server/migrations/seed_venue_ac_hookah_20261112.sql",
+      "literal": "80-150",
+      "count": 2,
+      "justification": "One-off venue seed (2026-11-12, AC Hookah 蛇口/后海): `price_range` is the legacy display-label column the admin VenueFormFields still writes. Two rows, seed data only; burns down with the price_range retirement."
+    },
+    {
+      "file": "apps/server/migrations/seed_venue_ac_hookah_20261112.sql",
+      "literal": "drinks_80_150",
+      "count": 2,
+      "justification": "One-off venue seed (2026-11-12, AC Hookah 蛇口/后海): `budget_categories` is required to carry the canonical tier id (`budgetTierIdSchema`, apps/server/src/routes/domains/venues.ts) — the registry id IS the contract value here, not a stray literal."
+    },
+    {
       "file": "apps/server/migrations/seed_venue_batch_and_co_20260608.sql",
       "literal": "80-150",
       "count": 1,
