@@ -317,6 +317,29 @@ async function captureSquadUnboxingReady() {
   )
 }
 
+async function captureSquadUnboxingCardEntry() {
+  // The sealed Events card's tap lands here with `from=card`. The page must
+  // paint its first frame already composed (no 120ms staged entrance) and run
+  // the one-shot landing beat: box drops 120ms, lid settles 120→380ms, float
+  // resumes at 520ms. A still frame cannot prove the beat — it proves the
+  // frame the user lands on has no spinner and no empty stage. Device-only.
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&__story=ready&from=card`,
+        { waitUntil: 'domcontentloaded', timeout: 60000 }
+      )
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('#drag-reveal-track', { timeout: 10000 })
+      await page.waitForTimeout(240)
+      return page.screenshot({ fullPage: false })
+    }
+  )
+}
+
 async function captureSquadUnboxingShaking() {
   return withBrowserPage(
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
@@ -840,13 +863,49 @@ async function captureLandingLegalHint() {
   )
 }
 register('landing-legal-hint', captureLandingLegalHint)
+// The after state of the sealed-table entry (2026-11-11). The card forks on
+// `jj_revealed_<groupId>`, so the revealed frame needs its own capture — without
+// it the receipt (stack → six faces) is a state nobody ever looks at.
+async function captureEventsRevealed() {
+  return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/events/index`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    // @tarojs/taro-h5 writes every stored value as { data } and unwraps it on
+    // read, so a bare JSON.stringify(true) is invisible to getStorageSync.
+    // Seeded 60s in the past on purpose: that is past the receipt window, so the
+    // capture is the settled card rather than a mid-stagger frame.
+    await page.evaluate(() => {
+      localStorage.setItem('jj_revealed_group-001', JSON.stringify({ data: true }))
+      localStorage.setItem('jj_revealed_at_group-001', JSON.stringify({ data: Date.now() - 60000 }))
+    })
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForSelector('.events-page__list', { timeout: 10000 })
+    await page.getByRole('tab', { name: '进行中' }).click()
+    await page.waitForFunction(() => {
+      const titles = Array.from(document.querySelectorAll('.footprint-oracle-card__title'))
+      return titles.some((title) => title.textContent?.includes('微醺夜话'))
+    }, undefined, { timeout: 10000 })
+    await page.waitForFunction(() => {
+      const images = Array.from(document.querySelectorAll('.footprint-oracle-card__table-face img'))
+      return images.length > 0 && images.every((image) => image.complete)
+    }, undefined, { timeout: 10000 })
+    await page.waitForTimeout(1200)
+    return screenshotPage(page)
+  })
+}
+
 register('events-footprint-oracle-card', captureEventsPage)
+register('events-footprint-revealed', captureEventsRevealed)
 register('events-footprint-terminal', captureEventsTerminal)
 register('discover-oracle-cards', captureDiscoverOracleCards)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
 register('event-ticket-payment', captureEventTicketPayment)
 register('squad-unboxing-ready', captureSquadUnboxingReady)
+register('squad-unboxing-card-entry', captureSquadUnboxingCardEntry)
 register('squad-unboxing-shaking', captureSquadUnboxingShaking)
 register('squad-unboxing-focused', captureSquadUnboxingFocused)
 register('squad-unboxing-revealed', () => captureSquadUnboxingRevealed())

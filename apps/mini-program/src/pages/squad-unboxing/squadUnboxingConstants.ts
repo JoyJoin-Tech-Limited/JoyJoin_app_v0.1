@@ -12,3 +12,13 @@ export const ART_FLIP_HOLD_TIMEOUT_MS = 1200
 export const HELD_FLIP_MAX_RETRIES = 3
 /** 最佳拍档 heartbeat haptics: the light pulse follows the medium beat. */
 export const BEST_PARTNER_HEARTBEAT_GAP_MS = 90
+
+/**
+ * Landing beat (2026-11-11, sealed-card entry). The box drops for 120ms, the
+ * lid settles 120→380ms, then the idle float resumes. 520ms is the exact point
+ * the SCSS float delay starts, so stripping the `--landing` class here hands
+ * off at the float's own 0% frame instead of snapping the transform.
+ * The haptic fires at 380ms — the bottom of the settle, not the drop.
+ */
+export const LANDING_BEAT_MS = 520
+export const LANDING_HAPTIC_MS = 380

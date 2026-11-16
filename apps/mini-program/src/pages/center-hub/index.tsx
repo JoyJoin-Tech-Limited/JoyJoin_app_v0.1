@@ -19,6 +19,7 @@ import { CountdownTickProvider } from '../../hooks/useCountdownTick'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { navigateToEventCard } from '../../lib/utils/eventCardNavigation'
+import type { TableEntryState } from '../../lib/utils/eventCardNavigation'
 import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { partitionJoinedEventsByDateTime } from '../events/eventPartition'
 import './index.scss'
@@ -55,9 +56,12 @@ function CenterHubContent({
 }) {
   const { isDegradation } = useDeviceTier()
 
-  const handleEventTap = useCallback((event: JoinedEventSummary) => {
-    eventsAnalytics.trackCardTap(event, activeTab)
-    navigateToEventCard(event, { isHistorical: activeTab === 'completed' })
+  const handleEventTap = useCallback((event: JoinedEventSummary, tableEntryState: TableEntryState) => {
+    eventsAnalytics.trackCardTap(event, activeTab, tableEntryState)
+    navigateToEventCard(event, {
+      isHistorical: activeTab === 'completed',
+      tableEntryState,
+    })
   }, [activeTab])
 
   if (isLoading) {

@@ -104,12 +104,12 @@ vi.mock('../../components/ui/PageMorphWrapper', () => ({
 }))
 
 vi.mock('../../components/events/FootprintOracleCard', () => ({
-  default: ({ event, onClick, isHistorical = false }: { event: JoinedEventSummary; onClick: (event: JoinedEventSummary) => void; isHistorical?: boolean }) => (
+  default: ({ event, onClick, isHistorical = false }: { event: JoinedEventSummary; onClick: (event: JoinedEventSummary, entry: 'sealed' | 'revealed' | 'none') => void; isHistorical?: boolean }) => (
     <button
       type='button'
       data-testid={`event-card-${event.id}`}
       data-is-historical={isHistorical ? 'true' : 'false'}
-      onClick={() => onClick(event)}
+      onClick={() => onClick(event, 'none')}
     >
       {event.title}
     </button>
@@ -293,8 +293,8 @@ describe('CenterHubPage three-bucket IA', () => {
     expect(screen.queryByText('第一次活动，期待与你相遇！')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('event-card-ongoing'))
-    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'ongoing')
-    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: false })
+    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'ongoing', 'none')
+    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: false, tableEntryState: 'none' })
     expect(mocks.navigateTo).not.toHaveBeenCalled()
     expect(mocks.markNotificationRead).not.toHaveBeenCalled()
     expect(mocks.markNotificationsAsRead).not.toHaveBeenCalled()
@@ -312,8 +312,8 @@ describe('CenterHubPage three-bucket IA', () => {
     expect(card).toHaveAttribute('data-is-historical', 'true')
     fireEvent.click(card)
 
-    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'completed')
-    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: true })
+    expect(eventsAnalytics.trackCardTap).toHaveBeenCalledWith(event, 'completed', 'none')
+    expect(navigateToEventCard).toHaveBeenCalledWith(event, { isHistorical: true, tableEntryState: 'none' })
     expect(event).toEqual(originalEvent)
   })
 

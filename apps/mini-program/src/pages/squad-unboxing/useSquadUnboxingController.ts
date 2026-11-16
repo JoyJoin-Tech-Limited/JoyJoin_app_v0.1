@@ -5,6 +5,7 @@ import {
   confirmPoolGroupAttendance,
   getPoolGroupAnalysis,
   getPoolGroupDetails,
+  markPoolGroupRevealed,
   type PoolGroupDetailsResponse,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
@@ -17,6 +18,7 @@ import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
 import { openPoolGroupDetail, replaceWithGatheringRoom, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
+import { hasOpenedTable, markTableOpened, syncTableRevealedAt } from '../../lib/utils/tableRevealState'
 import { squadUnboxingAnalytics, type SquadUnboxingEventType } from '../../lib/analytics/squadUnboxingAnalytics'
 import { interactionLatency } from '../../lib/analytics/interactionLatency'
 import {
@@ -51,29 +53,8 @@ import { createSquadAutoPocketSession, type SquadAutoPocketSession } from './squ
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
 
-function getRevealFlagKey(groupId: string): string {
-  return `jj_revealed_${groupId}`
-}
-
-function readRevealFlag(groupId: string): boolean {
-  try {
-    return Taro.getStorageSync(getRevealFlagKey(groupId)) === true
-  } catch {
-    return false
-  }
-}
-
-function writeRevealFlag(groupId: string): void {
-  try {
-    Taro.setStorageSync(getRevealFlagKey(groupId), true)
-  } catch (error) {
-    logError('[SquadUnboxing] Failed to persist reveal flag', {
-      groupId,
-      message: error instanceof Error ? error.message : String(error),
-    })
-  }
-}
-
+// The reveal flag lives in lib/utils/tableRevealState so the Events card can ask
+// the same question the ceremony answers. Never duplicate this key.
 // ── "Pocket the deck" persistence (2026-07-15) ──────────────────────────────
 // Mirrors the reveal-flag pattern: per-group keys, read === true, defensive
 // try/catch with structured error logs. Only the stable phases are persisted
@@ -157,17 +138,17 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
   const storyMode = process.env.TARO_APP_ENABLE_STORY_MODE === 'true'
   const storyName = routerParams['__story']
 
-  const [flowState, setFlowState] = useState<FlowState>(() => (groupId ? (readRevealFlag(groupId) ? 'revealed' : 'ready') : 'ready'))
+  const [flowState, setFlowState] = useState<FlowState>(() => (groupId ? (hasOpenedTable(groupId) ? 'revealed' : 'ready') : 'ready'))
   // Tap-to-reveal session interactivity (AC-01/AC-03): derived from the
   // reveal flag AT ARRIVAL only. First visit (flag absent) → interactive
   // face-down game; re-entry (flag present) → all-up, no chip, no shimmer.
   // Writing the flag at box-open must NOT flip this back mid-session.
-  const [isInteractiveSession, setIsInteractiveSession] = useState(() => (groupId ? !readRevealFlag(groupId) : false))
+  const [isInteractiveSession, setIsInteractiveSession] = useState(() => (groupId ? !hasOpenedTable(groupId) : false))
   // Pocket-the-deck phase (AC-01/AC-05): initialized from the persisted flag
   // ONLY when the reveal already happened — a first visit can never start
   // pocketed because the flag is only written from a revealed fan.
   const [deckPhase, setDeckPhase] = useState<DeckPhase>(() =>
-    groupId && readRevealFlag(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan',
+    groupId && hasOpenedTable(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan',
   )
   const prevGroupIdRef = useRef<string>(groupId)
   // Ready-dwell anticipation metric (Batch A, 2026-07-24): timestamp of the
@@ -191,7 +172,7 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
   // hold their entrance until the deal finishes so the handoff never shows
   // an empty white slab and logistics never render before people. Cold
   // re-entry (reveal flag present) starts settled — nothing to wait for.
-  const [dealSettled, setDealSettled] = useState(() => (groupId ? readRevealFlag(groupId) : false))
+  const [dealSettled, setDealSettled] = useState(() => (groupId ? hasOpenedTable(groupId) : false))
   const flowStateRef = useRef<FlowState>(flowState)
   useEffect(() => {
     flowStateRef.current = flowState
@@ -203,15 +184,15 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
     if (!groupId) return
     if (prevGroupIdRef.current === groupId) return
     prevGroupIdRef.current = groupId
-    const nextFlow = readRevealFlag(groupId) ? 'revealed' : 'ready'
+    const nextFlow = hasOpenedTable(groupId) ? 'revealed' : 'ready'
     setFlowState(nextFlow)
-    setIsInteractiveSession(!readRevealFlag(groupId))
-    setDeckPhase(readRevealFlag(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan')
+    setIsInteractiveSession(!hasOpenedTable(groupId))
+    setDeckPhase(hasOpenedTable(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan')
     if (nextFlow === 'ready') readyEnteredAtRef.current = Date.now()
     if (boxExitTimerRef.current) clearTimeout(boxExitTimerRef.current)
     boxExitTimerRef.current = null
     setBoxExiting(false)
-    setDealSettled(readRevealFlag(groupId))
+    setDealSettled(hasOpenedTable(groupId))
     reopenCountRef.current = 0
   }, [groupId])
 
@@ -977,7 +958,24 @@ export function useSquadUnboxingController({ groupId, routerParams, focusedIndex
       return undefined
     }
 
-    writeRevealFlag(groupId)
+    markTableOpened(groupId)
+    // Server truth, fire-and-forget (2026-11-11). The local flag above is the
+    // optimistic cache so the ceremony never waits on the network; this call is
+    // what makes the *other* devices see a settled table. The endpoint is
+    // idempotent (first write wins), so a re-run of this effect cannot move the
+    // timestamp the receipt window reads.
+    void markPoolGroupRevealed(apiRequest, groupId)
+      .then((result) => {
+        if (result.revealedAt) {
+          syncTableRevealedAt(groupId, result.revealedAt)
+        }
+      })
+      .catch((error) => {
+        logError('[SquadUnboxing] Failed to record reveal on the server', {
+          groupId,
+          message: error instanceof Error ? error.message : String(error),
+        })
+      })
     // `squad_unboxing_tonights_table_view` moved to the page's panel toggle
     // (2026-07-16): the 今晚这桌 chapter is collapsed by default, so the
     // impression now fires on the user's first expand, not on reveal entry.
