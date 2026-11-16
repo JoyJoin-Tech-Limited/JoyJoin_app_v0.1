@@ -65,6 +65,11 @@ export interface AdminEventPool {
   genderBalanceBonusPoints?: number | null;
   minFemaleCount?: number | null;
   minMaleCount?: number | null;
+  /** 保底场地/权益（方案 B），S1 起由列表 GET 返回，供编辑回填 */
+  guaranteedVenueId?: string | null;
+  guaranteedDealId?: string | null;
+  /** 成局时间；用于锁定保底承诺的编辑入口 */
+  matchedAt?: string | null;
   createdAt: string;
   registrationCount?: number;
   matchedCount?: number;

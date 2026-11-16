@@ -111,6 +111,12 @@ const VENUE_ASSIGNMENT_UNASSIGNED_REASONS = new Set([
   "no_suitable_venue",
   "capacity_insufficient",
   "slot_fully_booked_at_save",
+  // venue-deal S2 保底失败（合同 D8）——必须各自可见，不能归入 __other__
+  "guaranteed_binding_incomplete",
+  "guaranteed_venue_unavailable",
+  "guaranteed_deal_unavailable",
+  "guaranteed_venue_no_slot",
+  "guaranteed_venue_capacity",
 ]);
 
 function labelledCounterKey(labels: Record<string, string>): string {

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>悦聚 · 同桌凭证｜到店出示仪式感设计探索</title>
+<style>
+  :root{
+    --primary:#8B5CF6; --primary-dark:#7C3AED; --primary-light:#EDE9FE;
+    --coral:#FF9B85; --deal-ink:#B4462B; --deal-tint:#FFF1EA; --deal-line:#F3C9B6;
+    --ink:#2D3142; --ink-2:#6B7280; --ink-2-light:#59616C; --divider:#F3F4F6;
+    --plum-950:#1D1229; --plum-900:#251735; --plum-800:#30203F; --plum-line:#4A3560;
+    --cream:#FBF5EC; --cream-2:#F3EADA; --lav:#C9BCD8; --lav-dim:#A795BC;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    background:#F4F2EE;color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased}
+  .doc{max-width:1240px;margin:0 auto;padding:56px 40px 110px}
+  .doc-kicker{font-size:12px;letter-spacing:.18em;color:var(--ink-2);text-transform:uppercase}
+  h1{font-size:32px;line-height:1.35;margin-top:10px;font-weight:800}
+  .doc-meta{display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--ink-2)}
+  .doc-meta b{color:var(--ink);font-weight:600}
+  header.doc-head{border-bottom:2px solid var(--ink);padding-bottom:22px}
+  section{margin-top:56px}
+  h2{font-size:22px;font-weight:800;display:flex;align-items:baseline;gap:12px}
+  h2 .num{font-size:13px;font-weight:700;color:#fff;background:var(--ink);border-radius:6px;padding:2px 8px}
+  h3{font-size:16px;font-weight:700;margin:24px 0 10px}
+  p.lede{margin-top:12px;font-size:15px;color:var(--ink-2-light);max-width:880px}
+  .note{margin-top:16px;background:#fff;border-left:3px solid var(--primary);border-radius:0 10px 10px 0;
+    padding:14px 18px;font-size:14px;color:var(--ink-2-light);max-width:920px}
+  .note b{color:var(--ink)}
+  .shots{display:flex;flex-wrap:wrap;gap:34px;margin-top:26px;align-items:flex-start}
+  .shot{display:flex;flex-direction:column;gap:12px}
+  .shot-cap{font-size:13px;color:var(--ink-2);max-width:390px;line-height:1.65}
+  .shot-cap b{display:block;color:var(--ink);font-size:14px;font-weight:700}
+  .shot-cap code{font-size:12px;background:#ECE9E3;border-radius:4px;padding:0 4px}
+  .annot{margin-top:10px;font-size:11px;color:var(--primary-dark);background:var(--primary-light);
+    border-radius:8px;padding:6px 10px;line-height:1.6}
+  table{width:100%;border-collapse:collapse;margin-top:14px;background:#fff;border-radius:12px;overflow:hidden;
+    font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid #F0EDE7;vertical-align:top;line-height:1.65}
+  th{background:#EFECE6;font-size:12px;font-weight:700;letter-spacing:.04em}
+  td code{font-size:12px;background:#F2EFE9;border-radius:4px;padding:1px 5px;color:#5A4A3A}
+  tr:last-child td{border-bottom:none}
+  ul.plain{margin:12px 0 0 18px;font-size:14px;color:var(--ink-2-light)}
+  ul.plain li{margin-bottom:6px}
+
+  /* ══════════ 仪式版出示页 ══════════ */
+  .device{width:390px;border-radius:26px;overflow:hidden;border:1px solid #16101F;
+    box-shadow:0 14px 36px rgba(29,18,41,.22);background:var(--plum-950)}
+  .ceremony{position:relative;min-height:780px;display:flex;flex-direction:column;
+    background:
+      radial-gradient(120% 62% at 50% -8%, #4A2C63 0%, rgba(74,44,99,0) 62%),
+      radial-gradient(90% 40% at 50% 108%, rgba(255,155,133,.16) 0%, rgba(255,155,133,0) 60%),
+      linear-gradient(180deg,var(--plum-900),var(--plum-950));
+    color:var(--cream);padding:0 20px 22px}
+  .c-status{height:34px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 4px;font-size:12px;font-weight:600;color:var(--cream)}
+  .c-nav{height:44px;display:flex;align-items:center;justify-content:space-between;position:relative}
+  .c-nav .wordmark{font-size:12px;letter-spacing:.24em;color:var(--lav);font-weight:700}
+  .c-nav .close{width:30px;height:30px;border-radius:50%;border:1px solid var(--plum-line);
+    color:var(--lav);display:flex;align-items:center;justify-content:center;font-size:15px}
+  .c-eyebrow{text-align:center;margin-top:14px;font-size:11px;letter-spacing:.34em;color:var(--lav-dim);font-weight:600}
+  .c-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:.06em;margin-top:8px}
+  .c-sub{text-align:center;font-size:12px;color:var(--lav);margin-top:6px}
+
+  .credential{position:relative;margin-top:20px;background:linear-gradient(170deg,var(--cream),var(--cream-2));
+    border-radius:20px;padding:24px 20px 20px;color:var(--ink);
+    box-shadow:0 18px 40px rgba(0,0,0,.34)}
+  .credential:before{content:"";position:absolute;inset:8px;border:1px solid rgba(180,70,43,.22);border-radius:14px;pointer-events:none}
+  .cred-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .cred-venue{font-size:17px;font-weight:800;line-height:1.4;color:#2A2118}
+  .cred-meta{font-size:11px;color:#6B6357;margin-top:5px;line-height:1.7}
+  /* 印章 */
+  .seal{flex-shrink:0;width:66px;height:66px;border-radius:50%;border:2px solid var(--deal-ink);
+    color:var(--deal-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transform:rotate(-9deg);position:relative;margin-top:-4px;margin-right:-2px}
+  .seal:before{content:"";position:absolute;inset:4px;border:1px solid var(--deal-ink);border-radius:50%;opacity:.55}
+  .seal .a{font-size:12px;font-weight:900;letter-spacing:.1em;line-height:1.25}
+  .seal .b{font-size:9px;font-weight:700;letter-spacing:.14em;opacity:.85;margin-top:2px}
+  .seal--done{border-color:#207A46;color:#207A46;transform:rotate(6deg)}
+  .seal--done:before{border-color:#207A46}
+
+  .code-plaque{margin-top:20px;border:1.5px dashed rgba(180,70,43,.45);border-radius:14px;
+    background:rgba(255,255,255,.55);padding:18px 12px 16px;text-align:center}
+  .code-plaque .k{font-size:11px;letter-spacing:.2em;color:#7A5A44;font-weight:700}
+  .code-plaque .code{font-size:46px;font-weight:900;letter-spacing:.14em;color:#2A2118;line-height:1.25;margin-top:8px}
+  .code-plaque .sub{font-size:11px;letter-spacing:.08em;color:#6B6357;margin-top:8px;font-weight:500}
+  .code-plaque--menu .code{font-size:32px;letter-spacing:.04em}
+  .cred-value{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px}
+  .cred-value .v{font-size:30px;font-weight:900;color:var(--deal-ink);white-space:nowrap;line-height:1}
+  .cred-value .t{font-size:13px;font-weight:700;color:#4A3A2C;text-align:left;line-height:1.5}
+  .cred-value .s{display:block;font-size:11px;font-weight:500;color:#6B6357;margin-top:2px}
+
+  .c-actions{margin-top:22px}
+  .c-copy{display:block;width:100%;background:var(--primary);color:#fff;text-align:center;
+    border-radius:999px;padding:15px 0;font-size:16px;font-weight:700;box-shadow:0 8px 22px rgba(139,92,246,.34)}
+  .c-copy--done{background:#2F7D4F;box-shadow:0 8px 22px rgba(47,125,79,.28)}
+  .c-hint{text-align:center;font-size:12px;color:var(--lav);margin-top:12px;line-height:1.8}
+  .c-show-note{text-align:center;color:var(--cream);font-size:15px;font-weight:700;line-height:1.7;padding:6px 0}
+  .c-show-note small{display:block;font-size:12px;font-weight:400;color:var(--lav);margin-top:6px}
+  .c-rule{margin-top:auto;padding-top:22px;text-align:center;font-size:11px;color:var(--lav-dim);line-height:1.9}
+  .c-rule b{color:var(--cream);font-weight:600}
+  .c-brightness{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px;font-size:10px;color:var(--lav-dim)}
+  .c-brightness i{width:5px;height:5px;border-radius:50%;background:#A78BFA;box-shadow:0 0 0 3px rgba(167,139,250,.16);display:inline-block}
+
+  /* 动效分镜 */
+  .frames{display:flex;gap:14px}
+  .frame{flex:1;background:var(--plum-900);border-radius:16px;border:1px solid var(--plum-line);
+    min-height:210px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+  .frame .t{font-size:11px;color:var(--lav);letter-spacing:.1em;font-weight:700}
+  .frame .box{width:100%;height:96px;border-radius:12px;background:var(--cream);opacity:0;transform:translateY(26px)}
+  .frame.f2 .box{opacity:.55;transform:translateY(10px)}
+  .frame.f3 .box{opacity:1;transform:none}
+  .frame .stamp{width:44px;height:44px;border-radius:50%;border:2px solid var(--deal-ink);opacity:0;transform:scale(1.3) rotate(-9deg)}
+  .frame.f2 .stamp{opacity:.5}
+  .frame.f3 .stamp{opacity:1;transform:scale(1) rotate(-9deg)}
+  .frame .cap{font-size:10px;color:var(--lav-dim);text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <div class="doc-kicker">JoyJoin · Design Exploration</div>
+  <h1>同桌凭证｜「到店出示」的仪式感设计</h1>
+  <div class="doc-meta">
+    <span>版本 <b>v2.2 修订稿</b></span>
+    <span>日期 <b>2026-11-12</b></span>
+    <span>范围 <b>仅出示页，其余触点沿用 v2</b></span>
+    <span>状态 <b>未实现 · 主体 v2 已获设计批准</b></span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">1</span>方向：把「出示优惠」改成「亮出这桌的凭证」</h2>
+  <p class="lede">用户付完 ¥88 之后，唯一一次当着别人面打开悦聚的时刻就是到店出示。这一页如果只是一张优惠券，它就是工具；如果它是<strong>这一桌的凭证</strong>，它就是身份。仪式感由五个真实事实承担：店名、活动时间、同桌人数、专属暗号、本场印章 —— 全部是系统里已有的数据，不靠形容词堆出来。</p>
+  <div class="note"><b>措辞约束：</b>品牌已废止「会员 / VIP」类叫法，因此这里不出现会员卡、黑卡、贵宾等词。仪式感的载体是「同桌凭证」与「本场专属印章」，称谓是「这桌的客人」而非「会员」。同时遵守微信审核语汇：不出现匹配、社交、灵魂、撮合、AI。<br/><b>「接头暗号」已改为「到店暗号」</b>（评审意见）：接头 + 印章 + 编号的组合会把仪式感推向秘密接头或票证交易，与轻松真诚的调性不符；印章与凭证保留，措辞交 copy owner 终审。</div>
+  <ul class="plain">
+    <li><b>暗号仍是第一焦点</b>（沿用评审 P1-4）：仪式层只加在凭证外框，店员两秒内还是先读到暗号。</li>
+    <li><b>深色底只用于这一页</b>：它是全产品唯一的「舞台页」，与日常暖白界面形成场合感反差，不扩散到其它页面。</li>
+    <li><b>印章只记录真实动作</b>：初始 = 「本场专属」；复制暗号后 = 「暗号已复制」+ 复制时间。它不代表门店已出示、已使用或已核销 —— 本期没有核销端，就不伪造履约状态。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">2</span>凭证页 · 暗号版与套餐版</h2>
+  <div class="shots">
+    <div class="shot" data-shot="ceremony-code">
+      <div class="device"><div class="ceremony">
+        <div class="c-status"><span>19:12</span><span>5G</span></div>
+        <div class="c-nav"><span class="wordmark">JOYJOIN</span><span class="close">✕</span></div>
+        <div class="c-eyebrow">本 场 专 属</div>
+        <div class="c-title">同桌凭证</div>
+        <div class="c-sub">这一桌，为你留了位置</div>
+        <div class="credential">
+          <div class="cred-top">
+            <div><div class="cred-venue">山止川行·南山店</div><div class="cred-meta">11月14日 周六 19:00<br/>6 人桌 · 同桌 6/6 已确认</div></div>
+            <div class="seal"><span class="a">本场</span><span class="a">专属</span><span class="b">JOYJOIN</span></div>
+          </div>
+          <div class="code-plaque">
+            <div class="k">到 店 暗 号</div>
+            <div class="code">悦聚同桌</div>
+          </div>
+          <div class="cred-value"><span class="v">8折</span><div class="t">本场专属折扣<span class="s">无门槛 · 全单通用</span></div></div>
+        </div>
+        <div class="c-actions"><span class="c-copy">复制暗号</span><div class="c-hint">点单时报出暗号，店员确认后结账直接打折</div></div>
+        <div class="c-rule"><b>仅限本场活动 · 本桌使用</b><br/>订座费不含餐费，餐费到店与门店另结</div>
+        <div class="c-brightness"><i></i>出示时已自动提亮 · 屏幕常亮</div>
+      </div></div>
+      <div class="shot-cap"><b>C1 · 暗号凭证</b>深紫舞台 + 米色凭证 + 珊瑚印章。暗号 92rpx 居视觉中心，折扣只是凭证上的权益行。仪式感只来自真实数据：店名、活动时间、6 人桌与「同桌 6/6 已确认」。<b>已删除序列号与桌号</b> —— 本期没有门店核验动作，不伪造可供验证的票券编号。</div>
+    </div>
+
+    <div class="shot" data-shot="ceremony-setmenu">
+      <div class="device"><div class="ceremony">
+        <div class="c-status"><span>19:12</span><span>5G</span></div>
+        <div class="c-nav"><span class="wordmark">JOYJOIN</span><span class="close">✕</span></div>
+        <div class="c-eyebrow">本 场 专 属</div>
+        <div class="c-title">同桌凭证</div>
+        <div class="c-sub">这一桌，为你留了位置</div>
+        <div class="credential">
+          <div class="cred-top">
+            <div><div class="cred-venue">山止川行·南山店</div><div class="cred-meta">11月14日 周六 19:00<br/>6 人桌 · 同桌 6/6 已确认</div></div>
+            <div class="seal"><span class="a">本场</span><span class="a">专属</span><span class="b">JOYJOIN</span></div>
+          </div>
+          <div class="code-plaque code-plaque--menu">
+            <div class="k">为 这 桌 备 好 的</div>
+            <div class="code">悦聚专属 6 人餐</div>
+            <div class="sub">6 菜 1 汤 + 特调饮品</div>
+          </div>
+          <div class="cred-value"><span class="v">¥598</span><div class="t">整桌一口价<span class="s">原价 ¥758 · 餐费到店支付</span></div></div>
+        </div>
+        <div class="c-actions"><div class="c-show-note">把这一页递给店员<small>无需点按 · 门店按套餐出餐</small></div></div>
+        <div class="c-rule"><b>仅限本场活动 · 本桌使用</b><br/>订座费不含餐费，餐费到店与门店另结</div>
+        <div class="c-brightness"><i></i>出示时已自动提亮 · 屏幕常亮</div>
+      </div></div>
+      <div class="shot-cap"><b>C2 · 套餐凭证（无暗号时）</b>凭证本身即凭证：套餐名占据暗号位，下方一行写明内容，店员不需要追问价格与内容。<b>没有按钮</b>：页面本身就是出示动作，原「出示给店员」只播放反馈、不产生真实动作，属于虚假 affordance，已改为静态说明。</div>
+    </div>
+
+    <div class="shot" data-shot="ceremony-presented">
+      <div class="device"><div class="ceremony">
+        <div class="c-status"><span>19:14</span><span>5G</span></div>
+        <div class="c-nav"><span class="wordmark">JOYJOIN</span><span class="close">✕</span></div>
+        <div class="c-eyebrow">本 场 专 属</div>
+        <div class="c-title">同桌凭证</div>
+        <div class="c-sub">暗号已复制，去告诉店员吧</div>
+        <div class="credential">
+          <div class="cred-top">
+            <div><div class="cred-venue">山止川行·南山店</div><div class="cred-meta">11月14日 周六 19:00<br/>6 人桌 · 同桌 6/6 已确认</div></div>
+            <div class="seal seal--done"><span class="a">暗号</span><span class="a">已复制</span><span class="b">19:14</span></div>
+          </div>
+          <div class="code-plaque">
+            <div class="k">到 店 暗 号</div>
+            <div class="code">悦聚同桌</div>
+          </div>
+          <div class="cred-value"><span class="v">8折</span><div class="t">本场专属折扣<span class="s">无门槛 · 全单通用</span></div></div>
+        </div>
+        <div class="c-actions"><span class="c-copy c-copy--done">已复制 · 再说一次也可以</span><div class="c-hint">点单时报出暗号，店员确认后结账直接打折</div></div>
+        <div class="c-rule"><b>仅限本场活动 · 本桌使用</b><br/>订座费不含餐费，餐费到店与门店另结</div>
+        <div class="c-brightness"><i></i>出示时已自动提亮 · 屏幕常亮</div>
+      </div></div>
+      <div class="shot-cap"><b>C3 · 已复制（回收动作）</b>印章从「本场专属」翻为「暗号已复制」并记下<b>复制时间</b>，主按钮变绿。只声明真实发生的本地复制：不写「已使用 / 已核销」，也不写「已出示」。复制失败的提示只在失败时出现，成功态不再同屏展示失败说明。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">3</span>动效与触觉：只演一次，240ms 内结束</h2>
+  <p class="lede">仪式感应发生在打开的瞬间，之后页面必须绝对安静 —— 用户正把手机递给店员。无循环动画、无粒子、无声音。</p>
+  <div class="shots">
+    <div class="shot" data-shot="ceremony-motion" style="max-width:100%">
+      <div class="device" style="width:100%;background:var(--plum-950);border-color:var(--plum-line)">
+        <div style="padding:22px 22px 26px">
+          <div class="frames">
+            <div class="frame f1"><div class="t">0ms</div><div class="box"></div><div class="stamp"></div><div class="cap">深紫底先就位<br/>凭证在屏下 26px</div></div>
+            <div class="frame f2"><div class="t">120ms</div><div class="box"></div><div class="stamp"></div><div class="cap">凭证上浮并淡入<br/>印章等待落下</div></div>
+            <div class="frame f3"><div class="t">240ms</div><div class="box"></div><div class="stamp"></div><div class="cap">印章 1.15→1 落定<br/>轻触觉反馈一次</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="shot-cap" style="max-width:100%"><b>C4 · 打开分镜（示意）</b>只使用 transform 与 opacity，全程 ≤240ms；印章落定帧触发一次 <code>wx.vibrateShort({type:'light'})</code>。<code>reduce motion</code> 或低性能档时直接呈现终帧，无动画。</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>时刻</th><th>动作</th><th>约束</th></tr>
+    <tr><td>进入页面</td><td><code>wx.setScreenBrightness</code> 提至约 0.9，<code>wx.setKeepScreenOn(true)</code></td><td>退出时恢复原亮度并关闭常亮；失败静默降级，不阻断出示</td></tr>
+    <tr><td>0–240ms</td><td>凭证上浮 26px + 淡入；印章缩放落定</td><td>仅 transform/opacity；无布局抖动</td></tr>
+    <tr><td>印章落定</td><td>一次轻触觉反馈</td><td>不播放声音；不重复触发</td></tr>
+    <tr><td>复制暗号</td><td>按钮变绿 + 印章翻转为「暗号已复制」+ 复制时间戳</td><td>本地状态即可，<b>不代表已出示或门店已核销</b>，文案不写「已使用」「已出示」</td></tr>
+    <tr><td>复制失败</td><td>按钮不变绿、印章不翻转，提示「复制失败，请直接念给店员：{暗号}」</td><td>失败提示只在失败时出现，不与成功态同屏</td></tr>
+    <tr><td>之后</td><td>页面静止</td><td>无循环动画、无自动轮播、无新焦点跳动</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">4</span>规格增量（在 v2 §6 之上）</h2>
+  <table>
+    <tr><th>项</th><th>取值</th><th>说明</th></tr>
+    <tr><td>舞台底 <span style="color:#7C3AED;font-weight:700">新增</span></td><td><code>#1D1229</code> → <code>#251735</code> + 顶部紫色径向光</td><td><b>仅出示页使用</b>，不进入全局背景 token</td></tr>
+    <tr><td>凭证纸面</td><td><code>#FBF5EC</code> → <code>#F3EADA</code></td><td>与现有暖白同族，纸感来自内描边而非纹理图</td></tr>
+    <tr><td>深底文字</td><td>主 <code>#FBF5EC</code> · 次 <code>#C9BCD8</code> · 弱 <code>#A795BC</code></td><td>弱色只用于提示与品牌字标，关键规则用主/次色；牌匾内不再放装饰性英文行</td></tr>
+    <tr><td>纸面小字</td><td>统一 <code>#6B6357</code>（功能）· <code>#7A5A44</code>（牌匾标签）</td><td>废弃 <code>#7A6A58</code> / <code>#8A765F</code>：在较深纸色 <code>#F3EADA</code> 上低于 4.5:1</td></tr>
+    <tr><td>印章</td><td><code>#B4462B</code> 双环 + 旋转 −9°；复制后 <code>#207A46</code> + 6°</td><td>装饰性印章不替代文字状态，旁边始终有可读文案</td></tr>
+    <tr><td>暗号字阶</td><td>92rpx / 900 / 字距 0.14em</td><td>属于凭证专用 display token；套餐名降为 64rpx，长内容两行自适应</td></tr>
+    <tr><td>编号与桌号</td><td><b>不展示</b></td><td>已删除序列号与桌号：本期无门店核验动作，避免伪正式感与重复信息；仪式感由店名、时间、同桌确认数与印章承担</td></tr>
+    <tr><td>图标与素材</td><td>全部 CSS / 文字，无新增图片</td><td>不增加包体与 CDN 资产登记负担；印章为纯 CSS 双环</td></tr>
+    <tr><td>新增埋点</td><td><code>deal_credential_present</code></td><td>属性 <code>dealId</code> <code>method</code>(code|show_page) <code>secondsFromOpen</code>，衡量「打开到出示」的真实时长</td></tr>
+  </table>
+  <div class="note"><b>实现期必须验证的三件事：</b>① 深色页在户外夜间店内的真实可读性（真机，非模拟器）；② 提亮/常亮在 iOS 与 Android 微信上的权限与恢复路径；③ 印章动画在低端 Android 的掉帧情况 —— 掉帧即关动画，仪式感不能让位于店员等待。</div>
+</section>
+
+<section>
+  <h2><span class="num">5</span>评审记录（uiux-design-reviewer）</h2>
+  <table>
+    <tr><th>轮次</th><th>结论</th><th>处置</th></tr>
+    <tr><td>v2 主体复审（index.html 9 图）</td><td><b>APPROVE</b>：三项色彩/状态打回全部关闭</td><td>真实 Step 0 壳 + 短屏渲染、Lovart 资产、命中区域、真机状态集转为实现期 ship gate</td></tr>
+    <tr><td>同桌凭证 v2.1 首评</td><td><b>fix-then-ship</b>：方向认可，深紫舞台 / 纸面凭证 / 印章 / 240ms 入场均保留</td><td>本稿 v2.2 即为修改后的版本</td></tr>
+  </table>
+  <table>
+    <tr><th>v2.1 打回项</th><th>v2.2 处置</th></tr>
+    <tr><td>C3 把「复制」写成「已亮凭证 / 已出示」</td><td>印章与图注改为「暗号已复制 + 复制时间」，不声明出示或核销</td></tr>
+    <tr><td>C2「出示给店员」是无真实动作的按钮</td><td>删除按钮，改为静态出示说明；入场印章动画已足够承担仪式感</td></tr>
+    <tr><td>成功态同屏显示复制失败说明</td><td>成功态恢复使用提示；失败说明只在复制失败时出现（§3 新增一行）</td></tr>
+    <tr><td>「接头暗号」语感故弄玄虚</td><td>改「到店暗号」，交 copy owner 终审</td></tr>
+    <tr><td>序列号重复且像核验码；桌号无履约用途</td><td>两者均删除，同桌 6/6 已确认上移至凭证头部</td></tr>
+    <tr><td><code>#7A6A58</code> / <code>#8A765F</code> 纸面小字低于 4.5:1</td><td>功能小字统一 <code>#6B6357</code>；装饰英文行删除，套餐内容行改 <code>#6B6357</code></td></tr>
+  </table>
+  <div class="note"><b>不变的实现期 ship gate：</b>深色页店内照明真机可读性；iOS/Android 微信提亮、常亮与退出恢复；低性能档与 reduce-motion 直接终帧且不触发触觉反馈；关闭按钮命中区域 ≥88rpx；长店名 / 长套餐名 / 暗号缺失时不伪造内容。</div>
+</section>
+
+<footer style="margin-top:56px;border-top:1px solid #DED9CF;padding-top:16px;font-size:12px;color:var(--ink-2)">
+  同桌凭证 · 设计修订 v2.2 · 2026-11-12 · 仅设计稿，未改动产品代码。店名、日期、价格均为示意。<br/>
+  依附文档：<code>docs/design/venue-deal/index.html</code>（v2 两种权益、一条规则）。本稿只替换其 §4 出示页的视觉与动效，不改变任何权益规则与字段需求。
+</footer>
+</div>
+</body>
+</html>

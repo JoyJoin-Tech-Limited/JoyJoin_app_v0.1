@@ -164,7 +164,6 @@ export default function PoolRegistrationPage() {
   // impression event below so `registration_inclusions_viewed` only fires when
   // the strip is actually on screen.
   const windowHeightPx = useWindowHeightPx()
-  const showInclusions = windowHeightPx >= POOL_INCLUSIONS_COLLAPSE_BELOW_PX
 
   // Gate transient reactions so they only celebrate the first selection per step visit.
   const budgetReactionShownRef = useRef(false)
@@ -184,6 +183,15 @@ export default function PoolRegistrationPage() {
     queryFn: () => getEventPool(apiRequest, poolId),
     enabled: !!poolId && !authLoading,
   })
+
+  // S5：报名承诺必须同时具备「保底事实 + 承诺开关 + 兑现开关」。
+  // 否则 promise on / deals off 会出现报名有承诺、成局后无卡片/凭证的断裂。
+  const hasDealPromise =
+    user?.features?.venueDealPromiseEnabled === true &&
+    user?.features?.venueDealsEnabled === true &&
+    pool?.hasGuaranteedDeal === true
+  const showInclusions = windowHeightPx >= POOL_INCLUSIONS_COLLAPSE_BELOW_PX || hasDealPromise
+  const compactInclusions = hasDealPromise && windowHeightPx < POOL_INCLUSIONS_COLLAPSE_BELOW_PX
 
   // Check if the user is already registered for this pool
   const {
@@ -1183,7 +1191,12 @@ export default function PoolRegistrationPage() {
               disturbing the hero's widthFix aspect. Hidden on short viewports
               so the footer CTA stays above the fold. */}
           {showInclusions ? (
-            <PoolRegistrationInclusions visible={staggerMounted} reduceMotion={reduceMotion} />
+            <PoolRegistrationInclusions
+              visible={staggerMounted}
+              reduceMotion={reduceMotion}
+              dealPromise={hasDealPromise}
+              compact={compactInclusions}
+            />
           ) : null}
           <XiaoyueLetterCard
             insight={brief.insight}

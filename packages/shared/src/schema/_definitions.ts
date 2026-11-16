@@ -427,6 +427,12 @@ export const eventPools = pgTable("event_pools", {
   minGroupSize: integer("min_group_size").default(4), // 最小成局人数
   maxGroupSize: integer("max_group_size").default(6), // 最大成局人数
   targetGroups: integer("target_groups").default(1), // 目标组局数量
+
+  // 场地专属优惠 · 池级保底（方案 B，见 docs/design/venue-deal/implementation-plan.md §1.3）
+  // 建池即锁定场地与权益：命中保底的池在分配时视为硬约束，容量不足/门店停用 → 不成局走既有全退。
+  // onDelete=restrict：没有解绑流程前，不允许删场地/权益时静默带走池的承诺。
+  guaranteedVenueId: varchar("guaranteed_venue_id").references(() => venues.id, { onDelete: "restrict" }),
+  guaranteedDealId: varchar("guaranteed_deal_id").references(() => venueDeals.id, { onDelete: "restrict" }),
   
   // 状态管理
   status: varchar("status").default("active"), // active (招募中) | matching | matched | completed | cancelled
@@ -1387,30 +1393,32 @@ export const venueDeals = pgTable("venue_deals", {
   
   // 优惠信息
   title: text("title").notNull(), // 优惠标题，如"悦聚专属8折"
-  discountType: text("discount_type").notNull(), // percentage, fixed, gift
+  discountType: text("discount_type").notNull(), // percentage, fixed, gift, set_menu；用户侧本期只用 percentage / set_menu
   discountValue: integer("discount_value"), // 折扣值: percentage=20表示8折, fixed=30表示减30元
-  description: text("description"), // 优惠详细说明
+  setMenuPriceCents: integer("set_menu_price_cents"), // 定制套餐一口价（分）；discountType=set_menu 时必填，见 adminVenueDealCreateSchema
+  setMenuOriginalPriceCents: integer("set_menu_original_price_cents"), // 套餐划线原价（分）；必填且 > 一口价，是「划算」的唯一证据
+  description: text("description"), // 一句权益说明（≤20 字）：折扣=权益名，套餐=内容一句
   
   // 兑换方式
-  redemptionMethod: text("redemption_method").default("show_page"), // show_page, code, qr_code
-  redemptionCode: text("redemption_code"), // 兑换码/暗号
+  redemptionMethod: text("redemption_method").default("show_page"), // show_page, code, qr_code；本期只用 show_page / code，qr_code 无码图与核销端不上线
+  redemptionCode: text("redemption_code"), // 兑换码/暗号；method=code 时必填 2–8 字，出示页第一焦点
   
-  // 适用条件
+  // 适用条件（保留，客户端不读：本期没有门槛/上限/每人限用语义）
   minSpend: integer("min_spend"), // 最低消费
   maxDiscount: integer("max_discount"), // 最高优惠金额
   perPersonLimit: boolean("per_person_limit").default(false), // 是否每人限用一次
   
-  // 有效期
+  // 有效期（保留，客户端不读：有效性由「是否被池绑定 + is_active」决定）
   validFrom: date("valid_from"),
   validUntil: date("valid_until"),
   
-  // 使用限制
+  // 使用限制（保留，客户端不读：用户侧只有一条规则「仅限本场活动 · 本桌使用」）
   terms: text("terms"), // 使用条款
   excludedDates: text("excluded_dates").array(), // 不可用日期
   
   // 状态
   isActive: boolean("is_active").default(true),
-  usageCount: integer("usage_count").default(0), // 使用次数统计
+  usageCount: integer("usage_count").default(0), // 保留，客户端不读：无门店核销端，不把「复制暗号」记成已使用
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1865,6 +1873,85 @@ export const insertVenueDealSchema = createInsertSchema(venueDeals).omit({
   title: z.string().min(1, "优惠标题不能为空"),
   discountType: z.enum(["percentage", "fixed", "gift"]),
 });
+
+/**
+ * 场地专属优惠 · 后台新建严格校验（S0 交付，S1 才接线到 POST 路由）。
+ * 用户侧只有两种形态：统一折扣（percentage）/ 定制套餐（set_menu）；
+ * 只有一条规则「仅限本场活动 · 本桌使用」，因此不接受门槛、有效期、每人限用等字段。
+ * 旧行读取与 legacy insertVenueDealSchema 不受影响。
+ */
+export const adminVenueDealCreateSchema = z.object({
+  venueId: z.string().min(1, "场地不能为空"),
+  title: z.string().trim().min(1, "权益名不能为空").max(20, "权益名最多 20 字"),
+  description: z.string().trim().min(1, "权益说明不能为空").max(20, "权益说明最多 20 字"),
+  discountType: z.enum(["percentage", "set_menu"], {
+    message: "只支持统一折扣或定制套餐",
+  }),
+  // percentage 必填：整数 1–90，20 = 8 折；拒绝 0 与免费单
+  discountValue: z.number().int("折扣必须是整数").min(1, "折扣不能为 0").max(90, "折扣最低为 1 折").optional(),
+  setMenuPriceCents: z.number().int().positive("一口价必须大于 0").optional(),
+  setMenuOriginalPriceCents: z.number().int().positive("原价必须大于 0").optional(),
+  redemptionMethod: z.enum(["show_page", "code"], {
+    message: "只支持出示本页或到店暗号",
+  }).default("show_page"),
+  redemptionCode: z.string().trim().min(2, "暗号至少 2 字").max(8, "暗号最多 8 字").optional(),
+  isActive: z.boolean().optional(),
+}).superRefine((value, ctx) => {
+  if (value.discountType === "percentage") {
+    if (value.discountValue === undefined) {
+      ctx.addIssue({ code: "custom", path: ["discountValue"], message: "统一折扣必须填写折扣" });
+    }
+    if (value.setMenuPriceCents !== undefined || value.setMenuOriginalPriceCents !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["setMenuPriceCents"], message: "统一折扣不包含套餐价格" });
+    }
+  }
+  if (value.discountType === "set_menu") {
+    if (value.setMenuPriceCents === undefined || value.setMenuOriginalPriceCents === undefined) {
+      ctx.addIssue({ code: "custom", path: ["setMenuPriceCents"], message: "定制套餐必须填写一口价与原价" });
+    } else if (value.setMenuOriginalPriceCents <= value.setMenuPriceCents) {
+      ctx.addIssue({ code: "custom", path: ["setMenuOriginalPriceCents"], message: "原价必须大于一口价" });
+    }
+    if (value.redemptionMethod !== "show_page") {
+      ctx.addIssue({ code: "custom", path: ["redemptionMethod"], message: "定制套餐只能出示本页" });
+    }
+    if (value.discountValue !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["discountValue"], message: "定制套餐不包含折扣值" });
+    }
+  }
+  if (value.redemptionMethod === "code" && !value.redemptionCode) {
+    ctx.addIssue({ code: "custom", path: ["redemptionCode"], message: "到店暗号不能为空" });
+  }
+});
+
+export type AdminVenueDealCreateInput = z.infer<typeof adminVenueDealCreateSchema>;
+
+/**
+ * S1 后台更新权益的输入（部分字段）。业务不变量不在此重复：
+ * 服务端按「读既有行 → 合并 → adminVenueDealCreateSchema 整体校验」执行，
+ * 见 apps/server/src/routes/domains/venues.ts 的 PATCH 路由。
+ * confirmDeactivate 仅为传输字段：只允许伴随 isActive=false，校验后剔除，绝不落库。
+ */
+export const adminVenueDealUpdateSchema = z.object({
+  title: z.string().trim().min(1, "权益名不能为空").max(20, "权益名最多 20 字").optional(),
+  description: z.string().trim().min(1, "权益说明不能为空").max(20, "权益说明最多 20 字").optional(),
+  // 传输层只要求非空字符串：legacy 行（fixed/gift/qr_code）的折扣类型/出示方式
+  // 必须能进入路由，由 planVenueDealPatch 判 LEGACY_DEAL_READONLY；
+  // 现代行的合法值由「合并后 adminVenueDealCreateSchema 整体校验」兜底。
+  discountType: z.string().trim().min(1).optional(),
+  discountValue: z.number().int("折扣必须是整数").min(1).max(90).nullish(),
+  setMenuPriceCents: z.number().int().positive("一口价必须大于 0").nullish(),
+  setMenuOriginalPriceCents: z.number().int().positive("原价必须大于 0").nullish(),
+  redemptionMethod: z.string().trim().min(1).optional(),
+  redemptionCode: z.string().trim().min(2, "暗号至少 2 字").max(8, "暗号最多 8 字").nullish(),
+  isActive: z.boolean().optional(),
+  confirmDeactivate: z.literal(true).optional(),
+}).superRefine((value, ctx) => {
+  if (value.confirmDeactivate && value.isActive !== false) {
+    ctx.addIssue({ code: "custom", path: ["confirmDeactivate"], message: "确认停用只能伴随停用操作" });
+  }
+});
+
+export type AdminVenueDealUpdateInput = z.infer<typeof adminVenueDealUpdateSchema>;
 
 export const insertEventTemplateSchema = createInsertSchema(eventTemplates).omit({
   id: true,

@@ -74,6 +74,27 @@ describe('PoolRegistrationInclusions', () => {
     const root = container.querySelector('.pool-reg-inclusions')
     expect(root?.classList.contains('pool-reg-inclusions--static')).toBe(true)
   })
+
+  it('真实保底时渲染 A1 第五格、teaser 与餐费边界', () => {
+    mockConfig.autoErrorAlt = null
+    render(<PoolRegistrationInclusions visible reduceMotion dealPromise />)
+    expect(screen.getByTestId('pool-deal-promise-tile')).toHaveTextContent('专属优惠')
+    expect(screen.getByTestId('pool-deal-promise-tile')).toHaveTextContent('成局后到店可用')
+    expect(screen.getByText('场地确定后揭晓专属折扣或套餐，到店出示即可用')).toBeInTheDocument()
+    expect(screen.getByText('订座费不含餐费，餐费到店与门店另结')).toBeInTheDocument()
+  })
+
+  it('短屏 compact 仍保留承诺，legacy 默认不出第五格', () => {
+    mockConfig.autoErrorAlt = null
+    const promised = render(<PoolRegistrationInclusions visible reduceMotion dealPromise compact />)
+    expect(promised.container.querySelector('.pool-reg-inclusions--compact')).not.toBeNull()
+    expect(promised.getByTestId('pool-deal-promise-tile')).toBeInTheDocument()
+    promised.unmount()
+    const legacy = render(<PoolRegistrationInclusions visible reduceMotion />)
+    expect(legacy.queryByTestId('pool-deal-promise-tile')).toBeNull()
+    expect(legacy.container.querySelector('.pool-reg-inclusions--with-deal')).toBeNull()
+    expect(legacy.container.querySelector('.pool-reg-inclusions--compact')).toBeNull()
+  })
 })
 
 describe('InclusionTileIcon', () => {

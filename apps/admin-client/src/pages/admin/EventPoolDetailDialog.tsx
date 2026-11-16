@@ -30,12 +30,17 @@ const FILL_THRESHOLD_AMBER = 50;   // >= 50% fill is moderate (amber), < 50% is 
 const MATCH_SCORE_GREEN = 80;
 const MATCH_SCORE_AMBER = 60;
 
-const REASON_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+export const REASON_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   budget_mismatch: { label: "预算不匹配", variant: "destructive" },
   capacity_insufficient: { label: "容量不足", variant: "destructive" },
   no_available_slots: { label: "无可用时段", variant: "outline" },
   slot_fully_booked_at_save: { label: "时段已满", variant: "outline" },
   no_suitable_venue: { label: "无合适场地", variant: "outline" },
+  guaranteed_binding_incomplete: { label: "保底配置不完整", variant: "destructive" },
+  guaranteed_venue_unavailable: { label: "保底门店不可用", variant: "destructive" },
+  guaranteed_deal_unavailable: { label: "保底权益已失效", variant: "destructive" },
+  guaranteed_venue_no_slot: { label: "保底门店无可用时段", variant: "outline" },
+  guaranteed_venue_capacity: { label: "保底门店座位不足", variant: "destructive" },
 };
 
 const TEMPERATURE_LABELS: Record<string, string> = {

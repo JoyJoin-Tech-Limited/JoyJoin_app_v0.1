@@ -145,6 +145,25 @@ $color-burst-coral:    #FF9B85;
 $color-amber:          #F59E0B;
 $color-amber-700:      #B45309;
 
+// 场地专属优惠（VenueDealCard / 同桌凭证）——设计稿 docs/design/venue-deal/index.html §6.1
+// 仅 deal ink / surface / border 三个语义角色；描边为装饰，不承担状态识别。
+$color-deal-ink:       #B4462B; // 暖底上 4.94:1、白底 5.45:1，设计评审已批准
+$color-deal-surface:   #FFF1EA;
+$color-deal-border:    #F3C9B6;
+$color-deal-head-bg:   #FFF6F0;
+$color-deal-muted-bg:  #F4F1EB; // 锁定 / 读取失败面值底，功能文字用 $color-text-secondary-warm
+$color-deal-muted-border: #E3DED6; // 锁定 / 已调整 / 读取失败的中性描边
+// 面值专用 display token：不得扩散为页面标题或正文层级
+$font-size-deal-value:         76rpx;
+$font-size-deal-value-compact: 64rpx; // 四位数套餐价（E1 长内容）
+$font-size-deal-credential-code: 92rpx; // 同桌凭证暗号 display token（仅此页）
+$color-deal-stage-top: #1D1229;
+$color-deal-stage-bottom: #251735;
+$color-deal-paper: #FBF5EC;
+$color-deal-on-stage: #C9BCD8;
+$color-deal-stage-muted: #A795BC;
+$color-deal-paper-label: #7A5A44;
+
 // ─── Typography ───────────────────────────────────────────────────
 // UI stack: dense copy, forms, lists, legal — always use `$font-ui` / `$font-body`.
 $font-ui:   -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;

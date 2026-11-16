@@ -9,6 +9,12 @@ import {
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { localAsset } from '../../../lib/utils/cdnAssets'
+import {
+  VENUE_DEAL_FEE_BOUNDARY_LINE,
+  VENUE_DEAL_LOCKED_HINT,
+  VENUE_DEAL_PROMISE_TEASER,
+  VENUE_DEAL_PROMISE_TITLE,
+} from '@shared/copy/venueDealCopy'
 
 /**
  * 费用包含 strip height budget: the page hides this whole section when the
@@ -21,6 +27,10 @@ export const POOL_INCLUSIONS_COLLAPSE_BELOW_PX = 640
 interface PoolRegistrationInclusionsProps {
   visible: boolean
   reduceMotion: boolean
+  /** 服务端已证明池级保底；调用方必须同时满足独立 flag，不能只看候选门店 */
+  dealPromise?: boolean
+  /** 短屏仍保留真实保底承诺，但压缩垂直空间，订座 CTA 不被挤走 */
+  compact?: boolean
 }
 
 // Fallback glyph if a bundled Lovart WebP ever fails to load (packaging
@@ -36,7 +46,7 @@ const IMAGE_FALLBACK_GLYPHS: Record<
   full_refund_guarantee: { kind: 'glyph', emoji: '🛡️', tier: 'ui' },
 }
 
-export function InclusionTileIcon({ tile }: { tile: PoolInclusionTileCopy }) {
+export function InclusionTileIcon({ tile, compact = false }: { tile: PoolInclusionTileCopy; compact?: boolean }) {
   // Icon swap point: Lovart art replaces the glyph entry in
   // packages/shared/src/copy/poolRegistrationInclusionsCopy.ts with
   // `{ kind: 'image', src, alt }` — no component change needed.
@@ -49,7 +59,7 @@ export function InclusionTileIcon({ tile }: { tile: PoolInclusionTileCopy }) {
         <JoyJoinIcon
           emoji={fallback.emoji}
           tier={fallback.tier}
-          size={36}
+          size={compact ? 28 : 36}
           className='pool-reg-inclusions__icon-glyph'
         />
       )
@@ -71,7 +81,7 @@ export function InclusionTileIcon({ tile }: { tile: PoolInclusionTileCopy }) {
     <JoyJoinIcon
       emoji={tile.icon.emoji}
       tier={tile.icon.tier}
-      size={36}
+      size={compact ? 28 : 36}
       className='pool-reg-inclusions__icon-glyph'
     />
   )
@@ -92,6 +102,8 @@ export function InclusionTileIcon({ tile }: { tile: PoolInclusionTileCopy }) {
 export default function PoolRegistrationInclusions({
   visible,
   reduceMotion,
+  dealPromise = false,
+  compact = false,
 }: PoolRegistrationInclusionsProps) {
   const deviceTier = useDeviceTier()
   const staticRender = reduceMotion || deviceTier.isDegradation
@@ -100,19 +112,38 @@ export default function PoolRegistrationInclusions({
     'pool-reg-inclusions',
     visible ? 'pool-reg-inclusions--enter' : 'pool-reg-inclusions--hidden',
     staticRender ? 'pool-reg-inclusions--static' : '',
-  ].join(' ')
+    dealPromise ? 'pool-reg-inclusions--with-deal' : '',
+    compact ? 'pool-reg-inclusions--compact' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <View className={rootClasses} aria-label='费用包含'>
-      {POOL_INCLUSION_TILES.map((tile) => (
-        <View className='pool-reg-inclusions__tile' key={tile.id}>
-          <View className='pool-reg-inclusions__icon-badge'>
-            <InclusionTileIcon tile={tile} />
+      <View className='pool-reg-inclusions__grid'>
+        {POOL_INCLUSION_TILES.map((tile) => (
+          <View className='pool-reg-inclusions__tile' key={tile.id}>
+            <View className='pool-reg-inclusions__icon-badge'>
+              <InclusionTileIcon tile={tile} compact={compact} />
+            </View>
+            <Text className='pool-reg-inclusions__title'>{tile.title}</Text>
+            <Text className='pool-reg-inclusions__subtitle'>{tile.subtitle}</Text>
           </View>
-          <Text className='pool-reg-inclusions__title'>{tile.title}</Text>
-          <Text className='pool-reg-inclusions__subtitle'>{tile.subtitle}</Text>
+        ))}
+        {dealPromise ? (
+          <View className='pool-reg-inclusions__tile pool-reg-inclusions__tile--deal' data-testid='pool-deal-promise-tile'>
+            <View className='pool-reg-inclusions__icon-badge pool-reg-inclusions__icon-badge--deal'>
+              <JoyJoinIcon emoji='🎫' tier='ui' size={compact ? 28 : 36} className='pool-reg-inclusions__icon-glyph' />
+            </View>
+            <Text className='pool-reg-inclusions__title'>{VENUE_DEAL_PROMISE_TITLE}</Text>
+            <Text className='pool-reg-inclusions__subtitle'>{VENUE_DEAL_LOCKED_HINT}</Text>
+          </View>
+        ) : null}
+      </View>
+      {dealPromise ? (
+        <View className='pool-reg-inclusions__deal-notes'>
+          <Text className='pool-reg-inclusions__deal-teaser'>{VENUE_DEAL_PROMISE_TEASER}</Text>
+          <Text className='pool-reg-inclusions__fee-boundary'>{VENUE_DEAL_FEE_BOUNDARY_LINE}</Text>
         </View>
-      ))}
+      ) : null}
     </View>
   )
 }

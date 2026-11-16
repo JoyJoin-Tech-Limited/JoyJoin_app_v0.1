@@ -69,6 +69,11 @@ export const ADMIN_AUDIT_ACTIONS = [
   'VENUE_MIGRATED',
   'VENUE_ASSIGNED',
   'VENUE_ONBOARDING_STATUS_CHANGED',
+  // Venue deals (S1 后台权益录入) — create/update/delete + 停用已绑定权益的确认
+  'VENUE_DEAL_CREATED',
+  'VENUE_DEAL_UPDATED',
+  'VENUE_DEAL_DELETED',
+  'EVENT_POOL_DEAL_BOUND',
   // Event management
   'EVENT_STATUS_CHANGED',
   // Event pool management

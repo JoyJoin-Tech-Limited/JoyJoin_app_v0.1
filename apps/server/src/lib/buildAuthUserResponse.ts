@@ -127,6 +127,8 @@ const [
     profileRedesignEnabled,
     profilePixelAvatarEnabled,
     gatheringRoomEnabled,
+    venueDealsEnabled,
+    venueDealPromiseEnabled,
     eventCardOpenBoxEntryEnabled,
     icebreakerHapticGrammarEnabled,
     icebreakerMoodFieldEnabled,
@@ -194,6 +196,8 @@ const [
     getFeatureFlag('profileRedesignEnabled', true),
     getFeatureFlag('profilePixelAvatarEnabled', false),
     getFeatureFlag('gatheringRoomEnabled', false),
+    getFeatureFlag('venueDealsEnabled', false),
+    getFeatureFlag('venueDealPromiseEnabled', false),
     getFeatureFlag('eventCardOpenBoxEntryEnabled', true),
     getFeatureFlag('icebreakerHapticGrammarEnabled', false),
     getFeatureFlag('icebreakerMoodFieldEnabled', false),
@@ -333,6 +337,9 @@ const [
       profilePixelAvatarEnabled,
       /** Gathering room (集结房间) entry CTAs + room page. */
       gatheringRoomEnabled,
+      /** 场地专属优惠票券卡（S3）用户可见开关，默认暗发。 */
+      venueDealsEnabled,
+    venueDealPromiseEnabled,
       /** Events-card sealed table entry into the reveal ceremony. */
       eventCardOpenBoxEntryEnabled,
       icebreakerAcknowledgmentBeatEnabled,

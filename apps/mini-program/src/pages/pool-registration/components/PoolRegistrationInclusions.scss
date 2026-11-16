@@ -7,9 +7,6 @@
 // + 8 (pad). @use'd by the page SCSS so the rules compile into the
 // pool-registration subpackage page WXSS.
 .pool-reg-inclusions {
-  display: flex;
-  flex-direction: row;
-  gap: $spacing-xs;
   width: 100%;
   margin-bottom: $spacing-md;
   box-sizing: border-box;
@@ -32,6 +29,18 @@
     transform: none;
   }
 
+  &__grid {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-xs;
+    width: 100%;
+  }
+
+  &--with-deal &__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   &__tile {
     flex: 1;
     min-width: 0;
@@ -43,6 +52,73 @@
     background: $color-surface;
     box-shadow: $shadow-sm;
     box-sizing: border-box;
+  }
+
+  &__tile--deal {
+    grid-column: span 2;
+    align-items: flex-start;
+    background: $color-deal-surface;
+    box-shadow: none;
+    border: 1rpx solid $color-deal-border;
+  }
+
+  &__tile--deal &__title,
+  &__tile--deal &__subtitle {
+    text-align: left;
+  }
+
+  &__icon-badge--deal {
+    background: rgba($color-deal-ink, 0.08);
+  }
+
+  &__deal-notes {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2xs;
+    padding: $spacing-sm $spacing-xs 0;
+  }
+
+  &__deal-teaser {
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-deal-ink;
+  }
+
+  &__fee-boundary {
+    font-size: $font-size-2xs;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
+  }
+
+  &--compact &__grid {
+    gap: $spacing-2xs;
+  }
+
+  &--compact &__tile {
+    padding: $spacing-2xs;
+  }
+
+  &--compact &__icon-badge {
+    width: 48rpx;
+    height: 48rpx;
+  }
+
+  &--compact &__icon-image {
+    width: 36rpx;
+    height: 36rpx;
+  }
+
+  &--compact &__title {
+    margin-top: $spacing-2xs;
+  }
+
+  &--compact &__subtitle {
+    min-height: 0;
+    -webkit-line-clamp: 1;
+  }
+
+  &--compact &__deal-notes {
+    padding-top: $spacing-xs;
   }
 
   &__icon-badge {

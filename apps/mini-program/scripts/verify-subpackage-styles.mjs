@@ -105,6 +105,19 @@ const REQUIREMENTS = [
       // same @use-in-page discipline as matching-status above.
       'vacated-seat-card__core{',
       'vacated-seat-card__label{',
+      // 场地专属优惠票券卡（venue-deal S3, 2026-11-14）— 同 @use 合编译纪律。
+      'venue-deal-card__value-text{',
+      'venue-deal-card__perforation{',
+      'venue-deal-card--locked',
+    ],
+  },
+  {
+    // 同桌凭证出示页（venue-deal S4）— 页面自己的样式必须随该子包页发布。
+    page: 'pages/pool-group-detail/credential/index.wxss',
+    selectors: [
+      'deal-credential__code-text{',
+      'deal-credential__seal{',
+      'deal-credential__copy{',
     ],
   },
   {
@@ -116,6 +129,12 @@ const REQUIREMENTS = [
       'squad-unboxing__table-card-head{',
       'squad-unboxing__table-card-save{',
       'squad-unboxing__table-transition{',
+      // Landing beat (2026-11-11): the only motion a sealed-card entry gets.
+      // If style-splitting ever drops these, the box arrives with no beat and
+      // nothing else fails — exactly the silent class of regression this guard
+      // exists for.
+      'squad-unboxing__blind-box-visual--landing{',
+      'squad-unboxing__blind-box-lid--landing{',
     ],
   },
   {
