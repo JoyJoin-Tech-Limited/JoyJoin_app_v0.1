@@ -750,6 +750,13 @@
       "when": 1794560228225,
       "tag": "0106_venue_deal_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1794441600000,
+      "tag": "seed_venue_ac_hookah_20261112",
+      "breakpoints": true
     }
   ]
 }
