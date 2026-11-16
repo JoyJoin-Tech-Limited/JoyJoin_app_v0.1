@@ -10,6 +10,10 @@ export interface DragRevealRibbonProps {
   isDegradation: boolean
   enabled: boolean
   onReveal: () => void
+  /** Where this ceremony was entered from. Split reveal metrics by entry so the
+   *  sealed-card experiment is readable: a reveal reached from the Events card
+   *  is a different funnel than one intercepted from the waiting room. */
+  entrySource?: 'card' | 'matching_status'
 }
 
 const SNAP_THRESHOLD = 0.5
@@ -25,6 +29,7 @@ export default function DragRevealRibbon({
   isDegradation,
   enabled,
   onReveal,
+  entrySource = 'matching_status',
 }: DragRevealRibbonProps) {
   const useTapFallback = shouldReduceMotion || isDegradation || !enabled
 
@@ -111,6 +116,7 @@ export default function DragRevealRibbon({
           hasTrackedTapRef.current = true
           squadUnboxingAnalytics.track('squad_unboxing_reveal_tap', {
             method: 'tap',
+            entrySource,
             fallbackReason: shouldReduceMotion ? 'reducedMotion' : isDegradation ? 'degradation' : 'featureFlag',
           })
         }
@@ -131,6 +137,7 @@ export default function DragRevealRibbon({
       triggerLightHaptic()
       squadUnboxingAnalytics.track('squad_unboxing_reveal_drag', {
         method: 'drag',
+        entrySource,
         progress: Math.round(currentProgress * 100),
       })
       isRevealingRef.current = true
@@ -141,7 +148,7 @@ export default function DragRevealRibbon({
       scheduleProgress(0)
     }
     touchRef.current = null
-  }, [useTapFallback, isRevealing, onReveal, scheduleProgress, shouldReduceMotion, isDegradation])
+  }, [entrySource, useTapFallback, isRevealing, onReveal, scheduleProgress, shouldReduceMotion, isDegradation])
 
   const handleTap = useCallback(() => {
     if (useTapFallback && !isRevealingRef.current && !isRevealing) {
@@ -149,6 +156,7 @@ export default function DragRevealRibbon({
         hasTrackedTapRef.current = true
         squadUnboxingAnalytics.track('squad_unboxing_reveal_tap', {
           method: 'tap',
+          entrySource,
           fallbackReason: shouldReduceMotion ? 'reducedMotion' : isDegradation ? 'degradation' : 'featureFlag',
         })
       }
@@ -156,7 +164,7 @@ export default function DragRevealRibbon({
       setIsRevealing(true)
       onReveal()
     }
-  }, [useTapFallback, isRevealing, onReveal, shouldReduceMotion, isDegradation])
+  }, [entrySource, useTapFallback, isRevealing, onReveal, shouldReduceMotion, isDegradation])
 
   // Cancel any pending RAF / timeout on unmount
   useEffect(() => {

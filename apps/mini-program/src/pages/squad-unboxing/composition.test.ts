@@ -168,3 +168,92 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource.indexOf('squad_unboxing_card_detail_dismiss')).toBe(pageSource.lastIndexOf('squad_unboxing_card_detail_dismiss'))
   })
 })
+
+// ─── Landing beat (2026-11-11) ───────────────────────────────────────
+// The sealed card's press is the transition. Two invariants follow, and both
+// are structural (state-init + stylesheet order), so they are locked here
+// rather than left to a render nobody takes a screenshot of:
+//   1. `from=card` paints composed — no staged entrance may play after mount.
+//   2. The arrival beat is a one-shot that hands off to the idle float at the
+//      float's own 0% frame, and it can never outrank the open animation.
+const scssSource = readFileSync(new URL('./index.scss', import.meta.url), 'utf8')
+const visualSource = readFileSync(new URL('./BlindBoxVisual.tsx', import.meta.url), 'utf8')
+const lidSource = readFileSync(new URL('./BlindBoxLid.tsx', import.meta.url), 'utf8')
+const constantsSource = readFileSync(new URL('./squadUnboxingConstants.ts', import.meta.url), 'utf8')
+
+describe('squad-unboxing card-entry landing beat', () => {
+  it('initialises the header as ready when the page was opened from the card', () => {
+    // `useState(false)` (the pre-2026-11-11 init) replays the 280ms staged
+    // entrance on card entry, which re-announces "new page" and breaks the act.
+    expect(pageSource).toContain('const [headerReady, setHeaderReady] = useState(entryFromCard)')
+    expect(pageSource).not.toContain('const [headerReady, setHeaderReady] = useState(false)')
+    // The first-show branch of useDidShow must not reset it back to hidden.
+    expect(pageSource).toContain('setHeaderReady(entryFromCard)')
+  })
+
+  it('times the beat from the shared constants and clears it in the same effect', () => {
+    expect(pageSource).toContain('const [entryLanding, setEntryLanding] = useState(entryFromCard)')
+    expect(pageSource).toContain('setEntryLanding(false)')
+    expect(pageSource).toContain('LANDING_BEAT_MS')
+    expect(pageSource).toContain('LANDING_HAPTIC_MS')
+    expect(constantsSource).toContain('export const LANDING_BEAT_MS = 520')
+    expect(constantsSource).toContain('export const LANDING_HAPTIC_MS = 380')
+    // Reduced motion, low-end devices and a fast open all drop the beat instead
+    // of shortening it — the guard must name every one of them.
+    expect(pageSource).toMatch(
+      /if \(flowState !== 'ready' \|\| shouldReduceMotion \|\| isDegradation\) \{\s*setEntryLanding\(false\)\s*return\s*\}/,
+    )
+    // flowState has to be a dependency, otherwise the effect never re-runs when
+    // the user opens the box before the beat finishes.
+    expect(pageSource).toMatch(/\}, \[entryFromCard, flowState, shouldReduceMotion, isDegradation\]\)/)
+  })
+
+  it('hands the beat to both box layers, and only on the ready stage', () => {
+    expect(visualSource).toContain('entryLanding?: boolean')
+    expect(visualSource).toContain("'squad-unboxing__blind-box-visual--landing'")
+    expect(lidSource).toContain('entryLanding?: boolean')
+    expect(lidSource).toContain("'squad-unboxing__blind-box-lid--landing'")
+    expect(pageSource).toContain('entryLanding={entryLanding}')
+    expect(pageSource.indexOf('entryLanding={entryLanding}')).not.toBe(pageSource.lastIndexOf('entryLanding={entryLanding}'))
+  })
+
+  it('keeps the landing rules after --ready but before the open rules', () => {
+    // Specificity ties are broken by source order. `--landing` must beat the
+    // `--ready` float and lose to `--opening`, or a fast tap freezes the box.
+    const visualStart = scssSource.indexOf('&__blind-box-visual {')
+    const lidStart = scssSource.indexOf('&__blind-box-lid {')
+    expect(visualStart).toBeGreaterThanOrEqual(0)
+    expect(lidStart).toBeGreaterThan(visualStart)
+
+    const visualBlock = scssSource.slice(visualStart, lidStart)
+    const visualReady = visualBlock.indexOf('&--ready')
+    const visualLanding = visualBlock.indexOf('&--landing')
+    expect(visualReady).toBeGreaterThanOrEqual(0)
+    expect(visualLanding).toBeGreaterThan(visualReady)
+    // The open rules for the visual live further down the file, so they win
+    // the tie against the nested --landing block above them.
+    expect(scssSource.indexOf('&__blind-box-visual--opening')).toBeGreaterThan(visualLanding)
+
+    const lidBlock = scssSource.slice(lidStart)
+    const lidLanding = lidBlock.indexOf('&--landing')
+    const lidOpening = lidBlock.indexOf('&--opening,')
+    expect(lidLanding).toBeGreaterThanOrEqual(0)
+    expect(lidOpening).toBeGreaterThan(lidLanding)
+  })
+
+  it('resumes the idle float at exactly the moment the class is stripped', () => {
+    // The float delay is the handoff point: strip the class at 520ms and the
+    // float restarts at its own 0% keyframe, so nothing snaps sideways or up.
+    const delays = Array.from(
+      scssSource.matchAll(/squad-unboxing-float 3\.2s ease-in-out (\d+)ms infinite/g),
+      (match) => Number(match[1]),
+    )
+    expect(delays.length).toBeGreaterThanOrEqual(2)
+    expect(new Set(delays)).toEqual(new Set([520]))
+    expect(scssSource).toContain('@keyframes squad-unboxing-box-land')
+    expect(scssSource).toContain('@keyframes squad-unboxing-lid-settle')
+    // The arrival moves only — a fade would read as "the page loaded".
+    const boxLand = scssSource.slice(scssSource.indexOf('@keyframes squad-unboxing-box-land'))
+    expect(boxLand.slice(0, 400)).not.toContain('opacity')
+  })
+})

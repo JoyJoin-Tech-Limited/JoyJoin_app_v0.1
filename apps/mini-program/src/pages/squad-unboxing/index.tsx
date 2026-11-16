@@ -59,6 +59,8 @@ import {
   ART_FLIP_HOLD_TIMEOUT_MS,
   BEST_PARTNER_HEARTBEAT_GAP_MS,
   HELD_FLIP_MAX_RETRIES,
+  LANDING_BEAT_MS,
+  LANDING_HAPTIC_MS,
   getPageTitle,
 } from './squadUnboxingConstants'
 
@@ -146,6 +148,10 @@ export default function SquadUnboxingPage() {
   const composedHeroEnabled = currentUser?.features?.socialSquadComposedHeroEnabled ?? false
   const storyName = router.params['__story']
   const isStoryFocused = storyName === 'focused'
+  // Entered from the sealed Events card. That path must land on a fully
+  // composed frame — the card press is the transition, so a staged entrance
+  // here would re-announce "new page" and break the act into two.
+  const entryFromCard = router.params.from === 'card'
   const isComposedHeroActive = composedHeroEnabled && (flowState === 'ready' || flowState === 'shaking')
   // In composed mode the Xiaoyue host floats above the box, so the whole stage
   // (host + box) becomes one tap target via a dedicated layer; the stage body
@@ -154,7 +160,13 @@ export default function SquadUnboxingPage() {
 
   const [animateFocusedNarration, setAnimateFocusedNarration] = useState(false)
   const [announcement, setAnnouncement] = useState('')
-  const [headerReady, setHeaderReady] = useState(false)
+  // Frame-one composition: a sealed-card entry paints already-ready, so the
+  // 280ms staged entrance never plays after the card's press (the press IS the
+  // transition). Every other entry keeps the staged reveal below.
+  const [headerReady, setHeaderReady] = useState(entryFromCard)
+  // Landing beat state: true for one mount, then stripped so the idle float
+  // takes over from its own 0% frame (see LANDING_BEAT_MS).
+  const [entryLanding, setEntryLanding] = useState(entryFromCard)
   const hasShownRef = useRef(false)
   // Mirror of focusedCardIndex so handleCardTap can compute the next focus
   // synchronously without running side effects inside a state updater.
@@ -226,7 +238,9 @@ export default function SquadUnboxingPage() {
       setResetSignal((signal) => signal + 1)
       setHeaderReady(true)
     } else {
-      setHeaderReady(false)
+      // First show on a sealed-card entry is already composed; other entries
+      // start hidden and are armed by the [authLoading, isLoading] effect.
+      setHeaderReady(entryFromCard)
     }
     hasShownRef.current = true
   })
@@ -257,9 +271,38 @@ export default function SquadUnboxingPage() {
 
   useEffect(() => {
     if (authLoading || isLoading) return
+    // from=card: frame one is already composed (the card prefetched the group and
+    // its press animation covered navigation), so skip the staged entrance.
+    if (entryFromCard) {
+      setHeaderReady(true)
+      return
+    }
     const timer = setTimeout(() => setHeaderReady(true), 120)
     return () => clearTimeout(timer)
-  }, [authLoading, isLoading])
+  }, [authLoading, isLoading, entryFromCard])
+
+  // Landing beat (2026-11-11): only on a sealed-card entry, and never on a
+  // reduced-motion or degraded device — those get the composed frame with the
+  // box already at rest. The class is stripped at LANDING_BEAT_MS so the idle
+  // float resumes at its 0% frame; the haptic sits at the bottom of the lid
+  // settle, which is the one moment that reads as weight rather than motion.
+  useEffect(() => {
+    if (!entryFromCard) return
+    // A fast open outruns the beat (the ribbon accepts a tap immediately). Any
+    // state past `ready` drops the landing class so it stops competing with the
+    // opening animation, and clears the timer so the arrival haptic can never
+    // stack on the open haptic — one gesture, one buzz.
+    if (flowState !== 'ready' || shouldReduceMotion || isDegradation) {
+      setEntryLanding(false)
+      return
+    }
+    const hapticTimer = setTimeout(() => haptics('light'), LANDING_HAPTIC_MS)
+    const beatTimer = setTimeout(() => setEntryLanding(false), LANDING_BEAT_MS)
+    return () => {
+      clearTimeout(hapticTimer)
+      clearTimeout(beatTimer)
+    }
+  }, [entryFromCard, flowState, shouldReduceMotion, isDegradation])
 
   const trackCardFocus = useCallback((index: number, previousIndex: number, interaction?: string) => {
     const member = members[index]
@@ -985,6 +1028,7 @@ export default function SquadUnboxingPage() {
               shouldReduceMotion={shouldReduceMotion}
               isDegradation={isDegradation}
               enabled={dragRevealEnabled}
+              entrySource={entryFromCard ? 'card' : 'matching_status'}
               onReveal={() => handleOpenBox('ribbon')}
             />
           </View>
@@ -1109,6 +1153,7 @@ export default function SquadUnboxingPage() {
           >
             <BlindBoxVisual
               state={flowState === 'shaking' ? 'opening' : 'ready'}
+              entryLanding={entryLanding}
             />
           </View>
         ) : null}
@@ -1141,6 +1186,7 @@ export default function SquadUnboxingPage() {
           <View className='squad-unboxing__stage-lid'>
             <BlindBoxLid
               state={flowState === 'shaking' ? 'opening' : 'ready'}
+              entryLanding={entryLanding}
             />
           </View>
         ) : null}

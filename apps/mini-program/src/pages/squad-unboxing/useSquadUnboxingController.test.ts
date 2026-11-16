@@ -12,7 +12,7 @@ describe('useSquadUnboxingController flowState derivation', () => {
   it('re-derives flowState when groupId changes', () => {
     expect(source).toContain('prevGroupIdRef')
     expect(source).toContain("prevGroupIdRef.current === groupId")
-    expect(source).toContain("const nextFlow = readRevealFlag(groupId) ? 'revealed' : 'ready'")
+    expect(source).toContain("const nextFlow = hasOpenedTable(groupId) ? 'revealed' : 'ready'")
     expect(source).toContain('setFlowState(nextFlow)')
   })
 
@@ -44,7 +44,7 @@ describe('useSquadUnboxingController flowState derivation', () => {
   it('gates bubble + chapter entrance on dealSettled, true at cold re-entry (post-review fix)', () => {
     // First visit starts unsettled; the 团魂 bubble + 今晚这桌 chapter hold
     // until notifyDealSettled. Re-entry (reveal flag) starts settled.
-    expect(source).toContain('readRevealFlag(groupId) : false')
+    expect(source).toContain('hasOpenedTable(groupId) : false')
     expect(source).toContain('setDealSettled(true)')
     expect(source).toContain('dealSettled,')
   })
@@ -65,15 +65,31 @@ describe('useSquadUnboxingController flowState derivation', () => {
     expect(source).toContain("squad_unboxing_box_tap")
   })
 
-  it('reads the persisted reveal flag from storage', () => {
-    expect(source).toContain('jj_revealed_${groupId}')
-    expect(source).toContain('Taro.getStorageSync')
+  it('delegates the persisted reveal flag to the shared table-reveal helper', () => {
+    // The card, the waiting room and this ceremony must agree on what "opened"
+    // means, so the key + storage calls live in exactly one module.
+    expect(source).toContain('hasOpenedTable')
+    expect(source).toContain('markTableOpened(groupId)')
+    expect(source).not.toContain('jj_revealed_')
+    // Server truth rides alongside the cache (2026-11-11). The local flag is
+    // written first so the ceremony never waits on the network; the claim is
+    // what stops a second device from being offered the same box again.
+    expect(source).toContain('markPoolGroupRevealed(apiRequest, groupId)')
+    expect(source).toContain('syncTableRevealedAt(groupId, result.revealedAt)')
+    const revealModule = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '../../lib/utils/tableRevealState.ts'),
+      'utf8',
+    )
+    expect(revealModule).toContain('jj_revealed_${groupId}')
+    expect(revealModule).toContain('jj_revealed_at_${groupId}')
+    expect(revealModule).toContain('Taro.getStorageSync')
+    expect(revealModule).toContain('export function syncTableRevealedAt')
   })
 
   it('derives interactivity from the persisted reveal flag (first visit = face-down game)', () => {
     // First visit (no flag): interactive → cards land face-down and flips are
     // playable. Re-entry (flag present): all-up, zero unflipped, no hint chip.
-    expect(source).toContain('setIsInteractiveSession(!readRevealFlag(groupId))')
+    expect(source).toContain('setIsInteractiveSession(!hasOpenedTable(groupId))')
     expect(source).toMatch(/isInteractiveSession\s*\?\s*computeUnflippedCount/)
   })
 })
@@ -125,12 +141,13 @@ describe('useSquadUnboxingController flip-state wiring (tap-to-reveal)', () => {
     // Persisted keys are an exact allow-list of group-level flags — never
     // per-card flip state (REL-02). Pocket-the-deck (2026-07-15) added the
     // collapse flag + first-collapse hint flag alongside the reveal flag.
+    // The reveal flag moved to `tableRevealState` (shared with the footprint
+    // card), so only the two deck flags are written here.
     const storageHits = source.match(/Taro\.setStorageSync\([^)]*\)/g) ?? []
-    expect(storageHits).toHaveLength(3)
-    expect(storageHits.some((hit) => hit.includes('getRevealFlagKey'))).toBe(true)
+    expect(storageHits).toHaveLength(2)
     expect(storageHits.some((hit) => hit.includes('getDeckCollapseKey'))).toBe(true)
     expect(storageHits.some((hit) => hit.includes('getDeckCollapseHintKey'))).toBe(true)
-    expect(source).toContain('jj_revealed_${groupId}')
+    expect(source).toContain('markTableOpened(groupId)')
     // The deck key templates live in the pure module (locked here and in
     // squadDeckCollapseState.test.ts).
     const collapseModule = readFileSync(

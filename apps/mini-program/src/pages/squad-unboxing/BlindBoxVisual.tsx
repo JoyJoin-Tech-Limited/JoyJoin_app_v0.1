@@ -9,8 +9,11 @@ import {
 
 export function BlindBoxVisual({
   state,
+  entryLanding = false,
 }: {
   state: BlindBoxVisualState
+  /** One-shot arrival beat when the page was opened from the sealed Events card. */
+  entryLanding?: boolean
 }) {
   const [hasError, setHasError] = useState(false)
   const handleError = useCallback(() => setHasError(true), [])
@@ -22,6 +25,7 @@ export function BlindBoxVisual({
       className={[
         'squad-unboxing__blind-box-visual',
         `squad-unboxing__blind-box-visual--${state}`,
+        entryLanding ? 'squad-unboxing__blind-box-visual--landing' : '',
       ]
         .filter(Boolean)
         .join(' ')}

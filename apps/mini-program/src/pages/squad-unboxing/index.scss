@@ -1456,6 +1456,18 @@ $fan-rotations: (
       animation: squad-unboxing-float 3.2s ease-in-out infinite;
     }
 
+    // Landing beat (2026-11-11): on a sealed-card entry the box ARRIVES — the
+    // card press is the transition, so this drop is the only motion that says
+    // "your table just landed". It is one-shot: the page strips the class at
+    // LANDING_BEAT_MS (520ms), and the idle float is DELAYED to exactly that
+    // moment so the handoff resumes at the float's own 0% frame instead of
+    // snapping the transform. Declared after --ready (wins the tie) but before
+    // the --opening rules further down (opening still cancels everything).
+    &--landing {
+      animation:
+        squad-unboxing-box-land 120ms cubic-bezier(0.22, 1, 0.36, 1) both,
+        squad-unboxing-float 3.2s ease-in-out 520ms infinite;
+    }
   }
 
   &__blind-box-lid {
@@ -1469,6 +1481,16 @@ $fan-rotations: (
 
     &--ready {
       animation: squad-unboxing-float 3.2s ease-in-out infinite;
+    }
+
+    // Lid half of the landing beat: 120ms after the box drops, the lid settles
+    // 6rpx and returns — the beat that reads as weight rather than motion (one
+    // light haptic fires at its bottom on the page side). Float is delayed to
+    // the same 520ms handoff as the body so the two never desynchronise.
+    &--landing {
+      animation:
+        squad-unboxing-lid-settle 260ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both,
+        squad-unboxing-float 3.2s ease-in-out 520ms infinite;
     }
 
     &--opening,
@@ -3452,6 +3474,35 @@ $fan-rotations: (
 
   50% {
     transform: translateX(-50%) translateY(-10rpx);
+  }
+}
+
+// Landing beat (sealed-card entry only): the box arrives from 12rpx above and
+// settles at 1.0 scale, so the card's content reads as having crossed the
+// screen with the thumb. Opacity is deliberately untouched — a fade would
+// re-introduce the "a new page loaded" tell the composed frame exists to kill.
+@keyframes squad-unboxing-box-land {
+  0% {
+    transform: translateX(-50%) translateY(-12rpx) scale(1.04);
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+// The lid's half of the same beat: one weighty dip, not a bounce.
+@keyframes squad-unboxing-lid-settle {
+  0% {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  55% {
+    transform: translateX(-50%) translateY(6rpx);
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(0);
   }
 }
 

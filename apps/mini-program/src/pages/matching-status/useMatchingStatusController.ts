@@ -52,6 +52,7 @@ import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { hasOpenedTable } from '../../lib/utils/tableRevealState'
 import { logError, logInfo, logWarn } from '../../lib/utils/logger'
 import {
   navigateBackOrEventsTab,
@@ -793,16 +794,9 @@ export function useMatchingStatusController({
       return
     }
 
-    try {
-      const flag = Taro.getStorageSync<boolean>(`jj_revealed_${resolvedGroupId}`)
-      setHasRevealed(Boolean(flag))
-    } catch (error) {
-      logWarn('[MatchingStatus] Failed to read hasRevealed flag', {
-        groupId: resolvedGroupId,
-        message: error instanceof Error ? error.message : String(error),
-      })
-      setHasRevealed(false)
-    }
+    // Same helper the Events card and the ceremony read, so the three surfaces
+    // can never disagree about whether this table has been opened.
+    setHasRevealed(hasOpenedTable(resolvedGroupId))
   }, [resolvedGroupId])
 
   // Polling fallback: if registration data shows matchStatus=matched but WS
