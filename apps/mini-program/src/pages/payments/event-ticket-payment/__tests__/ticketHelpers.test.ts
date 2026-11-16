@@ -397,9 +397,13 @@ describe('event-ticket-payment page wiring contract (D2/D3)', () => {
     expect(pageSource).toContain('narrative={showRefundNarrativeStack}')
   })
 
-  it('转化 P0d: spacer grows pixel-exact for the two-line stack (CSS-reserved, no JS measurement)', () => {
-    expect(pageSource).toContain('ticket-bottom-spacer--with-guarantee-stack')
-    expect(pageSource).not.toContain('getBoundingClientRect')
+  it('费用透明: dynamic footer rows re-measure the real action-bar reserve', () => {
+    expect(pageSource).toContain('Taro.createSelectorQuery()')
+    expect(pageSource).toContain('actionBarHeightPx}px')
+    expect(pageSource).toContain('cancelCount')
+    expect(pageSource).toContain('payment.error')
+    expect(pageSource).toContain('showRefundNarrativeStack')
+    expect(pageSource).not.toContain('ticket-bottom-spacer--with-guarantee-stack')
   })
 
   it('转化 P0d: guardrail exposure meters once per page visit with enum-only bucket metadata', () => {

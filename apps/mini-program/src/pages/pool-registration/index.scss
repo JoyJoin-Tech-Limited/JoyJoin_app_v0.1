@@ -1282,3 +1282,66 @@
   }
 }
 
+
+// ── D4 overflow alternatives (2026-11-11) ─────────────────────
+// A full pool ends in a redirect, not a dead end. The panel sits directly under
+// the error card and shares its surface so the two read as one block; rows state
+// only held facts (date, area, real remaining 名额) and never imply urgency.
+.pool-reg__overflow {
+  margin: $spacing-md $spacing-lg 0;
+  padding: $spacing-md;
+  border-radius: $card-radius-sm;
+  background: $color-surface;
+  border: 1rpx solid $color-divider;
+}
+
+.pool-reg__overflow-title {
+  display: block;
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+}
+
+.pool-reg__overflow-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+  border-top: 1rpx solid $color-divider;
+
+  &:first-of-type {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  &--pressed {
+    opacity: 0.72;
+  }
+}
+
+.pool-reg__overflow-row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pool-reg__overflow-row-title {
+  display: block;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-truncate;
+}
+
+.pool-reg__overflow-row-meta {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.pool-reg__overflow-row-cue {
+  flex-shrink: 0;
+  font-size: $font-size-md;
+  color: $color-text-muted;
+}

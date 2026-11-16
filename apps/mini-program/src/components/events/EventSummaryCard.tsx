@@ -22,6 +22,20 @@ import './FootprintOracleCard.scss'
 
 const FALLBACK_FAMILY_COLOR = ARCHETYPE_FAMILY_COLORS.calm
 
+// Family colours are 6-digit hex, so the 8-digit `${familyColor}14` shorthand
+// works — but its failure mode is a SILENT transparent: one bad digit drops the
+// whole declaration and the plate just looks quietly styled. Expanding to
+// rgba() turns a malformed value into an obvious fallback instead (designer A1).
+const withAlpha = (hex: string, alpha: number): string => {
+  const value = hex.replace('#', '')
+  if (value.length !== 6) return `rgba(139, 92, 246, ${alpha})`
+  const r = parseInt(value.slice(0, 2), 16)
+  const g = parseInt(value.slice(2, 4), 16)
+  const b = parseInt(value.slice(4, 6), 16)
+  if ([r, g, b].some((channel) => Number.isNaN(channel))) return `rgba(139, 92, 246, ${alpha})`
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 // Status → accent family mapping for Oracle Card shell consistency.
 const STATUS_FAMILY_MAP: Record<string, 'fire' | 'calm' | 'warm' | 'cool'> = {
   pending: 'calm',
@@ -52,14 +66,13 @@ const STATUS_MOMENTUM_COPY: Record<string, string> = {
   no_show: '未出席',
 }
 
-// Explicit "what you are waiting for" copy. Empty means no extra waiting hint.
+// Explicit "what you are waiting for" copy for states with no formed table yet.
+// `matched` / `confirmed` / `venue_unlocked` are intentionally absent: they have
+// a group, so the place field below owns that whole question — both faces of it.
 const STATUS_WAITING_COPY: Record<string, string> = {
   pending: '系统正在安排本场同桌，请耐心等待',
   registered: '报名成功，等待排桌',
   upcoming: '报名成功，活动即将开始',
-  matched: '场地安排中',
-  confirmed: '期待见面',
-  venue_unlocked: '场地已解锁，期待见面',
 }
 
 // Venue is only disclosed once the group has been assigned a venue.
@@ -78,6 +91,35 @@ export interface EventSummaryCardProps {
   district?: string
   venueName?: string
   location?: string
+  /**
+   * Structured venue address from the venue assignment. Rendered under the
+   * venue name inside the place field — the card used to receive this fact and
+   * throw it away, which left a confirmed table with no way to actually go.
+   */
+  venueAddress?: string
+  /**
+   * Label for the place field's trailing affordance. The caller chooses it from
+   * what the mechanism can actually do (`导航` only when coordinates exist,
+   * otherwise `复制地址`) — a chevron must never promise a map it cannot open.
+   */
+  venueActionLabel?: string
+  venueActionAriaLabel?: string
+  onVenueAction?: () => void
+  /**
+   * Forces the pending face of the place field. Defaults to `status ===
+   * 'matched'`, i.e. a formed table whose venue is still being arranged.
+   */
+  placePending?: boolean
+  /**
+   * One-shot beat when the venue lands while the card stays mounted (poll
+   * refresh flips pending → resolved). The owner of the data knows the
+   * transition; this card only renders it, so it never fires on first paint.
+   */
+  placeRevealed?: boolean
+  /** Theme rationale: the tagline generated with the theme. */
+  themeSubtitle?: string
+  /** Theme rationale fallback: 3-4 group traits the theme was built around. */
+  themeHighlights?: string[]
   status?: string
   displayStatus?: string
   /** Presentation-only context; never changes the canonical event status. */
@@ -109,6 +151,12 @@ export interface EventSummaryCardProps {
   layout?: 'stacked' | 'split'
   role?: string
   ariaLabel?: string
+  /**
+   * Action phrase appended to the computed label instead of replacing it.
+   * Use this when a surface adds a step (e.g. 开箱看桌友) and the reader still
+   * needs the date, venue and price — an `ariaLabel` override would drop them.
+   */
+  ariaAction?: string
   animationDelay?: string
   /**
    * Optional right rail for read-only summary surfaces. When provided, the card
@@ -119,6 +167,13 @@ export interface EventSummaryCardProps {
   railMode?: boolean
   /** Accessible description for the right rail contents (e.g. countdown, group size, price). */
   railAriaLabel?: string
+  /**
+   * Hides the countdown chip. A formed-but-unopened table shows the arrival
+   * pill instead — 「排桌完成」 beside 「还有 4 天」 reads as a contradiction.
+   */
+  suppressCountdown?: boolean
+  /** Keeps the status dot steady. Pulse means "something new here". */
+  suppressLivePulse?: boolean
 }
 
 function EventSummaryCard({
@@ -130,6 +185,14 @@ function EventSummaryCard({
   district,
   venueName,
   location,
+  venueAddress,
+  venueActionLabel,
+  venueActionAriaLabel,
+  onVenueAction,
+  placePending: placePendingProp,
+  placeRevealed = false,
+  themeSubtitle,
+  themeHighlights,
   status: rawStatus,
   displayStatus,
   isHistorical = false,
@@ -147,11 +210,14 @@ function EventSummaryCard({
   layout = 'stacked',
   role,
   ariaLabel,
+  ariaAction,
   animationDelay,
   rightRail,
   railMode = false,
   railAriaLabel,
   themePill,
+  suppressCountdown = false,
+  suppressLivePulse = false,
 }: EventSummaryCardProps) {
   const { isDegradation: deviceIsDegradation } = useDeviceTier()
   const effectiveDegradation = isDegradationProp || deviceIsDegradation
@@ -170,7 +236,9 @@ function EventSummaryCard({
 
   const statusLabel = isHistoricalNonterminal ? '已结束' : getJoinedEventStatusLabel(status)
   const momentumLabel = isHistoricalNonterminal ? '已结束' : STATUS_MOMENTUM_COPY[status] ?? statusLabel
-  const isLiveStatus = !isHistoricalNonterminal && (status === 'matched' || status === 'venue_unlocked')
+  const isLiveStatus = !isHistoricalNonterminal
+    && !suppressLivePulse
+    && (status === 'matched' || status === 'venue_unlocked')
   const showVenue = VENUE_VISIBLE_STATUSES.has(status)
   const isMatched = !isHistoricalNonterminal && status === 'matched'
 
@@ -205,7 +273,9 @@ function EventSummaryCard({
     // The area already appears — in the split side column, or inside the stacked
     // title suffix — so repeating it here reads as two different locations.
     if (district && !titleParts.district) locationParts.push(district)
-    if (showVenue && venueName && !isSplit) locationParts.push(venueName)
+    // The venue name moved into the place field (2026-11-11). Gluing it onto the
+    // geography run here would print "where" twice, and the field is the copy
+    // that can carry the address and an action.
     if (locationParts.length > 0) {
       parts.push(locationParts.join(' · '))
     } else if (location) {
@@ -213,11 +283,7 @@ function EventSummaryCard({
     }
 
     return parts.length > 0 ? parts.join('  ·  ') : null
-  }, [eventType, city, district, venueName, location, showVenue, isSplit, titleParts.district])
-
-  // Split layout gives the disclosed venue its own line instead of gluing it
-  // onto the geography run, so "where" reads as type → city/district → place.
-  const venueLine = isSplit && showVenue && venueName ? venueName : null
+  }, [eventType, city, district, location, titleParts.district])
 
   const cornerAssetSrc = getOracleCardCornerAsset(eventType)
   const showCornerAsset = cornerAssetSrc && !effectiveDegradation
@@ -232,12 +298,15 @@ function EventSummaryCard({
         statusLabel,
         dateTimeText,
         locationLine ?? undefined,
+        showVenue && venueName ? venueName : undefined,
+        showVenue && venueAddress ? venueAddress : undefined,
         footerHint,
         railAriaLabel,
+        ariaAction,
       ]
         .filter(Boolean)
         .join('，'),
-    [title, statusLabel, dateTimeText, locationLine, footerHint, railAriaLabel],
+    [title, statusLabel, dateTimeText, locationLine, venueName, venueAddress, showVenue, footerHint, railAriaLabel, ariaAction],
   )
 
   // Upcoming already says 即将开始 in the status pill; repeating it as a
@@ -267,6 +336,54 @@ function EventSummaryCard({
   // cannot render identically to a T-4day card (designer P1, 2026-11-10).
   const hoursUntilStart = dateTime ? (new Date(dateTime).getTime() - Date.now()) / 3_600_000 : null
   const isStartingSoon = hoursUntilStart != null && hoursUntilStart > 0 && hoursUntilStart <= 24
+
+  // ── Place field (2026-11-11) ─────────────────────────────────
+  // "Where" used to be three unrelated text runs: the geography line, the venue
+  // name, and a grey 24rpx 场地安排中 that was typographically identical to the
+  // line above it — so "not decided yet" read exactly like "decided". It is one
+  // question, so it gets one field with two faces.
+  const isPlacePending = placePendingProp ?? (!isHistoricalNonterminal && isMatched)
+  const resolvedVenueName = !isHistoricalNonterminal && showVenue ? venueName : undefined
+  const showPlaceField = Boolean(resolvedVenueName) || isPlacePending
+  // Inside the 24h promise window the earlier sentence is already spent: the
+  // venue either lands or the pool is cancelled with a full refund, so
+  // re-stating "we will tell you the day before" would be yesterday's promise.
+  // `> 0` matters: a matched card that has already started (the 3h post-start
+  // window before completion) used to satisfy `<= 24` and promise a venue
+  // "later" for a time that has passed.
+  const isInsideVenuePromiseWindow = hoursUntilStart != null && hoursUntilStart > 0 && hoursUntilStart <= 24
+  const hasPromiseWindowPassed = hoursUntilStart != null && hoursUntilStart <= 0
+  const pendingPlaceLabel = isInsideVenuePromiseWindow ? '场地最后确认中' : '场地安排中'
+  const pendingPlaceHint =
+    isInsideVenuePromiseWindow || hasPromiseWindowPassed ? undefined : '最晚活动前一天告诉你具体地点'
+  // An ended card keeps the venue + address (that is the record) but drops the
+  // action: nothing tappable may live inside the dimmed scope.
+  const showPlaceAction = Boolean(resolvedVenueName) && !isEnded && Boolean(venueActionLabel) && Boolean(onVenueAction)
+
+  // The theme is a conclusion; one clause of evidence sits under it so a formed
+  // table can re-recognise itself. The table's own traits are the honest answer
+  // to "why this theme" — a mechanism sentence ("generated from your data") is a
+  // 🔴 hard-rule violation, and a score would collide with 合拍度.
+  const themeRationale = useMemo(() => {
+    const subtitle = themeSubtitle?.trim()
+    if (subtitle) return subtitle
+    const highlights = (themeHighlights ?? [])
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+    return highlights.length > 0 ? highlights.join(' · ') : undefined
+  }, [themeSubtitle, themeHighlights])
+
+  const handlePlaceAction = React.useCallback(
+    (e: { stopPropagation: () => void }) => {
+      // The card is the only destination. The place affordance must not ALSO
+      // navigate to event detail — the feedback pill documents the same trap.
+      e.stopPropagation()
+      onVenueAction?.()
+    },
+    [onVenueAction],
+  )
 
   return (
     <View
@@ -308,7 +425,7 @@ function EventSummaryCard({
                 />
                 <Text className='footprint-oracle-card__pulse-label'>{momentumLabel}</Text>
               </View>
-              {!railMode && (
+              {!railMode && !suppressCountdown && (
                 isSplit ? (
                   // Gate on the clock's own enablement: an ended card renders no
                   // digits, and a bare chip would show as an empty pill beside
@@ -317,7 +434,7 @@ function EventSummaryCard({
                     <View
                       className={`footprint-oracle-card__countdown-chip${isStartingSoon ? ' footprint-oracle-card__countdown-chip--urgent' : ''}`}
                       style={isStartingSoon
-                        ? { borderColor: `${familyColor}47` }
+                        ? { borderColor: withAlpha(familyColor, 0.28) }
                         : undefined}
                     >
                       <SegmentedCountdownClock
@@ -361,6 +478,18 @@ function EventSummaryCard({
               </View>
             )}
 
+            {/* Why this theme. A hanging clause under the value, not a third
+                badge: the rationale answers a question about the TABLE, so it
+                hangs off the theme it explains and never becomes its own row of
+                chrome (designer + PM, 2026-11-11). Absent data → no row at all;
+                a placeholder sentence would be worse than silence. */}
+            {themePill && themeRationale && (
+              <View className='footprint-oracle-card__theme-why'>
+                <View className='footprint-oracle-card__theme-why-tick' aria-hidden='true' />
+                <Text className='footprint-oracle-card__theme-why-text'>{themeRationale}</Text>
+              </View>
+            )}
+
             {/* L3 Date / time / location line */}
             <View
               className={`footprint-oracle-card__meta${themePill ? ' footprint-oracle-card__meta--after-theme' : ''}`}
@@ -376,14 +505,66 @@ function EventSummaryCard({
               {locationLine && (
                 <Text className='footprint-oracle-card__location'>{locationLine}</Text>
               )}
-              {venueLine && (
-                <Text className='footprint-oracle-card__venue'>{venueLine}</Text>
-              )}
               {waitingCopy && (
                 <Text className='footprint-oracle-card__waiting-hint'>{waitingCopy}</Text>
               )}
               {!isSplit && metaAccessory}
             </View>
+
+            {/* The place field: one question ("where do I go?") with two faces.
+                Pending answers "when will I know"; resolved carries the address
+                and the action. Same footprint either way, so the card never
+                re-composes when the venue lands (designer + PM, 2026-11-11). */}
+            {showPlaceField && (
+              <View
+                className={[
+                  'footprint-oracle-card__place',
+                  isPlacePending ? 'footprint-oracle-card__place--pending' : '',
+                  placeRevealed && !reduceMotion ? 'footprint-oracle-card__place--revealed' : '',
+                ].filter(Boolean).join(' ')}
+                // The family tint arrives inline: each status keeps its own hue,
+                // and the class above only owns geometry + the neutral fallback.
+                // Fill carries the state (0.12), not the hairline: at 0.08 the
+                // wash sat ~7/255 from the surface and a 1rpx 32%-alpha border
+                // was doing 100% of the signalling — on the exact primitive that
+                // dithers at some Android DPRs (designer A1).
+                style={isPlacePending ? {
+                  backgroundColor: withAlpha(familyColor, 0.12),
+                  borderColor: withAlpha(familyColor, 0.32),
+                } : undefined}
+                // The whole field is the target, never the 24rpx verb alone:
+                // at the verb's own metrics the tap box was ~15pt, and a sub-44pt
+                // target inside a card that is itself tappable is a miss waiting
+                // to become an accidental navigation to the detail page.
+                onClick={showPlaceAction ? handlePlaceAction : undefined}
+                hoverClass={showPlaceAction ? 'footprint-oracle-card__place--pressed' : undefined}
+                hoverStayTime={showPlaceAction ? 80 : undefined}
+                role={showPlaceAction ? 'button' : undefined}
+                aria-label={showPlaceAction ? (venueActionAriaLabel ?? venueActionLabel) : undefined}
+              >
+                <View
+                  className='footprint-oracle-card__place-bar'
+                  style={isPlacePending ? { backgroundColor: familyColor } : undefined}
+                  aria-hidden='true'
+                />
+                <View className='footprint-oracle-card__place-body'>
+                  <Text className='footprint-oracle-card__place-primary'>
+                    {isPlacePending ? pendingPlaceLabel : resolvedVenueName}
+                  </Text>
+                  {(isPlacePending ? pendingPlaceHint : venueAddress) && (
+                    <Text className='footprint-oracle-card__place-secondary'>
+                      {isPlacePending ? pendingPlaceHint : venueAddress}
+                    </Text>
+                  )}
+                </View>
+                {showPlaceAction && (
+                  <View className='footprint-oracle-card__place-action' aria-hidden='true'>
+                    <Text className='footprint-oracle-card__place-action-label'>{venueActionLabel}</Text>
+                    <Text className='footprint-oracle-card__place-action-chevron' aria-hidden='true'>›</Text>
+                  </View>
+                )}
+              </View>
+            )}
 
           </View>
 

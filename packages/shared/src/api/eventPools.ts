@@ -213,6 +213,12 @@ export interface PoolGroupDetailsResponse {
   group: PoolGroupSummary
   pool: PoolGroupSourceSummary
   members: PoolGroupMemberSummary[]
+  /**
+   * Reveal fact for the viewer of this response: when they opened this table,
+   * or null while it is still sealed for them. Server-owned so a second device
+   * does not re-offer a ceremony that already happened.
+   */
+  viewer?: { revealedAt: string | null }
 }
 
 export interface ConfirmPoolGroupAttendanceResponse {
@@ -325,6 +331,21 @@ export function getPoolGroupDetails(
 ): Promise<PoolGroupDetailsResponse> {
   return api<PoolGroupDetailsResponse>({
     path: `/api/pool-groups/${encodeURIComponent(groupId)}`,
+  })
+}
+
+/**
+ * Claim the reveal for this viewer. Idempotent on the server: the first call
+ * stamps the time, later calls return that same timestamp, so the receipt
+ * window cannot be restarted by a retry.
+ */
+export function markPoolGroupRevealed(
+  api: ApiTransport,
+  groupId: string
+): Promise<{ revealedAt: string | null }> {
+  return api<{ revealedAt: string | null }>({
+    path: `/api/pool-groups/${encodeURIComponent(groupId)}/reveal`,
+    method: 'POST',
   })
 }
 
@@ -462,6 +483,36 @@ export const guestEventPreviewItemSchema = z
 export type GuestEventPreviewItem = z.infer<typeof guestEventPreviewItemSchema>
 
 export const guestEventPreviewResponseSchema = z.array(guestEventPreviewItemSchema)
+
+/**
+ * 撞满后的改签出口（D4, 2026-11-11）。
+ *
+ * 满员响应里附带的「还有空位的场」：同城、尽量同区、近 7 天内、`spotsLeft > 0`，
+ * 最多 3 个。客户端只把它渲染成「换一场」，绝不自动替用户改签。
+ */
+export interface PoolOverflowAlternative {
+  poolId: string
+  title: string
+  eventType: string | null
+  dateTime: string
+  city: string | null
+  district: string | null
+  price: number | null
+  spotsLeft: number
+}
+
+export const poolOverflowAlternativeSchema = z.object({
+  poolId: z.string(),
+  title: z.string(),
+  eventType: z.string().nullable(),
+  dateTime: z.string(),
+  city: z.string().nullable(),
+  district: z.string().nullable(),
+  price: z.number().nullable(),
+  spotsLeft: z.number().int().min(0),
+})
+
+export const poolOverflowAlternativesSchema = z.array(poolOverflowAlternativeSchema)
 
 export function getGuestEventPreview(
   api: ApiTransport,

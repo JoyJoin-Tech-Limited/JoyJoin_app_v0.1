@@ -6,6 +6,7 @@ import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
+import { findPoolOverflowAlternatives, type PoolOverflowAlternative } from "../../lib/poolOverflowAlternatives";
 import { paymentService, CouponFullDiscountError } from "../../paymentService";
 import { paymentsRepo } from "../../repositories/paymentsRepo";
 import { paymentFulfillmentRepo } from "../../repositories/paymentFulfillmentRepo";
@@ -348,6 +349,8 @@ async function resolveEventCheckout(
       status: number;
       message: string;
       code?: string;
+      /** 撞满时的同区改签候选（D4）。付费容量闸仍然生效，只是给出下一步。 */
+      alternatives?: PoolOverflowAlternative[];
     }
 > {
   const eventRegistrationPayload = normalizeEventRegistrationPayload(payload);
@@ -417,11 +420,18 @@ async function resolveEventCheckout(
   );
 
   if (!availability.allowed) {
+    // 满员不是死胡同：同区邻场还有空位时，把「换一场」的候选一起交回去。
+    // 容量校验本身不放松（支付硬禁区），这里只是补一条出口。
+    const alternatives =
+      availability.code === "POOL_FULL"
+        ? await findPoolOverflowAlternatives(eventRegistrationPayload.poolId)
+        : [];
     return {
       ok: false,
       status: availability.status,
       code: availability.code,
       message: POOL_AVAILABILITY_MESSAGES[availability.code] ?? availability.message,
+      ...(alternatives.length > 0 ? { alternatives } : {}),
     };
   }
 
@@ -593,6 +603,7 @@ export function registerPaymentRoutes(app: Express): void {
             valid: false,
             message: eventCheckout.message,
             code: eventCheckout.code,
+            ...(eventCheckout.alternatives ? { alternatives: eventCheckout.alternatives } : {}),
           });
         }
 
@@ -659,6 +670,7 @@ export function registerPaymentRoutes(app: Express): void {
           return res.status(eventCheckout.status).json({
             message: eventCheckout.message,
             code: eventCheckout.code,
+            ...(eventCheckout.alternatives ? { alternatives: eventCheckout.alternatives } : {}),
           });
         }
 

@@ -1,7 +1,7 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import Taro from '@tarojs/taro'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import type { JoinedEventSummary } from '@shared/api'
 import FootprintOracleCard from '../FootprintOracleCard'
 import { trackFeedbackEvent } from '../../../lib/analytics/feedbackAnalytics'
@@ -9,6 +9,24 @@ import { trackFeedbackEvent } from '../../../lib/analytics/feedbackAnalytics'
 const mocks = vi.hoisted(() => ({
   trackFeedbackEvent: vi.fn(),
   haptics: vi.fn(),
+  prefetchQuery: vi.fn(() => Promise.resolve()),
+  tableOpened: false,
+  tableOpenedRecently: false,
+  reduceMotion: true,
+}))
+
+// The sealed entry reads the device-local reveal flag; these mocks let a test
+// state the flag directly instead of seeding Taro storage.
+vi.mock('../../../lib/utils/tableRevealState', () => ({
+  hasOpenedTable: () => mocks.tableOpened,
+  hasOpenedTableRecently: () => mocks.tableOpenedRecently,
+  markTableOpened: vi.fn(),
+}))
+
+// The card prefetches the group payload on tap so the ceremony's first frame
+// is composed; the prefetch client is the only data surface it touches.
+vi.mock('../../../lib/api/queryClient', () => ({
+  queryClient: { prefetchQuery: mocks.prefetchQuery },
 }))
 
 vi.mock('@tarojs/components', () => ({
@@ -27,12 +45,19 @@ vi.mock('../../../hooks/useDeviceTier', () => ({
   useDeviceTier: () => ({ isDegradation: false }),
 }))
 
+// The card owns its own feature-flag read so every surface that renders it
+// (Events, Center Hub, the legacy wrapper) gets the same sealed/revealed
+// decision without threading a prop through each page.
+vi.mock('../../../hooks/useAuth', () => ({
+  useAuth: () => ({ user: undefined, isLoading: false, isFetching: false, isAuthenticated: false }),
+}))
+
 vi.mock('../../../hooks/usePageVisibility', () => ({
   usePageVisibility: () => ({ isPageVisible: true }),
 }))
 
 vi.mock('../../../lib/utils/accessibility', () => ({
-  getSystemReducedMotion: () => true,
+  getSystemReducedMotion: () => mocks.reduceMotion,
 }))
 
 vi.mock('../../discover/oracleCardAssets', () => ({
@@ -47,11 +72,21 @@ vi.mock('../../../lib/utils/haptics', () => ({
   haptics: mocks.haptics,
 }))
 
+function inDays(days: number): string {
+  // Relative dates keep this fixture out of the past: a matched card whose date
+  // has already passed is not a real state, and it silently flips the place
+  // field into its urgent copy when the clock rolls over.
+  return new Date(Date.now() + days * 86_400_000).toISOString()
+}
+
 function makeCardEvent(overrides: Partial<JoinedEventSummary> = {}): JoinedEventSummary {
   return {
     id: 'event-1',
     title: '周末饭局',
-    dateTime: '2026-04-12T19:30:00+08:00',
+    // Deliberately in the past: a dated-but-formed table is the state where the
+    // card is a RECORD (not a sealed box), which is what the facts/faces/hint
+    // assertions below are about. Tests that need a live countdown override it.
+    dateTime: inDays(-30),
     status: 'matched',
     displayStatus: 'matched',
     registrationId: 'registration-1',
@@ -66,7 +101,7 @@ describe('FootprintOracleCard historical presentation integration', () => {
   })
 
   it('preserves active status, waiting copy, countdown, and live indicator by default', () => {
-    const event = makeCardEvent({ dateTime: '2026-04-14T19:30:00+08:00' })
+    const event = makeCardEvent({ dateTime: inDays(2) })
     const { container } = render(<FootprintOracleCard event={event} />)
 
     expect(screen.getByText('排桌完成')).toBeInTheDocument()
@@ -162,7 +197,7 @@ describe('FootprintOracleCard historical presentation integration', () => {
     })
     const { container } = render(<FootprintOracleCard event={event} />)
     const location = container.querySelector('.footprint-oracle-card__location')
-    const venue = container.querySelector('.footprint-oracle-card__venue')
+    const venue = container.querySelector('.footprint-oracle-card__place-primary')
 
     expect(location).toHaveTextContent('饭局 · 深圳')
     expect(location).not.toHaveTextContent('老街大排档')
@@ -330,5 +365,327 @@ describe('FootprintOracleCard table identity (Phase 2 + 3)', () => {
       />,
     )
     expect(finished.container.querySelector('.footprint-oracle-card__footer-hint')).toHaveTextContent('翻翻这场回顾')
+  })
+})
+
+describe('FootprintOracleCard sealed table entry', () => {
+  const FUTURE_DATE = '2026-11-14T22:02:00+08:00'
+  const FUTURE_WEEKDAY_LABEL = '11月14日'
+
+  function sealedEvent(overrides: Partial<JoinedEventSummary> = {}): JoinedEventSummary {
+    return makeCardEvent({
+      groupId: 'group-1',
+      groupSize: 6,
+      dateTime: FUTURE_DATE,
+      matchScore: 87,
+      memberArchetypes: ['corgi', 'fox', 'owl', 'koala', 'octopus', 'spider'],
+      ...overrides,
+    })
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.tableOpened = false
+    mocks.tableOpenedRecently = false
+  })
+
+  it('replaces the spoiler face row with a sealed deck while the table is unopened', () => {
+    const { container } = render(<FootprintOracleCard event={sealedEvent()} />)
+
+    expect(container.querySelectorAll('.footprint-oracle-card__seal-disc')).toHaveLength(3)
+    // The six people are the ceremony's payoff; the card must not pre-spend it.
+    expect(container.querySelectorAll('.footprint-oracle-card__table-face')).toHaveLength(0)
+    expect(container.querySelector('.footprint-oracle-card')).toHaveClass('footprint-oracle-card--sealed')
+  })
+
+  it('offers one filled capsule as the card affordance', () => {
+    const { container } = render(<FootprintOracleCard event={sealedEvent()} />)
+
+    const capsule = container.querySelector('.footprint-oracle-card__capsule')
+    expect(capsule).toHaveTextContent('开箱看桌友')
+    expect(container.querySelector('.footprint-oracle-card__footer-hint')).toBeNull()
+    // Copy promises the table, not the score: the score is the reward inside.
+    expect(capsule).not.toHaveTextContent('合拍度')
+  })
+
+  it('withholds the score until the table has been opened', () => {
+    const { container, unmount } = render(<FootprintOracleCard event={sealedEvent()} />)
+
+    // 合拍度 is part of what the box holds; printing it above 「开箱看桌友」
+    // would hand the gift over before it is opened (designer anti-pattern #7).
+    expect(container.querySelector('.footprint-oracle-card__fact')).toHaveTextContent('已排进 6 人桌')
+    expect(container.textContent).not.toContain('合拍度')
+    unmount()
+
+    mocks.tableOpened = true
+    const revealed = render(<FootprintOracleCard event={sealedEvent()} />)
+    expect(revealed.getByText('已排进 6 人桌 · 合拍度 87')).toBeInTheDocument()
+  })
+
+  it('drops the countdown chip so the rail states one thing: the table arrived', () => {
+    const { container } = render(<FootprintOracleCard event={sealedEvent()} />)
+
+    expect(screen.getByText('排桌完成')).toBeInTheDocument()
+    expect(screen.queryByTestId('countdown-clock')).not.toBeInTheDocument()
+    expect(container.querySelector('.footprint-oracle-card__countdown-chip')).toBeNull()
+  })
+
+  it('names the action in the accessibility label without dropping the facts', () => {
+    render(<FootprintOracleCard event={sealedEvent({ title: '微醺夜话' })} />)
+
+    // The action is appended, not substituted: a sealed card still owes the
+    // reader the date and the table it reveals.
+    const button = screen.getByRole('button', { name: /开箱看看这桌的 6 位桌友$/ })
+    expect(button).toHaveAccessibleName(/微醺夜话/)
+    expect(button).toHaveAccessibleName(/11月14日/)
+    expect(button).toHaveAccessibleName(/已排进 6 人桌/)
+    // The countdown chip is suppressed, so the label must not promise one.
+    expect(button).not.toHaveAccessibleName(/倒计时/)
+  })
+
+  it('prefetches the group payload and reports the sealed entry on tap', () => {
+    const onClick = vi.fn()
+    const event = sealedEvent()
+
+    render(<FootprintOracleCard event={event} onClick={onClick} />)
+    fireEvent.click(screen.getByRole('button', { name: /开箱看看这桌的 6 位桌友/ }))
+
+    expect(mocks.prefetchQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['mini-program', 'pool-group', 'group-1'] }),
+    )
+    expect(mocks.haptics).toHaveBeenCalledWith('light')
+    expect(onClick).toHaveBeenCalledWith(event, 'sealed')
+  })
+
+  it('goes quiet once the table has been opened', () => {
+    mocks.tableOpened = true
+    const { container } = render(<FootprintOracleCard event={sealedEvent()} />)
+
+    expect(container.querySelectorAll('.footprint-oracle-card__table-face')).toHaveLength(6)
+    expect(container.querySelector('.footprint-oracle-card__seal')).toBeNull()
+    expect(container.querySelector('.footprint-oracle-card__capsule')).toBeNull()
+    expect(container.querySelector('.footprint-oracle-card__footer-hint')).toHaveTextContent('看看这桌的合拍度')
+    // A spent reveal must not keep pulsing "something new here".
+    expect(container.querySelector('.footprint-oracle-card__pulse-dot--live')).toBeNull()
+    expect(screen.getByTestId('countdown-clock')).toBeInTheDocument()
+    expect(screen.getByText(FUTURE_WEEKDAY_LABEL)).toBeInTheDocument()
+  })
+
+  it('reports the revealed entry so the tap lands on the group detail', () => {
+    mocks.tableOpened = true
+    const onClick = vi.fn()
+    const event = sealedEvent()
+
+    render(<FootprintOracleCard event={event} onClick={onClick} />)
+    fireEvent.click(screen.getByRole('button'))
+
+    expect(onClick).toHaveBeenCalledWith(event, 'revealed')
+    expect(mocks.prefetchQuery).not.toHaveBeenCalled()
+  })
+
+  it('plays the receipt frames once when the user returns from the ceremony', () => {
+    mocks.tableOpened = true
+    mocks.tableOpenedRecently = true
+    const { container } = render(<FootprintOracleCard event={sealedEvent()} />)
+
+    expect(container.querySelector('.footprint-oracle-card')).toHaveClass('footprint-oracle-card--receipt')
+  })
+
+  it('keeps the receipt off for a table opened long ago', () => {
+    mocks.tableOpened = true
+    mocks.tableOpenedRecently = false
+    const { container } = render(<FootprintOracleCard event={sealedEvent()} />)
+
+    expect(container.querySelector('.footprint-oracle-card')).not.toHaveClass('footprint-oracle-card--receipt')
+  })
+
+  it('leaves a matched table with no assigned group completely unsealed', () => {
+    const { container } = render(
+      <FootprintOracleCard event={makeCardEvent({ dateTime: FUTURE_DATE, groupId: undefined, groupSize: undefined })} />,
+    )
+
+    expect(container.querySelector('.footprint-oracle-card__seal')).toBeNull()
+    expect(container.querySelector('.footprint-oracle-card__capsule')).toBeNull()
+    // Nothing can be promised without a table, so there is no affordance at all.
+    expect(container.querySelector('.footprint-oracle-card__footer-hint')).toBeNull()
+  })
+})
+
+describe('FootprintOracleCard venue navigation', () => {
+  it('offers navigation only when the venue carries coordinates', () => {
+    const withCoords = render(
+      <FootprintOracleCard event={makeCardEvent({
+        status: 'confirmed',
+        displayStatus: 'confirmed',
+        venueName: '老街大排档',
+        venueAddress: '深圳市罗湖区某路 1 号',
+        venueLatitude: 22.5431,
+        venueLongitude: 114.0579,
+      })} />,
+    )
+    expect(screen.getByText('导航')).toBeInTheDocument()
+    withCoords.unmount()
+
+    const withoutCoords = render(
+      <FootprintOracleCard event={makeCardEvent({
+        status: 'confirmed',
+        displayStatus: 'confirmed',
+        venueName: '老街大排档',
+        venueAddress: '深圳市罗湖区某路 1 号',
+      })} />,
+    )
+    // A chevron next to a clipboard would promise a map the app cannot open.
+    expect(screen.getByText('复制地址')).toBeInTheDocument()
+    expect(screen.queryByText('导航')).toBeNull()
+  })
+})
+
+describe('FootprintOracleCard venue-lands beat', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.tableOpened = true
+    mocks.reduceMotion = false
+  })
+
+  afterEach(() => {
+    mocks.reduceMotion = true
+  })
+
+  it('does not celebrate a card that mounts already resolved', () => {
+    const { container } = render(
+      <FootprintOracleCard event={makeCardEvent({
+        dateTime: inDays(2),
+        status: 'confirmed',
+        displayStatus: 'confirmed',
+        venueName: '老街大排档',
+      })} />,
+    )
+
+    // A card opened after the venue landed states the fact; it must not fire a
+    // celebration haptic on first paint.
+    expect(container.querySelector('.footprint-oracle-card__place--revealed')).toBeNull()
+    expect(mocks.haptics).not.toHaveBeenCalledWith('success')
+  })
+
+  it('announces the venue once when it lands while the card is mounted', () => {
+    const { container, rerender } = render(
+      <FootprintOracleCard event={makeCardEvent({
+        dateTime: inDays(2),
+        status: 'matched',
+        displayStatus: 'matched',
+      })} />,
+    )
+    expect(container.querySelector('.footprint-oracle-card__place--pending')).not.toBeNull()
+
+    // The events tab refreshes my-registrations; the venue can arrive on a card
+    // the user is already looking at.
+    rerender(
+      <FootprintOracleCard event={makeCardEvent({
+        dateTime: inDays(2),
+        status: 'confirmed',
+        displayStatus: 'confirmed',
+        venueName: '老街大排档',
+        venueAddress: '深圳市罗湖区某路 1 号',
+      })} />,
+    )
+
+    expect(container.querySelector('.footprint-oracle-card__place--revealed')).not.toBeNull()
+    expect(mocks.haptics).toHaveBeenCalledWith('success')
+  })
+
+  it('still acknowledges the venue when the user prefers reduced motion', () => {
+    // Ahead of the previous test's write so the shared cooldown cannot swallow
+    // this one (a mocked epoch BEHIND the real clock yields a negative delta and
+    // would silently suppress the haptic).
+    const base = Date.now()
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(base + 10_000)
+    mocks.reduceMotion = true
+
+    const { container, rerender } = render(
+      <FootprintOracleCard event={makeCardEvent({
+        dateTime: inDays(2),
+        status: 'matched',
+        displayStatus: 'matched',
+      })} />,
+    )
+
+    rerender(
+      <FootprintOracleCard event={makeCardEvent({
+        dateTime: inDays(2),
+        status: 'confirmed',
+        displayStatus: 'confirmed',
+        venueName: '老街大排档',
+      })} />,
+    )
+
+    // Reduced motion is a visual preference, not an acknowledgement preference:
+    // these users still get the one haptic, just no animation.
+    expect(mocks.haptics).toHaveBeenCalledWith('success')
+    expect(container.querySelector('.footprint-oracle-card__place--revealed')).toBeNull()
+    nowSpy.mockRestore()
+  })
+
+  it('coalesces a burst into one haptic when several venues land at once', () => {
+    const base = Date.now()
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(base + 60_000)
+    const matched = (groupId: string) => makeCardEvent({
+      dateTime: inDays(2),
+      status: 'matched',
+      displayStatus: 'matched',
+      groupId,
+    })
+    const resolved = (groupId: string) => makeCardEvent({
+      dateTime: inDays(2),
+      status: 'confirmed',
+      displayStatus: 'confirmed',
+      venueName: '老街大排档',
+      groupId,
+    })
+
+    const first = render(<FootprintOracleCard event={matched('group-a')} />)
+    const second = render(<FootprintOracleCard event={matched('group-b')} />)
+
+    // Venue assignment resolves a whole pool's groups in one run, and one poll
+    // can flip several cards the user is looking at. Three haptics in a burst is
+    // a buzzing phone, not a celebration.
+    first.rerender(<FootprintOracleCard event={resolved('group-a')} />)
+    second.rerender(<FootprintOracleCard event={resolved('group-b')} />)
+
+    expect(mocks.haptics.mock.calls.filter((call) => call[0] === 'success')).toHaveLength(1)
+    nowSpy.mockRestore()
+  })
+})
+
+describe('FootprintOracleCard theme rationale', () => {
+  it('withholds the rationale while the table is still sealed', () => {
+    mocks.tableOpened = false
+    const { container } = render(
+      <FootprintOracleCard event={makeCardEvent({
+        dateTime: inDays(3),
+        groupId: 'group-sealed-001',
+        groupSize: 6,
+        theme: '微醺夜话',
+        themeSubtitle: '深夜频道 · 说到做到',
+      })} />,
+    )
+
+    expect(container.querySelector('.footprint-oracle-card--sealed')).not.toBeNull()
+    expect(container.querySelector('.footprint-oracle-card__theme-why')).toBeNull()
+  })
+
+  it('shows the rationale once the table has been opened', () => {
+    mocks.tableOpened = true
+    const { container } = render(
+      <FootprintOracleCard event={makeCardEvent({
+        dateTime: inDays(3),
+        groupId: 'group-opened-001',
+        groupSize: 6,
+        theme: '微醺夜话',
+        themeSubtitle: '深夜频道 · 说到做到',
+      })} />,
+    )
+
+    expect(container.querySelector('.footprint-oracle-card__theme-why-text'))
+      .toHaveTextContent('深夜频道 · 说到做到')
   })
 })

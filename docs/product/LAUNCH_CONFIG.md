@@ -232,6 +232,11 @@ available at the `/api/metrics` endpoint.
 | `ONBOARDING_FORCE_SKIP_ENABLED` | Show a "跳过" force-skip button on onboarding steps for stuck users (admin kill-switch). | `false` |
 | `MATCHING_LIVE_REVEAL_ENABLED` | Show live reveal overlay in matching status before group detail. When `false`, skips overlay. | `true` |
 | `VENUE_ASSIGNMENT_ENABLED` | Auto-assign venues to groups after pool matching. When `false`, manual assignment required. | `true` |
+| `PAIR_FLOOR_CURVE_ENABLED` | D3 master switch for the time-decayed per-person admission floor (and the matching R1 no-orphan threshold). When `false`, the legacy strictness-derived 52/60/70 floor is used unchanged. | `false` |
+| `PAIR_FLOOR_CURVE_ROLLOUT_SCOPE` | Where the curve applies once the master switch is on: `pilot` (one pool) or `global`. Missing or invalid values expose nothing (fail-closed). | `pilot` |
+| `PAIR_FLOOR_CURVE_PILOT_POOL_ID` | The single event pool id exposed when scope is `pilot`. Empty means no pool is exposed; production pilots must use a bot-free, non-test pool. | unset |
+
+The three variables are read once per scan (5s flag cache). Enabling the master switch without a valid pilot id is a no-op, not an error. First exposure is staging, then one production pilot pool, then a separately reviewed `global` change; the enable date and observed `avg_pair_score` / group-size distribution are recorded in `docs/agent-context/matching-domain.md`.
 
 ---
 

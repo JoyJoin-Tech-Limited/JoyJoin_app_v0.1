@@ -758,6 +758,293 @@ export interface LowFillPool {
  * condition at all, while the tile claimed 报名不足. Threshold is
  * `min_group_size * target_groups` so multi-group pools are not under-reported.
  */
+export interface MatchingQualityCohortRow {
+  day: string;
+  policy: "legacy" | "curve_v1" | "unknown";
+  groups: number;
+  scoredGroups: number;
+  sizedGroups: number;
+  below45: number;
+  below47: number;
+  below50: number;
+  underfilledGroups: number;
+  sumAvgPair: number | null;
+  meanAvgPair: number | null;
+  p25AvgPair: number | null;
+  shareBelow45: number | null;
+  shareBelow47: number | null;
+  shareBelow50: number | null;
+  underfilledShare: number | null;
+  attended: number;
+  attendanceTotal: number;
+  attendanceRate: number | null;
+  atmosphereSum: number;
+  atmosphereResponses: number;
+  atmosphereMean: number | null;
+}
+
+export interface MatchingQualityCohortSummary {
+  groups: number;
+  scoredGroups: number;
+  sizedGroups: number;
+  meanAvgPair: number | null;
+  shareBelow45: number | null;
+  shareBelow47: number | null;
+  shareBelow50: number | null;
+  underfilledShare: number | null;
+  attendanceRate: number | null;
+  atmosphereMean: number | null;
+  atmosphereResponses: number;
+}
+
+interface MatchingQualityTotals {
+  groups: number;
+  scoredGroups: number;
+  sizedGroups: number;
+  below45: number;
+  below47: number;
+  below50: number;
+  underfilledGroups: number;
+  sumAvgPair: number;
+  attended: number;
+  attendanceTotal: number;
+  atmosphereSum: number;
+  atmosphereResponses: number;
+}
+
+function summarizeMatchingQualityTotals(totals: MatchingQualityTotals): MatchingQualityCohortSummary {
+  return {
+    groups: totals.groups,
+    scoredGroups: totals.scoredGroups,
+    sizedGroups: totals.sizedGroups,
+    meanAvgPair: totals.scoredGroups > 0 ? totals.sumAvgPair / totals.scoredGroups : null,
+    shareBelow45: totals.scoredGroups > 0 ? totals.below45 / totals.scoredGroups : null,
+    shareBelow47: totals.scoredGroups > 0 ? totals.below47 / totals.scoredGroups : null,
+    shareBelow50: totals.scoredGroups > 0 ? totals.below50 / totals.scoredGroups : null,
+    underfilledShare: totals.sizedGroups > 0 ? totals.underfilledGroups / totals.sizedGroups : null,
+    attendanceRate: totals.attendanceTotal > 0 ? totals.attended / totals.attendanceTotal : null,
+    atmosphereMean: totals.atmosphereResponses > 0 ? totals.atmosphereSum / totals.atmosphereResponses : null,
+    atmosphereResponses: totals.atmosphereResponses,
+  };
+}
+
+function addMatchingQualityTotals(rows: MatchingQualityCohortRow[]): MatchingQualityTotals {
+  return rows.reduce<MatchingQualityTotals>((acc, row) => ({
+    groups: acc.groups + row.groups,
+    scoredGroups: acc.scoredGroups + row.scoredGroups,
+    sizedGroups: acc.sizedGroups + row.sizedGroups,
+    below45: acc.below45 + row.below45,
+    below47: acc.below47 + row.below47,
+    below50: acc.below50 + row.below50,
+    underfilledGroups: acc.underfilledGroups + row.underfilledGroups,
+    sumAvgPair: acc.sumAvgPair + (row.sumAvgPair ?? 0),
+    attended: acc.attended + row.attended,
+    attendanceTotal: acc.attendanceTotal + row.attendanceTotal,
+    atmosphereSum: acc.atmosphereSum + row.atmosphereSum,
+    atmosphereResponses: acc.atmosphereResponses + row.atmosphereResponses,
+  }), {
+    groups: 0,
+    scoredGroups: 0,
+    sizedGroups: 0,
+    below45: 0,
+    below47: 0,
+    below50: 0,
+    underfilledGroups: 0,
+    sumAvgPair: 0,
+    attended: 0,
+    attendanceTotal: 0,
+    atmosphereSum: 0,
+    atmosphereResponses: 0,
+  });
+}
+
+async function queryMatchingQualityCohorts(from: Date, to: Date): Promise<MatchingQualityCohortRow[]> {
+  const result = await db.execute(sql`
+    WITH group_rows AS (
+      SELECT
+        g.created_at::date AS cohort_day,
+        COALESCE(g.pair_floor_policy, 'unknown') AS policy,
+        g.avg_pair_score,
+        g.formed_member_count,
+        COALESCE(p.max_group_size, 6) AS max_group_size,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM event_attendance a
+          WHERE a.event_id = g.event_id AND a.status <> 'cancelled'
+        ), 0) AS attendance_total,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM event_attendance a
+          WHERE a.event_id = g.event_id AND a.status = 'attended'
+        ), 0) AS attendance_attended,
+        COALESCE((
+          SELECT SUM(o.atmosphere_score)::int
+          FROM event_group_outcomes o
+          WHERE o.group_id = g.id
+        ), 0) AS atmosphere_sum,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM event_group_outcomes o
+          WHERE o.group_id = g.id
+        ), 0) AS atmosphere_responses
+      FROM event_pool_groups g
+      JOIN event_pools p ON p.id = g.pool_id
+      WHERE g.created_at >= ${from}
+        AND g.created_at < ${to}
+        AND p.is_test_pool = false
+        AND g.status <> 'cancelled'
+        AND COALESCE(g.operator_review_status, 'none') NOT IN ('pending', 'rejected')
+    )
+    SELECT
+      cohort_day AS day,
+      policy,
+      COUNT(*)::int AS groups,
+      COUNT(avg_pair_score)::int AS scored_groups,
+      COUNT(formed_member_count)::int AS sized_groups,
+      COUNT(*) FILTER (WHERE avg_pair_score < 45)::int AS below_45,
+      COUNT(*) FILTER (WHERE avg_pair_score < 47)::int AS below_47,
+      COUNT(*) FILTER (WHERE avg_pair_score < 50)::int AS below_50,
+      COUNT(*) FILTER (
+        WHERE formed_member_count IS NOT NULL AND formed_member_count < max_group_size
+      )::int AS underfilled_groups,
+      SUM(avg_pair_score)::float AS sum_avg_pair,
+      AVG(avg_pair_score)::float AS mean_avg_pair,
+      percentile_cont(0.25) WITHIN GROUP (ORDER BY avg_pair_score)::float AS p25_avg_pair,
+      SUM(attendance_attended)::int AS attended,
+      SUM(attendance_total)::int AS attendance_total,
+      SUM(atmosphere_sum)::int AS atmosphere_sum,
+      SUM(atmosphere_responses)::int AS atmosphere_responses
+    FROM group_rows
+    GROUP BY cohort_day, policy
+    ORDER BY cohort_day, policy
+  `);
+
+  return (result.rows as Array<Record<string, unknown>>).map((row) => {
+    const groups = safeNumber(row.groups) ?? 0;
+    const scoredGroups = safeNumber(row.scored_groups) ?? 0;
+    const sizedGroups = safeNumber(row.sized_groups) ?? 0;
+    const below45 = safeNumber(row.below_45) ?? 0;
+    const below47 = safeNumber(row.below_47) ?? 0;
+    const below50 = safeNumber(row.below_50) ?? 0;
+    const underfilledGroups = safeNumber(row.underfilled_groups) ?? 0;
+    const sumAvgPair = safeNumber(row.sum_avg_pair);
+    const attended = safeNumber(row.attended) ?? 0;
+    const attendanceTotal = safeNumber(row.attendance_total) ?? 0;
+    const atmosphereSum = safeNumber(row.atmosphere_sum) ?? 0;
+    const atmosphereResponses = safeNumber(row.atmosphere_responses) ?? 0;
+    const rawDay = row.day;
+    const day = rawDay instanceof Date
+      ? rawDay.toISOString().slice(0, 10)
+      : String(rawDay ?? "");
+
+    return {
+      day,
+      policy: row.policy === "legacy" || row.policy === "curve_v1" ? row.policy : "unknown",
+      groups,
+      scoredGroups,
+      sizedGroups,
+      below45,
+      below47,
+      below50,
+      underfilledGroups,
+      sumAvgPair,
+      meanAvgPair: safeNumber(row.mean_avg_pair),
+      p25AvgPair: safeNumber(row.p25_avg_pair),
+      shareBelow45: scoredGroups > 0 ? below45 / scoredGroups : null,
+      shareBelow47: scoredGroups > 0 ? below47 / scoredGroups : null,
+      shareBelow50: scoredGroups > 0 ? below50 / scoredGroups : null,
+      underfilledShare: sizedGroups > 0 ? underfilledGroups / sizedGroups : null,
+      attended,
+      attendanceTotal,
+      attendanceRate: attendanceTotal > 0 ? attended / attendanceTotal : null,
+      atmosphereSum,
+      atmosphereResponses,
+      atmosphereMean: atmosphereResponses > 0 ? atmosphereSum / atmosphereResponses : null,
+    };
+  });
+}
+
+/**
+ * D3 (AC-11) — cohort truth for the pair-floor rollout.
+ *
+ * Daily rows are split by persisted `pair_floor_policy` so a flag-on cohort can
+ * be compared with a prospective legacy baseline. Historical rows with a NULL
+ * policy and NULL avg_pair_score remain `unknown` / unscored; they never become
+ * zero. The baseline is the 28 days immediately before `range.from`.
+ */
+export async function getMatchingQualityCohorts(range: AdminMetricRange) {
+  const baselineTo = range.from;
+  const baselineFrom = new Date(baselineTo.getTime() - 28 * 24 * 60 * 60 * 1000);
+  const [cohorts, baselineCohorts] = await Promise.all([
+    queryMatchingQualityCohorts(range.from, range.to),
+    queryMatchingQualityCohorts(baselineFrom, baselineTo),
+  ]);
+
+  const curveTotals = addMatchingQualityTotals(cohorts.filter((row) => row.policy === "curve_v1"));
+  const legacyTotals = addMatchingQualityTotals(
+    baselineCohorts.filter((row) => row.policy === "legacy" || row.policy === "unknown"),
+  );
+  const curve = summarizeMatchingQualityTotals(curveTotals);
+  const legacy = summarizeMatchingQualityTotals(legacyTotals);
+
+  const triggers: string[] = [];
+  const dataGaps: string[] = [];
+  if (curve.scoredGroups === 0) dataGaps.push("avg_pair_score");
+  if (curve.sizedGroups === 0) dataGaps.push("formed_member_count");
+  if (curve.attendanceRate === null) dataGaps.push("attendance");
+
+  let status: "OK" | "REVIEW" | "INSUFFICIENT_DATA" = "OK";
+  if (curve.groups < 30 || legacy.groups < 30 || curve.scoredGroups === 0) {
+    status = "INSUFFICIENT_DATA";
+  } else {
+    if ((curve.shareBelow47 ?? 0) > 0.10) triggers.push("curve_share_below_47_gt_10pp");
+    if ((curve.shareBelow45 ?? 0) > 0.02) triggers.push("curve_share_below_45_gt_2pct");
+    if (
+      curve.underfilledShare !== null
+      && legacy.underfilledShare !== null
+      && curve.underfilledShare - legacy.underfilledShare > 0.10
+    ) {
+      triggers.push("underfilled_share_worse_by_10pp");
+    }
+    if (
+      curve.attendanceRate !== null
+      && legacy.attendanceRate !== null
+      && legacy.attendanceRate - curve.attendanceRate > 0.10
+    ) {
+      triggers.push("attendance_rate_worse_by_10pp");
+    }
+    if (triggers.length > 0) status = "REVIEW";
+  }
+
+  return {
+    range: {
+      from: range.from.toISOString(),
+      to: range.to.toISOString(),
+      label: describeAdminRange(range),
+    },
+    baseline: {
+      from: baselineFrom.toISOString(),
+      to: baselineTo.toISOString(),
+      label: "前 28 天",
+    },
+    cohorts,
+    baselineCohorts,
+    totals: { curve, legacy },
+    goNoGo: {
+      status,
+      triggers,
+      dataGaps,
+      minCohortGroups: 30,
+      thresholds: {
+        shareBelow47: 0.10,
+        shareBelow45: 0.02,
+        underfilledDelta: 0.10,
+        attendanceDelta: 0.10,
+      },
+    },
+  };
+}
+
 export async function getUnderfilledPoolsClosingSoon(hoursAhead = 24): Promise<LowFillPool[]> {
   const result = await db.execute(sql`
     SELECT

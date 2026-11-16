@@ -264,6 +264,9 @@ $shadow-md:   0 4rpx 24rpx rgba(0, 0, 0, 0.10);
 $shadow-lg:   0 8rpx 40rpx rgba(0, 0, 0, 0.14);
 $shadow-card: 0 2rpx 12rpx rgba(0, 0, 0, 0.07);
 $shadow-sheet: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
+// 费用透明 §12 批准的柔和接触阴影；不得回写旧 token 影响其他页面。
+$shadow-card-soft: 0 16rpx 48rpx rgba($color-text-primary, 0.06);
+$shadow-actionbar: 0 -8rpx 32rpx rgba($color-text-primary, 0.05);
 $shadow-primary-soft: 0 8rpx 32rpx rgba($color-primary, 0.35);
 
 // ─── Z-index ──────────────────────────────────────────────────────

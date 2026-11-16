@@ -1,0 +1,91 @@
+/* 单位换算：1px = 2rpx。所有色值/字号/间距均取自
+     apps/mini-program/src/styles/_variables.scss，见 docs/design/cost-transparency-20261114.md */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 375px; height: 812px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #F5F1E8; /* 统一米白底，不用三段渐变（评审 P0） */
+    color: #2D3142;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow: hidden;
+  }
+  .num { font-family: 'Quicksand', 'SF Mono', -apple-system, monospace; font-variant-numeric: tabular-nums; }
+
+  /* 状态栏 + 导航 */
+  .statusbar { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; font-size: 14px; font-weight: 600; }
+  .statusbar__icons { font-size: 12px; letter-spacing: 2px; font-weight: 400; }
+  .nav { height: 44px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .nav__title { font-size: 17px; font-weight: 600; }
+  .nav__back { position: absolute; left: 20px; font-size: 20px; font-weight: 400; color: #2D3142; }
+
+  .content { padding: 8px 20px 0; }
+
+  /* 活动头 */
+  .hero { padding: 8px 0 20px; }
+  .hero__topline { display: flex; align-items: center; gap: 8px; }
+  .hero__title {
+    font-family: 'AlimamaFangYuanTiVF-Full', 'AlimamaFangYuanTiVF', 'PingFang SC', sans-serif;
+    font-size: 20px; font-weight: 600; line-height: 1.4; letter-spacing: .2px;
+  }
+  .hero__badge {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+    background: #EDE9FE; color: #7C3AED; font-size: 11px; font-weight: 500; border-radius: 10px;
+  }
+  .hero__meta { margin-top: 8px; font-size: 12px; line-height: 1.8; color: #6B6357; }
+  .hero__meta-row { display: flex; gap: 12px; }
+  .hero__meta-label { color: #6B6357; } /* 功能信息不用 #8E949E：暖底上仅 2.7:1（评审 P0） */
+
+  /* 票面卡：费用块直接长在票面里，不再套一层卡 */
+  .ticket {
+    background: #FFFFFF; border-radius: 16px; padding: 20px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, .07);
+  }
+  .ticket__seats { font-size: 11px; color: #6B6357; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  .ticket__seats-dot { width: 4px; height: 4px; border-radius: 50%; background: #8B5CF6; }
+  .cost__label { font-size: 14px; font-weight: 600; color: #2D3142; margin-bottom: 12px; }
+
+  /* 选择区：预算 chip 已下移进费用块（一个事实只放一个家）；
+     标题降为 14px/500，让费用块成为卡内第一落点（评审 P1） */
+  .choices { margin-bottom: 24px; }
+  .choices__label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+  .choices__accent { width: 4px; height: 12px; border-radius: 2px; background: #8B5CF6; }
+  .choices__sub { margin-top: 8px; font-size: 11px; line-height: 1.6; color: #6B6357; }
+  .choices__chips { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 8px 12px; background: #FAFAFA; border-radius: 16px; font-size: 12px; color: #2D3142; }
+  .cost__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .cost__row + .cost__hint { margin-top: 4px; }
+  .cost__hint { font-size: 11px; line-height: 1.6; color: #6B6357; }
+  .cost__name { font-size: 14px; font-weight: 400; }
+  /* 金额与单位是一个光学居中组，不做 baseline 排列（评审 P0；Taro 侧 = flex row + align-items:center） */
+  .cost__amount { display: inline-flex; align-items: center; gap: 4px; font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .cost__amount-unit { font-size: 11px; font-weight: 400; color: #6B6357; }
+  .cost__group + .cost__group { margin-top: 16px; }
+  .cost__divider { height: .5px; /* = 1rpx 发丝线 */ background: #F3F4F6; margin: 16px 0 12px; }
+  /* 合计是费用块内唯一主强调：高于两个分项，但不做促销巨字（评审 P1） */
+  .cost__total { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .cost__total-label { font-size: 12px; font-weight: 500; color: #6B6357; }
+  .cost__total-amount { display: inline-flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 700; color: #2D3142; }
+  .cost__total-amount .cost__amount-unit { font-size: 11px; }
+  .cost__total-note { margin-top: 4px; font-size: 11px; line-height: 1.6; color: #6B6357; }
+
+  .cost-link { margin-top: 8px; min-height: 44px; /* 88rpx 触控目标 */ display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #6B6357; border-radius: 8px; transition: background .12s ease; }
+  .cost-link:active { background: rgba(139, 92, 246, .06); }
+
+  /* 底部动作条 */
+  .actionbar {
+    position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF;
+    box-shadow: 0 -2px 12px rgba(45, 49, 66, .04);
+    padding: 12px 20px 34px;
+  }
+  .actionbar__price { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .actionbar__price-label { font-size: 11px; color: #6B6357; }
+  .actionbar__price-value { font-size: 20px; font-weight: 600; }
+  .actionbar__cta {
+    height: 48px; border-radius: 28px; background: #8B5CF6; color: #FFFFFF;
+    display: flex; align-items: center; justify-content: center;
+    /* 白字/主紫 = 4.23:1。20px(40rpx) + 700 达 WCAG 大字阈值（≥14pt bold），按 3:1 验收即合规，
+       不需要改品牌紫、也不需要渐变或治理例外（评审 P0） */
+    font-size: 20px; font-weight: 700; letter-spacing: .5px;
+  }

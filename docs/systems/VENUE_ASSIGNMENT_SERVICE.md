@@ -205,3 +205,9 @@ per district with backup slots is what stops this path from firing.
 - [ ] 24h venue promise verified: unresolved at T-24h cancels + fully refunds
 - [ ] Admin dashboard shows unassigned reason codes
 - [ ] Unit tests pass (9 scenarios)
+
+## Venue supply gate (D5, 2026-11-11)
+
+A pool may only be listed when the catalog can actually seat the tables it promises. `apps/server/src/lib/venueSupplyGate.ts` counts eligible venues for the pool's city + district + event type (+ `seatingCapacity >= maxGroupSize`) that have a `venue_time_slots` row covering the start time, and compares that count with `targetGroups`. Short of it, `POST /api/admin/event-pools` and the edit path answer `400 VENUE_SUPPLY_INSUFFICIENT` with the shortfall spelled out (e.g. 「南山该时段只有 1 家可承接 2 桌饭局的场地（需要 2 家）」).
+
+Deliberate boundaries: budget overlap is **not** a condition (`budgetAdjacencyEnabled` relaxes budgets at assignment time, so blocking on strict overlap would reject serviceable pools); missing city / event type / start time never blocks; slot-lookup errors count as unknown rather than rejecting; the whole gate sits behind the DB flag `venueSupplyGateEnabled` (default off) and fails open, because a supply guard that throws would block every pool creation. Existing pools are not re-checked — they stay on the 24h venue promise + auto-refund path.

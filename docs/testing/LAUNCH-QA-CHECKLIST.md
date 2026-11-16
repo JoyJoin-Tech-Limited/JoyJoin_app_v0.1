@@ -45,6 +45,7 @@
 - [ ] 每个已开放测试池的 `dateTime` 被该档位 ≥1 个 venue slot 覆盖（否则 `地点待定`）
 - [ ] `pricing_settings` 已 seed（`seed_pricing_plans_20260805.sql`）；悦聚月卡/悦聚季卡/三连局包/六连局包/单场局票 名称与价格 DB 驱动一致
 - [ ] Profile V1.7 两个迁移（`20260715010000_add_equipment_personal_story.sql`、`20260715011000_seed_equipment_catalog_pools.sql`）**要么已应用，要么三个子 flag 保持 false** — 二选一，禁止中间态
+- [ ] **拆盒服务端事实（`0105_pool_registration_revealed_at.sql`）已在 staging 与 production 手工执行** — `ALTER TABLE event_pool_registrations ADD COLUMN IF NOT EXISTS revealed_at timestamp;`。`NULL` = 未拆盒，**禁止回填**（回填会把还在等「排桌完成」的人直接显示成已开箱）；缺列时服务端启动 `validateDbSchema()` fail-fast → 崩溃循环 / 502（0099 复现路径）。三段式顺序：**先 DDL → 再部署读 `revealed_at` 的 server → 最后发小程序**
 - [ ] 生产 DDL 前有 DB 快照；DDL 先于停止引用旧列的代码部署（三段式纪律）
 - [ ] **恢复演练（不只备份）：** 从最近一次 DB 快照实际 restore 到一次性数据库并 `db:verify` — 备份没 restore 过 = 没有备份
 - [ ] 测试池清理走 `cascadeDeleteByIds`（`apps/server/src/lib/fkCascadeDelete.ts`），无手工子表清单
@@ -175,6 +176,7 @@
 - [ ] Kill drill（staging 演练，逐条计时）：每个 LIVE flag 从后台置 false → ≤5s 生效 → <1min 完成
 - [ ] 快照语义：进行中会话不被 flag 切换改写（lie/dice/auction/miniscript 阶段快照）
 - [ ] 回滚动作可执行性：release-train §5 每条按 flag 走查
+- [ ] `eventCardOpenBoxEntryEnabled`（默认 **true**，2026-11-11 「封着的桌」入口）：同时控制卡片胶囊与路由分支（`resolveTableEntryState` / `buildEventCardUrl`）。回滚 = 置 false，无需回滚 PR；置 false 后 `matched` 卡片回到 `matching-status` 等待室，服务端 `revealed_at` 仍照常记录（无脏数据、无需回滚迁移）
 
 ## §11 P0 — Admin / RBAC / 审计
 
@@ -304,12 +306,14 @@
 | §2 | db:verify staging | staging | | | ☐ PASS ☐ FAIL | |
 | §2 | db:verify production | production | | | ☐ PASS ☐ FAIL | |
 | §2 | 恢复演练 | staging | | | ☐ PASS ☐ FAIL | |
+| §2 | 拆盒迁移 0103 已应用 + 冷启动无 `validateDbSchema()` fail-fast | staging + production | | | ☐ PASS ☐ FAIL | |
 | §3 | 支付全链路（真金 ¥0.01） | staging | | | ☐ PASS ☐ FAIL | |
 | §3 | smoke:auto-refund | local/dev DB | | | ☐ PASS ☐ FAIL | |
 | §4 | 认证矩阵重跑（dirty 改动后） | staging | | | ☐ PASS ☐ FAIL | |
 | §5 | 注销演练 + runbook 落盘 | staging | | | ☐ PASS ☐ FAIL | |
 | §6 | 核心旅程 E2E | staging | | | ☐ PASS ☐ FAIL | |
 | §6 | smoke:icebreaker-waves | local/dev DB | | | ☐ PASS ☐ FAIL | |
+| §6 | 拆盒事实链路：`POST …/reveal` 幂等 → `GET …/viewer.revealedAt` → joined `revealedAt`；非成员 404 | local/dev DB | | | ☑ PASS | 2026-11-11 |
 | §8 | 订阅模板校验 | production | | | ☐ PASS ☐ FAIL | |
 | §9 | build:weapp + 包体 + 子包样式 | local | | | ☐ PASS ☐ FAIL | |
 | §9 | 提审姿态（LLM 关/体验场开） | production | | | ☐ PASS ☐ FAIL | |

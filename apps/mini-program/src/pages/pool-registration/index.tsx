@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, getUserCoupons, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse } from '@shared/api'
+import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, getUserCoupons, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse, type PoolOverflowAlternative } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION, toggleIntentValue } from '@shared/constants'
 
@@ -76,6 +76,7 @@ import PoolRegistrationDetailsFields from './components/PoolRegistrationDetailsF
 import PoolRegistrationDetailsExpander from './components/PoolRegistrationDetailsExpander'
 import ChoiceCard from './components/ChoiceCard'
 import PoolRegistrationErrorCard from './components/PoolRegistrationErrorCard'
+import PoolRegistrationOverflowAlternatives from './components/PoolRegistrationOverflowAlternatives'
 import PoolRegistrationFooterBar from './components/PoolRegistrationFooterBar'
 import PoolRegistrationIntentGrid from './components/PoolRegistrationIntentGrid'
 import PoolRegistrationMascotSection, { type PoolRegistrationMascotState } from './components/PoolRegistrationMascotSection'
@@ -135,6 +136,10 @@ export default function PoolRegistrationPage() {
   const [isEnablingNotifications, setIsEnablingNotifications] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [error, setError] = useState('')
+  // D4 (2026-11-11): when the pool is full the server answers with the nearest
+  // pools that still have a seat. The page owns that list so the rejection can
+  // end in one tap instead of a dead end; it clears whenever a new attempt runs.
+  const [overflowAlternatives, setOverflowAlternatives] = useState<PoolOverflowAlternative[]>([])
   // Scroll-to-error anchor — set when error appears, cleared so it doesn't re-scroll on re-render
   const [scrollErrorId, setScrollErrorId] = useState('')
   // Expanding the duo card near the bottom can otherwise leave the share CTA's
@@ -890,7 +895,19 @@ export default function PoolRegistrationPage() {
     setResumeContext,
     setShowBlindBoxFlow,
     onRegistrationResponse: applyDuoBindingResponse,
+    onOverflowAlternatives: setOverflowAlternatives,
   })
+  const handleOverflowAlternativeSelect = useCallback((alternative: PoolOverflowAlternative) => {
+    // Swapping sessions replaces this page: the pool we are on has nothing left
+    // to offer, so keeping it in the back stack would only re-open a dead end.
+    Taro.redirectTo({
+      url: `/pages/pool-registration/index?id=${encodeURIComponent(alternative.poolId)}`,
+      fail: () => {
+        Taro.showToast({ title: '暂时无法打开这场活动，请稍后再试', icon: 'none' })
+      },
+    })
+  }, [])
+
   const handleRegister = useCallback(async () => {
     if (!poolId || isRegistering) return
 
@@ -1329,6 +1346,13 @@ export default function PoolRegistrationPage() {
           isRegistering={isRegistering}
           reduceMotion={reduceMotion}
           onRetry={handleRegister}
+        />
+      ) : null}
+
+      {error && overflowAlternatives.length > 0 ? (
+        <PoolRegistrationOverflowAlternatives
+          alternatives={overflowAlternatives}
+          onSelect={handleOverflowAlternativeSelect}
         />
       ) : null}
       </ScrollView>

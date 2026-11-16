@@ -22,6 +22,7 @@ import { addMemberToPoolGroup } from "../../lib/poolGroupAdmin";
 import { notifyPoolCancelled } from "../../lib/wecomNotifications";
 import { shellCache } from "../../lib/shellCache";
 import { validatePoolScheduleForVenuePromise } from "../../lib/poolScheduleRules";
+import { assertVenueSupply } from "../../lib/venueSupplyGate";
 
 const updateEventPoolSchema = z.object({
   title: z.string().min(1).optional(),
@@ -219,6 +220,24 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         });
       }
 
+      // D5 (2026-11-11): do not list a pool the venue catalog cannot serve.
+      // Shipping a pool that matches and then cancels at T-24h costs a refund
+      // and the user's evening; refusing it here costs operations one BD call.
+      const supply = await assertVenueSupply({
+        city: validatedData.city,
+        district: validatedData.district,
+        eventType: validatedData.eventType,
+        dateTime: validatedData.dateTime,
+        maxGroupSize: validatedData.maxGroupSize,
+        targetGroups: validatedData.targetGroups,
+      });
+      if (!supply.allowed) {
+        return res.status(400).json({
+          message: supply.reason ?? "该时段没有足够可承接的场地，暂不能上架",
+          code: "VENUE_SUPPLY_INSUFFICIENT",
+        });
+      }
+
       const [pool] = await db
         .insert(eventPools)
         .values(validatedData)
@@ -315,11 +334,23 @@ export function registerAdminEventPoolRoutes(app: Express): void {
       // Partial updates may touch only one side of the schedule, so validate
       // the merged pair. The 24h venue promise is unreachable when registration
       // closes later than event − 26h.
-      if (updates.dateTime || updates.registrationDeadline) {
+      if (
+        updates.dateTime ||
+        updates.registrationDeadline ||
+        updates.city ||
+        updates.district ||
+        updates.targetGroups ||
+        updates.maxGroupSize
+      ) {
         const [currentSchedule] = await db
           .select({
             dateTime: eventPools.dateTime,
             registrationDeadline: eventPools.registrationDeadline,
+            city: eventPools.city,
+            district: eventPools.district,
+            eventType: eventPools.eventType,
+            maxGroupSize: eventPools.maxGroupSize,
+            targetGroups: eventPools.targetGroups,
           })
           .from(eventPools)
           .where(eq(eventPools.id, req.params.id));
@@ -333,6 +364,23 @@ export function registerAdminEventPoolRoutes(app: Express): void {
             return res.status(400).json({
               message: scheduleError,
               code: "REGISTRATION_DEADLINE_TOO_LATE",
+            });
+          }
+
+          // D5: an edit can move a pool into a district or a table count the
+          // catalog cannot serve, so the gate runs on the merged values too.
+          const supply = await assertVenueSupply({
+            city: updates.city ?? currentSchedule.city,
+            district: updates.district ?? currentSchedule.district,
+            eventType: currentSchedule.eventType,
+            dateTime: nextDateTime,
+            maxGroupSize: updates.maxGroupSize ?? currentSchedule.maxGroupSize,
+            targetGroups: updates.targetGroups ?? currentSchedule.targetGroups,
+          });
+          if (!supply.allowed) {
+            return res.status(400).json({
+              message: supply.reason ?? "该时段没有足够可承接的场地，暂不能上架",
+              code: "VENUE_SUPPLY_INSUFFICIENT",
             });
           }
         }

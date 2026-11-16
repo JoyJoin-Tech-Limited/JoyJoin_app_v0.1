@@ -17,6 +17,9 @@
 // expanders all render ChevronGlyph; @use'd here so the rules compile into
 // this subpackage page's WXSS.
 @use '../../../components/ui/ChevronGlyph.scss' as *;
+// Cost transparency components compile into this payment subpackage page WXSS.
+@use '../../../components/event-ticket-payment/CostBreakdown.scss' as *;
+@use '../../../components/event-ticket-payment/IcebreakerInclusionSheet.scss' as *;
 
 // ── Color aliases ──
 $ticket-text: $color-text-primary;
@@ -32,15 +35,38 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
 .ticket-page {
   display: flex;
   flex-direction: column;
-  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
+  // design-audit:intentional — vh fallbacks lock the shell; ScrollView owns content scrolling.
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   min-height: 100dvh;
-  background: $color-bg;
+  overflow: hidden;
+  background: $color-bg-warm-to;
 }
 
 .ticket-scroll {
   flex: 1;
   min-height: 0;
+}
+
+// Payment-only §12 treatment; shared ReservationTicket and other surfaces stay unchanged.
+.ticket-page .reservation-ticket {
+  border-radius: $card-radius;
+  box-shadow: $shadow-card-soft;
+}
+
+.ticket-page .reservation-ticket__body {
+  padding-right: $container-padding;
+  padding-left: $container-padding;
+}
+
+.ticket-page .reservation-ticket__notch {
+  background: $color-bg-warm-to;
+}
+
+.ticket-page .reservation-ticket__meta-label,
+.ticket-page .reservation-ticket__meta-hint {
+  color: $color-text-secondary-warm;
 }
 
 // ── Ticket Card slot content ──
@@ -55,48 +81,51 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
 
     &--choices {
       margin-top: 24rpx;
+      margin-bottom: 64rpx;
     }
   }
 
   &__section-header {
     display: flex;
     align-items: center;
-    gap: 12rpx;
-    margin-bottom: 16rpx;
+    gap: 16rpx;
+    margin-bottom: 0;
   }
 
   &__section-accent {
-    width: 6rpx;
+    width: 8rpx;
     height: 24rpx;
     background: $color-primary;
     border-radius: 999rpx;
   }
 
   &__section-label {
-    font-family: $font-cn-display;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    line-height: 40rpx;
     color: $ticket-text;
-    letter-spacing: 1rpx;
+    letter-spacing: 0;
   }
 
   &__chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    gap: 16rpx;
   }
 
   &__chip {
     display: inline-flex;
     align-items: center;
-    padding: 8rpx 16rpx;
+    padding: 16rpx 24rpx;
     border-radius: $radius-pill;
     background: rgba($color-primary, 0.06);
 
     Text {
       font-family: $font-ui;
       font-size: $font-size-sm;
-      font-weight: $font-weight-semibold;
+      font-weight: $font-weight-normal;
+      line-height: 32rpx;
       color: $color-primary-dark;
     }
 
@@ -116,65 +145,42 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
       background: rgba($color-amber, 0.08);
       Text { color: $color-amber-700; }
     }
-
-    &--budget {
-      background: rgba($color-success, 0.08);
-      Text { color: darken-color($color-success, 15%); }
-    }
   }
 
-  // Terms as compact chips
-  &__terms {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12rpx;
-    margin-top: 24rpx;
-  }
-
-  &__terms-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 8rpx 16rpx;
-    background: $color-bg-warm-mid;
-    border-radius: $radius-pill;
-
-    &-text {
-      font-family: $font-ui;
-      font-size: $font-size-xs;
-      color: $ticket-text-subtle;
-      letter-spacing: 1rpx;
-      white-space: nowrap;
-      word-break: keep-all;
-    }
-  }
-
-  // Inclusion detail expand link
+  // Card-adjacent cost explanation link: 88rpx target, no extra top spacing.
   &__inclusion-link {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 8rpx;
-    margin-top: 8rpx;
+    min-height: $cta-min-tap;
+    margin: 0 $container-padding;
     padding: 0;
-    min-height: 88rpx;
-    transition: opacity 120ms ease;
+    border-radius: 16rpx;
 
-    &--pressed {
-      opacity: 0.6;
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16rpx;
+      background: rgba($color-primary, 0.06);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 120ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    &--pressed::before,
+    &:active::before {
+      opacity: 1;
     }
   }
 
   &__inclusion-link-text {
+    position: relative;
     font-family: $font-ui;
-    font-size: $font-size-xs;
-    color: $color-primary;
-    line-height: 1.5;
-  }
-
-  &__inclusion-link-chevron {
-    font-family: $font-ui;
-    font-size: $font-size-xs;
-    color: $color-primary;
-    line-height: 1;
+    font-size: $font-size-sm;
+    color: $color-text-secondary-warm;
+    line-height: 32rpx;
   }
 
   // Coupon stub
@@ -368,9 +374,9 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
   // Event-type full-bleed footer vignette
   &__tail-wrap {
     position: relative;
-    width: calc(100% + 64rpx);
+    width: calc(100% + 80rpx);
     height: 280rpx;
-    margin-left: -32rpx;
+    margin-left: -$container-padding;
     overflow: hidden;
   }
 
@@ -415,29 +421,11 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
 }
 
 // ── Bottom Spacer ──
+// Inline measured px replaces the fallback height; this margin is the approved
+// additional 32rpx finishing space, never a second safe-area reservation.
 .ticket-bottom-spacer {
   height: 200rpx;
-
-  // D3 (2026-10-11): the refund-guarantee caption adds one caption line to
-  // the fixed footer when preRevealRefundEnabled is on — grow the scroll-end
-  // spacer by the same amount so the abandon link is never occluded.
-  &--with-guarantee {
-    height: 248rpx;
-  }
-
-  // 转化 P0d (2026-10-21): the bucket-1 stack adds the narrative row — grow
-  // the spacer by exactly the footer's real growth so the taller fixed
-  // footer never occludes the abandon link. Pixel derivation (CSS-reserved,
-  // 禁 JS 测量后补 — both bucket heights are deterministic before render):
-  //   line box      = $font-size-xs (22rpx) × line-height 1.5 = 33rpx
-  //   stack block   = 12rpx margin-top + 33 + 4rpx row gap + 33 = 82rpx
-  //   spacer        = 200rpx baseline + 82rpx = 282rpx (exact)
-  // (The single-line bucket keeps the D3 248rpx baseline untouched — its
-  // 45rpx content sits 3rpx inside the legacy reservation, which predates
-  // this task and ships byte-identical.)
-  &--with-guarantee-stack {
-    height: 282rpx;
-  }
+  margin-bottom: 32rpx;
 }
 
 // ── Sticky Footer CTA ──
@@ -446,19 +434,55 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 24rpx 32rpx;
+  box-sizing: border-box;
+  padding: 24rpx $container-padding;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
   background: $color-surface;
-  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
+  box-shadow: $shadow-actionbar;
   z-index: 100;
 
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 32rpx;
+  }
+
+  &__price {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 8rpx;
+    min-width: 160rpx;
+  }
+
+  &__price-label {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    line-height: 32rpx;
+    color: $color-text-secondary-warm;
+  }
+
+  &__price-value {
+    font-family: $font-mono;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    line-height: 48rpx;
+    color: $color-text-primary;
+    white-space: nowrap;
+  }
+
+  &__price-value--text {
+    font-family: $font-ui;
+  }
+
   &__error {
-    text-align: center;
     margin-top: 12rpx;
+    text-align: center;
 
     Text {
       font-family: $font-ui;
       font-size: $font-size-xs;
+      line-height: 1.5;
       color: $color-error;
     }
   }
@@ -466,17 +490,28 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
 
 .ticket-cta {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  height: $button-height;
   min-height: $button-height;
+  margin: 0;
+  padding: 0;
+  border: 0;
   background: $color-primary;
-  border-radius: $button-radius;
+  border-radius: 56rpx;
   transition: opacity 0.12s ease, transform 0.12s ease;
 
+  &::after {
+    border: 0;
+  }
+
   &__text {
-    font-family: $font-cn-display;
-    font-size: $font-size-md;
+    font-family: $font-ui;
+    font-size: $font-size-xl;
     font-weight: $font-weight-bold;
+    line-height: 48rpx;
     color: $color-text-white;
   }
 
@@ -492,6 +527,17 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
   &--retry {
     background: $color-error;
   }
+}
+
+// WeChat/H5 inject their own disabled colour with higher-specificity rules.
+// Re-assert the approved CTA colours from the owning action-bar ancestor.
+.ticket-footer__main .ticket-cta[disabled] {
+  background: $color-primary;
+  color: $color-text-white;
+}
+
+.ticket-footer__main .ticket-cta[disabled] .ticket-cta__text {
+  color: $color-text-white;
 }
 
 // ── Loading State ──
@@ -703,6 +749,10 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
 
   .ticket-plan-card,
   .ticket-cta {
+    transition: none;
+  }
+
+  .ticket-card__inclusion-link::before {
     transition: none;
   }
 }
@@ -1162,20 +1212,22 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
 // Quiet factual seat signal (Wave 1) — deliberately muted, no urgency styling.
 .ticket-card__seat-line {
   display: block;
-  margin: 4rpx 0 0;
+  min-height: 32rpx;
+  margin: 0 0 24rpx;
   font-family: $font-ui;
   font-size: $font-size-xs;
-  color: $ticket-text-muted;
+  line-height: 32rpx;
+  color: $color-text-secondary-warm;
 }
 
 // Continuity subtitle under the choices header (Wave 1).
 .ticket-card__section-sub {
   display: block;
-  margin: 4rpx 0 12rpx;
+  margin: 16rpx 0 24rpx;
   font-family: $font-ui;
   font-size: $font-size-xs;
-  color: $ticket-text-muted;
-  line-height: $line-height-normal;
+  color: $color-text-secondary-warm;
+  line-height: 1.6;
 }
 
 // Soft inline note after the first pay cancel (anti-nag).
@@ -1372,7 +1424,7 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
   &__text {
     font-family: $font-ui;
     font-size: $font-size-xs;
-    color: $ticket-text-muted;
+    color: $color-text-secondary-warm;
     line-height: 1.5;
   }
 
@@ -1389,30 +1441,4 @@ $ticket-text-code: $color-text-tertiary-on-light; // small print on the cream st
   &__text + &__text {
     margin-top: 4rpx;
   }
-}
-
-// ── CTA Badge ──
-.ticket-cta__content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16rpx;
-}
-
-.ticket-cta__badge {
-  padding: 4rpx 12rpx;
-  background: rgba($color-text-white, 0.2);
-  border-radius: $radius-pill;
-
-  &-text {
-    font-family: $font-ui;
-    font-size: $font-size-2xs;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-  }
-}
-
-// Small helper to darken success color for budget chip text
-@function darken-color($color, $amount) {
-  @return mix(#111111, $color, $amount);
 }

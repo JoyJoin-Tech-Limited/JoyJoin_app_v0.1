@@ -7,6 +7,7 @@ import {
   type RegisterForPoolResponse,
 } from '@shared/api'
 import { getErrorMessage, ERROR_CODE_GENERIC_FALLBACK, type ErrorCode } from '@shared/copy/errorBaselines'
+import type { PoolOverflowAlternative } from '@shared/api/eventPools'
 
 import { apiRequest, type ApiError } from '../lib/api/api'
 import { bustRegistrationCaches } from '../lib/api/registrationCacheBust'
@@ -131,6 +132,25 @@ export interface OptimisticRegistrationUser {
   features?: { flowLifecycleEnabled?: boolean }
 }
 
+/**
+ * Read the D4 overflow alternatives off an API error. Shape-checked on purpose:
+ * this list comes from the network and is rendered as navigation targets, so a
+ * malformed row must be dropped rather than crash the error card.
+ */
+function readOverflowAlternatives(error: unknown): PoolOverflowAlternative[] {
+  const raw = (error as ApiError | undefined)?.data as
+    | { code?: string; alternatives?: unknown }
+    | undefined
+  if (!raw || raw.code !== 'POOL_FULL' || !Array.isArray(raw.alternatives)) return []
+  return raw.alternatives
+    .filter((item): item is PoolOverflowAlternative => {
+      if (!item || typeof item !== 'object') return false
+      const candidate = item as Partial<PoolOverflowAlternative>
+      return typeof candidate.poolId === 'string' && candidate.poolId.length > 0
+    })
+    .slice(0, 3)
+}
+
 export interface UseOptimisticRegistrationOptions {
   poolId: string
   poolTitle?: string
@@ -145,6 +165,12 @@ export interface UseOptimisticRegistrationOptions {
   setShowBlindBoxFlow: (visible: boolean) => void
   /** Receives only this submit's confirmed response; never cached by the hook. */
   onRegistrationResponse?: (response: RegisterForPoolResponse) => void
+  /**
+   * D4 (2026-11-11): a full pool answers with the nearest pools that still have
+   * a seat. The page owns the UI; the hook only reports the list ([] when the
+   * failure is not a full pool, so a stale list never outlives its rejection).
+   */
+  onOverflowAlternatives?: (alternatives: PoolOverflowAlternative[]) => void
 }
 
 export interface UseOptimisticRegistrationResult {
@@ -176,6 +202,7 @@ export function useOptimisticRegistration(
     setResumeContext,
     setShowBlindBoxFlow,
     onRegistrationResponse,
+    onOverflowAlternatives,
   } = options
   const queryClient = useQueryClient()
 
@@ -229,6 +256,7 @@ export function useOptimisticRegistration(
       handledErrorRef.current = false
       setOptimisticBusy(true)
       setError('')
+      onOverflowAlternatives?.([])
 
       logInfo('[PoolRegistration] Optimistic registration engaged', {
         poolId,
@@ -336,6 +364,9 @@ export function useOptimisticRegistration(
           // applies through the hook's re-thrown error.
           const message = resolveMessage(err, 'submit-failed')
           setError(message)
+          // D4: a full pool answers with the nearest pools that still have a
+          // seat, so the rejection is a redirect instead of a dead end.
+          onOverflowAlternatives?.(readOverflowAlternatives(err))
           discoverAnalytics.track('registration_submit_error', poolId, {
             message,
             step,

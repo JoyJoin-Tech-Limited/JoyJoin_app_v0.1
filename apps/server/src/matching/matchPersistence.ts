@@ -18,6 +18,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { getFeatureFlag } from "../lib/featureFlags";
 import { generateEventThemeTitle } from "../services/eventThemeTitleGenerator";
+import { clampThemeTitle, THEME_TAGLINE_MAX_GRAPHEMES } from "../lib/themeTitleClamp";
 import { executePostMatchCommitSideEffects } from "../lib/matchingPostMatchEffects";
 import type { MatchGroup, SaveMatchResultsOptions } from "./poolMatchingTypes";
 
@@ -110,7 +111,10 @@ export async function saveMatchResults(
           poolId,
           groupNumber: i + 1,
           memberCount: group.members.length,
+          formedMemberCount: group.members.length,
+          avgPairScore: group.avgPairScore,
           avgChemistryScore: group.avgChemistryScore,
+          pairFloorPolicy: group.pairFloorPolicy ?? options?.pairFloorPolicy ?? "legacy",
           diversityScore: group.diversityScore,
           communicationBalance: group.communicationBalance,
           overallScore: group.overallScore,
@@ -128,8 +132,10 @@ export async function saveMatchResults(
             reason: options?.predictiveRerankSummary?.reason ?? null,
             autoDisabledReason: options?.predictiveRerankSummary?.autoDisabledReason ?? null,
           } : null,
-          theme: eventThemeTitle,
-          subtitle: themeTagline,
+          theme: clampThemeTitle(eventThemeTitle),
+          subtitle: themeTagline
+            ? clampThemeTitle(themeTagline, THEME_TAGLINE_MAX_GRAPHEMES)
+            : themeTagline,
           themeEmoji: themeEmoji,
           themeReasoning: themeReasoning,
           themeGeneratedAt: (eventThemeTitle || themeTagline || themeEmoji || themeReasoning) ? new Date() : null,

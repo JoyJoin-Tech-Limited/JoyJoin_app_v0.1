@@ -8,6 +8,7 @@ const EventsAnalyticsEventSchema = z.object({
     'events_view',
     'events_tab_switch',
     'events_card_tap',
+    'events_card_impression',
     'events_empty_state_cta_tap',
     'events_pull_refresh',
     // Native WeChat customer-service session taps (open-type="contact"),
@@ -58,14 +59,21 @@ class EventsAnalytics {
     })
   }
 
-  /** Convenience helper for card taps — always includes card version, tab, and event type. */
-  trackCardTap(event: JoinedEventSummary, tab: 'ongoing' | 'upcoming' | 'completed'): void {
+  /** Convenience helper for card taps — always includes card version, tab, and event type.
+   *  `entry` records the sealed-table state the card was rendered in, so a tap on
+   *  an unopened table is distinguishable from a tap on a settled record. */
+  trackCardTap(
+    event: JoinedEventSummary,
+    tab: 'ongoing' | 'upcoming' | 'completed',
+    entry?: 'sealed' | 'revealed' | 'none',
+  ): void {
     this.track('events_card_tap', {
       eventId: event.id,
       tab,
       status: event.status,
       eventType: event.eventType,
       cardVersion: 'footprint_oracle_v1',
+      ...(entry ? { entry, hasGroup: Boolean(event.groupId) } : {}),
     })
   }
 }

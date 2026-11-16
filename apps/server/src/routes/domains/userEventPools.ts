@@ -32,6 +32,7 @@ import {
 import { resolveDuoBindingAvailability } from "../../repositories/duoBindingRepo";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
+import { findPoolOverflowAlternatives } from "../../lib/poolOverflowAlternatives";
 import { resolveEntitlementMode } from "../../lib/entitlement";
 import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
 import { attendanceRepo } from "../../repositories/attendanceRepo";
@@ -704,9 +705,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
       );
 
       if (!availability.allowed) {
+        const alternatives =
+          availability.code === "POOL_FULL"
+            ? await findPoolOverflowAlternatives(poolId)
+            : [];
         return res.status(availability.status).json({
           message: availability.message,
           code: availability.code,
+          ...(alternatives.length > 0 ? { alternatives } : {}),
         });
       }
 
@@ -1124,9 +1130,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
           REGISTRATION_DEADLINE_PASSED: "报名已截止",
           POOL_FULL: "该活动已满员",
         };
+        const alternatives =
+          availability.code === "POOL_FULL"
+            ? await findPoolOverflowAlternatives(poolId)
+            : [];
         return res.status(availability.status).json({
           message: messageMap[availability.code] ?? availability.message,
           code: availability.code,
+          ...(alternatives.length > 0 ? { alternatives } : {}),
         });
       }
 
@@ -1664,10 +1675,66 @@ export function registerUserEventPoolRoutes(app: Express): void {
             dateTime: pool.dateTime,
           },
           members: memberSummaries,
+          // Reveal fact for THIS viewer, server-owned (2026-11-11). The sealed
+          // Events card must know whether this table is still unopened for them;
+          // a device-local flag made a second device re-offer the ceremony.
+          viewer: {
+            revealedAt: userRegistration.revealedAt ?? null,
+          },
         });
       } catch (error) {
         logger.error("Error fetching pool group details:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch group details" });
+      }
+    });
+
+    // Claim the reveal — idempotent, first write wins.
+    //
+    // The Events card now routes a sealed table straight into the ceremony, so
+    // this fires when the box is actually opened (not when the page mounts).
+    // Re-calls return the original timestamp instead of moving it: the 15s
+    // receipt window and any "how long until they opened it" reading both hang
+    // off that value, and a retry must not restart them.
+    app.post("/api/pool-groups/:groupId/reveal", requireAuth, async (req, res) => {
+      try {
+        const groupId = req.params.groupId;
+        const userId = (req.session as any).userId as string;
+
+        const [claimed] = await db
+          .update(eventPoolRegistrations)
+          .set({ revealedAt: new Date(), updatedAt: new Date() })
+          .where(and(
+            eq(eventPoolRegistrations.assignedGroupId, groupId),
+            eq(eventPoolRegistrations.userId, userId),
+            isNull(eventPoolRegistrations.revealedAt),
+          ))
+          .returning({ revealedAt: eventPoolRegistrations.revealedAt });
+
+        if (claimed?.revealedAt) {
+          return res.json({ revealedAt: claimed.revealedAt });
+        }
+
+        // Nothing updated: either this member already claimed it, or they are
+        // not in the group. Read once without the null filter to tell the two
+        // apart — a stranger must never be answered with "already opened".
+        const existing = await db.query.eventPoolRegistrations.findFirst({
+          where: (regs: any, { eq: eqFn, and: andFn }: any) => andFn(
+            eqFn(regs.assignedGroupId, groupId),
+            eqFn(regs.userId, userId),
+          ),
+        });
+
+        if (!existing) {
+          return res.status(404).json({
+            message: "You are not a member of this group",
+            code: "NOT_GROUP_MEMBER",
+          });
+        }
+
+        return res.json({ revealedAt: existing.revealedAt ?? null });
+      } catch (error) {
+        logger.error("Error claiming pool group reveal:", { error: String(error) });
+        res.status(500).json({ message: "Failed to record reveal" });
       }
     });
 

@@ -127,6 +127,7 @@ const [
     profileRedesignEnabled,
     profilePixelAvatarEnabled,
     gatheringRoomEnabled,
+    eventCardOpenBoxEntryEnabled,
     icebreakerHapticGrammarEnabled,
     icebreakerMoodFieldEnabled,
     icebreakerGlanceStackEnabled,
@@ -193,6 +194,7 @@ const [
     getFeatureFlag('profileRedesignEnabled', true),
     getFeatureFlag('profilePixelAvatarEnabled', false),
     getFeatureFlag('gatheringRoomEnabled', false),
+    getFeatureFlag('eventCardOpenBoxEntryEnabled', true),
     getFeatureFlag('icebreakerHapticGrammarEnabled', false),
     getFeatureFlag('icebreakerMoodFieldEnabled', false),
     getFeatureFlag('icebreakerGlanceStackEnabled', false),
@@ -331,6 +333,8 @@ const [
       profilePixelAvatarEnabled,
       /** Gathering room (集结房间) entry CTAs + room page. */
       gatheringRoomEnabled,
+      /** Events-card sealed table entry into the reveal ceremony. */
+      eventCardOpenBoxEntryEnabled,
       icebreakerAcknowledgmentBeatEnabled,
       feedbackAcknowledgmentItemEnabled,
       /** Social Icebreaker social haptic grammar (ships dark). */

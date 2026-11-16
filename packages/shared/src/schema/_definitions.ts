@@ -494,6 +494,13 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   matchStatus: varchar("match_status").default("pending"), // pending | matched | unmatched
   assignedGroupId: varchar("assigned_group_id"), // 分配到的组ID（如果匹配成功）
   matchScore: integer("match_score"), // 匹配分数
+  /**
+   * When this member opened the formed table (拆盒). Grain is one user × one
+   * group, which is exactly the reveal fact. Server-owned so a new device does
+   * not re-offer a ceremony that already happened; the mini-program keeps a
+   * local cache of the same fact for offline re-renders.
+   */
+  revealedAt: timestamp("revealed_at"),
   
   // 元数据
   registeredAt: timestamp("registered_at").defaultNow(),
@@ -530,6 +537,9 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   // 组信息
   memberCount: integer("member_count").default(0),
   avgChemistryScore: integer("avg_chemistry_score"), // 平均化学反应分数
+  avgPairScore: integer("avg_pair_score"), // 平均配对兼容性分数（nullable；历史行为 NULL = 未知）
+  formedMemberCount: integer("formed_member_count"), // 成组时的成员数（不可变，用于桌型分布）
+  pairFloorPolicy: varchar("pair_floor_policy", { length: 20 }), // legacy | curve_v1
   diversityScore: integer("diversity_score"), // 多样性分数
   communicationBalance: integer("energy_balance"), // 沟通平衡分数（原energy_balance列，现用于存储语言沟通兼容性分数）
   genderBalanceScore: integer("gender_balance_score"), // 性别平衡分数（0-100）
@@ -675,6 +685,7 @@ export const poolMatchingLogs = pgTable("pool_matching_logs", {
   // 扫描快照
   pendingUsersCount: integer("pending_users_count").default(0),
   currentThreshold: integer("current_threshold"), // 本次扫描使用的阈值
+  pairFloor: integer("pair_floor"), // 本次扫描的逐人准入下限（flag 关时为 NULL）
   timeUntilEvent: integer("time_until_event"), // 距离活动开始的小时数
   
   // 匹配结果

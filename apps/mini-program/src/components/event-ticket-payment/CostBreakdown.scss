@@ -1,0 +1,172 @@
+@use '../../styles/variables' as *;
+
+// 费用透明最终视觉：docs/design/cost-transparency-20261114.md §12 + polish CSS。
+.cost-breakdown {
+  display: block;
+  color: $color-text-primary;
+
+  &__label {
+    display: block;
+    margin-bottom: 24rpx;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: 40rpx;
+  }
+
+  &__group {
+    display: block;
+  }
+
+  &__group + &__group {
+    margin-top: 32rpx;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24rpx;
+  }
+
+  &__name {
+    min-width: 0;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-normal;
+    line-height: 40rpx;
+  }
+
+  &__amount {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 8rpx;
+    font-family: $font-mono;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    line-height: 48rpx;
+    white-space: nowrap;
+  }
+
+  &__amount--text {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    line-height: 40rpx;
+  }
+
+  &__amount-value {
+    font: inherit;
+  }
+
+  &__amount-unit {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-normal;
+    line-height: 32rpx;
+    color: $color-text-secondary-warm;
+  }
+
+  &__hint {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-normal;
+    line-height: 1.6;
+    color: $color-text-secondary-warm;
+  }
+
+  // Approved 4rpx optical adjustment between a cost row and its own hint.
+  &__row + &__hint {
+    margin-top: 4rpx;
+  }
+
+  &__hint--purchase {
+    margin-top: 4rpx;
+  }
+
+  &__group--onsite &__row {
+    margin-bottom: 4rpx;
+  }
+
+  &__group--onsite &__hint {
+    margin-top: 0;
+  }
+
+  &__group--onsite &__hint--menu {
+    margin-top: 8rpx;
+  }
+
+  &__label-compact,
+  &__budget-attribution {
+    display: none;
+  }
+
+  &__divider {
+    height: 1rpx;
+    margin: 32rpx 0 24rpx;
+    background: $color-divider;
+  }
+
+  &__total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24rpx;
+  }
+
+  &__total-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    min-width: 0;
+  }
+
+  &__total-label {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    line-height: 40rpx;
+    color: $color-text-secondary-warm;
+  }
+
+  &__total-note {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-secondary-warm;
+  }
+
+  &__total-amount {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 8rpx;
+    font-family: $font-mono;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    line-height: 48rpx;
+    white-space: nowrap;
+  }
+
+  &__total-amount-value {
+    font: inherit;
+  }
+}
+
+@media (max-width: 359px) {
+  .cost-breakdown {
+    &__label-full {
+      display: none;
+    }
+
+    &__label-compact {
+      display: inline;
+    }
+
+    &__budget-attribution {
+      display: block;
+    }
+  }
+}
