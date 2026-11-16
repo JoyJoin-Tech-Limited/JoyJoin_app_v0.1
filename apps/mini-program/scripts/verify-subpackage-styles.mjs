@@ -129,12 +129,6 @@ const REQUIREMENTS = [
       'squad-unboxing__table-card-head{',
       'squad-unboxing__table-card-save{',
       'squad-unboxing__table-transition{',
-      // Landing beat (2026-11-11): the only motion a sealed-card entry gets.
-      // If style-splitting ever drops these, the box arrives with no beat and
-      // nothing else fails — exactly the silent class of regression this guard
-      // exists for.
-      'squad-unboxing__blind-box-visual--landing{',
-      'squad-unboxing__blind-box-lid--landing{',
     ],
   },
   {
