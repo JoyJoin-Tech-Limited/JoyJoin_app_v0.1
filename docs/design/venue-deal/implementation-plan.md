@@ -5,13 +5,15 @@
 > 用户约束：**只有两种权益形态（统一折扣 / 定制套餐）、一条规则（仅限本场活动 · 本桌使用）、先出方案再动手**。
 > Harness 分级：**Tier 2**（schema 变更 + 新公开 DTO + 多工作区 + 有状态承诺）。动手前先写 Sprint Contract 并过 Verifier。
 
+> **状态更新（2026-11-16，PR #669 已合并）**：0106 已在 **staging** 生效（随 Deploy Staging run `43843591828`）；journal 基线已清零——`0105_pool_registration_revealed_at` 与 `seed_venue_ac_hookah_20261112` 均已登记，`npm run db:journal-check` 全绿，且该检查已并入 `npm run guardrails`。AC Hookah seed 与 onboarding runbook 已随 PR #674 入库。**以下正文（S0–S6 切片记录）保留 2026-11-13/14 当时状态**：文中「0106 未在 staging 执行」「journal 仍失败两条」「seed 未跟踪」均为历史口径。当前真实状态：生产 0106 未执行、两 flag 仍为 `false`、S4 真机与 S5 Lovart 资产门禁未过。
+
 ---
 
 ## 0. 一句话方案
 
 **先让「一桌人有一张能出示的凭证」跑通（场地确定之后），再让「报名时承诺有优惠」上线（有池级保底之后）。** 顺序不能反：先承诺后托底，就是把失实风险卖给用户。
 
-两个触点，两个开关，互不强绑：
+两个触点，两个开关；**承诺开关依赖兑现开关**（2026-11-16 加固后 `venueDealPromiseEnabled` 还需 `venueDealsEnabled` 开启且池级 `hasGuaranteedDeal === true`）：
 
 | 触点 | 内容 | 开关（DB-backed，`apps/server/src/lib/featureFlags.ts`） | 默认 |
 |---|---|---|---|
@@ -125,7 +127,7 @@ Schema 唯一来源：`packages/shared/src/schema/_definitions.ts`（`venue_deal
 ## 4. 必过门禁（按切片执行）
 
 - 每片：`npm run guardrails`、`npm run typecheck`、相关 workspace 测试。
-- S0（已完成，见 §5 状态）：迁移 SQL 手写为 `apps/server/migrations/0106_venue_deal_foundation.sql`；如需用生成器，正确命令是 `npm run db:generate -w @joyjoin/server -- --custom`（root 没有 `db:generate`）。journal 只手工登记本切片条目，**不要跑全量 `db:rebuild-journal`**——它会把既有的未登记迁移一并并入。`npm run db:journal-check` 的既有失败基线是 `0105_pool_registration_revealed_at` 与 `seed_venue_ac_hookah_20261112` 两条，S0 之后仍应恰好是这两条。**staging / production 先迁移再部署**（`validateDbSchema()` 缺列 fail-fast），迁移失败即中止部署。
+- S0（已完成，见 §5 状态）：迁移 SQL 手写为 `apps/server/migrations/0106_venue_deal_foundation.sql`；如需用生成器，正确命令是 `npm run db:generate -w @joyjoin/server -- --custom`（root 没有 `db:generate`）。journal 只手工登记本切片条目，**不要跑全量 `db:rebuild-journal`**——它会把既有的未登记迁移一并并入。`npm run db:journal-check` 的既有失败基线是 `0105_pool_registration_revealed_at` 与 `seed_venue_ac_hookah_20261112` 两条，S0 之后仍应恰好是这两条（**2026-11-16 已清零，两条均已登记；见顶部状态更新**）。**staging / production 先迁移再部署**（`validateDbSchema()` 缺列 fail-fast），迁移失败即中止部署。
 - S3/S4/S5：`npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program`；新票券图标需 Lovart WebP + 本地/CDN 双登记（`check-cdn-icon-coverage`）；`npm run design:audit:changed`。
 - S4：真机验证深色页可读性、提亮与常亮恢复、低端 Android 掉帧即关动画。
 - 全部完成后：`harness-completion-gate` → `completeness-audit` → `performance-audit` → `user-satisfaction-audit` → `docs-sync`。
@@ -172,7 +174,7 @@ Sprint Contract：`.git/.orchestration/sprints/sprint-contract.venue-deals.md`�
 - `npm run typecheck`（shared / admin-client / mini-program / server）：全 PASS。
 - `npm run guardrails`：**0 errors** / 12 warnings（既有）。
 - 本地 dev DB 连跑两次迁移：均成功，第二次全部 `IF NOT EXISTS` 跳过；四列 nullable 类型正确，两条 FK `confdeltype = r`（RESTRICT）。
-- `npm run db:journal-check`：仍恰为既有两条未登记（`0105_pool_registration_revealed_at`、`seed_venue_ac_hookah_20261112`），0106 已登记。
+- `npm run db:journal-check`：仍恰为既有两条未登记（`0105_pool_registration_revealed_at`、`seed_venue_ac_hookah_20261112`），0106 已登记。（**2026-11-16：两条均已登记，check 全绿**）
 - 越界检查：本切片改动全部落在合同允许清单内；工作树中 mini-program squad-unboxing / center-hub 等改动为**他人既有未提交工作**，未触碰。
 - server 既有 venue/pool 用例：105 通过；`adminSmartVenues.test.ts` 在并行跑一次启动探针超时，**单文件重跑 12/12 通过**，判为既有并发抖动而非本切片回归。
 

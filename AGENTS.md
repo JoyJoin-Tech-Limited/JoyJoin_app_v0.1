@@ -273,6 +273,7 @@ npm run simulate:table -w @joyjoin/server -- --fixture=corgi-mix --rounds=3  # D
 **Migration discipline (CVM PostgreSQL):**
 - Local dev → `npm run db:push` (say No to destructive prompts).
 - Before commit → `npm run db:generate -- --custom` then `npm run db:rebuild-journal`
+- **Journal sync is a CI gate (2026-11-16):** every `.sql` under `apps/server/migrations/` — including one-off venue/data seeds — must appear in `apps/server/migrations/meta/_journal.json`. `npm run guardrails` now ends with `scripts/verify/verify-journal-sync.mjs` (the same script CI runs as a separate step); PR #674 shipped an unregistered seed, passed local guardrails, and failed staging at Guardrails. When the generator does not register an entry, append **only that entry** by hand; do **not** run `db:rebuild-journal` wholesale — it merges/renumbers every unregistered migration.
 - Production DDL → **manual** via generated `.sql` files + `psql`
   > ✅ `db:generate --custom` works: it creates `migrations/####_name.sql` and
     registers it in `_journal.json`. Fill the file with your DDL.
@@ -379,6 +380,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 | Profession input overlay | `docs/agent-context/profession-overlay.md` |
 | Cross-cutting mini-program patterns | `docs/agent-context/mini-program-patterns.md` |
 | Flow-animation overlays (blind-box lifecycle; Flow 1 removed 2026-08-26) | `docs/agent-context/flow-animation.md` |
+| Venue partner deals (门店专属优惠: 优惠卡, 凭证页, 保底绑定, flags) | `docs/agent-context/venue-deal.md` |
 
 **Onboarding is server-driven:** `GET /api/auth/user` returns `nextStep`. Client never computes its own position.
 
@@ -468,6 +470,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - No legacy onboarding identifiers (`hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`, `topicAvoidances`, `hasPets`, or the removed `hometown` column token)
 - No imports from legacy `shared/` root directory
 - No cross-app imports
+- **Migration journal sync (`scripts/verify/verify-journal-sync.mjs`, added 2026-11-16):** every `.sql` in `apps/server/migrations/` is registered in `meta/_journal.json`. Was previously CI-only, which let PR #674's AC Hookah seed pass local guardrails and fail staging. Seeds count; register them like any migration.
 - Admin/test-route RBAC is enforced by **server tests, not guardrails**: `apps/server/src/__tests__/adminRbacCoverage.test.ts` covers `/api/admin/*`, and `apps/server/src/__tests__/testAdminAuth.test.ts` covers `/api/test/**` (behavioural route introspection + source scan). The earlier AGENTS.md claim that guardrails itself checked this was inaccurate — it is why finding N1 (`/api/test/admin/*` unauthenticated) slipped through (2026-09-16)
 - Page-level loading/empty/error state blocks must include centering safety (`min-height`, `flex: 1`, or `@include scroll-view-centered-state`)
 - No inline emoji in `apps/mini-program/` TS/TSX (use `JoyJoinIcon` or CSS/text; server/admin files are exempt — the scanner reads full staged-file content, not the diff)

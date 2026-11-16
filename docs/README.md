@@ -96,6 +96,8 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 ### Venue and location services
 
 - [`systems/VENUE_ASSIGNMENT_SERVICE.md`](./systems/VENUE_ASSIGNMENT_SERVICE.md) — venue auto-assignment algorithm, scoring, DB schema, and operational runbooks
+- [`agent-context/venue-deal.md`](./agent-context/venue-deal.md) — 门店专属优惠: two flags, 0106 data model, six-state deal card, credential page, rollout gates
+- [`design/venue-deal/implementation-plan.md`](./design/venue-deal/implementation-plan.md) — S0–S6 slice record, guarantee-binding rules, QA verdicts, and environment status
 
 ### AI systems
 
@@ -130,6 +132,9 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`deliberations/2026-11-10-weekly-practice-retro.md`](./deliberations/2026-11-10-weekly-practice-retro.md) — 2026-11-04 → 11-10 周复盘：23 个提交的文档覆盖核对、做对的 9 条实践、13 个错误的复发锁（阈值方向、文案主语、采样截断、边态渲染、对比度、8rpx 网格等）
 
 ### Operations and runbooks
+
+- [`runbooks/production-migration-0104-0105.md`](./runbooks/production-migration-0104-0105.md) — 生产 0104/0105/0106 迁移执行方案（备份 → 加锁 → 迁移 → 验证 → 再部署）
+- [`runbooks/venue-onboarding-ac-hookah.md`](./runbooks/venue-onboarding-ac-hookah.md) — AC Hookah 蛇口/后海门店接入与保底权益配置
 
 - [`systems/observability.md`](./systems/observability.md)
 - [`admin/admin-rbac-matrix.md`](./admin/admin-rbac-matrix.md) — admin page → API → permission matrix

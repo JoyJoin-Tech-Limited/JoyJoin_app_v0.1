@@ -1,14 +1,16 @@
-# 生产库迁移执行方案 · 0104 + 0105
+# 生产库迁移执行方案 · 0104 + 0105 + 0106
 
-**日期：** 2026-11-16
+**日期：** 2026-11-16（2026-11-16 追加 0106）
 **触发原因：** `event_pool_groups.pair_floor_policy` 等字段随 main 上线，但生产尚未执行迁移。生产同样不会自动跑迁移，且服务启动时 `validateDbSchema()` fail-fast —— 先部署后迁移 = 容器 crash-loop + 部署脚本回滚。
-**范围：** 仅生产库 `joyjoin`。staging 已于 2026-11-16 执行完毕（run 43818841277）。
+**范围：** 仅生产库 `joyjoin`。staging 已于 2026-11-16 执行完毕——0104/0105 见 run 43818841277，0106 随 Deploy Staging run `43843591828` 生效（`b4261973d` 之后、`7565a75f4` 的部署已引用该列）。
+
+> 文件名保留 `0104-0105` 以免破坏既有链接；本文档现在覆盖 **0104 + 0105 + 0106** 三条。0106 是门店专属优惠（venue deal）的数据地基，PR #669 引入，列全部 nullable，但新代码启动时会查询它们。
 
 ---
 
 ## 0. 一句话执行顺序
 
-**备份 → 只读核对 → 加锁 → 应用 0104 + 0105 → 验证字段 → 再触发生产部署。**
+**备份 → 只读核对 → 加锁 → 应用 0104 + 0105 + 0106 → 验证字段 → 再触发生产部署。**
 顺序不能反：代码先上 = 服务起不来。
 
 ---
@@ -19,9 +21,10 @@
 |---|---|---|---|
 | `0104_matching_pair_floor.sql` | DDL | `event_pool_groups` + `avg_pair_score int` / `formed_member_count int` / `pair_floor_policy varchar(20)`；`pool_matching_logs` + `pair_floor int` | **是** |
 | `0105_pool_registration_revealed_at.sql` | DDL | `event_pool_registrations` + `revealed_at timestamp` | 是（同一启动查询路径） |
+| `0106_venue_deal_foundation.sql` | DDL | `venue_deals` + `set_menu_price_cents` / `set_menu_original_price_cents`；`event_pools` + `guaranteed_venue_id` / `guaranteed_deal_id`（两条 `ON DELETE RESTRICT` 外键） | **是**（`validateDbSchema()` 会查 `event_pools`/`venue_deals`） |
 | `0103_venue_slot_coverage_futian_20261111.sql` | DML | 福田 `venue_time_slots` 覆盖更新 | 否（可随后单独执行） |
 
-三条迁移都是**幂等**的（`ADD COLUMN IF NOT EXISTS` / 带条件的 `UPDATE`），重复执行无副作用。新增列均可空，旧代码不认识它们也不会报错——所以**先迁移、后部署**没有兼容性风险。
+四条迁移都是**幂等**的（`ADD COLUMN IF NOT EXISTS` / 带条件的 `UPDATE` / `pg_constraint` 存在性检查），重复执行无副作用。新增列均可空，旧代码不认识它们也不会报错——所以**先迁移、后部署**没有兼容性风险。
 
 ---
 
@@ -90,6 +93,27 @@ COMMENT ON COLUMN "event_pool_groups"."pair_floor_policy" IS 'Which pair-floor t
 COMMENT ON COLUMN "pool_matching_logs"."pair_floor" IS 'Pair-floor value applied during this matching run';
 COMMENT ON COLUMN "event_pool_registrations"."revealed_at" IS 'When the participant first opened the reveal; NULL means not opened';
 
+-- 0106 venue deal foundation (PR #669)
+ALTER TABLE "venue_deals"
+  ADD COLUMN IF NOT EXISTS "set_menu_price_cents" integer,
+  ADD COLUMN IF NOT EXISTS "set_menu_original_price_cents" integer;
+
+ALTER TABLE "event_pools"
+  ADD COLUMN IF NOT EXISTS "guaranteed_venue_id" varchar,
+  ADD COLUMN IF NOT EXISTS "guaranteed_deal_id" varchar;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'event_pools_guaranteed_venue_id_venues_id_fk') THEN
+    ALTER TABLE "event_pools" ADD CONSTRAINT event_pools_guaranteed_venue_id_venues_id_fk
+      FOREIGN KEY ("guaranteed_venue_id") REFERENCES "venues"("id") ON DELETE RESTRICT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'event_pools_guaranteed_deal_id_venue_deals_id_fk') THEN
+    ALTER TABLE "event_pools" ADD CONSTRAINT event_pools_guaranteed_deal_id_venue_deals_id_fk
+      FOREIGN KEY ("guaranteed_deal_id") REFERENCES "venue_deals"("id") ON DELETE RESTRICT;
+  END IF;
+END $$;
+
 COMMIT;
 SQL
 ```
@@ -135,6 +159,30 @@ docker exec -i <PG_CONTAINER> psql -U joyjoin -d joyjoin -Atc \
 ```
 
 两条都必须成功。第一条失败 = 表名/库错；第二条失败 = 字段没加上。
+
+**0106 单独核对**（四条新列 + 两条外键）：
+
+```bash
+docker exec -i <PG_CONTAINER> psql -U joyjoin -d joyjoin -At <<'SQL'
+select table_name || '.' || column_name || ' ' || data_type
+from information_schema.columns
+where table_schema = 'public'
+  and (
+    (table_name = 'venue_deals' and column_name in ('set_menu_price_cents','set_menu_original_price_cents'))
+    or (table_name = 'event_pools' and column_name in ('guaranteed_venue_id','guaranteed_deal_id'))
+  )
+order by 1;
+SQL
+```
+
+期望 **4 行**（`event_pools.guaranteed_deal_id character varying`、`event_pools.guaranteed_venue_id character varying`、`venue_deals.set_menu_original_price_cents integer`、`venue_deals.set_menu_price_cents integer`）。再确认两条约束存在：
+
+```bash
+docker exec -i <PG_CONTAINER> psql -U joyjoin -d joyjoin -Atc \
+  "select conname from pg_constraint where conname in ('event_pools_guaranteed_venue_id_venues_id_fk','event_pools_guaranteed_deal_id_venue_deals_id_fk') order by 1;"
+```
+
+必须返回两条。缺约束 = 保底绑定可被删除动作静默解除（`ON DELETE RESTRICT` 未生效）。
 
 ---
 
