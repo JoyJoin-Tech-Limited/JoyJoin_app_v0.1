@@ -4,6 +4,11 @@
 **来源：** `docs/deliberations/2026-11-12-ticket-drink-bundle-decision.md` §8 —— PM 异议后，费用透明被列为**无条件 P0**，与共享桶实验完全解耦。
 **工作量：** 2–3 人天（含状态截图与 DevTools 走查）。本周可交付。
 
+> **实施状态（2026-11-16）：已上线 staging，真机未验收。**
+> 落地提交 `bc8f42a91`（PR #667），已合入 main 并经 staging 部署验证（run 43818899292）。
+> 收银台旧的四格 `ticket-card__terms`、预算 chip 与「精选场地专属折扣」已删除。
+> **WeChat DevTools／真机八态、窄屏与 Quicksand 实载仍为 NOT VERIFIED**，不得当作可发布。
+
 > **实施唯一基准（防旧稿误读）：** 视觉、间距、合计两行组、紧凑单行动作条与窄屏规则，一律以 **§12 + `cost-transparency-polish-20261114.html/.css`** 为准。基础版 HTML/PNG 只证明信息架构；六态矩阵只证明状态与文案，**不得**从旧稿复制间距、合计结构或动作条。金额与状态语义以 §4/§5 为准。
 
 ---
