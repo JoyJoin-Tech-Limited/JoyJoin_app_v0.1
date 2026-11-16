@@ -40,6 +40,7 @@
     "design:audit": "node scripts/devtools/design-audit.mjs",
     "design:audit:changed": "node scripts/devtools/design-audit.mjs --scope changed --fail-on error",
     "audit:visual": "node scripts/visual-correctness-scan.mjs",
+    "report:kimi-usage": "node --disable-warning=ExperimentalWarning scripts/report-kimi-usage.mjs",
     "dep-check": "node scripts/check/check-workspace-dependency-ownership.mjs",
     "check:deps": "node scripts/check/check-dependency-vulns.mjs",
     "check:deps:baseline": "node scripts/check/check-dependency-vulns.mjs --write-baseline",
