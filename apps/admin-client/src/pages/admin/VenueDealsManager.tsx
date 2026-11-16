@@ -486,6 +486,12 @@ export default function VenueDealsManager({ venue, open, onOpenChange }: VenueDe
             </DialogDescription>
           </DialogHeader>
 
+          {/* 状态说明：后台配置与用户端可见性不是一回事。保留到小程序接入 venue_deals 为止，
+              否则运营会以为「已配置 = 用户已看到」。文案只陈述事实，不承诺上线时间。 */}
+          <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            小程序端尚未展示场地优惠：此处配置目前仅在后台生效，用户看不到，也不参与收银台费用说明。
+          </div>
+
           <div className="space-y-4 py-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <Tabs value={dealFilterStatus} onValueChange={(v) => setDealFilterStatus(v as any)}>

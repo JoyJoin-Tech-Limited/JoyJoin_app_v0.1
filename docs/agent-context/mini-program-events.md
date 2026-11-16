@@ -53,6 +53,15 @@
 - `onError` fallback: if a bundled WebP fails, the component degrades to a `JoyJoinIcon` glyph so the badge never looks empty.
 - Analytics: `registration_inclusions_viewed` tracked once per view only when the strip is actually rendered (`discoverAnalytics.ts` + server whitelist).
 
+**收银台费用透明 (2026-11-16):**
+- 收银台 `pages/payments/event-ticket-payment` 用一块「今晚的费用」账目替代了原来的四格 `ticket-card__terms`（「报名费含组织与排桌」「含悦仔多环节破冰」「现场消费 AA」「精选场地专属折扣」）。后两条尤其有害：AA 没有金额，「精选场地专属折扣」在小程序侧从来没有消费方，属于兑现不了的承诺。
+- 结构是**一晚两笔账**：报名费（组织/排桌/破冰）+ 到店自付（按用户在报名时选的预算档），最后一行给「今晚大约 ¥X–Y / 人 · 报名费已在内」。到店金额来自 `draft.budgetRange` / `draft.barBudgetRange`，**没有新 API**；金额一律走 `formatTonightTotal()`，禁止手写合计。锁值：88+80=168 / 88+150=238 / 68+80=148 / 68+150=218。
+- 八态：¥88、¥68（WELCOME20）、预算下限未知（「¥80 以内 / 人」）、饭局多选、权益单（「已含在权益里」、不显示 ¥0）、无预算（不出现任何到店金额，合计行与分隔线整条去掉）、不可映射标签（按未知处理、绝不猜数）、正价多场次产品（`pack_3` / `pack_6` / `vip_monthly` 走「本次购买」、不给今晚合计）。
+- 预算 chip 已从选择区删除，一个事实只留一个家；底部动作条保留报名费金额，用来确认**本次实付**，与卡内「今晚总账」职责不同。
+- 弹层 `IcebreakerInclusionSheet` 保留原拖拽/路由关闭/reduced-motion 行为，标题改「今晚的费用」，新增「不包含在报名费里」，并只通过只读可选属性接收预算文案，**弹层自己不读档位、不计算、不发请求**。
+- 规范与渲染基准：`docs/design/cost-transparency-20261114.md`（§12 与 polish HTML/CSS 是实施唯一基准）。埋点沿用 `ticket_inclusion_sheet_open`，未新增白名单事件。
+- 未纳入本批：`event-detail` 的预算行仍是 P1（需要 `EventPoolSummary` 契约变更，禁止硬编码）。
+
 **反馈激活与评价入口 (2026-10-16):**
 - **Canonical rule:** feedback opens at event start +3h (`POOL_COMPLETION_BUFFER_MS` — the same buffer `poolCompletionSweep` completes pools on, so display state never fights the hourly sweep tick). `apps/server/src/lib/feedbackStateResolver.ts` is the single source of truth for all three event id families (pool / blind-box / events.id); the client never derives state from dateTime. Eligibility (D5): pool → `matchStatus ∈ {matched, completed}`; legacy → non-cancelled `event_attendance`. Test pools follow the same time rule (testers walk the full flow). **Window close (2026-11-11):** `closed` is now emitted at start + 7 days (`FEEDBACK_CLOSE_OFFSET_MS`); `POST /api/events/:eventId/feedback` answers 409 `FEEDBACK_WINDOW_CLOSED`, and the earlier `locked` case keeps 403 `FEEDBACK_NOT_OPEN`. `event_pools` has no duration column, so the open instant stays start + 3h (documented assumption). **Explicit absence (D-I2, 2026-11-11):** only an `event_attendance.attendance_status = 'absent'` row (self-report or admin override) makes a pool-family viewer ineligible; `pending`, `confirmed`, `late` and *no row at all* stay eligible — silence is never read as absence.
 - **Endpoints:** `GET /api/events/:eventId/feedback-state` → `{ state: locked | open | submitted | ineligible | closed }` (404 unknown id; `{code:'server'}` on failure). `POST /api/events/:eventId/feedback` now runs eligibility → window → duplicate gates BEFORE content moderation, with coded 403/409s (`FEEDBACK_NOT_OPEN` / `FEEDBACK_NOT_ELIGIBLE` / `FEEDBACK_ALREADY_SUBMITTED`; copy in `packages/shared/src/copy/errorBaselines.ts`). The duplicate gate also closed a pre-existing XP double-award loophole.
