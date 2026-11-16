@@ -369,8 +369,13 @@ describe('FootprintOracleCard table identity (Phase 2 + 3)', () => {
 })
 
 describe('FootprintOracleCard sealed table entry', () => {
-  const FUTURE_DATE = '2026-11-14T22:02:00+08:00'
-  const FUTURE_WEEKDAY_LABEL = '11月14日'
+  // Keep this relative. A hardcoded date silently ages out of the sealed state
+  // the moment it passes, and every assertion below then tests a revealed card.
+  const FUTURE_DATE = inDays(5)
+  const FUTURE_WEEKDAY_LABEL = (() => {
+    const future = new Date(FUTURE_DATE)
+    return `${future.getMonth() + 1}月${future.getDate()}日`
+  })()
 
   function sealedEvent(overrides: Partial<JoinedEventSummary> = {}): JoinedEventSummary {
     return makeCardEvent({
@@ -437,7 +442,7 @@ describe('FootprintOracleCard sealed table entry', () => {
     // reader the date and the table it reveals.
     const button = screen.getByRole('button', { name: /开箱看看这桌的 6 位桌友$/ })
     expect(button).toHaveAccessibleName(/微醺夜话/)
-    expect(button).toHaveAccessibleName(/11月14日/)
+    expect(button).toHaveAccessibleName(new RegExp(FUTURE_WEEKDAY_LABEL))
     expect(button).toHaveAccessibleName(/已排进 6 人桌/)
     // The countdown chip is suppressed, so the label must not promise one.
     expect(button).not.toHaveAccessibleName(/倒计时/)
