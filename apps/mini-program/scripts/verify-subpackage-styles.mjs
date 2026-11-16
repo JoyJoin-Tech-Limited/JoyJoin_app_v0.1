@@ -220,6 +220,15 @@ const REQUIREMENTS = [
       'ticket-duo-link__text{',
       'ticket-duo-link__hint{',
       'ticket-duo-link__arrow{',
+      // 费用透明 (2026-11-14): CostBreakdown + extended inclusion sheet are
+      // @use'd by this subpackage page; their selectors must reach its WXSS.
+      '.cost-breakdown{',
+      'cost-breakdown__row{',
+      'cost-breakdown__total{',
+      'cost-breakdown__budget-attribution{',
+      'icebreaker-sheet__excluded{',
+      'icebreaker-sheet__budget-row{',
+      'icebreaker-sheet__note--venue{',
     ],
   },
   {

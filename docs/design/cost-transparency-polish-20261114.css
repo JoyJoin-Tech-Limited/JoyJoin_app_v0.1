@@ -1,0 +1,134 @@
+/* 费用透明 · 视觉打磨稿。1px = 2rpx。
+   仅调整视觉与节奏；信息架构、文案、金额及状态契约沿用已批准版本。 */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 375px; height: 812px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  background: #F5F1E8;
+  color: #2D3142;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow: hidden;
+  /* 页面 shell 不滚，主内容独立滚动；动作条在文档流中占位，从结构上杜绝遮挡。 */
+  display: flex;
+  flex-direction: column;
+}
+.num { font-family: 'Quicksand', 'SF Mono', -apple-system, monospace; font-variant-numeric: tabular-nums; }
+
+.statusbar { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; font-size: 14px; font-weight: 600; }
+.statusbar__icons { font-size: 12px; letter-spacing: 2px; font-weight: 400; }
+.nav { height: 44px; display: flex; align-items: center; justify-content: center; position: relative; }
+.nav__title { font-size: 17px; font-weight: 600; }
+.nav__back { position: absolute; left: 20px; font-size: 20px; font-weight: 400; color: #2D3142; }
+.content {
+  flex: 1; min-height: 0; overflow-y: auto;
+  /* 收尾间距 32rpx；真实实现为 ScrollView，其底部预留还须加上动作条实际总高度与实时安全区。 */
+  padding: 8px 20px 16px;
+}
+
+.hero { padding: 8px 0 20px; }
+.hero__topline { display: flex; align-items: center; gap: 8px; }
+.hero__title {
+  font-family: 'AlimamaFangYuanTiVF-Full', 'AlimamaFangYuanTiVF', 'PingFang SC', sans-serif;
+  font-size: 20px; font-weight: 600; line-height: 1.4; letter-spacing: .2px;
+}
+.hero__badge {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+  background: #EDE9FE; color: #7C3AED; font-size: 11px; font-weight: 500; border-radius: 10px;
+}
+.hero__meta { margin-top: 8px; font-size: 12px; line-height: 1.8; color: #6B6357; }
+.hero__meta-row { display: flex; gap: 12px; }
+.hero__meta-label { color: #6B6357; }
+
+/* 更柔、更长的接触阴影：去掉“默认细灰边”感，不增加额外线或底色块。 */
+.ticket {
+  background: #FFFFFF; border-radius: 16px; padding: 20px;
+  box-shadow: 0 8px 24px rgba(45, 49, 66, .06);
+}
+
+/* 入座信息仍是票面元信息；收紧它与选择摘要的间距，而非强行关联到账块。 */
+.ticket__seats {
+  min-height: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  font-size: 11px; line-height: 16px; color: #6B6357;
+}
+.ticket__seats-dot { width: 4px; height: 4px; border-radius: 50%; background: #8B5CF6; flex: none; }
+
+/* 64rpx major-section breath：只用品相与留白分区，不加线、不套卡。 */
+.choices { margin-bottom: 32px; }
+.choices__label { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 500; }
+.choices__accent { width: 4px; height: 12px; border-radius: 2px; background: #8B5CF6; }
+.choices__sub { margin-top: 8px; font-size: 11px; line-height: 1.6; color: #6B6357; }
+.choices__chips { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; padding: 8px 12px;
+  background: #FAFAFA; border-radius: 16px; font-size: 12px; line-height: 16px; color: #2D3142;
+}
+
+.cost__label { font-size: 14px; line-height: 20px; font-weight: 600; color: #2D3142; margin-bottom: 12px; }
+.cost__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cost__row + .cost__hint { margin-top: 4px; }
+.cost__hint { font-size: 11px; line-height: 1.6; color: #6B6357; }
+.cost__name { font-size: 14px; line-height: 20px; font-weight: 400; }
+.cost__amount {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 16px; line-height: 24px; font-weight: 600; white-space: nowrap;
+}
+.cost__amount-unit { font-size: 11px; font-weight: 400; line-height: 16px; color: #6B6357; }
+.cost__group + .cost__group { margin-top: 16px; }
+.cost__label-compact, .cost__budget-attribution { display: none; }
+/* 预算行的首段辅助间距由行本身承载，窄屏新增归属行时不会留下双倍间距。 */
+.cost__group--onsite .cost__row { margin-bottom: 4px; }
+.cost__group--onsite .cost__hint { margin-top: 0; }
+.cost__divider { height: .5px; background: #F3F4F6; margin: 16px 0 12px; }
+
+/* 左侧两行成为一个整体，右侧金额跨两行垂直居中；不再只与第一行对齐。 */
+.cost__total { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cost__total-copy { display: flex; flex-direction: column; gap: 4px; }
+.cost__total-label { font-size: 12px; line-height: 20px; font-weight: 500; color: #6B6357; }
+.cost__total-amount {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 18px; line-height: 24px; font-weight: 700; color: #2D3142; white-space: nowrap;
+}
+.cost__total-amount .cost__amount-unit { font-size: 11px; }
+.cost__total-note { font-size: 11px; line-height: 1.6; color: #6B6357; }
+
+/* 保持 88rpx 触控区，但去掉额外上间距，并与卡内正文左边线对齐。 */
+.cost-link {
+  position: relative; margin: 0 20px; min-height: 44px;
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 8px; font-size: 12px; color: #6B6357;
+}
+.cost-link::before {
+  content: ''; position: absolute; inset: 0; border-radius: 8px;
+  background: rgba(139, 92, 246, .06); opacity: 0; pointer-events: none;
+  transition: opacity .12s cubic-bezier(0.22,1,0.36,1);
+}
+.cost-link:active::before { opacity: 1; }
+
+/* 紧凑单行动作条：本次支付是一组，主 CTA 占据余量；34px 为截图设备安全区。 */
+.actionbar {
+  position: relative; flex: none; background: #FFFFFF;
+  box-shadow: 0 -4px 16px rgba(45, 49, 66, .05);
+  padding: 12px 20px 34px;
+}
+.actionbar__main { display: flex; align-items: center; gap: 16px; }
+.actionbar__price { display: flex; flex-direction: column; gap: 4px; min-width: 80px; flex: none; }
+.actionbar__price-label { font-size: 11px; line-height: 16px; color: #6B6357; }
+.actionbar__price-value { font-size: 20px; line-height: 24px; font-weight: 600; white-space: nowrap; }
+.actionbar__cta {
+  flex: 1; height: 48px; border-radius: 28px; background: #8B5CF6; color: #FFFFFF;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; line-height: 24px; font-weight: 700; letter-spacing: .5px;
+}
+
+/* <360px：主行只保留「到店自付」，归属说明作为独立辅助行。
+   两个主标签互斥显隐；金额、字号与文案不变。WXSS 可用同一 media query。 */
+@media (max-width: 359px) {
+  .cost__label-full { display: none; }
+  .cost__label-compact { display: inline; }
+  .cost__budget-attribution { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cost-link::before { transition: none; }
+}

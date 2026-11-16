@@ -3,12 +3,25 @@ import Taro from '@tarojs/taro'
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { haptics } from '../../lib/utils/haptics'
-import './IcebreakerInclusionSheet.scss'
+import {
+  COST_ONSITE_MENU_NOTE,
+  COST_ROW_ONSITE_HINT,
+  COST_SHEET_CURRENT_BUDGET,
+  COST_SHEET_EXCLUDED_TITLE,
+  COST_SHEET_PHASE_NOTE,
+  COST_SHEET_SUBTITLE,
+  COST_SHEET_TITLE,
+  COST_SHEET_VENUE_NOTE,
+} from '@shared/copy/eventCostCopy'
 
 interface IcebreakerInclusionSheetProps {
   visible: boolean
   onClose: () => void
   shouldReduceMotion?: boolean
+  /** Read-only display input produced by the page budget formatter. */
+  onSiteBudgetLabel?: string | null
+  /** Centralised dining/drinks hint; no budget derivation belongs here. */
+  onSiteHint?: string
 }
 
 // Representative sample of the phase pool. The actual run plan is compiled
@@ -24,7 +37,13 @@ const PHASES = [
 const DRAG_THRESHOLD_PX = 100
 const DRAG_RESISTANCE = 0.6
 
-export default function IcebreakerInclusionSheet({ visible, onClose, shouldReduceMotion = false }: IcebreakerInclusionSheetProps) {
+export default function IcebreakerInclusionSheet({
+  visible,
+  onClose,
+  shouldReduceMotion = false,
+  onSiteBudgetLabel,
+  onSiteHint,
+}: IcebreakerInclusionSheetProps) {
   const [dragY, setDragY] = useState(0)
   const startYRef = useRef(0)
   const isDraggingRef = useRef(false)
@@ -126,7 +145,7 @@ export default function IcebreakerInclusionSheet({ visible, onClose, shouldReduc
               mode='aspectFit'
               aria-hidden='true'
             />
-            <Text className='icebreaker-sheet__title'>费用包含</Text>
+            <Text className='icebreaker-sheet__title'>{COST_SHEET_TITLE}</Text>
           </View>
           <View
             className='icebreaker-sheet__close'
@@ -140,7 +159,7 @@ export default function IcebreakerInclusionSheet({ visible, onClose, shouldReduc
         </View>
 
         <Text className='icebreaker-sheet__subtitle'>
-          报名费已包含悦仔引导的多环节破冰体验
+          {COST_SHEET_SUBTITLE}
         </Text>
 
         <ScrollView
@@ -165,10 +184,26 @@ export default function IcebreakerInclusionSheet({ visible, onClose, shouldReduc
             ))}
           </View>
 
-          <View className='icebreaker-sheet__note'>
-            <Text className='icebreaker-sheet__note-text'>
-              具体环节会由悦仔根据成桌人数和现场氛围灵活组合
+          <View className='icebreaker-sheet__excluded'>
+            <Text className='icebreaker-sheet__excluded-title'>{COST_SHEET_EXCLUDED_TITLE}</Text>
+            {onSiteBudgetLabel ? (
+              <View className='icebreaker-sheet__budget-row'>
+                <Text className='icebreaker-sheet__budget-label'>{COST_SHEET_CURRENT_BUDGET}</Text>
+                <Text className='icebreaker-sheet__budget-value'>{onSiteBudgetLabel}</Text>
+              </View>
+            ) : (
+              <Text className='icebreaker-sheet__menu-note'>{COST_ONSITE_MENU_NOTE}</Text>
+            )}
+            <Text className='icebreaker-sheet__excluded-hint'>
+              {onSiteHint ?? COST_ROW_ONSITE_HINT}
             </Text>
+          </View>
+
+          <View className='icebreaker-sheet__note'>
+            <Text className='icebreaker-sheet__note-text'>{COST_SHEET_PHASE_NOTE}</Text>
+          </View>
+          <View className='icebreaker-sheet__note icebreaker-sheet__note--venue'>
+            <Text className='icebreaker-sheet__note-text'>{COST_SHEET_VENUE_NOTE}</Text>
           </View>
         </ScrollView>
       </View>

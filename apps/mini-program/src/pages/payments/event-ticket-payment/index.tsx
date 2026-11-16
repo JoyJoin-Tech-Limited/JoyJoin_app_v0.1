@@ -1,9 +1,20 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView, Image, Button } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { registerForPool, registerForPoolWithPayment, createMiniProgramPaymentIntent, getEventPool, getUserCoupons, reconcilePayment } from '@shared/api'
+import { registerForPool, registerForPoolWithPayment, createMiniProgramPaymentIntent, getEventPool, getUserCoupons, reconcilePayment, normalizeSubscriptionPlanType } from '@shared/api'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { normalizeBudgetTierIds } from '@shared/budgetTiers'
+import {
+  COST_ACTION_PURCHASE,
+  COST_INCLUDED_IN_PLAN,
+  COST_ROW_ONSITE_HINT,
+  COST_ROW_ONSITE_HINT_DINING,
+  COST_ROW_TICKET,
+  COST_SHEET_LINK,
+  formatOnSiteBudget,
+  formatTonightTotal,
+} from '@shared/copy/eventCostCopy'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest, type ApiError } from '../../../lib/api/api'
 import { logInfo, logError } from '../../../lib/utils/logger'
@@ -41,12 +52,12 @@ import XiaoyuePaymentReceipt, {
 import RefundGuaranteeLine from './components/RefundGuaranteeLine'
 import DuoEntryLink from './components/DuoEntryLink'
 import IcebreakerInclusionSheet from '../../../components/event-ticket-payment/IcebreakerInclusionSheet'
+import CostBreakdown from '../../../components/event-ticket-payment/CostBreakdown'
 import TicketOrderSkeleton, { getTicketCtaLabel } from '../../../components/payments/TicketOrderSkeleton'
 import {
   buildPlansShown,
   calculateDiscount,
   findWelcomeCoupon,
-  formatBudgetLabel,
   formatDateTimeLabel,
   formatPrice,
   getBestCoupon,
@@ -136,6 +147,7 @@ export default function EventTicketPaymentPage() {
   const [couponAppliedAt, setCouponAppliedAt] = useState<number>(0)
   const [pageEnteredAt, setPageEnteredAt] = useState<number>(0)
   const [showInclusionSheet, setShowInclusionSheet] = useState(false)
+  const [actionBarHeightPx, setActionBarHeightPx] = useState(0)
   const [tailImageError, setTailImageError] = useState(false)
   const [tailImageLoaded, setTailImageLoaded] = useState(false)
   const [tailLoadTimedOut, setTailLoadTimedOut] = useState(false)
@@ -147,7 +159,6 @@ export default function EventTicketPaymentPage() {
   const tailTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasTrackedViewRef = useRef(false)
   const hasTrackedPlanSelectorImpressionRef = useRef(false)
-  const hasTrackedTermsRowImpressionRef = useRef(false)
   const hasTrackedRefundGuaranteeImpressionRef = useRef(false)
 
   // Keep ref in sync with state for pollVerification closure safety
@@ -243,6 +254,37 @@ export default function EventTicketPaymentPage() {
   // 不再门控展示，仅作为曝光埋点的 cohort 标签保留（后验对照用）。
   const refundNarrativeBucket = resolveRefundNarrativeBucket(ritualContext)
   const showRefundNarrativeStack = preRevealRefundEnabled
+
+  // The fixed action bar owns dynamic rows (refund one/two-line, cancel note,
+  // retry and error). Measure its real rendered height, including the live
+  // safe-area inset, so the scroll-end reserve can never lag a visible row.
+  const measureActionBar = useCallback(() => {
+    Taro.nextTick(() => {
+      Taro.createSelectorQuery()
+        .select('.ticket-footer')
+        .boundingClientRect()
+        .exec((result) => {
+          const rect = result?.[0] as { height?: number } | null | undefined
+          const nextHeight = rect?.height
+          if (typeof nextHeight === 'number' && nextHeight > 0) {
+            setActionBarHeightPx(nextHeight)
+          }
+        })
+    })
+  }, [])
+
+  useEffect(() => {
+    measureActionBar()
+  }, [
+    measureActionBar,
+    cancelCount,
+    payment.status,
+    payment.error,
+    preRevealRefundEnabled,
+    showRefundNarrativeStack,
+    isPageReady,
+    poolLoading,
+  ])
 
   // D2 悦聚月卡 upsell offer — fail-closed: the monthly card renders only
   // when the flag is ON, ritual-context actually carries a monthly
@@ -400,16 +442,6 @@ export default function EventTicketPaymentPage() {
     })
   }, [isPageReady, poolId, planSelectorMetadataReady, selectedPlan, singlePrice, pack3Price, pack6Price, vipMonthlyOffer])
 
-  // Track terms row impression once the ticket card is actually rendered.
-  useEffect(() => {
-    if (!isPageReady || !poolId || poolLoading || !pool || hasTrackedTermsRowImpressionRef.current) return
-    hasTrackedTermsRowImpressionRef.current = true
-    discoverAnalytics.track('ticket_terms_row_impression', undefined, {
-      poolId,
-      hasIcebreakerChip: true,
-    })
-  }, [isPageReady, poolId, poolLoading, pool])
-
   // 转化 P0d guardrail (AC-06): refund-guarantee line exposure for the
   // `checkout_cancel_rate` 灰度护栏 — fired once per page visit (ref-dedup,
   // feedbackEntryTrackedRef pattern), ONLY when the line actually renders
@@ -466,6 +498,7 @@ export default function EventTicketPaymentPage() {
   // on swipe-back, and re-showing the checkout would invite a second charge
   // attempt against a pool that can never accept it.
   useDidShow(() => {
+    measureActionBar()
     if (payment.status === 'failed' && !payment.registrationPending && !payment.registrationTerminal) {
       setPayment({ status: 'idle' })
     }
@@ -1167,13 +1200,59 @@ export default function EventTicketPaymentPage() {
   const isPaying = payment.status === 'creating' || payment.status === 'paying'
   const dateLabel = formatDateTimeLabel(pool.dateTime)
   const areaLabel = pool.district || pool.city || ''
+  const paidCents = finalPrice
+  const isMultiEventPurchase =
+    selectedPlan === 'pack_3' ||
+    selectedPlan === 'pack_6' ||
+    selectedPlan === 'vip_monthly'
 
-  // Build choice chips from return context draft
+  // Budget authority stays in the page: normalize by event type, fail closed
+  // on any unknown selection, and pass only derived labels to the components.
   const draft = returnContext?.draft
-  const choiceChips: Array<{ label: string; category: 'budget' | 'intent' | 'language' | 'theme' | 'alcohol' | 'other' }> = []
+  const rawBudgetRange = eventType === '酒局' ? draft?.barBudgetRange : draft?.budgetRange
+  const budgetNormalization = normalizeBudgetTierIds(rawBudgetRange, { eventType })
+  const budgetTierIds = budgetNormalization.unknown.length > 0 ? [] : budgetNormalization.ids
+  const onSiteBudgetLabel = formatOnSiteBudget(budgetTierIds)
+  const onSiteHint = eventType === '饭局' ? COST_ROW_ONSITE_HINT_DINING : COST_ROW_ONSITE_HINT
+  const tonightTotalLabel = isMultiEventPurchase
+    ? null
+    : formatTonightTotal(paidCents, budgetTierIds)
+
+  // Multi-event purchase copy is limited to fields already present on the
+  // selected order plan. For vip_monthly, read the raw monthly record rather
+  // than vipMonthlyPlanView: the latter intentionally carries a selector-only
+  // displayName fallback, which is not evidence of order-provided copy.
+  const monthlyPurchaseRecord = [
+    ...(ritualContext?.subscriptionPlans ?? []),
+    ...(ritualContext?.plans ?? []),
+  ].find((candidate) => {
+    const record = candidate as { planType?: unknown; priceCents?: unknown; priceInCents?: unknown }
+    const hasExistingPrice = [record.priceCents, record.priceInCents].some(
+      (value) => typeof value === 'number' && Number.isFinite(value) && value > 0,
+    )
+    const planType = typeof record.planType === 'string' ? record.planType : null
+    return normalizeSubscriptionPlanType(planType) === 'monthly' && hasExistingPrice
+  }) ?? null
+  const selectedPurchaseRecord = (
+    selectedPlan === 'vip_monthly'
+      ? monthlyPurchaseRecord
+      : selectedPlan === 'pack_3'
+        ? pack3Plan
+        : selectedPlan === 'pack_6'
+          ? pack6Plan
+          : null
+  ) as { displayName?: unknown; description?: unknown } | null
+  const purchaseProductName = typeof selectedPurchaseRecord?.displayName === 'string'
+    ? selectedPurchaseRecord.displayName.trim()
+    : ''
+  const purchaseDescription = typeof selectedPurchaseRecord?.description === 'string'
+    ? selectedPurchaseRecord.description.trim()
+    : ''
+  const purchaseHint = [purchaseProductName, purchaseDescription].filter(Boolean).join(' · ') || null
+
+  // Build the remaining choice chips; budget has one home in CostBreakdown.
+  const choiceChips: Array<{ label: string; category: 'intent' | 'language' | 'theme' | 'alcohol' | 'other' }> = []
   if (draft && Object.keys(draft).length > 0) {
-    const budgets = eventType === '酒局' ? draft.barBudgetRange : draft.budgetRange
-    budgets?.forEach((b: string) => choiceChips.push({ label: formatBudgetLabel(b), category: 'budget' }))
     draft.eventIntent?.forEach((i: string) => choiceChips.push({ label: getDisplayLabel(i, 'intent'), category: 'intent' }))
     draft.preferredLanguages?.forEach((l: string) => choiceChips.push({ label: getDisplayLabel(l, 'language'), category: 'language' }))
     draft.barThemes?.forEach((t: string) => choiceChips.push({ label: t, category: 'theme' }))
@@ -1362,36 +1441,28 @@ export default function EventTicketPaymentPage() {
               </View>
             )}
 
-            {/* Terms */}
-            <View className='ticket-card__terms'>
-              <View className='ticket-card__terms-chip'>
-                <Text className='ticket-card__terms-chip-text'>报名费含组织与排桌</Text>
-              </View>
-              <View className='ticket-card__terms-chip'>
-                <Text className='ticket-card__terms-chip-text'>含悦仔多环节破冰</Text>
-              </View>
-              <View className='ticket-card__terms-chip'>
-                <Text className='ticket-card__terms-chip-text'>现场消费 AA</Text>
-              </View>
-              <View className='ticket-card__terms-chip'>
-                <Text className='ticket-card__terms-chip-text'>精选场地专属折扣</Text>
-              </View>
-            </View>
-
-            {/* Inclusion detail link */}
-            <View
-              className='ticket-card__inclusion-link'
-              hoverClass='ticket-card__inclusion-link--pressed'
-              onClick={() => {
-                haptics('light')
-                setShowInclusionSheet(true)
-                discoverAnalytics.track('ticket_inclusion_sheet_open', undefined, { poolId })
-              }}
-            >
-              <Text className='ticket-card__inclusion-link-text'>查看费用包含内容</Text>
-              <Text className='ticket-card__inclusion-link-chevron'>›</Text>
-            </View>
+            <CostBreakdown
+              paidCents={paidCents}
+              onSiteBudgetLabel={onSiteBudgetLabel}
+              tonightTotalLabel={tonightTotalLabel}
+              onSiteHint={onSiteHint}
+              isMultiEventPurchase={isMultiEventPurchase}
+              purchaseHint={purchaseHint}
+            />
         </ReservationTicket>
+
+        {/* Card-adjacent explanation link; the cost block itself stays static. */}
+        <View
+          className='ticket-card__inclusion-link'
+          hoverClass='ticket-card__inclusion-link--pressed'
+          onClick={() => {
+            haptics('light')
+            setShowInclusionSheet(true)
+            discoverAnalytics.track('ticket_inclusion_sheet_open', undefined, { poolId })
+          }}
+        >
+          <Text className='ticket-card__inclusion-link-text'>{COST_SHEET_LINK}</Text>
+        </View>
 
         {/* ── Plan Selector ── */}
         {/* Tier-M wait (M1): while the order is being created, replace the
@@ -1457,18 +1528,11 @@ export default function EventTicketPaymentPage() {
           <Text>稍后再报名</Text>
         </View>
 
-        {/* Spacer for sticky CTA — grows when the D3 refund-guarantee caption
-            adds a line to the fixed footer (flag preRevealRefundEnabled); grows
-            again, pixel-exact, when the 转化 P0d two-line stack (bucket 1) adds
-            the narrative row (CSS-reserved — 禁 JS 测量后补). */}
+        {/* Real action-bar height + the SCSS 32rpx收尾 margin. The CSS height
+            is only the pre-measurement fallback; every dynamic row re-measures. */}
         <View
-          className={`ticket-bottom-spacer ${
-            preRevealRefundEnabled
-              ? showRefundNarrativeStack
-                ? 'ticket-bottom-spacer--with-guarantee-stack'
-                : 'ticket-bottom-spacer--with-guarantee'
-              : ''
-          }`}
+          className='ticket-bottom-spacer'
+          style={actionBarHeightPx > 0 ? { height: `${actionBarHeightPx}px` } : undefined}
         />
       </ScrollView>
 
@@ -1481,28 +1545,44 @@ export default function EventTicketPaymentPage() {
             <Text className='ticket-cancel-note__text'>你的选择已保存，随时回来继续</Text>
           </View>
         ) : null}
-        {payment.status === 'failed' ? (
-          <View className='ticket-cta ticket-cta--retry' hoverClass='ticket-cta--pressed' onClick={handleRetry}>
-            <Text className='ticket-cta__text'>{payment.registrationPending ? '补上这次报名' : '重试支付'}</Text>
+        <View className='ticket-footer__main'>
+          <View className='ticket-footer__price'>
+            <Text className='ticket-footer__price-label'>
+              {isMultiEventPurchase ? COST_ACTION_PURCHASE : COST_ROW_TICKET}
+            </Text>
+            <Text
+              className={`ticket-footer__price-value ${
+                !isMultiEventPurchase && paidCents === 0 ? 'ticket-footer__price-value--text' : ''
+              }`}
+            >
+              {!isMultiEventPurchase && paidCents === 0 ? COST_INCLUDED_IN_PLAN : formatPrice(paidCents)}
+            </Text>
           </View>
-        ) : (
-          <View
-            className={`ticket-cta ${isPaying ? 'ticket-cta--loading' : ''}`}
-            hoverClass={isPaying ? '' : 'ticket-cta--pressed'}
-            onClick={isPaying ? undefined : handlePay}
-          >
-            <View className='ticket-cta__content'>
+          {payment.status === 'failed' ? (
+            <Button
+              className='ticket-cta ticket-cta--retry'
+              hoverClass='ticket-cta--pressed'
+              onClick={handleRetry}
+            >
               <Text className='ticket-cta__text'>
-                {getTicketCtaLabel(isPaying, payment.status === 'creating', formatPrice(finalPrice))}
+                {payment.registrationPending ? '补上这次报名' : '重试支付'}
               </Text>
-              {!isPaying && discountAmount > 0 && (
-                <View className='ticket-cta__badge'>
-                  <Text className='ticket-cta__badge-text'>已省 {formatPrice(discountAmount)}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
+            </Button>
+          ) : (
+            <Button
+              className={`ticket-cta ${isPaying ? 'ticket-cta--loading' : ''}`}
+              hoverClass={isPaying ? '' : 'ticket-cta--pressed'}
+              disabled={isPaying}
+              onClick={isPaying ? undefined : handlePay}
+            >
+              <Text className='ticket-cta__text'>
+                {isPaying
+                  ? getTicketCtaLabel(isPaying, payment.status === 'creating', formatPrice(paidCents))
+                  : '确认订座'}
+              </Text>
+            </Button>
+          )}
+        </View>
 
         {/* D3 refund-guarantee caption (flag preRevealRefundEnabled): one
             quiet System-UI line directly under the CTA; renders nothing when
@@ -1522,6 +1602,8 @@ export default function EventTicketPaymentPage() {
       <IcebreakerInclusionSheet
         visible={showInclusionSheet}
         shouldReduceMotion={shouldReduceMotion}
+        onSiteBudgetLabel={onSiteBudgetLabel}
+        onSiteHint={onSiteHint}
         onClose={() => {
           setShowInclusionSheet(false)
           discoverAnalytics.track('ticket_inclusion_sheet_close', undefined, { poolId })
