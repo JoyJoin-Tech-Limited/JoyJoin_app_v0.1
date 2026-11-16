@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>悦聚 · 场地专属优惠 设计稿 v2（简化版）</title>
+<style>
+  :root{
+    --primary:#8B5CF6; --primary-dark:#7C3AED; --primary-light:#EDE9FE;
+    --coral:#FF9B85;
+    --ink:#2D3142; --ink-warm:#2D2B28; --ink-2:#6B7280; --ink-3:#8E949E;
+    --ink-2-light:#59616C;
+    --divider:#F3F4F6; --surface:#FFFFFF;
+    --amber-700:#B45309; --success:#207A46;
+    /* 新增 token（§6.1）：优惠专用墨色 / 底色 / 描边，仅三个语义角色 */
+    --deal-ink:#B4462B; --deal-tint:#FFF1EA; --deal-line:#F3C9B6;
+    --warm-from:#FDFCFA; --warm-mid:#F8F6F1;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    background:#F4F2EE; color:var(--ink); line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .doc{max-width:1240px;margin:0 auto;padding:56px 40px 120px}
+  header.doc-head{border-bottom:2px solid var(--ink);padding-bottom:24px;margin-bottom:8px}
+  .doc-kicker{font-size:12px;letter-spacing:.18em;color:var(--ink-2);text-transform:uppercase}
+  h1{font-size:34px;line-height:1.35;margin-top:10px;font-weight:800}
+  .doc-meta{display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--ink-2)}
+  .doc-meta b{color:var(--ink);font-weight:600}
+  .badge-draft{display:inline-block;background:#FFF4D6;color:var(--amber-700);border:1px solid #EBD6A0;
+    border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
+  .badge-v2{display:inline-block;background:var(--primary-light);color:var(--primary-dark);
+    border-radius:6px;padding:1px 8px;font-size:12px;font-weight:700}
+  section{margin-top:64px}
+  h2{font-size:23px;font-weight:800;display:flex;align-items:baseline;gap:12px}
+  h2 .num{font-size:13px;font-weight:700;color:#fff;background:var(--ink);border-radius:6px;padding:2px 8px}
+  h3{font-size:16px;font-weight:700;margin:28px 0 10px}
+  p.lede{margin-top:12px;font-size:15px;color:var(--ink-2-light);max-width:860px}
+  .note{margin-top:16px;background:#fff;border-left:3px solid var(--primary);border-radius:0 10px 10px 0;
+    padding:14px 18px;font-size:14px;color:var(--ink-2-light);max-width:900px}
+  .note.warn{border-left-color:var(--coral)}
+  .note b{color:var(--ink)}
+  .shots{display:flex;flex-wrap:wrap;gap:36px;margin-top:28px;align-items:flex-start}
+  .shot{display:flex;flex-direction:column;gap:12px}
+  .shot-cap{font-size:13px;color:var(--ink-2);max-width:390px;line-height:1.65}
+  .shot-cap b{display:block;color:var(--ink);font-size:14px;font-weight:700}
+  .shot-cap code{font-size:12px;background:#ECE9E3;border-radius:4px;padding:0 4px}
+
+  .device{width:390px;background:linear-gradient(180deg,var(--warm-from),var(--warm-mid));
+    border:1px solid #E4DFD6;border-radius:26px;overflow:hidden;box-shadow:0 10px 30px rgba(45,43,40,.08)}
+  .device--crop{border-radius:20px}
+  .statusbar{height:34px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-size:12px;font-weight:600;color:var(--ink-warm)}
+  .navbar{height:44px;display:flex;align-items:center;justify-content:center;position:relative;
+    font-size:16px;font-weight:600;color:var(--ink-warm)}
+  .navbar .back{position:absolute;left:18px;font-size:20px;color:var(--ink-2);font-weight:400}
+  .screen{padding:16px 20px 28px}
+  .card{background:var(--surface);border-radius:16px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+  .card-title{display:block;font-size:16px;font-weight:600;color:var(--ink);margin-bottom:12px}
+  .info-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .info-row + .info-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--divider)}
+  .info-label{flex-shrink:0;color:var(--ink-2);font-size:14px}
+  .info-value{flex:1;text-align:right;color:var(--ink);font-size:14px;line-height:1.6}
+  .info-value.tbd{color:var(--amber-700);font-weight:600}
+  .cta{display:block;width:100%;margin-top:16px;background:var(--primary);color:#fff;text-align:center;
+    border-radius:999px;padding:14px 0;font-size:16px;font-weight:600}
+  .cta.ghost{background:var(--primary-light);color:var(--primary-dark)}
+  .price{font-size:32px;font-weight:800;color:var(--ink);line-height:1.1}
+  .price small{font-size:14px;font-weight:600}
+  .hairline{height:1px;background:var(--divider);margin:14px 0}
+  .mini{font-size:11px;color:var(--ink-2-light);line-height:1.7}
+  .annot{margin-top:10px;font-size:11px;color:var(--primary-dark);background:var(--primary-light);
+    border-radius:8px;padding:6px 10px;line-height:1.6}
+
+  /* ── 报名页 ── */
+  .stepper{display:flex;gap:10px;margin-bottom:18px}
+  .stepper div{flex:1;border:1px solid #DCD5F5;border-radius:999px;text-align:center;padding:9px 0;
+    font-size:14px;color:var(--primary-dark);font-weight:500}
+  .stepper .on{background:var(--primary-light);border-color:transparent;font-weight:700}
+  .mascot-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:20px}
+  .mascot{width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#F7DFA9,#E0AE6B);
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#7A4A1E}
+  .bubble{position:relative;background:#fff;border-radius:6px 16px 16px 16px;padding:12px 16px;
+    font-size:14px;line-height:1.65;color:var(--ink);box-shadow:0 1px 6px rgba(0,0,0,.05);flex:1}
+  .reg-title{font-size:21px;font-weight:800;line-height:1.4;color:var(--ink-warm)}
+  .reg-sub{font-size:13px;color:var(--ink-2-light);margin-top:8px;line-height:1.8}
+  .price-band{display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 4px}
+  .fee-note{font-size:11px;color:var(--ink-2-light);margin-top:6px}
+  .inclusions-label{font-size:12px;color:var(--ink-3);margin:18px 0 10px;font-weight:600}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tile{background:#fff;border-radius:14px;padding:12px 6px;text-align:center;box-shadow:0 1px 5px rgba(0,0,0,.05)}
+  .tile img{width:34px;height:34px;object-fit:contain;display:block;margin:0 auto 6px}
+  .tile .t{font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
+  .tile .s{font-size:10px;color:var(--ink-2-light);margin-top:3px;line-height:1.5}
+  .tile--deal{grid-column:span 2;display:flex;align-items:center;justify-content:center;gap:12px;
+    background:#FFF4EC;border:1px solid var(--deal-line);text-align:left}
+  .tile--deal .t{color:var(--deal-ink);font-size:15px}
+  .tile--deal .s{color:#A35B45;font-size:11px}
+  .ticket-glyph{width:38px;height:38px;position:relative;flex-shrink:0}
+  .ticket-glyph i{position:absolute;inset:8px 1px;border-radius:5px;background:linear-gradient(135deg,var(--coral),#A86BFF)}
+  .ticket-glyph i:before{content:"";position:absolute;top:50%;left:-4px;width:8px;height:8px;margin-top:-4px;
+    border-radius:50%;background:#FFF4EC;box-shadow:32px 0 0 #FFF4EC}
+  .ticket-glyph i:after{content:"";position:absolute;left:50%;top:4px;bottom:4px;border-left:2px dotted rgba(255,255,255,.9)}
+  .deal-teaser{margin-top:12px;background:#FFF4EC;border:1px solid var(--deal-line);border-radius:12px;padding:11px 14px}
+  .deal-teaser p{font-size:12px;color:#8C4A33;line-height:1.7}
+  .deal-teaser b{color:var(--deal-ink)}
+
+  /* ── 专属优惠卡：一张卡，一句话 ── */
+  .deal{border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--deal-line)}
+  .deal-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:#FFF6F0}
+  .deal-head .l{font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--deal-ink)}
+  .deal-head .r{font-size:11px;font-weight:700;color:var(--success);display:flex;align-items:center;gap:4px}
+  .deal-head .r:before{content:"";width:5px;height:5px;border-radius:50%;background:var(--success)}
+  .deal-body{display:flex;align-items:stretch;position:relative}
+  .deal-value{flex:0 0 104px;background:var(--deal-tint);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:20px 8px}
+  /* 面值 display token：76rpx（卡内）/152rpx（出示页），仅限优惠面值使用 */
+  .deal-value .v{font-size:38px;font-weight:900;color:var(--deal-ink);line-height:1;letter-spacing:-.02em;white-space:nowrap}
+  .deal-value .v small{font-size:18px;font-weight:800;margin-left:2px}
+  .deal-value .was{font-size:11px;color:#6B6357;text-decoration:line-through;margin-top:6px}
+  .deal-main{flex:1;padding:18px 16px;min-width:0}
+  .deal-body:before,.deal-body:after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;
+    background:var(--warm-mid);left:97px;z-index:2;border:1px solid var(--deal-line)}
+  .deal-body:before{top:-8px}
+  .deal-body:after{bottom:-8px}
+  .deal-body .perf{position:absolute;left:104px;top:10px;bottom:10px;border-left:2px dashed var(--deal-line)}
+  .deal-title{font-size:16px;font-weight:800;color:var(--ink);line-height:1.45;
+    overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .deal-scope{font-size:12px;color:var(--ink-2-light);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deal-how{display:inline-flex;align-items:center;gap:6px;margin-top:12px;color:var(--primary-dark);
+    font-size:12px;font-weight:700}
+  .deal-how:after{content:"›";font-size:14px;margin-left:2px}
+  .deal-foot{padding:10px 16px;border-top:1px solid var(--divider);font-size:11px;color:var(--ink-2-light)}
+  .deal--locked{border-color:#E3DED6}
+  .deal--locked .deal-head{background:#F4F1EB}
+  .deal--locked .deal-head .l{color:#6B6357}
+  .deal--locked .deal-head .r{color:#6B6357}
+  .deal--locked .deal-head .r:before{background:var(--amber-700)}
+  .deal--locked .deal-value{background:#F4F1EB}
+  .deal--locked .deal-value .v{color:#6B6357}
+  .deal--locked .deal-title{color:#6B6357;font-size:14px;-webkit-line-clamp:2}
+  .deal--error{border-color:#E3DED6}
+  .deal--error .deal-head .r:before{background:var(--amber-700)}
+  .deal--error .deal-head .r{color:#6B6357}
+  .deal--error .retry{color:var(--primary);font-weight:700;font-size:12px}
+
+  /* ── 到店出示页：凭证第一，折扣第二 ── */
+  .redeem-screen{background:linear-gradient(180deg,#FFF8F3,#F6F1FF);min-height:720px;
+    display:flex;flex-direction:column;padding:0 20px 24px}
+  .redeem-panel{background:#fff;border-radius:18px;padding:26px 18px;text-align:center;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);margin-top:18px}
+  .redeem-panel .k{font-size:12px;color:var(--ink-2-light)}
+  /* 凭证 = 第一焦点 */
+  .redeem-panel .big-code{font-size:44px;font-weight:900;letter-spacing:.12em;color:var(--ink);margin:14px 0 6px}
+  .redeem-panel .copy-btn{display:inline-block;margin-top:12px;background:var(--primary);color:#fff;
+    border-radius:999px;padding:12px 34px;font-size:15px;font-weight:700}
+  .redeem-panel .copied{display:inline-block;margin-top:12px;background:#EAF6EE;color:var(--success);
+    border-radius:999px;padding:12px 34px;font-size:15px;font-weight:700}
+  .redeem-panel .hint{font-size:12px;color:var(--ink-2-light);line-height:1.8;margin-top:14px}
+  .redeem-deal{margin-top:16px;background:#FFF4EC;border:1px solid var(--deal-line);border-radius:14px;
+    padding:14px 16px;display:flex;align-items:center;gap:14px}
+  .redeem-deal .v{font-size:28px;font-weight:900;color:var(--deal-ink);white-space:nowrap}
+  .redeem-deal .t{font-size:14px;font-weight:700;color:var(--ink);text-align:left;line-height:1.5}
+  .redeem-deal .s{font-size:11px;color:var(--ink-2-light);text-align:left;margin-top:2px}
+  .redeem-facts{margin-top:16px;text-align:center;font-size:12px;color:var(--ink-2-light);line-height:1.9}
+  .redeem-facts b{color:var(--ink);font-weight:600}
+  .brightness{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:14px;font-size:11px;color:var(--ink-2-light)}
+
+  table{width:100%;border-collapse:collapse;margin-top:14px;background:#fff;border-radius:12px;overflow:hidden;
+    font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid #F0EDE7;vertical-align:top;line-height:1.65}
+  th{background:#EFECE6;font-size:12px;font-weight:700;color:var(--ink);letter-spacing:.04em}
+  td code{font-size:12px;background:#F2EFE9;border-radius:4px;padding:1px 5px;color:#5A4A3A}
+  tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:1px 6px;margin-right:4px}
+  .tag.must{background:#FDE7E1;color:#B4462B}
+  .tag.new{background:#EDE9FE;color:#7C3AED}
+  .tag.del{background:#ECE9E3;color:#6B6357}
+  ul.plain{margin:12px 0 0 18px;font-size:14px;color:var(--ink-2-light)}
+  ul.plain li{margin-bottom:6px}
+  ul.plain code{font-size:12px;background:#ECE9E3;border-radius:4px;padding:0 4px}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+  .panel{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .panel h4{font-size:15px;font-weight:800;margin-bottom:10px}
+  .panel ul{margin-left:18px;font-size:13px;color:var(--ink-2-light);line-height:1.9}
+  .panel.del h4{color:var(--deal-ink)}
+  footer{margin-top:72px;border-top:1px solid #DED9CF;padding-top:18px;font-size:12px;color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <div class="doc-kicker">JoyJoin · Design Spec</div>
+  <h1>场地专属优惠 · 简化版设计稿</h1>
+  <div class="doc-meta">
+    <span>版本 <b>v2</b> <span class="badge-v2">按反馈简化</span></span>
+    <span>日期 <b>2026-11-12</b></span>
+    <span>范围 <b>仅设计稿，不含代码改动</b></span>
+    <span class="badge-draft">未实现 · 待复审</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">1</span>设计原则：两种权益，一条规则</h2>
+  <p class="lede">优惠是转化工具，不是阅读理解题。用户只需要知道「我得到什么、在哪用、怎么用」，门店只需要知道「给什么、怎么给」。因此只保留两种一句话能讲完的权益，规则全平台统一为一句话：<strong>仅限本场活动，到店出示即可。</strong></p>
+  <div class="twocol">
+    <div class="panel">
+      <h4>保留（用户能感知的全部）</h4>
+      <ul>
+        <li><b>统一折扣</b>：悦聚同桌 8 折，无门槛，全单通用</li>
+        <li><b>定制套餐</b>：悦聚专属 6 人餐 ¥598，含什么一句话</li>
+        <li>兑换方式：出示本页 <b>或</b> 报一句中文暗号</li>
+        <li>唯一规则：仅限本场活动当天、本桌使用</li>
+        <li>费用边界一句话：订座费不含餐费，餐费到店另结</li>
+      </ul>
+    </div>
+    <div class="panel del">
+      <h4>删除（v1 有，v2 全部砍掉）</h4>
+      <ul>
+        <li>满 ¥200 可用（<code>min_spend</code>）</li>
+        <li>最高优惠 ¥N（<code>max_discount</code>）</li>
+        <li>每桌限用一次 / 每人限一份（<code>per_person_limit</code>）</li>
+        <li>有效期起止、排除日期（<code>valid_from/until</code>、<code>excluded_dates</code>）</li>
+        <li>「使用规则」折叠层（<code>terms</code>）</li>
+        <li><code>fixed</code> 立减第三种数值形态（并入折扣）</li>
+        <li><code>qr_code</code> 扫码核销（无码图字段、无核销端）</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note"><b>为什么敢删：</b>权益有效期天然就是「这一场活动」，不需要独立日期系统；没有满减门槛，「出示即可用」才成立；没有每桌限次，就不需要同桌核销状态机。门店侧的执行动作也只剩一个：看到悦聚页面 → 打折 / 出套餐。</div>
+</section>
+
+<!-- ═══════════════ 触点 1 ═══════════════ -->
+<section>
+  <h2><span class="num">2</span>触点 1 · 报名页「费用包含」第 5 格</h2>
+  <p class="lede">场地在排桌后才分配，报名时只能承诺、不能展示具体门店优惠。第 5 格只说价值名称，teaser 只说兑现方式与费用边界，不复述同一句卖点。</p>
+  <div class="shots">
+    <div class="shot" data-shot="a1-registration">
+      <div class="device">
+        <div class="statusbar"><span>9:41</span><span>5G</span></div>
+        <div class="navbar"><span class="back">‹</span>活动池报名</div>
+        <div class="screen">
+          <div class="stepper"><div class="on">1 报名</div><div>2 预算</div><div>3 期待</div></div>
+          <div class="mascot-row"><div class="mascot">悦仔</div><div class="bubble">这一桌我帮你排好，场地和同桌都不用你操心。</div></div>
+          <div class="reg-title">周末松弛感饭局 · 南山</div>
+          <div class="reg-sub">11月14日 周六 19:00 · 6 人桌 · 破冰带玩</div>
+          <div class="price-band"><span class="price">¥88<small> /人</small></span><span class="mini">未成行自动全额退款</span></div>
+          <div class="fee-note">订座费不含餐费，餐费到店与门店另结</div>
+          <div class="hairline"></div>
+          <div class="inclusions-label">费用包含</div>
+          <div class="tiles">
+            <div class="tile"><img src="../../../apps/mini-program/src/assets/icons/included-strip/included-games.webp" alt=""/><div class="t">破冰带玩</div><div class="s">五重玩法可深可浅</div></div>
+            <div class="tile"><img src="../../../apps/mini-program/src/assets/icons/included-strip/included-tablemates.webp" alt=""/><div class="t">合拍同桌</div><div class="s">6维偏好精算排桌</div></div>
+            <div class="tile"><img src="../../../apps/mini-program/src/assets/icons/included-strip/included-venue.webp" alt=""/><div class="t">智能选场</div><div class="s">餐厅酒吧自动安排</div></div>
+            <div class="tile"><img src="../../../apps/mini-program/src/assets/icons/included-strip/included-refund.webp" alt=""/><div class="t">未成行全退</div><div class="s">平台原因自动退款</div></div>
+            <div class="tile tile--deal"><div class="ticket-glyph"><i></i></div><div><div class="t">专属优惠</div><div class="s">成局后到店可用</div></div></div>
+          </div>
+          <div class="deal-teaser"><p>场地确定后揭晓<b>专属折扣或套餐</b>，到店出示即可用</p></div>
+          <span class="cta">¥88 订座</span>
+        </div>
+      </div>
+      <div class="shot-cap"><b>A1 · 3+2 栅格，优惠格横跨两列</b>格子讲价值（专属优惠），teaser 讲兑现（折扣或套餐 / 无门槛 / 出示即可）。价格下方新增一行费用边界，杜绝「88 元含餐」的误读。</div>
+    </div>
+  </div>
+  <div class="note warn"><b>前置条件（评审 P0，未变）：</b>第 5 格与 teaser 只在<strong>该池有保底权益</strong>时渲染。保底必须覆盖最终分配到的任意场地与活动当天；做不到就从「费用包含」移除，不改写成「有机会得」继续当必得权益卖。现有 inclusion copy 标注 LOCKED，需 copy owner 批准。</div>
+</section>
+
+<!-- ═══════════════ 触点 2 ═══════════════ -->
+<section>
+  <h2><span class="num">3</span>触点 2 · 场地分配后的「本场专属」卡</h2>
+  <p class="lede">挂在 <code>pool-group-detail</code> 地点信息卡正下方，同卡复用到 <code>event-detail</code> 与集结房间。票券形态保留（左值右文 + 打孔虚线），装饰减到最少。<strong>一场只给一个权益</strong>：折扣与套餐二选一，由门店决定，不堆叠、不并列。</p>
+  <div class="shots">
+    <div class="shot" data-shot="b1-discount-card">
+      <div class="device">
+        <div class="statusbar"><span>9:41</span><span>5G</span></div>
+        <div class="navbar"><span class="back">‹</span>今晚这桌</div>
+        <div class="screen">
+          <div class="card">
+            <span class="card-title">地点信息</span>
+            <div class="info-row"><span class="info-label">地址</span><span class="info-value">山止川行·南山店<br/>南山区粤海街道科苑路 15 号</span></div>
+            <div class="info-row"><span class="info-label">地区</span><span class="info-value">深圳 · 南山区</span></div>
+          </div>
+          <div class="deal" style="margin-top:12px">
+            <div class="deal-head"><span class="l">本场专属</span><span class="r">已解锁</span></div>
+            <div class="deal-body"><span class="perf"></span>
+              <div class="deal-value"><div class="v">8<small>折</small></div></div>
+              <div class="deal-main">
+                <div class="deal-title">悦聚同桌专属折扣</div>
+                <div class="deal-scope">山止川行·南山店</div>
+                <div class="deal-how">无门槛 · 全单通用 · 到店出示</div>
+              </div>
+            </div>
+            <div class="deal-foot">仅限本场活动 · 本桌使用</div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <span class="card-title">活动信息</span>
+            <div class="info-row"><span class="info-label">时间</span><span class="info-value">11月14日 周六 19:00</span></div>
+            <div class="info-row"><span class="info-label">人数</span><span class="info-value">6人桌</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="shot-cap"><b>B1 · 统一折扣卡</b>面值 8 折是唯一大数字；标题只说权益名称，不重复数值。底部一行是唯一规则，没有第二条。</div>
+    </div>
+
+    <div class="shot" data-shot="b2-setmenu-card">
+      <div class="device">
+        <div class="statusbar"><span>9:41</span><span>5G</span></div>
+        <div class="navbar"><span class="back">‹</span>今晚这桌</div>
+        <div class="screen">
+          <div class="card">
+            <span class="card-title">地点信息</span>
+            <div class="info-row"><span class="info-label">地址</span><span class="info-value">山止川行·南山店<br/>南山区粤海街道科苑路 15 号</span></div>
+          </div>
+          <div class="deal" style="margin-top:12px">
+            <div class="deal-head"><span class="l">本场专属</span><span class="r">已解锁</span></div>
+            <div class="deal-body"><span class="perf"></span>
+              <div class="deal-value"><div class="v" style="font-size:32px"><small style="font-size:18px">¥</small>598</div><div class="was">¥758</div></div>
+              <div class="deal-main">
+                <div class="deal-title">悦聚专属 6 人餐</div>
+                <div class="deal-scope">6 菜 1 汤 + 特调饮品</div>
+                <div class="deal-how">整桌一口价 · 到店出示</div>
+              </div>
+            </div>
+            <div class="deal-foot">仅限本场活动 · 本桌使用 · 餐费到店支付</div>
+          </div>
+          <div class="annot">套餐的「划算」由划线原价承担，不需要额外形容词。套餐价与原价由门店提供并确认，平台不编造折扣幅度。</div>
+        </div>
+      </div>
+      <div class="shot-cap"><b>B2 · 定制套餐卡</b>对门店这是更好的形态：出餐标准化、毛利可控、无收银争议；对用户是「不用点菜、价格确定」。</div>
+    </div>
+
+    <div class="shot" data-shot="b0-locked">
+      <div class="device device--crop"><div class="screen">
+        <div class="card">
+          <span class="card-title">地点信息</span>
+          <div class="info-row"><span class="info-label">地址</span><span class="info-value tbd">场地安排中</span></div>
+        </div>
+        <div class="deal deal--locked" style="margin-top:12px">
+          <div class="deal-head"><span class="l">本场专属</span><span class="r">待解锁</span></div>
+          <div class="deal-body"><span class="perf"></span>
+            <div class="deal-value"><div class="v" style="font-size:26px">?</div></div>
+            <div class="deal-main"><div class="deal-title">场地确定后解锁本场专属优惠</div><div class="deal-scope">折扣或套餐，二选一</div></div>
+          </div>
+        </div>
+        <div class="annot">已修正 v1 两处问题：标题改为短句 + 两行自适应，不再出现孤字行；删除「与这家店谈好的」（场地未定，不能指代具体门店）。锁定态功能文字统一用现有 <code>$color-text-secondary-warm</code>（暖底约 5:1），不再用浅灰；状态点仅装饰。</div>
+      </div></div>
+      <div class="shot-cap"><b>B0 · 锁定态（仅保底权益存在时渲染）</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 出示页 ═══════════════ -->
+<section>
+  <h2><span class="num">4</span>到店出示页：凭证第一，折扣第二</h2>
+  <p class="lede">v1 的 152rpx 折扣比暗号更醒目，店员第一眼读到的是折扣而不是凭证 —— v2 反转主次：<strong>暗号 / 出示动作是主角</strong>，折扣退为下方的确认信息。点卡任意位置进入本页（整卡一个点击目标，pressed 态整卡下沉，不再有 chip 与整卡两个竞争入口）。</p>
+  <div class="note"><b>出示页已升级为「同桌凭证」仪式版：</b>见同目录 <code>redeem-ceremony.html</code>（深紫舞台 + 米色凭证 + 本场印章 + 桌号序列号，打开动效 ≤240ms）。本节 F1/F2 保留为该页的信息层级与可读性基准，仪式版不得牺牲暗号的第一焦点地位。</div>
+  <div class="shots">
+    <div class="shot" data-shot="f1-redeem-code">
+      <div class="device">
+        <div class="statusbar"><span>19:12</span><span>5G</span></div>
+        <div class="navbar"><span class="back">‹</span>到店出示</div>
+        <div class="redeem-screen">
+          <div class="redeem-panel">
+            <div class="k">点单时报出这句暗号</div>
+            <div class="big-code">悦聚同桌</div>
+            <span class="copy-btn">复制暗号</span>
+            <div class="hint">店员确认后，结账时直接打折</div>
+          </div>
+          <div class="redeem-deal"><span class="v">8折</span><div><div class="t">悦聚同桌专属折扣</div><div class="s">无门槛 · 全单通用</div></div></div>
+          <div class="redeem-facts"><b>山止川行·南山店</b><br/>11月14日 周六 19:00 · 6 人桌<br/>仅限本场活动 · 本桌使用</div>
+          <div class="brightness">建议将屏幕亮度调高后出示</div>
+          <span class="cta ghost" style="margin-top:auto">收起</span>
+        </div>
+      </div>
+      <div class="shot-cap"><b>F1 · 暗号出示</b>复制按钮 88rpx 以上命中高度；复制反馈与失败兜底见 §5 E3。</div>
+    </div>
+    <div class="shot" data-shot="f2-redeem-showpage">
+      <div class="device">
+        <div class="statusbar"><span>19:12</span><span>5G</span></div>
+        <div class="navbar"><span class="back">‹</span>到店出示</div>
+        <div class="redeem-screen">
+          <div class="redeem-panel">
+            <div class="k">把这一页给店员看</div>
+            <div class="big-code" style="font-size:34px;letter-spacing:.04em">悦聚专属<br/>6 人餐</div>
+            <div class="hint">门店按套餐出餐，餐费到店支付</div>
+          </div>
+          <div class="redeem-deal"><span class="v">¥598</span><div><div class="t">6 菜 1 汤 + 特调饮品</div><div class="s">整桌一口价 · 原价 ¥758</div></div></div>
+          <div class="redeem-facts"><b>山止川行·南山店</b><br/>11月14日 周六 19:00 · 6 人桌<br/>仅限本场活动 · 本桌使用</div>
+          <div class="brightness">建议将屏幕亮度调高后出示</div>
+          <span class="cta ghost" style="margin-top:auto">收起</span>
+        </div>
+      </div>
+      <div class="shot-cap"><b>F2 · 出示本页（无暗号时）</b>没有暗号的门店，出示页本身就是凭证：套餐名 + 价格 + 店名 + 桌型，店员不需要追问。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 状态 ═══════════════ -->
+<section>
+  <h2><span class="num">5</span>必须覆盖的状态（不含已删除的规则态）</h2>
+  <div class="shots">
+    <div class="shot" data-shot="e1-long-content">
+      <div class="device device--crop"><div class="screen">
+        <div class="deal">
+          <div class="deal-head"><span class="l">本场专属</span><span class="r">已解锁</span></div>
+          <div class="deal-body"><span class="perf"></span>
+            <div class="deal-value"><div class="v" style="font-size:32px"><small style="font-size:18px">¥</small>1288</div><div class="was">¥1688</div></div>
+            <div class="deal-main">
+              <div class="deal-title">悦聚专属六人分享餐含季节限定菜品</div>
+              <div class="deal-scope">山止川行·南山科技园旗舰店</div>
+              <div class="deal-how">整桌一口价 · 到店出示</div>
+            </div>
+          </div>
+          <div class="deal-foot">仅限本场活动 · 本桌使用</div>
+        </div>
+        <div class="annot">长内容规则：标题最多两行后省略；店名单行省略；四位数套餐价面值降为 64rpx（仍在批准的 display token 内），不换行、不挤压右侧。</div>
+      </div></div>
+      <div class="shot-cap"><b>E1 · 长店名 / 长标题 / 大金额</b></div>
+    </div>
+    <div class="shot" data-shot="e2-error">
+      <div class="device device--crop"><div class="screen">
+        <div class="deal deal--error">
+          <div class="deal-head"><span class="l">本场专属</span><span class="r">读取失败</span></div>
+          <div class="deal-body"><span class="perf"></span>
+            <div class="deal-value" style="background:#F4F1EB"><div class="v" style="font-size:22px;color:#6B6357">!</div></div>
+            <div class="deal-main"><div class="deal-title" style="font-size:14px">优惠暂时没加载出来</div><div class="deal-scope">网络恢复后再试，权益不会消失</div><div class="deal-how"><span class="retry">重新加载</span></div></div>
+          </div>
+        </div>
+        <div class="annot">「无优惠」与「读取失败」严格区分：无优惠 = 整卡不渲染、静默缺失；已承诺权益却加载失败 = 必须有错误态与重试，不能静默消失。加载中用同骨架灰块占位，不闪烁。</div>
+      </div></div>
+      <div class="shot-cap"><b>E2 · 读取失败 / 重试</b></div>
+    </div>
+    <div class="shot" data-shot="e3-copied">
+      <div class="device device--crop"><div class="screen" style="background:linear-gradient(180deg,#FFF8F3,#F6F1FF)">
+        <div class="redeem-panel">
+          <div class="k">点单时报出这句暗号</div>
+          <div class="big-code">悦聚同桌</div>
+          <span class="copied">已复制，去告诉店员吧</span>
+          <div class="hint">店员确认后，结账时直接打折</div>
+        </div>
+        <div class="annot">复制反馈：按钮变绿色确认态，2 秒后可再次复制。复制失败时 toast「复制失败，请直接念给店员」，不留无反馈死路。</div>
+      </div></div>
+      <div class="shot-cap"><b>E3 · 暗号已复制</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 规格 ═══════════════ -->
+<section>
+  <h2><span class="num">6</span>规格</h2>
+  <h3>6.1 视觉 token</h3>
+  <table>
+    <tr><th>用途</th><th>取值</th><th>说明</th></tr>
+    <tr><td>卡片容器</td><td><code>$card-radius 32rpx</code></td><td>复用现有卡片体系；v2 去掉装饰阴影，仅 1px 描边</td></tr>
+    <tr><td>优惠墨色 <span class="tag new">新增</span></td><td><code>#B4462B</code></td><td>在 <code>#FFF1EA</code> 上约 4.94:1，白底约 5.45:1，评审已认可</td></tr>
+    <tr><td>优惠底 / 描边 <span class="tag new">新增</span></td><td><code>#FFF1EA</code> / <code>#F3C9B6</code></td><td>仅 deal ink / surface / border 三个语义角色；描边为装饰，不承担状态</td></tr>
+    <tr><td>面值 display token <span class="tag new">新增</span></td><td><code>76rpx</code>（卡内）· <code>152rpx</code>（仅纯数值出示场景）</td><td><b>仅限优惠面值</b>，不扩散为页面标题或正文字阶；四位数金额降为 64rpx</td></tr>
+    <tr><td>其余字号</td><td>严格回归现有字阶</td><td>标题 32rpx、店名/条件 24rpx、底部规则 22rpx、正文 28rpx</td></tr>
+    <tr><td>状态文字</td><td>暖底功能文字一律 <code>$color-text-secondary-warm #6B6357</code>（在 <code>#F4F1EB</code> 上约 5:1）；成功 <code>$color-success-text-on-light</code></td><td>划线原价同用 warm secondary（v2 初稿 <code>#B0806C</code> 仅 3.09:1，已废）；<code>#B45309</code> 在暖底只有 4.45:1，故状态点仅作装饰，状态由文字承担；错误态不再出现绿色成功点</td></tr>
+    <tr><td>间距</td><td>严格 8rpx 节奏</td><td>打孔半圆 28rpx、虚线 4rpx 为装饰例外</td></tr>
+    <tr><td>图标</td><td>正式 Lovart WebP（票券）</td><td>稿内为 CSS 占位；实现时需本地 + CDN 双登记（<code>cdn-asset-manifest.json</code>）</td></tr>
+  </table>
+
+  <h3>6.2 字段需求（对比现有 venue_deals）</h3>
+  <table>
+    <tr><th>渲染内容</th><th>来源</th><th>现状</th></tr>
+    <tr><td>权益名称（悦聚同桌专属折扣 / 悦聚专属 6 人餐）</td><td><code>title</code></td><td>已有，可直接用</td></tr>
+    <tr><td>折扣面值（8 折）</td><td><code>discountType=percentage</code> + <code>discountValue</code></td><td>已有；<code>20</code> → 「8 折」</td></tr>
+    <tr><td>套餐价 / 划线原价</td><td><code>setMenuPrice</code> / <code>setMenuOriginalPrice</code> <span class="tag new">新增</span></td><td>需加字段（分）与 <code>discountType='set_menu'</code></td></tr>
+    <tr><td>套餐内容一句话（6 菜 1 汤 + 特调）</td><td><code>description</code></td><td>已有，限 20 字</td></tr>
+    <tr><td>暗号</td><td><code>redemptionCode</code>（<code>redemptionMethod=code</code>）</td><td>已有；无码则降级为出示本页</td></tr>
+    <tr><td>唯一规则「仅限本场活动 · 本桌使用」</td><td>客户端固定文案</td><td>不读任何字段，全平台统一</td></tr>
+    <tr><td><span class="tag del">不再上屏</span> <code>minSpend</code> <code>maxDiscount</code> <code>perPersonLimit</code> <code>validFrom/Until</code> <code>excludedDates</code> <code>terms</code> <code>qr_code</code></td><td>—</td><td>后台字段保留兼容，用户侧一律不渲染；录入端隐藏</td></tr>
+  </table>
+
+  <h3>6.3 埋点（4 个，与简化后的漏斗一致）</h3>
+  <table>
+    <tr><th>事件</th><th>触发</th><th>属性</th></tr>
+    <tr><td><code>deal_card_impression</code></td><td>已解锁票券实际展示；每次页面 mount 按 group+deal 去重</td><td><code>poolId</code> <code>groupId</code> <code>dealId</code> <code>kind</code> <code>method</code></td></tr>
+    <tr><td><code>deal_card_tap</code></td><td>真实点卡、导航前</td><td>同上</td></tr>
+    <tr><td><code>redeem_page_open</code></td><td>可用同桌凭证页每次 mount 一次</td><td>同上</td></tr>
+    <tr><td><code>deal_credential_present</code></td><td>code=复制成功；show_page=首次可用渲染。只是用户出示意图，不是门店核销</td><td>同上 + <code>secondsFromOpen</code></td></tr>
+  </table>
+  <p class="lede">北极星：<strong>出示页打开率 = redeem_page_open ÷ deal_card_impression</strong>。第 5 格对付费转化的贡献需 A/B 对照，当前无基线（待验证）。埋点不带暗号、地址或用户文本；staging 真实落库是外部门禁。套餐形态另需跟踪<strong>门店侧履约纠纷数</strong>，这是简化是否真成立的反向指标。</p>
+</section>
+
+<section>
+  <h2><span class="num">7</span>评审打回项的处置</h2>
+  <table>
+    <tr><th>评审条件</th><th>v2 处置</th></tr>
+    <tr><td><b>P0-1</b> 确定性权益必须有确定托底</td><td>保留为硬门槛：第 5 格 / teaser / B0 仅在该池保底权益覆盖最终场地与活动当天时渲染，否则全部不出现。<code>hasVenueDealPotential</code> 不足以托底，已明确不采用。</td></tr>
+    <tr><td><b>P0-2</b> 不得以「出示即可使用」掩盖条件</td><td>门槛类条件已整体删除，「无门槛 · 全单通用 · 到店出示」成为事实而非话术；价格下新增「订座费不含餐费，餐费到店另结」。</td></tr>
+    <tr><td><b>P0-3</b> 不展示机制无法兑现的规则</td><td><code>qr_code</code> 与「每桌限用一次」从设计中移除，因此不再需要码图字段、核销端、同桌已使用状态。仅剩 show_page / code 两种已可实现的兑换方式。</td></tr>
+    <tr><td><b>P1-4</b> 出示页主次与点击反馈</td><td>暗号升为第一焦点（88rpx），折扣退为确认条；整卡单一点击目标 + pressed 态；复制按钮 ≥88rpx，补 copied / failed 反馈。</td></tr>
+    <tr><td><b>P1-5</b> 真实页面约束与关键状态</td><td>本稿补长内容、读取失败、已复制三态与加载骨架约定。<b>复审结论：真实 Step 0（普通屏 + 短屏）转为实现期 ship 前置验收</b>，不再要求静态稿伪造通过；验收点为订座 CTA 不被挤出、第 5 格 / teaser / 费用边界不得沿用现有 collapse 逻辑无提示消失（现有 <code>PoolRegistrationInclusions</code> 为固定单排四格且短屏整段隐藏）。</td></tr>
+    <tr><td><b>P1-6</b> 视觉不合格项</td><td>B0 孤字行与浅灰已修；面值 76/152rpx 登记为优惠专用 display token，其余字号回归现有字阶；CSS 票券图标待正式 Lovart WebP。</td></tr>
+  </table>
+  <h3>剩余未决（不阻塞视觉定稿，阻塞上线）</h3>
+  <ul class="plain">
+    <li><b>保底权益来源：</b>需要一个池级保底机制（如 <code>event_pools.guaranteed_deal_id</code> + 迁移），否则触点 1 不上。</li>
+    <li><b>「独家」措辞：</b>默认文案已统一为「专属优惠」；只有签署真实独家合作的门店，第 5 格才切换为「独家优惠」，需后台字段驱动而非手改文案。</li>
+    <li><b>套餐字段与录入：</b><code>set_menu</code> 类型、套餐价/原价（分）、内容一句话需加进 <code>venue_deals</code> 与 <code>VenueDealsManager.tsx</code>；录入端用本稿卡面做实时预览，折扣值限制 0–90 整数，防止「20 = 8 折」填反。</li>
+    <li><b>无酒精桌的套餐适配：</b>含酒套餐不得分配给 <code>alcohol_options</code> 为无酒精的池，需在选场/选权益时作为准入条件。</li>
+    <li><b>权益失效的兜底：</b>门店临时停用或换场导致权益不可用时的替代方案与补偿口径，需商业条款文档定义（本稿不涉及）。</li>
+  </ul>
+</section>
+
+<footer>
+  设计稿 v2 · 2026-11-12 · 按「两种权益、一条规则」简化，未改动任何产品代码。稿内店名、日期、价格均为示意，非真实合作条款。<br/>
+  参考实现位置：<code>packages/shared/src/copy/poolRegistrationInclusionsCopy.ts</code>（触点 1）· <code>apps/mini-program/src/pages/pool-group-detail/index.tsx</code>（触点 2）· <code>apps/server/src/routes/domains/venues.ts</code>（已有接口）。
+</footer>
+
+</div>
+</body>
+</html>

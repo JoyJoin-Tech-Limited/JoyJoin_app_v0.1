@@ -1,4 +1,4 @@
-import { budgetTierIdSchema, eventPoolGroups, eventPoolRegistrations, eventPools, venues, venueTimeSlotBookings, venueTimeSlots } from "@shared/schema";
+import { adminVenueDealCreateSchema, adminVenueDealUpdateSchema, budgetTierIdSchema, eventPoolGroups, eventPoolRegistrations, eventPools, venues, venueTimeSlotBookings, venueTimeSlots } from "@shared/schema";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Express } from "express";
 import { z } from "zod";
@@ -7,6 +7,7 @@ import { db } from "../../db";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { logger } from "../../lib/logger";
+import { sanitizePublicVenueDeals } from "../../lib/venueDealVisibility";
 import {
   checkVenueDataQuality,
   normalizeVenueQualityRecord,
@@ -16,6 +17,19 @@ import { notificationsRepo } from "../../repositories/notificationsRepo";
 import { shellCache } from "../../lib/shellCache";
 import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
+import {
+  createVenueDeal,
+  deleteVenueDeal,
+  listPoolsBoundToDeal,
+  listVenueDeals,
+  updateVenueDealWithLock,
+  VenueDealNotFoundError,
+} from "../../repositories/venueDealsRepo";
+import {
+  buildMergedVenueDeal,
+  planVenueDealDeactivation,
+  planVenueDealPatch,
+} from "../../lib/venueDealBinding";
 import { venueMatchingService } from "../../venueMatchingService";
 import { checkTimeSlotAvailability, getAvailableTimeSlotsForVenue, parseEventDate } from "../../venueAssignmentService";
 
@@ -510,7 +524,7 @@ export function registerVenueRoutes(app: Express): void {
   app.get("/api/admin/venues/:venueId/deals", requireAdmin, async (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
-      const deals = (await storage.getVenueDeals(req.params.venueId)).slice(0, limit);
+      const deals = (await listVenueDeals(req.params.venueId)).slice(0, limit);
       res.json(deals);
     } catch (error) {
       logger.error("Error fetching venue deals", { error: String(error) });
@@ -523,20 +537,58 @@ export function registerVenueRoutes(app: Express): void {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
       const deals = (await storage.getActiveVenueDeals(req.params.venueId)).slice(0, limit);
-      res.json(deals);
+      // S2：公开路由脱敏，暗号属于同桌成员凭证（AC-07）
+      res.json(sanitizePublicVenueDeals(deals));
     } catch (error) {
       logger.error("Error fetching active venue deals", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch venue deals" });
     }
   });
 
-  // Create venue deal (admin)
+  // Create venue deal (admin) — S1：只接受统一折扣 / 定制套餐，服务端强校验
   app.post("/api/admin/venues/:venueId/deals", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
-      const deal = await storage.createVenueDeal({
+      const parsed = adminVenueDealCreateSchema.safeParse({
         ...req.body,
         venueId: req.params.venueId,
       });
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "权益信息不符合要求",
+          code: "INVALID_VENUE_DEAL",
+          errors: parsed.error.issues,
+        });
+      }
+
+      const [venue] = await db
+        .select({ id: venues.id })
+        .from(venues)
+        .where(eq(venues.id, req.params.venueId))
+        .limit(1);
+      if (!venue) {
+        return res.status(404).json({ message: "场地不存在", code: "VENUE_NOT_FOUND" });
+      }
+
+      const deal = await createVenueDeal({
+        ...parsed.data,
+        isActive: parsed.data.isActive ?? true,
+      });
+
+      logAdminAudit({
+        action: "VENUE_DEAL_CREATED",
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: "venue_deal",
+        targetEntityId: deal.id,
+        after: {
+          venueId: deal.venueId,
+          discountType: deal.discountType,
+          discountValue: deal.discountValue,
+          setMenuPriceCents: deal.setMenuPriceCents,
+          isActive: deal.isActive,
+        },
+      });
+
       res.json(deal);
     } catch (error) {
       logger.error("Error creating venue deal", { error: String(error) });
@@ -545,20 +597,149 @@ export function registerVenueRoutes(app: Express): void {
   });
 
   // Update venue deal (admin)
+  // 三类策略（S1 合同 AC-02）：
+  //  a) isActive-only 对任意既有行可用（唯一例外：已绑定权益停用需 confirmDeactivate）
+  //  b) legacy 类型只能改 isActive/title/description
+  //  c) 现代类型改核心业务字段时，读既有行→合并→创建 schema 整体校验（行锁事务）
   app.patch("/api/admin/venue-deals/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
-      const deal = await storage.updateVenueDeal(req.params.id, req.body);
+      const parsed = adminVenueDealUpdateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "权益信息不符合要求",
+          code: "INVALID_VENUE_DEAL",
+          errors: parsed.error.issues,
+        });
+      }
+
+      const { confirmDeactivate, ...updates } = parsed.data;
+
+      const outcome = await updateVenueDealWithLock(req.params.id, async (existing, write) => {
+        const plan = planVenueDealPatch(existing, updates);
+        if (plan.kind === "noop") return { deal: existing } as const;
+        if (plan.kind === "legacy_readonly") {
+          return {
+            error: {
+              status: 400,
+              body: {
+                message: "旧格式权益仅支持停用或修改文案，请新建权益",
+                code: "LEGACY_DEAL_READONLY",
+              },
+            },
+          } as const;
+        }
+
+        let affectedPoolIds: string[] = [];
+        if (updates.isActive === false && existing.isActive) {
+          const boundPools = await listPoolsBoundToDeal(existing.id);
+          const deactivation = planVenueDealDeactivation(
+            existing,
+            updates,
+            boundPools,
+            confirmDeactivate === true,
+          );
+          if (deactivation.kind === "confirm_required") {
+            return {
+              error: {
+                status: 409,
+                body: {
+                  message: `该权益仍被 ${deactivation.affectedPools.length} 个活动池引用，停用后这些池将失去保底权益`,
+                  code: "DEAL_BOUND_TO_POOL",
+                  affectedPools: deactivation.affectedPools.map((pool) => ({
+                    id: pool.id,
+                    title: pool.title,
+                    dateTime: pool.dateTime,
+                  })),
+                },
+              },
+            } as const;
+          }
+          affectedPoolIds = deactivation.affectedPoolIds;
+        }
+
+        if (plan.kind === "validate") {
+          const check = adminVenueDealCreateSchema.safeParse(buildMergedVenueDeal(existing, updates));
+          if (!check.success) {
+            return {
+              error: {
+                status: 400,
+                body: {
+                  message: "权益信息不符合要求",
+                  code: "INVALID_VENUE_DEAL",
+                  errors: check.error.issues,
+                },
+              },
+            } as const;
+          }
+        }
+
+        const deal = await write(updates);
+        return { deal, affectedPoolIds } as const;
+      });
+
+      if ("error" in outcome && outcome.error) {
+        return res.status(outcome.error.status).json(outcome.error.body);
+      }
+
+      const deal = outcome.deal;
+      if (!deal) {
+        return res.status(404).json({ message: "权益不存在", code: "VENUE_DEAL_NOT_FOUND" });
+      }
+
+      logAdminAudit({
+        action: "VENUE_DEAL_UPDATED",
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: "venue_deal",
+        targetEntityId: deal.id,
+        after: {
+          discountType: deal.discountType,
+          discountValue: deal.discountValue,
+          setMenuPriceCents: deal.setMenuPriceCents,
+          isActive: deal.isActive,
+        },
+        context:
+          "affectedPoolIds" in outcome && outcome.affectedPoolIds?.length
+            ? { affectedPoolIds: outcome.affectedPoolIds, confirmedDeactivation: true }
+            : undefined,
+      });
+
       res.json(deal);
     } catch (error) {
+      if (error instanceof VenueDealNotFoundError) {
+        return res.status(404).json({ message: "权益不存在", code: "VENUE_DEAL_NOT_FOUND" });
+      }
       logger.error("Error updating venue deal", { error: String(error) });
       res.status(500).json({ message: "Failed to update venue deal" });
     }
   });
 
-  // Delete venue deal (admin)
+  // Delete venue deal (admin) — 被池级保底引用时拒绝硬删
   app.delete("/api/admin/venue-deals/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
-      await storage.deleteVenueDeal(req.params.id);
+      const boundPools = await listPoolsBoundToDeal(req.params.id);
+      if (boundPools.length > 0) {
+        return res.status(409).json({
+          message: `该权益仍被 ${boundPools.length} 个活动池引用，请先在活动池解绑`,
+          code: "DEAL_BOUND_TO_POOL",
+          affectedPools: boundPools.map((pool) => ({
+            id: pool.id,
+            title: pool.title,
+            dateTime: pool.dateTime,
+          })),
+        });
+      }
+
+      await deleteVenueDeal(req.params.id);
+
+      logAdminAudit({
+        action: "VENUE_DEAL_DELETED",
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: "venue_deal",
+        targetEntityId: req.params.id,
+      });
+
       res.json({ message: "Venue deal deleted successfully" });
     } catch (error) {
       logger.error("Error deleting venue deal", { error: String(error) });
@@ -585,7 +766,7 @@ export function registerVenueRoutes(app: Express): void {
         return res.status(404).json({ message: "Venue not found" });
       }
       const deals = await storage.getActiveVenueDeals(req.params.venueId);
-      res.json({ venue, deals });
+      res.json({ venue, deals: sanitizePublicVenueDeals(deals) });
     } catch (error) {
       logger.error("Error fetching venue with deals", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch venue info" });
@@ -611,7 +792,7 @@ export function registerVenueRoutes(app: Express): void {
       }
       
       const deals = await storage.getActiveVenueDeals(venue.id);
-      res.json({ venue, deals });
+      res.json({ venue, deals: sanitizePublicVenueDeals(deals) });
     } catch (error) {
       logger.error("Error fetching venue by name", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch venue info" });

@@ -105,6 +105,19 @@ const REQUIREMENTS = [
       // same @use-in-page discipline as matching-status above.
       'vacated-seat-card__core{',
       'vacated-seat-card__label{',
+      // 场地专属优惠票券卡（venue-deal S3, 2026-11-14）— 同 @use 合编译纪律。
+      'venue-deal-card__value-text{',
+      'venue-deal-card__perforation{',
+      'venue-deal-card--locked',
+    ],
+  },
+  {
+    // 同桌凭证出示页（venue-deal S4）— 页面自己的样式必须随该子包页发布。
+    page: 'pages/pool-group-detail/credential/index.wxss',
+    selectors: [
+      'deal-credential__code-text{',
+      'deal-credential__seal{',
+      'deal-credential__copy{',
     ],
   },
   {

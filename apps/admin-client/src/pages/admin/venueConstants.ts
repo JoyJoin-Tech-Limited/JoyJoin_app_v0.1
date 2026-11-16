@@ -1,4 +1,4 @@
-import { Percent, CircleDollarSign, Gift } from "lucide-react";
+import { Percent, Gift } from "lucide-react";
 import {
   BUDGET_TIER_BY_ID,
   LEGACY_BUDGET_LABEL_TO_TIER_ID,
@@ -68,6 +68,7 @@ export interface Venue {
   contractStartDate?: string | null;
   contractEndDate?: string | null;
   onboardingStatus?: 'draft' | 'pending_review' | 'active' | 'suspended' | null;
+  partnerStatus?: 'active' | 'paused' | 'ended' | null;
 }
 
 export const VENUE_TYPES = [
@@ -160,8 +161,10 @@ export interface VenueDeal {
   id: string;
   venueId: string;
   title: string;
-  discountType: "percentage" | "fixed" | "gift";
+  discountType: "percentage" | "set_menu" | "fixed" | "gift";
   discountValue: number | null;
+  setMenuPriceCents: number | null;
+  setMenuOriginalPriceCents: number | null;
   description: string | null;
   redemptionMethod: "show_page" | "code" | "qr_code";
   redemptionCode: string | null;
@@ -177,11 +180,50 @@ export interface VenueDeal {
   createdAt: string;
 }
 
-export const DISCOUNT_TYPES = [
-  { value: "percentage", label: "折扣", icon: Percent },
-  { value: "fixed", label: "立减", icon: CircleDollarSign },
-  { value: "gift", label: "赠品", icon: Gift },
+/**
+ * S1 起后台只允许两种权益形态：统一折扣 / 定制套餐。
+ * fixed/gift 是历史数据，只能停用或改文案，不在新建表单出现。
+ */
+export const DEAL_FORM_TYPES = [
+  { value: "percentage", label: "统一折扣", icon: Percent },
+  { value: "set_menu", label: "定制套餐", icon: Gift },
 ];
+
+export const DEAL_FORM_METHODS = [
+  { value: "show_page", label: "出示页面" },
+  { value: "code", label: "报暗号" },
+];
+
+/** 折扣以「折」录入（1.0–9.9，一位小数），落库为 discountValue 整数 1–90。 */
+export function zheToDiscountValue(zhe: string): number | null {
+  if (!zhe.trim()) return null;
+  const value = Number(zhe);
+  if (!Number.isFinite(value)) return null;
+  if (value < 1 || value > 9.9) return null;
+  if (Math.round(value * 10) !== value * 10) return null;
+  const discountValue = Math.round((10 - value) * 10);
+  return discountValue >= 1 && discountValue <= 90 ? discountValue : null;
+}
+
+export function discountValueToZhe(discountValue: number | null | undefined): string {
+  if (!discountValue) return "";
+  const zhe = (100 - discountValue) / 10;
+  return String(Math.round(zhe * 10) / 10);
+}
+
+/** 元 → 分，最多两位小数；非法输入返回 null。 */
+export function yuanToCents(yuan: string): number | null {
+  if (!yuan.trim()) return null;
+  if (!/^\d+(\.\d{1,2})?$/.test(yuan.trim())) return null;
+  const cents = Math.round(Number(yuan) * 100);
+  return Number.isSafeInteger(cents) && cents > 0 ? cents : null;
+}
+
+export function centsToYuan(cents: number | null | undefined): string {
+  if (!cents) return "";
+  const yuan = cents / 100;
+  return String(Number.isInteger(yuan) ? yuan : Number(yuan.toFixed(2)));
+}
 
 export const REDEMPTION_METHODS = [
   { value: "show_page", label: "出示本页面" },
@@ -222,4 +264,18 @@ export interface VenueFormData {
   contractStartDate: string;
   contractEndDate: string;
   onboardingStatus: "draft" | "pending_review" | "active" | "suspended";
+}
+
+/**
+ * 池保底字段的提交归一化：空串 / undefined 一律落成 null。
+ * 编辑解绑必须真的把 null 发给服务端，缺字段会被理解为「不修改」。
+ */
+export function normalizePoolGuaranteePayload(data: {
+  guaranteedVenueId?: string | null;
+  guaranteedDealId?: string | null;
+}) {
+  return {
+    guaranteedVenueId: data.guaranteedVenueId?.trim() || null,
+    guaranteedDealId: data.guaranteedDealId?.trim() || null,
+  };
 }

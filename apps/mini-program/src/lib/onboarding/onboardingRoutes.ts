@@ -29,6 +29,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   matchingStatus: 'pages/matching-status/index',
   squadUnboxing: 'pages/squad-unboxing/index',
   poolGroupDetail: 'pages/pool-group-detail/index',
+  poolGroupCredential: 'pages/pool-group-detail/credential/index',
   gatheringRoom: 'pages/gathering-room/index',
   gatheringRoomMemory: 'pages/gathering-room/memory/index',
   icebreakerSession: 'pages/icebreaker-session/index',
@@ -230,6 +231,7 @@ export const MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT = 'pages/pool-group-
 
 export const MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_PAGES = [
   'index',
+  'credential/index',
 ] as const
 
 export const MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT = 'pages/gathering-room' as const

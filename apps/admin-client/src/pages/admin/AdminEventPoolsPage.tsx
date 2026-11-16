@@ -33,6 +33,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { useAuth } from "@/hooks/auth/useAuth";
 import EventPoolCreateDialog from "./EventPoolCreateDialog";
+import { normalizePoolGuaranteePayload } from "./venueConstants";
 import EventPoolMetrics from "./EventPoolMetrics";
 import EventPoolFilters from "./EventPoolFilters";
 import EventPoolDetailDialog from "./EventPoolDetailDialog";
@@ -83,6 +84,13 @@ const createPoolSchema = z
     genderBalanceBonusPoints: z.number().int().min(0).max(100).default(15),
     minFemaleCount: z.number().int().min(0).max(20).default(0),
     minMaleCount: z.number().int().min(0).max(20).default(0),
+    // 保底场地 + 保底权益：两者同空或同非空（服务端 venueDealBinding 再硬校验一次）
+    guaranteedVenueId: z.string().nullish(),
+    guaranteedDealId: z.string().nullish(),
+  })
+  .refine((data) => Boolean(data.guaranteedVenueId) === Boolean(data.guaranteedDealId), {
+    message: "保底场地与保底权益需要同时选择，或都不选",
+    path: ["guaranteedDealId"],
   })
   .refine(
     (data) => {
@@ -235,6 +243,8 @@ export default function AdminEventPoolsPage() {
       genderBalanceBonusPoints: 15,
       minFemaleCount: 0,
       minMaleCount: 0,
+      guaranteedVenueId: null as string | null,
+      guaranteedDealId: null as string | null,
     },
   });
 
@@ -450,6 +460,7 @@ export default function AdminEventPoolsPage() {
       genderBalanceBonusPoints: toBoundedInt(data.genderBalanceBonusPoints, 15),
       minFemaleCount: toBoundedInt(data.minFemaleCount, 0),
       minMaleCount: toBoundedInt(data.minMaleCount, 0),
+      ...normalizePoolGuaranteePayload(data),
     };
     
     if (editingPoolId) {
@@ -501,6 +512,8 @@ export default function AdminEventPoolsPage() {
       genderBalanceBonusPoints: pool.genderBalanceBonusPoints ?? 15,
       minFemaleCount: pool.minFemaleCount ?? 0,
       minMaleCount: pool.minMaleCount ?? 0,
+      guaranteedVenueId: pool.guaranteedVenueId ?? null,
+      guaranteedDealId: pool.guaranteedDealId ?? null,
     });
     setEditingPoolId(pool.id);
     setShowCreateDialog(true);
@@ -705,6 +718,7 @@ export default function AdminEventPoolsPage() {
         onSubmit={onSubmit}
         createPoolMutation={createPoolMutation}
         updatePoolMutation={updatePoolMutation}
+        guaranteeLocked={Boolean(pools.find((pool) => pool.id === editingPoolId)?.matchedAt)}
       />
         )}
       </div>

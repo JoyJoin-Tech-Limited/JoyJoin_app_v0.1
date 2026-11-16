@@ -108,6 +108,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  the presence WS flow are device-verified.
    *  Env fallback: GATHERING_ROOM_ENABLED (default: false). */
   gatheringRoomEnabled: "GATHERING_ROOM_ENABLED",
+  /** 场地专属优惠（VenueDealCard / 同桌凭证）：首个用户可见触点，默认暗发。
+   *  Env fallback: VENUE_DEALS_ENABLED (default: false). */
+  venueDealsEnabled: "VENUE_DEALS_ENABLED",
+  /** 报名页保底权益承诺：只在 venueDealsEnabled 之外单独开启，且仍需池级 hasGuaranteedDeal=true。
+   *  Env fallback: VENUE_DEAL_PROMISE_ENABLED (default: false). */
+  venueDealPromiseEnabled: "VENUE_DEAL_PROMISE_ENABLED",
   /** Events-card open-box entry: a matched-but-unopened table renders as a
    *  sealed card (seal stack + 「开箱看桌友」 capsule) and taps go straight to
    *  the reveal ceremony instead of the waiting room. Guards BOTH the capsule
@@ -623,6 +629,10 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   profilePixelAvatarEnabled: false,
   /** Gathering room ships dark until room art + presence flow are verified. */
   gatheringRoomEnabled: false,
+  /** 场地专属优惠 ships dark：需真实 Step 0/真机验收与池级保底配置后才开。 */
+  venueDealsEnabled: false,
+  /** 报名页承诺独立暗发；只有保底配置与真实 Step 0 验收完成后才可开启。 */
+  venueDealPromiseEnabled: false,
   /** Events-card open-box entry ships ON: the sealed card is the entry the
    *  reveal ceremony was missing, and one flip reverts both it and the route. */
   eventCardOpenBoxEntryEnabled: true,

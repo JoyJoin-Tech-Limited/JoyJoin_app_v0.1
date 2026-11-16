@@ -256,6 +256,11 @@ export async function notifyVenueUnassigned(payload: VenueUnassignedNotifyPayloa
     slot_fully_booked_at_save: "时段已满",
     no_suitable_venue: "无合适场地",
     contract_expired: "合同已过期",
+    guaranteed_binding_incomplete: "保底配置不完整",
+    guaranteed_venue_unavailable: "保底门店不可用",
+    guaranteed_deal_unavailable: "保底权益已失效",
+    guaranteed_venue_no_slot: "保底门店无可用时段",
+    guaranteed_venue_capacity: "保底门店座位不足",
   };
 
   const reasonLines = Object.entries(payload.reasonBreakdown).map(

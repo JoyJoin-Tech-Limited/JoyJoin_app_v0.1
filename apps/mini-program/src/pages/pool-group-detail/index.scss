@@ -11,6 +11,8 @@
 // deliberately has no TSX-side SCSS import; its rules are co-compiled here so
 // they reach this subpackage page WXSS (same style-splitting trap).
 @use '../../components/TablemateCard/vacated-seat';
+// VenueDealCard（场地专属优惠票券卡）— 同样合编译进本页 WXSS；组件 TSX 无 SCSS import。
+@use '../../components/VenueDealCard/index.scss' as venue-deal;
 
 .pool-group-detail {
   min-height: 100vh;

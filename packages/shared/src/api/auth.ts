@@ -141,6 +141,9 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** Enables the gathering room (集结房间): entry CTAs on pool-group-detail /
      *  squad-unboxing and the room page itself. Default: false. */
     gatheringRoomEnabled?: boolean
+    /** 场地专属优惠票券卡（S3）用户可见开关，默认 false 暗发 */
+    venueDealsEnabled?: boolean
+    venueDealPromiseEnabled?: boolean
     /** Enables the Events-card open-box entry: a matched-but-unopened table
      *  renders as a sealed card whose capsule goes straight to the reveal
      *  ceremony. Gates both the capsule and the card route. Default: true. */

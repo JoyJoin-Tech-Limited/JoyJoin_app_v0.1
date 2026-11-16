@@ -20,6 +20,8 @@ import {
 import { observeVenueAssignmentRun } from "./matchingMetrics";
 import { getFeatureFlag, getFeatureFlagSync } from "./lib/featureFlags";
 import { buildEligibleVenueConditions, toBudgetEventType } from "./lib/venueEligibility";
+import { getPoolGuarantee, getVenueDealById } from "./repositories/venueDealsRepo";
+import { isRedeemableVenueDeal } from "./lib/venueDealVisibility";
 import type { UserWithProfile, MatchGroup } from "./poolMatchingService";
 
 interface VenueScore {
@@ -521,6 +523,25 @@ export interface FindBestVenueOptions {
 }
 
 /**
+ * 保底池的单组分配决策（合同 D3/D8，纯函数便于单测）。
+ * 保底绕过预算/菜系打分，但座位数与时段并发仍是硬门槛；
+ * 时段耗尽优先于座位不足（D8 的判定顺序）。
+ */
+export function planGuaranteedGroupAssignment(input: {
+  seatingCapacity: number;
+  groupSize: number;
+  slotRemaining: number;
+}):
+  | { ok: true }
+  | { ok: false; reason: "guaranteed_venue_no_slot" | "guaranteed_venue_capacity" } {
+  if (input.slotRemaining <= 0) return { ok: false, reason: "guaranteed_venue_no_slot" };
+  if (input.seatingCapacity < input.groupSize) {
+    return { ok: false, reason: "guaranteed_venue_capacity" };
+  }
+  return { ok: true };
+}
+
+/**
  * Select the best venue for one group, applying the T7 two-pass rule.
  *
  * Pass 1 always runs (strict budget). When it yields no candidate AND the
@@ -595,6 +616,23 @@ export async function assignVenuesToGroups(
   const assignments = new Map<number, { venue: any; score: number; reasons: string[]; timeSlotId: string }>();
   const unassigned = new Map<number, string>();
 
+  // S2 保底（合同 D1/D2）：每次 run 按 poolId 读一次绑定，两个调用方
+  // （matchingPostMatchEffects / venueTbdRetry）因此都自动继承保底，无需改签名。
+  // 任一字段单独存在 = 配置损坏，fail-closed，绝不退回普通打分。
+  const guarantee = await getPoolGuarantee(poolId);
+  const guaranteeRequested = Boolean(guarantee?.guaranteedVenueId || guarantee?.guaranteedDealId);
+  const guaranteedVenueId = guaranteeRequested ? guarantee!.guaranteedVenueId : null;
+  const failAllGroups = (reason: string): VenueAssignmentResult => {
+    logger.warn(`[VenueAssignment] Guaranteed assignment blocked for pool ${poolId}: ${reason}`);
+    for (let i = 0; i < groups.length; i++) {
+      unassigned.set(i + 1, reason);
+    }
+    return { assignments, unassigned };
+  };
+  if (guaranteeRequested && (!guarantee?.guaranteedVenueId || !guarantee?.guaranteedDealId)) {
+    return failAllGroups("guaranteed_binding_incomplete");
+  }
+
   // T7: resolve the degradation flag once per run (DB-first with env fallback)
   // and pass it down — never a per-venue flag lookup.
   const budgetAdjacencyEnabled = await getFeatureFlag("budgetAdjacencyEnabled");
@@ -608,27 +646,44 @@ export async function assignVenuesToGroups(
     .select()
     .from(venues)
     .where(venueQuery);
-  
+
   logger.info(`[VenueAssignment] Found ${availableVenues.length} active venues in ${poolCity} ${poolDistrict || ''}`);
-  
+
+  // S2 保底：候选集只保留锁定门店，且它必须落在完整目录资格结果集内
+  // （onboarding/partner/合同/区域/类型，而不只是 isActive）。
+  let candidateVenues = availableVenues;
+  if (guaranteedVenueId) {
+    candidateVenues = availableVenues.filter((venue: typeof venues.$inferSelect) => venue.id === guaranteedVenueId);
+    if (candidateVenues.length === 0) {
+      return failAllGroups("guaranteed_venue_unavailable");
+    }
+    // D5：分配前权益必须仍然可兑现；失效/跨店/legacy 一律不成局。
+    const lockedDeal = await getVenueDealById(guarantee!.guaranteedDealId!);
+    if (!lockedDeal || lockedDeal.venueId !== guaranteedVenueId || !isRedeemableVenueDeal(lockedDeal)) {
+      return failAllGroups("guaranteed_deal_unavailable");
+    }
+    logger.info(`[VenueAssignment] Pool ${poolId} guaranteed to venue ${guaranteedVenueId}; scoring bypassed`);
+  }
+
   // 2. Filter by time slot availability (respects maxConcurrentEvents + existing bookings)
   const slotResults = await Promise.all(
-    availableVenues.map((venue: typeof venues.$inferSelect) => checkTimeSlotAvailability(venue.id, poolDateTime))
+    candidateVenues.map((venue: typeof venues.$inferSelect) => checkTimeSlotAvailability(venue.id, poolDateTime))
   );
 
   const venuesWithSlots: VenueWithSlot[] = [];
-  for (let i = 0; i < availableVenues.length; i++) {
+  for (let i = 0; i < candidateVenues.length; i++) {
     if (slotResults[i]) {
-      venuesWithSlots.push({ venue: availableVenues[i], timeSlot: slotResults[i]! });
+      venuesWithSlots.push({ venue: candidateVenues[i], timeSlot: slotResults[i]! });
     }
   }
   
   logger.info(`[VenueAssignment] ${venuesWithSlots.length} venues have available time slots with capacity`);
   
   if (venuesWithSlots.length === 0) {
-    logger.warn(`[VenueAssignment] No venues available at ${poolDateTime}. Groups will remain unassigned.`);
+    const reason = guaranteedVenueId ? "guaranteed_venue_no_slot" : "no_available_slots";
+    logger.warn(`[VenueAssignment] No venues available at ${poolDateTime} for pool ${poolId} (reason=${reason}). Groups will remain unassigned.`);
     for (let i = 0; i < groups.length; i++) {
-      unassigned.set(i + 1, "no_available_slots");
+      unassigned.set(i + 1, reason);
     }
     return { assignments, unassigned };
   }
@@ -645,7 +700,34 @@ export async function assignVenuesToGroups(
     const groupBudget = calculateGroupBudget(group.members, eventType);
     
     logger.info(`[VenueAssignment] Group ${i + 1}: ${group.members.length} members, budget: ${groupBudget.join(', ')}`);
-    
+
+    // S2 保底分支：绕过 findBestVenueForGroup 打分，但复用同一 slotUsageTracker，
+    // 保证 maxConcurrentEvents=1 时两组只能成一组。
+    if (guaranteedVenueId) {
+      const { venue, timeSlot } = venuesWithSlots[0];
+      const used = slotUsageTracker.get(timeSlot.id) ?? 0;
+      const max = slotMaxConcurrent.get(timeSlot.id) ?? 1;
+      const plan = planGuaranteedGroupAssignment({
+        seatingCapacity: venue.seatingCapacity ?? venue.capacity ?? 0,
+        groupSize: group.members.length,
+        slotRemaining: max - used,
+      });
+      if (plan.ok) {
+        assignments.set(i + 1, {
+          venue,
+          score: 100,
+          reasons: ["guaranteed_pool_venue"],
+          timeSlotId: timeSlot.id,
+        });
+        slotUsageTracker.set(timeSlot.id, used + 1);
+        logger.info(`[VenueAssignment] Group ${i + 1} → guaranteed venue ${venue.brandName || venue.name}`);
+      } else {
+        unassigned.set(i + 1, plan.reason);
+        logger.warn(`[VenueAssignment] Guaranteed venue rejected group ${i + 1} in pool ${poolId}: ${plan.reason}`);
+      }
+      continue;
+    }
+
     // Two-pass selection (strict → relaxed) lives in findBestVenueForGroup.
     const bestMatch = await findBestVenueForGroup(
       group,

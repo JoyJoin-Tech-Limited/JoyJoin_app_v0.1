@@ -15,6 +15,7 @@ import { resolveArchetype } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
+import { trackVenueDealCardImpression, trackVenueDealCardTap } from '../../lib/analytics/venueDealAnalytics'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Card from '../../components/ui/Card'
@@ -23,6 +24,8 @@ import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetyp
 import TablemateCard from '../../components/TablemateCard'
 import VacatedSeatCard from '../../components/TablemateCard/VacatedSeatCard'
 import TablemateDetailSheet from '../../components/TablemateDetailSheet'
+import VenueDealCard from '../../components/VenueDealCard'
+import { resolveVenueDealCardState } from '../../lib/matching/venueDealCardState'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { haptics } from '../../lib/utils/haptics'
@@ -274,11 +277,32 @@ export default function PoolGroupDetailPage() {
     }
   }, [poolGroup, isGeneratingPoster])
 
+  // ── 场地专属优惠（S3/S6）：状态与曝光 hook 必须在所有 early return 之前 ──
+  const venueDeal = poolGroup?.group.venueDeal ?? null
+  const venueDealState = resolveVenueDealCardState({
+    deal: venueDeal,
+    hasGuaranteedDeal: poolGroup?.pool.hasGuaranteedDeal,
+    hasGuaranteedDealBinding: poolGroup?.pool.hasGuaranteedDealBinding,
+    venueAssignmentStatus: poolGroup?.group.venueAssignmentStatus,
+    queryError: Boolean(error),
+    flagEnabled: currentUser?.features?.venueDealsEnabled === true,
+    isCollapsedGroup,
+  })
+  const showVenueDealCard = venueDealState !== 'hidden'
+  const dealImpressionsRef = useRef(new Set<string>())
+  useEffect(() => {
+    if (venueDealState !== 'ticket' || !venueDeal || !poolGroup?.pool.id) return
+    const key = `${groupId}:${venueDeal.id}`
+    if (dealImpressionsRef.current.has(key)) return
+    dealImpressionsRef.current.add(key)
+    trackVenueDealCardImpression({ poolId: poolGroup.pool.id, groupId, deal: venueDeal })
+  }, [venueDealState, venueDeal, poolGroup?.pool.id, groupId])
+
   if (authLoading || isLoading) {
     return <LoadingScreen message='正在揭晓小队阵容…' />
   }
 
-  if (error || !poolGroup) {
+  if (error && !poolGroup) {
     return (
       <View className='pool-group-detail__error' role='alert' aria-live='polite'>
         <Image
@@ -308,11 +332,21 @@ export default function PoolGroupDetailPage() {
     )
   }
 
+  // refetch 失败但仍有既有数据时继续渲染旧内容（优惠卡走读取失败态）；
+  // 没有任何数据且不在加载中时才需要兜底。
+  if (!poolGroup) return null
+
   const { group, pool } = poolGroup
   const isVenuePending = group.venueAssignmentStatus === 'unassigned'
   const venueName = group.venueName?.trim() ?? ''
   const venueAddress = group.venueAddress?.trim() ?? ''
   const locationText = isVenuePending ? '' : [venueName, venueAddress].filter(Boolean).join(' ')
+
+  // venueDeal / venueDealState / 曝光已在 early return 之前计算，避免 hooks 顺序错误。
+  const handleDealRetry = () => {
+    haptics('light')
+    queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-group', groupId] })
+  }
 
   const handleCopyAddress = () => {
     if (!locationText) {
@@ -480,6 +514,22 @@ export default function PoolGroupDetailPage() {
             </Text>
           </View>
         </Card>
+      ) : null}
+
+      {showVenueDealCard ? (
+        <VenueDealCard
+          deal={venueDeal}
+          locked={venueDealState === 'locked'}
+          error={venueDealState === 'error'}
+          adjusted={venueDealState === 'adjusted'}
+          onRetry={handleDealRetry}
+          onPress={venueDealState === 'ticket' ? () => {
+            if (venueDeal) trackVenueDealCardTap({ poolId: pool.id, groupId, deal: venueDeal })
+            void Taro.navigateTo({
+              url: `/pages/pool-group-detail/credential/index?groupId=${encodeURIComponent(groupId)}`,
+            })
+          } : undefined}
+        />
       ) : null}
 
       {isCollapsedGroup ? (

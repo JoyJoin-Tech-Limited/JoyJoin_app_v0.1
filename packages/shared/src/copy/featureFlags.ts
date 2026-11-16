@@ -107,6 +107,8 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
 
   // 集结房间
   gatheringRoomEnabled: 'gathering-room',
+  venueDealsEnabled: 'venue',
+  venueDealPromiseEnabled: 'venue',
 
   // 现场冰局·流程与现场体验
   socialIcebreakerClientForceEnd: 'icebreaker-core',
@@ -258,6 +260,8 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
 
   // ── 集结房间 ──────────────────────────────────────
   gatheringRoomEnabled: '集结房间',
+  venueDealsEnabled: '场地专属优惠',
+  venueDealPromiseEnabled: '报名页专属优惠承诺',
 
   // ── 个人主页 ──────────────────────────────────────
   profileRedesignEnabled: '个人主页新版',
@@ -441,6 +445,10 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
   // ── 集结房间 ──────────────────────────────────────
   gatheringRoomEnabled:
     '默认关闭，待房间美术与实时在线链路实机验证后开启。开启后，已成桌成员可在活动前进入集结房间（像素场景等候室）互相互动；关闭时隐藏所有入口。',
+  venueDealsEnabled:
+    '默认关闭。开启后，已成桌成员在「小队详情」看到本场专属优惠票券卡（统一折扣或定制套餐），关闭时整卡隐藏；池级保底权益与门店分配不受此开关影响。',
+  venueDealPromiseEnabled:
+    '默认关闭。只有已配置有效池级保底权益、且「场地专属优惠」兑现开关也已开启时，报名页才显示「专属优惠」承诺、兑现说明与餐费边界；两个开关任一关闭都不显示承诺。开启前须完成真实 Step 0 普通屏/短屏验收。',
 
   // ── 个人主页 ──────────────────────────────────────
   profileRedesignEnabled:

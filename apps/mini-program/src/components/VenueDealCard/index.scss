@@ -1,0 +1,244 @@
+@use '../../styles/variables' as *;
+
+// VenueDealCard（场地专属优惠票券卡）
+// 设计稿：docs/design/venue-deal/index.html v2 §2 B0/B1/B2、§5 E1/E2、§6.1 token。
+// 由消费页 @use 合编译（见 pages/pool-group-detail/index.scss），组件 TSX 不 import 本文件。
+.venue-deal-card {
+  position: relative;
+  margin-bottom: $spacing-md;
+  overflow: hidden;
+  border-radius: $card-radius;
+  background: $color-surface;
+  // 2rpx = 设计稿 1px 描边（375 屏）；无装饰阴影
+  border: 2rpx solid $color-deal-border;
+
+  &--pressed {
+    opacity: 0.92;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22rpx 32rpx;
+    background: $color-deal-head-bg;
+  }
+
+  &__head-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-black;
+    letter-spacing: 0.08em;
+    color: $color-deal-ink;
+  }
+
+  &__head-status {
+    display: flex;
+    align-items: center;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: $color-success-text-on-light;
+
+    &::before {
+      content: '';
+      width: 10rpx;
+      height: 10rpx;
+      margin-right: 8rpx;
+      border-radius: 50%;
+      background: $color-success-text-on-light;
+    }
+  }
+
+  &__body {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+
+    // 票券打孔：上下两个半圆缺口 + 中间虚线
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      left: 194rpx; // 面值栏 208rpx − 缺口半径 14rpx
+      z-index: 2;
+      width: 28rpx;
+      height: 28rpx;
+      border-radius: 50%;
+      background: $color-bg;
+      border: 2rpx solid $color-deal-border;
+    }
+
+    &::before { top: -16rpx; }
+    &::after { bottom: -16rpx; }
+  }
+
+  &__perforation {
+    position: absolute;
+    left: 208rpx;
+    top: 20rpx;
+    bottom: 20rpx;
+    border-left: 2rpx dashed $color-deal-border;
+  }
+
+  &__value {
+    flex: 0 0 208rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32rpx 0;
+    background: $color-deal-surface;
+
+    &--muted {
+      background: $color-deal-muted-bg;
+    }
+  }
+
+  &__value-text {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    font-size: $font-size-deal-value;
+    font-weight: $font-weight-black;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: $color-deal-ink;
+    white-space: nowrap;
+
+    &--long {
+      // E1：四位数套餐价降为 64rpx，仍在批准的面值 display token 内
+      font-size: $font-size-deal-value-compact;
+    }
+  }
+
+  &__value-number {
+    font: inherit;
+  }
+
+  &__value-unit {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+    margin-left: 4rpx;
+  }
+
+  &__value-was {
+    margin-top: 12rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary-warm;
+    text-decoration: line-through;
+  }
+
+  &__value-mark {
+    font-size: 52rpx; // 设计 B0「?」= 26px：卡内装饰符号的批准例外，非正文字阶
+    font-weight: $font-weight-black;
+    color: $color-text-secondary-warm;
+
+    &--error {
+      font-size: 44rpx; // 设计 E2「!」= 22px，同属装饰符号例外
+    }
+  }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+    padding: 36rpx 32rpx;
+  }
+
+  &__title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: $font-size-md;
+    font-weight: $font-weight-black;
+    line-height: 1.45;
+    color: $color-text-primary;
+
+    &--muted {
+      font-size: $font-size-base;
+      color: $color-text-secondary-warm;
+    }
+  }
+
+  &__scope {
+    display: block;
+    margin-top: 8rpx;
+    font-size: $font-size-sm;
+    color: $color-text-secondary-on-light;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__how {
+    display: flex;
+    align-items: center;
+    margin-top: 24rpx;
+  }
+
+  &__how-text {
+    font-size: $font-size-sm;
+    color: $color-primary-dark;
+  }
+
+  &__how-arrow {
+    margin-left: 8rpx;
+    font-size: $font-size-base;
+    color: $color-primary-dark;
+  }
+
+  &__retry {
+    display: inline-flex;
+    align-items: center;
+    min-height: 88rpx; // 单手店内场景的命中目标
+    margin-top: 8rpx;
+    padding: 0 $spacing-sm;
+    align-self: flex-start;
+  }
+
+  &__retry-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  &__foot {
+    padding: 20rpx 32rpx;
+    border-top: 1px solid $color-divider; // 1px 发丝线
+  }
+
+  &__foot-text {
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+  }
+
+  // 锁定态 / 已调整：暖灰层级，琥珀只做装饰性状态点
+  &--locked,
+  &--adjusted {
+    border-color: $color-deal-muted-border;
+
+    .venue-deal-card__head { background: $color-deal-muted-bg; }
+    .venue-deal-card__head-label { color: $color-text-secondary-warm; }
+    .venue-deal-card__head-status {
+      color: $color-text-secondary-warm;
+
+      &::before { background: $color-amber-700; }
+    }
+    .venue-deal-card__body::before,
+    .venue-deal-card__body::after { border-color: $color-deal-muted-border; }
+    .venue-deal-card__perforation { border-left-color: $color-deal-muted-border; }
+  }
+
+  // 读取失败：状态点用琥珀，不再出现绿色成功信号
+  &--error {
+    border-color: $color-deal-muted-border;
+
+    .venue-deal-card__head-status {
+      color: $color-text-secondary-warm;
+
+      &::before { background: $color-amber-700; }
+    }
+    .venue-deal-card__body::before,
+    .venue-deal-card__body::after { border-color: $color-deal-muted-border; }
+    .venue-deal-card__perforation { border-left-color: $color-deal-muted-border; }
+  }
+}

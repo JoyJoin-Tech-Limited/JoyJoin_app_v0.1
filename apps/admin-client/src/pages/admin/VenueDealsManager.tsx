@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +26,19 @@ import {
 import { Plus, Gift, Percent, CircleDollarSign, Edit, Trash2, Calendar, Eye, Tag } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
-import { Venue, VenueDeal, DISCOUNT_TYPES, REDEMPTION_METHODS } from "./venueConstants";
+import VenueDealPreview from "@/components/admin/VenueDealPreview";
+import { formatDiscountLabel, formatSetMenuPriceLabel } from "@shared/copy/venueDealCopy";
+import {
+  Venue,
+  VenueDeal,
+  REDEMPTION_METHODS,
+  DEAL_FORM_TYPES,
+  DEAL_FORM_METHODS,
+  zheToDiscountValue,
+  discountValueToZhe,
+  yuanToCents,
+  centsToYuan,
+} from "./venueConstants";
 
 interface VenueDealsManagerProps {
   venue: Venue | null;
@@ -35,25 +46,237 @@ interface VenueDealsManagerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+export interface DealFormState {
+  kind: "discount" | "set_menu";
+  title: string;
+  description: string;
+  /** 折扣以「折」录入，1.0–9.9 */
+  discountZhe: string;
+  setMenuPriceYuan: string;
+  setMenuOriginalPriceYuan: string;
+  redemptionMethod: "show_page" | "code";
+  redemptionCode: string;
+}
+
+export const EMPTY_DEAL_FORM: DealFormState = {
+  kind: "discount",
+  title: "",
+  description: "",
+  discountZhe: "",
+  setMenuPriceYuan: "",
+  setMenuOriginalPriceYuan: "",
+  redemptionMethod: "show_page",
+  redemptionCode: "",
+};
+
+const isModernDeal = (deal: VenueDeal) =>
+  deal.discountType === "percentage" || deal.discountType === "set_menu";
+
+/**
+ * 表单 → API payload。折扣换算 discountValue=(10-折)*10；套餐元→分；不携带任何门槛/有效期字段。
+ *
+ * forUpdate（PATCH）时，目标类型用不到的面值字段必须显式给 null：
+ * JSON 会丢弃 undefined，服务端合并既有行时就会保留旧类型的 discountValue / 套餐价，
+ * 导致「折扣 ↔ 套餐」互转被创建不变量拒绝。null 在服务端的语义就是清除该字段。
+ */
+export function buildDealPayload(form: DealFormState, options: { forUpdate?: boolean } = {}) {
+  const isSetMenu = form.kind === "set_menu";
+  const unused = options.forUpdate ? null : undefined;
+  return {
+    title: form.title.trim(),
+    description: form.description.trim(),
+    discountType: isSetMenu ? ("set_menu" as const) : ("percentage" as const),
+    discountValue: isSetMenu ? unused : zheToDiscountValue(form.discountZhe) ?? undefined,
+    setMenuPriceCents: isSetMenu ? yuanToCents(form.setMenuPriceYuan) ?? undefined : unused,
+    setMenuOriginalPriceCents: isSetMenu
+      ? yuanToCents(form.setMenuOriginalPriceYuan) ?? undefined
+      : unused,
+    // 定制套餐只能是出示页面，没有暗号
+    redemptionMethod: isSetMenu ? ("show_page" as const) : form.redemptionMethod,
+    redemptionCode:
+      !isSetMenu && form.redemptionMethod === "code" ? form.redemptionCode.trim() : unused,
+  };
+}
+
+export function validateDealForm(form: DealFormState): string | null {
+  if (!form.title.trim()) return "请填写权益标题";
+  if (form.title.trim().length > 20) return "标题最多 20 字";
+  if (form.description.trim().length > 20) return "说明最多 20 字";
+  if (form.kind === "discount") {
+    if (zheToDiscountValue(form.discountZhe) === null) return "折扣需为 1.0–9.9 之间的一位小数";
+    if (form.redemptionMethod === "code") {
+      const code = form.redemptionCode.trim();
+      if (code.length < 2 || code.length > 8) return "暗号需为 2–8 字";
+    }
+  } else {
+    const price = yuanToCents(form.setMenuPriceYuan);
+    const original = yuanToCents(form.setMenuOriginalPriceYuan);
+    if (price === null) return "请填写有效的套餐一口价（元，最多两位小数）";
+    if (original === null) return "请填写有效的套餐原价（元，最多两位小数）";
+    if (original <= price) return "原价必须大于一口价";
+  }
+  return null;
+}
+
+/** 新建/编辑共用的表单字段；legacy 行由父组件只渲染文案字段。 */
+export function DealFormFields({
+  value,
+  onChange,
+}: {
+  value: DealFormState;
+  onChange: (next: DealFormState) => void;
+}) {
+  const set = (patch: Partial<DealFormState>) => onChange({ ...value, ...patch });
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>权益类型 *</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {DEAL_FORM_TYPES.map((type) => (
+            <Button
+              key={type.value}
+              type="button"
+              variant={
+                (type.value === "set_menu") === (value.kind === "set_menu") ? "default" : "outline"
+              }
+              onClick={() =>
+                set({
+                  kind: type.value === "set_menu" ? "set_menu" : "discount",
+                  redemptionMethod: type.value === "set_menu" ? "show_page" : value.redemptionMethod,
+                })
+              }
+              data-testid={`deal-kind-${type.value}`}
+            >
+              {type.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {value.kind === "discount" ? (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="deal-discount-zhe">折扣（折）*</Label>
+            <Input
+              id="deal-discount-zhe"
+              type="number"
+              step="0.1"
+              min="1"
+              max="9.9"
+              placeholder="例：8 表示 8 折"
+              value={value.discountZhe}
+              onChange={(e) => set({ discountZhe: e.target.value })}
+              data-testid="input-discount-zhe"
+            />
+            <p className="text-xs text-muted-foreground">1.0–9.9，一位小数；无门槛，全单通用</p>
+          </div>
+          <div className="space-y-2">
+            <Label>核销方式</Label>
+            <Select
+              value={value.redemptionMethod}
+              onValueChange={(v) => set({ redemptionMethod: v as "show_page" | "code" })}
+            >
+              <SelectTrigger data-testid="select-redemption-method">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DEAL_FORM_METHODS.map((method) => (
+                  <SelectItem key={method.value} value={method.value}>
+                    {method.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {value.redemptionMethod === "code" && (
+            <div className="space-y-2">
+              <Label htmlFor="deal-redemption-code">到店暗号（2–8 字）*</Label>
+              <Input
+                id="deal-redemption-code"
+                placeholder="例：悦聚同桌"
+                maxLength={8}
+                value={value.redemptionCode}
+                onChange={(e) => set({ redemptionCode: e.target.value })}
+                data-testid="input-redemption-code"
+              />
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="deal-set-menu-price">一口价（元）*</Label>
+              <Input
+                id="deal-set-menu-price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="598"
+                value={value.setMenuPriceYuan}
+                onChange={(e) => set({ setMenuPriceYuan: e.target.value })}
+                data-testid="input-set-menu-price"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deal-set-menu-original">原价（元）*</Label>
+              <Input
+                id="deal-set-menu-original"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="758"
+                value={value.setMenuOriginalPriceYuan}
+                onChange={(e) => set({ setMenuOriginalPriceYuan: e.target.value })}
+                data-testid="input-set-menu-original"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">原价必须大于一口价；说明里写清套餐内容</p>
+        </>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="deal-title">权益标题（20 字内）*</Label>
+        <Input
+          id="deal-title"
+          placeholder={value.kind === "discount" ? "例：本场专属折扣" : "例：六人分享套餐"}
+          maxLength={20}
+          value={value.title}
+          onChange={(e) => set({ title: e.target.value })}
+          data-testid="input-deal-title"
+        />
+        <p className="text-xs text-muted-foreground">{value.title.length}/20</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="deal-description">说明（20 字内）</Label>
+        <Textarea
+          id="deal-description"
+          placeholder={value.kind === "discount" ? "无门槛全单通用" : "例：6菜1汤加一壶特调"}
+          maxLength={20}
+          rows={2}
+          value={value.description}
+          onChange={(e) => set({ description: e.target.value })}
+          data-testid="input-deal-description"
+        />
+        <p className="text-xs text-muted-foreground">{value.description.length}/20</p>
+      </div>
+    </div>
+  );
+}
+
 export default function VenueDealsManager({ venue, open, onOpenChange }: VenueDealsManagerProps) {
   const { toast } = useToast();
   const [showDealFormDialog, setShowDealFormDialog] = useState(false);
   const [editingDeal, setEditingDeal] = useState<VenueDeal | null>(null);
   const [dealFilterStatus, setDealFilterStatus] = useState<"all" | "active" | "inactive" | "expired">("all");
-  const [dealFormData, setDealFormData] = useState({
-    title: "",
-    discountType: "percentage" as "percentage" | "fixed" | "gift",
-    discountValue: "",
-    description: "",
-    redemptionMethod: "show_page" as "show_page" | "code" | "qr_code",
-    redemptionCode: "",
-    minSpend: "",
-    maxDiscount: "",
-    perPersonLimit: false,
-    validFrom: "",
-    validUntil: "",
-    terms: "",
-  });
+  const [dealForm, setDealForm] = useState<DealFormState>(EMPTY_DEAL_FORM);
+  const [legacyForm, setLegacyForm] = useState({ title: "", description: "" });
+  const [deactivateTarget, setDeactivateTarget] = useState<{
+    deal: VenueDeal;
+    affectedPools: Array<{ id: string; title: string; dateTime?: string }>;
+  } | null>(null);
 
   const { data: venueDeals = [], isLoading: venueDealsLoading } = useQuery<VenueDeal[]>({
     queryKey: ["/api/admin/venues", venue?.id, "deals"],
@@ -81,166 +304,161 @@ export default function VenueDealsManager({ venue, open, onOpenChange }: VenueDe
     });
   }, [venueDeals, dealFilterStatus]);
 
-  const createDealMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await fetch(`/api/admin/venues/${venue?.id}/deals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      }).then((r) => r.json()).catch((err) => { throw err; });
-    },
-    onSuccess: () => {
-      if (venue) {
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", venue.id, "deals"] });
-      }
-      setShowDealFormDialog(false);
-      resetDealForm();
-      toast({ title: "优惠创建成功", description: "优惠已添加到场地" });
-    },
-    onError: () => {
-      toast({ title: "创建失败", description: "无法创建优惠，请重试", variant: "destructive" });
-    },
-  });
+  const invalidateDeals = () => {
+    if (venue) queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", venue.id, "deals"] });
+  };
 
-  const updateDealMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await fetch(`/api/admin/venue-deals/${id}`, {
-        method: "PATCH",
+  // 4xx/5xx 必须当失败处理：旧实现只 r.json()，400 校验拒绝也会走 onSuccess
+  const requestJson = async (url: string, init: RequestInit) => {
+    const res = await fetch(url, { credentials: "include", ...init });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error = new Error(body?.message || "请求失败") as Error & {
+        code?: string;
+        affectedPools?: Array<{ id: string; title: string; dateTime?: string }>;
+      };
+      error.code = body?.code;
+      error.affectedPools = body?.affectedPools;
+      throw error;
+    }
+    return body;
+  };
+
+  const closeForm = () => {
+    setShowDealFormDialog(false);
+    setEditingDeal(null);
+    setDealForm(EMPTY_DEAL_FORM);
+  };
+
+  const saveDealMutation = useMutation({
+    mutationFn: async ({ id, data }: { id?: string; data: any }) =>
+      requestJson(id ? `/api/admin/venue-deals/${id}` : `/api/admin/venues/${venue?.id}/deals`, {
+        method: id ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(data),
-      }).then((r) => r.json()).catch((err) => { throw err; });
+      }),
+    onSuccess: (_data, variables) => {
+      invalidateDeals();
+      closeForm();
+      toast({
+        title: variables.id ? "更新成功" : "优惠创建成功",
+        description: variables.id ? "权益信息已更新" : "权益已添加到场地",
+      });
     },
-    onSuccess: () => {
-      if (venue) {
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", venue.id, "deals"] });
-      }
-      setShowDealFormDialog(false);
-      setEditingDeal(null);
-      resetDealForm();
-      toast({ title: "更新成功", description: "优惠信息已更新" });
-    },
-    onError: () => {
-      toast({ title: "更新失败", description: "无法更新优惠，请重试", variant: "destructive" });
+    onError: (error: any) => {
+      toast({
+        title: "保存失败",
+        description: error?.message || "无法保存优惠，请重试",
+        variant: "destructive",
+      });
     },
   });
 
   const deleteDealMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return await fetch(`/api/admin/venue-deals/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      }).then((r) => r.json()).catch((err) => { throw err; });
-    },
+    mutationFn: async (id: string) =>
+      requestJson(`/api/admin/venue-deals/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      if (venue) {
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", venue.id, "deals"] });
-      }
+      invalidateDeals();
       toast({ title: "删除成功", description: "优惠已删除" });
     },
-    onError: () => {
-      toast({ title: "删除失败", description: "无法删除优惠，请重试", variant: "destructive" });
+    onError: (error: any) => {
+      const pools = error?.affectedPools?.map((p: any) => p.title).join("、");
+      toast({
+        title: error?.code === "DEAL_BOUND_TO_POOL" ? "该权益已被活动池绑定" : "删除失败",
+        description:
+          error?.code === "DEAL_BOUND_TO_POOL"
+            ? `请先在活动池中解绑：${pools || "相关活动池"}`
+            : error?.message || "无法删除优惠，请重试",
+        variant: "destructive",
+      });
     },
   });
 
   const toggleDealMutation = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      return await fetch(`/api/admin/venue-deals/${id}`, {
+    mutationFn: async ({ id, isActive, confirmDeactivate }: { id: string; isActive: boolean; confirmDeactivate?: boolean }) =>
+      requestJson(`/api/admin/venue-deals/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ isActive }),
-      }).then((r) => r.json()).catch((err) => { throw err; });
-    },
+        body: JSON.stringify(confirmDeactivate ? { isActive, confirmDeactivate } : { isActive }),
+      }),
     onSuccess: () => {
-      if (venue) {
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", venue.id, "deals"] });
+      invalidateDeals();
+      setDeactivateTarget(null);
+    },
+    onError: (error: any, variables) => {
+      if (error?.code === "DEAL_BOUND_TO_POOL" && !variables.confirmDeactivate) {
+        const deal = venueDeals.find((d) => d.id === variables.id);
+        if (deal) {
+          setDeactivateTarget({ deal, affectedPools: error.affectedPools ?? [] });
+          return;
+        }
       }
+      toast({
+        title: "操作失败",
+        description: error?.message || "无法更新状态，请重试",
+        variant: "destructive",
+      });
     },
   });
 
-  const resetDealForm = () => {
-    setDealFormData({
-      title: "",
-      discountType: "percentage",
-      discountValue: "",
-      description: "",
-      redemptionMethod: "show_page",
-      redemptionCode: "",
-      minSpend: "",
-      maxDiscount: "",
-      perPersonLimit: false,
-      validFrom: "",
-      validUntil: "",
-      terms: "",
-    });
-  };
-
   const handleCreateDeal = () => {
     setEditingDeal(null);
-    resetDealForm();
-    const today = new Date().toISOString().split("T")[0];
-    const nextYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    setDealFormData((prev) => ({ ...prev, validFrom: today, validUntil: nextYear }));
+    setDealForm(EMPTY_DEAL_FORM);
     setShowDealFormDialog(true);
   };
 
   const handleEditDeal = (deal: VenueDeal) => {
     setEditingDeal(deal);
-    setDealFormData({
-      title: deal.title,
-      discountType: deal.discountType,
-      discountValue: deal.discountValue?.toString() || "",
-      description: deal.description || "",
-      redemptionMethod: deal.redemptionMethod,
-      redemptionCode: deal.redemptionCode || "",
-      minSpend: deal.minSpend?.toString() || "",
-      maxDiscount: deal.maxDiscount?.toString() || "",
-      perPersonLimit: deal.perPersonLimit,
-      validFrom: deal.validFrom || "",
-      validUntil: deal.validUntil || "",
-      terms: deal.terms || "",
-    });
+    if (isModernDeal(deal)) {
+      setDealForm({
+        kind: deal.discountType === "set_menu" ? "set_menu" : "discount",
+        title: deal.title,
+        description: deal.description || "",
+        discountZhe: discountValueToZhe(deal.discountValue),
+        setMenuPriceYuan: centsToYuan(deal.setMenuPriceCents),
+        setMenuOriginalPriceYuan: centsToYuan(deal.setMenuOriginalPriceCents),
+        redemptionMethod: deal.redemptionMethod === "code" ? "code" : "show_page",
+        redemptionCode: deal.redemptionCode || "",
+      });
+    } else {
+      setLegacyForm({ title: deal.title, description: deal.description || "" });
+    }
     setShowDealFormDialog(true);
   };
 
   const handleSubmitDeal = () => {
-    if (!dealFormData.title) {
-      toast({ title: "请填写优惠标题", variant: "destructive" });
+    if (editingDeal && !isModernDeal(editingDeal)) {
+      if (!legacyForm.title.trim()) {
+        toast({ title: "请填写权益标题", variant: "destructive" });
+        return;
+      }
+      saveDealMutation.mutate({
+        id: editingDeal.id,
+        data: { title: legacyForm.title.trim(), description: legacyForm.description.trim() },
+      });
       return;
     }
-
-    const dealData = {
-      title: dealFormData.title,
-      discountType: dealFormData.discountType,
-      discountValue: dealFormData.discountValue ? parseInt(dealFormData.discountValue) : null,
-      description: dealFormData.description || null,
-      redemptionMethod: dealFormData.redemptionMethod,
-      redemptionCode: dealFormData.redemptionCode || null,
-      minSpend: dealFormData.minSpend ? parseInt(dealFormData.minSpend) : null,
-      maxDiscount: dealFormData.maxDiscount ? parseInt(dealFormData.maxDiscount) : null,
-      perPersonLimit: dealFormData.perPersonLimit,
-      validFrom: dealFormData.validFrom || null,
-      validUntil: dealFormData.validUntil || null,
-      terms: dealFormData.terms || null,
-    };
-
-    if (editingDeal) {
-      updateDealMutation.mutate({ id: editingDeal.id, data: dealData });
-    } else {
-      createDealMutation.mutate(dealData);
+    const error = validateDealForm(dealForm);
+    if (error) {
+      toast({ title: error, variant: "destructive" });
+      return;
     }
+    saveDealMutation.mutate({
+      id: editingDeal?.id,
+      data: buildDealPayload(dealForm, { forUpdate: Boolean(editingDeal?.id) }),
+    });
   };
 
   const formatDiscountText = (deal: VenueDeal): string => {
     switch (deal.discountType) {
       case "percentage":
-        return `${100 - (deal.discountValue || 0)}折`;
+        return formatDiscountLabel(deal.discountValue ?? 0) || "专属折扣";
+      case "set_menu":
+        return `${formatSetMenuPriceLabel(deal.setMenuPriceCents ?? 0)} 套餐`;
       case "fixed":
-        return `立减¥${deal.discountValue}`;
+        return `立减¥${deal.discountValue}（旧格式）`;
       case "gift":
-        return "赠品福利";
+        return "赠品福利（旧格式）";
       default:
         return "专属优惠";
     }
@@ -263,7 +481,9 @@ export default function VenueDealsManager({ venue, open, onOpenChange }: VenueDe
               <Tag className="h-5 w-5 text-amber-500" />
               场地优惠管理 - {venue?.name}
             </DialogTitle>
-            <DialogDescription>管理此场地的专属优惠活动</DialogDescription>
+            <DialogDescription>
+              只有两种形态：统一折扣 / 定制套餐。无门槛、无有效期，规则固定为「仅限本场活动 · 本桌使用」
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -312,6 +532,7 @@ export default function VenueDealsManager({ venue, open, onOpenChange }: VenueDe
                           <div className="flex items-start gap-3 flex-1">
                             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
                               {deal.discountType === "percentage" && <Percent className="h-5 w-5 text-white" />}
+                              {deal.discountType === "set_menu" && <Tag className="h-5 w-5 text-white" />}
                               {deal.discountType === "fixed" && <CircleDollarSign className="h-5 w-5 text-white" />}
                               {deal.discountType === "gift" && <Gift className="h-5 w-5 text-white" />}
                             </div>
@@ -388,206 +609,112 @@ export default function VenueDealsManager({ venue, open, onOpenChange }: VenueDe
 
       <Dialog
         open={showDealFormDialog}
-        onOpenChange={(open) => {
-          setShowDealFormDialog(open);
-          if (!open) {
-            setEditingDeal(null);
-            resetDealForm();
-          }
+        onOpenChange={(next) => {
+          if (!next) closeForm();
+          else setShowDealFormDialog(true);
         }}
       >
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDeal ? "编辑优惠" : "添加优惠"}</DialogTitle>
             <DialogDescription>
-              {editingDeal ? "修改优惠信息" : "为场地添加新的专属优惠"}
+              {editingDeal && !isModernDeal(editingDeal)
+                ? "旧格式权益仅支持修改文案或停用，新权益请重新创建"
+                : "右侧为用户将看到的卡面与出示页预览"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="deal-title">优惠标题 *</Label>
-              <Input
-                id="deal-title"
-                placeholder="例：悦聚专属8折优惠"
-                value={dealFormData.title}
-                onChange={(e) => setDealFormData({ ...dealFormData, title: e.target.value })}
-                data-testid="input-deal-title"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          {editingDeal && !isModernDeal(editingDeal) ? (
+            <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>优惠类型 *</Label>
-                <Select
-                  value={dealFormData.discountType}
-                  onValueChange={(v) => setDealFormData({ ...dealFormData, discountType: v as any })}
-                >
-                  <SelectTrigger data-testid="select-discount-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DISCOUNT_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {dealFormData.discountType !== "gift" && (
-                <div className="space-y-2">
-                  <Label htmlFor="discount-value">
-                    {dealFormData.discountType === "percentage" ? "折扣值 (输入20表示8折)" : "立减金额 (元)"}
-                  </Label>
-                  <Input
-                    id="discount-value"
-                    type="number"
-                    placeholder={dealFormData.discountType === "percentage" ? "20" : "30"}
-                    value={dealFormData.discountValue}
-                    onChange={(e) => setDealFormData({ ...dealFormData, discountValue: e.target.value })}
-                    data-testid="input-discount-value"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="deal-description">优惠说明</Label>
-              <Textarea
-                id="deal-description"
-                placeholder="详细描述优惠内容"
-                value={dealFormData.description}
-                onChange={(e) => setDealFormData({ ...dealFormData, description: e.target.value })}
-                rows={2}
-                data-testid="input-deal-description"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>核销方式</Label>
-                <Select
-                  value={dealFormData.redemptionMethod}
-                  onValueChange={(v) => setDealFormData({ ...dealFormData, redemptionMethod: v as any })}
-                >
-                  <SelectTrigger data-testid="select-redemption-method">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REDEMPTION_METHODS.map((method) => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {dealFormData.redemptionMethod === "code" && (
-                <div className="space-y-2">
-                  <Label htmlFor="redemption-code">暗号</Label>
-                  <Input
-                    id="redemption-code"
-                    placeholder="例：悦聚会员"
-                    value={dealFormData.redemptionCode}
-                    onChange={(e) => setDealFormData({ ...dealFormData, redemptionCode: e.target.value })}
-                    data-testid="input-redemption-code"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="valid-from">生效日期</Label>
+                <Label htmlFor="legacy-deal-title">权益标题（20 字内）*</Label>
                 <Input
-                  id="valid-from"
-                  type="date"
-                  value={dealFormData.validFrom}
-                  onChange={(e) => setDealFormData({ ...dealFormData, validFrom: e.target.value })}
-                  data-testid="input-valid-from"
+                  id="legacy-deal-title"
+                  maxLength={20}
+                  value={legacyForm.title}
+                  onChange={(e) => setLegacyForm({ ...legacyForm, title: e.target.value })}
+                  data-testid="input-legacy-deal-title"
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="valid-until">失效日期</Label>
-                <Input
-                  id="valid-until"
-                  type="date"
-                  value={dealFormData.validUntil}
-                  onChange={(e) => setDealFormData({ ...dealFormData, validUntil: e.target.value })}
-                  data-testid="input-valid-until"
+                <Label htmlFor="legacy-deal-description">说明</Label>
+                <Textarea
+                  id="legacy-deal-description"
+                  rows={2}
+                  value={legacyForm.description}
+                  onChange={(e) => setLegacyForm({ ...legacyForm, description: e.target.value })}
+                  data-testid="input-legacy-deal-description"
                 />
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          ) : (
+            <div className="grid gap-6 py-4 md:grid-cols-[1fr_280px]">
+              <DealFormFields value={dealForm} onChange={setDealForm} />
               <div className="space-y-2">
-                <Label htmlFor="min-spend">最低消费 (可选)</Label>
-                <Input
-                  id="min-spend"
-                  type="number"
-                  placeholder="无限制"
-                  value={dealFormData.minSpend}
-                  onChange={(e) => setDealFormData({ ...dealFormData, minSpend: e.target.value })}
-                  data-testid="input-min-spend"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="max-discount">最高优惠金额 (可选)</Label>
-                <Input
-                  id="max-discount"
-                  type="number"
-                  placeholder="无限制"
-                  value={dealFormData.maxDiscount}
-                  onChange={(e) => setDealFormData({ ...dealFormData, maxDiscount: e.target.value })}
-                  data-testid="input-max-discount"
+                <Label>实时预览</Label>
+                <VenueDealPreview
+                  kind={dealForm.kind}
+                  title={dealForm.title}
+                  description={dealForm.description}
+                  discountValue={zheToDiscountValue(dealForm.discountZhe)}
+                  setMenuPriceCents={yuanToCents(dealForm.setMenuPriceYuan)}
+                  setMenuOriginalPriceCents={yuanToCents(dealForm.setMenuOriginalPriceYuan)}
+                  method={dealForm.kind === "set_menu" ? "show_page" : dealForm.redemptionMethod}
+                  code={dealForm.redemptionCode}
+                  venueName={venue?.brandName || venue?.name}
                 />
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="deal-terms">使用条款</Label>
-              <Textarea
-                id="deal-terms"
-                placeholder="例：每桌限用一次，不可与其他优惠叠加"
-                value={dealFormData.terms}
-                onChange={(e) => setDealFormData({ ...dealFormData, terms: e.target.value })}
-                rows={2}
-                data-testid="input-deal-terms"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="per-person-limit"
-                checked={dealFormData.perPersonLimit}
-                onCheckedChange={(checked) => setDealFormData({ ...dealFormData, perPersonLimit: !!checked })}
-                data-testid="checkbox-per-person-limit"
-              />
-              <Label htmlFor="per-person-limit" className="text-sm cursor-pointer">
-                每人限用一次
-              </Label>
-            </div>
-          </div>
+          )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDealFormDialog(false)} data-testid="button-cancel-deal">
+            <Button variant="outline" onClick={closeForm} data-testid="button-cancel-deal">
               取消
             </Button>
             <Button
               onClick={handleSubmitDeal}
-              disabled={createDealMutation.isPending || updateDealMutation.isPending}
+              disabled={saveDealMutation.isPending}
               data-testid="button-submit-deal"
             >
-              {createDealMutation.isPending || updateDealMutation.isPending
-                ? "保存中..."
-                : editingDeal
-                ? "更新优惠"
-                : "添加优惠"}
+              {saveDealMutation.isPending ? "保存中..." : editingDeal ? "更新优惠" : "添加优惠"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deactivateTarget} onOpenChange={(next) => !next && setDeactivateTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>停用已被绑定的权益？</DialogTitle>
+            <DialogDescription>
+              以下活动池把「{deactivateTarget?.deal.title}」作为保底权益。停用后这些池在排桌时将无法成局，
+              并按既有流程重试，最迟活动前 24 小时取消且向已付款用户全额退款。
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="max-h-48 space-y-1 overflow-y-auto text-sm" data-testid="deactivate-affected-pools">
+            {deactivateTarget?.affectedPools.map((pool) => (
+              <li key={pool.id}>· {pool.title}</li>
+            ))}
+            {deactivateTarget && deactivateTarget.affectedPools.length === 0 && <li>· 相关活动池</li>}
+          </ul>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateTarget(null)} data-testid="button-cancel-deactivate">
+              先不停用
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={toggleDealMutation.isPending}
+              onClick={() =>
+                deactivateTarget &&
+                toggleDealMutation.mutate({
+                  id: deactivateTarget.deal.id,
+                  isActive: false,
+                  confirmDeactivate: true,
+                })
+              }
+              data-testid="button-confirm-deactivate"
+            >
+              确认停用
             </Button>
           </DialogFooter>
         </DialogContent>

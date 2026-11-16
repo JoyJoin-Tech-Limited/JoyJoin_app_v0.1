@@ -52,6 +52,8 @@ const MOCK_USER = {
   pendingReferralCode: '',
   features: {
     aigcLabelsEnabled: true,
+    venueDealsEnabled: true,
+    venueDealPromiseEnabled: true,
     restartOnboarding: false,
     smartProfession: true,
     onboardingForceSkip: false,
@@ -737,7 +739,9 @@ app.get('/api/equipment/shop', (req, res) => {
 
 // Event pool
 app.get('/api/event-pools/:id', (req, res) => {
-  res.json({ ...MOCK_POOL, id: req.params.id })
+  // S5：002 为真实保底承诺场景；其它池保持 legacy 四格，001 已报名不能用于 Step 0。
+  const hasGuaranteedDeal = req.params.id === 'pool-screenshot-002'
+  res.json({ ...MOCK_POOL, id: req.params.id, hasGuaranteedDeal })
 })
 
 // 双人成行 status (screenshot harness): only the dedicated duo fixture pool
@@ -1121,13 +1125,52 @@ const MOCK_SQUAD_POOL = {
 app.get('/api/pool-groups/:id', (req, res) => {
   const isSix = req.params.id === 'group-screenshot-006'
   const isNine = req.params.id === 'group-screenshot-009'
+  // venue-deal S3 五态渲染验证（group-deal-*）
+  const dealScenario = req.params.id.replace(/^group-deal-/, '')
+  const DEAL_SCENARIOS = {
+    discount: {
+      kind: 'discount', valueOffPercent: 20, title: '悦聚同桌专属折扣',
+      method: 'code', code: '悦聚同桌', venueName: '山止川行·南山店',
+    },
+    showpage: {
+      kind: 'discount', valueOffPercent: 20, title: '悦聚同桌专属折扣',
+      method: 'show_page', venueName: '山止川行·南山店',
+    },
+    longcode: {
+      kind: 'discount', valueOffPercent: 20, title: '悦聚同桌专属折扣',
+      method: 'code', code: '悦聚同桌四人同行', venueName: '山止川行·南山店',
+    },
+    setmenu: {
+      kind: 'set_menu', setMenuPriceCents: 59800, setMenuOriginalPriceCents: 75800,
+      title: '悦聚专属 6 人餐', description: '6 菜 1 汤 + 特调饮品',
+      method: 'show_page', venueName: '山止川行·南山店',
+    },
+    long: {
+      kind: 'set_menu', setMenuPriceCents: 128800, setMenuOriginalPriceCents: 168800,
+      title: '悦聚专属六人分享餐含季节限定菜品', description: '6 菜 1 汤 + 特调饮品',
+      method: 'show_page', venueName: '山止川行·南山科技园旗舰店',
+    },
+  }
+  const isDealPage = req.params.id.startsWith('group-deal-')
+  const deal = DEAL_SCENARIOS[dealScenario]
+    ? { id: `deal-${dealScenario}`, ...DEAL_SCENARIOS[dealScenario] }
+    : null
+  const groupOverride = !isDealPage ? {} : dealScenario === 'locked'
+    ? { venueAssignmentStatus: 'unassigned', venueName: null, venueAddress: null, venueDeal: null }
+    : {
+        venueAssignmentStatus: 'assigned',
+        venueName: deal?.venueName ?? '山止川行·南山店',
+        venueAddress: '深圳市南山区粤海街道科苑路 15 号',
+        venueDeal: deal,
+      }
   res.json({
     group: {
       ...MOCK_SQUAD_GROUP,
       id: req.params.id,
       memberCount: isNine ? 9 : isSix ? 6 : MOCK_SQUAD_GROUP.memberCount,
+      ...groupOverride,
     },
-    pool: MOCK_SQUAD_POOL,
+    pool: { ...MOCK_SQUAD_POOL, hasGuaranteedDeal: isDealPage },
     members: isNine ? MOCK_SQUAD_MEMBERS_9 : isSix ? MOCK_SQUAD_MEMBERS_6 : MOCK_SQUAD_MEMBERS,
   })
 })

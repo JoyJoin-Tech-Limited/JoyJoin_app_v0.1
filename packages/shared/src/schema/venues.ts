@@ -4,6 +4,8 @@ export {
   venueBookings,
   insertVenueSchema,
   insertVenueDealSchema,
+  adminVenueDealCreateSchema,
+  adminVenueDealUpdateSchema,
 } from './_definitions.js';
 
 export {
@@ -19,6 +21,8 @@ export type {
   VenueDeal,
   InsertVenueDeal,
   VenueBooking,
+  AdminVenueDealCreateInput,
+  AdminVenueDealUpdateInput,
 } from './_definitions.js';
 
 export type {

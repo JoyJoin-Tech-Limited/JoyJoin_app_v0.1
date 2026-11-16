@@ -23,6 +23,7 @@ import { notifyPoolCancelled } from "../../lib/wecomNotifications";
 import { shellCache } from "../../lib/shellCache";
 import { validatePoolScheduleForVenuePromise } from "../../lib/poolScheduleRules";
 import { assertVenueSupply } from "../../lib/venueSupplyGate";
+import { describePoolBindingChange, isPoolGuaranteeChangeLocked, resolvePoolDealBinding } from "../../lib/venueDealBinding";
 
 const updateEventPoolSchema = z.object({
   title: z.string().min(1).optional(),
@@ -49,6 +50,9 @@ const updateEventPoolSchema = z.object({
   genderBalanceBonusPoints: z.number().int().min(0).max(100).optional(),
   minFemaleCount: z.number().int().min(0).max(20).optional(),
   minMaleCount: z.number().int().min(0).max(20).optional(),
+  // S1 池级保底（方案 B）：两者同时为空或同时非空，业务校验见 lib/venueDealBinding.ts
+  guaranteedVenueId: z.string().min(1).nullish(),
+  guaranteedDealId: z.string().min(1).nullish(),
 });
 
 const GENDER_BALANCE_FIELDS = [
@@ -143,6 +147,8 @@ export function registerAdminEventPoolRoutes(app: Express): void {
           createdAt: eventPools.createdAt,
           updatedAt: eventPools.updatedAt,
           matchedAt: eventPools.matchedAt,
+          guaranteedVenueId: eventPools.guaranteedVenueId,
+          guaranteedDealId: eventPools.guaranteedDealId,
         })
         .from(eventPools)
         .orderBy(desc(eventPools.createdAt))
@@ -238,6 +244,20 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         });
       }
 
+      // S1：创建即绑定保底场地/权益，必须在同一次 POST 内完成校验
+      const binding = await resolvePoolDealBinding({
+        guaranteedVenueId: validatedData.guaranteedVenueId,
+        guaranteedDealId: validatedData.guaranteedDealId,
+        city: validatedData.city,
+        district: validatedData.district,
+        eventType: validatedData.eventType,
+      });
+      if (!binding.ok) {
+        return res.status(400).json({ message: binding.message, code: binding.code });
+      }
+      validatedData.guaranteedVenueId = binding.venueId;
+      validatedData.guaranteedDealId = binding.dealId;
+
       const [pool] = await db
         .insert(eventPools)
         .values(validatedData)
@@ -270,8 +290,18 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         },
       });
 
-      const { generateAndSavePoolCardCopy } = await import("../../ai/workers/poolCardCopyWorker");
-      generateAndSavePoolCardCopy(pool.id).catch((err: any) => {
+      if (binding.venueId && binding.dealId) {
+        logAdminAudit({
+          action: "EVENT_POOL_DEAL_BOUND",
+          adminId: getActingAdminId(req),
+          adminRole: (req as any).adminRole,
+          targetEntityType: "event_pool",
+          targetEntityId: pool.id,
+          after: { guaranteedVenueId: binding.venueId, guaranteedDealId: binding.dealId },
+        });
+      }
+
+      const { generateAndSavePoolCardCopy } = await import("../../ai/workers/poolCardCopyWorker");      generateAndSavePoolCardCopy(pool.id).catch((err: any) => {
         logger.error(`[poolCardCopyWorker] Failed to generate copy for new pool ${pool.id}:`, err);
       });
 
@@ -435,6 +465,68 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         genderBalanceBefore = currentPoolGender;
       }
 
+      // S1：保底绑定在 PATCH 也必须合并既有池再校验——仅修改城市/区域/活动类型同样可能让绑定失效
+      const bindingFieldsTouched =
+        updates.guaranteedVenueId !== undefined || updates.guaranteedDealId !== undefined;
+      const bindingTouched =
+        bindingFieldsTouched ||
+        updates.city !== undefined ||
+        updates.district !== undefined ||
+        updates.eventType !== undefined;
+      let bindingAudit: ReturnType<typeof describePoolBindingChange> | undefined;
+      if (bindingTouched) {
+        const [currentBinding] = await db
+          .select({
+            city: eventPools.city,
+            district: eventPools.district,
+            eventType: eventPools.eventType,
+            matchedAt: eventPools.matchedAt,
+            guaranteedVenueId: eventPools.guaranteedVenueId,
+            guaranteedDealId: eventPools.guaranteedDealId,
+          })
+          .from(eventPools)
+          .where(eq(eventPools.id, req.params.id));
+
+        if (!currentBinding) {
+          return res.status(404).json({ message: "Event pool not found" });
+        }
+
+        const nextGuarantee = {
+          guaranteedVenueId:
+            updates.guaranteedVenueId !== undefined
+              ? updates.guaranteedVenueId
+              : currentBinding.guaranteedVenueId,
+          guaranteedDealId:
+            updates.guaranteedDealId !== undefined
+              ? updates.guaranteedDealId
+              : currentBinding.guaranteedDealId,
+        };
+        const change = describePoolBindingChange(currentBinding, nextGuarantee);
+        // 成局后的保底是用户承诺的一部分，不允许改写/抹掉；确需变更必须另走运营补偿流程。
+        if (isPoolGuaranteeChangeLocked(currentBinding, change.type)) {
+          return res.status(409).json({
+            code: "POOL_GUARANTEE_LOCKED_AFTER_MATCHING",
+            message: "该活动池已成局，保底场地与权益不能再换绑或解绑",
+          });
+        }
+
+        const binding = await resolvePoolDealBinding({
+          ...nextGuarantee,
+          city: updates.city ?? currentBinding.city,
+          district: updates.district ?? currentBinding.district,
+          eventType: updates.eventType ?? currentBinding.eventType,
+        });
+        if (!binding.ok) {
+          return res.status(400).json({ message: binding.message, code: binding.code });
+        }
+
+        updates.guaranteedVenueId = binding.venueId;
+        updates.guaranteedDealId = binding.dealId;
+
+        // 字段被显式提交但值未变时不写审计，避免噪音
+        bindingAudit = change.type === "none" ? undefined : change;
+      }
+
       const whereClause = updates.status && oldStatus
         ? and(
             eq(eventPools.id, req.params.id),
@@ -472,6 +564,22 @@ export function registerAdminEventPoolRoutes(app: Express): void {
       }
 
       shellCache.invalidateDiscover();
+
+      if (bindingAudit) {
+        logAdminAudit({
+          action: "EVENT_POOL_DEAL_BOUND",
+          adminId: getActingAdminId(req),
+          adminRole: (req as any).adminRole,
+          targetEntityType: "event_pool",
+          targetEntityId: pool.id,
+          before: bindingAudit.before,
+          after: {
+            ...bindingAudit.after,
+            unbound: bindingAudit.type === "unbind",
+          },
+          context: { changeType: bindingAudit.type },
+        });
+      }
 
       if (touchedGenderBalance) {
         logAdminAudit({

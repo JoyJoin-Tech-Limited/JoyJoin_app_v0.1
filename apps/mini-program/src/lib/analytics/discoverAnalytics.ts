@@ -150,6 +150,11 @@ export type DiscoverAnalyticsEventType =
   | 'guest_preview_login_success'
   | 'duo_entry_link_impression'
   | 'duo_entry_link_tap'
+  // Venue-deal funnel（S6）：只带 id/枚举/耗时，暗号与门店地址绝不入 metadata。
+  | 'deal_card_impression'
+  | 'deal_card_tap'
+  | 'redeem_page_open'
+  | 'deal_credential_present'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { CITY_DISTRICTS } from "@/lib/cityDistricts";
+import PoolGuaranteeFields from "@/components/admin/PoolGuaranteeFields";
 import { useToast } from "@/hooks/ui/use-toast";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { cn } from "@/lib/utils";
@@ -113,6 +114,8 @@ interface EventPoolCreateDialogProps {
   onSubmit: (data: any) => void;
   createPoolMutation: { isPending: boolean };
   updatePoolMutation: { isPending: boolean };
+  /** 成局后保底是用户承诺，不允许在编辑对话框换绑/解绑 */
+  guaranteeLocked?: boolean;
 }
 
 export default function EventPoolCreateDialog({
@@ -124,6 +127,7 @@ export default function EventPoolCreateDialog({
   onSubmit,
   createPoolMutation,
   updatePoolMutation,
+  guaranteeLocked = false,
 }: EventPoolCreateDialogProps) {
   const { toast } = useToast();
   const currentCity = form.watch("city") as "深圳" | "香港";
@@ -913,6 +917,21 @@ export default function EventPoolCreateDialog({
                 </div>
               )}
             </div>
+
+            <PoolGuaranteeFields
+              city={currentCity}
+              district={currentDistrict}
+              eventType={currentEventType || "饭局"}
+              locked={guaranteeLocked}
+              value={{
+                venueId: form.watch("guaranteedVenueId") ?? null,
+                dealId: form.watch("guaranteedDealId") ?? null,
+              }}
+              onChange={(next) => {
+                form.setValue("guaranteedVenueId", next.venueId, { shouldDirty: true });
+                form.setValue("guaranteedDealId", next.dealId, { shouldDirty: true });
+              }}
+            />
 
             <DialogFooter>
               <Button

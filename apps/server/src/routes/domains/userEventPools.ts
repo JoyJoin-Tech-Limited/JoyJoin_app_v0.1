@@ -38,6 +38,7 @@ import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
 import { attendanceRepo } from "../../repositories/attendanceRepo";
 import { equipmentRepository } from "../../repositories/equipmentRepo";
 import { buildPoolPersonaSnapshot } from "../../repositories/eventPoolPersonaRepo";
+import { computeHasGuaranteedDeal, getGroupVenueDeal } from "../../repositories/venueDealsRepo";
 import { loadInterestSignalsByUserIds } from "./helpers";
 import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
@@ -371,8 +372,15 @@ export function registerUserEventPoolRoutes(app: Express): void {
           now,
         });
 
+        // S2：保底绑定是运营配置，不下发给普通用户（合同 AC-05）
+        const {
+          guaranteedVenueId: _guaranteedVenueId,
+          guaranteedDealId: _guaranteedDealId,
+          ...publicPool
+        } = pool as any;
+
         return {
-          ...pool,
+          ...publicPool,
           registrationCount,
           currentParticipants: registrationCount,
           maxParticipants: capacity,
@@ -490,8 +498,23 @@ export function registerUserEventPoolRoutes(app: Express): void {
       //    resolver is fail-open, so this never blocks or empties the payload. ──
       const budgetOptions = await resolveBudgetOptions(pool.city, pool.eventType);
 
+      // S2：保底字段不下发（AC-05）；hasGuaranteedDeal 由服务端按目录资格 + 可兑现判定计算（D7）
+      const {
+        guaranteedVenueId: _guaranteedVenueId,
+        guaranteedDealId: _guaranteedDealId,
+        ...publicPool
+      } = pool as any;
+      const hasGuaranteedDeal = await computeHasGuaranteedDeal({
+        guaranteedVenueId: pool.guaranteedVenueId ?? null,
+        guaranteedDealId: pool.guaranteedDealId ?? null,
+        city: pool.city,
+        district: pool.district ?? null,
+        eventType: pool.eventType,
+      });
+
       res.json({
-        ...pool,
+        ...publicPool,
+        hasGuaranteedDeal,
         registrationCount: registrations.length,
         currentParticipants: registrations.length,
         maxParticipants: capacity,
@@ -1643,6 +1666,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
           intent: member.intent,
         }));
 
+        const venueDeal = await getGroupVenueDeal({
+          venueId: group.venueId ?? null,
+          venueName: group.venueName ?? null,
+          assignmentStatus: group.venueAssignmentStatus ?? null,
+          poolGuaranteedVenueId: pool.guaranteedVenueId ?? null,
+          poolGuaranteedDealId: pool.guaranteedDealId ?? null,
+        });
+
         res.json({
           group: {
             id: group.id,
@@ -1662,6 +1693,8 @@ export function registerUserEventPoolRoutes(app: Express): void {
             venueAddress: group.venueAddress,
             venueAssignmentStatus: group.venueAssignmentStatus,
             venueAssignmentReason: group.venueAssignmentReason,
+            // S2：唯一一张可兑现权益（D5/D6）；未 assigned / 失效 / 保底跨店均为 null
+            venueDeal,
             finalDateTime: group.finalDateTime,
             status: group.status,
           },
@@ -1673,6 +1706,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
             city: pool.city,
             district: pool.district,
             dateTime: pool.dateTime,
+            // S3：保底真值随同一响应下发，避免两次请求之间的状态竞争
+            hasGuaranteedDeal: await computeHasGuaranteedDeal(pool),
+            // 「当前保底仍有效」与「这桌基于保底绑定成局」是两个事实：
+            // 权益被撤销后前者变 false，后者仍为 true，页面据此显示「已调整」而不是静默消失。
+            hasGuaranteedDealBinding: Boolean(pool.guaranteedVenueId && pool.guaranteedDealId),
           },
           members: memberSummaries,
           // Reveal fact for THIS viewer, server-owned (2026-11-11). The sealed

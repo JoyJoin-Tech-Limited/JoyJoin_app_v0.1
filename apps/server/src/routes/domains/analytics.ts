@@ -119,6 +119,11 @@ const ALLOWED_PERSONALITY_RESULT_EVENT_TYPES = new Set<PersonalityResultEventTyp
 const DISCOVER_EVENT_TYPES = [
   "pool_card_tap",
   "pool_card_impression",
+  // Venue-deal S6：卡曝光/点卡/出示页打开/真实出示意图；metadata 仅 id、枚举与耗时。
+  "deal_card_impression",
+  "deal_card_tap",
+  "redeem_page_open",
+  "deal_credential_present",
   "registration_start",
   "registration_confirm_shown",
   "registration_confirm_confirmed",

@@ -33,6 +33,12 @@ export interface EventPoolSummary {
   topComplementaryType?: string | null
   narrativePivot?: PoolNarrativePivot
   hoursUntilDeadline?: number
+  /**
+   * 场地专属优惠 · 池级保底（S2 服务端计算，S5 报名页消费）。
+   * true 表示该池建池时已锁定保底场地与有效权益，客户端才可渲染「专属优惠」承诺。
+   * 客户端不得自行推测候选场地；缺省 / false 一律视为无承诺。
+   */
+  hasGuaranteedDeal?: boolean
   [key: string]: unknown
 }
 
@@ -177,6 +183,32 @@ export interface PoolGroupMemberSummary {
   intent?: string[] | null
 }
 
+/**
+ * 场地专属优惠 · 小组维度唯一读取模型（S2 服务端装配）。
+ * 只有两种形态：discount（统一折扣）/ set_menu（定制套餐）。
+ * 规则只有一条「仅限本场活动 · 本桌使用」，由 copy/venueDealCopy.ts 固定输出，
+ * 因此这里刻意不含门槛、有效期、每人限用等字段。
+ * null 表示本场没有可用权益；读取失败由客户端单独走错误态，不得当作 null 静默。
+ */
+export interface VenueDealSummary {
+  id: string
+  kind: 'discount' | 'set_menu'
+  /** discount 专用：20 = 8 折，整数 1–90 */
+  valueOffPercent?: number
+  /** set_menu 专用：一口价（分） */
+  setMenuPriceCents?: number
+  /** set_menu 专用：划线原价（分），必大于一口价 */
+  setMenuOriginalPriceCents?: number
+  /** ≤20 字：折扣 = 权益名，套餐 = 套餐名 */
+  title: string
+  /** ≤20 字：套餐内容一句 */
+  description?: string | null
+  method: 'show_page' | 'code'
+  /** method = code 时必存在，出示页第一焦点 */
+  code?: string
+  venueName: string
+}
+
 export interface PoolGroupSummary {
   id: string
   groupNumber: number
@@ -195,6 +227,8 @@ export interface PoolGroupSummary {
   venueAddress?: string | null
   venueAssignmentStatus?: string | null
   venueAssignmentReason?: string | null
+  /** 本场专属优惠；venueAssignmentStatus='assigned' 且权益有效时才由服务端返回，否则为 null */
+  venueDeal?: VenueDealSummary | null
   finalDateTime?: string | null
   status?: PoolGroupStatus | null
 }
@@ -207,6 +241,10 @@ export interface PoolGroupSourceSummary {
   city?: string | null
   district?: string | null
   dateTime?: string | null
+  /** S3：池级保底承诺真值（服务端计算）。缺省/false 一律无承诺。 */
+  hasGuaranteedDeal?: boolean
+  /** S3：保底绑定是否存在（不论权益当前是否可兑现）。撤销后仍为 true → 「已调整」 */
+  hasGuaranteedDealBinding?: boolean
 }
 
 export interface PoolGroupDetailsResponse {
