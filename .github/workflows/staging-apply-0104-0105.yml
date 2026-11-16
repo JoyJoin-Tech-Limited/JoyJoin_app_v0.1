@@ -1,0 +1,160 @@
+name: Apply Staging Migrations 0104-0105
+
+# 2026-11-16: staging never auto-runs migrations, and deploy-staging fails fast
+# (validateDbSchema) then rolls back when code references a column the staging
+# database does not have. Run 43816329767 crashed on event_pool_groups.* from
+# 0104_matching_pair_floor.sql, which reached main via an accidentally stacked
+# local commit. This job applies the two schema migrations idempotently so the
+# next deploy can boot.
+#
+# Scope: schema only. 0103_venue_slot_coverage_futian_20261111.sql is DML
+# (venue_time_slots updates) and is NOT required for the server to start.
+#
+# Production needs the same two migrations applied before the next production
+# deploy. Do not reuse this workflow for production without a separate review.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only inspect current columns, do not apply DDL"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize with staging deploys (see deploy-staging lock split, 2026-10-22).
+  group: joyjoin-cvm-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Apply 0104 + 0105 on staging
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin
+
+            exec 9>/var/lock/joyjoin-cvm-staging.lock
+            flock -n 9
+
+            test -f deployment/.env.staging
+            set -a
+            source deployment/.env.staging
+            set +a
+            : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+            run_psql() {
+              docker exec -i \
+                -e PGPASSWORD="$POSTGRES_PASSWORD" \
+                postgres-staging \
+                psql -h 127.0.0.1 -U joyjoin -d joyjoin_staging "$@"
+            }
+
+            database_name="$(run_psql -Atc 'select current_database()')"
+            test "$database_name" = 'joyjoin_staging'
+
+            echo "Before — event_pool_groups columns:"
+            run_psql -At <<'SQL'
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'event_pool_groups'
+              and column_name in ('avg_pair_score', 'formed_member_count', 'pair_floor_policy')
+            order by column_name;
+            SQL
+
+            echo "Before — pool_matching_logs.pair_floor:"
+            run_psql -At <<'SQL'
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'pool_matching_logs'
+              and column_name = 'pair_floor';
+            SQL
+
+            echo "Before — event_pool_registrations.revealed_at:"
+            run_psql -At <<'SQL'
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'event_pool_registrations'
+              and column_name = 'revealed_at';
+            SQL
+
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "dry_run=true — no DDL applied."
+              exit 0
+            fi
+
+            echo "Applying 0104_matching_pair_floor.sql (idempotent)..."
+            run_psql -v ON_ERROR_STOP=1 -f /dev/stdin <<'SQL'
+            BEGIN;
+
+            ALTER TABLE "event_pool_groups" ADD COLUMN IF NOT EXISTS "avg_pair_score" integer;
+            ALTER TABLE "event_pool_groups" ADD COLUMN IF NOT EXISTS "formed_member_count" integer;
+            ALTER TABLE "event_pool_groups" ADD COLUMN IF NOT EXISTS "pair_floor_policy" varchar(20);
+
+            ALTER TABLE "pool_matching_logs" ADD COLUMN IF NOT EXISTS "pair_floor" integer;
+
+            COMMENT ON COLUMN "event_pool_groups"."avg_pair_score" IS 'Mean pair score of the formed group, null when not computed';
+            COMMENT ON COLUMN "event_pool_groups"."formed_member_count" IS 'Member count captured at formation time';
+            COMMENT ON COLUMN "event_pool_groups"."pair_floor_policy" IS 'Which pair-floor tier allowed this group to form';
+            COMMENT ON COLUMN "pool_matching_logs"."pair_floor" IS 'Pair-floor value applied during this matching run';
+
+            COMMIT;
+            SQL
+
+            echo "Applying 0105_pool_registration_revealed_at.sql (idempotent)..."
+            run_psql -v ON_ERROR_STOP=1 -f /dev/stdin <<'SQL'
+            BEGIN;
+
+            ALTER TABLE "event_pool_registrations"
+              ADD COLUMN IF NOT EXISTS "revealed_at" timestamp;
+
+            COMMENT ON COLUMN "event_pool_registrations"."revealed_at"
+              IS 'When the participant first opened the reveal; NULL means not opened';
+
+            COMMIT;
+            SQL
+
+            echo "After — event_pool_groups columns:"
+            run_psql -At <<'SQL'
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'event_pool_groups'
+              and column_name in ('avg_pair_score', 'formed_member_count', 'pair_floor_policy')
+            order by column_name;
+            SQL
+
+            echo "After — pool_matching_logs.pair_floor:"
+            run_psql -At <<'SQL'
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'pool_matching_logs'
+              and column_name = 'pair_floor';
+            SQL
+
+            echo "After — event_pool_registrations.revealed_at:"
+            run_psql -At <<'SQL'
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'event_pool_registrations'
+              and column_name = 'revealed_at';
+            SQL
+
+            echo "Migration apply complete."
