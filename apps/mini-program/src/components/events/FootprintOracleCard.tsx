@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import { getPoolGroupDetails } from '@shared/api'
 import type { JoinedEventSummary } from '@shared/api'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
 import { haptics } from '../../lib/utils/haptics'
 import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
 import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
@@ -23,6 +24,7 @@ import {
 import { hasOpenedTableRecently, syncTableRevealedAt } from '../../lib/utils/tableRevealState'
 import EventSummaryCard from './EventSummaryCard'
 import ArchetypeHead from '../mascot/ArchetypeHead'
+import MissingArchetypePlaceholder from '../mascot/MissingArchetypePlaceholder'
 import './FootprintOracleCard.scss'
 
 // groupSize is the viewer's assigned table size, never pool registrations or
@@ -205,7 +207,14 @@ export default React.memo(function FootprintOracleCard({
 
   const hasPrice = price != null
   const tableFaces = Array.isArray(event.memberArchetypes)
-    ? event.memberArchetypes.filter((archetype) => typeof archetype === 'string' && archetype.length > 0).slice(0, 6)
+    ? event.memberArchetypes
+        // One slot per seat, in seat order: a canonical machine id when the
+        // server could resolve one, `undefined` when that tablemate has no
+        // archetype on file. `ArchetypeHead` keys its art by machine id, so a
+        // Chinese display name (人脉蛛 …) has to be normalized first or the head
+        // falls back to a bare glyph (device report 2026-11-17).
+        .slice(0, 6)
+        .map((archetype) => (typeof archetype === 'string' && archetype.trim() ? resolveArchetype(archetype)?.id : undefined))
     : []
   const themePill = typeof event.theme === 'string' && event.theme.trim() ? event.theme.trim() : undefined
   // The rationale belongs to the table, and a sealed card is still holding its
@@ -235,6 +244,9 @@ export default React.memo(function FootprintOracleCard({
     : undefined
   const venueName = typeof event.venueName === 'string' && event.venueName.trim() ? event.venueName.trim() : undefined
   const canOpenMap = venueLatitude != null && venueLongitude != null
+  // A finished record still wants its address (find it again, forward it), but
+  // never navigation: the map would route you to a table that ended weeks ago.
+  const isEndedRecord = status === 'completed' || status === 'attended' || isHistoricalNonterminal
 
   // ── The venue-lands beat (2026-11-11) ─────────────────────────
   // The venue can arrive while this card is already on screen (the events tab
@@ -274,7 +286,7 @@ export default React.memo(function FootprintOracleCard({
         .catch(() => undefined)
     }
 
-    if (!canOpenMap) {
+    if (!canOpenMap || isEndedRecord) {
       copyAddress()
       return
     }
@@ -286,11 +298,12 @@ export default React.memo(function FootprintOracleCard({
       address: venueAddress,
       scale: 18,
     }).catch(copyAddress)
-  }, [canOpenMap, venueAddress, venueLatitude, venueLongitude, venueName])
+  }, [canOpenMap, isEndedRecord, venueAddress, venueLatitude, venueLongitude, venueName])
 
-  const venueActionLabel = canOpenMap ? '导航' : '复制地址'
+  const canNavigate = canOpenMap && !isEndedRecord
+  const venueActionLabel = canNavigate ? '导航' : '复制地址'
   const venueActionAriaLabel = venueName
-    ? (canOpenMap ? `打开地图导航到${venueName}` : `复制${venueName}的地址`)
+    ? (canNavigate ? `打开地图导航到${venueName}` : `复制${venueName}的地址`)
     : undefined
   // Phase 3 (2026-11-10): a state-aware affordance line. The card has no button,
   // so the footer carries the next step instead of inventing a fake CTA. The
@@ -300,7 +313,7 @@ export default React.memo(function FootprintOracleCard({
   // compete with it, and it was the wrong voice for an unopened box anyway.
   const ctaHint = isSealedTable
     ? undefined
-    : status === 'completed' || status === 'attended'
+    : status === 'completed' || status === 'attended' || isHistoricalNonterminal
       ? '翻翻这场回顾'
       : hasAssignedTable
         ? '看看这桌的合拍度'
@@ -330,6 +343,19 @@ export default React.memo(function FootprintOracleCard({
       ) : tableFaces.length > 0 && (
         <View className='footprint-oracle-card__table-faces' aria-hidden='true'>
           {tableFaces.map((archetype, faceIndex) => {
+            if (!archetype) {
+              // A seat with no archetype on file keeps its slot: the row sits
+              // beside 「6 人桌」, so dropping the seat made the count and the
+              // faces disagree. Brand canon forbids abstract initials, so the
+              // unknown seat wears the shared logo placeholder.
+              return (
+                <MissingArchetypePlaceholder
+                  key={`${event.id}-face-${faceIndex}`}
+                  size={40}
+                  className='footprint-oracle-card__table-face-unknown'
+                />
+              )
+            }
             const token = getArchetypeTokens(archetype)
             return (
               <View
@@ -404,6 +430,7 @@ export default React.memo(function FootprintOracleCard({
       placeRevealed={placeRevealed}
       venueActionLabel={venueActionLabel}
       venueActionAriaLabel={venueActionAriaLabel}
+      venueActionNavigates={canNavigate}
       onVenueAction={handleVenueAction}
       location={event.location}
       status={event.status}

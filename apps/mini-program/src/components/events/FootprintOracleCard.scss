@@ -95,7 +95,12 @@
 
   // Muted treatment for terminal states (completed / cancelled).
   &--terminal {
+    // The title's cue (`›`) is its punctuation, not a second control. Left at
+    // full purple on a record whose title had stepped back, it read as two
+    // states spliced into one line (rendered review, 2026-11-17) — so it dims
+    // with the word it follows. The card stays tappable either way.
     .footprint-oracle-card__title,
+    .footprint-oracle-card__title-cue,
     .footprint-oracle-card__date-time,
     .footprint-oracle-card__location,
     .footprint-oracle-card__theme-text,
@@ -103,6 +108,17 @@
     .footprint-oracle-card__waiting-hint,
     .footprint-oracle-card__place-primary,
     .footprint-oracle-card__place-secondary,
+    // The when-column's date never made it into this list: the split layout
+    // renders `__side-date` (year / month-day / clock row) instead of
+    // `__date-time`, so 「11月18日」 stayed near-black on a finished card and
+    // outshouted everything except the live verb (rendered review, 2026-11-17).
+    .footprint-oracle-card__side-date,
+    // The district is the last purple fact in the when-column; with the date and
+    // clock already stepped back it was the only accent left up there, reading
+    // as a live chip on a finished record (rendered review, 2026-11-17). Three
+    // tiers survive the dim: the state pill (what happened), this content group,
+    // and the one control the card still offers.
+    .footprint-oracle-card__side-district,
     .footprint-oracle-card__footer-hint {
       opacity: 0.78;
     }
@@ -112,6 +128,17 @@
     .footprint-oracle-card__place {
       background: transparent;
       border-color: transparent;
+    }
+
+    // ...unless the field still carries a verb. 复制地址 survived the terminal
+    // demotion (defect fix 2026-11-17) and with the plate fully transparent it
+    // rendered as pale text hanging under the address with nothing holding it,
+    // while every other card showed a boxed field (rendered review, same day).
+    // Give the actionable field its boundary back, quieter than a live plate:
+    // the record is finished, but the tap target is not.
+    .footprint-oracle-card__place--actionable {
+      background: rgba($color-surface, 0.42);
+      border-color: rgba($color-primary, 0.1);
     }
 
     .footprint-oracle-card__place--revealed {
@@ -526,6 +553,17 @@
     }
   }
 
+  // A seat whose tablemate has no archetype on file. It keeps the row's 40rpx
+  // rhythm and the single -16rpx overlap step so the cluster still reads as one
+  // table; only the artwork differs (shared logo placeholder, never initials).
+  &__table-face-unknown {
+    flex-shrink: 0;
+
+    &:not(:first-child) {
+      margin-left: -16rpx;
+    }
+  }
+
   // 封着的桌 (2026-11-11): the table is formed but the box is still closed, so
   // the real faces are withheld — showing them here pre-spoils the ceremony
   // this same card opens. Three IDENTICAL discs read as one deck; three
@@ -589,6 +627,11 @@
     // the theme ~3.5rpx right of the rationale that hangs under it — a stagger
     // that reads as a bug (designer B1).
     width: 44rpx;
+    // `nowrap` is load-bearing: two CJK glyphs at 22rpx plus the 0.08em tracking
+    // below measure ~45.8rpx, so without it 「主题」 wraps one glyph per line and
+    // the card grows a vertical label (device report 2026-11-17). The 1.8rpx
+    // overflow lands inside the 8rpx gap, so the value still starts at 52rpx.
+    white-space: nowrap;
     font-size: $font-size-xs;
     // The label is a signpost, not a word. It recedes by weight and tracking so
     // the table's own name can carry the line — never by ink: 22rpx tertiary
@@ -763,7 +806,19 @@
     min-width: 0;
   }
 
+  // The venue name and its verb share one line, so the address below can use the
+  // whole plate. `min-width: 0` lets a long venue truncate instead of pushing
+  // the verb out of the border.
+  &__place-head {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-width: 0;
+  }
+
   &__place-primary {
+    flex: 1;
+    min-width: 0;
     font-size: 28rpx;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
@@ -773,14 +828,22 @@
 
   &__place-secondary {
     // 24rpx, not 22: this is a street address — the one string a user reads
-    // aloud to a driver. Contrast does not vary with font size, so 4.48:1 is
+    // aloud to a driver. Contrast does not vary with font size so 4.48:1 is
     // this token's ceiling on the lower tint at any size; the point of going to
     // 24rpx was legibility, not ratio (designer, second pass).
     font-size: $font-size-sm;
     font-weight: $font-weight-normal;
     color: $color-text-secondary;
     line-height: 1.4;
-    @include text-truncate;
+    // Two lines, not one. An address is the one string a user reads aloud to a
+    // driver, and 「广东省深圳市福田区福华五路卓越世纪中心 4 栋 2 楼」 does not
+    // fit a 348rpx plate on one line (rendered review, 2026-11-17). Clamped at
+    // two so a long street stays readable without letting the field push the
+    // facts row down indefinitely.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   // Capability-matched: `导航` only when coordinates exist, otherwise

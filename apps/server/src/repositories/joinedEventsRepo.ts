@@ -18,6 +18,7 @@ import type { JoinedEventSummary } from "@shared/api";
 import { POOL_COMPLETION_BUFFER_MS } from "../lib/poolCompletionSweep";
 import { FEEDBACK_ELIGIBLE_MATCH_STATUSES } from "../lib/feedbackStateResolver";
 import { clampThemeTitle, THEME_TAGLINE_MAX_GRAPHEMES } from "../lib/themeTitleClamp";
+import { resolveRosterArchetype } from "@shared/personality/archetypeNames";
 
 /**
  * Derive a user-facing status for pool events from the matching + venue lifecycle.
@@ -263,6 +264,11 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     const memberRows = await db
       .select({
         groupId: eventPoolRegistrations.assignedGroupId,
+        // Both columns, then resolve: `users.archetype` holds a Chinese display
+        // name (人脉蛛 / 脑洞章鱼 …) while the 同桌 face row keys its head art by
+        // canonical machine id, so reading the legacy column rendered two-glyph
+        // text chips instead of heads (device report 2026-11-17).
+        primaryArchetype: users.primaryArchetype,
         archetype: users.archetype,
       })
       .from(eventPoolRegistrations)
@@ -275,10 +281,18 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       );
     for (const row of memberRows) {
       const groupId = row.groupId;
-      if (!groupId || !row.archetype) continue;
+      if (!groupId) continue;
+      // `resolveRosterArchetype` is primary-first and normalizes the 24 v1/v2
+      // Chinese names, so a V4 user is not dropped and a legacy row is not a
+      // headless face.
+      const archetype = resolveRosterArchetype(row.primaryArchetype, row.archetype);
       const faces = groupArchetypes.get(groupId) ?? [];
       if (faces.length >= 6) continue;
-      faces.push(row.archetype);
+      // One entry per seat, `''` for a tablemate with no archetype on file: the
+      // card shows 「6 人桌」 next to this row, so a silently dropped seat rendered
+      // five faces beside six people (2026-11-17). The client draws its
+      // brand-safe placeholder for the empty slot instead of inventing a face.
+      faces.push(archetype ?? "");
       groupArchetypes.set(groupId, faces);
     }
   }

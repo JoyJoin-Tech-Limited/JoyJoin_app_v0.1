@@ -347,6 +347,39 @@ describe('FootprintOracleCard table identity (Phase 2 + 3)', () => {
     expect(container.querySelectorAll('.footprint-oracle-card__table-face')).toHaveLength(6)
   })
 
+  it('normalizes Chinese display names into machine ids before choosing head art', () => {
+    const event = makeCardEvent({
+      groupId: 'group-1',
+      groupSize: 4,
+      // `users.archetype` stores the Chinese display name while the face row
+      // keys its art by machine id; an unresolved name used to paint a bare
+      // glyph instead of the archetype head (2026-11-17).
+      memberArchetypes: ['社牛柯基', '寻宝狐', '好奇猫头鹰', '人脉蛛'],
+    })
+    const { container } = render(<FootprintOracleCard event={event} />)
+
+    const faces = Array.from(container.querySelectorAll('.footprint-oracle-card__table-face'))
+    expect(faces).toHaveLength(4)
+    const sources = faces.map((face) => face.querySelector('img')?.getAttribute('src') ?? '').join('|')
+    expect(sources).toContain('corgi')
+    expect(sources).toContain('spider')
+  })
+
+  it('keeps the seat when a tablemate has no archetype on file', () => {
+    // The row sits beside 「N 人桌」, so a dropped seat made the faces and the
+    // count disagree (2026-11-17). Unknown slots wear the shared placeholder.
+    const event = makeCardEvent({
+      groupId: 'group-1',
+      groupSize: 3,
+      memberArchetypes: ['corgi', '', 'fox'],
+    })
+    const { container } = render(<FootprintOracleCard event={event} />)
+
+    expect(container.querySelectorAll('.footprint-oracle-card__table-face')).toHaveLength(2)
+    expect(container.querySelectorAll('.footprint-oracle-card__table-face-unknown')).toHaveLength(1)
+    expect(screen.getByText('已排进 3 人桌')).toBeInTheDocument()
+  })
+
   it('renders the match-time theme as a pill under the title', () => {
     const event = makeCardEvent({ theme: '高能充电站·周日晚风' })
     const { container } = render(<FootprintOracleCard event={event} />)
@@ -365,6 +398,17 @@ describe('FootprintOracleCard table identity (Phase 2 + 3)', () => {
       />,
     )
     expect(finished.container.querySelector('.footprint-oracle-card__footer-hint')).toHaveTextContent('翻翻这场回顾')
+    finished.unmount()
+
+    // A past-but-never-swept record already reads 已结束 in the pill, so it must
+    // not invite the viewer to "see this table's chemistry" — the night is over.
+    const historical = render(
+      <FootprintOracleCard
+        event={makeCardEvent({ groupId: 'group-3', groupSize: 4, displayStatus: 'matched', status: 'matched' })}
+        isHistorical
+      />,
+    )
+    expect(historical.container.querySelector('.footprint-oracle-card__footer-hint')).toHaveTextContent('翻翻这场回顾')
   })
 })
 
@@ -529,6 +573,8 @@ describe('FootprintOracleCard venue navigation', () => {
       })} />,
     )
     expect(screen.getByText('导航')).toBeInTheDocument()
+    // A real navigation can go somewhere, so it keeps the chevron.
+    expect(withCoords.container.querySelector('.footprint-oracle-card__place-action-chevron')).not.toBeNull()
     withCoords.unmount()
 
     const withoutCoords = render(
@@ -542,6 +588,27 @@ describe('FootprintOracleCard venue navigation', () => {
     // A chevron next to a clipboard would promise a map the app cannot open.
     expect(screen.getByText('复制地址')).toBeInTheDocument()
     expect(screen.queryByText('导航')).toBeNull()
+    expect(withoutCoords.container.querySelector('.footprint-oracle-card__place-action-chevron')).toBeNull()
+  })
+
+  it('downgrades a finished record to copying the address', () => {
+    // Even with coordinates on file, a past table must not open a map that
+    // routes you to a dinner that ended weeks ago — the address is still useful,
+    // so the affordance becomes 复制地址 instead of disappearing.
+    render(
+      <FootprintOracleCard event={makeCardEvent({
+        status: 'completed',
+        displayStatus: 'completed',
+        venueName: '老街大排档',
+        venueAddress: '深圳市罗湖区某路 1 号',
+        venueLatitude: 22.5431,
+        venueLongitude: 114.0579,
+      })} />,
+    )
+
+    expect(screen.getByText('复制地址')).toBeInTheDocument()
+    expect(screen.queryByText('导航')).toBeNull()
+    expect(document.querySelector('.footprint-oracle-card__place-action-chevron')).toBeNull()
   })
 })
 
