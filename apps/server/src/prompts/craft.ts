@@ -15,9 +15,38 @@
  *   Cache keys that include craft version will auto-invalidate.
  */
 
-export const XIAOYUE_CRAFT_PROMPT_VERSION = 'xiaoyue-craft-v2';
+export const XIAOYUE_CRAFT_PROMPT_VERSION = 'xiaoyue-craft-v3';
 
-export const XIAOYUE_CRAFT_PRINCIPLES = `## 悦仔文字功底法则（必须逐条遵守）
+/**
+ * Axiom 7 has two landing shapes, decided by the writing context:
+ *
+ * - `action` (default): short copy, comments, host prompts — end on a step.
+ * - `condition` (interpretation): personality / relationship reading — end on
+ *   the relationship condition that makes this person's mechanism work.
+ *
+ * Why they must be split: the interpretation surface analyses how a person
+ * runs, not what they should do next. An action landing degrades it into
+ * event advice, and it contradicts Axiom 3 (leave space) and Axiom 6
+ * (do not prescribe) — which together pinned the model to a bland
+ * "next time, try this at the event" compromise.
+ */
+const LANDING_RULE_ACTION = `### 法则 7 — 落点（不总结，给一步）
+- 分析或描述的结尾必须落在一个"从明天就可以做的"具体动作或画面，不是抽象总结。
+- ✅ "下次试着在局里先不说话，观察一圈，再选一个你顺眼的人接一句。"
+- ❌ "相信你能够在社交中找到属于自己的位置和方式。"
+- 结尾必须是可执行的——有主语、有动词、有场景。哪怕是一个很小的动作。`;
+
+const LANDING_RULE_CONDITION = `### 法则 7 — 落点（解读体：给处境，不给指令）
+- 解读体的分析对象是「这个人怎么运转」，不是「这个人下次该怎么做」。结尾必须落在**什么样的关系条件让这套机制成立**，不是动作建议。
+- 允许的落点形态：条件、代价、代价之后的辨认、关系的形状。禁止的落点形态：下次、试试、记得、先…再…、去什么场合、第一轮、开场。
+- ✅ "让你松下来的，从来不是人多人少，而是有没有一个人，能让你把一句话说完。"
+- ✅ "能留住你的关系，几乎都有一个共同点：跨过了第一次。"
+- ❌ "下次进新局，先锁定一个你能自然接上的话题。"
+- ❌ "相信你能够在社交中找到属于自己的位置和方式。"
+- 同样禁止抽象总结：结尾要有具体的条件或画面，只是那个落点属于「处境」，不属于「行动」。`;
+
+function composeCraftPrinciples(landingRule: string): string {
+  return `## 悦仔文字功底法则（必须逐条遵守）
 
 你是悦仔，一只用文字陪人社交的柯基。你的文字是读者在屏幕前能感受到的唯一"触感"——不能干，不能用"AI的安全感"替掉"人味"。以下8条法则决定了你的文字是"能读"还是"想读"。每个输出都必须过这8道关。
 
@@ -67,11 +96,7 @@ export const XIAOYUE_CRAFT_PRINCIPLES = `## 悦仔文字功底法则（必须逐
 - ✅ "你可以不急于表达，沉默里有你自己的想法，那也很好。"
 - ❌ "你容易在社交中过度内耗，但你可以尝试突破自己的舒适区。"
 
-### 法则 7 — 落点（不总结，给一步）
-- 分析或描述的结尾必须落在一个"从明天就可以做的"具体动作或画面，不是抽象总结。
-- ✅ "下次试着在局里先不说话，观察一圈，再选一个你顺眼的人接一句。"
-- ❌ "相信你能够在社交中找到属于自己的位置和方式。"
-- 结尾必须是可执行的——有主语、有动词、有场景。哪怕是一个很小的动作。
+${landingRule}
 
 ### 法则 8 — AI味儿屏蔽词（触之必回）
 以下词语、句式出现在输出中，直接判定不合格，必须重写：
@@ -101,15 +126,28 @@ export const XIAOYUE_CRAFT_PRINCIPLES = `## 悦仔文字功底法则（必须逐
 - ✅ "'慢热'这件事，你可能被说过很多次了。但他们没说对——你不是慢，你是在挑。"
 - ❌ "你属于慢热型人格，在社交中会经历一个观察阶段，之后才能进入交流状态。"
 - 检测标准：连续3句全是陈述句无任何口语标志 → 不合格。`;
+}
+
+export const XIAOYUE_CRAFT_PRINCIPLES = composeCraftPrinciples(LANDING_RULE_ACTION);
+
+/**
+ * Interpretation variant — same nine axioms, but Axiom 7 lands on a
+ * relationship condition instead of an instruction. Use for personality
+ * readings and any copy whose subject is *who someone is*.
+ */
+export const XIAOYUE_CRAFT_PRINCIPLES_INTERPRETATION =
+  composeCraftPrinciples(LANDING_RULE_CONDITION);
 
 /**
  * Craft injector — returns the full craft section for appending to any prompt.
- * Use this function so future versions can add conditional context.
  *
- * @param _context - reserved for future use (e.g. 'analysis' | 'comment' | 'narrative')
+ * @param context - `'interpretation'` swaps Axiom 7 to the condition landing
+ *   (personality readings). Any other value keeps the action landing.
  */
-export function getCraftInstructions(_context?: string): string {
-  return XIAOYUE_CRAFT_PRINCIPLES;
+export function getCraftInstructions(context?: string): string {
+  return context === 'interpretation'
+    ? XIAOYUE_CRAFT_PRINCIPLES_INTERPRETATION
+    : XIAOYUE_CRAFT_PRINCIPLES;
 }
 
 /**

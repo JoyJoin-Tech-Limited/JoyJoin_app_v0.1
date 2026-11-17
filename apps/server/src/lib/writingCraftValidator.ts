@@ -38,6 +38,8 @@ export interface CraftDiagnostics {
   landingIsActionable: boolean;
   /** Landing: is last sentence an abstract summary? */
   landingIsAbstractSummary: boolean;
+  /** Landing: does the tail express a relationship condition (interpretation mode)? */
+  landingIsConditional: boolean;
 
   /** Density: "你" character count per 100 chars */
   niDensity: number;
@@ -91,6 +93,21 @@ function isAbstractSummaryEnding(sentences: string[]): boolean {
   if (sentences.length === 0) return false;
   const last = sentences[sentences.length - 1].trim();
   return /相信你|属于你|适合你|你会找到|一定能|总会/.test(last);
+}
+
+/**
+ * Whether the text lands on a relationship *condition* rather than an action.
+ *
+ * Scans a tail window instead of the last clause: `splitSentences` also splits
+ * on commas, so a condition such as「让你松下来的，从来不是人多人少，而是…
+ * 能让你把一句话说完」straddles four clauses and its marker lives mid-text.
+ */
+function isConditionalEnding(text: string): boolean {
+  const tail = text.trim().slice(-60);
+  if (tail.length === 0) return false;
+  return /从来不是|而不是|不是|有一个共同点|需要的是|除非|一旦|只有|取决于|如果有人|跨过|的唯一|让你.+的是/.test(
+    tail,
+  );
 }
 
 // ─── Banned Words ─────────────────────────────────────────────────────────────
@@ -240,15 +257,30 @@ function calculateScore(diag: Omit<CraftDiagnostics, 'craftScore' | 'passes' | '
     issues.push(`发现${diag.pathologizingPhrases}处病理化句式（"你容易/你倾向于"），改为"你更愿意/有时你会"`);
   }
 
-  // Axiom 7: Landing (12.5 pts) — skipped for short text
+  // Axiom 7: Landing (12.5 pts) — skipped for short text.
+  // Two landing shapes: 'analysis' is an interpretation surface and must land on
+  // a relationship condition; every other context lands on an action step.
   if (!skipFormChecks) {
-    if (diag.landingIsAbstractSummary) {
-      score -= 8;
-      issues.push('结尾为抽象总结而非具体动作，落点不够利落');
-    }
-    if (!diag.landingIsActionable) {
-      score -= 6;
-      issues.push('结尾缺少可执行的具体动作');
+    if (context === 'analysis') {
+      if (diag.landingIsAbstractSummary) {
+        score -= 8;
+        issues.push('结尾为抽象总结，落点不够利落');
+      } else if (diag.landingIsActionable) {
+        score -= 8;
+        issues.push('解读体结尾落在动作指令上，应落在关系条件（什么样的关系让它成立）');
+      } else if (!diag.landingIsConditional) {
+        score -= 6;
+        issues.push('结尾缺少处境条件，落点没有落地');
+      }
+    } else {
+      if (diag.landingIsAbstractSummary) {
+        score -= 8;
+        issues.push('结尾为抽象总结而非具体动作，落点不够利落');
+      }
+      if (!diag.landingIsActionable) {
+        score -= 6;
+        issues.push('结尾缺少可执行的具体动作');
+      }
     }
   }
 
@@ -269,7 +301,7 @@ function calculateScore(diag: Omit<CraftDiagnostics, 'craftScore' | 'passes' | '
 
 // ─── Main Validator ───────────────────────────────────────────────────────────
 
-export function validateCraft(text: string, _context: CraftContext = 'analysis'): CraftDiagnostics {
+export function validateCraft(text: string, context: CraftContext = 'analysis'): CraftDiagnostics {
   const sentences = splitSentences(text);
   const lengths = sentences.map(s => s.length);
   const totalChars = text.replace(/\s/g, '').length;
@@ -297,8 +329,16 @@ export function validateCraft(text: string, _context: CraftContext = 'analysis')
 
   // Banned words
   const banned = BANNED_WORDS.filter(w => text.includes(w));
+  // The verdict beat is the ONE place a type statement is allowed: an
+  // interpretation opens by naming the pattern ("你是那种…的人"), then earns it
+  // with four beats of evidence. The pattern ban targets AI slop like
+  // "你是一个善于思考的人" — generic descriptors that assert nothing testable —
+  // so we exempt only a leading verdict sentence, and only in interpretation
+  // contexts. Any occurrence after the first sentence still fails.
+  const patternScanText =
+    context === 'analysis' ? text.replace(/^\s*你是那种[^。]*。/, '') : text;
   const bannedPatterns = BANNED_SENTENCE_PATTERNS
-    .filter(p => p.regex.test(text))
+    .filter(p => p.regex.test(patternScanText))
     .map(p => p.label);
   const allBanned = [...banned, ...bannedPatterns];
 
@@ -334,6 +374,7 @@ export function validateCraft(text: string, _context: CraftContext = 'analysis')
   // Landing
   const actionable = isActionableEnding(sentences);
   const abstractEnding = isAbstractSummaryEnding(sentences);
+  const conditionalEnding = isConditionalEnding(text);
 
   // Density
   const niCount = (text.match(/你/g) || []).length;
@@ -353,11 +394,12 @@ export function validateCraft(text: string, _context: CraftContext = 'analysis')
     pathologizingPhrases: pathoCount,
     landingIsActionable: actionable,
     landingIsAbstractSummary: abstractEnding,
+    landingIsConditional: conditionalEnding,
     niDensity: Math.round(niDensity * 10) / 10,
   };
 
-  const { score, issues } = calculateScore(rawDiag, _context);
-  const threshold = _context === 'comment' || _context === 'coaching' || _context === 'lite' ? 55 : PASS_THRESHOLD;
+  const { score, issues } = calculateScore(rawDiag, context);
+  const threshold = context === 'comment' || context === 'coaching' || context === 'lite' ? 55 : PASS_THRESHOLD;
 
   return {
     ...rawDiag,

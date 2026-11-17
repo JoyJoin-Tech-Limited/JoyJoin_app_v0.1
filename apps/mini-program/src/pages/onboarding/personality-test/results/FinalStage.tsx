@@ -12,14 +12,15 @@ import type { ArchetypeVisual } from '../visuals'
 import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymousOnboarding'
 import { haptics } from '../../../../lib/utils/haptics'
 import { cdnAsset } from '../../../../lib/utils/cdnAssets'
-import XiaoyueChatBubble from '../../../../components/mascot/XiaoyueChatBubble'
 import XiaoyueInlineError from '../../../../components/mascot/XiaoyueInlineError'
 import ArchetypeHead from '../../../../components/mascot/ArchetypeHead'
-import { PERSONALITY_TEST_XIAOYUE_EXPRESSION } from '../../../../lib/mascot/xiaoyueExpressions'
+import {
+  PERSONALITY_TEST_XIAOYUE_EXPRESSION,
+  XIAOYUE_ASSET_BY_EXPRESSION,
+} from '../../../../lib/mascot/xiaoyueExpressions'
 import AIGCLabel from '../../../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../../../hooks/useAIGCLabelsEnabled'
-import { ONBOARDING_MASCOT_SIZE } from '../../../../lib/onboarding/onboardingRoutes'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 import { normalizeMatchScore, type TypicalityLabel } from './resultHelpers'
 import SignalRetestPrompt from './SignalRetestPrompt'
@@ -425,6 +426,26 @@ export default function FinalStage({
     const blend = xiaoyueAnalysis?.blendLine?.trim() ?? ''
     return why && blend ? blend : ''
   }, [xiaoyueAnalysis])
+
+  // Split the four-layer reading into beats for the detail sheet. The server
+  // joins the four layers with newlines; a single-paragraph payload (older
+  // cache entries) is split after its first sentence so the lead line still
+  // carries display weight instead of degrading into a wall of body copy.
+  const readingBeats = useMemo(() => {
+    const raw = xiaoyueAnalysis?.analysis?.trim() ?? ''
+    if (!raw) return []
+    const byParagraph = raw
+      .split(/\n+/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (byParagraph.length > 1) return byParagraph
+    // The server separates the five beats with newlines; a single-paragraph
+    // reading (legacy cache, or a model that ignored the format rule) still
+    // needs rhythm, so fall back to sentence beats rather than one wall of text.
+    const bySentence =
+      raw.match(/[^。！？]+[。！？]?/g)?.map((part) => part.trim()).filter(Boolean) ?? []
+    return bySentence.length > 1 ? bySentence : [raw]
+  }, [xiaoyueAnalysis])
   const showXiaoyueUnavailableNotice = shouldShowXiaoyueUnavailableNotice({
     xiaoyueAnalysis,
     summary,
@@ -540,7 +561,7 @@ export default function FinalStage({
                       <AIGCLabel meta={xiaoyueAnalysis.meta?.aigc} />
                     </View>
                     <Text className='personality-results__xiaoyue-bubble-analysis'>
-                      {xiaoyueAnalysis.analysis}
+                      {readingBeats.slice(0, 2).join('') || xiaoyueAnalysis.analysis}
                     </Text>
                   </View>
                 </View>
@@ -841,63 +862,81 @@ export default function FinalStage({
                     the top breathing room lives on this inner wrapper — the
                     first mascot line never touches the sheet's rounded edge. */}
                 <View className='personality-results__detail-scroll-inner'>
-                  {/* Sheet header */}
-              <View className='personality-results__detail-header'>
-                <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
-                <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
-              </View>
-
-              {/* ── 悦仔的完整解读 — mascot reads aloud, sentence-staggered ── */}
-              {xiaoyueAnalysis?.analysis && (
-                <View className='personality-results__detail-section personality-results__detail-section--chat'>
-                  <View className='personality-results__detail-section-label-row'>
-                    <Text className='personality-results__detail-section-label'>悦仔的完整解读</Text>
-                    <AIGCLabel meta={xiaoyueAnalysis.meta?.aigc} />
+                  {/* ── Sheet head — an editorial page head on one left axis.
+                      The eyebrow names what the reader is looking at, the
+                      title is the answer, the subtitle is the one-line gloss;
+                      the hairline closes the head so the reading below starts
+                      on a clean edge. ── */}
+                  <View className='personality-results__detail-header'>
+                    <Text className='personality-results__detail-eyebrow'>原型揭晓</Text>
+                    <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
+                    <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
                   </View>
-                  <XiaoyueChatBubble
-                    content={xiaoyueAnalysis.analysis}
-                    pose='casual'
-                    expressionId={PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach}
-                    horizontal
-                    showGlow
-                    staggerDelay={70}
-                    entranceDelay={detailDeferEntrance ? DETAIL_SHEET_SLIDE_UP_MS : 0}
-                    instantEntrance={!detailDeferEntrance}
-                    avatarSize={ONBOARDING_MASCOT_SIZE}
-                    className='personality-results__detail-chat'
-                  />
-                  {aigcLabelsEnabled && (
-                    <AIContentReportButton
-                      className='personality-results__detail-report'
-                      options={{
-                        reason: '举报“人格测试结果解读”AI 生成内容',
-                      }}
-                    />
+                  <View className='personality-results__detail-rule' />
+
+                  {/* ── 悦仔的完整解读 — one reading page, signed by Xiaoyue.
+                      Five beats: the verdict (「你是那种…的人」), what others
+                      pick up first, why this person runs that way, what it
+                      costs them, and which relationship condition makes it
+                      work. Verdict first, reasoning after — the reader needs
+                      to recognise themselves before the explanation earns it.
+
+                      Layout history: the 200rpx avatar used to sit in the left
+                      column and cost 216rpx of measure — ~14 chars per line,
+                      which forced every beat to fold two or three extra times.
+                      It now signs the piece as an 88rpx masthead, so each line
+                      gets the full 670rpx (~23 chars) and the whole reading
+                      gets ~35% shorter without losing a word. ── */}
+                  {readingBeats.length > 0 && (
+                    <View
+                      className={`personality-results__detail-reading ${detailDeferEntrance ? 'personality-results__detail-reading--deferred' : ''}`}
+                    >
+                      <View className='personality-results__detail-reading-head'>
+                        <View className='personality-results__detail-reading-avatar'>
+                          <Image
+                            className='personality-results__detail-reading-avatar-img'
+                            mode='aspectFit'
+                            src={XIAOYUE_ASSET_BY_EXPRESSION[PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach]}
+                          />
+                        </View>
+                        <Text className='personality-results__detail-reading-byline'>悦仔 · 为你读</Text>
+                        <View className='personality-results__detail-reading-badge'>
+                          <AIGCLabel meta={xiaoyueAnalysis?.meta?.aigc} />
+                        </View>
+                      </View>
+
+                      <View className='personality-results__detail-reading-body'>
+                        <Text
+                          className={`personality-results__detail-reading-lead ${readingBeats[0].length > 36 ? 'personality-results__detail-reading-lead--compact' : ''}`}
+                        >
+                          {readingBeats[0]}
+                        </Text>
+                        {readingBeats.slice(1).map((beat, index) => (
+                          <View
+                            key={`reading-beat-${index}`}
+                            className='personality-results__detail-reading-beat'
+                            style={{ borderLeftColor: visual.accentBorder }}
+                          >
+                            <Text className='personality-results__detail-reading-beat-text'>{beat}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
                   )}
-                </View>
-              )}
 
-              {/* ── 悦仔的关键洞察 — quiet pull-quote, no glow, different pose ── */}
+              {/* ── 悦仔的关键洞察 — the quiet lift that closes the reading.
+                  Deliberately chrome-less: the reading above already owns the
+                  mascot and the paper, so a second bubble here read as a
+                  sticker stack and flattened the hierarchy. ── */}
               {pullQuote && (
-                <View className='personality-results__detail-section personality-results__detail-section--chat'>
-                  <View
-                    className='personality-results__detail-quote'
-                    style={{ borderLeftColor: visual.accent }}
-                  >
-                    <View className='personality-results__detail-quote-avatar'>
-                      <Image
-                        className='personality-results__detail-quote-avatar-img'
-                        mode='aspectFit'
-                        src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp')}
-                      />
-                    </View>
-                    <View className='personality-results__detail-quote-body'>
-                      <Text className='personality-results__detail-quote-text'>{pullQuote}</Text>
-                      {pullQuoteFooter && (
-                        <Text className='personality-results__detail-quote-footer'>{pullQuoteFooter}</Text>
-                      )}
-                    </View>
-                  </View>
+                <View
+                  className='personality-results__detail-insight'
+                  style={{ borderLeftColor: visual.accentBorder }}
+                >
+                  <Text className='personality-results__detail-insight-text'>{pullQuote}</Text>
+                  {pullQuoteFooter && (
+                    <Text className='personality-results__detail-insight-footer'>{pullQuoteFooter}</Text>
+                  )}
                 </View>
               )}
 
@@ -1049,13 +1088,27 @@ export default function FinalStage({
               <View className='personality-results__detail-fade personality-results__detail-fade--bottom' />
             </View>
 
-            {/* Close button */}
-            <View
-              className='personality-results__detail-close'
-              onClick={handleCloseDetail}
-              hoverClass='personality-results__detail-close--active'
-            >
-              <Text className='personality-results__detail-close-text'>收起</Text>
+            {/* Footer bar — report link left, dismiss right, one hairline.
+                Replaces the floating bordered report chip (which read as a
+                disabled button) and the orphaned grey 收起 300rpx below the
+                last section (which read as a dead zone). */}
+            <View className='personality-results__detail-footer'>
+              {aigcLabelsEnabled && readingBeats.length > 0 && (
+                <AIContentReportButton
+                  variant='text'
+                  className='personality-results__detail-footer-report'
+                  options={{
+                    reason: '举报“人格测试结果解读”AI 生成内容',
+                  }}
+                />
+              )}
+              <View
+                className='personality-results__detail-footer-close'
+                onClick={handleCloseDetail}
+                hoverClass='personality-results__detail-footer-close--active'
+              >
+                <Text className='personality-results__detail-footer-close-text'>收起</Text>
+              </View>
             </View>
           </View>
         </View>

@@ -272,7 +272,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       xiaoyueFallback: {
         headline: "你不是场面话选手，你是真的会看见人",
         shareLine: "我是夸夸仓鼠型，看着温和，其实很会把关系聊热。",
-        stateLabel: "熟了更有火花型",
+        stateLabel: "快热带动型",
         analysis: "你是夸夸仓鼠型：发现别人的好，然后真心说出来，不是客套。被你夸到的人，会记很久。这种看见人的能力，比多数社交技巧都稀缺。",
         socialRole: "你更像关系升温器，能把陌生感聊成舒服感。",
         bestScene: "更适合2到6人的局，能给彼此一点真实交流空间。",
@@ -386,7 +386,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       xiaoyueFallback: {
         headline: "你不是掉线型，你是先看气场再发力",
         shareLine: "我是机灵海豚型，习惯先看气场，再决定什么时候出手。",
-        stateLabel: "低耗观察型",
+        stateLabel: "稳场推进型",
         analysis: "你是机灵海豚型：情绪稳，读人准，在任何人群里都能找到自己的节奏。你那种淡定不是疏离，是心里有底。局里最让人放心的，往往是你这种人。",
         socialRole: "你更像安静观察者，关键时刻往往说到点上。",
         bestScene: "更适合3到6人的轻松聚会，或者先有共同话题的场景。",

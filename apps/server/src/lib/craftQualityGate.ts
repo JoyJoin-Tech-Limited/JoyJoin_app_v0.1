@@ -91,6 +91,8 @@ function getDefaultThreshold(context: CraftContext): number {
 function getCraftPrinciples(context: CraftContext): string {
   switch (context) {
     case 'analysis':
+      // Interpretation surface: Axiom 7 lands on a relationship condition.
+      return getCraftInstructions('interpretation');
     case 'narrative':
       return getCraftInstructions();
     case 'comment':

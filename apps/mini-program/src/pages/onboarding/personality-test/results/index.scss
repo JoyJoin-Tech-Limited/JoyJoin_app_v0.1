@@ -8,10 +8,6 @@
 // page's WXSS (verify-subpackage-styles.mjs; the components carry no
 // TSX-side SCSS import).
 @use '../../../../components/onboarding/GuestEventPreviewCard.scss' as *;
-// Subpackage WXSS guard: XiaoyueChatBubble renders in FinalStage. The
-// component no longer side-effect-imports its SCSS — a module reached by two
-// page entries is hoisted into the main-package common.wxss.
-@use '../../../../components/mascot/XiaoyueChatBubble.scss' as *;
 
 // ─── Local semantic colors (extracted from hard-coded values) ────
 $color-holo-gold: #bf953f;
@@ -1685,75 +1681,6 @@ $color-skill-cool: #7c3aed;
     will-change: transform;
   }
 
-  // ── Detail sheet: chat section spacing ──
-  &__detail-section--chat {
-    margin-bottom: 24rpx;
-  }
-
-  &__detail-chat {
-    width: 100%;
-  }
-
-  // ── Pull-quote bubble (悦仔 关键洞察) ──
-  &__detail-quote {
-    display: flex;
-    align-items: flex-start;
-    gap: 16rpx;
-    padding: 18rpx 20rpx 18rpx 22rpx;
-    border-radius: 22rpx;
-    background: rgba($color-primary, 0.03);
-    border: 1rpx solid rgba($color-primary, 0.08);
-    border-left-width: 6rpx;
-    border-left-style: solid;
-    opacity: 0;
-    transform: translateY(8rpx);
-    animation: detail-quote-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
-  }
-
-  @keyframes detail-quote-in {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  &__detail-quote-avatar {
-    flex-shrink: 0;
-    width: 56rpx;
-    height: 56rpx;
-    border-radius: 50%;
-    background: $color-surface;
-    border: 1rpx solid rgba($color-primary, 0.1);
-    overflow: hidden;
-  }
-
-  &__detail-quote-avatar-img {
-    width: 100%;
-    height: 100%;
-  }
-
-  &__detail-quote-body {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__detail-quote-text {
-    display: block;
-    font-size: $font-size-sm;
-    line-height: 1.78;
-    color: $color-text-primary;
-    word-break: keep-all;
-  }
-
-  &__detail-quote-footer {
-    display: block;
-    margin-top: 8rpx;
-    font-size: $font-size-xs;
-    line-height: 1.6;
-    color: $color-text-tertiary;
-    font-style: italic;
-  }
-
   // ── Detail sheet: section head with mini mascot avatar ──
   &__detail-section-head {
     display: flex;
@@ -2091,13 +2018,16 @@ $color-skill-cool: #7c3aed;
   }
 
   &__detail-sheet {
-    background: rgba($color-surface, 0.98);
-    border-radius: 40rpx 40rpx 0 0;
-    padding: $spacing-md $container-padding $spacing-xl;
-    @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
+    // Warm paper, not another white layer: the dimmed page, a 98%-white sheet
+    // and a white bubble stacked three whites and flattened the sheet into a
+    // sticker. The tint gives the reading page its own material.
+    background: $color-bg-tint-cream;
+    border-radius: 32rpx 32rpx 0 0;
+    padding: $spacing-md $container-padding 0;
     animation: personality-results-detail-slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-    max-height: 72%;
-    margin-bottom: 40rpx;
+    // 86% leaves room above for the dimmed prototype card to stay legible as
+    // context, while letting the reading breathe instead of scrolling at once.
+    max-height: 86%;
     display: flex;
     flex-direction: column;
 
@@ -2122,11 +2052,11 @@ $color-skill-cool: #7c3aed;
 
   &__detail-scroll-inner {
     // WeChat drops padding on the native ScrollView element in webview
-    // rendering mode — inner spacing lives here instead. 48rpx top keeps the
-    // first mascot line clear of the sheet's rounded top edge; 32rpx bottom
-    // keeps the last line clear of the bottom fade.
-    padding-top: 48rpx;
-    padding-bottom: 32rpx;
+    // rendering mode — inner spacing lives here instead. The sheet head owns
+    // the top air now (the handle + header already clear the rounded edge),
+    // so this only needs to keep the last section off the bottom fade.
+    padding-top: $spacing-sm;
+    padding-bottom: $spacing-md;
   }
 
   &__detail-fade {
@@ -2138,16 +2068,16 @@ $color-skill-cool: #7c3aed;
 
     &--top {
       top: 0;
-      height: 48rpx;
-      // Matches the sheet background (rgba($color-surface, 0.98)); solid
-      // token reads identical over the dimmed overlay.
-      background: linear-gradient(to bottom, $color-surface 0%, rgba($color-surface, 0) 100%);
+      height: 32rpx;
+      // Must match the sheet surface exactly — a white fade over the cream
+      // paper would print a visible band at the top of the reading.
+      background: linear-gradient(to bottom, $color-bg-tint-cream 0%, rgba($color-bg-tint-cream, 0) 100%);
     }
 
     &--bottom {
       bottom: 0;
       height: 24rpx;
-      background: linear-gradient(to top, $color-surface 0%, rgba($color-surface, 0) 100%);
+      background: linear-gradient(to top, $color-bg-tint-cream 0%, rgba($color-bg-tint-cream, 0) 100%);
     }
   }
 
@@ -2182,8 +2112,20 @@ $color-skill-cool: #7c3aed;
   }
 
   &__detail-header {
-    text-align: center;
+    // Left axis, like a printed page. Centring the head above a left-aligned
+    // body gave the sheet four competing left edges (centred subtitle, label,
+    // bubble, report chip) — the eye never found a starting point.
+    text-align: left;
     margin-bottom: $spacing-md;
+  }
+
+  &__detail-eyebrow {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    letter-spacing: 4rpx;
+    color: rgba($color-primary-dark, 0.62);
+    margin-bottom: $spacing-xs;
   }
 
   &__detail-title {
@@ -2191,15 +2133,154 @@ $color-skill-cool: #7c3aed;
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    margin-bottom: 6rpx;
+    margin-bottom: $spacing-xs;
     font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__detail-subtitle {
     display: block;
     font-size: $font-size-sm;
+    line-height: 1.6;
     color: $color-text-secondary;
     word-break: keep-all;
+  }
+
+  &__detail-rule {
+    height: 1rpx;
+    background: rgba($color-primary, 0.12);
+    margin-bottom: $spacing-lg;
+  }
+
+  // ── The reading page (悦仔的完整解读) ──
+  &__detail-reading {
+    margin-bottom: $spacing-lg;
+
+    // First open only: hold the whole reading invisible until the sheet has
+    // finished sliding up, then rise once as a block (260ms). A per-sentence
+    // cascade (70ms each, five beats) used to read as "still generating".
+    &--deferred {
+      opacity: 0;
+      animation: personality-results-reading-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.35s forwards;
+    }
+  }
+
+  @keyframes personality-results-reading-in {
+    from {
+      opacity: 0;
+      transform: translateY(12rpx);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__detail-reading-head {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  &__detail-reading-avatar {
+    flex: 0 0 auto;
+    width: 88rpx;
+    height: 88rpx;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba($color-primary, 0.06);
+  }
+
+  &__detail-reading-avatar-img {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__detail-reading-byline {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    letter-spacing: 2rpx;
+    color: rgba($color-primary-dark, 0.78);
+  }
+
+  &__detail-reading-badge {
+    margin-left: auto;
+    flex: 0 0 auto;
+  }
+
+  &__detail-reading-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__detail-reading-lead {
+    display: block;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
+    font-size: 36rpx;
+    font-weight: 600;
+    line-height: 1.5;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+
+    // A 40-character lead at 36rpx would run five lines and eat the first
+    // screen; drop one step so the display line still reads as one thought.
+    &--compact {
+      font-size: $font-size-md;
+    }
+  }
+
+  &__detail-reading-beat {
+    // Rail colour is per-archetype (inline style); 2rpx + 24rpx inset keeps
+    // the text on the same left axis as the lead while marking the beat.
+    border-left: 2rpx solid transparent;
+    padding-left: $spacing-md;
+    margin-bottom: $spacing-md;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__detail-reading-beat-text {
+    display: block;
+    font-size: $font-size-base;
+    line-height: 1.78;
+    color: $color-text-secondary-on-light;
+    word-break: keep-all;
+  }
+
+  // ── The quiet lift that closes the reading (悦仔的关键洞察) ──
+  &__detail-insight {
+    border-left: 4rpx solid rgba($color-primary, 0.24);
+    padding-left: $spacing-md;
+    margin-bottom: $spacing-lg;
+    opacity: 0;
+    transform: translateY(8rpx);
+    animation: detail-insight-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+  }
+
+  @keyframes detail-insight-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__detail-insight-text {
+    display: block;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
+    font-size: $font-size-md;
+    line-height: 1.6;
+    color: $color-text-primary;
+  }
+
+  &__detail-insight-footer {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-tertiary;
   }
 
   &__detail-section {
@@ -2212,17 +2293,6 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.78);
     letter-spacing: 2rpx;
-  }
-
-  &__detail-section-label-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__detail-report {
-    margin-top: $spacing-sm;
   }
 
   &__detail-partner-scroll {
@@ -2346,18 +2416,42 @@ $color-skill-cool: #7c3aed;
     font-family: $font-en-brand, system-ui, sans-serif;
   }
 
-    &__detail-close {
-    text-align: center;
-    padding: $spacing-sm 0;
+  // ── Detail sheet: footer bar (report + dismiss) ──
+  &__detail-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    padding-top: $spacing-sm;
+    border-top: 1rpx solid rgba($color-text-primary, 0.06);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-sm);
+  }
+
+  &__detail-footer-report {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  &__detail-footer-close {
+    flex: 0 0 auto;
+    margin-left: auto;
     min-height: $cta-min-tap;
+    padding: 0 $spacing-lg;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
+
+    &--active {
+      background: rgba($color-primary, 0.14);
+    }
   }
 
-  &__detail-close-text {
+  &__detail-footer-close-text {
     font-size: $font-size-sm;
-    color: $color-text-muted;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
   }
 
   // ── Collect-them-all teaser ──
