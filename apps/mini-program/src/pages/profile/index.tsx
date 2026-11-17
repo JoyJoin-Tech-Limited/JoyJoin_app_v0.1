@@ -287,7 +287,7 @@ export default function ProfilePage() {
   const dailyGreeting = useMemo(() => getDailyGreeting(archetype), [archetype])
   // A4-3 (full-marks Wave A): on an event day the greeting becomes concrete
   // (time + district) and replaces the daily rotation — one greeting concept
-  // shared by the identity card and the large-title sub-line.
+  // shared by the identity card and the top meta line.
   const eventDayGreeting = useMemo(
     () => getEventDayGreeting(registrationsQuery.data),
     [registrationsQuery.data],
@@ -297,10 +297,14 @@ export default function ProfilePage() {
   const lifeStage = authUser?.lifeStage
   const bio = typeof authUser?.bio === 'string' ? authUser.bio.trim() : null
   const genderLabel = getGenderLabel(authUser?.gender)
-  // P2-5: large-title sub-line — date + weekday; the daily greeting joins
-  // ONLY when a real user bio occupies the identity card's bio slot (the
-  // greeting never renders twice — UIUX memo §3).
-  const largeTitleSub = useMemo(() => {
+  // 2026-11-17 quiet-identity pass: life stage + gender are context, not
+  // badges — they share one 20rpx line instead of two more pills. The hero
+  // keeps only the archetype + tribe pair (the brand's own two-tone pairing).
+  const identityMeta = [lifeStage, genderLabel].filter(Boolean).join(' · ')
+  // 2026-11-17: quiet meta line under the fixed nav title — date + weekday;
+  // the daily greeting joins ONLY when a real user bio occupies the identity
+  // card's bio slot (the greeting never renders twice — UIUX memo §3).
+  const metaLine = useMemo(() => {
     const now = new Date()
     const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
     const dateLine = `${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`
@@ -860,13 +864,13 @@ export default function ProfilePage() {
         showScrollbar={false}
         onScroll={handleScroll}
       >
-        {/* P2-5 iOS large title: scrolls away under the condensing nav; the
-            sub-line is date + weekday, plus the daily greeting ONLY when a
-            real bio occupies the identity card (greeting never renders twice
-            — UIUX memo §3 dedupe rule). */}
-        <View className='profile-page__large-title' data-testid='profile-large-title'>
-          <Text className='profile-page__large-title-text'>我的</Text>
-          <Text className='profile-page__large-title-sub'>{largeTitleSub}</Text>
+        {/* 2026-11-17 title parity: the page name now lives in the fixed nav
+            (same place as the native bar on Discover/Events), so the content
+            opens with one quiet meta line — date + weekday, plus the daily
+            greeting ONLY when a real bio occupies the identity card (greeting
+            never renders twice — UIUX memo §3 dedupe rule). */}
+        <View className='profile-page__meta' data-testid='profile-date-line'>
+          <Text className='profile-page__meta-text'>{metaLine}</Text>
         </View>
         {profileV17Enabled ? (
           <View
@@ -874,9 +878,18 @@ export default function ProfilePage() {
             style={identityStageFoilStyle}
             data-testid='profile-v4'
           >
-            {/* aspectFill: the stage is near-square since 2026-08-01 (728rpx
-                tall) — crop the wide street art instead of stretching it. */}
-            <IdentityStageScene absoluteAvatar={false} layerImageMode='aspectFill'>
+            {/* 2026-11-17: the street art is an absolute backdrop and the
+                column is a normal-flow sibling. Inside the scene, `__content`
+                lives in an absolutely-positioned, camera-drifting box — it
+                cannot size the card, which is what clipped the equipment dock
+                at a fixed stage height. */}
+            <View className='profile-page__identity-stage-art' aria-hidden='true'>
+              {/* aspectFill: crop the wide street art instead of stretching it. */}
+              <IdentityStageScene absoluteAvatar={false} layerImageMode='aspectFill'>
+                {null}
+              </IdentityStageScene>
+            </View>
+            <View className='profile-page__identity-stage-body'>
               {/* Left rail owns the vertical layout of both glass cards, so a
                   tall identity card can never paint over the growth card. */}
               <View
@@ -918,13 +931,10 @@ export default function ProfilePage() {
                           {archetypeFamilyName}
                         </Text>
                       )}
-                      {lifeStage && (
-                        <Text className='profile-page__identity-tag profile-page__identity-tag--stage'>{lifeStage}</Text>
-                      )}
-                      {genderLabel && (
-                        <Text className='profile-page__identity-tag profile-page__identity-tag--gender'>{genderLabel}</Text>
-                      )}
                     </View>
+                    {identityMeta && (
+                      <Text className='profile-page__identity-meta'>{identityMeta}</Text>
+                    )}
                     {displayBio && (
                       <Text className={`profile-page__identity-bio${!bio && dailyGreeting ? ' profile-page__identity-bio--daily' : ''}`}>
                         {displayBio}
@@ -990,6 +1000,9 @@ export default function ProfilePage() {
               <View
                 className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}${avatarBouncing ? ' profile-page__partner-visual--tapped' : ''}`}
               >
+                {/* 2026-11-17: symmetric warm spotlight behind the centred
+                    character — a stage vignette, not a corner parking spot. */}
+                <View className='profile-page__partner-glow' aria-hidden='true' />
                 <View
                   className={`profile-page__partner-platform${deviceTier.isDegradation || !pageVisible ? ' profile-page__partner-platform--no-pulse' : ''}`}
                   aria-hidden='true'
@@ -1190,7 +1203,7 @@ export default function ProfilePage() {
                   </View>
                 </View>
               )}
-            </IdentityStageScene>
+            </View>
 
             {/* P1-2 foil sweep (UIUX memo §11): one -45° band in the
                 archetype hue crosses the stage once per page instance

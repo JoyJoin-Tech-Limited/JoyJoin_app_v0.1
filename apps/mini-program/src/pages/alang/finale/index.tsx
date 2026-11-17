@@ -1,8 +1,8 @@
 import Taro from '@tarojs/taro'
 import { ScrollView, Text, View } from '@tarojs/components'
-import { FlashButton, FlashPageState } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashGatePending, FlashPageState } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
-import { isStreetBlindBoxLive } from '../../../lib/alang/alangAccess'
+import { resolveStreetBlindBoxMode } from '../../../lib/alang/alangAccess'
 import { useFlashEncounter } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import '../flash.scss'
@@ -15,13 +15,15 @@ const DIMENSIONS = [
 ] as const
 
 export default function FlashFinalePage() {
-  const { user } = useAuth()
-  const enabled = isStreetBlindBoxLive(user)
+  const { user, isLoading: authLoading } = useAuth()
+  const blindBoxMode = resolveStreetBlindBoxMode(user, { authPending: authLoading })
+  const enabled = blindBoxMode === 'live'
   const encounterId = Taro.getCurrentInstance().router?.params?.encounterId ?? ''
   const { data, isLoading, isError } = useFlashEncounter(encounterId, enabled && !!encounterId)
   const story = data?.storyEpisode
   const ending = story?.ending
 
+  if (blindBoxMode === 'unresolved') return <FlashGatePending />
   if (!enabled) return <FlashPageState title='这条时间线暂时收好了' description='街头盲盒当前没有开放。' />
   if (isLoading) return <FlashPageState title='正在收拢十五次选择…' description='你的结局不会被重新生成。' />
   if (isError || !story || story.code !== 'season-finale' || !ending) {

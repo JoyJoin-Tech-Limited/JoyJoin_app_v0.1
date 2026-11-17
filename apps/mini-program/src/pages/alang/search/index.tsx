@@ -3,9 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Map, ScrollView, Text, View } from '@tarojs/components'
 import type { MapProps } from '@tarojs/components'
 import { getWalkingRoute, type WalkingRouteSuccessResponse } from '@shared/api'
-import { FlashButton, FlashFeatureClosed, FlashLocationDisclosure, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashAvailability } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashGatePending, FlashLocationDisclosure, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashAvailability } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
-import { isStreetBlindBoxLive } from '../../../lib/alang/alangAccess'
+import { resolveStreetBlindBoxMode } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { decodeFlashRouteParam, redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
@@ -45,8 +45,9 @@ const MAP_STATUS: Record<LocateState, { label: string; assistiveLabel: string }>
 
 type LocationChangeHandler = Parameters<typeof Taro.onLocationChange>[0]
 export default function FlashMapPage() {
-  const { user } = useAuth()
-  const enabled = isStreetBlindBoxLive(user)
+  const { user, isLoading: authLoading } = useAuth()
+  const blindBoxMode = resolveStreetBlindBoxMode(user, { authPending: authLoading })
+  const enabled = blindBoxMode === 'live'
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const appearanceId = decodeFlashRouteParam(params.appearanceId)
   const npcName = decodeFlashRouteParam(params.npcName, '这位朋友')
@@ -257,6 +258,8 @@ export default function FlashMapPage() {
   const encounterMomentCopy = FLASH_ENCOUNTER_MOMENT_COPY[
     Math.min(Math.max(encounterOrdinal, 1), FLASH_ENCOUNTER_MOMENT_COPY.length) - 1
   ]
+
+  if (blindBoxMode === 'unresolved') return <FlashGatePending />
 
   if (!enabled) return <FlashFeatureClosed />
 

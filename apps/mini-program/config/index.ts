@@ -8,8 +8,15 @@ import prodConfig from './prod'
 
 type MergeConfig = (...configs: UserConfigExport<'vite'>[]) => UserConfigExport<'vite'>
 
+// Snapshot the real process environment BEFORE any .env file is loaded.
+// CI/CLI-provided build targets must win; everything else may be overridden by
+// .env.local, which is authoritative for mini-program builds (see apiBaseUrl).
+const EXPLICIT_BUILD_ENV_KEYS = new Set(Object.keys(process.env))
+
 loadRepoRootEnvFile()
-loadMiniProgramEnvFile()
+loadMiniProgramEnvFile(undefined, process.env, {
+  preserveKeys: EXPLICIT_BUILD_ENV_KEYS,
+})
 
 const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()
 if (MINI_PROGRAM_API_BASE_URL.includes('joyjoinapp.com')) {

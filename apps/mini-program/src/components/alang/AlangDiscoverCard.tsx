@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { Image, Text, View } from '@tarojs/components'
 import { useEffect, useRef, useState } from 'react'
-import { isStreetBlindBoxLive, shouldShowStreetBlindBoxEntry } from '../../lib/alang/alangAccess'
+import { resolveStreetBlindBoxMode, shouldShowStreetBlindBoxEntry, type StreetBlindBoxMode } from '../../lib/alang/alangAccess'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { alangEvents } from '../../lib/alang/alangAnalytics'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
@@ -34,19 +34,20 @@ const FLASH_TEASER_ICON_CDN = cdnAsset('/assets/alang/flash-teaser-icon-v1.webp'
  * code changes.
  */
 export default function AlangDiscoverCard() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const { shouldReduceMotion } = useMiniRevealMotion()
   const { isDegradation } = useDeviceTier()
   const [isInView, setIsInView] = useState(true)
   const [teaserIconFailed, setTeaserIconFailed] = useState(false)
   const teaserImpressionFiredRef = useRef(false)
 
-  const isLive = isStreetBlindBoxLive(user)
+  const mode = resolveStreetBlindBoxMode(user, { authPending: authLoading })
+  const isTeaser = mode === 'teaser'
 
   // Teaser idle motion (halo breath + sheen sweep) runs only while the card is
   // in the viewport — the Discover hero banner owns the top-of-screen peak.
   useEffect(() => {
-    if (isLive || shouldReduceMotion || isDegradation) {
+    if (!isTeaser || shouldReduceMotion || isDegradation) {
       setIsInView(true)
       return
     }
@@ -81,29 +82,33 @@ export default function AlangDiscoverCard() {
         // Cleanup is best-effort; never throw in unmount.
       }
     }
-  }, [isLive, shouldReduceMotion, isDegradation])
+  }, [isTeaser, shouldReduceMotion, isDegradation])
 
   // Teaser demand signal: impression once per mount; mode resolution logs on
-  // every change (auth revalidation can flip the flag mid-session).
-  const lastLoggedModeRef = useRef<'live' | 'teaser' | null>(null)
+  // every change (auth revalidation can flip the flag mid-session). Unresolved
+  // modes are logged but never counted as a teaser impression.
+  const lastLoggedModeRef = useRef<StreetBlindBoxMode | null>(null)
   useEffect(() => {
-    const mode = isLive ? 'live' : 'teaser'
     if (lastLoggedModeRef.current !== mode) {
       lastLoggedModeRef.current = mode
       logInfo('[FlashTeaser] mode resolved', { mode })
     }
-    if (isLive || teaserImpressionFiredRef.current) return
+    if (!isTeaser || teaserImpressionFiredRef.current) return
     teaserImpressionFiredRef.current = true
     discoverAnalytics.track('flash_teaser_impression', undefined, { surface: 'card' })
-  }, [isLive])
+  }, [mode, isTeaser])
 
   if (!shouldShowStreetBlindBoxEntry()) return null
 
-  const animateTeaser = !isLive && isInView && !shouldReduceMotion && !isDegradation
+  // Never paint the teaser for an unresolved gate: that is what made a live
+  // feature look "closed" during auth hydration / a partial cached payload.
+  if (mode === 'unresolved') return null
+
+  const animateTeaser = isTeaser && isInView && !shouldReduceMotion && !isDegradation
 
   const handleTap = async () => {
     haptics('light')
-    if (!isLive) {
+    if (isTeaser) {
       discoverAnalytics.track('flash_teaser_tap', undefined, { surface: 'card' })
       try {
         await Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangTeaser })
@@ -131,7 +136,7 @@ export default function AlangDiscoverCard() {
     }
   }
 
-  if (!isLive) {
+  if (isTeaser) {
     return (
       <View
         id={ALANG_DISCOVER_CARD_ID}

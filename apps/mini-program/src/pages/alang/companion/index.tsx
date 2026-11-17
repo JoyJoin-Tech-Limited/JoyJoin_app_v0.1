@@ -1,9 +1,9 @@
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
-import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashDueDate } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashGatePending, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashDueDate } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
-import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { resolveStreetBlindBoxMode } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { resolveFlashTaskCategory } from '../../../lib/alang/flashNpcAssets'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
@@ -16,8 +16,9 @@ import '../flash.scss'
 type ArrivalState = 'idle' | 'locating' | 'outside' | 'denied' | 'error'
 
 export default function FlashTaskPage() {
-  const { user } = useAuth()
-  const enabled = shouldShowAlangEntry(user)
+  const { user, isLoading: authLoading } = useAuth()
+  const blindBoxMode = resolveStreetBlindBoxMode(user, { authPending: authLoading })
+  const enabled = blindBoxMode === 'live'
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const assignmentId = params.assignmentId ?? ''
   const { data, isLoading, isError, error, refetch } = useFlashAssignment(assignmentId, enabled && !!assignmentId)
@@ -137,6 +138,8 @@ export default function FlashTaskPage() {
       Taro.showToast({ title: '复测没有启动，请确认后台开关仍开启', icon: 'none' })
     }
   }
+
+  if (blindBoxMode === 'unresolved') return <FlashGatePending />
 
   if (!enabled) return <FlashFeatureClosed />
 

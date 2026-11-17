@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 
-// P0-8 / P2-5 shared scroll state machine for the profile page.
-// One ScrollView onScroll feeds one hook; P0-8 consumes `navCondensed`,
-// P2-5 (iOS large title) will consume the same state machine for the
-// title-fold. Hysteresis band prevents flicker at the boundary:
+// P0-8 shared scroll state machine for the profile page.
+// One ScrollView onScroll feeds one hook; `navCondensed` firms up the chrome
+// (the title is permanent since 2026-11-17). Hysteresis band prevents flicker
+// at the boundary:
 // enter condensation at ≥96rpx of scroll, exit only below 64rpx.
 // The handler setState's ONLY on band crossings, so per-frame scroll events
 // cost zero re-renders and need no time-based throttle.

@@ -42,7 +42,7 @@ import { AdminUserStarRating } from "@/components/admin/AdminUserStarRating";
 import { AdminUserDetailSheet } from "./AdminUserDetailSheet";
 import { apiRequest, queryClient, resolveApiUrl } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { getCanonicalDisplayName } from "@/lib/userFieldMappings";
+import { getCanonicalDisplayName, getGenderDisplay } from "@/lib/userFieldMappings";
 import { fmtDate } from "@/lib/dateUtils";
 import { useUrlFilters } from "@/lib/useUrlFilters";
 import { useScrollRestoration } from "@/lib/useScrollRestoration";
@@ -612,7 +612,7 @@ export default function AdminUsersPage() {
                 {user.gender && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">性别</span>
-                    <span className="font-medium">{user.gender}</span>
+                    <span className="font-medium">{getGenderDisplay(user.gender)}</span>
                   </div>
                 )}
                 {user.archetype && (

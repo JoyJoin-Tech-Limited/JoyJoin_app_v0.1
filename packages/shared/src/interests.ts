@@ -16,6 +16,8 @@ export const TAXONOMY_VERSION = "2.0.0";
 // ============ Type Definitions ============
 export type RiasecType = 'R' | 'I' | 'A' | 'S' | 'E' | 'C';
 export type MacroCategory = 'food' | 'play' | 'sports' | 'culture' | 'life' | 'growth';
+/** Interest heat tier: tap count 1–3 in the onboarding carousel. */
+export type InterestLevel = 1 | 2 | 3;
 
 export interface InterestDefinition {
   id: string;
@@ -356,6 +358,26 @@ export const MACRO_CATEGORY_LABELS: Record<MacroCategory, string> = {
   culture: '文艺现场',
   life: '生活美学',
   growth: '思想成长',
+};
+
+/** Canonical display order — matches the onboarding carousel's category order. */
+export const MACRO_CATEGORY_ORDER: MacroCategory[] = ['food', 'play', 'sports', 'culture', 'life', 'growth'];
+
+/**
+ * Heat tier copy. One home for the vocabulary used by onboarding, admin, and
+ * match explanations: 感兴趣 (tap 1) → 很热衷 (tap 2) → 必聊项 (tap 3).
+ */
+export const INTEREST_LEVEL_LABELS: Record<InterestLevel, string> = {
+  1: '感兴趣',
+  2: '很热衷',
+  3: '必聊项',
+};
+
+/** Heat weight per tier. Feeds totalHeat / categoryHeat and heat-weighted matching. */
+export const INTEREST_HEAT_BY_LEVEL: Record<InterestLevel, 3 | 10 | 25> = {
+  1: 3,
+  2: 10,
+  3: 25,
 };
 
 export const RIASEC_LABELS: Record<RiasecType, string> = {

@@ -8,7 +8,7 @@ export default defineConfig({
     include: [
       'src/**/*.{test,spec}.ts',
       'src/**/*.{test,spec}.tsx',
-      'config/miniProgramChunks.test.ts',
+      'config/**/*.{test,spec}.ts',
       'scripts/**/*.{test,spec}.mjs',
     ],
     exclude: [

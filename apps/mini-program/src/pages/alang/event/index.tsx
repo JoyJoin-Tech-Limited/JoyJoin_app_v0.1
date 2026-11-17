@@ -2,7 +2,7 @@ import Taro, { useDidHide, useDidShow, useUnload } from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
-import { isStreetBlindBoxLive, shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
+import { resolveStreetBlindBoxMode, shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { hasAcknowledgedFlashIntro, markFlashIntroAcknowledged } from '../../../lib/alang/flashExperienceStorage'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
@@ -16,6 +16,7 @@ import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-wor
 import flashAmbientBackground from '../assets/ui/flash-city-ambient-bg.png'
 import flashEmptyOnline from '../assets/ui/flash-empty-online.png'
 import {
+  FlashGatePending,
   FlashNpcPortrait,
   FlashPageState,
   formatFlashAvailability,
@@ -86,8 +87,9 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
 }
 
 export default function FlashHomePage() {
-  const { user } = useAuth()
-  const enabled = isStreetBlindBoxLive(user)
+  const { user, isLoading: authLoading } = useAuth()
+  const blindBoxMode = resolveStreetBlindBoxMode(user, { authPending: authLoading })
+  const enabled = blindBoxMode === 'live'
   const canReplayStories = shouldShowAlangDebugTools(user)
   const [gate, setGate] = useState<GateState>('checking')
   const [pageVisible, setPageVisible] = useState(true)
@@ -170,6 +172,8 @@ export default function FlashHomePage() {
     ].filter(Boolean).join('&')
     void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangSearch}?${params}` })
   }
+
+  if (blindBoxMode === 'unresolved') return <FlashGatePending />
 
   if (!enabled) {
     return (

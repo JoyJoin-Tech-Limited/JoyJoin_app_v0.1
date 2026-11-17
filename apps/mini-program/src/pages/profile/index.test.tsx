@@ -751,13 +751,51 @@ describe('Profile approved V4 layout', () => {
     expect(state.switchTab).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.events })
   })
 
-  it('P2-5: large title shows 我的 + date sub-line (greeting joins only when a bio exists)', () => {
+  it('2026-11-17 title parity: 我的 lives in the fixed nav, content opens with the date line', () => {
     const { getByTestId } = render(<ProfilePage />)
-    expect(getByTestId('profile-large-title')).toBeTruthy()
-    // Mock user has no bio → sub-line is date + weekday only (greeting
+    // Page name is permanent chrome, like the native bar on Discover/Events.
+    const nav = getByTestId('profile-top-navigation')
+    expect(nav.querySelector('.profile-page__nav-title')?.textContent).toBe('我的')
+    // No duplicated in-scroll hero title.
+    expect(document.querySelector('.profile-page__large-title')).toBeNull()
+    // Mock user has no bio → meta line is date + weekday only (greeting
     // stays in the identity card; never rendered twice — memo §3).
-    const sub = document.querySelector('.profile-page__large-title-sub')?.textContent ?? ''
-    expect(sub).toMatch(/^\d+月\d+日 周[一二三四五六日]$/)
+    expect(getByTestId('profile-date-line')).toBeTruthy()
+    const meta = document.querySelector('.profile-page__meta-text')?.textContent ?? ''
+    expect(meta).toMatch(/^\d+月\d+日 周[一二三四五六日]$/)
+  })
+
+  it('2026-11-17: stage height is content-driven — the column sits in a flow body above the art backdrop', () => {
+    const { getByTestId } = render(<ProfilePage />)
+    const stage = getByTestId('profile-v4')
+    const body = stage.querySelector('.profile-page__identity-stage-body')
+    expect(body).toBeTruthy()
+    // The equipment dock must live in the flow body; it was clipped when it
+    // sat inside the absolutely-positioned, camera-drifting scene.
+    expect(body?.contains(getByTestId('profile-partner-equipment-entry'))).toBe(true)
+    expect(stage.querySelector('.profile-page__identity-stage-art .identity-stage')).toBeTruthy()
+    // The scene's content slot stays empty so it cannot compete for layout.
+    expect(stage.querySelector('.identity-stage__content')?.children.length).toBe(0)
+  })
+
+  it('2026-11-17 quiet-identity pass: two brand pills + one stage · gender meta line', () => {
+    state.user = {
+      ...makeUser(true),
+      lifeStage: '探索生活的新阶段',
+      gender: 'female',
+    }
+    const { container, getByText, rerender } = render(<ProfilePage />)
+
+    // Only the archetype + tribe pills remain; stage/gender are no longer chips.
+    expect(container.querySelectorAll('.profile-page__identity-tag').length).toBe(2)
+    expect(container.querySelector('.profile-page__identity-tag--stage')).toBeNull()
+    expect(container.querySelector('.profile-page__identity-tag--gender')).toBeNull()
+    expect(getByText('探索生活的新阶段 · 女生')).toBeTruthy()
+
+    // No meta row at all when neither field exists — never an empty gap.
+    state.user = makeUser(true)
+    rerender(<ProfilePage />)
+    expect(container.querySelector('.profile-page__identity-meta')).toBeNull()
   })
 
   it('P1-1: tapping the partner avatar fires one ref-locked bounce haptic', () => {

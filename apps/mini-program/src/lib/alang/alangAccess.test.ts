@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   isStreetBlindBoxLive,
+  resolveStreetBlindBoxMode,
   shouldShowAlangDebugTools,
   shouldShowAlangEntry,
   shouldShowStreetBlindBoxEntry,
@@ -92,5 +93,32 @@ describe('Alang access gates', () => {
       appMode: 'test',
       features: { alangEnabled: true },
     })).toBe(false)
+  })
+})
+
+describe('resolveStreetBlindBoxMode', () => {
+  it('resolves live / teaser from an explicit flag', () => {
+    expect(resolveStreetBlindBoxMode({ features: { alangEnabled: true } })).toBe('live')
+    expect(resolveStreetBlindBoxMode({ features: { alangEnabled: false } })).toBe('teaser')
+  })
+
+  it('is unresolved while auth has not settled', () => {
+    expect(resolveStreetBlindBoxMode(undefined, { authPending: true })).toBe('unresolved')
+    expect(
+      resolveStreetBlindBoxMode({ features: { alangEnabled: false } }, { authPending: true }),
+    ).toBe('unresolved')
+    expect(
+      resolveStreetBlindBoxMode({ features: { alangEnabled: true } }, { authPending: true }),
+    ).toBe('unresolved')
+  })
+
+  it('does not read an authenticated payload without features as "feature off"', () => {
+    expect(resolveStreetBlindBoxMode({})).toBe('unresolved')
+    expect(resolveStreetBlindBoxMode({ features: {} })).toBe('unresolved')
+  })
+
+  it('keeps a settled guest fail-closed to the teaser', () => {
+    expect(resolveStreetBlindBoxMode(null)).toBe('teaser')
+    expect(resolveStreetBlindBoxMode(undefined)).toBe('teaser')
   })
 })

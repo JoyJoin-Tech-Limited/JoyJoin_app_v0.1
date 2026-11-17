@@ -41,6 +41,7 @@ import AdminQueryError from "@/components/admin/AdminQueryError";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Check, X, Users, Eye, Info } from "lucide-react";
 import { safeFormat } from "@/lib/dateUtils";
+import { getGenderDisplay } from "@/lib/userFieldMappings";
 
 type ReviewStatus = "pending" | "approved" | "rejected" | "all";
 
@@ -597,7 +598,7 @@ export default function AdminMatchingReviewsPage() {
                           <span className="text-muted-foreground">· {member.archetype}</span>
                         )}
                         {member.gender && (
-                          <span className="text-muted-foreground">· {member.gender}</span>
+                          <span className="text-muted-foreground">· {getGenderDisplay(member.gender)}</span>
                         )}
                       </div>
                     ))}

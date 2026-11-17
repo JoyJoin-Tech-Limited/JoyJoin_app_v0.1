@@ -112,6 +112,15 @@ export interface UserPoolRegistration {
   budgetRange?: string[];
   /** Server-computed cancel policy branch (when exposed by the detail endpoint). */
   cancelPolicy?: string | null;
+  /** Joined from event_pools by the detail endpoint — never a replacement for poolId. */
+  poolTitle?: string | null;
+  poolEventType?: string | null;
+  poolDateTime?: string | null;
+  poolCity?: string | null;
+  poolDistrict?: string | null;
+  poolStatus?: string | null;
+  /** Group number inside the pool (event_pool_groups.group_number). */
+  groupNumber?: number | null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -251,7 +260,11 @@ export interface UserInterests {
     topicId: string;
     emoji?: string;
     label: string;
+    fullName?: string;
+    /** Normalized Chinese category label, e.g. 聚会玩乐. */
     category: string;
+    /** Canonical macro id, e.g. play. */
+    categoryId?: string;
     heat: number;
     level: number;
   }>;
@@ -264,6 +277,7 @@ export interface JoinedEvent {
   eventType?: string;
   dateTime?: string;
   attendanceStatus?: string;
+  attendeeCount?: number;
 }
 
 export interface Connection {
@@ -274,6 +288,12 @@ export interface Connection {
   status: string;
   revealedAt?: string | null;
   createdAt?: string;
+  /** Joined partner identity — the raw row only carries user ids. */
+  partnerName?: string | null;
+  partnerArchetype?: string | null;
+  /** Joined event identity — the raw row only carries eventId. */
+  eventTitle?: string | null;
+  eventDateTime?: string | null;
 }
 
 /** Full user detail payload returned by /api/admin/users/:id */

@@ -22,7 +22,7 @@ import { notifyAdminAction } from "../../lib/wecomNotifications";
 import { cascadeDeleteByIds } from "../../lib/fkCascadeDelete";
 import { reassignOrTombstoneHostedSessions } from "../../lib/socialIcebreakerStore";
 import { registerAdminSocialIcebreakerRoutes } from "./adminSocialIcebreaker";
-import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
+import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, eventPools, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
 
 /**
  * Account-deletion retention set (memo 2026-10-06, Option B): de-identified
@@ -816,6 +816,116 @@ export function registerAdminUserRoutes(app: Express): void {
       const assessmentSession = assessmentSessionResult[0] || null;
       const interests = interestsResult[0] || null;
 
+      // Enrich rows with the labels an operator needs to identify what they are
+      // looking at. The raw rows only carry UUIDs, which are not actionable in a
+      // profile drawer: an operator cannot tell one 场次 from another, or one
+      // 连接对象 from another, without joining to pools/groups/users/events.
+      // `poolRegistrations` / `userConnections` come out of the mixed Promise.all
+      // tuple as `any` (the interests element is cast to a row array), so pin the
+      // row types here before enriching.
+      const registrationsTyped = poolRegistrations as Array<typeof eventPoolRegistrations.$inferSelect>;
+      const connectionsTyped = userConnections as Array<typeof connections.$inferSelect>;
+
+      const poolIds = Array.from(new Set(registrationsTyped.map((reg) => reg.poolId).filter(Boolean)));
+      const groupIds = Array.from(
+        new Set(registrationsTyped.map((reg) => reg.assignedGroupId).filter((id): id is string => !!id)),
+      );
+      const connectionEventIds = Array.from(new Set(connectionsTyped.map((conn) => conn.eventId).filter(Boolean)));
+      const connectionPartnerIds = Array.from(
+        new Set(
+          connectionsTyped
+            .map((conn) => (conn.userAId === userId ? conn.userBId : conn.userAId))
+            .filter(Boolean),
+        ),
+      );
+
+      const poolRows: Array<{
+        id: string;
+        title: string;
+        eventType: string;
+        dateTime: Date;
+        city: string;
+        district: string | null;
+        status: string | null;
+      }> = poolIds.length
+        ? await db
+            .select({
+              id: eventPools.id,
+              title: eventPools.title,
+              eventType: eventPools.eventType,
+              dateTime: eventPools.dateTime,
+              city: eventPools.city,
+              district: eventPools.district,
+              status: eventPools.status,
+            })
+            .from(eventPools)
+            .where(inArray(eventPools.id, poolIds))
+        : [];
+
+      const groupRows: Array<{ id: string; groupNumber: number }> = groupIds.length
+        ? await db
+            .select({ id: eventPoolGroups.id, groupNumber: eventPoolGroups.groupNumber })
+            .from(eventPoolGroups)
+            .where(inArray(eventPoolGroups.id, groupIds))
+        : [];
+
+      const connectionEventRows: Array<{ id: string; title: string; dateTime: Date }> =
+        connectionEventIds.length
+          ? await db
+              .select({ id: events.id, title: events.title, dateTime: events.dateTime })
+              .from(events)
+              .where(inArray(events.id, connectionEventIds))
+          : [];
+
+      const connectionPartnerRows: Array<{
+        id: string;
+        displayName: string | null;
+        wechatNickname: string | null;
+        archetype: string | null;
+      }> = connectionPartnerIds.length
+        ? await db
+            .select({
+              id: users.id,
+              displayName: users.displayName,
+              wechatNickname: users.wechatNickname,
+              archetype: users.archetype,
+            })
+            .from(users)
+            .where(inArray(users.id, connectionPartnerIds))
+        : [];
+
+      const poolById = new Map(poolRows.map((pool) => [pool.id, pool]));
+      const groupNumberById = new Map(groupRows.map((group) => [group.id, group.groupNumber]));
+      const connectionEventById = new Map(connectionEventRows.map((event) => [event.id, event]));
+      const connectionPartnerById = new Map(connectionPartnerRows.map((partner) => [partner.id, partner]));
+
+      const enrichedPoolRegistrations = registrationsTyped.map((reg) => {
+        const pool = poolById.get(reg.poolId);
+        return {
+          ...reg,
+          poolTitle: pool?.title ?? null,
+          poolEventType: pool?.eventType ?? null,
+          poolDateTime: pool?.dateTime ?? null,
+          poolCity: pool?.city ?? null,
+          poolDistrict: pool?.district ?? null,
+          poolStatus: pool?.status ?? null,
+          groupNumber: reg.assignedGroupId ? groupNumberById.get(reg.assignedGroupId) ?? null : null,
+        };
+      });
+
+      const enrichedConnections = connectionsTyped.map((conn) => {
+        const partnerId = conn.userAId === userId ? conn.userBId : conn.userAId;
+        const partner = connectionPartnerById.get(partnerId);
+        const event = connectionEventById.get(conn.eventId);
+        return {
+          ...conn,
+          partnerName: partner?.displayName ?? partner?.wechatNickname ?? null,
+          partnerArchetype: partner?.archetype ?? null,
+          eventTitle: event?.title ?? null,
+          eventDateTime: event?.dateTime ?? null,
+        };
+      });
+
       const profileCompleteness = calculateAdminProfileCompleteness({ user, interests });
 
       // Deterministic allow-list DTO; sensitive columns are stripped by the mapper
@@ -854,8 +964,8 @@ export function registerAdminUserRoutes(app: Express): void {
         },
         assessmentSession: assessmentSession || null,
         joinedEvents,
-        poolRegistrations,
-        connections: userConnections,
+        poolRegistrations: enrichedPoolRegistrations,
+        connections: enrichedConnections,
         matchHistory: userMatchHistory,
         interests: interests || null,
         matchingReadiness,

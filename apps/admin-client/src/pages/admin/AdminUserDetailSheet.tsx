@@ -43,6 +43,7 @@ import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { AdminUserStarRating } from "@/components/admin/AdminUserStarRating";
 import {
   calculateAge,
+  getGenderDisplay,
   getLifeStageDisplay,
   getRelationshipDisplay,
   getDietaryRestrictionDisplay,
@@ -53,6 +54,13 @@ import {
 import { fmtDate, fmtDateTimeShort } from "@/lib/dateUtils";
 import { TRAIT_DISPLAY_CONFIG } from "@shared/personality/traitDisplayConfig";
 import { getArchetypeBadgeStyle, getStuckStatus } from "./adminUserBadges";
+import { AdminUserInterestCard } from "./AdminUserInterestCard";
+import {
+  cancelPolicyLabel,
+  joinedEventAttendanceLabel,
+  matchStatusLabel,
+  shortId,
+} from "./adminUserStatusDisplay";
 import type { UserDetail, UserPoolRegistration } from "./types";
 
 interface AdminUserDetailSheetProps {
@@ -224,8 +232,9 @@ export function AdminUserDetailSheet({
                     </div>
                     {userDetail.user.profileCompleteness.missingFields.length > 0 && (
                       <span className="text-xs text-muted-foreground">
-                        缺少: {userDetail.user.profileCompleteness.missingFields.slice(0, 4).join("、")}
-                        {userDetail.user.profileCompleteness.missingFields.length > 4 && "…"}
+                        缺少 {userDetail.user.profileCompleteness.missingFields.length} 项：
+                        {userDetail.user.profileCompleteness.missingFields.slice(0, 4).join("、")}
+                        {userDetail.user.profileCompleteness.missingFields.length > 4 && " 等"}
                       </span>
                     )}
                   </div>
@@ -248,7 +257,7 @@ export function AdminUserDetailSheet({
                       {userDetail.user.gender && (
                         <div>
                           <p className="text-xs text-muted-foreground">性别</p>
-                          <p className="font-medium">{userDetail.user.gender}</p>
+                          <p className="font-medium">{getGenderDisplay(userDetail.user.gender)}</p>
                         </div>
                       )}
                       {userDetail.user.currentCity && (
@@ -402,9 +411,9 @@ export function AdminUserDetailSheet({
                           return (
                             <div key={trait} className="text-center p-2 rounded-md bg-muted/50">
                               <p className="text-lg font-bold">{typeof score === 'number' ? score.toFixed(1) : score}</p>
-                              <p className="text-xs text-muted-foreground">{trait}</p>
+                              <p className="text-xs font-medium">{traitConfig?.chineseName ?? trait}</p>
                               {traitConfig && (
-                                <p className="text-[10px] text-muted-foreground">{traitConfig.chineseName}</p>
+                                <p className="text-[10px] text-muted-foreground">{trait}</p>
                               )}
                             </div>
                           );
@@ -532,41 +541,7 @@ export function AdminUserDetailSheet({
                 </Card>
 
                 {userDetail.interests && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center justify-between">
-                        兴趣数据
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {userDetail.interests.totalSelections || 0} 个选择 · 热度 {userDetail.interests.totalHeat || 0}
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {userDetail.interests.topPriorities && userDetail.interests.topPriorities.length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1.5">高优先级兴趣</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {userDetail.interests.topPriorities.slice(0, 10).map((p) => (
-                              <Badge key={p.topicId} variant="secondary" className="text-xs">{p.label}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {userDetail.interests.categoryHeat && Object.keys(userDetail.interests.categoryHeat).length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1.5">分类热度</p>
-                          <div className="grid grid-cols-2 gap-1 text-xs">
-                            {Object.entries(userDetail.interests.categoryHeat).map(([cat, heat]) => (
-                              <div key={cat} className="flex justify-between px-2 py-1 rounded bg-muted/40">
-                                <span>{cat}</span>
-                                <span className="font-medium">{heat}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <AdminUserInterestCard interests={userDetail.interests} />
                 )}
               </TabsContent>
 
@@ -584,14 +559,22 @@ export function AdminUserDetailSheet({
                     ) : (
                       <div className="space-y-2">
                         {userDetail.joinedEvents.map((event) => (
-                          <div key={event.id} className="flex justify-between items-center text-sm border-l-2 border-primary pl-3 py-1">
-                            <div>
-                              <p className="font-medium">{event.title || event.eventType}</p>
-                              <p className="text-xs text-muted-foreground">{event.eventType}</p>
+                          <div key={event.id} className="flex justify-between items-start gap-3 text-sm border-l-2 border-primary pl-3 py-1">
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{event.title || "未命名活动"}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {[event.eventType, event.attendeeCount != null ? `${event.attendeeCount} 人出席` : null]
+                                  .filter((part) => part != null && part !== "")
+                                  .join(" · ") || "—"}
+                              </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                               <p className="text-xs text-muted-foreground">{fmtDate(event.dateTime)}</p>
-                              {event.attendanceStatus && <Badge variant="outline" className="text-xs mt-0.5">{event.attendanceStatus}</Badge>}
+                              {event.attendanceStatus && (
+                                <Badge variant="outline" className="text-xs mt-0.5">
+                                  {joinedEventAttendanceLabel(event.attendanceStatus)}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -614,27 +597,40 @@ export function AdminUserDetailSheet({
                       <div className="space-y-2">
                         {userDetail.poolRegistrations.map((reg) => (
                           <div key={reg.id} className="text-sm border rounded-md px-3 py-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="text-xs text-muted-foreground">Pool: {reg.poolId?.slice(0, 8)}…</p>
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">
+                                  {reg.poolTitle || `场次 ${shortId(reg.poolId)}`}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {[
+                                    reg.poolEventType,
+                                    reg.poolDateTime ? fmtDate(reg.poolDateTime) : null,
+                                    [reg.poolCity, reg.poolDistrict].filter(Boolean).join(" "),
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ") || "场次信息缺失"}
+                                </p>
                                 {reg.assignedGroupId && (
-                                  <p className="text-xs text-green-600">已匹配 · 分组 {reg.assignedGroupId.slice(0, 8)}…</p>
+                                  <p className="text-xs text-green-600">
+                                    已排桌 · {reg.groupNumber != null ? `第 ${reg.groupNumber} 组` : `分组 ${shortId(reg.assignedGroupId)}`}
+                                  </p>
                                 )}
                               </div>
-                              <div className="text-right space-y-0.5">
+                              <div className="text-right space-y-0.5 shrink-0">
                                 <Badge
                                   variant={reg.matchStatus === 'matched' ? 'default' : reg.matchStatus === 'pending' ? 'secondary' : 'outline'}
                                   className="text-xs"
                                 >
-                                  {reg.matchStatus || '待处理'}
+                                  {matchStatusLabel(reg.matchStatus)}
                                 </Badge>
                                 {reg.matchScore != null && (
-                                  <p className="text-xs text-muted-foreground">得分: {reg.matchScore}</p>
+                                  <p className="text-xs text-muted-foreground">匹配分 {reg.matchScore}</p>
                                 )}
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                              {fmtDateTimeShort(reg.registeredAt)}
+                              报名于 {fmtDateTimeShort(reg.registeredAt)}
                             </p>
                             {canMutate && isRegistrationCancellable(reg) && (
                               <div className="mt-2 flex justify-end">
@@ -675,15 +671,25 @@ export function AdminUserDetailSheet({
                           const otherId = conn.userAId === userDetail.user.id ? conn.userBId : conn.userAId;
                           return (
                             <div key={conn.id} className="text-sm border rounded-md px-3 py-2">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <p className="text-xs text-muted-foreground">对方: {otherId?.slice(0, 12)}…</p>
-                                  <p className="text-xs text-muted-foreground">活动: {conn.eventId?.slice(0, 8)}…</p>
+                              <div className="flex justify-between items-start gap-3">
+                                <div className="min-w-0">
+                                  <p className="font-medium flex items-center gap-1.5">
+                                    <span className="truncate">{conn.partnerName || `用户 ${shortId(otherId, 8)}`}</span>
+                                    {conn.partnerArchetype && (
+                                      <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+                                        {conn.partnerArchetype}
+                                      </Badge>
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {conn.eventTitle || `活动 ${shortId(conn.eventId)}`}
+                                    {conn.eventDateTime ? ` · ${fmtDate(conn.eventDateTime)}` : ""}
+                                  </p>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right shrink-0">
                                   <Badge variant="default" className="text-xs">互相连接</Badge>
                                   {conn.revealedAt && (
-                                    <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(conn.revealedAt)}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">揭晓于 {fmtDate(conn.revealedAt)}</p>
                                   )}
                                 </div>
                               </div>
@@ -716,19 +722,21 @@ export function AdminUserDetailSheet({
                               <div className="flex justify-between items-start">
                                 <div>
                                   <p className="text-xs text-muted-foreground">
-                                    对方: {match.partnerName || otherId?.slice(0, 12)}…
+                                    对方: {match.partnerName || `用户 ${shortId(otherId, 8)}`}
                                     {match.partnerArchetype && (
                                       <Badge variant="outline" className="ml-1 text-[10px] font-normal">{match.partnerArchetype}</Badge>
                                     )}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">活动: {match.eventTitle || match.eventId?.slice(0, 8)}…</p>
-                                  {match.connectionPointTypes && (
-                                    <p className="text-xs text-muted-foreground">契合类型: {Array.isArray(match.connectionPointTypes) ? match.connectionPointTypes.join(', ') : match.connectionPointTypes}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    活动: {match.eventTitle || `活动 ${shortId(match.eventId)}`}
+                                  </p>
+                                  {Array.isArray(match.connectionPointTypes) && match.connectionPointTypes.length > 0 && (
+                                    <p className="text-xs text-muted-foreground">契合类型: {match.connectionPointTypes.join(', ')}</p>
                                   )}
                                 </div>
                                 <div className="text-right space-y-0.5">
                                   {match.connectionQuality != null && (
-                                    <Badge variant="outline" className="text-xs">质量 {match.connectionQuality}</Badge>
+                                    <Badge variant="outline" className="text-xs">连接质量 {match.connectionQuality}</Badge>
                                   )}
                                   {match.wouldMeetAgain != null && (
                                     <p className="text-xs text-muted-foreground">再见意愿: {match.wouldMeetAgain ? '是' : '否'}</p>
@@ -800,12 +808,12 @@ export function AdminUserDetailSheet({
               <AlertDialogDescription asChild>
                 <div className="space-y-2">
                   <p>
-                    将为该用户取消活动池报名（Pool: {cancelTarget?.poolId?.slice(0, 8)}…）。
+                    将为该用户取消活动池报名（{cancelTarget?.poolTitle || `场次 ${shortId(cancelTarget?.poolId)}`}）。
                     该操作将记录审计日志。
                   </p>
                   {cancelTarget?.cancelPolicy && (
                     <p className="text-amber-600 dark:text-amber-500">
-                      当前取消政策：{cancelTarget.cancelPolicy}
+                      当前取消政策：{cancelPolicyLabel(cancelTarget.cancelPolicy)}
                     </p>
                   )}
                 </div>

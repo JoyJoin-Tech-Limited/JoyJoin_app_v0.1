@@ -1,24 +1,45 @@
 import Taro from '@tarojs/taro'
 import type { AuthUserResponse, DiscoverShellResponse, ProfileShellResponse, EventsShellResponse, ConnectionsShellResponse } from '@shared/api'
 import { handleMiniProgramUnauthorized } from './authSession'
+import { logInfo } from '../utils/logger'
+import {
+  DEFAULT_MINI_PROGRAM_API_BASE_URL,
+  PRODUCTION_API_BASE_URL,
+  resolveApiBaseInfo,
+  type ApiBaseInfo,
+} from './apiBaseInfo'
 
-const DEFAULT_MINI_PROGRAM_API_BASE_URL = 'http://localhost:5001'
-const STAGING_API_BASE_URL = 'https://staging.joyjoinapp.com'
-const PRODUCTION_API_BASE_URL = 'https://api.joyjoinapp.com'
-
-function resolveApiBaseUrl(): string {
-  const buildTimeUrl = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_API_BASE_URL).replace(/\/$/, '')
+function readMiniProgramEnvVersion(): string | undefined {
   try {
-    const accountInfo = Taro.getAccountInfoSync()
-    const envVersion = accountInfo?.miniProgram?.envVersion
-    if (envVersion === 'trial') return STAGING_API_BASE_URL
-    if (envVersion === 'release') return PRODUCTION_API_BASE_URL
+    return Taro.getAccountInfoSync()?.miniProgram?.envVersion
   } catch {
+    return undefined
   }
-  return buildTimeUrl
 }
 
-const API_BASE_URL = resolveApiBaseUrl()
+export const API_BASE_INFO: ApiBaseInfo = resolveApiBaseInfo(
+  readMiniProgramEnvVersion(),
+  process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_API_BASE_URL,
+)
+const API_BASE_URL = API_BASE_INFO.baseUrl
+
+// Startup diagnostic: a build labelled "开发版" can point at staging (CI) or
+// production (a local build reading the repo-root .env), and the two backends
+// can resolve feature flags differently. Log the resolved target for every
+// non-production backend so a tester can tell which environment they are on.
+// Production stays silent.
+if (API_BASE_INFO.baseUrl !== PRODUCTION_API_BASE_URL) {
+  logInfo('[api] resolved base URL', {
+    baseUrl: API_BASE_INFO.baseUrl,
+    envVersion: API_BASE_INFO.envVersion,
+    source: API_BASE_INFO.source,
+  })
+}
+
+/** Diagnostics only — never branch product behaviour on this. */
+export function getApiBaseInfo(): ApiBaseInfo {
+  return API_BASE_INFO
+}
 // Keep requests responsive on mobile networks while still allowing payment and
 // auth calls enough time to complete under normal latency.
 const REQUEST_TIMEOUT_MS =

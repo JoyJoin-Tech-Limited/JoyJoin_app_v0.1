@@ -133,3 +133,25 @@ describe('AlangDiscoverCard teaser mode (alangEnabled=false)', () => {
     })
   })
 })
+
+describe('AlangDiscoverCard unresolved gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders nothing while auth has not settled', () => {
+    mocks.useAuth.mockReturnValue({ user: undefined, isLoading: true })
+    const { container } = render(<AlangDiscoverCard />)
+
+    expect(container).toBeEmptyDOMElement()
+    expect(mocks.track).not.toHaveBeenCalled()
+  })
+
+  it('does not read an authenticated payload without features as "feature off"', () => {
+    mocks.useAuth.mockReturnValue({ user: { id: 'user-1' } })
+    const { container } = render(<AlangDiscoverCard />)
+
+    expect(container).toBeEmptyDOMElement()
+    expect(mocks.track).not.toHaveBeenCalled()
+  })
+})

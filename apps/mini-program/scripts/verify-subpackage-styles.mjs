@@ -44,14 +44,18 @@ const REQUIREMENTS = [
     selectors: [...AVATAR_STAGE_SELECTORS],
   },
   {
-    // Second blank-stage trap (2026-07-23): IdentityStageScene sizes itself
-    // with `height: 100%`, which never resolves against a parent that only
-    // declares `min-height` — the scene collapses to 0 height and its
-    // overflow:hidden clips the entire identity card. The Profile stage must
-    // keep an explicit `height` next to its `min-height`.
+    // Blank-stage trap (2026-07-23) and its 2026-11-17 re-shape: the identity
+    // scene sizes itself with `height: 100%`, which only resolves against a
+    // parent with a definite height. The stage used to declare an explicit
+    // `height`; it now sizes from content (`min-height` floor) and gives the
+    // scene a definite box via an absolutely-positioned `inset: 0` art layer.
+    // Guard the arrangement, not the old literal: base stage rule + art
+    // backdrop + content column must all reach the profile page WXSS.
     page: 'pages/profile/index.wxss',
     selectors: [
-      'profile-page__identity-stage{position:relative;height:',
+      'profile-page__identity-stage{position:relative;display:flex',
+      'profile-page__identity-stage-art{position:absolute',
+      'profile-page__identity-stage-body{',
       // P6 profile first-visit guidance tip (2026-09-11): GuidanceTipCard
       // carries no TSX-side SCSS import; its rules are @use'd by the page
       // SCSS and must reach the profile page WXSS — same subpackage

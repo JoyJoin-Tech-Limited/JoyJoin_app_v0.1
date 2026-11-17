@@ -10,6 +10,7 @@ import {
 } from '@shared/api'
 import {
   INTEREST_TAXONOMY,
+  INTEREST_LEVEL_LABELS,
   MACRO_CATEGORY_LABELS,
   type InterestDefinition,
   type MacroCategory,
@@ -122,9 +123,9 @@ const INTEREST_LEVEL_META: Array<{
   bgColor: string
   borderColor: string
 }> = [
-  { level: 1, label: '感兴趣', shortLabel: '感兴趣', legendLabel: '点1次 · 感兴趣', description: '加入你的兴趣画像', color: HEAT_COLORS[1], bgColor: 'rgba(167,139,250,0.12)', borderColor: 'rgba(167,139,250,0.28)' },
-  { level: 2, label: '很热衷', shortLabel: '很热衷', legendLabel: '点2次 · 很热衷', description: '更容易聊到停不下来', color: HEAT_COLORS[2], bgColor: 'rgba(139,92,246,0.14)', borderColor: 'rgba(139,92,246,0.35)' },
-  { level: 3, label: '必聊项', shortLabel: '必聊项', legendLabel: '点3次 · 必聊项', description: '优先排同好，预览重点展示', color: HEAT_COLORS[3], bgColor: 'rgba(249,115,22,0.16)', borderColor: 'rgba(249,115,22,0.42)' },
+  { level: 1, label: INTEREST_LEVEL_LABELS[1], shortLabel: INTEREST_LEVEL_LABELS[1], legendLabel: `点1次 · ${INTEREST_LEVEL_LABELS[1]}`, description: '加入你的兴趣画像', color: HEAT_COLORS[1], bgColor: 'rgba(167,139,250,0.12)', borderColor: 'rgba(167,139,250,0.28)' },
+  { level: 2, label: INTEREST_LEVEL_LABELS[2], shortLabel: INTEREST_LEVEL_LABELS[2], legendLabel: `点2次 · ${INTEREST_LEVEL_LABELS[2]}`, description: '更容易聊到停不下来', color: HEAT_COLORS[2], bgColor: 'rgba(139,92,246,0.14)', borderColor: 'rgba(139,92,246,0.35)' },
+  { level: 3, label: INTEREST_LEVEL_LABELS[3], shortLabel: INTEREST_LEVEL_LABELS[3], legendLabel: `点3次 · ${INTEREST_LEVEL_LABELS[3]}`, description: '优先排同好，预览重点展示', color: HEAT_COLORS[3], bgColor: 'rgba(249,115,22,0.16)', borderColor: 'rgba(249,115,22,0.42)' },
 ]
 
 const activeInterests = INTEREST_TAXONOMY.filter((item) => item.active)

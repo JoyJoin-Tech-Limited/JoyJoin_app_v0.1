@@ -2,8 +2,10 @@ import type { ApiTransport } from './core.js'
 import type { OnboardingNextStep } from '../onboarding.js'
 import {
   getInterestById,
+  INTEREST_HEAT_BY_LEVEL,
   MACRO_CATEGORY_LABELS,
   validateInterestIds,
+  type InterestLevel,
   type MacroCategory,
 } from '../interests.js'
 
@@ -44,7 +46,7 @@ export function submitEssentialData(
   })
 }
 
-export type InterestSelectionLevel = 1 | 2 | 3
+export type InterestSelectionLevel = InterestLevel
 
 export interface InterestSelectionDraft {
   topicId: string
@@ -85,12 +87,6 @@ export type InterestsPayloadInput =
   | { interests: StructuredInterestsPayload | string[] | InterestSelectionDraft[] }
   | string[]
   | InterestSelectionDraft[]
-
-const INTEREST_HEAT_BY_LEVEL: Record<InterestSelectionLevel, 3 | 10 | 25> = {
-  1: 3,
-  2: 10,
-  3: 25,
-}
 
 const food_emoji = '🍜'
 const play_emoji = '🎮'

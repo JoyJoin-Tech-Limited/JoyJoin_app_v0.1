@@ -9,7 +9,7 @@ import {
   type FlashStoryUnitId,
 } from '@shared/alang/flashStorySeason'
 import { useAuth } from '../../../hooks/useAuth'
-import { isStreetBlindBoxLive } from '../../../lib/alang/alangAccess'
+import { resolveStreetBlindBoxMode } from '../../../lib/alang/alangAccess'
 import { useFlashStoryArchive } from '../../../lib/alang/useFlash'
 import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
 import type { FlashStoryArchiveView } from '../../../lib/alang/flashTypes'
@@ -17,7 +17,7 @@ import { flashStoryAnalytics } from '../../../lib/analytics/flashStoryAnalytics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import { FlashButton, FlashFeatureClosed, FlashPageState } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashGatePending, FlashPageState } from '../../../components/alang/FlashUi'
 import '../flash.scss'
 import './index.scss'
 
@@ -79,8 +79,9 @@ function pilotImprintsComplete(archive: FlashStoryArchiveView | undefined): bool
 }
 
 export default function FlashStoryArchivePage() {
-  const { user } = useAuth()
-  const enabled = isStreetBlindBoxLive(user)
+  const { user, isLoading: authLoading } = useAuth()
+  const blindBoxMode = resolveStreetBlindBoxMode(user, { authPending: authLoading })
+  const enabled = blindBoxMode === 'live'
   const { shouldReduceMotion } = useMiniRevealMotion()
   const { data, isLoading, isError, refetch } = useFlashStoryArchive(enabled)
   const archiveOpenedRef = useRef(false)
@@ -155,6 +156,8 @@ export default function FlashStoryArchivePage() {
     haptics('light')
     void Taro.navigateBack().catch(() => Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }))
   }
+
+  if (blindBoxMode === 'unresolved') return <FlashGatePending />
 
   if (!enabled) return <FlashFeatureClosed />
 

@@ -261,6 +261,22 @@ export function FlashFeatureClosed() {
   )
 }
 
+/**
+ * Gate placeholder for `resolveStreetBlindBoxMode(...) === 'unresolved'`.
+ * The access flag has not arrived yet, so this must look like "loading", never
+ * like the feature is closed (2026-11-17 env-mismatch incident).
+ */
+export function FlashGatePending() {
+  return (
+    <View className='flash-page'>
+      <FlashPageState
+        title='正在确认街头盲盒的入口'
+        description='马上就好。'
+      />
+    </View>
+  )
+}
+
 export function FlashTaskCategoryBadge({
   category: categoryName,
   className = '',

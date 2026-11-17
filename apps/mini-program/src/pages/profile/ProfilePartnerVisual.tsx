@@ -101,7 +101,7 @@ export default function ProfilePartnerVisual({
         role='img'
         aria-label={archetypeName ? `${archetypeName}伙伴形象` : `${displayName}的伙伴形象待解锁`}
       >
-        <ArchetypeHead archetype={archetype} size={248} fallbackText={displayName} />
+        <ArchetypeHead archetype={archetype} size={176} fallbackText={displayName} />
       </View>
     )
   }

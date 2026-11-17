@@ -62,9 +62,19 @@ export function loadRepoRootEnvFile(
   }
 }
 
+export interface LoadMiniProgramEnvOptions {
+  /**
+   * Keys that already exist in the real process environment (CI-injected or
+   * explicitly exported by the caller). Those must never be overridden by a
+   * checked-in file, so production/staging build targets stay authoritative.
+   */
+  preserveKeys?: ReadonlySet<string>
+}
+
 export function loadMiniProgramEnvFile(
   envPath = MINI_PROGRAM_ENV_PATH,
   env: NodeJS.ProcessEnv = process.env,
+  options: LoadMiniProgramEnvOptions = {},
 ): void {
   let envFileContent: string
 
@@ -76,11 +86,14 @@ export function loadMiniProgramEnvFile(
 
   const envEntries = parseEnvFile(envFileContent)
   for (const [key, value] of Object.entries(envEntries)) {
-    // .env.local is authoritative for mini-program builds:
-    // overwrite empty strings as well as undefined values.
-    if (env[key] === undefined || env[key] === '') {
-      env[key] = value
+    // .env.local is authoritative for mini-program builds: it overrides the
+    // repo-root .env, which config/index.ts loads first. Keys supplied by the
+    // real process environment (CI/CLI) still win so an explicit build target
+    // is never silently replaced.
+    if (options.preserveKeys?.has(key)) {
+      continue
     }
+    env[key] = value
   }
 }
 
