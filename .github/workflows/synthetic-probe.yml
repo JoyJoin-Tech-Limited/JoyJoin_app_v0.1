@@ -49,6 +49,10 @@ jobs:
       - name: Run synthetic probe
         env:
           BASE_URL: ${{ inputs.base_url || secrets.PRODUCTION_BASE_URL || 'https://api.joyjoinapp.com' }}
+          # Admin portal shell probe (added 2026-11-17): a ~14h white screen shipped
+          # while every /api/* probe stayed green, because nothing asserted the SPA
+          # shell still boots. Override the secret to point at staging instead.
+          ADMIN_BASE_URL: ${{ secrets.ADMIN_BASE_URL || 'https://admin.joyjoinapp.com' }}
           PROBE_TIMEOUT_MS: "5000"
           PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
         run: node scripts/synthetic/happy-path-probe.mjs

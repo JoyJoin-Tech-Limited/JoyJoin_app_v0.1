@@ -13,6 +13,8 @@
  *   2. Metrics check  GET /api/metrics            → expect 200, Prometheus text
  *   3. Auth attempt   GET /api/auth/user          → expect 401 (no session cookie)
  *      (A 401 confirms the auth middleware is reachable and responding.)
+ *   4. Admin shell    GET <ADMIN_BASE_URL>/        → expect 200, mount node + hashed
+ *      bundle present, and NO third-party stylesheet (skipped when ADMIN_BASE_URL unset)
  *
  * Exit codes:
  *   0 → all probes passed
@@ -20,6 +22,8 @@
  *
  * Environment variables:
  *   BASE_URL          Server base URL (default: http://localhost:5001)
+ *   ADMIN_BASE_URL    Admin portal origin (e.g. https://admin.joyjoinapp.com).
+ *                     Unset = skip the portal-shell probe.
  *   PROBE_TIMEOUT_MS  Per-request timeout in ms (default: 5000)
  *   PUSHGATEWAY_URL   Optional Prometheus Pushgateway URL to push probe result
  *
@@ -32,8 +36,19 @@
 
 // @ts-check
 
+import { findRenderBlockingExternals } from '../check/check-render-blocking-externals.mjs';
+
 const DEFAULT_BASE_URL = 'http://localhost:5001';
 const BASE_URL = normalizeBaseUrl(process.env.BASE_URL, DEFAULT_BASE_URL);
+/**
+ * Admin portal origin (the HTML shell, not the API). Empty = skip the portal probe,
+ * which is what local runs want.
+ *
+ * Why this exists (2026-11-17): the probe used to check ONLY /api/*. The API stayed
+ * green through a ~14-hour admin-portal white screen, because nothing ever asserted
+ * that the SPA shell was still bootable.
+ */
+const ADMIN_BASE_URL = normalizeBaseUrl(process.env.ADMIN_BASE_URL, '');
 const PROBE_TIMEOUT_MS = parseInt(process.env.PROBE_TIMEOUT_MS ?? '5000', 10);
 const PUSHGATEWAY_URL = process.env.PUSHGATEWAY_URL ?? '';
 
@@ -53,10 +68,19 @@ function normalizeBaseUrl(rawBaseUrl, fallback) {
 
 /**
  * @param {string} url
- * @param {{ expectedStatus?: number; expectedBodyContains?: string; method?: string }} opts
+ * @param {{ expectedStatus?: number; expectedBodyContains?: string | string[]; forbiddenBodyContains?: string | string[]; validate?: (body: string) => string | null; method?: string }} opts
  * @returns {Promise<{ ok: boolean; status: number; ms: number; error?: string }>}
  */
-async function probe(url, { expectedStatus = 200, expectedBodyContains, method = 'GET' } = {}) {
+async function probe(
+  url,
+  {
+    expectedStatus = 200,
+    expectedBodyContains,
+    forbiddenBodyContains,
+    validate,
+    method = 'GET',
+  } = {},
+) {
   const start = Date.now();
   try {
     const controller = new AbortController();
@@ -77,13 +101,33 @@ async function probe(url, { expectedStatus = 200, expectedBodyContains, method =
       };
     }
 
-    if (expectedBodyContains && !body.includes(expectedBodyContains)) {
-      return {
-        ok: false,
-        status: res.status,
-        ms,
-        error: `Response body does not contain "${expectedBodyContains}"`,
-      };
+    for (const needle of toNeedleList(expectedBodyContains)) {
+      if (!body.includes(needle)) {
+        return {
+          ok: false,
+          status: res.status,
+          ms,
+          error: `Response body does not contain "${needle}"`,
+        };
+      }
+    }
+
+    for (const needle of toNeedleList(forbiddenBodyContains)) {
+      if (body.includes(needle)) {
+        return {
+          ok: false,
+          status: res.status,
+          ms,
+          error: `Response body contains forbidden marker "${needle}"`,
+        };
+      }
+    }
+
+    if (validate) {
+      const failure = validate(body);
+      if (failure) {
+        return { ok: false, status: res.status, ms, error: failure };
+      }
     }
 
     return { ok: true, status: res.status, ms };
@@ -95,6 +139,16 @@ async function probe(url, { expectedStatus = 200, expectedBodyContains, method =
       error: err?.name === 'AbortError' ? `Timeout after ${PROBE_TIMEOUT_MS}ms` : String(err),
     };
   }
+}
+
+/**
+ * Normalises a single marker or a list of markers to an array.
+ * @param {string | string[] | undefined} value
+ * @returns {string[]}
+ */
+function toNeedleList(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 /**
@@ -142,6 +196,26 @@ const PROBES = [
     // Expect 401 — the endpoint is reachable and auth is enforced
     opts: { expectedStatus: 401 },
   },
+  ...(ADMIN_BASE_URL
+    ? [
+        {
+          name: 'admin_portal_shell',
+          url: `${ADMIN_BASE_URL}/`,
+          opts: {
+            expectedStatus: 200,
+            // A built SPA shell must expose the mount node and reference its hashed bundle.
+            expectedBodyContains: ['id="root"', '/assets/'],
+            // The 2026-11-17 regression: a third-party stylesheet that cannot be reached
+            // from mainland China gated first paint and left #root empty for 30s+.
+            // Shares its parser with the CI gate so the two can never disagree.
+            validate: (body) => {
+              const [hit] = findRenderBlockingExternals(body);
+              return hit ? `render-blocking external resource: ${hit.message}` : null;
+            },
+          },
+        },
+      ]
+    : []),
 ];
 
 // ---------------------------------------------------------------------------

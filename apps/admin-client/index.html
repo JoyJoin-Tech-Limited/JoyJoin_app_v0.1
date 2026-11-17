@@ -6,22 +6,116 @@
     <title>悦聚·Joy - 管理后台</title>
     <meta name="description" content="JoyJoin 管理后台 - 活动管理、用户管理、数据分析" />
     <!--
-      Brand fonts are decorative: `--font-sans` / `--font-en-brand` already fall back to
-      system-ui. Load them NON-BLOCKING (media="print" → media="all" on load) so an
-      unreachable fonts.googleapis.com can never gate first paint. A blocking <link>
-      here caused a 30s+ white screen for admins in mainland China (2026-11-17).
+      No third-party webfont is loaded here, on purpose.
+
+      A render-blocking <link rel="stylesheet"> to fonts.googleapis.com used to sit in
+      this <head>. In mainland China that host is unreachable (TCP connects, TLS is
+      reset), and the browser only gives up after 30-42s — during which it paints
+      nothing, so #root stayed empty and the portal showed a permanent white screen
+      (2026-11-17, staging.admin + admin.joyjoinapp.com).
+
+      The fonts were purely decorative: `--font-sans` and `--font-ui` already resolve to
+      system stacks and the admin dashboard prioritises density over display type. So the
+      dependency is deleted rather than merely deferred. Any future third-party stylesheet
+      must be non-blocking — enforced by
+      scripts/check/check-render-blocking-externals.mjs (runs in `npm run guardrails`).
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
-    >
   </head>
   <body>
     <div id="root"></div>
+
+    <!--
+      Boot shell — inline styles on purpose. It has to paint even when the JS or CSS
+      bundle fails to load, because that is precisely the case it exists for. It is
+      removed by src/main.tsx once React has committed its first render.
+    -->
+    <div
+      id="boot"
+      role="status"
+      aria-live="polite"
+      style="position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:#f7f7f8;font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif"
+    >
+      <div style="width:100%;max-width:420px;text-align:center">
+        <div id="boot-title" style="font-size:15px;font-weight:600;color:#1f1f23;letter-spacing:.02em">
+          正在加载管理后台…
+        </div>
+        <div id="boot-hint" style="margin-top:10px;font-size:13px;line-height:1.65;color:#6b6b76">
+          首次加载可能需要几秒，请稍候
+        </div>
+        <button
+          id="boot-retry"
+          type="button"
+          style="display:none;margin:20px auto 0;padding:9px 22px;font-size:13px;font-weight:600;color:#fff;background:#8B5CF6;border:0;border-radius:8px;cursor:pointer"
+        >
+          重新加载
+        </button>
+      </div>
+    </div>
+
+    <script>
+      /*
+        Boot watchdog — pairs with the #boot shell above and src/main.tsx.
+
+        It only acts while the shell is still mounted, so a runtime error raised AFTER a
+        successful mount can never replace a working portal with this screen. Before this
+        existed, a failed bundle (404 after a deploy pruned old hashed assets, CSP, blocked
+        network) left an empty #root and a silent white screen with no copy and no retry.
+      */
+      (function () {
+        var failed = false;
+
+        function showFailure(detail) {
+          if (failed) return;
+          var boot = document.getElementById('boot');
+          if (!boot) return;
+          failed = true;
+
+          var title = document.getElementById('boot-title');
+          var hint = document.getElementById('boot-hint');
+          var retry = document.getElementById('boot-retry');
+
+          if (title) title.textContent = '管理后台加载失败';
+          if (hint) {
+            hint.style.color = '#b4232c';
+            hint.textContent = '页面没能完成加载。请先重试；如果反复出现，把下面这行信息发给技术同学。';
+          }
+          if (retry) {
+            retry.style.display = 'inline-block';
+            retry.addEventListener('click', function () {
+              location.reload();
+            });
+          }
+
+          var code = document.createElement('div');
+          code.style.cssText =
+            'margin-top:14px;font-family:Menlo,monospace;font-size:11px;line-height:1.5;color:#8a8a94;word-break:break-all';
+          code.textContent = detail || 'unknown error';
+          boot.firstElementChild.appendChild(code);
+        }
+
+        window.addEventListener(
+          'error',
+          function (event) {
+            var target = event.target;
+            if (
+              target &&
+              target.nodeType === 1 &&
+              (target.tagName === 'SCRIPT' || target.tagName === 'LINK')
+            ) {
+              showFailure('资源加载失败：' + (target.src || target.href || target.tagName));
+              return;
+            }
+            showFailure('脚本错误：' + (event.message || 'unknown'));
+          },
+          true,
+        );
+
+        window.addEventListener('unhandledrejection', function () {
+          showFailure('启动异常：promise rejected');
+        });
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

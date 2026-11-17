@@ -82,14 +82,17 @@
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   /* ── JoyJoin semantic font roles ──────────────────────────────────
-     Admin client intentionally uses system / Google-loaded fallbacks.
-     No self-hosted @font-face is loaded here; the admin dashboard
-     prioritises density and performance over custom display fonts.
+     No webfont is loaded here — not self-hosted, not from a third-party CDN.
+     The admin dashboard prioritises density and first paint over display type,
+     and the render-blocking Google Fonts request that used to live in index.html
+     white-screened the portal for 30s+ on unreachable networks (2026-11-17).
+     'Inter' / 'Outfit' survive in these stacks only as an opportunistic match
+     for machines that happen to have them installed; every stack MUST end in a
+     system family so it degrades without a network request.
      font-ui          → system Chinese stack; default for all dense UI
      font-cn-display  → system Chinese stack (no custom font in admin);
                         for branded headings / emotional moments
-     font-en-brand    → Outfit (loaded via Google Fonts); for English
-                        wordmark and brand accent surfaces             */
+     font-en-brand    → system stack; English wordmark / brand accents  */
   --font-ui: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
   --font-cn-display: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-en-brand: 'Outfit', system-ui, sans-serif;
@@ -445,7 +448,7 @@
     font-family: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   }
 
-  /* 英文品牌展示字体（admin-client local mapping） */
+  /* 英文品牌展示字体（admin-client 无 webfont；Outfit 仅在本机已安装时命中） */
   .font-en-brand {
     font-family: 'Outfit', system-ui, sans-serif;
   }
