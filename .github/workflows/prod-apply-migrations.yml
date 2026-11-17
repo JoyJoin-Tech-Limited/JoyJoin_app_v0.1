@@ -1,0 +1,224 @@
+name: Apply Production Migrations
+
+# Production never auto-runs DDL (deployment/scripts/deploy-production.sh stops at
+# a read-only connectivity probe and logs "no DDL, migration, or seed was
+# executed"). This workflow is the manual counterweight: it applies the reviewed
+# .sql files against the production database BEFORE the code that needs them.
+#
+# Why the ordering matters (2026-10-26 staging incident, 754 container restarts,
+# ~13h of nginx 502): the server calls validateDbSchema() at boot, which does a
+# `select * limit 0` on the critical tables. A missing column is a hard startup
+# failure, so shipping code ahead of its migration does not degrade — it 502s.
+#
+# ORDERING RULE for the 2026-11 backlog (154 commits behind):
+#   phase_a  → additive only (new tables / nullable columns / DML). Safe while
+#              the OLD code is still serving.
+#   deploy   → Deploy Production workflow.
+#   phase_b  → 0100_drop_promotion_banners.sql. MUST run after the deploy:
+#              the live pre-deploy build still reads promotion_banners from
+#              adminBanners.ts / pricingRepo.ts / legacyStorageRepo.ts.
+#              phase_b refuses to run while the running bundle still
+#              references the table.
+#
+# DB access: production Postgres is the `postgres` container on the CVM and the
+# deploy script itself connects as `docker exec postgres psql -U joyjoin -d
+# joyjoin` over the container's unix socket (trust auth). No POSTGRES_PASSWORD
+# and no deployment/.env.production is needed here — mirroring that exact form
+# keeps this job working even if the env file is mid-rewrite.
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "phase_a = additive (pre-deploy) · phase_b = drop promotion_banners (post-deploy)"
+        type: choice
+        options:
+          - phase_a
+          - phase_b
+        default: phase_a
+      dry_run:
+        description: "Only inspect the database and list what would run"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # Same group as the production deploy job, so a migration can never overlap a
+  # release. The flock below is the host-level backstop.
+  group: joyjoin-cvm-remote
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    # Production approval gate — same environment as the deploy job.
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve deployment client host fingerprint
+        id: cvm-host-key
+        uses: ./.github/actions/resolve-cvm-host-fingerprint
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      # Upload to a directory OUTSIDE ~/JoyJoin. The production deploy rsyncs the
+      # repo with `--delete`, so anything parked inside ~/JoyJoin can vanish
+      # mid-run. A faithful copy beats inlining ~20 KB of DDL into YAML.
+      - name: Upload migration SQL
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: -az --delete
+          path: apps/server/migrations/
+          remote_path: ~/joyjoin-migrations/
+          remote_host: ${{ secrets.SERVER_IP }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      - name: Apply on the production host
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
+          timeout: 120s
+          command_timeout: 15m
+          envs: PHASE,DRY_RUN
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin
+
+            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            if ! flock -n 9; then
+              echo "::error::Another production operation holds /var/lock/joyjoin-cvm-remote.lock"
+              exit 1
+            fi
+
+            INCOMING="$HOME/joyjoin-migrations"
+            test -d "$INCOMING"
+
+            run_psql() {
+              docker exec -i postgres psql -U joyjoin -d joyjoin "$@"
+            }
+
+            database_name="$(run_psql -Atc 'select current_database()')"
+            if [ "$database_name" != "joyjoin" ]; then
+              echo "::error::Refusing to migrate database '$database_name' (expected joyjoin)"
+              exit 1
+            fi
+            echo "Target database: $database_name"
+
+            echo "--- Before ---"
+            run_psql -At <<'SQL'
+            select 'event_pools.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'event_pools'
+               and column_name in ('set_menu_price_cents','set_menu_original_price_cents','guaranteed_venue_id','guaranteed_deal_id')
+            union all
+            select 'event_pool_groups.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'event_pool_groups'
+               and column_name in ('avg_pair_score','formed_member_count','pair_floor_policy')
+            union all
+            select 'event_pool_registrations.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'event_pool_registrations'
+               and column_name = 'revealed_at'
+            union all
+            select 'connections.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'connections'
+               and column_name = 'reveal_at'
+            union all
+            select 'table:' || table_name
+              from information_schema.tables
+             where table_schema = 'public'
+               and table_name in ('social_agent_events','connection_selection_windows','promotion_banners')
+             order by 1;
+            SQL
+
+            if [ "$PHASE" = "phase_a" ]; then
+              FILES="0099_social_agent_events.sql 0101_connection_selection_windows.sql 0102_notification_mutual_match_dedupe.sql 0103_venue_slot_coverage_futian_20261111.sql 0104_matching_pair_floor.sql 0105_pool_registration_revealed_at.sql 0106_venue_deal_foundation.sql seed_venue_ac_hookah_20261112.sql"
+            elif [ "$PHASE" = "phase_b" ]; then
+              FILES="0100_drop_promotion_banners.sql"
+
+              # Hard guard: the drop is only safe once the API that reads this
+              # table has actually been replaced. The bundle is grep-able.
+              if docker exec joyjoin-api sh -c "grep -rq promotion_banners /app/apps/server/dist 2>/dev/null"; then
+                echo "::error::The running API bundle still references promotion_banners. Deploy first, then re-run phase_b."
+                exit 1
+              fi
+
+              existing_table="$(run_psql -Atc "select coalesce(to_regclass('public.promotion_banners')::text, '')")"
+              if [ -z "$existing_table" ]; then
+                echo "promotion_banners is already absent — nothing to do."
+                exit 0
+              fi
+            else
+              echo "::error::Unknown phase '$PHASE'"
+              exit 1
+            fi
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "dry_run — would apply, in order:"
+              for f in $FILES; do
+                if [ -f "$INCOMING/$f" ]; then
+                  echo "  $f (present)"
+                else
+                  echo "  $f (MISSING)"
+                fi
+              done
+              exit 0
+            fi
+
+            for f in $FILES; do
+              if [ ! -f "$INCOMING/$f" ]; then
+                echo "::error::Missing migration file $f"
+                exit 1
+              fi
+              echo "==> applying $f"
+              run_psql -v ON_ERROR_STOP=1 < "$INCOMING/$f"
+            done
+
+            echo "--- After ---"
+            run_psql -At <<'SQL'
+            select 'event_pools.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'event_pools'
+               and column_name in ('set_menu_price_cents','set_menu_original_price_cents','guaranteed_venue_id','guaranteed_deal_id')
+            union all
+            select 'event_pool_groups.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'event_pool_groups'
+               and column_name in ('avg_pair_score','formed_member_count','pair_floor_policy')
+            union all
+            select 'event_pool_registrations.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'event_pool_registrations'
+               and column_name = 'revealed_at'
+            union all
+            select 'connections.' || column_name
+              from information_schema.columns
+             where table_schema = 'public' and table_name = 'connections'
+               and column_name = 'reveal_at'
+            union all
+            select 'table:' || table_name
+              from information_schema.tables
+             where table_schema = 'public'
+               and table_name in ('social_agent_events','connection_selection_windows','promotion_banners')
+             order by 1;
+            SQL
+
+            echo "Done ($PHASE)."
+        env:
+          PHASE: ${{ inputs.phase }}
+          DRY_RUN: ${{ inputs.dry_run }}
