@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Bot, ChevronLeft, ChevronRight } from "lucide-react";
+import { personLabel } from "../personLabel";
 import { apiRequest } from "@/lib/queryClient";
 import { fmtDateTime } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/ui/use-toast";
@@ -47,6 +48,8 @@ interface AiContentReport {
   createdAt: string;
   reporterDisplayName: string | null;
   reporterWechatNickname: string | null;
+  reportedDisplayName: string | null;
+  reportedWechatNickname: string | null;
 }
 
 interface AiContentReportListResponse {
@@ -207,7 +210,13 @@ export default function AiContentReportsTab() {
                           {report.reporterDisplayName || report.reporterWechatNickname || "未知用户"}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {report.reportedUserId ? report.reportedUserId.slice(0, 8) + "…" : "AI 内容"}
+                          {report.reportedUserId
+                            ? personLabel({
+                                displayName: report.reportedDisplayName,
+                                wechatNickname: report.reportedWechatNickname,
+                                id: report.reportedUserId,
+                              })
+                            : "AI 内容"}
                         </TableCell>
                         <TableCell className="text-sm max-w-xs">
                           <span className="line-clamp-2">{truncate(report.description)}</span>

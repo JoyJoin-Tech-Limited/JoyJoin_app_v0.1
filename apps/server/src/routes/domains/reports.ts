@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "../../db";
 import { reports, users } from "@shared/schema";
 import { requireAuth } from "../../middleware/auth";
@@ -104,15 +105,22 @@ export function registerReportRoutes(app: Express): void {
 
       const offset = (page - 1) * pageSize;
 
+      // The reported user is a second reference to `users`; alias it so the
+      // reporter join keeps its own columns.
+      const reportedUsers = alias(users, "reported_users");
+
       const [rows, countResult] = await Promise.all([
         db
           .select({
             report: reports,
             reporterDisplayName: users.displayName,
             reporterWechatNickname: users.wechatNickname,
+            reportedDisplayName: reportedUsers.displayName,
+            reportedWechatNickname: reportedUsers.wechatNickname,
           })
           .from(reports)
           .leftJoin(users, eq(reports.reporterId, users.id))
+          .leftJoin(reportedUsers, eq(reports.reportedUserId, reportedUsers.id))
           .where(whereClause)
           .orderBy(desc(reports.createdAt))
           .limit(pageSize)
@@ -129,6 +137,8 @@ export function registerReportRoutes(app: Express): void {
         report: typeof reports.$inferSelect;
         reporterDisplayName: string | null;
         reporterWechatNickname: string | null;
+        reportedDisplayName: string | null;
+        reportedWechatNickname: string | null;
       };
 
       return res.json({
@@ -136,6 +146,8 @@ export function registerReportRoutes(app: Express): void {
           ...r.report,
           reporterDisplayName: r.reporterDisplayName,
           reporterWechatNickname: r.reporterWechatNickname,
+          reportedDisplayName: r.reportedDisplayName,
+          reportedWechatNickname: r.reportedWechatNickname,
         })),
         pagination: {
           page,

@@ -25,6 +25,7 @@ import { fmtDateTimeShort } from "@/lib/dateUtils";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import EmptyState from "@/components/admin/EmptyState";
 import { formatDuoSeatedRate, getDuoRewardOutcome, getDuoSeatedOutcome, type DuoOutcome } from "@/components/admin/duo/duoInviteUtils";
+import { personLabel } from "./personLabel";
 import type { AdminEventPool } from "./types";
 
 type DuoInviteStatus = "pending" | "bound" | "expired";
@@ -36,8 +37,10 @@ interface DuoInviteItem {
   invitationType: string | null;
   inviterId: string;
   inviterDisplayName: string | null;
+  inviterWechatNickname: string | null;
   inviteeId: string | null;
   inviteeDisplayName: string | null;
+  inviteeWechatNickname: string | null;
   poolId: string | null;
   poolTitle: string | null;
   poolCity: string | null;
@@ -310,17 +313,37 @@ export default function AdminDuoInvitesPage() {
                     data-testid={`row-duo-invite-${item.id}-${item.useId ?? "no-use"}`}
                   >
                     <TableCell>
-                      <div>
-                        <p className="truncate font-medium" title={item.inviterDisplayName || "未设置昵称"}>{item.inviterDisplayName || "未设置昵称"}</p>
-                        <p className="text-xs text-muted-foreground">{item.inviterId.slice(0, 12)}…</p>
-                      </div>
+                      <p
+                        className="truncate font-medium"
+                        title={personLabel({
+                          displayName: item.inviterDisplayName,
+                          wechatNickname: item.inviterWechatNickname,
+                          id: item.inviterId,
+                        })}
+                      >
+                        {personLabel({
+                          displayName: item.inviterDisplayName,
+                          wechatNickname: item.inviterWechatNickname,
+                          id: item.inviterId,
+                        })}
+                      </p>
                     </TableCell>
                     <TableCell>
                       {item.inviteeId ? (
-                        <div>
-                          <p className="truncate font-medium" title={item.inviteeDisplayName || "未设置昵称"}>{item.inviteeDisplayName || "未设置昵称"}</p>
-                          <p className="text-xs text-muted-foreground">{item.inviteeId.slice(0, 12)}…</p>
-                        </div>
+                        <p
+                          className="truncate font-medium"
+                          title={personLabel({
+                            displayName: item.inviteeDisplayName,
+                            wechatNickname: item.inviteeWechatNickname,
+                            id: item.inviteeId,
+                          })}
+                        >
+                          {personLabel({
+                            displayName: item.inviteeDisplayName,
+                            wechatNickname: item.inviteeWechatNickname,
+                            id: item.inviteeId,
+                          })}
+                        </p>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

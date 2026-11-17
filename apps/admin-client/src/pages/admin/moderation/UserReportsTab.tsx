@@ -54,11 +54,16 @@ import { useToast } from "@/hooks/ui/use-toast";
 import { fmtDateTime } from "@/lib/dateUtils";
 import EmptyState from "@/components/admin/EmptyState";
 import AdminQueryError from "@/components/admin/AdminQueryError";
+import { personLabel } from "../personLabel";
+import { shortId } from "../adminUserStatusDisplay";
+import { canApplyUserAction } from "./reportActions";
 import type { ModerationStats, Report, ModerationLog } from "../types";
 
 const REPORT_TYPE_MAP: Record<string, { label: string; variant: "default" | "destructive" | "secondary" | "outline" }> = {
   harassment: { label: "骚扰", variant: "destructive" },
   inappropriate_content: { label: "不当内容", variant: "secondary" },
+  fake_profile: { label: "虚假资料", variant: "outline" },
+  ai_content: { label: "AI 内容", variant: "outline" },
   spam: { label: "垃圾信息", variant: "outline" },
   other: { label: "其他", variant: "default" },
 };
@@ -80,14 +85,42 @@ type ConfirmableAction = "ban" | "warn" | "dismiss";
 const errorMessage = (e: unknown) =>
   (e instanceof Error ? e.message : String(e)).replace(/^\d{3}:\s*/, "");
 
-const getUserName = (firstName: string | null, lastName: string | null) => {
-  const fullName = `${firstName || ""} ${lastName || ""}`.trim();
-  return fullName || "未知用户";
-};
+const reporterName = (report: Report) =>
+  personLabel({
+    displayName: report.reporter_display_name,
+    wechatNickname: report.reporter_wechat_nickname,
+    firstName: report.reporter_first_name,
+    lastName: report.reporter_last_name,
+    id: report.reporter_id,
+  });
 
-const getReportedName = (report: Report) =>
-  [report.reported_first_name, report.reported_last_name].filter(Boolean).join(" ") ||
-  report.reported_user_id;
+const reportedName = (report: Report) =>
+  personLabel({
+    displayName: report.reported_display_name,
+    wechatNickname: report.reported_wechat_nickname,
+    firstName: report.reported_first_name,
+    lastName: report.reported_last_name,
+    id: report.reported_user_id,
+  });
+
+const logAdminName = (log: ModerationLog) =>
+  personLabel({
+    displayName: log.admin_display_name,
+    wechatNickname: log.admin_wechat_nickname,
+    firstName: log.admin_first_name,
+    lastName: log.admin_last_name,
+    id: log.admin_id,
+    fallback: "管理员",
+  });
+
+const logTargetName = (log: ModerationLog) =>
+  personLabel({
+    displayName: log.target_display_name,
+    wechatNickname: log.target_wechat_nickname,
+    firstName: log.target_first_name,
+    lastName: log.target_last_name,
+    id: log.target_user_id,
+  });
 
 export type UserReportsFilter = "all" | "pending";
 
@@ -199,7 +232,13 @@ export default function UserReportsTab({
   });
 
   const createLogMutation = useMutation({
-    mutationFn: async (data: { action: string; target_user_id: string; reason?: string; notes?: string }) => {
+    mutationFn: async (data: {
+      action: string;
+      target_user_id: string;
+      related_report_id?: string;
+      reason?: string;
+      notes?: string;
+    }) => {
       const res = await apiRequest("POST", "/api/admin/moderation/logs", data);
       return res.json();
     },
@@ -240,7 +279,7 @@ export default function UserReportsTab({
   const handleOpenReport = (report: Report) => {
     setSelectedReport(report);
     setEditStatus(report.status);
-    setAdminNotes(report.admin_notes || "");
+    setAdminNotes(report.resolution || "");
   };
 
   const handleCloseDialog = () => {
@@ -272,13 +311,26 @@ export default function UserReportsTab({
   // banned user with an unresolved report (or vice versa). Server change not
   // implemented here — tracked as follow-up.
   const executeAction = async (report: Report, action: ConfirmableAction) => {
-    const reason = `举报: ${REPORT_TYPE_MAP[report.report_type]?.label || report.report_type}`;
+    const reason = `举报: ${REPORT_TYPE_MAP[report.category]?.label || report.category}`;
+    // AI-content reports carry no target user; ban/warn would hit
+    // /api/admin/users/null/ban and fail after the log step.
+    if (action !== "dismiss" && !canApplyUserAction(report)) {
+      setPendingAction(null);
+      toast({
+        title: "无法执行该操作",
+        description: "该举报没有关联用户，只能驳回或修改状态",
+        variant: "destructive",
+      });
+      return;
+    }
+    const targetUserId = report.reported_user_id ?? undefined;
     try {
       if (action === "ban") {
-        await banUserMutation.mutateAsync({ userId: report.reported_user_id, reason });
+        await banUserMutation.mutateAsync({ userId: targetUserId!, reason });
         await createLogMutation.mutateAsync({
           action: "ban",
-          target_user_id: report.reported_user_id,
+          target_user_id: targetUserId!,
+          related_report_id: report.id,
           reason,
           notes: report.description,
         });
@@ -289,7 +341,8 @@ export default function UserReportsTab({
       } else if (action === "warn") {
         await createLogMutation.mutateAsync({
           action: "warn",
-          target_user_id: report.reported_user_id,
+          target_user_id: targetUserId!,
+          related_report_id: report.id,
           reason,
           notes: report.description,
         });
@@ -449,13 +502,13 @@ export default function UserReportsTab({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <CardTitle className="text-sm font-mono" data-testid={`text-report-id-${report.id}`}>
-                                {report.id.slice(0, 8)}...
+                                {`举报 ${shortId(report.id)}`}
                               </CardTitle>
                               <Badge
-                                variant={REPORT_TYPE_MAP[report.report_type]?.variant || "default"}
+                                variant={REPORT_TYPE_MAP[report.category]?.variant || "default"}
                                 data-testid={`badge-report-type-${report.id}`}
                               >
-                                {REPORT_TYPE_MAP[report.report_type]?.label || report.report_type}
+                                {REPORT_TYPE_MAP[report.category]?.label || report.category}
                               </Badge>
                             </div>
                           </div>
@@ -472,7 +525,7 @@ export default function UserReportsTab({
                             <div>
                               <p className="text-muted-foreground mb-1">举报人</p>
                               <p className="font-medium" data-testid={`text-reporter-name-${report.id}`}>
-                                {getUserName(report.reporter_first_name, report.reporter_last_name)}
+                                {reporterName(report)}
                               </p>
                               {report.reporter_email && (
                                 <p className="text-xs text-muted-foreground" data-testid={`text-reporter-email-${report.id}`}>
@@ -483,7 +536,7 @@ export default function UserReportsTab({
                             <div>
                               <p className="text-muted-foreground mb-1">被举报人</p>
                               <p className="font-medium" data-testid={`text-reported-name-${report.id}`}>
-                                {getUserName(report.reported_first_name, report.reported_last_name)}
+                                {reportedName(report)}
                               </p>
                               {report.reported_email && (
                                 <p className="text-xs text-muted-foreground" data-testid={`text-reported-email-${report.id}`}>
@@ -513,7 +566,8 @@ export default function UserReportsTab({
                                     e.stopPropagation();
                                     setPendingAction({ report, action: "warn" });
                                   }}
-                                  disabled={actionPending}
+                                  disabled={actionPending || !canApplyUserAction(report)}
+                                  title={!canApplyUserAction(report) ? "该举报没有关联用户" : undefined}
                                   data-testid={`button-warn-quick-${report.id}`}
                                 >
                                   <AlertOctagon className="h-3 w-3 mr-1" />
@@ -526,7 +580,8 @@ export default function UserReportsTab({
                                     e.stopPropagation();
                                     setPendingAction({ report, action: "ban" });
                                   }}
-                                  disabled={actionPending}
+                                  disabled={actionPending || !canApplyUserAction(report)}
+                                  title={!canApplyUserAction(report) ? "该举报没有关联用户" : undefined}
                                   data-testid={`button-ban-quick-${report.id}`}
                                 >
                                   <Ban className="h-3 w-3 mr-1" />
@@ -612,13 +667,13 @@ export default function UserReportsTab({
                             </TableCell>
                             <TableCell>
                               <div className="font-medium" data-testid={`text-admin-name-${log.id}`}>
-                                {getUserName(log.admin_first_name, log.admin_last_name)}
+                                {logAdminName(log)}
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
                                 <div className="font-medium" data-testid={`text-target-name-${log.id}`}>
-                                  {getUserName(log.target_first_name, log.target_last_name)}
+                                  {logTargetName(log)}
                                 </div>
                                 {log.target_email && (
                                   <div className="text-xs text-muted-foreground" data-testid={`text-target-email-${log.id}`}>
@@ -667,10 +722,10 @@ export default function UserReportsTab({
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">举报信息</h3>
                   <Badge
-                    variant={REPORT_TYPE_MAP[selectedReport.report_type]?.variant || "default"}
+                    variant={REPORT_TYPE_MAP[selectedReport.category]?.variant || "default"}
                     data-testid="dialog-report-type"
                   >
-                    {REPORT_TYPE_MAP[selectedReport.report_type]?.label || selectedReport.report_type}
+                    {REPORT_TYPE_MAP[selectedReport.category]?.label || selectedReport.category}
                   </Badge>
                 </div>
 
@@ -678,7 +733,7 @@ export default function UserReportsTab({
                   <div>
                     <p className="text-muted-foreground mb-1">举报人</p>
                     <p className="font-medium" data-testid="dialog-reporter-name">
-                      {getUserName(selectedReport.reporter_first_name, selectedReport.reporter_last_name)}
+                      {reporterName(selectedReport)}
                     </p>
                     {selectedReport.reporter_email && (
                       <p className="text-xs text-muted-foreground" data-testid="dialog-reporter-email">
@@ -689,7 +744,7 @@ export default function UserReportsTab({
                   <div>
                     <p className="text-muted-foreground mb-1">被举报人</p>
                     <p className="font-medium" data-testid="dialog-reported-name">
-                      {getUserName(selectedReport.reported_first_name, selectedReport.reported_last_name)}
+                      {reportedName(selectedReport)}
                     </p>
                     {selectedReport.reported_email && (
                       <p className="text-xs text-muted-foreground" data-testid="dialog-reported-email">
@@ -705,15 +760,6 @@ export default function UserReportsTab({
                     {selectedReport.description}
                   </p>
                 </div>
-
-                {selectedReport.evidence && (
-                  <div>
-                    <p className="text-muted-foreground text-sm mb-1">证据</p>
-                    <p className="text-sm" data-testid="dialog-evidence">
-                      {selectedReport.evidence}
-                    </p>
-                  </div>
-                )}
 
                 <div>
                   <p className="text-muted-foreground text-sm mb-1">创建时间</p>
@@ -759,7 +805,8 @@ export default function UserReportsTab({
                       variant="destructive"
                       size="sm"
                       onClick={() => setPendingAction({ report: selectedReport, action: "ban" })}
-                      disabled={actionPending}
+                      disabled={actionPending || !canApplyUserAction(selectedReport)}
+                      title={!canApplyUserAction(selectedReport) ? "该举报没有关联用户" : undefined}
                       data-testid="button-ban-user"
                     >
                       <Ban className="h-4 w-4 mr-2" />
@@ -769,7 +816,8 @@ export default function UserReportsTab({
                       variant="secondary"
                       size="sm"
                       onClick={() => setPendingAction({ report: selectedReport, action: "warn" })}
-                      disabled={actionPending}
+                      disabled={actionPending || !canApplyUserAction(selectedReport)}
+                      title={!canApplyUserAction(selectedReport) ? "该举报没有关联用户" : undefined}
                       data-testid="button-warn-user"
                     >
                       <AlertOctagon className="h-4 w-4 mr-2" />
@@ -824,13 +872,13 @@ export default function UserReportsTab({
             <AlertDialogDescription>
               {pendingAction?.action === "ban" && (
                 <>
-                  你即将封禁用户 <strong>{getReportedName(pendingAction.report)}</strong>
+                  你即将封禁用户 <strong>{reportedName(pendingAction.report)}</strong>
                   ，该用户将立即无法登录和使用产品。此操作会同时记录操作日志并将举报标记为已处理。
                 </>
               )}
               {pendingAction?.action === "warn" && (
                 <>
-                  你即将对用户 <strong>{getReportedName(pendingAction.report)}</strong> 发出警告
+                  你即将对用户 <strong>{reportedName(pendingAction.report)}</strong> 发出警告
                   ，警告会记录到操作日志，并将举报标记为已处理。
                 </>
               )}

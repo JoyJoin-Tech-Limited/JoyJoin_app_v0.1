@@ -13,6 +13,7 @@ import {
 import { Send, UserPlus, Users, AlertTriangle, Trophy } from "lucide-react";
 import AdminQueryError from "@/components/admin/AdminQueryError";
 import EmptyState from "@/components/admin/EmptyState";
+import { personLabel } from "./personLabel";
 
 interface ReferralStats {
   invitations: {
@@ -38,8 +39,18 @@ interface ReferralStats {
     selfReferralConversions: number;
     totalSelfReferralFlags: number;
   };
-  topInviters: Array<{ userId: string; displayName: string | null; count: number }>;
-  topReferrers: Array<{ userId: string; displayName: string | null; count: number }>;
+  topInviters: Array<{
+    userId: string;
+    displayName: string | null;
+    wechatNickname: string | null;
+    count: number;
+  }>;
+  topReferrers: Array<{
+    userId: string;
+    displayName: string | null;
+    wechatNickname: string | null;
+    count: number;
+  }>;
 }
 
 function pct(ratio: number | null): string {
@@ -170,10 +181,14 @@ export default function AdminReferralsPage() {
                     <TableRow key={inviter.userId} data-testid={`row-inviter-${inviter.userId}`}>
                       <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{inviter.displayName || "未设置昵称"}</p>
-                          <p className="text-xs text-muted-foreground">{inviter.userId.slice(0, 12)}…</p>
-                        </div>
+                        <p className="font-medium">
+                          {personLabel({
+                            displayName: inviter.displayName,
+                            wechatNickname: inviter.wechatNickname,
+                            id: inviter.userId,
+                            fallback: "未设置昵称",
+                          })}
+                        </p>
                       </TableCell>
                       <TableCell className="text-right font-semibold">{inviter.count}</TableCell>
                     </TableRow>
@@ -256,10 +271,14 @@ export default function AdminReferralsPage() {
                     <TableRow key={referrer.userId} data-testid={`row-referrer-${referrer.userId}`}>
                       <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{referrer.displayName || "未设置昵称"}</p>
-                          <p className="text-xs text-muted-foreground">{referrer.userId.slice(0, 12)}…</p>
-                        </div>
+                        <p className="font-medium">
+                          {personLabel({
+                            displayName: referrer.displayName,
+                            wechatNickname: referrer.wechatNickname,
+                            id: referrer.userId,
+                            fallback: "未设置昵称",
+                          })}
+                        </p>
                       </TableCell>
                       <TableCell className="text-right font-semibold">{referrer.count}</TableCell>
                     </TableRow>

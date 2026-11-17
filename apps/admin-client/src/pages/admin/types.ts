@@ -389,18 +389,27 @@ export interface FinanceStats {
 export interface Report {
   id: string;
   reporter_id: string;
-  reported_user_id: string;
-  report_type: ReportType;
+  /** Null when the report targets AI-generated content rather than a user. */
+  reported_user_id: string | null;
+  /** Live column is `category` (there is no `report_type` column). */
+  category: ReportType;
   description: string;
-  evidence: string | null;
+  related_event_id: string | null;
   status: ReportStatus;
-  admin_notes: string | null;
+  /** Written to the `resolution` column by the review PATCH. */
+  resolution: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   created_at: string;
   reporter_first_name: string | null;
   reporter_last_name: string | null;
+  reporter_display_name?: string | null;
+  reporter_wechat_nickname?: string | null;
   reporter_email: string | null;
   reported_first_name: string | null;
   reported_last_name: string | null;
+  reported_display_name?: string | null;
+  reported_wechat_nickname?: string | null;
   reported_email: string | null;
 }
 
@@ -414,8 +423,12 @@ export interface ModerationLog {
   created_at: string;
   admin_first_name: string | null;
   admin_last_name: string | null;
+  admin_display_name?: string | null;
+  admin_wechat_nickname?: string | null;
   target_first_name: string | null;
   target_last_name: string | null;
+  target_display_name?: string | null;
+  target_wechat_nickname?: string | null;
   target_email: string | null;
 }
 
@@ -436,7 +449,13 @@ export type SortOption =
 export type EventStatusFilter = "all" | "upcoming" | "ongoing" | "past" | "cancelled";
 export type PoolStatusFilter = "all" | "pending_match" | "matched" | "cancelled" | "archived";
 
-export type ReportType = "harassment" | "inappropriate_content" | "spam" | "other";
+export type ReportType =
+  | "harassment"
+  | "inappropriate_content"
+  | "fake_profile"
+  | "ai_content"
+  | "spam"
+  | "other";
 export type ReportStatus = "pending" | "resolved" | "dismissed";
 export type ModerationAction = "ban" | "warn" | "unban";
 

@@ -6,7 +6,12 @@ export interface ModerationRepository {
   getModerationStats(): Promise<any>;
   getAllReports(): Promise<any[]>;
   getPendingReports(): Promise<any[]>;
-  updateReportStatus(id: string, status: string, adminNotes?: string): Promise<any>;
+  updateReportStatus(
+    id: string,
+    status: string,
+    adminNotes?: string,
+    reviewedBy?: string,
+  ): Promise<any>;
   createModerationLog(data: any): Promise<any>;
   getModerationLogs(): Promise<any[]>;
   createChatReport(data: InsertChatReport): Promise<ChatReport>;
@@ -51,9 +56,13 @@ export const moderationRepo: ModerationRepository = {
         r.*,
         u1.first_name as reporter_first_name,
         u1.last_name as reporter_last_name,
+        u1.display_name as reporter_display_name,
+        u1.wechat_nickname as reporter_wechat_nickname,
         u1.email as reporter_email,
         u2.first_name as reported_first_name,
         u2.last_name as reported_last_name,
+        u2.display_name as reported_display_name,
+        u2.wechat_nickname as reported_wechat_nickname,
         u2.email as reported_email
       FROM reports r
       LEFT JOIN users u1 ON r.reporter_id = u1.id
@@ -69,9 +78,13 @@ export const moderationRepo: ModerationRepository = {
         r.*,
         u1.first_name as reporter_first_name,
         u1.last_name as reporter_last_name,
+        u1.display_name as reporter_display_name,
+        u1.wechat_nickname as reporter_wechat_nickname,
         u1.email as reporter_email,
         u2.first_name as reported_first_name,
         u2.last_name as reported_last_name,
+        u2.display_name as reported_display_name,
+        u2.wechat_nickname as reported_wechat_nickname,
         u2.email as reported_email
       FROM reports r
       LEFT JOIN users u1 ON r.reporter_id = u1.id
@@ -82,10 +95,22 @@ export const moderationRepo: ModerationRepository = {
     return result.rows;
   },
 
-  async updateReportStatus(id: string, status: string, adminNotes?: string): Promise<any> {
+  async updateReportStatus(
+    id: string,
+    status: string,
+    adminNotes?: string,
+    reviewedBy?: string,
+  ): Promise<any> {
+    // The live table has no `admin_notes` / `resolved_at` columns; the review
+    // fields are `resolution`, `reviewed_at`, `reviewed_by`. Writing the old
+    // names made every moderation PATCH fail with a 42703 at runtime.
     const result = await db.execute(sql`
-      UPDATE reports 
-      SET status = ${status}, admin_notes = ${adminNotes || null}, resolved_at = ${status === 'resolved' ? new Date() : null}
+      UPDATE reports
+      SET
+        status = ${status},
+        resolution = ${adminNotes || null},
+        reviewed_at = ${status === 'pending' ? null : new Date()},
+        reviewed_by = ${reviewedBy || null}
       WHERE id = ${id}
       RETURNING *
     `);
@@ -94,8 +119,15 @@ export const moderationRepo: ModerationRepository = {
 
   async createModerationLog(data: any): Promise<any> {
     const result = await db.execute(sql`
-      INSERT INTO moderation_logs (admin_id, action, target_user_id, reason, notes)
-      VALUES (${data.adminId}, ${data.action}, ${data.targetUserId}, ${data.reason || null}, ${data.notes || null})
+      INSERT INTO moderation_logs (admin_id, action, target_user_id, related_report_id, reason, notes)
+      VALUES (
+        ${data.adminId},
+        ${data.action},
+        ${data.targetUserId || null},
+        ${data.relatedReportId || null},
+        ${data.reason || null},
+        ${data.notes || null}
+      )
       RETURNING *
     `);
     return result.rows[0];
@@ -107,8 +139,12 @@ export const moderationRepo: ModerationRepository = {
         ml.*,
         u1.first_name as admin_first_name,
         u1.last_name as admin_last_name,
+        u1.display_name as admin_display_name,
+        u1.wechat_nickname as admin_wechat_nickname,
         u2.first_name as target_first_name,
         u2.last_name as target_last_name,
+        u2.display_name as target_display_name,
+        u2.wechat_nickname as target_wechat_nickname,
         u2.email as target_email
       FROM moderation_logs ml
       LEFT JOIN users u1 ON ml.admin_id = u1.id

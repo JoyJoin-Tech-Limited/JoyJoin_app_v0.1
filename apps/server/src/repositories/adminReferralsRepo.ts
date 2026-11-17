@@ -47,8 +47,18 @@ export interface ReferralStats {
     selfReferralConversions: number;
     totalSelfReferralFlags: number;
   };
-  topInviters: Array<{ userId: string; displayName: string | null; count: number }>;
-  topReferrers: Array<{ userId: string; displayName: string | null; count: number }>;
+  topInviters: Array<{
+    userId: string;
+    displayName: string | null;
+    wechatNickname: string | null;
+    count: number;
+  }>;
+  topReferrers: Array<{
+    userId: string;
+    displayName: string | null;
+    wechatNickname: string | null;
+    count: number;
+  }>;
 }
 
 function ratio(numerator: number, denominator: number): number | null {
@@ -98,12 +108,13 @@ export async function getReferralStats(): Promise<ReferralStats> {
       .select({
         userId: invitations.inviterId,
         displayName: users.displayName,
+        wechatNickname: users.wechatNickname,
         count: sql<number>`count(*)::int`,
       })
       .from(invitationUses)
       .innerJoin(invitations, eq(invitationUses.invitationId, invitations.id))
       .leftJoin(users, eq(invitations.inviterId, users.id))
-      .groupBy(invitations.inviterId, users.displayName)
+      .groupBy(invitations.inviterId, users.displayName, users.wechatNickname)
       .orderBy(desc(sql`count(*)`))
       .limit(20),
     // Top 20 referral-code owners by conversions.
@@ -111,12 +122,13 @@ export async function getReferralStats(): Promise<ReferralStats> {
       .select({
         userId: referralCodes.userId,
         displayName: users.displayName,
+        wechatNickname: users.wechatNickname,
         count: sql<number>`count(*)::int`,
       })
       .from(referralConversions)
       .innerJoin(referralCodes, eq(referralConversions.referralCodeId, referralCodes.id))
       .leftJoin(users, eq(referralCodes.userId, users.id))
-      .groupBy(referralCodes.userId, users.displayName)
+      .groupBy(referralCodes.userId, users.displayName, users.wechatNickname)
       .orderBy(desc(sql`count(*)`))
       .limit(20),
     // Abuse signal: inviter accepted their own invite.
@@ -194,8 +206,10 @@ export interface DuoInviteListItem {
   invitationType: string | null;
   inviterId: string;
   inviterDisplayName: string | null;
+  inviterWechatNickname: string | null;
   inviteeId: string | null;
   inviteeDisplayName: string | null;
+  inviteeWechatNickname: string | null;
   poolId: string | null;
   poolTitle: string | null;
   poolCity: string | null;
@@ -394,8 +408,10 @@ export async function listDuoInvites(params: DuoInviteListParams): Promise<{
       invitationType: invitations.invitationType,
       inviterId: invitations.inviterId,
       inviterDisplayName: users.displayName,
+      inviterWechatNickname: users.wechatNickname,
       inviteeId: invitationUses.inviteeId,
       inviteeDisplayName: inviteeUsers.displayName,
+      inviteeWechatNickname: inviteeUsers.wechatNickname,
       boundAt: invitationUses.createdAt,
       matchedTogether: invitationUses.matchedTogether,
       rewardIssued: invitationUses.rewardIssued,

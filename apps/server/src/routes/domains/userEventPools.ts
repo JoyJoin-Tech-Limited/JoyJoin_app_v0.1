@@ -2383,8 +2383,18 @@ export function registerUserEventPoolRoutes(app: Express): void {
     // Moderation - Update report status
     app.patch("/api/admin/moderation/reports/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
       try {
-        const { status, adminNotes } = req.body;
-        const report = await storage.updateReportStatus(req.params.id, status, adminNotes);
+        const { status, adminNotes, admin_notes } = req.body ?? {};
+        if (!['pending', 'resolved', 'dismissed'].includes(status)) {
+          return res.status(400).json({ code: 'INVALID_REPORT_STATUS', message: '无效的举报状态' });
+        }
+        // The client still sends `admin_notes`; the column is `resolution`.
+        const resolution =
+          typeof adminNotes === 'string' ? adminNotes : typeof admin_notes === 'string' ? admin_notes : undefined;
+        const session = req.session as any;
+        const report = await storage.updateReportStatus(req.params.id, status, resolution, session.userId);
+        if (!report) {
+          return res.status(404).json({ code: 'REPORT_NOT_FOUND', message: '举报记录不存在' });
+        }
         res.json(report);
       } catch (error) {
         logger.error("Error updating report:", { error: String(error) });
@@ -2395,13 +2405,26 @@ export function registerUserEventPoolRoutes(app: Express): void {
     // Moderation - Create moderation log
     app.post("/api/admin/moderation/logs", requireAdmin, requireOperatorOrAbove, async (req, res) => {
       try {
+        const body = req.body ?? {};
+        // The client posts snake_case (`target_user_id`); accept both so a
+        // naming drift cannot silently write a log with no target.
+        const action = body.action;
+        const targetUserId = body.targetUserId ?? body.target_user_id ?? null;
+        const relatedReportId = body.relatedReportId ?? body.related_report_id ?? null;
+        if (!['ban', 'warn', 'unban'].includes(action)) {
+          return res.status(400).json({ code: 'INVALID_MODERATION_ACTION', message: '无效的处置动作' });
+        }
+        if ((action === 'ban' || action === 'warn') && !targetUserId) {
+          return res.status(400).json({ code: 'MODERATION_TARGET_REQUIRED', message: '处置动作缺少目标用户' });
+        }
         const session = req.session as any;
         const log = await storage.createModerationLog({
           adminId: session.userId,
-          action: req.body.action,
-          targetUserId: req.body.targetUserId,
-          reason: req.body.reason,
-          notes: req.body.notes,
+          action,
+          targetUserId,
+          relatedReportId,
+          reason: body.reason,
+          notes: body.notes,
         });
         res.json(log);
       } catch (error) {
