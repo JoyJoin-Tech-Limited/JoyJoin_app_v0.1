@@ -307,21 +307,17 @@ jobs:
           key: taro-weapp-dist-${{ github.sha }}
 
   # CVM tunnel upload: rsync dist → SSH → miniprogram-ci on CVM (fixed IP).
-  # Automatic uploads follow a successful staging deployment for the exact
-  # commit; transient SSH failures are retried, while miniprogram-ci itself is
-  # intentionally single-attempt. Compiled-output verification now runs in the
-  # push build (fail-fast), so this job only uploads.
-  # Note: `event == 'push' || 'workflow_dispatch'` — a manually dispatched
-  # staging deploy is the same explicit-intent signal (2026-10-14: the intent
-  # icons 开发版 upload was blocked for ~40 min because a dispatch-approved
-  # staging success didn't satisfy the push-only gating).
+  # 2026-11-17: the push build publishes the 开发版 itself. Previously the
+  # upload waited for the staging deploy of the same commit, so push→开发版
+  # inherited the whole 11–12 min deploy; the push lane lands in ~10 min.
+  # The former workflow_run lane is gone on purpose: keeping both would
+  # publish the same commit twice, and a late release run for an older
+  # commit could overwrite a newer 开发版. Transient SSH failures are retried
+  # here; manual dispatch keeps its explicit `should_upload` path.
   upload-weapp:
     if: >-
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       (github.event.workflow_run.event == 'push' ||
-        github.event.workflow_run.event == 'workflow_dispatch') &&
-       github.event.workflow_run.head_branch == 'main' &&
+      (github.event_name == 'push' &&
+       github.ref_name == 'main' &&
        needs.check-mini-program-changes.outputs.changed == 'true') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.should_upload == 'true')
     needs: [check-mini-program-changes, build-weapp]
@@ -344,7 +340,7 @@ jobs:
         uses: actions/cache/restore@v4.2.0
         with:
           path: apps/mini-program/dist
-          key: taro-weapp-dist-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          key: taro-weapp-dist-${{ github.sha }}
           fail-on-cache-miss: true
 
       - name: Upload to WeChat Mini Program via CVM
@@ -355,8 +351,7 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
-          SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-          REQUIRE_STAGING_SHA: ${{ github.event_name == 'workflow_run' && 'true' || 'false' }}
+          SOURCE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
@@ -498,22 +493,10 @@ jobs:
 
           wait_for_ssh_banner
 
-          # Automatic publishing is allowed only while staging still serves
-          # this exact commit. The shared CVM lock keeps the marker stable for
-          # the check plus upload, so a later API deploy cannot overtake it.
-          if [ "$REQUIRE_STAGING_SHA" = "true" ]; then
-            DEPLOYED_SHA=$(timeout 45s ssh "${SSH_OPTIONS[@]}" "$CVM" \
-              "test -f ~/JoyJoin/deployment/.staging-deployed-sha && cat ~/JoyJoin/deployment/.staging-deployed-sha")
-            if [ "$DEPLOYED_SHA" != "$SOURCE_SHA" ]; then
-              echo "::warning::Skipping stale WeChat upload: staging no longer serves ${SOURCE_SHA:0:7}"
-              {
-                echo "### WeChat mini-program upload"
-                echo "- Commit: \`${SOURCE_SHA:0:7}\`"
-                echo "- Result: skipped because a newer staging release is active"
-              } >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-          fi
+          # 2026-11-17: the push build publishes the 开发版 itself, so this job
+          # no longer waits for the staging deploy of the same commit. The old
+          # guard compared against .staging-deployed-sha and would have skipped
+          # every push-lane upload; it was removed together with that lane.
 
           echo "📱 Uploading mini-program v$VERSION via CVM..."
 
