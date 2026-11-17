@@ -1,4 +1,15 @@
 /* globals Component, wx, getCurrentPages */
+
+// Window (ms) after a page-hook selection push during which the push is
+// authoritative for this instance. `pageLifetimes.show` fires mid-transition
+// and can read a stale `getCurrentPages()`; inside this window it defers.
+var PUSH_SETTLE_MS = 400
+
+// The logo settle is an app-entry brand moment, not a per-tab-page one. Each
+// tab page builds its own tab-bar instance, so without this flag the animation
+// replayed on every first visit.
+var hasPlayedLogoEntrance = false
+
 Component({
   options: {
     addGlobalClass: true,
@@ -26,6 +37,21 @@ Component({
   _activeSwitchRequestId: 0,
   _pendingSwitch: null,
   _switchTimer: null,
+  // Route-to-highlight reconciliation.
+  //
+  // INVARIANT: the visible route is the only durable selection authority.
+  // Every instance converges to `_routeToIndex[visibleRoute]` at attach and on
+  // every show; convergence is idempotent (no setData when already correct).
+  // An optimistic tap highlight may pre-empt route truth, but it is provisional
+  // and is overwritten by the next settle. No writer may set `selected` for a
+  // page it is not currently showing.
+  //
+  // `_lastPushAt` marks the last selection push from the page hook. `show` runs
+  // during the switchTab transition, when `getCurrentPages()` may still report
+  // the outgoing route; a push that just landed is fresher than that read, so
+  // show must not overwrite it.
+  _lastPushAt: 0,
+  _settleTimer: null,
   // Screen-reader announcement timer
   _announcementTimer: null,
   _routeToIndex: {
@@ -41,6 +67,8 @@ Component({
     selected: 0,
     lowEnd: false,
     hidden: true,
+    // Logo settle plays once per app session (see hasPlayedLogoEntrance).
+    settle: false,
     collapsed: false,
     sheetOpen: false,
     announcement: '',
@@ -105,7 +133,7 @@ Component({
     attached: function () {
       // Some WeChat runtimes do not copy top-level non-data properties to the
       // instance before attached fires. Re-initialize the route map here as a
-      // defensive fallback to prevent `_shouldHideOnPage` crashes.
+      // defensive fallback to prevent `_reconcileSelection` crashes.
       if (!this._routeToIndex) {
         this._routeToIndex = {
           'pages/discover/index': 0,
@@ -147,11 +175,27 @@ Component({
       this._activeSwitchRequestId = 0
       this._pendingSwitch = null
       clearTimeout(this._switchTimer)
+      this._lastPushAt = 0
 
-      // Hide by default; setSelected will reveal on tab pages.
-      var shouldHide = this._shouldHideOnPage()
-      if (shouldHide) {
-        this.setData({ hidden: true })
+      // Seed selection + visibility from the route as the instance mounts, so a
+      // tab page never renders an invisible bar waiting for a later callback.
+      // `data.hidden` stays `true` by default, so this cannot leak the bar onto
+      // non-tab routes: reconcile hides it there and leaves an unresolvable
+      // stack untouched. Trade-off vs. the old hide-only attach: this reads the
+      // same `getCurrentPages()` that can be mid-transition, so a switch may
+      // paint the outgoing tab for a frame — the page's own publish (and
+      // `pageLifetimes.show`) correct it immediately afterwards.
+      this._reconcileSelection()
+
+      // Brand moment: first tab-bar instance of the session only.
+      if (!hasPlayedLogoEntrance) {
+        hasPlayedLogoEntrance = true
+        this.setData({ settle: true })
+        // Clear once the 400ms settle has finished. The root sits behind
+        // `wx:if`, so without this a later teardown/rebuild (closing Discover's
+        // area-filter sheet rebuilds the subtree) would replay the animation on
+        // a screen the user never left.
+        this._settleTimer = setTimeout(this._clearSettle.bind(this), 450)
       }
 
       // Network awareness for deferred badge updates.
@@ -182,6 +226,7 @@ Component({
       clearTimeout(this._syncTimer)
       clearTimeout(this._announcementTimer)
       clearTimeout(this._switchTimer)
+      clearTimeout(this._settleTimer)
       this._switchRequestId += 1
       this._activeSwitchRequestId = 0
       this._pendingSwitch = null
@@ -193,10 +238,13 @@ Component({
   },
 
   pageLifetimes: {
-    // The visible route is the only durable selection authority. Reconcile
-    // synchronously so a late callback or swipe-back cannot leave stale color.
+    // Backstop only. The page's own useDidShow publishes route truth for this
+    // instance and is fresher than anything readable here mid-transition, so a
+    // recent push wins. With no recent push this covers swipe-back, deep links,
+    // and re-attach, where no hook runs at all.
     show: function () {
-      this._syncSelectionWithCurrentRoute()
+      if (Date.now() - (this._lastPushAt || 0) < PUSH_SETTLE_MS) return
+      this._reconcileSelection()
     },
   },
 
@@ -281,6 +329,9 @@ Component({
     setSelected: function (selected) {
       var n = Number(selected)
       this._confirmedSelected = n
+      // Marks route truth as fresh for this instance: `pageLifetimes.show`
+      // defers to it instead of re-reading a possibly-stale page stack.
+      this._lastPushAt = Date.now()
       // No-op guard: tab switches already set selected optimistically in
       // handleTabTap/handleCenterTap. Skipping the redundant setData avoids
       // an extra native re-render (icon flicker) on every switch.
@@ -301,7 +352,7 @@ Component({
      * hide the tab bar when a bottom sheet (area filter / city picker)
      * is open. Independent of the page-route logic so sheets fully
      * cover the viewport without native-layer bleed-through.
-     * When the page re-shows (tab switch), _syncSelectionWithCurrentRoute
+     * When the page re-shows (tab switch), _reconcileSelection
      * may set hidden:false but does not touch sheetOpen, so the bar
      * stays hidden until the sheet closes.
      */
@@ -400,7 +451,7 @@ Component({
         if (self._pendingSwitch) {
           self._flushPendingSwitch()
         } else {
-          self._syncSelectionWithCurrentRoute()
+          self._reconcileSelection()
         }
       }, 400)
 
@@ -409,7 +460,7 @@ Component({
         success: function () {
           if (!self._settleSwitch(requestId) || self._isDetached) return
           if (requestId === self._switchRequestId) {
-            self._syncSelectionWithCurrentRoute()
+            self._reconcileSelection()
             if (self._routeToIndex[self._getCurrentRoute()] === index) {
               self._setAnnouncement(isCenter ? '已切换到中心入口' : self._getTabAnnouncement(index))
             }
@@ -432,11 +483,14 @@ Component({
           if (!self._settleSwitch(requestId) || self._isDetached) return
 
           if (isLatest) {
-            if (typeof self._routeToIndex[self._getCurrentRoute()] === 'number') {
-              self._syncSelectionWithCurrentRoute()
-            } else {
+            // Route truth first: a failed switch normally means the user never
+            // left the previous page, which the route read already reflects.
+            var outcome = self._reconcileSelection()
+            if (outcome === 'unknown') {
+              // Unreadable stack: fall back to where we came from rather than
+              // leaving the optimistic highlight on a page we never reached.
               self._confirmedSelected = request.previousSelected
-              self.setData({ selected: request.previousSelected })
+              self.setData({ selected: request.previousSelected, hidden: false })
             }
             if (wx.showToast) {
               wx.showToast({ title: '切换失败，请重试', icon: 'none' })
@@ -460,6 +514,17 @@ Component({
       if (this._switchInFlight || this._isDetached || !this._pendingSwitch) return
       var pending = this._pendingSwitch
       this._pendingSwitch = null
+      // The route already advanced to this destination while we waited (a fast
+      // platform callback or a second tap that matched the active target).
+      // Re-issuing switchTab would be a redundant native hop that re-runs the
+      // destination page's onShow for no visible change.
+      // A stale read can only report the OUTGOING route, so it can equal
+      // `pending.index` only when the user re-tapped the tab they were already
+      // on — exactly the case where dropping the intent is correct.
+      if (this._routeToIndex[this._getCurrentRoute()] === pending.index) {
+        this._reconcileSelection()
+        return
+      }
       this._startSwitch(pending)
     },
 
@@ -490,24 +555,46 @@ Component({
       return route.replace(/^\//, '').split('?')[0]
     },
 
-    _syncSelectionWithCurrentRoute: function () {
+    /**
+     * Ends the one-time logo settle so a later subtree rebuild does not replay
+     * it (see hasPlayedLogoEntrance).
+     */
+    _clearSettle: function () {
+      this._settleTimer = null
+      if (this._isDetached) return
+      this.setData({ settle: false })
+    },
+
+    /**
+     * Resolves selection + visibility from the visible route.
+     *
+     * The ONLY writer of `selected`/`hidden` that is derived from routing.
+     * Idempotent: when the instance already matches the route it performs no
+     * setData at all, so calling it on every show is free.
+     *
+     * Returns:
+     *   'tab'     — a mapped tab route; the bar is revealed and lit
+     *   'hidden'  — a mapped non-tab route; the bar must not exist here
+     *   'unknown' — empty/unreadable page stack; nothing was changed
+     */
+    _reconcileSelection: function () {
+      var pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+      if (!pages || pages.length === 0) return 'unknown'
+
       var route = this._getCurrentRoute()
       var nextSelected = this._routeToIndex[route]
       if (typeof nextSelected !== 'number') {
         if (this.data.hidden !== true) {
           this.setData({ hidden: true })
         }
-        return
+        return 'hidden'
       }
 
       this._confirmedSelected = nextSelected
       if (this.data.selected !== nextSelected || this.data.hidden) {
         this.setData({ selected: nextSelected, hidden: false })
       }
-    },
-
-    _shouldHideOnPage: function () {
-      return typeof this._routeToIndex[this._getCurrentRoute()] !== 'number'
+      return 'tab'
     },
 
     /**

@@ -65,6 +65,17 @@ describe('native custom tab bar structure', () => {
     expect(wxml).toContain('causing blank tab icons')
   })
 
+  it('renders the announcement in a live region and marks the center CTA pressed state', () => {
+    // data.announcement is written by _setAnnouncement on every successful tab
+    // switch. Before 2026-11-17 nothing rendered it, so the contract was dead:
+    // tests asserted the state field while screen readers heard nothing.
+    expect(wxml).toContain('aria-live="polite"')
+    expect(wxml).toContain('{{announcement}}')
+    expect(wxml).toContain('aria-atomic="true"')
+    // Center hub is index 4; side tabs already expose aria-pressed.
+    expect(wxml).toContain('aria-pressed="{{selected === 4}}"')
+  })
+
   it('uses stacked dual icons with opacity toggle (no src swap on selection)', () => {
     // Swapping <image src> on selection forces a PNG re-decode and visibly
     // flickers on every tab switch. Both icons must stay mounted; selection

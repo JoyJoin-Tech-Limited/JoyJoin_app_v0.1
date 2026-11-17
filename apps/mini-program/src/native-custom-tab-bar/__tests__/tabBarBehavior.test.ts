@@ -189,15 +189,29 @@ describe('native custom tab bar behavior', () => {
     expect(component._confirmedSelected).toBe(0)
   })
 
-  it('preserves the current selection when re-attached', async () => {
+  it('adopts the visible route on attach instead of stale instance state', async () => {
     setupMocks()
     const component = await loadComponent()
 
+    // A re-created instance may still carry an outdated selection; the route
+    // is the authority, so attach must converge to it (here: Discover = 0).
     component.setData({ selected: 2 })
     component.attached()
 
-    expect(component.data.selected).toBe(2)
-    expect(component._confirmedSelected).toBe(2)
+    expect(component.data.selected).toBe(0)
+    expect(component._confirmedSelected).toBe(0)
+    expect(component.data.hidden).toBe(false)
+  })
+
+  it('reveals an already-lit bar at attach on a tab page (no second tap)', async () => {
+    setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+    const component = await loadComponent()
+
+    component.attached()
+
+    expect(component.data.selected).toBe(1)
+    expect(component.data.hidden).toBe(false)
   })
 
   it('updates the active highlight when a side tab is tapped', async () => {
@@ -618,10 +632,11 @@ describe('native custom tab bar behavior', () => {
     const component = await loadComponent()
 
     component.attached()
-    expect(component.data.hidden).toBe(true)
-
-    component.setSelected(0)
     expect(component.data.hidden).toBe(false)
+
+    component.show()
+    expect(component.data.hidden).toBe(false)
+    expect(component.data.selected).toBe(0)
   })
 
   it('hides the tab bar when attached to a known non-tab page', async () => {
@@ -655,15 +670,136 @@ describe('native custom tab bar behavior', () => {
     const component = await loadComponent()
 
     component.attached()
-    expect(component.data.hidden).toBe(true)
-
-    component.setSelected(0)
+    // Discover alias: the bar is revealed at attach and already lit.
     expect(component.data.hidden).toBe(false)
     expect(component.data.selected).toBe(0)
 
     component.show()
     expect(component.data.hidden).toBe(false)
     expect(component.data.selected).toBe(0)
+  })
+
+  describe('route-truth reconciliation', () => {
+    it.each([
+      ['pages/discover/index', 0],
+      ['pages/events/index', 1],
+      ['pages/connections/index', 2],
+      ['pages/profile/index', 3],
+      ['pages/center-hub/index', 4],
+      ['pages/pool-registration/index', 0],
+    ])('attaches on %s already revealed and lit (index %i)', async (route, index) => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route }])
+      const component = await loadComponent()
+
+      component.attached()
+
+      // The regression this locks: a fresh instance used to stay hidden until a
+      // single useDidShow push arrived. If that push was lost, the bar only lit
+      // on the user's SECOND tap.
+      expect(component.data.hidden).toBe(false)
+      expect(component.data.selected).toBe(index)
+      expect(component._confirmedSelected).toBe(index)
+    })
+
+    it('keeps the default hidden state when no page stack is readable', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([])
+      const component = await loadComponent()
+
+      expect(() => component.attached()).not.toThrow()
+      expect(component.data.hidden).toBe(true)
+    })
+
+    it('still hides on a known non-tab route', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/index/index' }])
+      const component = await loadComponent()
+
+      component.attached()
+
+      expect(component.data.hidden).toBe(true)
+    })
+
+    it('does not re-render when show() finds the instance already correct', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      const setDataSpy = vi.spyOn(component, 'setData')
+      component.show()
+
+      expect(setDataSpy).not.toHaveBeenCalled()
+    })
+
+    it('does not let a mid-transition show() overwrite a just-landed route push', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      // The page hook pushed 连接 while getCurrentPages() still reported 发现.
+      component.setSelected(2)
+      component.show()
+
+      expect(component.data.selected).toBe(2)
+      expect(component._confirmedSelected).toBe(2)
+    })
+
+    it('reconciles again once the push window has expired', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      component.setSelected(2)
+      component._lastPushAt = 0
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      component.show()
+
+      expect(component.data.selected).toBe(1)
+    })
+
+    it('defers a show() inside the push window and reconciles just after it', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      // Route advanced to 连接, but a push landed inside the 400ms window:
+      // the push is fresher than this read, so show() must not repaint.
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      component._lastPushAt = Date.now() - 399
+      component.show()
+      expect(component.data.selected).toBe(1)
+
+      // Same route, window expired: the route backstop takes over again.
+      component._lastPushAt = Date.now() - 401
+      component.show()
+      expect(component.data.selected).toBe(2)
+    })
+
+    it('keeps an open sheet hidden through show()', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      component.setSheetOpen(true)
+      component.show()
+
+      expect(component.data.sheetOpen).toBe(true)
+    })
+
+    it('plays the logo settle only for the first instance of a session', async () => {
+      setupMocks()
+      const first = await loadComponent()
+      first.attached()
+      expect(first.data.settle).toBe(true)
+
+      // A second tab page builds its own instance from the same module.
+      const second = createMockInstance(lastComponentConfig as ComponentConfig)
+      second.attached()
+      expect(second.data.settle).toBe(false)
+    })
   })
 
   describe('setCollapsed', () => {

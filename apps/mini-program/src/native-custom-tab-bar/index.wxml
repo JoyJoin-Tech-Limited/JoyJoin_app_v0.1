@@ -21,7 +21,8 @@
           data-tab="{{item.key}}"
           bindtap="handleTabTap"
           hover-class="joy-custom-tab-bar__item--pressed"
-          hover-stay-time="150"
+          hover-start-time="0"
+          hover-stay-time="100"
           role="button"
           aria-label="{{item.text}}"
           aria-pressed="{{selected === item.index}}"
@@ -69,7 +70,8 @@
           data-tab="{{item.key}}"
           bindtap="handleTabTap"
           hover-class="joy-custom-tab-bar__item--pressed"
-          hover-stay-time="150"
+          hover-start-time="0"
+          hover-stay-time="100"
           role="button"
           aria-label="{{item.text}}"
           aria-pressed="{{selected === item.index}}"
@@ -110,14 +112,16 @@
       class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
       bindtap="handleCenterTap"
       hover-class="joy-custom-tab-bar__center--pressed"
-      hover-stay-time="150"
+      hover-start-time="0"
+      hover-stay-time="100"
       role="button"
       aria-label="{{center.label || 'JoyJoin 中心入口'}}"
+      aria-pressed="{{selected === 4}}"
     >
       <view class="joy-custom-tab-bar__center-outer-ring">
         <view class="joy-custom-tab-bar__center-button">
           <image
-            class="joy-custom-tab-bar__center-logo"
+            class="joy-custom-tab-bar__center-logo {{settle ? 'joy-custom-tab-bar__center-logo--settle' : ''}}"
             src="../assets/joyjoin-logo-tab.png"
             mode="aspectFit"
           />
@@ -127,4 +131,9 @@
       <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
     </view>
   </view>
+
+  <!-- Screen-reader switch confirmation. Visually hidden: this node is the
+       consumer of `data.announcement` (see _setAnnouncement). Without it the
+       announcement was written to state nobody ever rendered. -->
+  <view class="joy-custom-tab-bar__a11y" aria-live="polite" aria-atomic="true">{{announcement}}</view>
 </view>

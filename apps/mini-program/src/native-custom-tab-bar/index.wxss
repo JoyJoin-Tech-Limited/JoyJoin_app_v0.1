@@ -18,8 +18,12 @@
   height: 128rpx;
   box-sizing: border-box;
   background: #FFFFFF;
+  /* Bottom offset + half-blur must stay inside the 16rpx surface-to-screen gap
+     (safe-area-inset-bottom is 0 on Android): 8 + 8 = 16rpx. The old
+     0 16rpx 48rpx cast its body past the gap, so the dock read as pasted to
+     the edge on Android while floating correctly on iOS. */
   box-shadow: 0 -4rpx 24rpx rgba(45, 49, 66, 0.06),
-              0 16rpx 48rpx rgba(45, 49, 66, 0.14);
+              0 8rpx 16rpx rgba(45, 49, 66, 0.12);
   border-radius: 40rpx;
   border: 1rpx solid rgba(139, 92, 246, 0.06);
   overflow: hidden;
@@ -71,28 +75,39 @@
   height: 100%;
   padding: 0 8rpx;
   box-sizing: border-box;
-  transition: transform 100ms ease-out, opacity 100ms ease-out, background-color 150ms ease;
+  /* Selection is a state paint, not a transition: a tab switch reveals a fresh
+     instance that is already correct, so animating it would encode a change
+     that never happened. */
 }
 
-.joy-custom-tab-bar__item--active {
-  background: rgba(139, 92, 246, 0.08);
-  border-radius: 20rpx;
+/* Selection container hugs the icon, not the whole 115.5 × 112rpx item.
+   The old full-item tile competed with the 154rpx center CTA while carrying
+   only a 48rpx icon. The wrap is 64rpx in BOTH states so selecting a tab never
+   shifts layout; 24rpx radius = 37.5% of height (> ⅓) and stays on the 8rpx
+   grid. */
+.joy-custom-tab-bar__item--active .joy-custom-tab-bar__item-icon-wrap {
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 24rpx;
 }
 
 .joy-custom-tab-bar__item-icon-wrap {
   position: relative;
   display: flex;
-  width: 48rpx;
-  height: 48rpx;
+  width: 64rpx;
+  height: 64rpx;
   align-items: center;
   justify-content: center;
+  /* Press feedback lives on the icon only: scaling the 115rpx item block also
+     dragged the label and dimmed it, which read as "disabled". 0ms start is
+     set by hover-start-time on the item. */
+  transition: transform 90ms cubic-bezier(0.4, 0, 0.2, 1), opacity 90ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .joy-custom-tab-bar__item-icon {
   width: 42rpx;
   height: 42rpx;
-  opacity: 0.5;
-  transition: opacity 150ms ease;
+  /* No opacity multiplier: the *_inactive.png artwork is already muted. Stacking
+     a 0.5 multiply on it dropped primary navigation below the 3:1 floor. */
 }
 
 /* Selected variant is stacked on top of the inactive icon and revealed via
@@ -118,20 +133,30 @@
   max-width: 96rpx;
   font-size: 22rpx;
   line-height: 24rpx;
-  color: #9CA3AF;
+  /* $color-text-secondary-on-light — measured 6.27:1 on white. The previous
+     #9CA3AF measured 2.54:1, below the 4.5:1 floor for 22rpx text. */
+  color: #59616C;
   text-align: center;
-  transition: color 150ms ease;
+  transition: opacity 90ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .joy-custom-tab-bar__item-label--active {
-  color: #8B5CF6;
+  /* $color-primary-dark — measured 5.17:1 on the 10% selection pill and
+     5.70:1 on white. Brand #8B5CF6 measured 3.84:1 on the pill. */
+  color: #7C3AED;
   font-weight: 600;
 }
 
-/* Pressed / hover state for tab items */
-.joy-custom-tab-bar__item--pressed {
-  transform: scale(0.95);
-  opacity: 0.8;
+/* Pressed / hover state — the icon scales and the label only dims (no
+   transform, so nothing displaces). Covers taps anywhere in the item, not just
+   the icon. */
+.joy-custom-tab-bar__item--pressed .joy-custom-tab-bar__item-icon-wrap {
+  transform: scale(0.94);
+  opacity: 0.72;
+}
+
+.joy-custom-tab-bar__item--pressed .joy-custom-tab-bar__item-label {
+  opacity: 0.72;
 }
 
 /* ── Side tab notification badge ───────────────────────────── */
@@ -170,9 +195,7 @@
 
 /* ── Semi-raised center CTA ────────────────────────────────── */
 
-/* Logo settle-in (one-time on first render, transform-only, opacity-safe).
-   Coexists with the unscoped `cover-fade-in` on the parent cover-image:
-   fade reveals 0→1 in 200ms, settle expands 0.94→1.0 in 400ms.
+/* Logo settle-in (one-time per app session, transform-only).
    Gated by prefers-reduced-motion + .joy-custom-tab-bar--low-end below. */
 .joy-custom-tab-bar__center-logo {
   width: 148rpx;
@@ -182,6 +205,12 @@
      grid — do NOT "fix" by bumping to 8rpx; that re-introduces the frame
      effect the user rejected. 114rpx is the load-bearing number here. */
   transform-origin: 50% 60%;
+}
+
+/* One-time brand moment: only the FIRST tab-bar instance of an app session
+   plays it. Every other instance paints settled — replaying this on each tab
+   visit left chrome still moving ~0.6s after the user had already switched. */
+.joy-custom-tab-bar__center-logo--settle {
   animation: logo-settle 400ms cubic-bezier(0.22, 1, 0.36, 1) 1 both;
 }
 
@@ -243,6 +272,9 @@
   justify-content: center;
   border-radius: 9999rpx;
   box-sizing: border-box;
+  /* The logo is 148rpx inside a 146rpx inner box (154 − 8 border); without
+     clipping it overruns the white border ~1rpx per side. */
+  overflow: hidden;
   /* Token: $color-bg-tint-pink — light pink so the multi-color JoyJoin logo pops
      against the background instead of clashing with the primary purple. */
   background: #FFF4F8;
@@ -251,7 +283,6 @@
     /* Token: $color-secondary at 12% opacity */
     0 2rpx 8rpx rgba(255, 107, 157, 0.12);
   border: 4rpx solid rgba(255, 255, 255, 0.96);
-  transition: box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .joy-custom-tab-bar__center-badge {
@@ -264,12 +295,6 @@
   /* Token: $color-secondary */
   background: #FF6B9D;
   border: 2rpx solid rgba(255, 255, 255, 0.98);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.8; }
 }
 
 /* Sits in the 46rpx free band below the ring (ring bottom 120 → surface
@@ -284,7 +309,6 @@
   font-weight: 600;
   color: #374151;
   text-align: center;
-  transition: color 150ms ease;
 }
 
 /* Pressed / hover state for center button */
@@ -306,9 +330,8 @@
 /* Active-state glow on the center button ("you are here" signal).
    Static, not animated — a 4rpx pink ring + 18rpx pink halo sit
    inside the 5rpx gap between the 122rpx inner button and the 136rpx
-   outer ring, so the white outer ring stays visible. Box-shadow
-   transition 240ms keeps the selection feel responsive without being
-   attention-grabbing. */
+   outer ring, so the white outer ring stays visible. No transition on
+   purpose: like the side tabs, this is a state paint, not an event. */
 .joy-custom-tab-bar__center--selected .joy-custom-tab-bar__center-button {
   box-shadow:
     0 0 0 4rpx rgba(255, 107, 157, 0.22),
@@ -320,17 +343,34 @@
 /* Cover-image fade-in removed: local assets load instantly and the global
    animation caused re-render flicker every time setData fired. */
 
+/* Visually-hidden live region: must stay in the layout tree (1rpx + clipped)
+   so screen readers still receive the announcement. */
+.joy-custom-tab-bar__a11y {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1rpx;
+  height: 1rpx;
+  overflow: hidden;
+  /* No `opacity: 0`: WeChat's a11y bridge is inconsistent about announcing
+     opacity-0 nodes. The 1rpx clip already keeps it invisible. */
+  pointer-events: none;
+}
+
 /* Low-end device (benchmarkLevel <= 15): disable all animations */
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center {
   transition: none !important;
 }
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item--pressed,
-.joy-custom-tab-bar--low-end .joy-custom-tab-bar__center--pressed {
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__center--pressed,
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__item--pressed .joy-custom-tab-bar__item-icon-wrap,
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__item--pressed .joy-custom-tab-bar__item-label {
   transform: none !important;
   opacity: 1 !important;
 }
-.joy-custom-tab-bar--low-end .joy-custom-tab-bar__item-icon {
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__item-icon,
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__item-icon-wrap {
   transition: none !important;
 }
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item-label {
@@ -366,11 +406,14 @@
     transition: none !important;
   }
   .joy-custom-tab-bar__item--pressed,
-  .joy-custom-tab-bar__center--pressed {
+  .joy-custom-tab-bar__center--pressed,
+  .joy-custom-tab-bar__item--pressed .joy-custom-tab-bar__item-icon-wrap,
+  .joy-custom-tab-bar__item--pressed .joy-custom-tab-bar__item-label {
     transform: none !important;
     opacity: 1 !important;
   }
-  .joy-custom-tab-bar__item-icon {
+  .joy-custom-tab-bar__item-icon,
+  .joy-custom-tab-bar__item-icon-wrap {
     transition: none !important;
   }
   .joy-custom-tab-bar__item-label {

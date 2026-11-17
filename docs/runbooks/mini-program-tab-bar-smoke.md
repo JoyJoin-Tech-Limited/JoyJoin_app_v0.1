@@ -6,7 +6,7 @@
 > **Audience:** Frontend engineers and QA validating `apps/mini-program` in
 > WeChat DevTools or on a real device.
 >
-> **Last updated:** 2026-11-09
+> **Last updated:** 2026-11-17
 
 ---
 
@@ -36,7 +36,9 @@ From the repo root:
 ```bash
 npm run test -w mini-program -- \
   src/native-custom-tab-bar/__tests__/tabBarBehavior.test.ts \
-  src/native-custom-tab-bar/__tests__/tabBarStructure.test.ts
+  src/native-custom-tab-bar/__tests__/tabBarStructure.test.ts \
+  src/lib/navigation/__tests__/tabBarRouteIndexParity.test.ts \
+  src/hooks/navigation/__tests__/useCustomTabBarSync.test.tsx
 npm run typecheck -w mini-program
 npm run build:weapp -w mini-program
 ```
@@ -150,15 +152,21 @@ wx.reLaunch({ url: '/pages/index/index' })
 | `pages/index/index?auth=logout` (loggedOut re-auth) | `.joy-custom-tab-bar` element not found, or `hidden=""` + `display: none` |
 | `pages/index/index` (landing) | `.joy-custom-tab-bar` element not found, or `hidden=""` + `display: none` |
 
-If the tab bar is still visible on a non-tab page, the allow-list lookup or the
-`_updateVisibility` guard has regressed.
+If the tab bar is still visible on a non-tab page, the route-map lookup or the
+`_reconcileSelection` guard has regressed.
 
 ### Step 5 — Interaction sanity
 
 On a tab page:
 
-1. Tap a different tab. The active tab should highlight with a rounded
-   background pill.
+0. **First-visit highlight (2026-11-17 regression lock).** From a cold start on
+   发现, tap 足迹. The 足迹 icon + label must be active **on that first tap**,
+   with no second tap required, and the bar must appear already lit (no
+   late-mount pop-in, no highlight fading in afterwards). Repeat for 连接,
+   我的, the center hub, and after a full app restart — the defect was a
+   first-visit-per-instance bug, not a 足迹-specific one.
+1. Tap a different tab. The active tab should highlight instantly with a rounded
+   background pill (state paint, no crossfade).
 2. Tap the center button. The side highlight should disappear and the center
    button should show its selected state.
 3. Rapidly tap three different side tabs. Only one native `wx.switchTab` may be
@@ -175,6 +183,9 @@ On a tab page:
 6. Toggle the device network to **offline** and tap a tab. The bar should remain
    responsive because tab switches are local; `syncState` calls should be queued
    and replayed when the network returns.
+7. Swipe back into a tab page. The highlight must match that page immediately
+   (no flash of the previous tab), and the logo settle must **not** replay —
+   it plays once per app session.
 
 ---
 

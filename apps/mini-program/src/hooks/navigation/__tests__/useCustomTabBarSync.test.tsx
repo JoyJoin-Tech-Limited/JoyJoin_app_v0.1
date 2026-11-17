@@ -6,8 +6,10 @@ import Taro from '@tarojs/taro'
 import { useCustomTabBarSync } from '../useCustomTabBarSync'
 import { useNotificationCounts } from '../../useNotificationCounts'
 import {
+  getTabBarState,
   setTabBarBadges,
   setTabBarCenterState,
+  setTabBarSelected,
 } from '../../../lib/navigation/tabBarState'
 import { getMiniProgramCenterState } from '../../../lib/navigation/centerTabRouting'
 
@@ -43,6 +45,7 @@ function createWrapper() {
 }
 
 function resetState() {
+  setTabBarSelected(0)
   setTabBarCenterState(getMiniProgramCenterState([], []))
   setTabBarBadges({ discover: 0, activities: 0, chat: 0 })
 }
@@ -60,6 +63,7 @@ describe('useCustomTabBarSync', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -127,13 +131,80 @@ describe('useCustomTabBarSync', () => {
     expect(mockSetSelected).toHaveBeenCalledWith(0)
   })
 
-  it('does not sync when disabled', () => {
+  it('publishes the tab selection even when data sync is disabled', () => {
     renderHook(() => useCustomTabBarSync({ enabled: false, poolRegistrations: [], events: [] }), { wrapper: createWrapper() })
 
     act(() => didShowCallback?.())
 
+    // Selection is route truth, not data: it must be correct on the first frame
+    // even while auth/queries are still loading.
+    expect(mockSetSelected).toHaveBeenCalledWith(0)
     expect(mockSyncState).not.toHaveBeenCalled()
+  })
+
+  it('retries the selection push when the native instance is not ready yet', () => {
+    vi.useFakeTimers()
+    let resolveCount = 0
+    const lateGetTabBar = vi.fn(() => {
+      resolveCount += 1
+      return resolveCount >= 3 ? { setSelected: mockSetSelected, syncState: mockSyncState } : undefined
+    })
+    ;(Taro as any).getCurrentInstance.mockReturnValue({
+      page: { route: 'pages/events/index', getTabBar: lateGetTabBar },
+    })
+
+    renderHook(() => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => didShowCallback?.())
     expect(mockSetSelected).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
+
+    expect(mockSetSelected).toHaveBeenCalledTimes(1)
+    expect(mockSetSelected).toHaveBeenCalledWith(1)
+    vi.useRealTimers()
+  })
+
+  it('cancels a pending selection retry when the page hides', () => {
+    vi.useFakeTimers()
+    const neverReady = vi.fn(() => undefined)
+    ;(Taro as any).getCurrentInstance.mockReturnValue({
+      page: { route: 'pages/events/index', getTabBar: neverReady },
+    })
+
+    renderHook(() => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => didShowCallback?.())
+    act(() => didHideCallback?.())
+    const callsAfterHide = neverReady.mock.calls.length
+
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    // No late write for a page the user already left.
+    expect(neverReady.mock.calls.length).toBe(callsAfterHide)
+    vi.useRealTimers()
+  })
+
+  it('records route truth in the tab bar singleton', () => {
+    ;(Taro as any).getCurrentInstance.mockReturnValue({
+      page: { route: 'pages/connections/index', getTabBar: mockGetTabBar },
+    })
+
+    renderHook(() => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => didShowCallback?.())
+
+    expect(getTabBarState().selected).toBe(2)
   })
 
   it('does not set selected for non-tab routes such as event-detail and event-ticket-payment', async () => {

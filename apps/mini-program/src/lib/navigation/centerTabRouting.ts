@@ -23,7 +23,10 @@ export interface MiniProgramCenterState {
 }
 
 export interface CustomTabBarSyncState {
-  selected?: number
+  // NOTE: `selected` is deliberately NOT part of syncState. Selection is route
+  // truth published once per page show by useCustomTabBarSync; letting it ride
+  // along with data updates lets a hidden page repaint the visible page's
+  // highlight (and the native component would ignore it anyway).
   center: MiniProgramCenterState
 }
 
