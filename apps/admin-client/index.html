@@ -5,9 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>悦聚·Joy - 管理后台</title>
     <meta name="description" content="JoyJoin 管理后台 - 活动管理、用户管理、数据分析" />
+    <!--
+      Brand fonts are decorative: `--font-sans` / `--font-en-brand` already fall back to
+      system-ui. Load them NON-BLOCKING (media="print" → media="all" on load) so an
+      unreachable fonts.googleapis.com can never gate first paint. A blocking <link>
+      here caused a 30s+ white screen for admins in mainland China (2026-11-17).
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    >
   </head>
   <body>
     <div id="root"></div>
