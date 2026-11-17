@@ -16,7 +16,7 @@ describe('EventStatusTabs', () => {
     expect(screen.getByRole('tablist', { name: '活动记录状态' })).toBeInTheDocument()
     expect(screen.getAllByRole('tab')).toHaveLength(3)
     expect(screen.getByRole('tab', { name: '待开始' })).toHaveAttribute('aria-selected', 'true')
-    expect(container.querySelector('.event-status-tabs__tab-indicator')).toHaveAttribute('data-active-tab', 'upcoming')
+    expect(container.querySelector('.event-status-tabs')).toHaveAttribute('data-active-tab', 'upcoming')
     expect(container.querySelector('.event-status-tabs')).not.toHaveClass('event-status-tabs--manual')
 
     fireEvent.click(screen.getByRole('tab', { name: '待开始' }))
@@ -29,6 +29,6 @@ describe('EventStatusTabs', () => {
 
     rerender(<EventStatusTabs activeTab='ongoing' onChange={onChange} />)
     expect(screen.getByRole('tab', { name: '进行中' })).toHaveAttribute('aria-selected', 'true')
-    expect(container.querySelector('.event-status-tabs__tab-indicator')).toHaveAttribute('data-active-tab', 'ongoing')
+    expect(container.querySelector('.event-status-tabs')).toHaveAttribute('data-active-tab', 'ongoing')
   })
 })

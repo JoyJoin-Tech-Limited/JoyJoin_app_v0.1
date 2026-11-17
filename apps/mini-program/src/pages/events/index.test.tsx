@@ -246,9 +246,9 @@ describe('EventsPage three-bucket IA', () => {
       makeEvent('upcoming', 'confirmed', '2026-04-14T19:30:00+08:00'),
       makeEvent('ongoing', 'matched', '2026-04-14T19:30:00+08:00'),
     ])
-    const indicator = container.querySelector('.event-status-tabs__tab-indicator')
+    const tabs = container.querySelector('.event-status-tabs')
 
-    expect(indicator).toHaveAttribute('data-active-tab', 'upcoming')
+    expect(tabs).toHaveAttribute('data-active-tab', 'upcoming')
     expect(container.querySelector('.event-status-tabs')).toHaveAttribute('aria-label', '活动记录状态')
     vi.mocked(haptics).mockClear()
     fireEvent.click(getTab('待开始'))
@@ -258,7 +258,7 @@ describe('EventsPage three-bucket IA', () => {
     fireEvent.click(getTab('进行中'))
     expect(haptics).toHaveBeenCalledTimes(1)
     expect(haptics).toHaveBeenCalledWith('light')
-    expect(indicator).toHaveAttribute('data-active-tab', 'ongoing')
+    expect(tabs).toHaveAttribute('data-active-tab', 'ongoing')
     expect(getTab('进行中')).toHaveAttribute('aria-selected', 'true')
   })
 

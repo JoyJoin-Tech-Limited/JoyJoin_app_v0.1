@@ -106,8 +106,13 @@ export interface JoinedEventSummary {
   /** Overall table chemistry score 0-100 (pool events only). */
   matchScore?: number
   /**
-   * Archetype ids of the matched table, capped at 6. Powers the 同桌 face row —
-   * the viewer is already a member, so no masking is applied.
+   * One entry per matched seat, in seat order, capped at 6. Powers the 同桌 face
+   * row — the viewer is already a member, so no masking is applied.
+   *
+   * Entries are canonical archetype ids; `''` marks a seat whose occupant has no
+   * archetype on file. The empty slot is kept on purpose: the row is rendered
+   * beside an 「N 人桌」 count, so dropping the seat makes the faces and the count
+   * disagree. Render the brand placeholder for `''`, never initials.
    */
   memberArchetypes?: string[]
   /**

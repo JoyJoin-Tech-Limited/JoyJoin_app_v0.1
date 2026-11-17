@@ -33,21 +33,21 @@ export default React.memo(function EventStatusTabs({
 
   return (
     <View
+      // Only the motion modifier survives on the root: the per-key classes
+      // (`--ongoing/--upcoming/--completed`) had no rule left to hit once the
+      // thumb moved onto the active tab, and a dead class is a promise that the
+      // next reader will look up a style that does not exist. `data-active-tab`
+      // below is the machine-readable state.
       className={[
         'event-status-tabs',
-        `event-status-tabs--${activeTab}`,
         manualMotionEnabled ? 'event-status-tabs--manual' : '',
         className,
       ].filter(Boolean).join(' ')}
       role='tablist'
       aria-label='活动记录状态'
+      data-active-tab={activeTab}
     >
       <View className='event-status-tabs__track'>
-        <View
-          className='event-status-tabs__tab-indicator'
-          data-active-tab={activeTab}
-          aria-hidden='true'
-        />
         {ITEMS.map((item) => (
           <View
             key={item.key}

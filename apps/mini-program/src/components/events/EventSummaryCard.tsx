@@ -76,7 +76,67 @@ const STATUS_WAITING_COPY: Record<string, string> = {
 }
 
 // Venue is only disclosed once the group has been assigned a venue.
-const VENUE_VISIBLE_STATUSES = new Set(['confirmed', 'venue_unlocked', 'completed'])
+// A seated table's venue is public the moment it is confirmed, and stays public
+// once the event is over. 'attended' is the status `derivePoolDisplayStatus`
+// returns for a completed pool, so omitting it hid the venue from every finished
+// pool card that was not rendered through the 已结束 tab (2026-11-17).
+const VENUE_VISIBLE_STATUSES = new Set(['confirmed', 'venue_unlocked', 'completed', 'attended'])
+
+// The geography run above the place field already prints 「深圳 · 南山区」. When the
+// stored address opens with those same tokens («深圳市南山区科苑路…») the card
+// states the location twice and pushes the street — the only part a driver needs
+// — to the end of the line. Only administrative prefixes are removed, and only
+// when the following characters prove it is a prefix: 「深圳湾科技生态园…」 must
+// survive intact even though it starts with the city name (2026-11-17).
+const stripShownPlacePrefixes = (
+  address: string | undefined,
+  city: string | undefined,
+  districtName: string | undefined,
+): string | undefined => {
+  const raw = address?.trim()
+  if (!raw) return undefined
+  const cityName = city?.trim()
+  const district = districtName?.trim()
+  let rest = raw
+  const trimSeparators = () => {
+    rest = rest.replace(/^[\s·・,，、:：\-/]+/, '')
+  }
+
+  const province = rest.match(/^[\u4e00-\u9fa5]{2,4}省/)
+  if (province) {
+    rest = rest.slice(province[0].length)
+    trimSeparators()
+  }
+
+  if (cityName) {
+    const cityWithSuffix = cityName.endsWith('市') ? cityName : `${cityName}市`
+    if (rest.startsWith(cityWithSuffix)) {
+      rest = rest.slice(cityWithSuffix.length)
+      trimSeparators()
+    } else if (district && rest.startsWith(`${cityName}${district}`)) {
+      // Some venue rows store city + district without the 市 suffix at all.
+      rest = rest.slice(cityName.length)
+      trimSeparators()
+    }
+  }
+
+  if (district && rest.startsWith(district) && rest.length > district.length) {
+    // 「福田」 in the geography run vs 「福田区」 in the address: the administrative
+    // suffix belongs to the district, not to the street, so it goes with it.
+    const districtHasSuffix = /[区县市]$/.test(district)
+    const afterDistrict = rest[district.length]
+    if (districtHasSuffix || /[区县市]/.test(afterDistrict)) {
+      const cut = districtHasSuffix ? district.length : district.length + 1
+      if (rest.length > cut) {
+        rest = rest.slice(cut)
+        trimSeparators()
+      }
+    }
+  }
+
+  // A strip that ate the street is worse than the duplication it removed.
+  return rest.length >= 3 ? rest : raw
+}
 
 // ─── Presentational Event Summary Card ─────────────────────────
 // Shared visual base for FootprintOracleCard and any read-only
@@ -104,6 +164,13 @@ export interface EventSummaryCardProps {
    */
   venueActionLabel?: string
   venueActionAriaLabel?: string
+  /**
+   * Whether the affordance leaves the screen (opens the map) or stays on it
+   * (copies the address). The chevron is a promise about the destination:
+   * rendering it beside 复制地址 read as 「there is more behind this」, which is
+   * the one thing a clipboard cannot deliver (rendered review, 2026-11-17).
+   */
+  venueActionNavigates?: boolean
   onVenueAction?: () => void
   /**
    * Forces the pending face of the place field. Defaults to `status ===
@@ -188,6 +255,7 @@ function EventSummaryCard({
   venueAddress,
   venueActionLabel,
   venueActionAriaLabel,
+  venueActionNavigates = false,
   onVenueAction,
   placePending: placePendingProp,
   placeRevealed = false,
@@ -241,6 +309,14 @@ function EventSummaryCard({
     && (status === 'matched' || status === 'venue_unlocked')
   const showVenue = VENUE_VISIBLE_STATUSES.has(status)
   const isMatched = !isHistoricalNonterminal && status === 'matched'
+  // A finished record has nothing left to withhold: the table already met, and
+  // the disclosure rule exists to protect a seat that is still being filled —
+  // not to hide the place a past table sat at. Scope is exactly that: a venue
+  // that is already public (`showVenue`) plus the past-but-never-swept record
+  // (`isHistoricalNonterminal`). A cancelled / declined / no-show card stays
+  // venue-free, because that seat never became a table (device report
+  // 2026-11-17: an 已结束 card showed 深圳 · 南山区 with no venue name or address).
+  const showResolvedPlace = showVenue || isHistoricalNonterminal
 
   const dateTimeText = formatEventDateTime(dateTime)
   const dateTimeParts = useMemo(() => formatEventDateTimeParts(dateTime), [dateTime])
@@ -298,15 +374,15 @@ function EventSummaryCard({
         statusLabel,
         dateTimeText,
         locationLine ?? undefined,
-        showVenue && venueName ? venueName : undefined,
-        showVenue && venueAddress ? venueAddress : undefined,
+        showResolvedPlace && venueName ? venueName : undefined,
+        showResolvedPlace && venueAddress ? venueAddress : undefined,
         footerHint,
         railAriaLabel,
         ariaAction,
       ]
         .filter(Boolean)
         .join('，'),
-    [title, statusLabel, dateTimeText, locationLine, venueName, venueAddress, showVenue, footerHint, railAriaLabel, ariaAction],
+    [title, statusLabel, dateTimeText, locationLine, venueName, venueAddress, showResolvedPlace, footerHint, railAriaLabel, ariaAction],
   )
 
   // Upcoming already says 即将开始 in the status pill; repeating it as a
@@ -343,7 +419,10 @@ function EventSummaryCard({
   // line above it — so "not decided yet" read exactly like "decided". It is one
   // question, so it gets one field with two faces.
   const isPlacePending = placePendingProp ?? (!isHistoricalNonterminal && isMatched)
-  const resolvedVenueName = !isHistoricalNonterminal && showVenue ? venueName : undefined
+  const resolvedVenueName = showResolvedPlace ? venueName : undefined
+  const resolvedVenueAddress = showResolvedPlace
+    ? stripShownPlacePrefixes(venueAddress, city, district)
+    : undefined
   const showPlaceField = Boolean(resolvedVenueName) || isPlacePending
   // Inside the 24h promise window the earlier sentence is already spent: the
   // venue either lands or the pool is cancelled with a full refund, so
@@ -356,9 +435,12 @@ function EventSummaryCard({
   const pendingPlaceLabel = isInsideVenuePromiseWindow ? '场地最后确认中' : '场地安排中'
   const pendingPlaceHint =
     isInsideVenuePromiseWindow || hasPromiseWindowPassed ? undefined : '最晚活动前一天告诉你具体地点'
-  // An ended card keeps the venue + address (that is the record) but drops the
-  // action: nothing tappable may live inside the dimmed scope.
-  const showPlaceAction = Boolean(resolvedVenueName) && !isEnded && Boolean(venueActionLabel) && Boolean(onVenueAction)
+  // An ended card keeps the venue + address *and* now keeps the affordance: the
+  // address is the last useful thing a finished record can still do for you
+  // (find the place again, forward it to whoever you met). The caller downgrades
+  // it to 复制地址 on ended records — a chevron must never promise navigation to
+  // an event that already happened (2026-11-17).
+  const showPlaceAction = Boolean(resolvedVenueName) && Boolean(venueActionLabel) && Boolean(onVenueAction)
 
   // The theme is a conclusion; one clause of evidence sits under it so a formed
   // table can re-recognise itself. The table's own traits are the honest answer
@@ -520,6 +602,10 @@ function EventSummaryCard({
                 className={[
                   'footprint-oracle-card__place',
                   isPlacePending ? 'footprint-oracle-card__place--pending' : '',
+                  // Tells the stylesheet the field carries a verb, so a card whose
+                  // field is otherwise demoted can keep the thin plate the verb
+                  // needs to read as an affordance instead of stray link text.
+                  showPlaceAction ? 'footprint-oracle-card__place--actionable' : '',
                   placeRevealed && !reduceMotion ? 'footprint-oracle-card__place--revealed' : '',
                 ].filter(Boolean).join(' ')}
                 // The family tint arrives inline: each status keeps its own hue,
@@ -548,21 +634,33 @@ function EventSummaryCard({
                   aria-hidden='true'
                 />
                 <View className='footprint-oracle-card__place-body'>
-                  <Text className='footprint-oracle-card__place-primary'>
-                    {isPlacePending ? pendingPlaceLabel : resolvedVenueName}
-                  </Text>
-                  {(isPlacePending ? pendingPlaceHint : venueAddress) && (
+                  {/* The verb rides the venue name, not the block. As a flex
+                      sibling of the body it centred itself against a two-line
+                      address and carved ~120rpx out of BOTH lines, so the street
+                      read 「东门老街解放路 / 1 号 2 楼」 beside a verb floating
+                      in the gutter (rendered review, 2026-11-17). Same line as
+                      the name it belongs to; the address gets the plate. */}
+                  <View className='footprint-oracle-card__place-head'>
+                    <Text className='footprint-oracle-card__place-primary'>
+                      {isPlacePending ? pendingPlaceLabel : resolvedVenueName}
+                    </Text>
+                    {showPlaceAction && (
+                      <View className='footprint-oracle-card__place-action' aria-hidden='true'>
+                        <Text className='footprint-oracle-card__place-action-label'>{venueActionLabel}</Text>
+                        {/* Only a navigation earns the chevron. Beside 复制地址 it
+                            promised a screen the tap never reaches. */}
+                        {venueActionNavigates && (
+                          <Text className='footprint-oracle-card__place-action-chevron' aria-hidden='true'>›</Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                  {(isPlacePending ? pendingPlaceHint : resolvedVenueAddress) && (
                     <Text className='footprint-oracle-card__place-secondary'>
-                      {isPlacePending ? pendingPlaceHint : venueAddress}
+                      {isPlacePending ? pendingPlaceHint : resolvedVenueAddress}
                     </Text>
                   )}
                 </View>
-                {showPlaceAction && (
-                  <View className='footprint-oracle-card__place-action' aria-hidden='true'>
-                    <Text className='footprint-oracle-card__place-action-label'>{venueActionLabel}</Text>
-                    <Text className='footprint-oracle-card__place-action-chevron' aria-hidden='true'>›</Text>
-                  </View>
-                )}
               </View>
             )}
 
