@@ -560,9 +560,10 @@ export default function FinalStage({
                       </Text>
                       <AIGCLabel meta={xiaoyueAnalysis.meta?.aigc} />
                     </View>
-                    <Text className='personality-results__xiaoyue-bubble-analysis'>
-                      {readingBeats.slice(0, 2).join('') || xiaoyueAnalysis.analysis}
-                    </Text>
+                    {/* 2026-11-19: the bubble used to echo the first two beats
+                        here, so the verdict and the archetype note were read
+                        twice — once in the hero, once at the top of the sheet.
+                        The hero is the hook; the reading lives behind the CTA. */}
                   </View>
                 </View>
                 {xiaoyueAnalysis.expressionTags?.length > 0 && (

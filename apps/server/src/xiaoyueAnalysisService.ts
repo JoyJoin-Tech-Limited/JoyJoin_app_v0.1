@@ -5,7 +5,7 @@ import { XIAOYUE_PERSONA, GENDER_NEUTRAL, XIAOYUE_PERSONA_PROMPT_VERSION, XIAOYU
 import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { generateWithCraftQuality } from './lib/craftQualityGate';
 import { logger } from './lib/logger';
-import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { buildAIGCMeta, buildCachedAIMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import { moderateGeneratedContent } from './lib/aiContentModeration';
 
 export interface ArchetypeAnalysisInput {
@@ -892,8 +892,19 @@ export async function generateXiaoyueAnalysis(
     logger.info('[XiaoyueAnalysis] Cache hit', { archetype: input.archetype });
     const hit = { ...cached.result, cached: true };
     if (!hit.meta) {
-      hit.meta = buildFallbackAIMeta('cache_missing_meta', XIAOYUE_CRAFT_PROMPT_VERSION);
-      hit.meta.aigc = buildAIGCMeta({ fallbackUsed: hit.meta.fallbackUsed, labelType: 'ai-generated' });
+      // A cache hit with no meta can only come from a record written before the
+      // field existed. The text is still model output, so the trace must read
+      // "cached", not "fallback": buildFallbackAIMeta() sets fallbackUsed, and
+      // buildAIGCMeta() then forces aiGenerated:false — which hid the AIGC
+      // label on text the model actually wrote (2026-11-19).
+      hit.meta = {
+        ...buildCachedAIMeta(
+          new Date(cached.timestamp).toISOString(),
+          null,
+          XIAOYUE_CRAFT_PROMPT_VERSION,
+        ),
+        aigc: { aiGenerated: true, labelType: 'ai-generated' },
+      };
     }
     return hit;
   }
