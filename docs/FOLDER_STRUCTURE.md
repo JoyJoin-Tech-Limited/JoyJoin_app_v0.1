@@ -382,7 +382,6 @@ packages/shared/
 │   │   ├── feedback.ts
 │   │   ├── traitCorrection.ts
 │   │   ├── traitDisplayConfig.ts
-│   │   ├── resultViewModel.ts
 │   │   ├── canvasPalette.ts
 │   │   ├── trainingDataCollector.ts
 │   │   ├── secondaryQuestionMap.ts

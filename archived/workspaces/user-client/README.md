@@ -2,6 +2,13 @@
 
 This workspace contains JoyJoin's web reference user experience built with React + Vite.
 
+> **Archived — read the code here as history, not as a buildable app.** One
+> import no longer resolves: `@joyjoin/shared/personality/resultViewModel` was
+> deleted on 2026-11-19, because `apps/server/src/xiaoyueAnalysisService.ts`
+> owns the personality reading now and the shared copy had drifted into
+> superseded wording. `PersonalityTestResultPage.tsx`, `RevealStage.tsx` and
+> `ResultStage.tsx` still reference it.
+
 ## Source-of-truth entry points
 
 - `apps/user-client/src/main.tsx` — Vite bootstrap

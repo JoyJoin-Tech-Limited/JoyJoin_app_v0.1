@@ -22,7 +22,6 @@
 | `archetypeNames.ts` | Display name mapping |
 | `archetypeSkills.ts` | Skill definitions per archetype |
 | `traitDisplayConfig.ts` | UI rendering config |
-| `resultViewModel.ts` | Result presentation helpers |
 | `feedback.ts` | Milestone/feedback messages |
 
 ## Tests
