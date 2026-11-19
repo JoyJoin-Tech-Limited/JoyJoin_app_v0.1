@@ -31,7 +31,7 @@ Runs **automatically at the start of every implementation task** to:
 Before proposing any file edits, run:
 
 ```bash
-node scripts/harness-auto-trigger.mjs \
+node scripts/harness/harness-auto-trigger.mjs \
   --prompt="<the user's exact request>" \
   --proposed-files=<files-you-plan-to-touch>
 ```

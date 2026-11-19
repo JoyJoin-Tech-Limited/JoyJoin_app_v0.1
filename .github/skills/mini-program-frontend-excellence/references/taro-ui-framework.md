@@ -4,7 +4,7 @@ This reference complements [`../SKILL.md`](../SKILL.md). Use it for **structural
 
 ## Version reality (read first)
 
-**JoyJoin `apps/mini-program` ships Taro 4.x** (see root `package.json` / `@tarojs/*` versions). Do not treat **Taro 5–only** APIs, theme engines, or marketing performance figures as current facts—see [Future / Taro 5 upgrade notes](#future--taro-5-upgrade-notes).
+**JoyJoin `apps/mini-program` ships Taro 4.2.0 + React 18** (`@tarojs/*` pinned at `4.2.0`, `react`/`react-dom` at `^18.0.0` in `apps/mini-program/package.json`). Do not treat **Taro 5–only** APIs, theme engines, or marketing performance figures as current facts—see [Future / Taro 5 upgrade notes](#future--taro-5-upgrade-notes).
 
 ---
 
@@ -114,6 +114,9 @@ Premium visuals must stay **measurable**. Do **not** silently merge oversized bi
 | **General UI PNG/JPEG/WebP** | **Flag for review** when a single inline UI asset exceeds roughly **100–200 KiB** without justification; **stricter** budgets for tab bar, launch, and first-screen hero paths. |
 | **SVG icons** | Flag SVGs beyond **~20–50 KiB** or with excessive paths—run SVGO or simplify artwork. |
 | **Uncertainty** | Measure: `ls -la`, build output, WeChat simulator package analytics, or Lighthouse / CWV on H5 when relevant. |
+| **Package budget** | Main package stays under the **≈1856 KiB** safety limit (WeChat overhead 160 KiB + 32 KiB margin, modelled in `scripts/check-compiled-package-source-size.mjs`); `build:weapp` runs `check:package-size` + `verify:upload-assets`. |
+| **Upload allow-list** | Any **new bundled asset directory** needs a `packOptions.include` regexp in `apps/mini-program/project.config.json` or the upload silently drops it. Assets only a subpackage page renders belong in that subpackage. |
+| **Asset URL helpers** | Bundled assets resolve via `localAsset()`; remote assets via `cdnAsset()`. `cdnAsset()` is idempotent — never double-wrap an already-resolved URL. |
 
 ### When over budget — recommend (in order of fit)
 
@@ -126,6 +129,21 @@ Premium visuals must stay **measurable**. Do **not** silently merge oversized bi
 ### Premium without harming load
 
 Crisp hierarchy and restrained motion must **not** depend on **unbounded** binary weight. Tie decisions to first-load and scroll smoothness expectations in [`../../frontend-performance-and-loading/SKILL.md`](../../frontend-performance-and-loading/SKILL.md) and [`../../../../docs/reference/perf.md`](../../../../docs/reference/perf.md) where applicable.
+
+---
+
+## 9. Repo CI gates (mini-program)
+
+| Gate | Command | Fails when |
+|------|---------|-----------|
+| Guardrails | `npm run guardrails` | inline emoji in mini-program TS/TSX (except `emoji=` / `icon=` / `fallbackEmoji`), new BEM class orphans, brand-colour literals, design-audit errors |
+| Diff-scoped design audit | `npm run design:audit:changed` | new anti-patterns on changed lines |
+| Subpackage styles | `npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program` | a required selector is missing from the owning page WXSS, or `sub-common.wxss` is non-empty |
+| Package size | inside `build:weapp` | main package exceeds the ≈1856 KiB safety estimate |
+| Upload assets | inside `build:weapp` | a `dist/` media asset is neither `packOptions`-covered nor explicitly excluded |
+| File size | auto-eval | a frontend file exceeds **1800 lines** (`LARGE_FRONTEND_FILE_FAILURE_LINE_COUNT`) |
+
+Fix patterns: `@use` the component SCSS from the consuming page and remove the matching side-effect `import './X.scss'`; add the `packOptions.include` regexp in the same PR as a new asset directory; split a screen before it reaches 1800 lines (pattern: `pages/icebreaker-session/` keeps JSX in `SessionPhaseViews.tsx` and handlers in `hooks/useSocialActions.ts`).
 
 ---
 

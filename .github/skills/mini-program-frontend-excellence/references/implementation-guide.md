@@ -5,7 +5,8 @@
 1. **Classify the scope first**
    Use `platform-coordination-protocol` to decide whether the change is `MINI_PROGRAM_ONLY` or `BOTH_REQUIRED`.
 
-2. **WeChat DevTools MCP:** Before calling UI work complete, use the **WeChat DevTools MCP server** (`wechat-devtools`) to launch the mini-program, navigate to the affected page, and verify visual state. This is mandatory for pixel-precision checks and pre-merge UI validation. Capture screenshots when deviation from spec is suspected.
+2. **Pick the right verification instrument**
+   WeChat DevTools MCP (`wechat-devtools`, configured in `.mcp.json`) inspects structure and state — `check_health`, navigate, `get_page_data` — but it **cannot screenshot**. For pixels use the H5 build + Playwright flow in `mini-program-screenshot-workflow` or an existing `npm run screenshot:*` generator; for tap feel and fonts use a CLI preview QR on the smallest target device. Never report a visual check you did not run.
 
 3. **Choose a design direction before coding**
    Name the one visual or emotional idea that should define the screen. Run the anti-generic check from `joyjoin-brand-guidelines` and `wow-elements`. If the design spec conflicts with JoyJoin brand rules, stop and flag the exact conflict.
@@ -64,6 +65,15 @@ Before marking a PR ready (or approving), authors and reviewers must:
 4. When the diff is visual and reviewers cannot reproduce locally, the author attaches **screenshots** or a short **DevTools note** (which selectors were checked and values seen).
 
 **Reviewers:** If `apps/mini-program` UI changed and there is no evidence of DevTools or device spot-check, **request changes** or block merge until satisfied.
+
+## Repo CI gates
+
+- `npm run guardrails` — inline emoji ban, BEM class coverage, brand colours, design audit.
+- `npm run design:audit:changed` — must report 0 errors on changed lines.
+- `npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program` — must pass with no non-empty `sub-common.wxss`.
+- `build:weapp` also runs `check:package-size`, `verify:upload-assets`, and `validate:wechat-app-config`; main-package safety limit ≈1856 KiB.
+- A new bundled asset directory needs a `packOptions.include` regexp in `project.config.json`, or the upload silently drops it.
+- Auto-eval fails frontend files above **1800 lines**.
 
 ## Related references
 

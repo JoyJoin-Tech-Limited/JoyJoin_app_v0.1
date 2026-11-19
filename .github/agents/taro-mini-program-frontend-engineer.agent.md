@@ -58,7 +58,7 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 
 **Before any file edits, classify the task:**
 
-1. Run `node scripts/harness-auto-trigger.mjs --prompt="<user's request>" --proposed-files=<files you plan to touch>`
+1. Run `node scripts/harness/harness-auto-trigger.mjs --prompt="<user's request>" --proposed-files=<files you plan to touch>`
 2. **Announce the result to the user** using the Harness Classification format:
    ```
    🔍 Harness Classification
@@ -79,6 +79,19 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 - `BOTH_REQUIRED`: duplicated auth, API, payment, pricing, session semantics, shared types, or other coordinated business behavior across web and mini-program.
 - If a task touches a `BOTH_REQUIRED` surface, review `docs/reference/PLATFORM_COORDINATION.md` and inspect the sibling platform before finalizing the change.
 
+## Repo Hard Gates (CI-enforced)
+
+Check these before handoff — they fail CI or the harness gate:
+
+- **Inline emoji ban:** no emoji literals in `apps/mini-program` TS/TSX except `emoji=` / `icon=` / `fallbackEmoji` props. Use `JoyJoinIcon` or CSS/text.
+- **BEM class coverage:** every static `__` class in TSX must exist in a compiled stylesheet; `npm run guardrails` fails on new orphans (`scripts/check/check-class-coverage.mjs`).
+- **Design audit:** `npm run design:audit:changed` must report 0 errors on changed lines.
+- **Subpackage styles:** `npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program` must pass with no non-empty `sub-common.wxss`. `@use` the component SCSS from the consuming page and drop the matching `import './X.scss'`.
+- **Package budget:** main-package safety limit ≈1856 KiB. A new bundled asset directory needs a `packOptions.include` regexp in `project.config.json` or it is silently dropped from the upload; `verify:upload-assets` and `check:package-size` run inside `build:weapp`.
+- **File size:** auto-eval fails frontend files above **1800 lines** (`LARGE_FRONTEND_FILE_FAILURE_LINE_COUNT`) — split before crossing it.
+- **Copy posture (WeChat review):** visible copy uses 排桌中/排桌完成/合拍度/活动画像/轮桌畅聊, never 匹配/社交/灵魂/撮合/AI; AIGC 角标 stay fail-closed.
+- **Recurring traps:** `AGENTS.md` §6 and `docs/agent-context/mini-program-patterns.md` — page-stack flags (`useResetOnShow`), hooks above early returns, `ScrollView scrollIntoView` (not `Taro.pageScrollTo`), disabled-CTA platform colour, `packOptions` allow-list.
+
 ## Mini-Program Approach For `apps/mini-program`
 
 - Prefer Taro-native components and APIs over browser compatibility shims.
@@ -86,8 +99,8 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 - Preserve product intent, visible hierarchy, interaction states, and copy from the archived web flow when relevant, but do not force exact browser mechanics where the platform differs.
 - Use `Taro.navigateTo`, `Taro.redirectTo`, `Taro.showToast`, storage APIs, and page lifecycle hooks where appropriate instead of browser navigation or DOM events.
 - Adapt styling to WXSS-safe patterns and mini-program rendering limits rather than copying browser CSS blindly.
-- **WeChat DevTools MCP:** For automated mini-program verification, use the **WeChat DevTools MCP server** (`wechat-devtools`) to launch the mini-program, navigate pages, inspect WXML structure, simulate taps, and capture screenshots. This is especially valuable for pixel-precision validation and pre-merge UI gate checks.
-- For UI delivery, start with `mini-program-frontend-excellence` as the owning workflow. **Always read [`mini-program-frontend-excellence/references/pixel-precision.md`](../skills/mini-program-frontend-excellence/references/pixel-precision.md)** for spec-vs-rhythm rules, ≤1px tolerance, 8rpx spacing when no spec, and the mandatory **WeChat DevTools** pre-merge gate. **Read [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md)** for structural Taro rules (layout, setData/list performance, cross-end files, `RichText` vs unsafe HTML, asset budgets). Co-load `joyjoin-brand-guidelines`, `design-system-governance`, `wow-elements`, or `frontend-performance-and-loading` as the surface needs.
+- **WeChat DevTools MCP (structure only):** The `wechat-devtools` MCP server (configured in the repo `.mcp.json`; not part of `opencode.json`) can launch the project, navigate pages, and dump WXML/state via `check_health`, navigation, and `get_page_data`. It **cannot capture visual screenshots** — never claim a visual check you did not run. Visual evidence comes from the H5 + Playwright flow in [`mini-program-screenshot-workflow`](../skills/mini-program-screenshot-workflow/SKILL.md); real-device evidence comes from a CLI preview QR.
+- For UI delivery, start with `mini-program-frontend-excellence` as the owning workflow. **Always read [`mini-program-frontend-excellence/references/pixel-precision.md`](../skills/mini-program-frontend-excellence/references/pixel-precision.md)** for spec-vs-rhythm rules, ≤1px tolerance, 8rpx spacing when no spec, and the mandatory **WeChat DevTools** pre-merge gate. **Read [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md)** for structural Taro rules (layout, setData/list performance, cross-end files, `RichText` vs unsafe HTML, asset budgets). Co-load `joyjoin-brand-guidelines`, `design-system-governance`, `wow-elements`, `frontend-performance-and-loading`, `viewport-zero-scroll` for the zero-scroll shell, `performance-audit` + `completeness-audit` before calling a user-facing surface done, and `harness-completion-gate` before sign-off.
 - Do not use `dangerouslySetInnerHTML` for cross-end HTML in mini-program work; use `RichText` or structured `View`/`Text` composition.
 - When adding or replacing **images or icons**, check file size against [`taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md) §8. If over threshold, **flag** in review output and propose compression, SVG optimization, vector/CSS substitution, or subpackage/lazy routing so premium visuals do not regress load performance or package budget.
 - Use the repo's existing styling patterns by default. Do not introduce CSS-in-JS or a new styling system just because Taro can support it.
@@ -102,14 +115,13 @@ For frontend UI tasks, use this sequence:
 3. **Sprint Contract (Tier 2+ tasks):** If this task requires a Sprint Contract (`contractRequired: true`), write the draft contract BEFORE editing any files. Save it to `.git/.orchestration/sprints/sprint-contract.{taskId}.md` and route to Verifier for review. Do not begin implementation until the contract is accepted.
 4. Implement with Taro-native primitives and explicit state completeness.
 5. Rework browser-only effects into Taro-safe hierarchy, copy, spacing, and lightweight motion instead of force-porting them.
-6. **Mandatory WeChat DevTools MCP checkpoint:** Before calling any UI work complete, use the **WeChat DevTools MCP server** (`wechat-devtools`) to:
-   - `launch` the mini-program project at `apps/mini-program`
-   - `navigate_to` the affected page(s)
-   - `get_page_data` to verify data binding and state
-   - Capture screenshots to validate visual output against spec
-   - If pixel-precision deviations are found (>1px from spec or broken 8rpx rhythm), fix before proceeding.
+6. **Verification ladder — use the strongest evidence the tooling actually supports:**
+   - **Structure/state:** WeChat DevTools MCP (`check_health` → navigate → `get_page_data`) to confirm bindings, visibility, and state transitions.
+   - **Pixels:** H5 build + Playwright screenshot via [`mini-program-screenshot-workflow`](../skills/mini-program-screenshot-workflow/SKILL.md), or an existing `npm run screenshot:*` generator. DevTools MCP cannot screenshot.
+   - **Real device:** CLI preview QR on the smallest target device for layout, fonts, and tap feel.
+   - If pixel deviations are found (>1px from spec or a broken 8rpx rhythm), fix before proceeding. Never report a visual verification you did not run.
 7. **Self-evaluation:** Before handing off to QA Agent, verify your implementation against the Sprint Contract criteria (if any) and the 5 Harness pillars.
-8. Re-check scroll smoothness, tap latency, asset weight, and package impact before calling the surface polished.
+8. Re-check scroll smoothness, tap latency, asset weight, and package impact before calling the surface polished — or run `performance-audit` for a PASS/WARN/BLOCK verdict.
 
 ## Coordination Boundary
 

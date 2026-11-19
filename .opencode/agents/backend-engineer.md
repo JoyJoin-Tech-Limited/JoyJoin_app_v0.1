@@ -30,7 +30,7 @@ Load skills based on the backend domain:
 ### Phase 0: Harness Session Guard (auto-trigger)
 
 Before any file edits:
-1. Run `node scripts/harness-auto-trigger.mjs --prompt="<user request>" --proposed-files=<files>`
+1. Run `node scripts/harness/harness-auto-trigger.mjs --prompt="<user request>" --proposed-files=<files>`
 2. Announce the result:
    - Tier: {1|2|3}
    - Contract required: {yes|no}

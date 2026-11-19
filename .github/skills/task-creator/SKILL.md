@@ -44,7 +44,7 @@ Extract: **Mission** (one sentence, plain language, no jargon), **Description** 
 **Run the auto-trigger silently:**
 
 ```bash
-node scripts/harness-auto-trigger.mjs \
+node scripts/harness/harness-auto-trigger.mjs \
   --prompt="<user's exact request>" \
   --proposed-files=<files-you-plan-to-touch>
 ```

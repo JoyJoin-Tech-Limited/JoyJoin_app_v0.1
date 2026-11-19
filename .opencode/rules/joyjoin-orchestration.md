@@ -81,7 +81,7 @@ When acting as Supervisor, route to the correct specialist based on task domain:
 ### Harness Tier Classification
 
 Before any file edits on non-trivial work, classify the task:
-1. Run `node scripts/harness-auto-trigger.mjs --prompt="<request>" --proposed-files=<files>`
+1. Run `node scripts/harness/harness-auto-trigger.mjs --prompt="<request>" --proposed-files=<files>`
 2. **Tier 1** (~$0, ≤50 lines, 1 workspace) → Direct delivery, no contract needed
 3. **Tier 2** (~$0.50-$2, multi-file, auth, stateful) → Sprint Contract required before file edits
 4. **Tier 3** (~$10-$25, core engine, payment, major refactor) → Harness Runtime Controller deliberation

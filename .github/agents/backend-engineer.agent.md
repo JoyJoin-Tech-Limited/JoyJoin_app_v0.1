@@ -55,7 +55,7 @@ Load skills explicitly based on the backend domain:
 
 **Before any file edits, classify the task:**
 
-1. Run `node scripts/harness-auto-trigger.mjs --prompt="<user's request>" --proposed-files=<files you plan to touch>`
+1. Run `node scripts/harness/harness-auto-trigger.mjs --prompt="<user's request>" --proposed-files=<files you plan to touch>`
 2. **Announce the result to the user** using the Harness Classification format:
    ```
    🔍 Harness Classification
