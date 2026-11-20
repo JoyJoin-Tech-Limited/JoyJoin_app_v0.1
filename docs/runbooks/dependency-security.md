@@ -47,6 +47,16 @@ which matches what the lockfile already had — no version changed.
 a tree that differs from what CI installs, and `--force` is how `npm audit`
 "fixes" `@tarojs` by downgrading it to 3.2.16.
 
+The 2026-11-20 follow-up hit a second ERESOLVE source: `apps/mini-program`
+declared `react-refresh ^0.19.0` (a Dependabot group bump) while
+`babel-preset-taro@4.2.0` has `peerOptional react-refresh ^0.14.0`. `npm ls`
+flagged it invalid and every normal install failed. The fix is to correct the
+declaration (`^0.14.2`), not to pass the flag. `--legacy-peer-deps` was used
+once as a diagnostic and mis-hoisted `@vitejs/plugin-react`, breaking the admin
+build with `Cannot find package 'vite'`; the tree was repaired by deleting that
+lock node and running a plain `npm install`. Treat the flag as a diagnostic
+only, and always validate the result with `npm ci --dry-run`.
+
 ### Where it runs in CI
 
 `.github/workflows/quality-gates.yml` → job **Dependency Audit**
@@ -104,13 +114,38 @@ always welcome, never blocked.
 ### Never do this
 
 ```bash
-npm audit fix --force   # ❌ forbidden in this repo
+npm audit fix           # ❌ forbidden in this repo since 2026-11-20
+npm audit fix --force   # ❌ doubly forbidden
 ```
 
 npm's resolution for the `@tarojs/*` advisories is a **downgrade** to Taro
 3.2.16 / `@tarojs/cli@1.3.8`, which destroys the mini-program build. Plain
-`npm audit fix` (no `--force`) is fine. If a fix needs a major bump, do it
-deliberately in its own commit (W2 style) with typecheck + tests + build.
+`npm audit fix` is not safe here either: measured 2026-11-20, it removed
+`@tarojs/plugin-framework-react`, `@tarojs/vite-runner`,
+`@vitejs/plugin-legacy`, and the mini-program's `vite 4.5.14`, and downgraded
+the root `vite` from 5.4.21 to 4.5.14 — to "fix" H5-only advisories — while only
+reducing 76 affected packages to 75. Recover with
+`git checkout package-lock.json && npm ci`. Fix packages one at a time, each
+with typecheck + tests + build.
+
+### `overrides` do not re-resolve on npm 11.6.2
+
+- Adding or changing an override and running `npm install`, `npm install --force`,
+  or `npm install --package-lock-only` can print `up to date` and leave the old
+  node in place.
+- Only `npm update <pkg> --legacy-peer-deps` reifies some edges — and it ignores
+  peers (see §1).
+- Dead overrides are worse than an honest baseline: they look like mitigation
+  but change nothing. On 2026-11-20 `qs`, `@tarojs/plugin-doctor.glob`, and
+  `miniprogram-ci.request.form-data` were removed after confirming they never
+  applied.
+- Forcing those three by deleting their lock nodes produced `npm ls` invalid
+  edges (`request` requires `form-data ~2.3.2` and `qs ~6.5.2`;
+  `plugin-doctor` requires `glob 10.2.6` exactly), so the forced layout was
+  reverted.
+- Rule: after any override change run `npm ci --dry-run`, `npm ls --depth=0`,
+  and the build of the workspace that owns the edge. If the override cannot be
+  reified without invalid edges, remove it and record the risk in the baseline.
 
 ---
 
@@ -159,4 +194,5 @@ resolve a lockfile conflict by hand-merging `package-lock.json`.
 | 2026-10-21 (W0) | 3 (`@babel/traverse`, `@tarojs/components`, `swiper` — all Taro chain) | 8 | Baseline landed; `drizzle-orm` is the only true server-side item |
 | 2026-10-21 (after W1) | 2 (`@tarojs/components`, `swiper`) | 6 | `npm audit fix` swept `@babel/traverse`, `browserslist`, `json5`; root graph 185 → 137 nodes |
 | 2026-10-22 (after W2) | 3 (`@tarojs/components`, `swiper`, `@tarojs/taro`) | 6 | `drizzle-orm` 0.39.1 → 0.45.4 and `sharp` 0.34.5 → 0.35.5 landed. Two new upstream advisories arrived mid-batch (`lodash` high + its `@tarojs/taro` critical propagation), so the gated count is 9, not 7. `swiper` override attempted and reverted — see W2 note in `docs/launch-risks.md`. Root graph 137 → 134 nodes. |
-| target after W3 | 0 | 0 | **Struck 2026-10-22: a Taro upgrade clears nothing.** `@tarojs/components@4.3.0` (the newest 4.x) still pins `swiper` to `11.1.15`, and `@tarojs/helper@4.3.0` still depends on `lodash@^4.17.21`, whose advisories have no released fix (`fixAvailable: false`). The remaining entries disappear when upstream ships, not when we upgrade. W3 is now maintenance-only — do not schedule it for security numbers. |
+| 2026-11-20 (follow-up) | 3 (`@tarojs/components`, `@tarojs/taro`, `swiper`) | 1 (`lodash`) | 4 gated / 4 baselined / 37 build-tool, 0 new. Admin `vite` 5.4.21 → 7.3.8 clears the admin manifest's vite alerts; root `vite 5.4.21` (hoisted plugin-react) and Taro's `vite 4.5.14` keep the package-lock alert. `joi` 17.13.9, `follow-redirects` 1.16.3, `@babel/core` 7.29.13, and `@babel/plugin-transform-modules-systemjs` 7.29.8 cleared. GitHub still showed 89 open alerts before push because Taro / miniprogram-ci / archived manifests pin vulnerable versions — see `docs/design/dependency-security-batch-20261021.md` §6. |
+| target after W3 | 0 | 0 | **Struck 2026-10-22: a Taro upgrade clears nothing.** `@tarojs/components@4.3.0` (the newest 4.x) still pins `swiper` to `11.1.15`, and `@tarojs/helper@4.3.0` still depends on `lodash@^4.17.21`, whose fix cannot be reified while `miniprogram-ci@2.1.48` pins `lodash` to exactly `4.17.21`. The remaining entries disappear when upstream ships, not when we upgrade. W3 is now maintenance-only — do not schedule it for security numbers. |

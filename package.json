@@ -10,17 +10,8 @@
   ],
   "overrides": {
     "@babel/plugin-transform-modules-systemjs": "^7.29.4",
-    "@tarojs/plugin-doctor": {
-      "glob": "10.5.0"
-    },
     "follow-redirects": "^1.16.2",
-    "joi": "^17.13.9",
-    "miniprogram-ci": {
-      "request": {
-        "form-data": "2.5.6"
-      }
-    },
-    "qs": "^6.16.1"
+    "joi": "^17.13.9"
   },
   "scripts": {
     "dev": "npm run db:push && npm run dev:server",

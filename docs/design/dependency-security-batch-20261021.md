@@ -160,3 +160,65 @@
 - 不升级 `three`、不升 `react` 18→19、不升 `express` 5.x（与本批次目标无关）。
 - 不为"让数字归零"而引入 `overrides` 强行抬版本 —— 除 W2.3 的 swiper（已论证不随包发版）。
 - 不在此批次内处理 CI 的 `npm ci --no-audit` 提速设置（保留，审计由独立 job 承担）。
+
+## 6. 2026-11-20 补充：Dependabot 遗留告警的第二次清理
+
+本节记录 DEP-SEC-1 之后的独立跟进（不是新的 wave）。触发条件：GitHub 上仍有 **89 条 open alert**（3 critical / 26 high / 48 medium / 12 low），其中大量是 Taro / miniprogram-ci / archived 工作区的精确锁版本造成的"结构性不可修"，少数是上一轮未覆盖的直接依赖。
+
+### 6.1 本轮实际改动
+
+| 位置 | 变更 | 目的 | 验证 |
+|---|---|---|---|
+| `apps/admin-client/package.json` | `vite ^5.4.21` → `^7.3.8` | 清 admin-client manifest 的 vite low 告警（6.4.4 才修复） | `typecheck` 通过；vitest 20 files / 171 tests；`build` ✓ 5.42s |
+| `apps/mini-program/package.json` | `@babel/runtime ^7.24.4` → `^7.29.14` | 小程序运行时直接依赖，清 manifest 的 1 条 medium | `build:weapp` + `verify:subpackage-styles` 通过 |
+| `apps/mini-program/package.json` | `@babel/core ^7.24.4` → `^7.29.6` | 清 1 条 low；`7.29.13` 已解析 | 同上 |
+| `apps/mini-program/package.json` | `react-refresh ^0.19.0` → `^0.14.2` | 修复与 `babel-preset-taro@4.2.0` 的 `peerOptional ^0.14.0` 冲突（0.19.0 由 Dependabot 分组提交引入，`npm ls` 标 invalid，导致所有正常解析 ERESOLVE） | `npm ls --depth=0` 无 invalid/UNMET |
+| root `package.json` | 保留 `overrides`：`@babel/plugin-transform-modules-systemjs ^7.29.4`、`follow-redirects ^1.16.2`、`joi ^17.13.9` | 三条 override 实际生效（解析为 7.29.8 / 1.16.3 / 17.13.9），清 1 high + 1 high + 1 high | `npm ci --dry-run` 通过 |
+| root `package.json` | 删除无效 override：`qs ^6.16.1`、`@tarojs/plugin-doctor.glob 10.5.0`、`miniprogram-ci.request.form-data 2.5.6` | npm 11.6.2 从未重算这三条；强行重算会产生 invalid 树（见 6.2） | 最终 lock 由 `npm ci` 重建 |
+
+清掉的告警（确定项）：`@babel/core`（low）、`@babel/plugin-transform-modules-systemjs`（high）、`follow-redirects`（high）、`joi`（high），以及 admin-client manifest 的 vite 条目（约 10 条 low）。**预计 10–15 条**会在下一次 push 后由 GitHub 重算关闭；Dependabot 不会因本地 lock 变更而自动重算。
+
+### 6.2 npm 11.6.2 的 override 不重算问题（重要运维知识）
+
+- 新增或修改 `overrides` 后，`npm install`、`npm install --force`、`npm install --package-lock-only` 均可能直接报 `up to date`，**不会**重新解析已存在的边。
+- 只有 `npm update <package> --legacy-peer-deps` 会重算一部分边；但 `--legacy-peer-deps` 会忽略 peer 约束，本轮曾把 `@vitejs/plugin-react@4.7.0` 提升到根目录，而 `vite` 只存在于 `apps/admin-client/node_modules`，导致 `build` 报 `ERR_MODULE_NOT_FOUND: Cannot find package 'vite' imported from node_modules/@vitejs/plugin-react/dist/index.js`。
+- 修复方式：从 lock 中删除 `packages["node_modules/@vitejs/plugin-react"]` 后执行**正常** `npm install`（不带 legacy 标志），让根 `vite 5.4.21` 回来供 hoisted plugin-react 解析；admin 构建仍解析自己的嵌套 `vite 7.3.8`。当前布局是"双 vite"：plugin-react 的运行时 import 走 5.4.21，admin 的 config/build 走 7.3.8。**不要删除根 vite 5.4.21**，除非同时把 plugin-react 嵌套到 admin。
+- 结论：覆盖解析后必须用 `npm ci --dry-run`（或 `npm ci`）验证最终树；`--legacy-peer-deps` 只能作为诊断手段，不能作为常规安装方式。
+
+### 6.3 `npm audit fix` 在本仓库不可用（硬规则升级）
+
+`npm audit fix --dry-run` 报告 76 个受影响包（4 low / 31 moderate / 32 high / 9 critical）和 27 个 non-major 修复，但真正执行时：
+
+- 移除 `@tarojs/plugin-framework-react`、`@tarojs/vite-runner`、`@vitejs/plugin-legacy`、mini-program 的 `vite 4.5.14`、`esbuild 0.18.20`；
+- 把根 `vite 5.4.21` 降级到 `4.5.14`；
+- 移除根 `glob 10.5.0`；
+- 受影响包只从 76 降到 75。
+
+已用 `/tmp/package-lock.pre-auditfix.json` + `npm ci` 完整回滚。**禁止在本仓库运行 `npm audit fix`**（不只是 `--force`）；修复必须逐包、可验证地进行。
+
+### 6.4 仍然保留的告警（按归属）
+
+| 归属 | 包 | 为什么不动 |
+|---|---|---|
+| Taro / H5-only | `swiper 11.1.15`（critical）、`@tarojs/components`、`@tarojs/taro`、`lodash-es`、`adm-zip 0.5.18`、`glob`、`minimatch`、`serialize-javascript` | `@tarojs/components` 精确锁 `swiper 11.1.15`，`@tarojs/plugin-platform-h5` / `@tarojs/taro-h5` 精确锁 `lodash-es 4.17.21`，`@tarojs/cli` 锁 `adm-zip ^0.5.12`；小程序编译为原生 `<Swiper>`，这些 H5 代码不随包发版。升级/降级 Taro 都禁止。 |
+| miniprogram-ci 上传工具（dev-only） | `protobufjs 6.11.6`、`lodash 4.17.21`、`tmp 0.0.28`、`uuid 3.x`、`request 2.88.2`、`tough-cookie`、`decompress`、`got`、`phin`、`git-clone`、`lodash.template`、`qs 6.5.5` | `miniprogram-ci@2.1.48` 是当前最新版，精确锁上述版本；没有可升级的 patched 版本，降级 miniprogram-ci 会破坏上传链路。`request` 链的 `form-data` 必须是 `~2.3.2`，强行抬到 4.x 会让上传静默失败。 |
+| archived 工作区 | `vite`（low）、`zod`（high） | `archived/workspaces/user-client` 不是 npm workspace，没有 lockfile，从未安装；仅 manifest 被扫描。是否删除该目录是独立的产品决策。 |
+| 运行时 medium（不在 critical/high 棘轮内） | 根 `@babel/runtime 7.24.6`（miniprogram-ci 精确锁）、`esbuild 0.21.5`、`postcss-selector-parser 6.x` 等 | 棘轮只 gate critical/high；根 `@babel/runtime` 不随小程序发版（小程序用嵌套 7.29.14）。 |
+
+`lodash` 的基线理由已同步更新：`4.18.1` 虽然存在，但 `miniprogram-ci@2.1.48` 精确锁 `4.17.21`，`@tarojs/helper` 的 `^4.17.21` 已被满足，npm 不会重算；强推 4.18.1 会产生 invalid 树，故维持基线。
+
+### 6.5 本轮验证矩阵（2026-11-20）
+
+- `npm ci --dry-run` → exit 0（最终 lock 可复现）。
+- `npm ls --depth=0` → 无 invalid / UNMET。
+- `npm run build -w @joyjoin/admin-client` → ✓ built in 5.42s。
+- `npm run build:weapp -w mini-program` → exit 0；`verify:upload-assets` PASS（32 critical assets / 212 classified）；`verify:subpackage-styles` PASS。
+- `npx vitest run`（server 定向：joinedEvents / joinedEventsRepoContract / entitlementMode / adminUserDetailContract）→ 4 files / 17 tests PASS。
+- `npm run check:deps` → 4 runtime critical/high，4 baselined，37 build-tool，0 new。
+- `npm run guardrails` → exit 0，零违规。
+
+### 6.6 后续建议
+
+1. Taro 升级单独立项（W3）：即使升到 4.3.0，swiper 仍锁 11.1.15、lodash 仍为 ^4.17.21，**不会清零**，不要把它当安全修复。
+2. 追踪 `miniprogram-ci` 上游（lodash / @babel/runtime / tmp / protobufjs）与 `@tarojs/helper` 的 lodash 范围。
+3. archived `user-client` 的 vite/zod 告警只能通过删除归档目录解决，按产品决策单独处理。

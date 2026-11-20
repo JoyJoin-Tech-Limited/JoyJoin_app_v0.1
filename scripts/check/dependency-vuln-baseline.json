@@ -1,6 +1,7 @@
 {
   "$comment": "Ratchet baseline for scripts/check/check-dependency-vulns.mjs. Keys are `<severity>:<package>` for findings reachable from a workspace runtime dependency set. Entries must be burned down, never added without a reason + reviewBy.",
   "generatedAt": "2026-10-26",
+  "updatedAt": "2026-11-20",
   "packages": {
     "critical:@tarojs/components": {
       "package": "@tarojs/components",
@@ -19,7 +20,7 @@
     "high:lodash": {
       "package": "lodash",
       "severity": "high",
-      "reason": "No patched release exists (affected range is <=4.17.23, and 4.17.21 is current). Reachable only through build-time @tarojs/helper, which sits in the Taro runtime dependency list by framework convention; no app code imports lodash, and the three advisories only fire on _.template key names / _.unset / _.omit with attacker-controlled paths. Revisit when lodash ships a fix or with the Taro upgrade (W3).",
+      "reason": "lodash 4.18.1 now ships fixes for all three advisories, but the vulnerable 4.17.21 copy cannot be moved on npm 11.6.2. miniprogram-ci@2.1.48 pins lodash to exactly 4.17.21 (upload tooling), and @tarojs/helper@4.2.0 accepts ^4.17.21 — a range 4.17.21 already satisfies, so npm never re-resolves it. A root override and a workspace devDependency both failed to hoist 4.18.1; deleting the lock node and re-resolving produced an invalid tree (npm ls flagged the forced edges), so those attempts were reverted. No app code imports lodash, and the three advisories only fire on _.template key names / _.unset / _.omit with attacker-controlled paths. Revisit when miniprogram-ci allows a newer lodash or with the Taro upgrade (W3).",
       "reviewBy": "2027-01-31",
       "advisoryUrls": [
         "https://github.com/advisories/GHSA-r5fr-rjxr-66jc",
