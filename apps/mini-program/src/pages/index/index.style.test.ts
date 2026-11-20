@@ -44,9 +44,9 @@ describe('mini-program landing page styles', () => {
     expect(landingPageSource).toContain('"landing-page--mid"')
     expect(landingPageSource).not.toContain('< 640')
     // The spacer collapses with the short tier; mid keeps a slimmer gap
-    // than the default tier (both grew 2026-09-03 to redistribute the
-    // space freed by the removed mechanism strip).
-    expect(landingPageSource).toContain('heightRpx={isMidScreen ? 48 : 96}')
+    // than the default tier (trimmed 2026-11-19 to lift the action block
+    // closer to the hero copy).
+    expect(landingPageSource).toContain('heightRpx={isMidScreen ? 24 : 56}')
     expect(landingPageSource).toContain('collapseBelow={700}')
     // Both compaction tiers exist in the stylesheet with scaled hero stages.
     // Scales are sized against WeChat's nav-exclusive windowHeight: the

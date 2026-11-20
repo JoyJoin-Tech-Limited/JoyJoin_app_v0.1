@@ -805,7 +805,7 @@ export default function MiniProgramLandingPage({
             fixed CTA stays reachable; mid tier keeps a slimmer gap. The
             freed strip/caption space (2026-09-03) is redistributed here so
             the copy never floats in a void above the CTA. */}
-        <ResponsiveSpacer heightRpx={isMidScreen ? 48 : 96} collapseBelow={700} />
+        <ResponsiveSpacer heightRpx={isMidScreen ? 24 : 56} collapseBelow={700} />
       </View>
 
       {/* CTA */}
@@ -876,20 +876,18 @@ export default function MiniProgramLandingPage({
             where the primary CTA IS the login (one door). */}
         {!loggedOutMode && (
           <View className='landing-page__login-row'>
-            <Button
-              variant='brand'
-              className='landing-page__login-btn'
-              disabled={isAuthLoading || isLoggingIn || isPageExiting || isOffline}
-              loading={isLoggingIn}
+            <Text
+              className={`landing-page__login-link${isAuthLoading || isLoggingIn || isPageExiting || isOffline ? ' landing-page__login-link--disabled' : ''}`}
               onClick={() => {
+                if (isAuthLoading || isLoggingIn || isPageExiting || isOffline) return
                 hapticLight()
                 onboardingAnalytics.interaction('login', 'landing_login_clicked')
                 fireDwell('login_tap')
                 void handleWeChatLogin()
               }}
             >
-              已有账号？立即登录
-            </Button>
+              {isLoggingIn ? '登录中…' : '已有账号？立即登录'}
+            </Text>
           </View>
         )}
 
