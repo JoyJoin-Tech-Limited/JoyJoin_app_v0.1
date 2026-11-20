@@ -199,7 +199,7 @@ jobs:
         uses: burnett01/rsync-deployments@7.1.0
         with:
           switches: >-
-            -az --delete
+            -az --delete --checksum
             --exclude=.git/
             --exclude=.github/
             --exclude=.cursor/

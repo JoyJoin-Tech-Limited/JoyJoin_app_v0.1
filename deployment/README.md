@@ -54,7 +54,7 @@ GitHub Actions
 
 ## 服务器准备
 
-> 规格选择与迁机（含换 IP 后必须同步的 CI pin、微信上传白名单、DNS 步骤）见 [`MIGRATION-lighthouse-20261023.md`](./MIGRATION-lighthouse-20261023.md)。当前生产规格：腾讯云轻量应用服务器 4C8G（180GB SSD / 12Mbps / 2000GB 月流量），¥245/月，月付。
+> 规格选择与迁机（含换 IP 后必须同步的 CI pin、微信上传白名单、DNS 步骤）见 [`MIGRATION-lighthouse-20261023.md`](./MIGRATION-lighthouse-20261023.md)。当前生产规格：腾讯云轻量应用服务器 **2C4G**（100GB SSD / 7Mbps / 1000GB 月流量），¥100/月，3 个月预付；2026-11-20 已从旧 CVM `1.12.243.104` 迁到 Lighthouse `43.138.185.90`。staging 按需启停，staging 语义维关闭；生产 granite + 语义维保留。后续可原地升配 4C8G（保留公网 IP）。
 
 远程服务器需要具备：
 

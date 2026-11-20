@@ -5,6 +5,10 @@
 > 成本：−65%（¥8,400/年 → ¥2,940/年）。
 > 时间窗：**必须 2026-10-30 前收尾**。11/2–11/8 提审周禁止任何服务器变更（审核未过即整体顺延至 11/16，见 `docs/deliberations/2026-10-12-launch-timetable-cold-start.md`）。
 
+> **2026-11-20 执行记录（actual）**：本次实际迁到**轻量 2C4G 通用型（进阶）**，广州，¥100/月（100GB SSD / 7Mbps / 1000GB 月流量），3 个月预付（备案资源要求）。原 CVM `1.12.243.104` 未续费，于 **2026-11-21 15:52** 到期。新机 `joyjoin-lighthouse` / **`43.138.185.90`**。生产 DNS `@/www/api/admin` 已于 2026-11-20 18:58 切到新 IP；`staging/staging.admin` 暂留旧机。CI pin、GitHub `SERVER_IP`、nginx `/ws`、static 404 已更新。生产栈（api/admin/postgres/granite）已在新机运行；staging 暂未迁移。
+> **2C4G 运行规则**：staging 空闲即停；staging 关闭语义维（`ENABLE_SEMANTIC_SIMILARITY=false`，并清空 `EMBEDDING_BASE_URL`）；保留 prod granite + 语义维；2GB swap + 内存 85% 告警；Node heap 1536MB。内存紧张时原地升配 4C8G（保留公网 IP）。
+> **本文以下 4C8G 方案为 2026-10-23 的历史决策记录，不再代表当前目标。**
+
 ---
 
 ## 0. 为什么要 4C8G，而不是更便宜的 2C4G
