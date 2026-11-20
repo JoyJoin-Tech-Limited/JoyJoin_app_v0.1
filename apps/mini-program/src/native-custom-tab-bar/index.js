@@ -18,6 +18,7 @@ Component({
   // Internal debounce / diff state (not reactive)
   _syncTimer: null,
   _lastBadgesKey: '',
+  _lastDotsKey: '',
   _lastSelected: -1,
   _lastCenterUrl: '',
   // Last selection confirmed by the visible route — used only as a fallback
@@ -51,6 +52,9 @@ Component({
   // the outgoing route; a push that just landed is fresher than that read, so
   // show must not overwrite it.
   _lastPushAt: 0,
+  // Registered by useCustomTabBarSync: (index) => { action, atTop } | void.
+  // The page owns what a re-tap means; the chrome only guarantees feedback.
+  _retapHandler: null,
   _settleTimer: null,
   // Screen-reader announcement timer
   _announcementTimer: null,
@@ -69,7 +73,6 @@ Component({
     hidden: true,
     // Logo settle plays once per app session (see hasPlayedLogoEntrance).
     settle: false,
-    collapsed: false,
     sheetOpen: false,
     announcement: '',
     center: {
@@ -91,6 +94,7 @@ Component({
         selectedIcon: '../assets/tab-icons/发现 icon.png',
         badgeCount: 0,
         badgeCategory: 'discover',
+        badgeDot: false,
       },
       {
         key: 'events',
@@ -101,6 +105,7 @@ Component({
         selectedIcon: '../assets/tab-icons/足迹 icon.png',
         badgeCount: 0,
         badgeCategory: 'activities',
+        badgeDot: false,
       },
     ],
     rightTabs: [
@@ -113,6 +118,7 @@ Component({
         selectedIcon: '../assets/tab-icons/连接 icon.png',
         badgeCount: 0,
         badgeCategory: 'chat',
+        badgeDot: false,
       },
       {
         key: 'profile',
@@ -125,6 +131,7 @@ Component({
         // P0-5 (2026-10-22): pending equipment draws surface as the 我的 tab
         // badge, same number-pill system as the sibling tabs.
         badgeCategory: 'profile',
+        badgeDot: false,
       },
     ],
   },
@@ -320,6 +327,33 @@ Component({
           }
         }
 
+        // Dots: a boolean state per tab, kept in a separate channel so a dot
+        // never renders as a "1" pill. Same path-based, diffed write as badges.
+        if (state.dots) {
+          var dotsKey = JSON.stringify(state.dots)
+          if (dotsKey !== self._lastDotsKey) {
+            self._lastDotsKey = dotsKey
+            var leftDotTabs = self.data.leftTabs
+            var rightDotTabs = self.data.rightTabs
+
+            leftDotTabs.forEach(function (tab, idx) {
+              var dot = tab.badgeCategory ? !!state.dots[tab.badgeCategory] : false
+              if (!!tab.badgeDot !== dot) {
+                update['leftTabs[' + idx + '].badgeDot'] = dot
+                hasChange = true
+              }
+            })
+
+            rightDotTabs.forEach(function (tab, idx) {
+              var dot = tab.badgeCategory ? !!state.dots[tab.badgeCategory] : false
+              if (!!tab.badgeDot !== dot) {
+                update['rightTabs[' + idx + '].badgeDot'] = dot
+                hasChange = true
+              }
+            })
+          }
+        }
+
         if (hasChange) {
           self.setData(update)
         }
@@ -337,6 +371,15 @@ Component({
       // an extra native re-render (icon flicker) on every switch.
       if (this.data.selected === n && !this.data.hidden) return
       this.setData({ selected: n, hidden: false })
+    },
+
+    /**
+     * Registers the visible page's re-tap behaviour (scroll-to-top vs refresh).
+     * The page owns what "already here" means; the component only guarantees
+     * the tap is acknowledged (haptics + analytics) and never re-navigates.
+     */
+    setRetapHandler: function (handler) {
+      this._retapHandler = typeof handler === 'function' ? handler : null
     },
 
     setCenterState: function (center) {
@@ -360,19 +403,6 @@ Component({
       this.setData({ sheetOpen: !!open })
     },
 
-    /**
-     * Collapses or expands the tab bar surface.
-     * Returns true when the state changed, false when already in target
-     * state or when the component is detached.
-     */
-    setCollapsed: function (collapsed) {
-      if (this._isDetached) return false
-      if (this.data.collapsed === collapsed) return false
-      this._setAnnouncement(collapsed ? '标签栏已收起' : '标签栏已展开')
-      this.setData({ collapsed: collapsed })
-      return true
-    },
-
     handleTabTap: function (e) {
       this._switchToIndex(
         Number(e.currentTarget.dataset.index),
@@ -383,7 +413,86 @@ Component({
 
     handleCenterTap: function () {
       var action = this.data.center.action
-      this._switchToIndex(4, action.url, { isCenter: true, action: action })
+      if (!action) return
+      // Contextual destinations leave the tab world, so they must not use the
+      // tab-switch queue (which only understands `switchTab`) and must not
+      // optimistically paint the center slot as selected — the hub is not
+      // where the user is going.
+      if (action.navigation === 'navigateTo' && action.url) {
+        this._openCenterDestination(action)
+        return
+      }
+      // A switchTab destination is not necessarily the hub: the idle
+      // destination is 发现, and painting index 4 for it would light the wrong
+      // slot. Resolve the index from the URL and fall back to the hub.
+      var route = String(action.url || '').replace(/^\//, '').split('?')[0]
+      var targetIndex = this._routeToIndex[route]
+      if (typeof targetIndex !== 'number') targetIndex = 4
+      this._switchToIndex(targetIndex, action.url, { isCenter: true, action: action })
+    },
+
+    /**
+     * Opens a resolved center destination as a pushed page.
+     *
+     * Deliberately outside `_switchInFlight`: a navigateTo is not a tab switch,
+     * and queueing it as one would block the next tab tap behind the 400ms
+     * watchdog for no reason.
+     */
+    _openCenterDestination: function (action) {
+      var self = this
+      this._triggerHaptic()
+      this.trackTabBarEvent('mini_program_center_button_tap', {
+        action_kind: (action && action.kind) || 'unknown',
+        navigation: 'navigateTo',
+      })
+      wx.navigateTo({
+        url: action.url,
+        fail: function (err) {
+          console.warn('[TabBar] center navigateTo failed:', err)
+          self.trackTabBarEvent('mini_program_center_button_switch_fail', {
+            action_kind: (action && action.kind) || 'unknown',
+            navigation: 'navigateTo',
+            stale: false,
+          })
+          if (wx.showToast) {
+            wx.showToast({ title: '打开失败，请重试', icon: 'none' })
+          }
+        },
+      })
+    },
+
+    /** Registered by useCustomTabBarSync; see _retapHandler. */
+    setRetapHandler: function (handler) {
+      this._retapHandler = typeof handler === 'function' ? handler : null
+    },
+
+    /**
+     * Re-tap of the tab the user is already on. The page owns the outcome
+     * (scroll to top / silent refresh); the chrome guarantees a haptic and a
+     * measurable event, and NEVER issues a second switchTab — a re-tap must not
+     * re-run the destination page's onShow for no visible change.
+     */
+    _handleRetap: function (index, meta) {
+      var result = null
+      if (typeof this._retapHandler === 'function') {
+        try {
+          result = this._retapHandler(index)
+        } catch (err) {
+          result = null
+        }
+      } else if (wx.pageScrollTo) {
+        // Default for pages that supply no handler: a page-level scroll to the
+        // top is the only outcome chrome can guarantee alone. Inside a
+        // ScrollView this is a no-op, so those pages pass their own handler.
+        wx.pageScrollTo({ scrollTop: 0, duration: 200 })
+        result = { action: 'scroll-top' }
+      }
+      this._triggerHaptic()
+      this.trackTabBarEvent('mini_program_tab_bar_retap', {
+        tab: (meta && meta.tabKey) || (index === 4 ? 'center' : 'unknown'),
+        at_top: result && result.atTop ? 1 : 0,
+        action: (result && result.action) || 'none',
+      })
     },
 
     _switchToIndex: function (index, url, meta) {
@@ -391,7 +500,12 @@ Component({
 
       var currentRouteIndex = this._routeToIndex[this._getCurrentRoute()]
       if (currentRouteIndex === index && !this._switchInFlight) {
+        // Re-tap: the destination is already visible, so there is nothing to
+        // navigate to. Give the tap an outcome instead of silently repainting
+        // the same highlight — but never a second switchTab and never a toast.
+        // The single implementation (handler, haptic, analytics) is _handleRetap.
         this.setSelected(index)
+        this._handleRetap(index, meta)
         return
       }
 

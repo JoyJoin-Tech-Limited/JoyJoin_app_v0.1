@@ -11,6 +11,7 @@ import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { useTabRetapScroll } from '../../hooks/navigation/useTabRetap'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
@@ -65,8 +66,21 @@ function EventCardSkeleton() {
 export default function EventsPage() {
   const { isDegradation } = useDeviceTier()
   const { authLoading, renderGate } = useMiniPageGate()
+
+  // Re-tapping 足迹 while it is already visible: scrolled → back to the top;
+  // already at the top → silent refresh. `evictPersistedQuery` is deliberately
+  // NOT used here — it forces a cold fetch and a visible loading shell. The
+  // 即将开始/进行中/已结束 bucket is untouched by design.
+  const { scrollTop, handleScroll, onRetap } = useTabRetapScroll({
+    onRefresh: () => {
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/events'] })
+    },
+  })
+
   useCustomTabBarSync({
     enabled: !authLoading,
+    onRetap,
   })
 
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
@@ -249,7 +263,15 @@ export default function EventsPage() {
       )}
 
       {/* ScrollView exception: this is the events feed list port (see viewport-zero-scroll skill). */}
-      <ScrollView className='events-page__list' scrollY enhanced showScrollbar={false}>
+      <ScrollView
+        className='events-page__list'
+        scrollY
+        enhanced
+        showScrollbar={false}
+        scrollTop={scrollTop}
+        onScroll={handleScroll}
+        scrollWithAnimation
+      >
         <View className='events-page__list-content'>
           {isFetching && !isLoading && (
             <View className='events-page__refresh-indicator' />

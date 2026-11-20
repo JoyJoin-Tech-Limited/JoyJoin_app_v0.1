@@ -81,7 +81,14 @@ describe('useCustomTabBarSync', () => {
     act(() => didShowCallback?.())
 
     await waitFor(() => {
-      expect(mockSyncState).toHaveBeenCalledWith({ center, badges: { discover: 5, activities: 0, chat: 2, profile: 0 } })
+      // 2026-11-19 badge arbitration: only 连接 carries a number, 发现 never
+      // badges, and 足迹/我的 are dots. The center dot still fits: the number
+      // occupies one of the two visible slots, leaving one for it.
+      expect(mockSyncState).toHaveBeenCalledWith({
+        center,
+        badges: { discover: 0, activities: 0, chat: 2, profile: 0 },
+        dots: { activities: false, profile: false },
+      })
     })
   })
 
@@ -99,7 +106,12 @@ describe('useCustomTabBarSync', () => {
     act(() => didShowCallback?.())
 
     await waitFor(() => {
-      expect(mockSyncState).toHaveBeenCalledWith({ center, badges: { discover: 0, activities: 0, chat: 0, profile: 2 } })
+      // 我的 is a dot, never a count — a badge pill would read as a score.
+      expect(mockSyncState).toHaveBeenCalledWith({
+        center,
+        badges: { discover: 0, activities: 0, chat: 0, profile: 0 },
+        dots: { activities: false, profile: true },
+      })
     })
   })
 
@@ -140,6 +152,36 @@ describe('useCustomTabBarSync', () => {
     // even while auth/queries are still loading.
     expect(mockSetSelected).toHaveBeenCalledWith(0)
     expect(mockSyncState).not.toHaveBeenCalled()
+  })
+
+  it('registers the page re-tap handler on the native instance', () => {
+    const setRetapHandler = vi.fn()
+    // Persistent, not mockReturnValueOnce: the mount-time data-sync effect also
+    // resolves the instance, so a once-value would be consumed before the publish.
+    mockGetTabBar.mockReturnValue({
+      setSelected: mockSetSelected,
+      syncState: mockSyncState,
+      setRetapHandler,
+    } as any)
+    const onRetap = vi.fn(() => ({ action: 'scroll-to-top', atTop: false }))
+
+    try {
+      renderHook(
+        () => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [], onRetap }),
+        { wrapper: createWrapper() },
+      )
+
+      act(() => didShowCallback?.())
+
+      // The native instance is re-created per tab page, so the handler must be
+      // registered on every publish, not once at mount.
+      expect(setRetapHandler).toHaveBeenCalledTimes(1)
+      const handler = setRetapHandler.mock.calls[0][0] as (index: number) => unknown
+      expect(handler(1)).toEqual({ action: 'scroll-to-top', atTop: false })
+      expect(onRetap).toHaveBeenCalledWith(1)
+    } finally {
+      mockGetTabBar.mockImplementation(() => ({ setSelected: mockSetSelected, syncState: mockSyncState }))
+    }
   })
 
   it('retries the selection push when the native instance is not ready yet', () => {

@@ -12,6 +12,7 @@ import { apiRequest } from '../../lib/api/api'
 import { getMiniProgramCenterState, type CustomTabBarSyncState } from '../../lib/navigation/centerTabRouting'
 import { resolveTabIndexForRoute } from '../../lib/navigation/tabBarRouteIndex'
 import { setTabBarSelected } from '../../lib/navigation/tabBarState'
+import { arbitrateTabIndicators } from '../../lib/navigation/tabIndicatorArbitration'
 import { useNotificationCounts } from '../useNotificationCounts'
 import { readProfileTabDotCount } from '../../lib/profile/profileTabDot'
 
@@ -23,10 +24,23 @@ export interface TabBadgeCounts {
   profile: number
 }
 
+/** Dot-only indicators (a number would over-signal these slots). */
+export interface TabIndicatorDots {
+  activities: boolean
+  profile: boolean
+}
+
 /** Native WeChat custom-tab-bar component interface (syncState method). */
 interface NativeCustomTabBar {
   setSelected(selected: number): void
-  syncState(state: CustomTabBarSyncState & { badges?: TabBadgeCounts }): void
+  syncState(state: CustomTabBarSyncState & { badges?: TabBadgeCounts; dots?: TabIndicatorDots }): void
+  /**
+   * Registers the page's re-tap outcome (scroll to top / silent refresh).
+   * Optional: older instances in a warm runtime may not expose it.
+   */
+  setRetapHandler?(
+    handler: (index: number) => { action: string; atTop?: boolean } | void
+  ): void
 }
 
 interface UseCustomTabBarSyncOptions {
@@ -39,6 +53,13 @@ interface UseCustomTabBarSyncOptions {
    * profile page last wrote — no extra fetch on non-profile tabs.
    */
   profileBadgeCount?: number
+  /**
+   * What a re-tap of the tab the user is already on should do. The chrome
+   * guarantees the haptic and the analytics event; the page owns the outcome
+   * because only it knows its scroll owner (page scroll vs ScrollView) and
+   * which query a silent refresh should invalidate.
+   */
+  onRetap?: (index: number) => { action: string; atTop?: boolean } | void
 }
 
 function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCustomTabBar | undefined {
@@ -68,6 +89,7 @@ export function useCustomTabBarSync({
   poolRegistrations: providedPoolRegistrations,
   events: providedEvents,
   profileBadgeCount,
+  onRetap,
 }: UseCustomTabBarSyncOptions) {
   const { data: queriedPoolRegistrations } = useQuery({
     queryKey: ['mini-program', 'my-pool-registrations'],
@@ -88,19 +110,45 @@ export function useCustomTabBarSync({
   const poolRegistrations = providedPoolRegistrations ?? queriedPoolRegistrations
   const events = providedEvents ?? queriedEvents
 
+  const rawCenterState = useMemo(
+    () => getMiniProgramCenterState(poolRegistrations, events),
+    [poolRegistrations, events]
+  )
+
+  // Badge arbitration (2026-11-19): at most two indicators, at most one of them
+  // a number, 发现 never badged. Raw counts are inputs, not what gets rendered —
+  // see tabIndicatorArbitration.ts for the product rules.
+  const indicators = useMemo(
+    () =>
+      arbitrateTabIndicators({
+        chat: notificationCounts?.chat ?? 0,
+        center: rawCenterState.showBadge,
+        activities: (notificationCounts?.activities ?? 0) > 0,
+        profile: (profileBadgeCount ?? readProfileTabDotCount()) > 0,
+      }),
+    [notificationCounts, profileBadgeCount, rawCenterState.showBadge]
+  )
+
+  // Only the numbered slot carries a count; the other slots are dots so the
+  // bar does not read as a scoreboard.
   const badges = useMemo<TabBadgeCounts>(
     () => ({
-      discover: notificationCounts?.discover ?? 0,
-      activities: notificationCounts?.activities ?? 0,
-      chat: notificationCounts?.chat ?? 0,
-      profile: profileBadgeCount ?? readProfileTabDotCount(),
+      discover: 0,
+      activities: 0,
+      chat: indicators.chat,
+      profile: 0,
     }),
-    [notificationCounts, profileBadgeCount]
+    [indicators.chat]
+  )
+
+  const dots = useMemo<TabIndicatorDots>(
+    () => ({ activities: indicators.activities, profile: indicators.profile }),
+    [indicators.activities, indicators.profile]
   )
 
   const centerState = useMemo(
-    () => getMiniProgramCenterState(poolRegistrations, events),
-    [poolRegistrations, events]
+    () => ({ ...rawCenterState, showBadge: indicators.center }),
+    [rawCenterState, indicators.center]
   )
 
   // Track whether the current page is visible to avoid hidden pages
@@ -108,6 +156,13 @@ export function useCustomTabBarSync({
   const isVisibleRef = useRef(false)
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pageRetryRef = useRef(0)
+
+  // The handler is stable for the life of the page but must read the latest
+  // closure, so the option lives in a ref and the registered function never
+  // changes identity (re-registering on every render would be pure churn).
+  const onRetapRef = useRef(onRetap)
+  onRetapRef.current = onRetap
+  const retapHandlerRef = useRef((index: number) => onRetapRef.current?.(index))
 
   function clearRetryTimer() {
     if (retryTimerRef.current !== null) {
@@ -164,6 +219,11 @@ export function useCustomTabBarSync({
       const tabBar = getNativeTabBar(page)
       if (tabBar && typeof tabBar.setSelected === 'function') {
         tabBar.setSelected(targetIndex)
+        // Registered on every publish: the native instance is re-created per
+        // page, so a handler registered once at mount would not survive.
+        if (typeof tabBar.setRetapHandler === 'function') {
+          tabBar.setRetapHandler(retapHandlerRef.current)
+        }
         return
       }
       attempt += 1
@@ -179,7 +239,7 @@ export function useCustomTabBarSync({
     publishSelectedIndex()
     // Center + badges are data; they may legitimately wait for `enabled`.
     if (!enabled) return
-    getNativeTabBar(Taro.getCurrentInstance().page)?.syncState({ center: centerState, badges })
+    getNativeTabBar(Taro.getCurrentInstance().page)?.syncState({ center: centerState, badges, dots })
   })
 
   useDidHide(() => {
@@ -200,8 +260,8 @@ export function useCustomTabBarSync({
     // from overwriting the visible page's tab selection on data update.
     // Selection is published once per show by publishSelectedIndex() above;
     // it must never ride along with data updates.
-    tabBar?.syncState({ center: centerState, badges })
-  }, [enabled, centerState, badges])
+    tabBar?.syncState({ center: centerState, badges, dots })
+  }, [enabled, centerState, badges, dots])
 
   return {
     centerState,

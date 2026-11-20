@@ -48,6 +48,12 @@
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
               </view>
             </view>
+            <!-- Dot indicator: boolean, never a count. wx:elif binds to the
+                 number pill above, so a tab can never show both. -->
+            <view
+              wx:elif="{{item.badgeDot}}"
+              class="joy-custom-tab-bar__item-dot"
+            ></view>
           </view>
           <view
             class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
@@ -95,6 +101,12 @@
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
               </view>
             </view>
+            <!-- Dot indicator: boolean, never a count. wx:elif binds to the
+                 number pill above, so a tab can never show both. -->
+            <view
+              wx:elif="{{item.badgeDot}}"
+              class="joy-custom-tab-bar__item-dot"
+            ></view>
           </view>
           <view
             class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"

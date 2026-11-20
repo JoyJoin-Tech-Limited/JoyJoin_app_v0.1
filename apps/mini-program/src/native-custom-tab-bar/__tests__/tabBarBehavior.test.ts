@@ -267,15 +267,22 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.announcement).toBe('已切换到足迹')
   })
 
-  it('no-ops when tapping the already-selected side tab', async () => {
+  it('re-taps the already-selected side tab through the page handler without a second switchTab', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
+    component.setRetapHandler(() => ({ action: 'scroll-to-top', atTop: false }))
 
     component.handleTabTap(makeEvent(0, '/pages/discover/index', 'discover'))
 
+    // #2 (2026-11-19): a re-tap owes the user an outcome (scroll top / silent
+    // refresh) plus a haptic, but it must never re-issue switchTab.
     expect(global.wx.switchTab).not.toHaveBeenCalled()
-    expect(global.wx.vibrateShort).not.toHaveBeenCalled()
+    expect(global.wx.vibrateShort).toHaveBeenCalledTimes(1)
+    expect(global.wx.reportAnalytics).toHaveBeenCalledWith(
+      'mini_program_tab_bar_retap',
+      { tab: 'discover', at_top: 0, action: 'scroll-to-top' }
+    )
   })
 
   it('no-ops when tapping the already-selected center button', async () => {
@@ -288,6 +295,9 @@ describe('native custom tab bar behavior', () => {
     component.handleCenterTap()
 
     expect(global.wx.switchTab).not.toHaveBeenCalled()
+    // A re-tap still acknowledges the press even when the destination is the
+    // page already on screen.
+    expect(global.wx.vibrateShort).toHaveBeenCalledTimes(1)
   })
 
   it('rolls back optimistic selection and shows toast when switchTab fails', async () => {
@@ -800,92 +810,51 @@ describe('native custom tab bar behavior', () => {
       second.attached()
       expect(second.data.settle).toBe(false)
     })
-  })
 
-  describe('setCollapsed', () => {
-    it('collapses and expands the tab bar', async () => {
+    it('releases the one-shot logo settle so a rebuilt subtree does not replay it', async () => {
       setupMocks()
       const component = await loadComponent()
       component.attached()
+      expect(component.data.settle).toBe(true)
 
-      expect(component.data.collapsed).toBe(false)
+      await vi.advanceTimersByTimeAsync(450)
 
-      const collapsedResult = component.setCollapsed(true)
-      expect(collapsedResult).toBe(true)
-      expect(component.data.collapsed).toBe(true)
-
-      const expandedResult = component.setCollapsed(false)
-      expect(expandedResult).toBe(true)
-      expect(component.data.collapsed).toBe(false)
+      // The WXML root sits behind `wx:if`: closing Discover's area-filter sheet
+      // rebuilds the subtree, so a latched flag would replay the settle on a
+      // screen the user never left.
+      expect(component.data.settle).toBe(false)
     })
 
-    it('returns false without redundant setData when already in target state', async () => {
+    it('opens a contextual center destination with navigateTo and never repaints the hub slot', async () => {
       setupMocks()
       const component = await loadComponent()
       component.attached()
+      global.wx.navigateTo = vi.fn()
 
-      expect(component.setCollapsed(false)).toBe(false)
-      expect(component.data.collapsed).toBe(false)
-    })
+      component.setData({
+        center: {
+          label: '今日出发',
+          showBadge: false,
+          action: {
+            kind: 'matched-event',
+            navigation: 'navigateTo',
+            url: '/pages/event-detail/index?id=event-1',
+          },
+        },
+      })
 
-    it('returns false and no-ops when the component is detached', async () => {
-      setupMocks()
-      const component = await loadComponent()
-      component.attached()
+      component.handleCenterTap()
 
-      component.detached()
-
-      const result = component.setCollapsed(true)
-      expect(result).toBe(false)
-      expect(component.data.collapsed).toBe(false)
-    })
-
-    it('allows setCollapsed to work again after detach + re-attach', async () => {
-      setupMocks()
-      const component = await loadComponent()
-      component.attached()
-
-      component.detached()
-      expect(component._isDetached).toBe(true)
-      expect(component.setCollapsed(true)).toBe(false)
-
-      // Simulate WeChat re-attaching the custom tab bar instance.
-      component.attached()
-      expect(component._isDetached).toBe(false)
-
-      expect(component.setCollapsed(true)).toBe(true)
-      expect(component.data.collapsed).toBe(true)
-
-      expect(component.setCollapsed(false)).toBe(true)
-      expect(component.data.collapsed).toBe(false)
-    })
-
-    it('allows collapse state changes on low-end devices (gating is caller responsibility)', async () => {
-      setupMocks()
-      const component = await loadComponent()
-      component.attached()
-      component.setData({ lowEnd: true })
-
-      expect(component.setCollapsed(true)).toBe(true)
-      expect(component.data.collapsed).toBe(true)
-    })
-
-    it('announces collapse state for screen readers and clears after 1 s', async () => {
-      setupMocks()
-      const component = await loadComponent()
-      component.attached()
-
-      component.setCollapsed(true)
-      expect(component.data.announcement).toBe('标签栏已收起')
-
-      await vi.advanceTimersByTimeAsync(1000)
-      expect(component.data.announcement).toBe('')
-
-      component.setCollapsed(false)
-      expect(component.data.announcement).toBe('标签栏已展开')
-
-      await vi.advanceTimersByTimeAsync(1000)
-      expect(component.data.announcement).toBe('')
+      expect(global.wx.navigateTo).toHaveBeenCalledTimes(1)
+      expect(global.wx.navigateTo.mock.calls[0][0].url).toBe('/pages/event-detail/index?id=event-1')
+      expect(global.wx.switchTab).not.toHaveBeenCalled()
+      // A navigateTo leaves the tab world untouched, so the hub slot must not
+      // be painted selected optimistically.
+      expect(component.data.selected).toBe(0)
+      expect(global.wx.reportAnalytics).toHaveBeenCalledWith(
+        'mini_program_center_button_tap',
+        expect.objectContaining({ action_kind: 'matched-event', navigation: 'navigateTo' }),
+      )
     })
   })
 })

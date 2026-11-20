@@ -11,6 +11,7 @@ import { queryClient } from '../../lib/api/queryClient'
 import { trackFeedbackEvent } from '../../lib/analytics/feedbackAnalytics'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { useTabRetapScroll } from '../../hooks/navigation/useTabRetap'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
@@ -36,8 +37,17 @@ interface Connection {
 export default function ConnectionsPage() {
   const { authLoading, renderGate } = useMiniPageGate()
 
+  // Re-tap on 连接: scroll to top when the list is scrolled, otherwise refresh
+  // silently from cache while the network revalidates.
+  const { scrollTop, handleScroll, onRetap } = useTabRetapScroll({
+    onRefresh: () => {
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'connections'] })
+    },
+  })
+
   useCustomTabBarSync({
     enabled: !authLoading,
+    onRetap,
   })
 
   // Warm own first-viewport assets + adjacent tabs' assets during idle so
@@ -99,7 +109,15 @@ export default function ConnectionsPage() {
   return renderGate(
     <View className={`connections-page ${tabEntranceClass}`}>
 
-      <ScrollView className='connections-page__list' scrollY enhanced showScrollbar={false}>
+      <ScrollView
+        className='connections-page__list'
+        scrollY
+        enhanced
+        showScrollbar={false}
+        scrollTop={scrollTop}
+        onScroll={handleScroll}
+        scrollWithAnimation
+      >
         {isLoading ? (
           <View className='connections-page__loading'>
             <XiaoyueEmptyState

@@ -23,6 +23,7 @@ import IdentityStageScene from '../../components/profile/IdentityStageScene'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { useTabRetapScroll } from '../../hooks/navigation/useTabRetap'
 import { NOTIFICATION_COUNTS_KEY } from '../../hooks/useNotificationCounts'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
@@ -497,9 +498,24 @@ export default function ProfilePage() {
   // this page ever mounts (storage fallback, no extra fetches elsewhere).
   // The count drops to 0 when the draws are claimed (equipment query
   // invalidates on claim) — the dot clears itself.
+  // Re-tap on 我的: scroll to top when the page is scrolled, otherwise refresh
+  // silently. Outputs are renamed because this page already owns a
+  // `handleScroll` from useProfileScroll (nav condensation).
+  const {
+    scrollTop: retapScrollTop,
+    handleScroll: handleRetapScroll,
+    onRetap,
+  } = useTabRetapScroll({
+    onRefresh: () => {
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] })
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
+    },
+  })
+
   useCustomTabBarSync({
     enabled: !authLoading,
     profileBadgeCount: pendingEntitlementCount,
+    onRetap,
   })
 
   useEffect(() => {
@@ -862,7 +878,11 @@ export default function ProfilePage() {
         scrollY
         enhanced
         showScrollbar={false}
-        onScroll={handleScroll}
+        scrollTop={retapScrollTop}
+        onScroll={(event) => {
+          handleScroll(event)
+          handleRetapScroll(event)
+        }}
       >
         {/* 2026-11-17 title parity: the page name now lives in the fixed nav
             (same place as the native bar on Discover/Events), so the content
