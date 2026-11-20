@@ -22,7 +22,7 @@ import {
   userInterestSignals,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, or, gte, lte, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { logAdminAudit } from "../lib/adminAuditLogger";
@@ -61,7 +61,17 @@ export interface LegacyStorage {
   
   
   // Event operations
-  getUserJoinedEvents(userId: string): Promise<Array<Event & { attendanceStatus: string; attendeeCount: number; participants: Array<{ id: string; displayName: string | null; archetype: string | null }> }>>;
+  /**
+   * Events this user is linked to, carrying BOTH attendance facts:
+   * - `rsvpStatus`       — `event_attendance.status` (confirmed | cancelled | attended)
+   * - `attendanceStatus` — `event_attendance.attendance_status` (pending | confirmed | late | absent)
+   *
+   * `attendeeCount` / `participants` count real check-ins only
+   * (`attendance_status IN ('confirmed','late')`). The RSVP column is never an
+   * attendance signal: it is written as 'confirmed' at match persistence, so
+   * counting it claims everyone showed up before the event even happens.
+   */
+  getUserJoinedEvents(userId: string): Promise<Array<Event & { rsvpStatus: string | null; attendanceStatus: string | null; attendeeCount: number; participants: Array<{ id: string; displayName: string | null; archetype: string | null }> }>>;
   getEventParticipants(eventId: string): Promise<Array<User>>;
   
   // Chat operations
@@ -220,12 +230,20 @@ export class LegacyStorageRepo implements LegacyStorage {
   // Social tag operations
 
   // Event operations
-  async getUserJoinedEvents(userId: string): Promise<Array<Event & { attendanceStatus: string; attendeeCount: number; participants: Array<{ id: string; displayName: string | null; archetype: string | null }> }>> {
+  async getUserJoinedEvents(userId: string): Promise<Array<Event & { rsvpStatus: string | null; attendanceStatus: string | null; attendeeCount: number; participants: Array<{ id: string; displayName: string | null; archetype: string | null }> }>> {
+    // Two different facts live on `event_attendance`:
+    //   status            = RSVP lifecycle  (confirmed | cancelled | attended)
+    //   attendance_status = actual check-in (pending | confirmed | late | absent)
+    // The RSVP column defaults to 'confirmed' and is written at match
+    // persistence, so it can never answer "did this person show up?" — only the
+    // check-in column can. Counts and the participant list use the same
+    // predicate so a badge and its "N 人出席" can never disagree.
     const result = await db
       .select({
         event: events,
-        attendanceStatus: eventAttendance.status,
-        attendeeCount: sql<number>`(SELECT COUNT(*) FROM ${eventAttendance} WHERE ${eventAttendance.eventId} = ${events.id} AND ${eventAttendance.status} = 'confirmed')`,
+        rsvpStatus: eventAttendance.status,
+        attendanceStatus: eventAttendance.attendanceStatus,
+        attendeeCount: sql<number>`(SELECT COUNT(DISTINCT ${eventAttendance.userId}) FROM ${eventAttendance} WHERE ${eventAttendance.eventId} = ${events.id} AND ${eventAttendance.attendanceStatus} IN ('confirmed', 'late'))`,
       })
       .from(eventAttendance)
       .innerJoin(events, eq(eventAttendance.eventId, events.id))
@@ -234,7 +252,7 @@ export class LegacyStorageRepo implements LegacyStorage {
 
     // Get participants for each event
     const eventsWithParticipants = await Promise.all(
-      result.map(async (r: { event: Event; attendanceStatus: string | null; attendeeCount: number }) => {
+      result.map(async (r: { event: Event; rsvpStatus: string | null; attendanceStatus: string | null; attendeeCount: number }) => {
         const participants = await db
           .select({
             id: users.id,
@@ -246,13 +264,14 @@ export class LegacyStorageRepo implements LegacyStorage {
           .where(
             and(
               eq(eventAttendance.eventId, r.event.id),
-              eq(eventAttendance.status, 'confirmed')
+              inArray(eventAttendance.attendanceStatus, ['confirmed', 'late'])
             )
           )
 
         return {
           ...r.event,
-          attendanceStatus: r.attendanceStatus || 'confirmed',
+          rsvpStatus: r.rsvpStatus ?? null,
+          attendanceStatus: r.attendanceStatus ?? null,
           attendeeCount: Number(r.attendeeCount) || 0,
           participants: participants,
         };

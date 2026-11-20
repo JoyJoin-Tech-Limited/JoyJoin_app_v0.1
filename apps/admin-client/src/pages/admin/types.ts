@@ -218,6 +218,8 @@ export interface MatchHistoryEntry {
   partnerName?: string | null;
   partnerArchetype?: string | null;
   eventTitle?: string | null;
+  /** `events.date_time` — the session date, not the derivation timestamp. */
+  eventDateTime?: string | null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -276,8 +278,15 @@ export interface JoinedEvent {
   title?: string;
   eventType?: string;
   dateTime?: string;
-  attendanceStatus?: string;
+  /** `events.status` — lifecycle (upcoming | ongoing | completed | cancelled). */
+  status?: string | null;
+  /** `event_attendance.status` — RSVP lifecycle (confirmed | cancelled | attended). */
+  rsvpStatus?: string | null;
+  /** `event_attendance.attendance_status` — the only attendance truth. */
+  attendanceStatus?: string | null;
+  /** Real check-ins for the whole event (`attendance_status IN ('confirmed','late')`). */
   attendeeCount?: number;
+  participants?: Array<{ id: string; displayName: string | null; archetype: string | null }>;
 }
 
 export interface Connection {
@@ -296,6 +305,29 @@ export interface Connection {
   eventDateTime?: string | null;
 }
 
+/**
+ * Mirror of the server's `resolveEntitlementMode` result — the SAME resolver the
+ * registration gate uses. Never reconstruct this from `user.eventCredits`; the
+ * credit column is not the gate.
+ */
+export interface UserEntitlement {
+  mode: "subscription" | "event_pack" | "test" | null;
+  availableEventCredits: number;
+  subscription: { planType: "monthly" | "quarterly"; daysRemaining: number } | null;
+}
+
+/** Per-user money + attendance snapshot (`getAdminUserCommercialSnapshot`). */
+export interface CommercialSnapshot {
+  totalPaidCents: number;
+  paidOrderCount: number;
+  attendedCount: number;
+  recentAttendedAt: string | null;
+  /** 0–100; null when there is no matched registration to divide by. */
+  attendanceRate: number | null;
+  matchedRegistrationCount: number;
+  isRepeat: boolean;
+}
+
 /** Full user detail payload returned by /api/admin/users/:id */
 export interface UserDetail {
   user: AdminUser;
@@ -307,6 +339,8 @@ export interface UserDetail {
   matchHistory: MatchHistoryEntry[];
   interests: UserInterests | null;
   matchingReadiness: { isReady: boolean; blockers: string[] };
+  entitlement?: UserEntitlement | null;
+  commercial?: CommercialSnapshot | null;
 }
 
 // ═══════════════════════════════════════════════════════════

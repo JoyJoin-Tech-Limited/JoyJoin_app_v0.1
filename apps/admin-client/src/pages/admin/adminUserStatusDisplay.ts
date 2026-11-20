@@ -34,6 +34,28 @@ export function cancelPolicyLabel(policy: string | null | undefined): string {
 }
 
 /**
+ * `event_pools.status` → operator-facing Chinese. A pool status is not a
+ * registration status: the pool is the session being recruited/formed, the
+ * registration is this user's seat in it. Rendering the pool row without it
+ * leaves the operator unable to tell a recruiting pool from a finished one.
+ */
+export const POOL_STATUS_LABELS: Record<string, string> = {
+  pending_match: "待排桌",
+  active: "招募中",
+  matching: "排桌中",
+  matched: "已排桌",
+  matched_pending: "待开桌",
+  completed: "已结束",
+  cancelled: "已取消",
+  archived: "已归档",
+};
+
+export function poolStatusLabel(status: string | null | undefined): string {
+  if (!status) return "";
+  return POOL_STATUS_LABELS[status] ?? status;
+}
+
+/**
  * `event_attendance.status` on a joined event. Reuses the War Room map so the
  * two surfaces cannot drift, but keeps an honest fallback (the War Room helper
  * coerces anything unknown to 待确认, which would be wrong on a historical row).

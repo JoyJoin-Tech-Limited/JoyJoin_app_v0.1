@@ -212,7 +212,13 @@ export default function AdminUsersPage() {
   // Remember where the operator was in the list across tab navigation.
   useScrollRestoration(undefined, { ready: !isLoading });
 
-  const { data: userDetail, isLoading: isLoadingDetail } = useQuery<UserDetail>({
+  const {
+    data: userDetail,
+    isLoading: isLoadingDetail,
+    isError: isDetailError,
+    error: detailError,
+    refetch: refetchDetail,
+  } = useQuery<UserDetail>({
     queryKey: ["/api/admin/users", selectedUser, "detail"],
     queryFn: async () => {
       const response = await fetch(`/api/admin/users/${selectedUser}/detail`, { credentials: "include" });
@@ -704,6 +710,10 @@ export default function AdminUsersPage() {
         onClose={() => setSelectedUser(null)}
         userDetail={userDetail}
         isLoadingDetail={isLoadingDetail}
+        detailError={isDetailError ? detailError : undefined}
+        onRetryDetail={() => {
+          void refetchDetail();
+        }}
         onBan={() => setShowBanDialog(true)}
         onUnban={() => {
           if (userDetail) unbanMutation.mutate(userDetail.user.id);

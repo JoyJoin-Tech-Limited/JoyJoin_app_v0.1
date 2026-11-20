@@ -55,12 +55,23 @@ import { fmtDate, fmtDateTimeShort } from "@/lib/dateUtils";
 import { TRAIT_DISPLAY_CONFIG } from "@shared/personality/traitDisplayConfig";
 import { getArchetypeBadgeStyle, getStuckStatus } from "./adminUserBadges";
 import { AdminUserInterestCard } from "./AdminUserInterestCard";
+import AdminQueryError from "@/components/admin/AdminQueryError";
+import { personLabel } from "./personLabel";
 import {
   cancelPolicyLabel,
-  joinedEventAttendanceLabel,
   matchStatusLabel,
+  poolStatusLabel,
   shortId,
 } from "./adminUserStatusDisplay";
+import {
+  commercialDisplay,
+  entitlementDisplay,
+  groupMatchHistoryByEvent,
+  joinedEventAttendanceDisplay,
+  listCountLabel,
+  resolveArchetypeDisplay,
+  splitActivityEvents,
+} from "./adminUserDetailModel";
 import type { UserDetail, UserPoolRegistration } from "./types";
 
 interface AdminUserDetailSheetProps {
@@ -68,6 +79,9 @@ interface AdminUserDetailSheetProps {
   onClose: () => void;
   userDetail: UserDetail | undefined;
   isLoadingDetail: boolean;
+  /** Failed `/detail` fetch. Rendered as a retryable surface, never an empty body. */
+  detailError?: unknown;
+  onRetryDetail?: () => void;
   onBan: () => void;
   onUnban: () => void;
   onDelete: () => void;
@@ -130,6 +144,8 @@ export function AdminUserDetailSheet({
   onClose,
   userDetail,
   isLoadingDetail,
+  detailError,
+  onRetryDetail,
   onBan,
   onUnban,
   onDelete,
@@ -141,6 +157,19 @@ export function AdminUserDetailSheet({
   const { toast } = useToast();
   const [cancelTarget, setCancelTarget] = useState<UserPoolRegistration | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+
+  // Pure derivations — computed once per render so the JSX cannot show two
+  // different counts for the same list.
+  const activitySplit = userDetail
+    ? splitActivityEvents(userDetail.joinedEvents, userDetail.poolRegistrations)
+    : null;
+  const standaloneEvents = activitySplit?.standaloneEvents ?? [];
+  const matchedPoolEventCount = activitySplit?.eventByPoolId.size ?? 0;
+  const tablemateGroups = userDetail
+    ? groupMatchHistoryByEvent(userDetail.matchHistory, userDetail.user.id)
+    : [];
+  const entitlement = entitlementDisplay(userDetail?.entitlement);
+  const commercial = commercialDisplay(userDetail?.commercial);
 
   const cancelMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
@@ -191,10 +220,13 @@ export function AdminUserDetailSheet({
           <SheetTitle className="flex items-center gap-2">
             用户详情
             {userDetail?.user.isAdmin && <Crown className="h-5 w-5 text-amber-500" />}
+            {userDetail?.user.isTestBot && (
+              <Badge variant="outline" className="text-xs font-normal">测试机器人</Badge>
+            )}
             {userDetail?.user.isBanned && <Badge variant="destructive">已封禁</Badge>}
           </SheetTitle>
           <SheetDescription>
-            {(userDetail?.user.displayName || userDetail?.user.wechatNickname) || '—'} · {userDetail?.user.phoneNumber || userDetail?.user.email || '—'}
+            {userDetail ? personLabel(userDetail.user) : "—"} · {userDetail?.user.phoneNumber || userDetail?.user.email || '—'}
           </SheetDescription>
         </SheetHeader>
 
@@ -204,6 +236,14 @@ export function AdminUserDetailSheet({
               <div key={i} className="h-4 bg-muted rounded animate-pulse" style={{ width: `${60 + i * 10}%` }} />
             ))}
           </div>
+        ) : detailError ? (
+          <div className="flex-1 p-6">
+            <AdminQueryError
+              title="用户详情加载失败"
+              error={detailError}
+              onRetry={onRetryDetail}
+            />
+          </div>
         ) : userDetail ? (
           <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden" aria-label="用户详情标签页">
             <TabsList className="mx-6 mt-4 mb-0 shrink-0 flex flex-wrap h-auto gap-1 justify-start bg-muted/50">
@@ -211,8 +251,7 @@ export function AdminUserDetailSheet({
               <TabsTrigger value="portrait" className="text-xs">用户画像</TabsTrigger>
               <TabsTrigger value="activity" className="text-xs">活动历史</TabsTrigger>
               <TabsTrigger value="connections" className="text-xs">连接关系</TabsTrigger>
-              <TabsTrigger value="matches" className="text-xs">匹配历史</TabsTrigger>
-              <TabsTrigger value="readiness" className="text-xs">匹配就绪度</TabsTrigger>
+              <TabsTrigger value="tablemates" className="text-xs">同桌历史</TabsTrigger>
             </TabsList>
 
             <ScrollArea className="flex-1 px-6 pt-4 pb-6">
@@ -275,23 +314,33 @@ export function AdminUserDetailSheet({
                           {fmtDate(userDetail.user.createdAt)}
                         </p>
                       </div>
-                      {(userDetail.user.primaryArchetype || userDetail.user.archetype) && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">社交原型</p>
-                          {(() => {
-                            const style = getArchetypeBadgeStyle(userDetail.user.primaryArchetype || userDetail.user.archetype);
-                            return (
+                      {(() => {
+                        // Chinese name first: `primaryArchetype` is a machine id
+                        // and `archetype` is a legacy Chinese name — neither is a
+                        // thing to show an operator raw.
+                        const archetype = resolveArchetypeDisplay(
+                          userDetail.user.primaryArchetype || userDetail.user.archetype,
+                        );
+                        if (!archetype) return null;
+                        const style = getArchetypeBadgeStyle(archetype.styleKey);
+                        return (
+                          <div>
+                            <p className="text-xs text-muted-foreground">社交原型</p>
+                            <div className="flex flex-wrap items-baseline gap-1.5">
                               <Badge variant="outline" style={style ? {
                                 backgroundColor: style.backgroundColor,
                                 color: style.color,
                                 borderColor: style.borderColor,
                               } : undefined}>
-                                {userDetail.user.primaryArchetype || userDetail.user.archetype}
+                                {archetype.name}
                               </Badge>
-                            );
-                          })()}
-                        </div>
-                      )}
+                              {archetype.id && (
+                                <span className="text-[10px] text-muted-foreground">{archetype.id}</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex gap-2 pt-1">
                       {userDetail.user.isAdmin && <Badge variant="secondary"><Crown className="h-3 w-3 mr-1" />管理员</Badge>}
@@ -328,6 +377,136 @@ export function AdminUserDetailSheet({
                     <OnboardingStep done={userDetail.onboarding.profileEssentialComplete} label="基本资料完成" />
                     <OnboardingStep done={userDetail.onboarding.hasCompletedInterestsCarousel} label="兴趣偏好完成" />
                     <OnboardingStep done={userDetail.onboarding.hasSeenProfileReview} label="资料预览完成" />
+                  </CardContent>
+                </Card>
+
+                {/* 匹配就绪度 lives here (it used to be a sixth tab): readiness is a
+                    property of this user, not a history surface. */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        匹配就绪度
+                        <FieldInfoTooltip
+                          title="匹配就绪度"
+                          description="服务端在详情接口中计算的就绪状态：人格测试、原型、基本资料、兴趣数据、账号状态。任一项不满足即无法进入排桌。"
+                        />
+                      </span>
+                      {userDetail.matchingReadiness.isReady ? (
+                        <Badge className="bg-green-500 hover:bg-green-500">
+                          <Zap className="h-3 w-3 mr-1" />已就绪
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive">未就绪</Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-0.5">
+                    <ReadinessCheck ok={!!userDetail.onboarding.hasCompletedPersonalityTest} label="人格测试完成" />
+                    <ReadinessCheck ok={!!(userDetail.user.archetype || userDetail.user.primaryArchetype)} label="原型已确定" />
+                    <ReadinessCheck ok={userDetail.onboarding.profileEssentialComplete} label="基本资料完整 (昵称/性别/城市)" />
+                    <ReadinessCheck ok={!!userDetail.onboarding.hasCompletedInterestsCarousel} label="兴趣数据完整" />
+                    <ReadinessCheck ok={!userDetail.user.isBanned} label="账号状态正常 (未被封禁)" />
+                    {!userDetail.matchingReadiness.isReady && userDetail.matchingReadiness.blockers.length > 0 && (
+                      <p className="flex items-start gap-2 pt-2 mt-1 border-t text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>阻断：{userDetail.matchingReadiness.blockers.join("、")}</span>
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* 权益快照 — read from the same resolver as the registration
+                    gate. `users.event_credits` is never consulted here. */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        权益快照
+                        <FieldInfoTooltip
+                          title="权益快照"
+                          description="与报名校验使用同一个服务端判定顺序：订阅中 → 局包 → 无权益。测试环境单独标记，不校验真实权益。"
+                        />
+                      </span>
+                      <Badge
+                        variant={
+                          entitlement.tone === "active"
+                            ? "default"
+                            : entitlement.tone === "credits"
+                              ? "secondary"
+                              : "outline"
+                        }
+                        className="text-xs font-normal"
+                      >
+                        {entitlement.modeLabel}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1">
+                    <p className="text-sm font-medium">{entitlement.detail}</p>
+                    <p className="text-xs text-muted-foreground">
+                      判定顺序：订阅 → 局包 → 无权益；订阅期间不占用局包次数。
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* 消费与出席 — money and attendance in one snapshot. */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        消费与出席
+                        <FieldInfoTooltip
+                          title="消费与出席"
+                          description="实付金额与付费订单来自已完成的支付记录；出席按签到记录统计（已签到 / 迟到），分母为已排桌报名场次。"
+                        />
+                      </span>
+                      {commercial && (
+                        <Badge
+                          variant={userDetail.commercial?.isRepeat ? "default" : "outline"}
+                          className="text-xs font-normal"
+                        >
+                          {commercial.repeat}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {commercial ? (
+                      <div className="space-y-2 text-sm">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">累计实付</p>
+                            <p className="font-medium tabular-nums">{commercial.totalPaid}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">付费订单</p>
+                            <p className="font-medium tabular-nums">{commercial.paidOrders}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">已出席</p>
+                            <p className="font-medium tabular-nums">{commercial.attended}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">最近出席</p>
+                            <p className="font-medium">{commercial.recentAttended}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground">出席率（已出席 / 已排桌）</p>
+                            <p className="font-medium tabular-nums">
+                              {commercial.attendanceRate ??
+                                commercial.attendanceRateNote ??
+                                "尚无已排桌场次，无法计算"}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          只统计签到成功的场次；未签到与待确认不计入出席。
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">详情接口未返回消费与出席快照</p>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -368,34 +547,45 @@ export function AdminUserDetailSheet({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {(userDetail.user.primaryArchetype || userDetail.user.archetype) ? (
-                      <div className="flex items-center gap-2">
-                        {(() => {
-                          const style = getArchetypeBadgeStyle(userDetail.user.primaryArchetype || userDetail.user.archetype);
-                          return (
-                            <Badge className="text-base px-3 py-1" style={style ? {
-                              backgroundColor: style.backgroundColor,
-                              color: style.color,
-                              borderColor: style.borderColor,
-                            } : undefined}>
-                              {userDetail.user.primaryArchetype || userDetail.user.archetype}
-                            </Badge>
-                          );
-                        })()}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">未确定原型</p>
-                    )}
-                    {userDetail.assessmentSession?.matchDetailsJson && (
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        {userDetail.assessmentSession.matchDetailsJson.secondaryArchetype && (
-                          <p>次要原型: <Badge variant="outline" className="text-xs">{userDetail.assessmentSession.matchDetailsJson.secondaryArchetype}</Badge></p>
-                        )}
-                        {userDetail.assessmentSession.matchDetailsJson.decisiveReason && (
-                          <p className="italic">"{userDetail.assessmentSession.matchDetailsJson.decisiveReason}"</p>
-                        )}
-                      </div>
-                    )}
+                    {(() => {
+                      const archetype = resolveArchetypeDisplay(
+                        userDetail.user.primaryArchetype || userDetail.user.archetype,
+                      );
+                      if (!archetype) {
+                        return <p className="text-sm text-muted-foreground">未确定原型</p>;
+                      }
+                      const style = getArchetypeBadgeStyle(archetype.styleKey);
+                      return (
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <Badge className="text-base px-3 py-1" style={style ? {
+                            backgroundColor: style.backgroundColor,
+                            color: style.color,
+                            borderColor: style.borderColor,
+                          } : undefined}>
+                            {archetype.name}
+                          </Badge>
+                          {archetype.id && (
+                            <span className="text-xs text-muted-foreground">{archetype.id}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {userDetail.assessmentSession?.matchDetailsJson && (() => {
+                      const secondary = resolveArchetypeDisplay(
+                        userDetail.assessmentSession.matchDetailsJson.secondaryArchetype,
+                      );
+                      if (!secondary) return null;
+                      // The stored `decisiveReason` is machine prose ("Gap 34% with
+                      // high confidence"). There is no honest Chinese restatement
+                      // from a percentage gap, so it is not rendered at all.
+                      return (
+                        <p className="text-xs text-muted-foreground">
+                          次要原型:{" "}
+                          <Badge variant="outline" className="text-xs">{secondary.name}</Badge>
+                          {secondary.id && <span className="ml-1.5 text-[10px]">{secondary.id}</span>}
+                        </p>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
 
@@ -540,44 +730,60 @@ export function AdminUserDetailSheet({
                   </CardContent>
                 </Card>
 
-                {userDetail.interests && (
-                  <AdminUserInterestCard interests={userDetail.interests} />
-                )}
+                {/* Always rendered: 「尚未填写兴趣」 is a real, operationally
+                    relevant state, not a reason to hide the card. */}
+                <AdminUserInterestCard interests={userDetail.interests} />
               </TabsContent>
 
               <TabsContent value="activity" className="mt-0 space-y-4">
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      参与活动
-                      <Badge variant="outline" className="font-normal">{userDetail.joinedEvents.length}</Badge>
+                    <CardTitle className="text-sm flex items-center justify-between gap-2">
+                      <span>参与活动</span>
+                      <span className="flex items-baseline gap-2">
+                        {activitySplit && activitySplit.cancelledCount > 0 && (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            另有 {activitySplit.cancelledCount} 场已取消未计入
+                          </span>
+                        )}
+                        <Badge variant="outline" className="font-normal">{standaloneEvents.length}</Badge>
+                      </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {userDetail.joinedEvents.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">尚未参与任何活动</p>
+                    {standaloneEvents.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {matchedPoolEventCount > 0
+                          ? "已排桌场次见下方活动池报名，此处不重复"
+                          : userDetail.joinedEvents.length > 0
+                            ? "活动均已取消，不计入参与"
+                            : "尚未参与任何活动"}
+                      </p>
                     ) : (
                       <div className="space-y-2">
-                        {userDetail.joinedEvents.map((event) => (
-                          <div key={event.id} className="flex justify-between items-start gap-3 text-sm border-l-2 border-primary pl-3 py-1">
-                            <div className="min-w-0">
-                              <p className="font-medium truncate">{event.title || "未命名活动"}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {[event.eventType, event.attendeeCount != null ? `${event.attendeeCount} 人出席` : null]
-                                  .filter((part) => part != null && part !== "")
-                                  .join(" · ") || "—"}
-                              </p>
+                        {standaloneEvents.map((event) => {
+                          const attendance = joinedEventAttendanceDisplay(event);
+                          return (
+                            <div key={event.id} className="flex justify-between items-start gap-3 text-sm border-l-2 border-primary pl-3 py-1">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{event.title || "未命名活动"}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {[event.eventType, event.attendeeCount != null ? `${event.attendeeCount} 人出席` : null]
+                                    .filter((part) => part != null && part !== "")
+                                    .join(" · ") || "—"}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-xs text-muted-foreground">{fmtDate(event.dateTime)}</p>
+                                {attendance && (
+                                  <Badge variant="outline" className="text-xs mt-0.5">
+                                    {attendance}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-xs text-muted-foreground">{fmtDate(event.dateTime)}</p>
-                              {event.attendanceStatus && (
-                                <Badge variant="outline" className="text-xs mt-0.5">
-                                  {joinedEventAttendanceLabel(event.attendanceStatus)}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -586,68 +792,91 @@ export function AdminUserDetailSheet({
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center justify-between">
-                      活动池报名
-                      <Badge variant="outline" className="font-normal">{userDetail.poolRegistrations.length}</Badge>
+                      <span>活动池报名</span>
+                      <Badge variant="outline" className="font-normal">
+                        {listCountLabel(userDetail.poolRegistrations.length)}
+                      </Badge>
                     </CardTitle>
+                    {userDetail.poolRegistrations.length > 0 && (
+                      <p className="text-xs text-muted-foreground pt-1">
+                        同桌整体分是这一桌的评分，同组每位成员数值相同。
+                      </p>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {userDetail.poolRegistrations.length === 0 ? (
                       <p className="text-sm text-muted-foreground">暂无活动池报名记录</p>
                     ) : (
                       <div className="space-y-2">
-                        {userDetail.poolRegistrations.map((reg) => (
-                          <div key={reg.id} className="text-sm border rounded-md px-3 py-2">
-                            <div className="flex justify-between items-start gap-3">
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">
-                                  {reg.poolTitle || `场次 ${shortId(reg.poolId)}`}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {[
-                                    reg.poolEventType,
-                                    reg.poolDateTime ? fmtDate(reg.poolDateTime) : null,
-                                    [reg.poolCity, reg.poolDistrict].filter(Boolean).join(" "),
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" · ") || "场次信息缺失"}
-                                </p>
-                                {reg.assignedGroupId && (
-                                  <p className="text-xs text-green-600">
-                                    已排桌 · {reg.groupNumber != null ? `第 ${reg.groupNumber} 组` : `分组 ${shortId(reg.assignedGroupId)}`}
+                        {userDetail.poolRegistrations.map((reg) => {
+                          const poolEvent = activitySplit?.eventByPoolId.get(reg.poolId);
+                          const attendance = poolEvent ? joinedEventAttendanceDisplay(poolEvent) : null;
+                          const statusLabel = poolStatusLabel(reg.poolStatus);
+                          return (
+                            <div key={reg.id} className="text-sm border rounded-md px-3 py-2">
+                              <div className="flex justify-between items-start gap-3">
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">
+                                    {reg.poolTitle || `场次 ${shortId(reg.poolId)}`}
                                   </p>
-                                )}
+                                  <p className="text-xs text-muted-foreground">
+                                    {[
+                                      reg.poolEventType,
+                                      statusLabel || null,
+                                      reg.poolDateTime ? fmtDate(reg.poolDateTime) : null,
+                                      [reg.poolCity, reg.poolDistrict].filter(Boolean).join(" "),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ") || "场次信息缺失"}
+                                  </p>
+                                  {reg.assignedGroupId && (
+                                    <p className="text-xs text-green-600">
+                                      已排桌 · {reg.groupNumber != null ? `第 ${reg.groupNumber} 组` : `分组 ${shortId(reg.assignedGroupId)}`}
+                                    </p>
+                                  )}
+                                  {poolEvent && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {[
+                                        attendance,
+                                        poolEvent.attendeeCount != null ? `${poolEvent.attendeeCount} 人出席` : null,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" · ") || "签到状态未记录"}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right space-y-0.5 shrink-0">
+                                  <Badge
+                                    variant={reg.matchStatus === 'matched' ? 'default' : reg.matchStatus === 'pending' ? 'secondary' : 'outline'}
+                                    className="text-xs"
+                                  >
+                                    {matchStatusLabel(reg.matchStatus)}
+                                  </Badge>
+                                  {reg.matchScore != null && (
+                                    <p className="text-xs text-muted-foreground">同桌整体分 {reg.matchScore}/100</p>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-right space-y-0.5 shrink-0">
-                                <Badge
-                                  variant={reg.matchStatus === 'matched' ? 'default' : reg.matchStatus === 'pending' ? 'secondary' : 'outline'}
-                                  className="text-xs"
-                                >
-                                  {matchStatusLabel(reg.matchStatus)}
-                                </Badge>
-                                {reg.matchScore != null && (
-                                  <p className="text-xs text-muted-foreground">匹配分 {reg.matchScore}</p>
-                                )}
-                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                报名于 {fmtDateTimeShort(reg.registeredAt)}
+                              </p>
+                              {canMutate && isRegistrationCancellable(reg) && (
+                                <div className="mt-2 flex justify-end">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                                    onClick={() => openCancelDialog(reg)}
+                                    data-testid={`button-cancel-registration-${reg.id}`}
+                                  >
+                                    <Ban className="h-3 w-3 mr-1" />
+                                    代客取消
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              报名于 {fmtDateTimeShort(reg.registeredAt)}
-                            </p>
-                            {canMutate && isRegistrationCancellable(reg) && (
-                              <div className="mt-2 flex justify-end">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                                  onClick={() => openCancelDialog(reg)}
-                                  data-testid={`button-cancel-registration-${reg.id}`}
-                                >
-                                  <Ban className="h-3 w-3 mr-1" />
-                                  代客取消
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -702,99 +931,67 @@ export function AdminUserDetailSheet({
                 </Card>
               </TabsContent>
 
-              <TabsContent value="matches" className="mt-0 space-y-4">
+              <TabsContent value="tablemates" className="mt-0 space-y-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center justify-between">
-                      匹配记录
-                      <Badge variant="outline" className="font-normal">{userDetail.matchHistory.length}</Badge>
+                      <span>同桌历史</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {listCountLabel(userDetail.matchHistory.length)} 配对 · {tablemateGroups.length} 桌
+                      </span>
                     </CardTitle>
+                    {userDetail.matchHistory.length > 0 && (
+                      <p className="text-xs text-muted-foreground pt-1">
+                        一桌一张卡；「愿意再聚」按配对统计（双方都选愿意才算），不是同桌整体结果。
+                      </p>
+                    )}
                   </CardHeader>
                   <CardContent>
-                    {userDetail.matchHistory.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">暂无匹配记录</p>
+                    {tablemateGroups.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">暂无同桌记录</p>
                     ) : (
                       <div className="space-y-2">
-                        {userDetail.matchHistory.map((match) => {
-                          const otherId = match.user1Id === userDetail.user.id ? match.user2Id : match.user1Id;
-                          return (
-                            <div key={match.id} className="text-sm border rounded-md px-3 py-2">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="text-xs text-muted-foreground">
-                                    对方: {match.partnerName || `用户 ${shortId(otherId, 8)}`}
-                                    {match.partnerArchetype && (
-                                      <Badge variant="outline" className="ml-1 text-[10px] font-normal">{match.partnerArchetype}</Badge>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    活动: {match.eventTitle || `活动 ${shortId(match.eventId)}`}
-                                  </p>
-                                  {Array.isArray(match.connectionPointTypes) && match.connectionPointTypes.length > 0 && (
-                                    <p className="text-xs text-muted-foreground">契合类型: {match.connectionPointTypes.join(', ')}</p>
-                                  )}
-                                </div>
-                                <div className="text-right space-y-0.5">
-                                  {match.connectionQuality != null && (
-                                    <Badge variant="outline" className="text-xs">连接质量 {match.connectionQuality}</Badge>
-                                  )}
-                                  {match.wouldMeetAgain != null && (
-                                    <p className="text-xs text-muted-foreground">再见意愿: {match.wouldMeetAgain ? '是' : '否'}</p>
-                                  )}
-                                  {match.matchedAt && (
-                                    <p className="text-xs text-muted-foreground">{fmtDate(match.matchedAt)}</p>
-                                  )}
-                                </div>
+                        {tablemateGroups.map((table) => (
+                          <div key={table.eventId} className="text-sm border rounded-md px-3 py-2 space-y-2">
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">
+                                  {table.eventTitle || `活动 ${shortId(table.eventId)}`}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {fmtDate(table.eventDateTime || table.matchedAt)}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0 space-y-0.5">
+                                <Badge variant="outline" className="text-xs">
+                                  同桌 {table.tableSize} 人
+                                </Badge>
+                                <p className="text-xs text-muted-foreground">
+                                  {table.answeredPairs === 0
+                                    ? "尚无再聚反馈"
+                                    : `愿意再聚 ${table.willingPairs}/${table.answeredPairs}`}
+                                </p>
                               </div>
                             </div>
-                          );
-                        })}
+                            <div className="flex flex-wrap gap-1.5 pt-1 border-t">
+                              {table.partners.map((partner) => (
+                                <span
+                                  key={partner.key}
+                                  className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+                                >
+                                  <span className="truncate max-w-[10rem]">{partner.name}</span>
+                                  {partner.archetype && (
+                                    <span className="text-muted-foreground">{partner.archetype.name}</span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </CardContent>
                 </Card>
-              </TabsContent>
-
-              <TabsContent value="readiness" className="mt-0 space-y-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      匹配就绪状态
-                      {userDetail.matchingReadiness.isReady ? (
-                        <Badge className="bg-green-500 hover:bg-green-500">
-                          <Zap className="h-3 w-3 mr-1" />已就绪
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">未就绪</Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1">
-                    <ReadinessCheck ok={!!userDetail.onboarding.hasCompletedPersonalityTest} label="人格测试完成" />
-                    <ReadinessCheck ok={!!(userDetail.user.archetype || userDetail.user.primaryArchetype)} label="原型已确定" />
-                    <ReadinessCheck ok={userDetail.onboarding.profileEssentialComplete} label="基本资料完整 (昵称/性别/城市)" />
-                    <ReadinessCheck ok={!!userDetail.onboarding.hasCompletedInterestsCarousel} label="兴趣数据完整" />
-                    <ReadinessCheck ok={!userDetail.user.isBanned} label="账号状态正常 (未被封禁)" />
-                  </CardContent>
-                </Card>
-
-                {!userDetail.matchingReadiness.isReady && userDetail.matchingReadiness.blockers.length > 0 && (
-                  <Card className="border-destructive/50 bg-destructive/5">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-destructive">阻断原因</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-1 text-sm text-destructive">
-                        {userDetail.matchingReadiness.blockers.map((b, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 shrink-0" />
-                            {b}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
               </TabsContent>
 
             </ScrollArea>

@@ -21,6 +21,8 @@ import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { notifyAdminAction } from "../../lib/wecomNotifications";
 import { cascadeDeleteByIds } from "../../lib/fkCascadeDelete";
 import { reassignOrTombstoneHostedSessions } from "../../lib/socialIcebreakerStore";
+import { resolveEntitlementMode } from "../../lib/entitlement";
+import { getAdminUserCommercialSnapshot } from "../../lib/adminMetrics";
 import { registerAdminSocialIcebreakerRoutes } from "./adminSocialIcebreaker";
 import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, eventPools, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
 
@@ -760,6 +762,8 @@ export function registerAdminUserRoutes(app: Express): void {
         userConnections,
         userMatchHistory,
         interestsResult,
+        entitlement,
+        commercialSnapshot,
       ] = await Promise.all([
         db
           .select()
@@ -793,9 +797,12 @@ export function registerAdminUserRoutes(app: Express): void {
             connectionQuality: matchHistory.connectionQuality,
             wouldMeetAgain: matchHistory.wouldMeetAgain,
             connectionPointTypes: matchHistory.connectionPointTypes,
-            partnerName: users.displayName,
+            // `users.display_name` is not guaranteed: older accounts only carry
+            // the WeChat nickname, and a drawer row must still name the person.
+            partnerName: sql<string | null>`COALESCE(${users.displayName}, ${users.wechatNickname})`,
             partnerArchetype: users.archetype,
             eventTitle: events.title,
+            eventDateTime: events.dateTime,
           })
           .from(matchHistory)
           .leftJoin(users, or(
@@ -811,6 +818,10 @@ export function registerAdminUserRoutes(app: Express): void {
           .from(userInterests)
           .where(eq(userInterests.userId, userId))
           .limit(1) as AdminUserInterestSummary[],
+        // Same resolver as the registration gate — the drawer must never
+        // re-derive entitlement from `users.event_credits`.
+        resolveEntitlementMode(userId),
+        getAdminUserCommercialSnapshot(userId),
       ]);
 
       const assessmentSession = assessmentSessionResult[0] || null;
@@ -969,6 +980,8 @@ export function registerAdminUserRoutes(app: Express): void {
         matchHistory: userMatchHistory,
         interests: interests || null,
         matchingReadiness,
+        entitlement,
+        commercial: commercialSnapshot,
       });
     } catch (error) {
       logger.error("Error fetching user detail", { error: String(error) });

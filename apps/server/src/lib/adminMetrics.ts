@@ -1191,3 +1191,101 @@ export async function countPendingReports(): Promise<number> {
     return 0;
   }
 }
+
+// ============ Per-user commercial snapshot ============
+
+/**
+ * One user's money + attendance facts for the admin user-detail drawer.
+ *
+ * Single statement on purpose: the counts describe one snapshot, and separate
+ * queries let a webhook land between them. Sources:
+ *
+ * - 实付 / 订单 — `payments.status = 'completed'`, summing `final_amount` (分).
+ *   Refunds leave the row at `status = 'refunded'`, so they drop out of both.
+ * - 出席 — `event_attendance.attendance_status IN ('confirmed','late')`, the
+ *   check-in column. `status` is the RSVP lifecycle and defaults to
+ *   'confirmed' at match persistence, so it can never answer "did they show
+ *   up?" and must not be read here.
+ * - 出席率分母 — matched pool registrations: a user can only attend an event
+ *   they were seated for.
+ *
+ * `attendanceRate` is a percentage (0–100, one decimal) like `getFormationRate`,
+ * and `null` when nothing formed — never 0%, which would read as "never shows
+ * up" instead of "no evidence yet".
+ */
+export interface AdminUserCommercialSnapshot {
+  totalPaidCents: number;
+  paidOrderCount: number;
+  attendedCount: number;
+  /** Venue date of the most recent check-in (falls back to joined_at). */
+  recentAttendedAt: string | null;
+  /** attendedCount / matchedRegistrationCount as 0–100; null when denominator is 0. */
+  attendanceRate: number | null;
+  matchedRegistrationCount: number;
+  isRepeat: boolean;
+}
+
+function toIsoStringOrNull(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+export async function getAdminUserCommercialSnapshot(
+  userId: string,
+): Promise<AdminUserCommercialSnapshot> {
+  const result = await db.execute(sql`
+    WITH paid AS (
+      SELECT
+        COUNT(*)::int AS paid_order_count,
+        COALESCE(SUM(final_amount), 0)::bigint AS total_paid_cents
+      FROM payments
+      WHERE user_id = ${userId}
+        AND status = 'completed'
+    ),
+    attended AS (
+      SELECT
+        COUNT(DISTINCT COALESCE(ea.event_id, ea.blind_box_event_id, ea.id))::int AS attended_count,
+        MAX(COALESCE(e.date_time, bbe.date_time, ea.joined_at)) AS recent_attended_at
+      FROM event_attendance ea
+      LEFT JOIN events e ON e.id = ea.event_id
+      LEFT JOIN blind_box_events bbe ON bbe.id = ea.blind_box_event_id
+      WHERE ea.user_id = ${userId}
+        AND ea.attendance_status IN ('confirmed', 'late')
+    ),
+    seated AS (
+      SELECT COUNT(*)::int AS matched_registrations
+      FROM event_pool_registrations
+      WHERE user_id = ${userId}
+        AND match_status = 'matched'
+    )
+    SELECT
+      p.total_paid_cents,
+      p.paid_order_count,
+      a.attended_count,
+      a.recent_attended_at,
+      s.matched_registrations
+    FROM paid p
+    CROSS JOIN attended a
+    CROSS JOIN seated s
+  `);
+
+  const row = result.rows[0] as Record<string, unknown> | undefined;
+  const totalPaidCents = safeNumber(row?.total_paid_cents) ?? 0;
+  const paidOrderCount = safeNumber(row?.paid_order_count) ?? 0;
+  const attendedCount = safeNumber(row?.attended_count) ?? 0;
+  const matchedRegistrationCount = safeNumber(row?.matched_registrations) ?? 0;
+
+  return {
+    totalPaidCents,
+    paidOrderCount,
+    attendedCount,
+    recentAttendedAt: toIsoStringOrNull(row?.recent_attended_at),
+    attendanceRate:
+      matchedRegistrationCount > 0
+        ? Math.round((attendedCount / matchedRegistrationCount) * 1000) / 10
+        : null,
+    matchedRegistrationCount,
+    isRepeat: attendedCount >= 2 || paidOrderCount >= 2,
+  };
+}
