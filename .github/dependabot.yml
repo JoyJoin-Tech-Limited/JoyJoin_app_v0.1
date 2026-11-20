@@ -107,3 +107,74 @@ updates:
       - dependency-name: '@types/cookie'
         update-types:
           - version-update:semver-major
+      # --- 2026-11-20 accepted-risk suppressions (review by 2027-01-31) -------
+      # Every entry is a vulnerable copy that cannot move in this tree: Taro 4.2
+      # pins vite 4 and swiper 11.1.15, miniprogram-ci 2.1.48 pins lodash,
+      # @babel/runtime and @babel/plugin-transform-modules-systemjs exactly,
+      # and `request` is unmaintained. Version ranges stop at the *patched*
+      # boundary, so a genuinely fixed release still arrives as a normal PR.
+      # Per-package reasoning: docs/design/dependency-security-batch-20261021.md
+      # §6.4. These suppressions stop unmergeable security-update PRs; they do
+      # not hide Security-tab alerts, which remain the honest statement about
+      # the installed tree. Remove an entry when its blocker (Taro / upload CLI)
+      # is upgraded.
+      - dependency-name: vite
+        versions:
+          - '< 6.4.4'
+      - dependency-name: lodash
+        versions:
+          - '< 4.18.0'
+      - dependency-name: lodash-es
+        versions:
+          - '< 4.17.23'
+      - dependency-name: '@babel/runtime'
+        versions:
+          - '< 7.26.10'
+      - dependency-name: '@babel/plugin-transform-modules-systemjs'
+        versions:
+          - '< 7.29.4'
+      - dependency-name: protobufjs
+        versions:
+          - '< 7.5.6'
+      - dependency-name: adm-zip
+        versions:
+          - '<= 0.6.0'
+      - dependency-name: decompress
+        versions:
+          - '<= 4.2.1'
+      - dependency-name: request
+        versions:
+          - '<= 2.88.2'
+      - dependency-name: uuid
+        versions:
+          - '< 11.1.1'
+      - dependency-name: tough-cookie
+        versions:
+          - '< 4.1.3'
+      - dependency-name: swiper
+        versions:
+          - '< 12.1.2'
+      - dependency-name: form-data
+        versions:
+          - '< 2.5.4'
+      - dependency-name: serialize-javascript
+        versions:
+          - '< 7.1.3'
+      - dependency-name: glob
+        versions:
+          - '< 14.0.2'
+      - dependency-name: minimatch
+        versions:
+          - '< 11.0.1'
+      - dependency-name: tmp
+        versions:
+          - '< 0.2.6'
+      - dependency-name: git-clone
+        versions:
+          - '<= 0.2.0'
+      - dependency-name: lodash.template
+        versions:
+          - '<= 4.5.0'
+      - dependency-name: decode-uri-component
+        versions:
+          - '< 0.5.1'

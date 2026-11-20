@@ -9,6 +9,11 @@ This workspace contains JoyJoin's web reference user experience built with React
 > superseded wording. `PersonalityTestResultPage.tsx`, `RevealStage.tsx` and
 > `ResultStage.tsx` still reference it.
 
+> **Manifest:** `package.json` is stored as `package.json.archived` (renamed
+> 2026-11-20) so GitHub's dependency scanner does not treat a manifest that is
+> never installed and has no lockfile as a live workspace. Rename it back
+> before reviving this workspace.
+
 ## Source-of-truth entry points
 
 - `apps/user-client/src/main.tsx` — Vite bootstrap

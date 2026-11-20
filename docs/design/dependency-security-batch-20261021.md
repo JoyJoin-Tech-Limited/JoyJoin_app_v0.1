@@ -201,8 +201,8 @@
 | 归属 | 包 | 为什么不动 |
 |---|---|---|
 | Taro / H5-only | `swiper 11.1.15`（critical）、`@tarojs/components`、`@tarojs/taro`、`lodash-es`、`adm-zip 0.5.18`、`glob`、`minimatch`、`serialize-javascript` | `@tarojs/components` 精确锁 `swiper 11.1.15`，`@tarojs/plugin-platform-h5` / `@tarojs/taro-h5` 精确锁 `lodash-es 4.17.21`，`@tarojs/cli` 锁 `adm-zip ^0.5.12`；小程序编译为原生 `<Swiper>`，这些 H5 代码不随包发版。升级/降级 Taro 都禁止。 |
-| miniprogram-ci 上传工具（dev-only） | `protobufjs 6.11.6`、`lodash 4.17.21`、`tmp 0.0.28`、`uuid 3.x`、`request 2.88.2`、`tough-cookie`、`decompress`、`got`、`phin`、`git-clone`、`lodash.template`、`qs 6.5.5` | `miniprogram-ci@2.1.48` 是当前最新版，精确锁上述版本；没有可升级的 patched 版本，降级 miniprogram-ci 会破坏上传链路。`request` 链的 `form-data` 必须是 `~2.3.2`，强行抬到 4.x 会让上传静默失败。 |
-| archived 工作区 | `vite`（low）、`zod`（high） | `archived/workspaces/user-client` 不是 npm workspace，没有 lockfile，从未安装；仅 manifest 被扫描。是否删除该目录是独立的产品决策。 |
+| miniprogram-ci 上传工具（dev-only） | `protobufjs 6.11.6`、`lodash 4.17.21`、`@babel/runtime 7.24.6`、`@babel/plugin-transform-modules-systemjs 7.22.5`、`tmp 0.0.28`、`uuid 3.x`、`request 2.88.2`、`tough-cookie`、`form-data 2.3.3`（critical，2026-11-20 新 advisory `<2.5.4`）、`decompress`、`got`、`phin`、`git-clone`、`lodash.template`、`qs 6.5.5` | `miniprogram-ci@2.1.48` 是当前最新版，精确锁上述版本；没有可升级的 patched 版本，降级 miniprogram-ci 会破坏上传链路。`request` 已停止维护，其 `form-data ~2.3.2` 无法满足新的 `>=2.5.4` 修复线；强行抬到 4.x 会让上传静默失败。每次发版前做一次上传冒烟。 |
+| archived 工作区 | `vite`（low）、`zod`（high） | 2026-11-20 已将 `archived/workspaces/user-client/package.json` 重命名为 `package.json.archived`，Dependabot 不再扫描这个从未安装、无 lockfile 的 manifest；告警在下次扫描后消失，归档目录本身保留。 |
 | 运行时 medium（不在 critical/high 棘轮内） | 根 `@babel/runtime 7.24.6`（miniprogram-ci 精确锁）、`esbuild 0.21.5`、`postcss-selector-parser 6.x` 等 | 棘轮只 gate critical/high；根 `@babel/runtime` 不随小程序发版（小程序用嵌套 7.29.14）。 |
 
 `lodash` 的基线理由已同步更新：`4.18.1` 虽然存在，但 `miniprogram-ci@2.1.48` 精确锁 `4.17.21`，`@tarojs/helper` 的 `^4.17.21` 已被满足，npm 不会重算；强推 4.18.1 会产生 invalid 树，故维持基线。
@@ -221,4 +221,12 @@
 
 1. Taro 升级单独立项（W3）：即使升到 4.3.0，swiper 仍锁 11.1.15、lodash 仍为 ^4.17.21，**不会清零**，不要把它当安全修复。
 2. 追踪 `miniprogram-ci` 上游（lodash / @babel/runtime / tmp / protobufjs）与 `@tarojs/helper` 的 lodash 范围。
-3. archived `user-client` 的 vite/zod 告警只能通过删除归档目录解决，按产品决策单独处理。
+3. archived `user-client`：2026-11-20 已将 manifest 改名为 `package.json.archived`，Dependabot 下次扫描后其 vite/zod 告警消失；归档目录本身保留，作为历史参考。
+
+### 6.7 推送后复扫与 Dependabot 噪声治理（2026-11-20）
+
+- 推送 `0601a7f15` 后 GitHub 重新扫描：**81 条 open alerts**（4 critical / 24 high / 42 moderate / 11 low），低于本轮开始时的 89 条（3 / 26 / 48 / 12）。
+- 已确认关闭：`joi`、`follow-redirects`、`@babel/core`，以及 `apps/admin-client/package.json` 的 8 条 `vite` 告警。`package-lock.json` 的 `vite` 告警仍在，因为 Taro 的 `vite 4.5.14` 和根 `vite 5.4.21` 仍被锁链需要。
+- 扫描同时出现一条**新发布的** `form-data < 2.5.4` critical：来自 `miniprogram-ci@2.1.48 → request@2.88.2 → form-data 2.3.3`。这不是本轮改动引入的回归——在删除那个从未生效的 `miniprogram-ci.request.form-data` override 之前，嵌套副本就已经是 2.3.3。处理：接受 + 发版前上传冒烟，不做 override。
+- `.github/dependabot.yml` 增加 20 条**版本区间** ignore（止于 patched 边界，不是整包忽略），覆盖 §6.4 的结构性告警；复查日 **2027-01-31**。目的不是让数字归零，而是阻止无法合并的 security-update PR 每周重现；Security 标签页的告警仍会如实存在，因为 Dependabot alerts 由依赖图生成，不受 `ignore` 影响。
+- 移除 blocker（升级 Taro / 更换上传 CLI）时，必须同步删除对应 ignore 条目，否则 patched 版本会被误挡。

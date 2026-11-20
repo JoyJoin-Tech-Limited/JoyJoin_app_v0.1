@@ -181,6 +181,15 @@ Config: `.github/dependabot.yml` (weekly, Monday 09:00 Asia/Shanghai, max 5 open
 | **`@tarojs/*` (any update type)** | Ignored entirely. The package set is pinned in lockstep to one exact version; a partial bot bump makes every `npm install` fail with ERESOLVE (PR #642, closed 2026-10-22). A coordinated bump is maintenance-only — it clears **no** advisory (see §5). |
 | **`three`, `lucide-react`, `vitest`, `@types/cookie` major** | Ignored by config on purpose. `three` is pinned for the avatar3d renderer; `lucide-react` 1.x renames icons across 135 files; `vitest` 5 is a runner major; `@types/cookie` 1.x would describe cookie@1 while the tree still resolves 0.7.2. Each is a planned migration, and PRs #639/#640/#641/#643 were closed with that reason on 2026-10-22. |
 
+**Suppressed advisories (2026-11-20).** `.github/dependabot.yml` now ignores
+the *vulnerable version ranges* listed in
+`docs/design/dependency-security-batch-20261021.md` §6.4 (20 packages; review
+by 2027-01-31). Ranges stop at the patched boundary, so a genuinely fixed
+release still arrives as a normal PR. This suppresses unmergeable
+security-update PRs only — Dependabot alerts are generated from the dependency
+graph and remain visible. Remove an entry in the same PR that upgrades its
+blocker (Taro / `miniprogram-ci`).
+
 If a Dependabot PR fails because the lockfile it produces conflicts with
 in-flight work, close it and re-open after the other branch lands — never
 resolve a lockfile conflict by hand-merging `package-lock.json`.
@@ -194,5 +203,5 @@ resolve a lockfile conflict by hand-merging `package-lock.json`.
 | 2026-10-21 (W0) | 3 (`@babel/traverse`, `@tarojs/components`, `swiper` — all Taro chain) | 8 | Baseline landed; `drizzle-orm` is the only true server-side item |
 | 2026-10-21 (after W1) | 2 (`@tarojs/components`, `swiper`) | 6 | `npm audit fix` swept `@babel/traverse`, `browserslist`, `json5`; root graph 185 → 137 nodes |
 | 2026-10-22 (after W2) | 3 (`@tarojs/components`, `swiper`, `@tarojs/taro`) | 6 | `drizzle-orm` 0.39.1 → 0.45.4 and `sharp` 0.34.5 → 0.35.5 landed. Two new upstream advisories arrived mid-batch (`lodash` high + its `@tarojs/taro` critical propagation), so the gated count is 9, not 7. `swiper` override attempted and reverted — see W2 note in `docs/launch-risks.md`. Root graph 137 → 134 nodes. |
-| 2026-11-20 (follow-up) | 3 (`@tarojs/components`, `@tarojs/taro`, `swiper`) | 1 (`lodash`) | 4 gated / 4 baselined / 37 build-tool, 0 new. Admin `vite` 5.4.21 → 7.3.8 clears the admin manifest's vite alerts; root `vite 5.4.21` (hoisted plugin-react) and Taro's `vite 4.5.14` keep the package-lock alert. `joi` 17.13.9, `follow-redirects` 1.16.3, `@babel/core` 7.29.13, and `@babel/plugin-transform-modules-systemjs` 7.29.8 cleared. GitHub still showed 89 open alerts before push because Taro / miniprogram-ci / archived manifests pin vulnerable versions — see `docs/design/dependency-security-batch-20261021.md` §6. |
+| 2026-11-20 (follow-up) | 3 (`@tarojs/components`, `@tarojs/taro`, `swiper`) | 1 (`lodash`) | 4 gated / 4 baselined / 37 build-tool, 0 new. Admin `vite` 5.4.21 → 7.3.8 cleared the admin manifest's 8 vite alerts; root `vite 5.4.21` (hoisted plugin-react) and Taro's `vite 4.5.14` keep the package-lock alert. `joi` 17.13.9, `follow-redirects` 1.16.3 and `@babel/core` 7.29.13 cleared. `miniprogram-ci` still pins `@babel/plugin-transform-modules-systemjs 7.22.5` (forcing 7.29.8 produces an invalid edge), plus `lodash` / `@babel/runtime` / `protobufjs` / `form-data`. GitHub open alerts: 89 → **81** after push (4 critical / 24 high / 42 moderate / 11 low). Archived manifest renamed to `package.json.archived`. See `docs/design/dependency-security-batch-20261021.md` §6.7. |
 | target after W3 | 0 | 0 | **Struck 2026-10-22: a Taro upgrade clears nothing.** `@tarojs/components@4.3.0` (the newest 4.x) still pins `swiper` to `11.1.15`, and `@tarojs/helper@4.3.0` still depends on `lodash@^4.17.21`, whose fix cannot be reified while `miniprogram-ci@2.1.48` pins `lodash` to exactly `4.17.21`. The remaining entries disappear when upstream ships, not when we upgrade. W3 is now maintenance-only — do not schedule it for security numbers. |
