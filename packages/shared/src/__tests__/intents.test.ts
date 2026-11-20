@@ -19,10 +19,10 @@ describe('toggleIntentValue', () => {
     expect(next).toEqual(fiveOfSix)
   })
 
-  it('collapses to flexible when every explicit intent is selected', () => {
+  it('keeps every explicit intent selected instead of collapsing to flexible', () => {
     const allExplicit = INTENT_OPTIONS.map((option) => option.value)
     const current = allExplicit.slice(0, -1)
-    expect(toggleIntentValue(current, allExplicit[allExplicit.length - 1])).toEqual([flexible])
+    expect(toggleIntentValue(current, allExplicit[allExplicit.length - 1])).toEqual(allExplicit)
   })
 
   it('blocks adding an explicit intent when a custom cap is reached and returns null', () => {

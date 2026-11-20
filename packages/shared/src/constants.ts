@@ -267,8 +267,8 @@ export function getIntentEmoji(intent: string): string {
  * preference, so it is mutually exclusive with explicit intents.
  *
  * By default there is no selection cap: users may pick as many explicit
- * intents as they want. Selecting EVERY explicit option collapses the
- * selection to flexible ("I'm up for anything") automatically.
+ * intents as they want, including all of them. Flexible remains an explicit
+ * choice ("I'm up for anything"), never an automatic collapse.
  *
  * An explicit `maxExplicit` still blocks additions past the cap (returns
  * `null` — callers should surface feedback). Returns the updated array on
@@ -298,12 +298,6 @@ export function toggleIntentValue(
   }
 
   const next = [...withoutFlexible, value];
-
-  // Selecting every explicit option means "I'm up for anything" — collapse to
-  // flexible automatically.
-  if (INTENT_OPTIONS.every((option) => next.includes(option.value))) {
-    return [flexibleValue];
-  }
 
   return next;
 }

@@ -63,6 +63,7 @@ import { registerPersonalStoryRoutes } from "./routes/domains/personalStory";
 import { registerShareClipRoutes } from "./routes/domains/shareClip";
 import { registerShareQrCodeRoutes } from "./routes/domains/shareQrCode";
 import { registerHealthRoutes } from "./healthRoutes";
+import { registerPublicConfigRoutes } from "./routes/domains/publicConfig";
 import { logger } from "./lib/logger";
 import { SESSION_COOKIE_NAME } from "./lib/sessionCookieName";
 import { isTestMode } from "./auth/getAuthStrategy";
@@ -98,6 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health and readiness endpoints must be before session middleware for cloud checks
   registerHealthRoutes(app);
+  registerPublicConfigRoutes(app);
 
   registerAnalyticsRoutes(app);
 

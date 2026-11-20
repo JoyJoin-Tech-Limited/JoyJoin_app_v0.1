@@ -73,6 +73,8 @@ export interface AuthUserResponse extends SanitizedAuthUser {
   /** Feature flags exposed to the client. */
   features?: {
     restartOnboarding?: boolean
+    /** M2 login-timing experiment: B = login after first result screen. */
+    onboardingLoginTimingExperiment?: boolean
     smartProfession?: boolean
     onboardingForceSkip?: boolean
     matchingLiveReveal?: boolean

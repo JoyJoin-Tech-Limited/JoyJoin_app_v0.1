@@ -169,6 +169,7 @@ const [
     icebreakerAcknowledgmentBeatEnabled,
     feedbackAcknowledgmentItemEnabled,
     entitlementMode,
+    onboardingLoginTimingExperiment,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -275,6 +276,7 @@ const [
         });
         return null;
       }),
+    getFeatureFlag('onboardingLoginTimingExperiment', false),
   ]);
 
   // Never expose client debug surfaces in production, even if a stale
@@ -309,6 +311,7 @@ const [
     restartsRemaining: Math.max(0, 5 - (user.onboardingRestartCount ?? 0)),
     features: {
       restartOnboarding,
+      onboardingLoginTimingExperiment,
       smartProfession,
       onboardingForceSkip,
       matchingLiveReveal,

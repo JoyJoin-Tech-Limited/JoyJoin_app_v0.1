@@ -42,6 +42,7 @@ export const FEATURE_FLAG_SECTIONS: FeatureFlagSection[] = [
 export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
   // 新手引导与落地页
   restartOnboarding: 'onboarding',
+  onboardingLoginTimingExperiment: 'onboarding',
   smartProfession: 'onboarding',
   onboardingForceSkip: 'onboarding',
   guidanceQueueEnabled: 'onboarding',
@@ -167,6 +168,7 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
 export const FEATURE_FLAG_LABELS: Record<string, string> = {
   // ── 新手引导与落地页 ──────────────────────────────
   restartOnboarding: '允许重置新手引导',
+  onboardingLoginTimingExperiment: '登录时机实验',
   smartProfession: '智能职业识别',
   onboardingForceSkip: '引导强制跳过',
   guidanceQueueEnabled: '引导提示队列',
@@ -291,6 +293,8 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
 export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
   // ── 新手引导与落地页 ──────────────────────────────
   restartOnboarding: '默认关闭。开启后，已完成新手引导的用户可在设置中重置引导进度，重新走一遍完整流程。',
+  onboardingLoginTimingExperiment:
+    '默认关闭。开启后，结果页按匿名 ID 50/50 分流：B 组在首屏结果出现后、揭晓完成前显示登录入口，A 组保持 FinalStage 登录。',
   smartProfession: '默认开启。开启后，用户用自由文本填写职业时会触发智能分类，自动归入标准职业类别，减少手选成本；关闭后退回关键词模板反应，且不再产出职业分类数据。',
   onboardingForceSkip:
     '默认关闭。仅内部测试，谨慎开启：开启后所有用户在新手引导页面都会看到「跳过」按钮，会绕过正常引导流程，生产环境禁止开启。',

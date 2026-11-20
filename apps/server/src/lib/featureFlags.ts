@@ -13,6 +13,9 @@ import { logger } from "./logger";
 
 export const FLAG_ENV_MAP: Record<string, string> = {
   restartOnboarding: "RESTART_ONBOARDING_ENABLED",
+  /** M2 login-timing experiment (2026-11-19): B = login after the first
+   *  result screen, before reveal completes. Default off. */
+  onboardingLoginTimingExperiment: "ONBOARDING_LOGIN_TIMING_EXPERIMENT",
   smartProfession: "SMART_PROFESSION_V1_ENABLED",
   onboardingForceSkip: "ONBOARDING_FORCE_SKIP_ENABLED",
   /** Auto-refund pipeline (2026-08-05): 场次未成行 → refunds + credit
@@ -810,6 +813,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   // 现在显式登记，使后台「来源:默认值」与运行时完全一致。
   /** 引导重置（设置内自助重走引导，终身 5 次）— 调用点 false。 */
   restartOnboarding: false,
+  /** M2 登录时机实验 — 默认关闭；admin toggle + kill switch。 */
+  onboardingLoginTimingExperiment: false,
   /** 引导强制跳过按钮（内部测试工具）— 调用点 false。 */
   onboardingForceSkip: false,
   /** 冰局主持人强制结束（内部测试工具）— 调用点 false。 */
