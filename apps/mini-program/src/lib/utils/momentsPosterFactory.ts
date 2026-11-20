@@ -764,7 +764,7 @@ export async function generatePersonalitySquarePoster(
   // the right with a gold rim when available.
   const bandX = M + 24
   const bandW = cardW - 48
-  const ctaHeadline = '你是哪一种氛围命格？'
+  const ctaHeadline = '你是哪一种聚会气场？'
   const ctaTextColor = '#fff7d6'
   const ctaTextSoft = 'rgba(255, 247, 214, 0.85)'
   const drawCtaBandShell = (): void => {
@@ -966,7 +966,7 @@ export async function generateGroupRevealPoster(
     ctx.setFontSize(20)
     ctx.setTextAlign('center')
     ctx.setTextBaseline('top')
-    ctx.fillText(member.archetype || '未知命格', cx, cy + 72)
+    ctx.fillText(member.archetype || '未知气场', cx, cy + 72)
     ctx.restore()
 
     // Display name
@@ -1011,7 +1011,7 @@ export async function generateGroupRevealPoster(
 
   // Bottom branding
   drawTextBlock(ctx, {
-    text: 'JoyJoin · 悦聚 — 测测你的氛围命格',
+    text: 'JoyJoin · 悦聚 — 测测你的聚会气场',
     x: W / 2,
     y: H - M - 56,
     maxChars: 26,

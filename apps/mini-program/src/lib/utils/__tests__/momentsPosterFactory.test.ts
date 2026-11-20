@@ -114,7 +114,7 @@ function buildInput(overrides: Partial<PersonalitySquarePosterInput> = {}): Pers
   return {
     archetype: '开心柯基',
     tagline: '把热闹带给每一桌',
-    shareLine: '来悦聚测测你的氛围命格',
+    shareLine: '来悦聚测测你的聚会气场',
     archetypeAsset: 'https://cdn.example.com/corgi.webp',
     archetypeAssetPng: 'https://cdn.example.com/corgi.png',
     preResolvedImagePath: 'tmp://archetype.png',
@@ -173,7 +173,7 @@ describe('personality square poster — AC-03 QR and export lifecycle', () => {
     expect(output).toBe('tmp://personality-square.png')
     expect(texts.map((call) => call.text)).toContain('微信搜索「悦聚」，3 分钟开测')
     expect(texts.some((call) => call.text.includes('长按识别'))).toBe(false)
-    expect(texts.find((call) => call.text === '你是哪一种氛围命格？')?.align).toBe('center')
+    expect(texts.find((call) => call.text === '你是哪一种聚会气场？')?.align).toBe('center')
 
     const bandPaints = rects
       .map((rect, index) => ({ rect, index }))
@@ -269,7 +269,7 @@ describe('personality square poster — AC-03 optional flow and bounds', () => {
 
   it('bounds empty, maximum CJK, unbroken ASCII and over-cap values without CTA collision', async () => {
     const { texts, rects } = await render({
-      archetype: '超长氛围命格'.repeat(24),
+      archetype: '超长聚会气场'.repeat(24),
       typicalityChip: '典型'.repeat(100),
       tagline: 'CJK'.repeat(200),
       traitEntries: [
@@ -299,7 +299,7 @@ describe('personality square poster — AC-03 optional flow and bounds', () => {
     expect(drawn).toContain('100%')
 
     const cta = findRect(rects, 622, 124)
-    const ctaCopy = new Set(['你是哪一种氛围命格？', '长按识别小程序码，3 分钟开测'])
+    const ctaCopy = new Set(['你是哪一种聚会气场？', '长按识别小程序码，3 分钟开测'])
     for (const call of texts) {
       if (call.y < 300 || ctaCopy.has(call.text)) continue
       expect(call.y + call.fontSize, `CTA collision for ${call.text}`).toBeLessThanOrEqual(cta.y - 4)
