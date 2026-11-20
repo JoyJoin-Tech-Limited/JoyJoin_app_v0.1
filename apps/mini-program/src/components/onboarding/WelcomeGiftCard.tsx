@@ -30,7 +30,12 @@ export interface WelcomeGiftCardProps {
   reduceMotion?: boolean
   /** When true, renders a skeleton placeholder instead of coupon content. */
   isLoading?: boolean
-  /** Compact, non-interactive status row for the unified entry card. */
+  /**
+   * Compact, non-interactive grant receipt for the unified entry card. The face
+   * value leads (40rpx, brand colour), availability + expiry ride a secondary
+   * line, and one quiet 「已入账」 stamp closes the row. Still `role='status'`
+   * only — no tap target, no button, no urgency.
+   */
   compact?: boolean
 }
 
@@ -99,7 +104,7 @@ export default function WelcomeGiftCard({
         className={rootClass}
         role='status'
         aria-live='polite'
-        aria-label={isLoading ? '悦仔见面礼确认中' : `见面礼已放入权益，${badgeLabel}，报名可用`}
+        aria-label={isLoading ? '悦仔见面礼确认中' : `见面礼已放入权益，${badgeLabel}，首场报名可用${validityHint ? `，有效期至 ${validityHint}` : ''}`}
       >
         {isLoading ? (
           <View className='welcome-gift-card__compact-skeleton' aria-hidden='true' />
@@ -114,10 +119,19 @@ export default function WelcomeGiftCard({
               aria-hidden='true'
             />
             <View className='welcome-gift-card__compact-copy'>
-              <Text className='welcome-gift-card__compact-title'>见面礼已放入权益</Text>
+              {/* Face value leads: one receipt line — amount, then the quiet label. */}
+              <View className='welcome-gift-card__compact-amount-row'>
+                <Text className='welcome-gift-card__compact-amount'>{value}</Text>
+                <Text className='welcome-gift-card__compact-amount-unit'>{unit}</Text>
+                <Text className='welcome-gift-card__compact-title'>见面礼已放入权益</Text>
+              </View>
               <Text className='welcome-gift-card__compact-body'>
-                {badgeLabel} · 报名可用{validityHint ? ` · 有效期至 ${validityHint}` : ''}
+                首场报名可用{validityHint ? ` · 有效期至 ${validityHint}` : ''}
               </Text>
+            </View>
+            {/* Decorative ink stamp — the aria-label already carries the grant. */}
+            <View className='welcome-gift-card__compact-stamp' aria-hidden='true'>
+              <Text className='welcome-gift-card__compact-stamp-text'>已入账</Text>
             </View>
           </>
         )}
@@ -148,7 +162,7 @@ export default function WelcomeGiftCard({
       onClick={handleTap}
       hoverClass='welcome-gift-card--pressed'
       role='button'
-      aria-label={`悦仔见面礼，送你一张 ${badgeLabel} 券，报名可用`}
+      aria-label={`悦仔见面礼，送你一张 ${badgeLabel} 券，首场报名可用`}
     >
       <View className='welcome-gift-card__placeholder' />
       <Image
@@ -166,7 +180,7 @@ export default function WelcomeGiftCard({
           <Text className='welcome-gift-card__title'>一点小心意</Text>
           <Text className='welcome-gift-card__body'>今晚去发现页，挑一场对味的局</Text>
           <View className='welcome-gift-card__hint'>
-            <Text className='welcome-gift-card__hint-text'>报名可用</Text>
+            <Text className='welcome-gift-card__hint-text'>首场报名可用</Text>
           </View>
           {validityHint ? (
             <Text className='welcome-gift-card__expiry'>有效期至 {validityHint}</Text>

@@ -432,8 +432,15 @@ const REQUIREMENTS = [
       'insight-reveal__evidence-pill{',
       // Amendment A1 (AC-16): aggregated AIGC footer row.
       'insight-reveal__footer{',
-      // Amendment A2 (AC-23): per-line feedback links (tap targets).
-      'insight-reveal__row-feedback-link{',
+      // P1 card-level feedback control (segmented 挺像的/不太像); the old
+      // per-row 准/不太准 link rules were removed with the redesign.
+      'insight-reveal__segment{',
+      // 入场卡背面 (2026-11-19): the archive sheet has no TSX-side SCSS
+      // import; its rules (and InterestChipCloud's, co-compiled through it)
+      // must reach this page WXSS or the sheet renders bare on device.
+      'profile-archive-sheet__panel{',
+      'profile-archive-sheet__field-value{',
+      'interest-chip-cloud__chip{',
       // insight-share-poster (2026-10-15): quiet entry + hidden canvas host.
       'insight-share-entry__button{',
       'profile-review__insight-poster-canvas{',

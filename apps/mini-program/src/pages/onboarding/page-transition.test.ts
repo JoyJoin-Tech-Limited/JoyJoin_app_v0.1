@@ -70,6 +70,28 @@ describe('mini-program onboarding page transitions', () => {
     })
   })
 
+  it('locks profile-review to the viewport so the detail and CTA cannot be pushed out', () => {
+    const style = readFileSync(path.resolve(currentDir, 'profile-review/index.scss'), 'utf8')
+    const view = readFileSync(path.resolve(currentDir, 'profile-review/index.tsx'), 'utf8')
+
+    // P0 regression lock (2026-11-19): a min-height-only flex root sizes to
+    // content, so the ScrollView grew instead of scrolling and the CTA moved
+    // below the viewport. The root must own a fixed 100dvh shell.
+    expect(style).toMatch(/\.profile-review \{[\s\S]*?height:\s*100dvh;[\s\S]*?overflow:\s*hidden;/)
+    expect(style).not.toMatch(/(?<!min-)height:\s*100vh/)
+    expect(style).toContain('&__scroll {\n    flex: 1;\n    min-height: 0;\n  }')
+
+    // The action bar must be a sibling after the ScrollView, never inside it.
+    expect(view.indexOf('</ScrollView>')).toBeLessThan(view.indexOf('profile-review__cta'))
+    // The old inline accordion is gone; the compact strip is always visible,
+    // with a dog-ear entry into the card-back archive sheet.
+    expect(view).not.toContain('isSummaryExpanded')
+    expect(view).toContain('profile-review__summary-row')
+    expect(view).toContain('profile-review__archive-entry')
+    expect(view).toContain('ProfileArchiveSheet')
+    expect(style).toContain('profile-review__archive-entry')
+  })
+
   it('keeps personality completion navigation single-shot', () => {
     const source = readFileSync(
       path.resolve(currentDir, 'personality-test/index.tsx'),

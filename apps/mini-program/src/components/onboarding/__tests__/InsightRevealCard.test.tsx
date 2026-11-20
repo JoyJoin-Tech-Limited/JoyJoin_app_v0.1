@@ -516,7 +516,7 @@ describe('InsightRevealCard — AC-21 visual polish contracts', () => {
   })
 })
 
-describe('InsightRevealCard — AC-23 E-1 per-line light feedback', () => {
+describe('InsightRevealCard — P1 card-level feedback control', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
@@ -535,62 +535,82 @@ describe('InsightRevealCard — AC-23 E-1 per-line light feedback', () => {
     })
   }
 
-  it('renders 准/不太准 links only on landed aigc rows', () => {
-    renderCard()
+  it('renders ONE card-level ask and no per-row feedback links', () => {
+    const { container } = renderCard()
 
-    // Skeleton phase: no links yet.
-    expect(screen.queryAllByText('准')).toHaveLength(0)
-    expect(screen.queryAllByText('不太准')).toHaveLength(0)
+    // Skeleton phase: nothing to vote on yet.
+    expect(screen.queryByText('这几句像你吗？')).toBeNull()
+    expect(screen.queryByText('挺像的')).toBeNull()
 
-    act(() => {
-      vi.advanceTimersByTime(INSIGHT_ROW_STAGGER_MS)
-    })
-    expect(screen.getAllByText('准')).toHaveLength(1)
-    expect(screen.getAllByText('不太准')).toHaveLength(1)
+    landAllLlmRows()
 
-    act(() => {
-      vi.advanceTimersByTime(INSIGHT_ROW_STAGGER_MS)
-    })
-    expect(screen.getAllByText('准')).toHaveLength(2)
-    expect(screen.getAllByText('不太准')).toHaveLength(2)
+    // Exactly one ask for the whole card, not one per line.
+    expect(screen.getAllByText('这几句像你吗？')).toHaveLength(1)
+    const group = screen.getByRole('group', { name: '这几句像你吗？' })
+    expect(group).toBeTruthy()
+    expect(screen.getByRole('button', { name: '挺像的' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '不太像' })).toBeTruthy()
 
-    // The deterministic observation row carries no feedback affordance.
-    const observationRow = screen
-      .getByText('你把最多的热量给了探店和私厨')
-      .closest('.insight-reveal__row')
-    expect(observationRow?.querySelectorAll('.insight-reveal__row-feedback-link').length).toBe(0)
+    // Layout contract: ask first, then ONE shared control holding both halves
+    // (never two independent pills floating beside the question).
+    expect(group.firstElementChild?.className).toContain('insight-reveal__feedback-question')
+    const control = group.querySelector('.insight-reveal__feedback-segments')
+    expect(control).not.toBeNull()
+    expect(control?.querySelectorAll('.insight-reveal__segment')).toHaveLength(2)
+
+    // Press feedback is available only while the ask is unanswered.
+    expect(screen.getByRole('button', { name: '挺像的' }).getAttribute('hoverclass')).toBe(
+      'insight-reveal__segment--hover',
+    )
+
+    // The old per-row 准/不太准 links are gone for good.
+    expect(container.querySelectorAll('.insight-reveal__row-feedback-link')).toHaveLength(0)
+    expect(container.querySelectorAll('.insight-reveal__row-feedback')).toHaveLength(0)
+    expect(screen.queryByText('准')).toBeNull()
+    expect(screen.queryByText('不太准')).toBeNull()
   })
 
-  it('tap fires exactly once with the anonymous payload and swaps to 收到', () => {
+  it('never renders the ask while the query is loading or the reveal is inactive', () => {
+    const { rerender } = renderCard({ isLoading: true })
+    act(() => {
+      vi.advanceTimersByTime(INSIGHT_ROW_STAGGER_MS * 3)
+    })
+    expect(screen.queryByText('这几句像你吗？')).toBeNull()
+
+    rerender(<InsightRevealCard {...BASE_PROPS} active={false} tagline={V2_TAGLINE} />)
+    act(() => {
+      vi.advanceTimersByTime(INSIGHT_ROW_STAGGER_MS * 3)
+    })
+    expect(screen.queryByText('这几句像你吗？')).toBeNull()
+  })
+
+  it('fires the unchanged telemetry payload ONCE, keyed to the primary reveal line', () => {
     const onLineFeedback = vi.fn<(meta: InsightLineFeedbackMeta) => void>()
     renderCard({ onLineFeedback })
     landAllLlmRows()
 
-    const accurateLink = screen.getAllByText('准')[0]
-    fireEvent.click(accurateLink)
+    const accurate = screen.getByRole('button', { name: '挺像的' })
+    fireEvent.click(accurate)
     // A double-tap inside one tick is ref-deduped.
-    fireEvent.click(accurateLink)
+    fireEvent.click(accurate)
 
     expect(onLineFeedback).toHaveBeenCalledTimes(1)
     expect(onLineFeedback).toHaveBeenCalledWith({
-      role: 'inference',
+      role: 'reveal',
       vote: 'accurate',
-      lineIndex: 1,
+      lineIndex: 2,
       shape: 'v2',
     })
     expect(haptics).toHaveBeenCalledWith('light')
-
-    // The link pair is replaced locally by a quiet 收到.
-    expect(screen.getByText('收到')).toBeTruthy()
-    expect(screen.getAllByText('准')).toHaveLength(1)
+    expect(accurate.getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('uses the line index from the full lines array for the reveal row', () => {
+  it('maps 不太像 to the inaccurate vote on the same primary line', () => {
     const onLineFeedback = vi.fn<(meta: InsightLineFeedbackMeta) => void>()
     renderCard({ onLineFeedback })
     landAllLlmRows()
 
-    fireEvent.click(screen.getAllByText('不太准')[1])
+    fireEvent.click(screen.getByRole('button', { name: '不太像' }))
     expect(onLineFeedback).toHaveBeenCalledWith({
       role: 'reveal',
       vote: 'inaccurate',
@@ -599,46 +619,137 @@ describe('InsightRevealCard — AC-23 E-1 per-line light feedback', () => {
     })
   })
 
-  it('votes on each row independently — once per row', () => {
-    const onLineFeedback = vi.fn<(meta: InsightLineFeedbackMeta) => void>()
-    renderCard({ onLineFeedback })
+  it('answers with a check on the chosen segment and a single quiet thank-you note', () => {
+    renderCard()
     landAllLlmRows()
 
-    fireEvent.click(screen.getAllByText('准')[0])
-    fireEvent.click(screen.getAllByText('准')[0])
+    fireEvent.click(screen.getByRole('button', { name: '挺像的' }))
 
-    expect(onLineFeedback).toHaveBeenCalledTimes(2)
-    expect(onLineFeedback.mock.calls.map((call) => call[0].lineIndex).sort()).toEqual([1, 2])
+    // The question is replaced by one acknowledgment — never 收到.
+    expect(screen.getByText('谢谢，悦仔会记住')).toBeTruthy()
+    expect(screen.queryByText('这几句像你吗？')).toBeNull()
+    expect(screen.queryByText('收到')).toBeNull()
+
+    const chosen = screen.getByRole('button', { name: '挺像的' })
+    const other = screen.getByRole('button', { name: '不太像' })
+    expect(chosen.className).toContain('insight-reveal__segment--selected')
+    expect(chosen.className).not.toContain('insight-reveal__segment--muted')
+    expect(other.className).toContain('insight-reveal__segment--muted')
+    // Both are inert once answered, including the press feedback.
+    expect(chosen.getAttribute('aria-disabled')).toBe('true')
+    expect(other.getAttribute('aria-disabled')).toBe('true')
+    expect(other.getAttribute('aria-pressed')).toBe('false')
+    expect(chosen.getAttribute('hoverclass')).toBe('none')
+    expect(other.getAttribute('hoverclass')).toBe('none')
+    // The check mark lives on the chosen segment only.
+    expect(chosen.querySelectorAll('.insight-reveal__segment-check')).toHaveLength(1)
+    expect(other.querySelectorAll('.insight-reveal__segment-check')).toHaveLength(0)
+    // The shared shell is still one control — answering never splits it.
+    expect(chosen.parentElement).toBe(other.parentElement)
+    expect(chosen.parentElement?.className).toContain('insight-reveal__feedback-segments')
   })
 
-  it('resets the 收到 state when the replay nonce bumps (useDidShow reset)', () => {
+  it('resets the answer when the replay nonce bumps (useDidShow reset)', () => {
+    const onLineFeedback = vi.fn<(meta: InsightLineFeedbackMeta) => void>()
     const { rerender } = render(
-      <InsightRevealCard {...BASE_PROPS} tagline={V2_TAGLINE} replayNonce={0} />,
+      <InsightRevealCard {...BASE_PROPS} tagline={V2_TAGLINE} replayNonce={0} onLineFeedback={onLineFeedback} />,
     )
     landAllLlmRows()
-    fireEvent.click(screen.getAllByText('准')[0])
-    expect(screen.getByText('收到')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '挺像的' }))
+    expect(screen.getByText('谢谢，悦仔会记住')).toBeTruthy()
 
-    rerender(<InsightRevealCard {...BASE_PROPS} tagline={V2_TAGLINE} replayNonce={1} />)
-    expect(screen.queryByText('收到')).toBeNull()
-    // Rows reset to skeletons on the fresh visit.
-    expect(screen.queryAllByText('准')).toHaveLength(0)
+    rerender(
+      <InsightRevealCard {...BASE_PROPS} tagline={V2_TAGLINE} replayNonce={1} onLineFeedback={onLineFeedback} />,
+    )
+    expect(screen.queryByText('谢谢，悦仔会记住')).toBeNull()
+    // Rows reset to skeletons on the fresh visit, so the ask withdraws too.
+    expect(screen.queryByText('这几句像你吗？')).toBeNull()
+
+    landAllLlmRows()
+    fireEvent.click(screen.getByRole('button', { name: '不太像' }))
+    expect(onLineFeedback).toHaveBeenCalledTimes(2)
   })
 
-  it('renders no feedback links on the legacy single-line path', () => {
+  it('renders no feedback control on the legacy single-line path', () => {
     render(
       <InsightRevealCard
         {...BASE_PROPS}
         tagline={{ insightLine: '老版本的一行观察', meta: V2_TAGLINE.meta }}
       />,
     )
-    expect(screen.queryAllByText('准')).toHaveLength(0)
-    expect(screen.queryAllByText('不太准')).toHaveLength(0)
+    expect(screen.queryByText('这几句像你吗？')).toBeNull()
+    expect(screen.queryByText('挺像的')).toBeNull()
+    expect(screen.queryByText('不太像')).toBeNull()
   })
 
-  it('renders the links statically under reduced motion', () => {
+  it('withdraws the ask when the v2 payload has no LLM row to speak for', () => {
+    const deterministicOnly: ProfileTaglineV2Response = {
+      lines: [{ role: 'observation', text: '你把最多的热量给了探店', aigc: false }],
+      evidence: [{ text: '你选了「探店」', sourceRef: 'interest:tan-dian' }],
+      meta: V2_TAGLINE.meta,
+      insightLine: '',
+    }
+    renderCard({ tagline: deterministicOnly })
+
+    expect(screen.getByText('你把最多的热量给了探店')).toBeTruthy()
+    expect(screen.queryByText('这几句像你吗？')).toBeNull()
+    expect(screen.queryByRole('button', { name: '挺像的' })).toBeNull()
+  })
+
+  it('renders the ask statically under reduced motion', () => {
     renderCard({ shouldReduceMotion: true })
-    expect(screen.getAllByText('准')).toHaveLength(2)
-    expect(screen.getAllByText('不太准')).toHaveLength(2)
+    expect(screen.getByText('这几句像你吗？')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '挺像的' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '不太像' })).toBeTruthy()
+  })
+
+  it('SCSS locks the stacked segmented-control geometry and tokens', () => {
+    const scss = readFileSync(
+      resolve(process.cwd(), 'src/components/onboarding/InsightRevealCard.scss'),
+      'utf8',
+    )
+
+    // Scope to the P1 footer so unrelated rules elsewhere can't satisfy these.
+    const feedback = scss.slice(
+      scss.indexOf('&__feedback {'),
+      scss.indexOf('// AC-16: aggregated AIGC footer'),
+    )
+    expect(feedback.length).toBeGreaterThan(0)
+
+    // 1. The ask owns its own line; nothing in the footer wraps into one row.
+    expect(feedback).toMatch(/&__feedback \{[\s\S]*?flex-direction: column/)
+    expect(feedback).not.toMatch(/&__feedback \{[\s\S]*?flex-wrap/)
+    expect(feedback).not.toMatch(/&__feedback \{[\s\S]*?justify-content: space-between/)
+
+    // 2. ONE shared shell: a single 1rpx outer hairline, pill radius, clipped.
+    expect(feedback).toContain('border: 1rpx solid rgba($color-primary, 0.22);')
+    expect(feedback).toContain('border-radius: $radius-full;')
+    expect(feedback).toContain('overflow: hidden;')
+    expect(feedback.match(/border: 1rpx solid/g) ?? []).toHaveLength(1)
+
+    // 3. Equal halves at 88rpx (44pt), no per-segment pill border, and the old
+    //    fixed 160rpx minimum is gone (it is what forced the collision).
+    expect(feedback).toMatch(/&__segment \{[\s\S]*?flex: 1;/)
+    expect(feedback).toMatch(/&__segment \{[\s\S]*?min-height: 88rpx;/)
+    expect(feedback).toMatch(/&__segment \{[\s\S]*?border: none;/)
+    expect(feedback).not.toContain('min-width: 160rpx')
+
+    // 4. Exactly one divider between the two halves — full-height border-left.
+    expect(feedback).toContain('border-left: 1rpx solid rgba($color-primary, 0.16);')
+
+    // 5. Selected = soft fill + 8rpx inset ring + primary ink.
+    expect(feedback).toMatch(/&--selected[\s\S]*?background: rgba\(\$color-primary, 0\.08\);/)
+    expect(feedback).toContain('box-shadow: inset 0 0 0 8rpx rgba($color-primary, 0.04);')
+    expect(feedback).toMatch(/&--selected[\s\S]*?color: \$color-primary;/)
+
+    // 6. The unpicked half is stepped back to the muted token.
+    expect(feedback).toMatch(/&--muted[\s\S]*?color: \$color-text-muted;/)
+
+    // 7. Small print uses the readable on-light token, not #8E949E.
+    expect(feedback).toMatch(/&__feedback-question[\s\S]*?color: \$color-text-tertiary-on-light/)
+    expect(scss).not.toContain('$color-text-tertiary;')
+    // The old per-row feedback rules are gone, and no gradient returns.
+    expect(scss).not.toContain('&__row-feedback')
+    expect(scss).not.toContain('gradient')
   })
 })

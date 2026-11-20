@@ -7,6 +7,9 @@
 // entry-card-insight-v2: InsightRevealCard carries no TSX-side SCSS import;
 // its rules compile into this page's WXSS via this @use.
 @use '../../../components/onboarding/InsightRevealCard.scss' as *;
+// P1 card-back archive: the sheet's rules must co-compile into this page's
+// WXSS (the component has no TSX-side side-effect import).
+@use '../../../components/onboarding/ProfileArchiveSheet.scss' as *;
 // insight-share-poster: InsightShareEntry — same pattern, page-level @use.
 @use '../../../components/onboarding/InsightShareEntry.scss' as *;
 // PR-8: XiaoyueInlineError renders in this page's error surface — co-compile
@@ -22,6 +25,13 @@
 .profile-review {
   display: flex;
   flex-direction: column;
+  // P0: a min-height-only flex container sizes to content in WKWebView, so the
+  // ScrollView grows instead of scrolling and pushes the CTA out of the
+  // viewport. Lock the shell to the dynamic viewport; the ScrollView is the
+  // only scroller. page-gradient-bg still keeps the 100vh min-height fallback
+  // for runtimes without dvh.
+  height: 100dvh;
+  overflow: hidden;
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
   @include onboarding-page-enter-transition;
@@ -29,6 +39,15 @@
   &__scroll {
     flex: 1;
     min-height: 0;
+  }
+
+  // Success dwell: the card overlay is the focus; let the separate gift row
+  // recede with the card instead of staying the only bright surface.
+  &--celebrating {
+    .profile-review__gift-region {
+      opacity: 0.55;
+      transition: opacity 0.2s ease;
+    }
   }
 
   &__shell {
@@ -77,16 +96,16 @@
   &__welcome-illustration {
     display: flex;
     justify-content: center;
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-xs;
   }
 
   &__welcome-image {
-    width: 240rpx;
-    height: 240rpx;
+    width: 180rpx;
+    height: 180rpx;
   }
 
   &__hero {
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-xs;
     text-align: center;
   }
 
@@ -94,14 +113,14 @@
   // so the spine centers too (left-aligned elsewhere per the spine spec).
   &__spine {
     justify-content: center;
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-xs;
   }
 
   &__title {
     @include type-display-page-title;
     display: block;
-    margin-top: $spacing-sm;
-    font-size: $font-size-2xl;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xl;
     color: $color-text-primary;
     line-height: 1.4;
     word-break: keep-all;
@@ -112,12 +131,13 @@
   &__title-en {
     @include type-en-brand-label;
     display: inline;
+    vertical-align: baseline;
     white-space: nowrap;
   }
 
   &__subtitle {
     display: block;
-    margin-top: $spacing-sm;
+    margin-top: $spacing-xs;
     font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: $line-height-relaxed;
@@ -127,7 +147,7 @@
   }
 
   &__mascot {
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-sm;
   }
 
   // ─── Single playful admission poster ───────────────────────────────────────
@@ -372,58 +392,146 @@
     line-height: 1.4;
   }
 
-  // ─── Folded summary card (2026-08-18 simplification) ──────────────────────
-  // The already-filled data (小档案 / 意向 / 兴趣热量) lives behind this
-  // default-folded card; 改 expands it in place.
+  // ─── Compact profile strip (2026-11-19) ──────────────────────────────────
+  // Three rows of the strongest personal signals; the full profile remains in
+  // 「我的」 after completion. The old inline accordion competed with the CTA
+  // and pushed it out of the viewport on short screens.
   &__summary {
-    padding: 0;
+    display: flex;
+    flex-direction: column;
+    padding: $spacing-xs $spacing-md 0;
     margin: 0;
     border-top: 2rpx dashed rgba($color-border, 0.6);
-    overflow: hidden;
     background: transparent;
   }
 
-  &__summary-header {
+  &__summary-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    align-items: flex-start;
+    gap: $spacing-sm;
     min-height: 88rpx;
-    padding: $spacing-sm $spacing-md;
+    padding: $spacing-xs 0;
 
-    &--pressed {
-      background: rgba($color-primary, 0.04);
+    & + & {
+      border-top: 1rpx solid rgba($color-border, 0.5);
     }
   }
 
-  &__summary-title {
-    font-size: $font-size-sm;
+  &__summary-label {
+    flex: 0 0 88rpx;
+    padding-top: 4rpx;
+    font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
+    color: $color-text-tertiary-on-light;
+    line-height: 1.5;
+  }
+
+  &__summary-value {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__summary-edit {
+    display: flex;
+    flex: 0 0 auto;
+    align-self: stretch;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 88rpx;
+    min-height: 88rpx;
+    padding-left: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
+    line-height: 1.5;
+  }
+
+  &__summary-chips {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    min-width: 0;
+  }
+
+  &__summary-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48rpx;
+    padding: 0 $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.06);
+  }
+
+  &__summary-chip--accent {
+    background: rgba($color-primary, 0.1);
+  }
+
+  &__summary-chip-text {
+    font-size: $font-size-xs;
     color: $color-text-primary;
     line-height: 1.4;
   }
 
-  &__summary-edit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 88rpx;
-    min-height: 56rpx;
-    padding: 0 $spacing-sm;
-    border-radius: $radius-pill;
-    background: rgba($color-primary, 0.08);
-    flex-shrink: 0;
-  }
-
-  &__summary-edit-text {
+  &__summary-placeholder {
+    padding-top: 4rpx;
     font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-    line-height: 1.4;
+    color: $color-text-tertiary-on-light;
+    line-height: 1.5;
   }
 
-  &__summary-body {
-    padding-bottom: $spacing-sm;
-    border-top: 2rpx dashed rgba($color-border, 0.6);
+  // Quiet dog-ear entry into the card-back archive. The fold is a clipped
+  // triangle, not a pill: the card physically has another side. The negative
+  // right margin pulls the fold to the poster's actual edge so the rounded
+  // corner clips it into a real paper corner.
+  &__archive-entry {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 8rpx;
+    min-height: 88rpx;
+    margin-right: -$spacing-md;
+    padding: $spacing-xs 0 0;
+    border-radius: 0 0 $card-radius-lg 0;
+    transition: background-color 0.16s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.04);
+
+      .profile-review__archive-entry-text {
+        opacity: 0.72;
+      }
+
+      .profile-review__archive-entry-fold {
+        transform: scale(0.88) rotate(-8deg);
+        background: rgba($color-primary, 0.26);
+      }
+    }
+  }
+
+  &__archive-entry-text {
+    font-size: 26rpx;
+    font-weight: $font-weight-semibold;
+    // Inline archiveAccentText overrides this to inherit the card's accent.
+    color: $color-text-tertiary-on-light;
+    line-height: 1.4;
+    padding-bottom: 4rpx;
+    transition: opacity 0.16s ease, color 0.16s ease;
+  }
+
+  &__archive-entry-fold {
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
+    background: rgba($color-primary, 0.18);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    transform-origin: 100% 100%;
+    transition: transform 0.18s ease, background-color 0.18s ease;
   }
 
   // ─── AI-generated social tag (first wow moment) ────────────────────────────
@@ -866,12 +974,14 @@
   }
 
   // PR-8: the error surface hosts the inline 悦仔 row (its own retry pill
-  // carries the tap action); the wrapper only provides spacing.
+  // carries the tap action); it now sits above the CTA so a failed completion
+  // is always visible, not buried below the card inside the ScrollView.
   &__error {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    margin-top: $spacing-md;
+    flex-shrink: 0;
+    margin: 0 $container-padding $spacing-sm;
   }
 
   &__error-text {
@@ -892,21 +1002,21 @@
     text-align: center;
   }
 
-  // ─── Bottom CTA: one safe-area owner, no phantom scroll reserve ───────────
+  // ─── Bottom action bar: one safe-area owner, intentional white surface ────
   &__cta {
     position: relative;
     z-index: 10;
-    margin: 0 $container-padding $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    border-radius: $radius-pill;
-    background: rgba($color-surface, 0.94);
-    box-shadow: $shadow-lg;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin: 0;
+    padding: $spacing-sm $container-padding;
+    border-top: 1rpx solid rgba($color-text-primary, 0.06);
+    border-radius: 0;
+    background: $color-surface;
+    box-shadow: 0 -8rpx 24rpx rgba($color-text-primary, 0.04);
+    transition: box-shadow 0.2s ease;
     @include safe-area-bottom-padding(padding-bottom, $spacing-sm);
 
     &--scrolled {
-      transform: translateY(-4rpx);
-      box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.14);
+      box-shadow: 0 -12rpx 32rpx rgba($color-text-primary, 0.06);
     }
   }
 
@@ -917,9 +1027,60 @@
     &.joy-button--brand {
       @include type-brand-cta-label;
     }
+  }
 
-    &[disabled] {
-      opacity: 0.55;
+  // The status strip shares the bar chrome; keep the idle CTA's height so the
+  // 720ms success dwell never shifts the scroll area.
+  &__cta--celebrating {
+    min-height: $button-height + $spacing-sm * 2;
+  }
+
+  // Celebration status strip: a progress cue, not a disabled purple button.
+  &__cta-status {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12rpx;
+    min-height: $button-height;
+  }
+
+  &__cta-status-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__cta-status-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: $radius-circle;
+    background: $color-primary;
+    flex-shrink: 0;
+  }
+
+  &__cta-status-text {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
+  &__cta-status-track {
+    height: 4rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.12);
+    overflow: hidden;
+  }
+
+  &__cta-status-fill {
+    height: 100%;
+    background: $color-primary;
+    transform: scaleX(0);
+    transform-origin: left center;
+    animation: profile-review-cta-progress 720ms linear forwards;
+
+    &--static {
+      transform: scaleX(1);
+      animation: none;
     }
   }
 
@@ -1010,11 +1171,12 @@
 .profile-review__gift-region {
   position: relative;
   z-index: 2;
+  margin-top: $spacing-md;
 }
 
 .profile-review__gift-card,
 .profile-review__coupon-error {
-  margin: 0 $spacing-md $spacing-md;
+  margin: 0;
 }
 
 .profile-review__coupon-error {
@@ -1071,4 +1233,14 @@
   top: 0;
   opacity: 0;
   pointer-events: none;
+}
+
+@keyframes profile-review-cta-progress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
 }

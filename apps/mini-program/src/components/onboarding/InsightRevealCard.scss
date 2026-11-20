@@ -88,36 +88,6 @@
     line-height: $line-height-relaxed;
   }
 
-  // AC-23 E-1: per-line light feedback — two 20rpx tertiary text links.
-  // No chrome; min-height keeps the tap target comfortable (~56rpx).
-  &__row-feedback {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-top: 8rpx;
-  }
-
-  &__row-feedback-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 56rpx;
-    padding: 0 16rpx;
-    font-size: $font-size-2xs;
-    color: $color-text-tertiary;
-    line-height: 1.4;
-  }
-
-  &__row-feedback-done {
-    display: inline-flex;
-    align-items: center;
-    min-height: 56rpx;
-    padding: 0 16rpx;
-    font-size: $font-size-2xs;
-    color: $color-text-muted;
-    line-height: 1.4;
-  }
-
   // AC-15: dual-bar skeleton (82% + 60%, each 32rpx tall, 8rpx apart)
   // approximates two-line text height — kills the landing height jump.
   &__row-skeleton {
@@ -218,6 +188,111 @@
     white-space: nowrap;
   }
 
+  // P1 feedback control — ONE card-level ask (「这几句像你吗？」) rendered after
+  // every row has landed. Replaces the per-row 准/不太准 text links, which
+  // repeated under every line and read as stray metadata.
+  //
+  // Column layout (2026-11-19): the ask owns a full line and the segmented
+  // control sits on its own row below it. Sharing one `space-between` row made
+  // the 22rpx question and the two segments fight for the card's ~500rpx line,
+  // so on a 320pt screen or under a large system font they collided or wrapped
+  // mid-control.
+  &__feedback {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+
+    &--landed {
+      animation: insight-reveal-row-land 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    &--static {
+      animation: none;
+    }
+  }
+
+  &__feedback-question {
+    display: block;
+    width: 100%;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary-on-light;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  // ONE segmented control, not two free-floating pills: the shell owns the
+  // single 1rpx hairline + pill radius and clips both halves into it. Width is
+  // shared 50/50 by the segments, so the control can never overflow its card.
+  &__feedback-segments {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border: 1rpx solid rgba($color-primary, 0.22);
+    border-radius: $radius-full;
+    overflow: hidden;
+    background: rgba($color-surface, 0.92);
+  }
+
+  // Each half: equal share of the shell, 88rpx (44pt) tap height, no pill
+  // chrome of its own. `min-width: 0` lets a long label wrap instead of
+  // pushing the control wider than the card.
+  &__segment {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    min-width: 0;
+    min-height: 88rpx;
+    padding: 0 $spacing-xs;
+    border: none;
+    background: transparent;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary-on-light;
+    line-height: 1.2;
+    text-align: center;
+    transition: background-color 0.12s ease, color 0.12s ease;
+
+    // The one divider between the halves — not a per-segment outline.
+    & + & {
+      border-left: 1rpx solid rgba($color-primary, 0.16);
+    }
+
+    // Press feedback exists only while unanswered (the TSX drops `hoverClass`
+    // once voted) and stays a step below the answered fill, so a hover can
+    // never be mistaken for a selection.
+    &--hover {
+      background: rgba($color-primary, 0.06);
+    }
+
+    // The answered half: soft primary fill + 8rpx inset ring + primary ink,
+    // rounded by the shell's `overflow: hidden`.
+    &--selected {
+      background: rgba($color-primary, 0.08);
+      box-shadow: inset 0 0 0 8rpx rgba($color-primary, 0.04);
+      color: $color-primary;
+    }
+
+    // The half NOT chosen: inert and stepped back, never a second CTA.
+    &--muted {
+      background: transparent;
+      color: $color-text-muted;
+    }
+  }
+
+  // CSS check mark (no emoji glyph, no icon asset): two borders rotated.
+  &__segment-check {
+    width: 20rpx;
+    height: 10rpx;
+    border-left: 3rpx solid $color-primary;
+    border-bottom: 3rpx solid $color-primary;
+    transform: rotate(-45deg);
+    flex-shrink: 0;
+  }
+
   // AC-16: aggregated AIGC footer — one quiet row, no per-line labels.
   &__footer {
     display: flex;
@@ -238,6 +313,10 @@
 
   @media (prefers-reduced-motion: reduce) {
     &__row--landed {
+      animation: none;
+    }
+
+    &__feedback--landed {
       animation: none;
     }
 

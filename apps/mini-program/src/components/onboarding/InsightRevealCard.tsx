@@ -39,6 +39,20 @@ export const INSIGHT_ROW_STAGGER_MS = 420
 const AIGC_FOOTER_META: AIGCMeta = { aiGenerated: true, labelType: 'ai-generated' }
 
 /**
+ * P1 feedback control copy. One card-level ask, two answered states — the
+ * question is replaced by the acknowledgment so the footer never grows.
+ */
+const FEEDBACK_QUESTION_COPY = '这几句像你吗？'
+const FEEDBACK_THANKS_COPY = '谢谢，悦仔会记住'
+const FEEDBACK_OPTIONS: ReadonlyArray<{
+  vote: InsightLineFeedbackMeta['vote']
+  label: string
+}> = [
+  { vote: 'accurate', label: '挺像的' },
+  { vote: 'inaccurate', label: '不太像' },
+]
+
+/**
  * AC-19 telemetry payload for `insight_reveal_complete`, fired once per page
  * visit when every row has landed (or the legacy/generic shape renders).
  */
@@ -95,7 +109,9 @@ export interface InsightRevealCardProps {
   onAllRowsLanded?: () => void
   /** AC-19: fires once per visit alongside onAllRowsLanded, carrying telemetry metadata. */
   onRevealComplete?: (meta: InsightRevealCompleteMeta) => void
-  /** AC-23: fires once per row when a landed aigc row is voted 准/不太准. */
+  /** AC-23: fires ONCE per visit when the card-level 挺像的/不太像 control is
+   *  answered. The payload keeps the pre-P1 shape and is keyed to the primary
+   *  (last / most meaningful) LLM row, so existing page telemetry is unchanged. */
   onLineFeedback?: (meta: InsightLineFeedbackMeta) => void
 }
 
@@ -131,6 +147,15 @@ function sanitizeEvidence(evidence: InsightEvidenceItem[] | undefined): InsightE
  * AIGC disclosure is aggregated into ONE quiet card footer (AC-16): a single
  * AIGCLabel + a chrome-less text report button, rendered only when ≥1 landed
  * row has aigc=true (fail-closed — deterministic/legacy shapes render none).
+ *
+ * Feedback is ONE card-level control (P1 redesign): 「这几句像你吗？」 on its own
+ * full-width line, with a two-segment control on the row below it, rendered
+ * only after every row has landed. It replaces the per-row 准/不太准 text links,
+ * which repeated under every line, read as stray metadata and clashed with the
+ * insight typography. The stacked footer is deliberate: side-by-side, the ask
+ * and the segments collided at 320pt and under large system fonts. The answer
+ * still emits the anonymous `insight_line_feedback` payload once, keyed to the
+ * primary (last / most meaningful) LLM row.
  *
  * Backward compat: when `lines` is absent/empty (old server or v1 fallback) or
  * `v2Enabled` is explicitly false (AC-18), renders the current single-line UI
@@ -171,26 +196,31 @@ export default function InsightRevealCard({
         .filter((row) => row.line.aigc),
     [lines],
   )
+  // P1: the card-level answer speaks for the whole reveal, so the telemetry
+  // payload rides the primary row — the LAST aigc line (the reveal row when
+  // the server sends one, the inference line otherwise).
+  const primaryFeedbackRow = llmRows.length > 0 ? llmRows[llmRows.length - 1] : null
 
   const [landedLlmRowCount, setLandedLlmRowCount] = useState(0)
-  const [votedLineIndexes, setVotedLineIndexes] = useState<ReadonlySet<number>>(new Set())
+  // P1: ONE card-level verdict for the whole reveal — not a per-row vote.
+  const [cardVote, setCardVote] = useState<InsightLineFeedbackMeta['vote'] | null>(null)
   const notifiedForRef = useRef<unknown>(null)
   const prevReplayNonceRef = useRef(replayNonce)
-  // AC-23 once-per-row guard: a ref Set so a double-tap inside one tick can
-  // never double-fire the event before the 收到 re-render lands.
-  const votedRowsRef = useRef<Set<number>>(new Set())
+  // Once-per-visit guard: a double-tap inside one tick can never double-fire
+  // the event before the disabled re-render lands.
+  const cardVoteRef = useRef<InsightLineFeedbackMeta['vote'] | null>(null)
 
   // Per-visit replay, as a render-phase adjustment (the React-sanctioned
   // "adjust state when a prop changes" pattern — NOT an effect): the page
   // bumps replayNonce from useDidShow, and the sequence + emission dedupe
   // reset synchronously so a swipe-back revisit re-runs the reveal instead of
-  // firing telemetry on stale landed state. AC-23: the 收到 votes reset too.
+  // firing telemetry on stale landed state. P1: the answer resets too.
   if (prevReplayNonceRef.current !== replayNonce) {
     prevReplayNonceRef.current = replayNonce
     notifiedForRef.current = null
-    votedRowsRef.current = new Set()
-    if (votedLineIndexes.size > 0) {
-      setVotedLineIndexes(new Set())
+    cardVoteRef.current = null
+    if (cardVote !== null) {
+      setCardVote(null)
     }
     if (landedLlmRowCount !== 0) {
       setLandedLlmRowCount(0)
@@ -260,26 +290,33 @@ export default function InsightRevealCard({
     : Math.min(landedLlmRowCount, llmRows.length)
   const showAigcFooter = isV2 && landedLlmCount > 0 && aigcLabelsEnabled
 
+  // P1: the ask waits for the whole reveal — never over skeletons, the legacy
+  // single line, or before the page stage is actually visible.
+  const showFeedbackFooter = isV2 && active && allRowsLanded && primaryFeedbackRow !== null
+
   // AC-21③: the reveal row inherits the themed poster accent when provided;
   // the SCSS token ($color-primary) stays the fallback when absent.
   const getRowTextStyle = (line: InsightRevealLine) =>
     line.role === 'reveal' && accentColor ? { color: accentColor } : undefined
 
-  // AC-23: once-per-row vote → haptic + 收到 swap + anonymous telemetry.
-  const handleLineFeedback = (
-    role: InsightRevealLineRole,
-    vote: InsightLineFeedbackMeta['vote'],
-    lineIndex: number,
-  ) => {
-    if (votedRowsRef.current.has(lineIndex)) return
-    votedRowsRef.current.add(lineIndex)
+  // P1: one card-level answer → haptic + the unchanged anonymous telemetry
+  // payload, keyed to the primary row so `insight_line_feedback` consumers
+  // need no change. Ref-guarded for double-taps inside a single tick.
+  const handleCardFeedback = (vote: InsightLineFeedbackMeta['vote']) => {
+    if (!primaryFeedbackRow || cardVoteRef.current) return
+    cardVoteRef.current = vote
     haptics('light')
-    onLineFeedback?.({ role, vote, lineIndex, shape: 'v2' })
-    setVotedLineIndexes(new Set(votedRowsRef.current))
+    onLineFeedback?.({
+      role: primaryFeedbackRow.line.role,
+      vote,
+      lineIndex: primaryFeedbackRow.lineIndex,
+      shape: 'v2',
+    })
+    setCardVote(vote)
   }
 
   const renderLlmRow = (row: { line: InsightRevealLine; lineIndex: number }, index: number) => {
-    const { line, lineIndex } = row
+    const { line } = row
     const landed = shouldReduceMotion || index < landedLlmRowCount
     if (!landed) {
       // AC-15: dual-bar skeleton (82% + 60%, each 32rpx, 8rpx apart)
@@ -295,7 +332,6 @@ export default function InsightRevealCard({
         </View>
       )
     }
-    const voted = votedLineIndexes.has(lineIndex)
     return (
       <View
         key={`llm-${index}`}
@@ -307,27 +343,6 @@ export default function InsightRevealCard({
           <Text className='insight-reveal__row-text' style={getRowTextStyle(line)}>
             {line.text}
           </Text>
-        </View>
-        {/* AC-23 E-1: per-line light feedback — v2 aigc rows only. */}
-        <View className='insight-reveal__row-feedback'>
-          {voted ? (
-            <Text className='insight-reveal__row-feedback-done'>收到</Text>
-          ) : (
-            <>
-              <Text
-                className='insight-reveal__row-feedback-link'
-                onClick={() => handleLineFeedback(line.role, 'accurate', lineIndex)}
-              >
-                准
-              </Text>
-              <Text
-                className='insight-reveal__row-feedback-link'
-                onClick={() => handleLineFeedback(line.role, 'inaccurate', lineIndex)}
-              >
-                不太准
-              </Text>
-            </>
-          )}
         </View>
       </View>
     )
@@ -375,6 +390,7 @@ export default function InsightRevealCard({
           ) : null}
           {aigcLabelsEnabled && !isError ? (
             <AIContentReportButton
+              variant='text'
               className='profile-review__ai-tag-report'
               options={{
                 reason: '举报“悦仔的观察”AI 生成内容',
@@ -413,6 +429,55 @@ export default function InsightRevealCard({
           ) : null}
 
           {llmRows.map((row, index) => renderLlmRow(row, index))}
+
+          {/* P1: ONE card-level feedback ask, after the whole reveal has
+              landed. Replaces the per-row 准/不太准 text links. The ask owns a
+              line; both halves of the shared segmented control sit below it. */}
+          {showFeedbackFooter ? (
+            <View
+              className={`insight-reveal__feedback ${
+                shouldReduceMotion
+                  ? 'insight-reveal__feedback--static'
+                  : 'insight-reveal__feedback--landed'
+              }`}
+              role='group'
+              aria-label={FEEDBACK_QUESTION_COPY}
+            >
+              <Text className='insight-reveal__feedback-question'>
+                {cardVote ? FEEDBACK_THANKS_COPY : FEEDBACK_QUESTION_COPY}
+              </Text>
+              <View className='insight-reveal__feedback-segments'>
+                {FEEDBACK_OPTIONS.map((option) => {
+                  const isSelected = cardVote === option.vote
+                  // After the answer, the segment the user did NOT pick is
+                  // muted and inert; the picked one keeps its fill + check.
+                  const isMuted = cardVote !== null && !isSelected
+                  return (
+                    <View
+                      key={option.vote}
+                      className={[
+                        'insight-reveal__segment',
+                        isSelected ? 'insight-reveal__segment--selected' : '',
+                        isMuted ? 'insight-reveal__segment--muted' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      hoverClass={cardVote ? 'none' : 'insight-reveal__segment--hover'}
+                      hoverStayTime={120}
+                      role='button'
+                      aria-label={option.label}
+                      aria-pressed={isSelected}
+                      aria-disabled={cardVote !== null}
+                      onClick={() => handleCardFeedback(option.vote)}
+                    >
+                      {isSelected ? <View className='insight-reveal__segment-check' /> : null}
+                      <Text>{option.label}</Text>
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+          ) : null}
 
           {/* AC-16: one aggregated AIGC label + de-chromed text report button,
               rendered only when a landed LLM row exists (fail-closed). */}

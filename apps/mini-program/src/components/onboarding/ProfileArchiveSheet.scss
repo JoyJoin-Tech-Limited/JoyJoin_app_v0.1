@@ -1,0 +1,504 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+// Subpackage WXSS trap (AGENTS §15): this file carries no TSX-side import —
+// `pages/onboarding/profile-review/index.scss` `@use`s it so the rules compile
+// into the subpackage page WXSS. InterestChipCloud's rules are co-compiled
+// through this file as well (same discipline as TablemateCard →
+// ConnectionPointPill): the cloud is rendered here, so its chunk must never be
+// the only owner of its styles inside a subpackage.
+@use '../profile/InterestChipCloud.scss' as *;
+
+// ─── 入场卡背面 (card back) ──────────────────────────────────────────
+// A warm paper archive page, not a second card and not a settings list:
+// accent-ruled sections, airy type, one hairline per section boundary, zero
+// icons/emoji/gradients of its own. The panel inherits the entry card's
+// accent surface/border/ink from the parent (inline props) so the back reads
+// as the same physical object as the front — down to the crease that marks the
+// fold a flipped card would carry.
+.profile-archive-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 100; // spec: above the page CTA bar (10), below $z-toast
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  pointer-events: none; // closed: the sheet never intercepts the page
+
+  &--visible {
+    pointer-events: auto;
+  }
+
+  &__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba($color-text-primary, 0.38);
+    opacity: 0;
+    transition: opacity 220ms cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  &--visible &__scrim {
+    opacity: 1;
+    transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__panel {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    max-height: 90vh;
+    max-height: 90dvh;
+    // Opaque white base FIRST: accentSurface is a gradient whose far stop is
+    // ~96% opaque, so painting it as `background` (shorthand) would let the
+    // dark scrim behind the panel bleed through the lower half.
+    background-color: $color-surface;
+    border-top: 1rpx solid rgba($color-border, 0.7); // inline accentBorder overrides
+    border-radius: $card-radius-lg $card-radius-lg 0 0;
+    box-shadow: 0 -24rpx 64rpx rgba($color-text-primary, 0.16);
+    overflow: hidden;
+    transform: translateY(100%);
+    transition: transform 220ms cubic-bezier(0.4, 0, 1, 1);
+    // WeChat home-indicator clearance, with the constant() fallback for older
+    // iOS WKWebView shipped by the repo mixin.
+    @include safe-area-bottom-padding(padding-bottom, 0rpx);
+  }
+
+  &--visible &__panel {
+    transform: translateY(0);
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  // Fold crease: a 1rpx dashed line just inside the top edge, inset past the
+  // 40rpx corner curve so it never fights the radius. This is the one cue that
+  // makes the surface read as the back of a flipped card rather than another
+  // modal — so it stays ink-light and never becomes a second border.
+  &__panel::before {
+    content: '';
+    position: absolute;
+    top: $spacing-xs;
+    right: $card-radius-lg;
+    left: $card-radius-lg;
+    border-top: 1rpx dashed rgba($color-text-primary, 0.09);
+    pointer-events: none;
+  }
+
+  // ── Header: the Taro-native "sticky" region ─────────────────────
+  // It is a non-scrolling flex sibling of the ScrollView, so no
+  // `position: sticky` (unsupported/unreliable in WXSS) is involved —
+  // only the body scrolls.
+  &__header {
+    flex-shrink: 0;
+    padding: $spacing-lg $container-padding $spacing-md;
+    @include safe-area-inline($container-padding);
+    border-bottom: 1rpx solid rgba($color-border, 0.5);
+  }
+
+  &__header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__header-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__eyebrow {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    letter-spacing: 2rpx;
+    line-height: $line-height-display;
+    color: $color-primary; // inline accentText overrides
+  }
+
+  &__title {
+    display: block;
+    margin-top: $spacing-xs;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-display;
+    color: $color-text-primary;
+  }
+
+  // One visibility line, not two stacked rows: a status dot plus a single
+  // sentence. Privacy is stated, not sold — no pill, no icon, no second row.
+  &__privacy {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
+  &__privacy-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.5);
+    flex-shrink: 0;
+  }
+
+  &__privacy-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-xs;
+    line-height: $line-height-normal;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    min-width: $cta-min-tap;
+    min-height: $cta-min-tap;
+    // Lifts the 88rpx tap box so 收起 optically sits on the eyebrow baseline
+    // while the whole box stays tappable.
+    margin-top: -$spacing-md;
+    padding-left: $spacing-md;
+    border-radius: $radius-md;
+    transition: background-color 120ms ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__close-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-display;
+    color: $color-text-secondary-on-light;
+  }
+
+  // ── Body: the Taro ScrollView is the only scroller ───────────────
+  // WeChat drops `padding` on native ScrollView in webview mode, so the
+  // padding lives on __body-inner (AGENTS §3). `vh` precedes `dvh` because
+  // older WeChat WKWebView runtimes do not resolve dvh.
+  //
+  // Content-sized, not a fixed slab: a short archive used to leave ~40% of the
+  // panel as blank paper under the last line. 58dvh is a ceiling now — short
+  // archives end where their content ends, long ones scroll inside it.
+  &__body-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 58vh;
+    max-height: 58dvh;
+  }
+
+  &__body {
+    // The cap repeats here on purpose: the native scroll-view derives its inner
+    // scroller from its own used height, so a parent flex constraint alone does
+    // not bound scrolling on device.
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 58vh;
+    max-height: 58dvh;
+  }
+
+  // Scroll cue: 32rpx of paper fading in at the bottom edge. Decorative only
+  // (pointer-events: none, no scroll-state JS) so native scroll physics are
+  // untouched. On a short archive it sits over the body's 60rpx tail padding,
+  // where it reads as nothing at all.
+  &__body-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 32rpx;
+    background: linear-gradient(to bottom, rgba($color-surface, 0), rgba($color-surface, 0.94));
+    pointer-events: none;
+  }
+
+  &__body-inner {
+    padding: $spacing-md $container-padding $spacing-xl;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__section {
+    & + & {
+      margin-top: $spacing-lg;
+      padding-top: $spacing-lg;
+      border-top: 1rpx solid rgba($color-border, 0.45);
+    }
+  }
+
+  &__section-head {
+    display: flex;
+    // center, not baseline: the 4rpx rule has no text baseline to sit on. An
+    // inline-flex sibling would otherwise ride high next to the title (the R2
+    // baseline trap).
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  // 32×4 accent tick instead of 01/02/03 — a rule, not a step number.
+  &__section-rule {
+    width: 32rpx;
+    height: 4rpx;
+    border-radius: $radius-circle;
+    background: $color-primary; // inline accentText overrides
+    flex-shrink: 0;
+  }
+
+  &__section-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 1rpx;
+    line-height: $line-height-display;
+    color: $color-text-primary;
+  }
+
+  // ── 小档案: two-column field grid, no chrome per field ───────────
+  &__fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: $spacing-lg;
+    row-gap: $spacing-md;
+  }
+
+  &__field {
+    min-width: 0;
+  }
+
+  // An odd field count (the 5-row archive: 家乡/关系状态/学历/职业/行业) leaves
+  // the tail alone in column one. Spanning it keeps the grid from ending in a
+  // hole — the last field reads as a closing row, not a missing value.
+  &__field--wide {
+    grid-column: 1 / -1;
+  }
+
+  &__field-label {
+    display: block;
+    font-size: $font-size-xs;
+    line-height: $line-height-normal;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__field-value {
+    display: block;
+    margin-top: $spacing-2xs;
+    font-size: $font-size-sm;
+    line-height: $line-height-normal;
+    color: $color-text-primary;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  &__placeholder {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+    color: $color-text-tertiary-on-light;
+  }
+
+  // ── 想找: read-only intent pills ────────────────────────────────
+  &__intents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__intent {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 56rpx;
+    padding: 0 $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.06);
+  }
+
+  &__intent-text {
+    font-size: $font-size-sm;
+    line-height: $line-height-snug;
+    color: $color-text-primary;
+  }
+
+  // ── 兴趣热量地图 ────────────────────────────────────────────────
+  &__heat-map {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__heat-conclusion {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__interest-cloud {
+    margin-top: $spacing-md;
+  }
+
+  &__category-cloud {
+    margin-top: $spacing-sm;
+  }
+
+  &__story {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-xs;
+    margin-top: $spacing-md;
+  }
+
+  &__story-dot {
+    width: 8rpx;
+    height: 8rpx;
+    margin-top: $spacing-sm;
+    border-radius: $radius-circle;
+    background: $color-primary;
+    flex-shrink: 0;
+  }
+
+  &__story-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
+    color: $color-text-tertiary-on-light;
+  }
+
+  // ── Calm skeleton: opacity pulse only (GPU-safe, no shimmer sweep) ──
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__skeleton-line {
+    height: 20rpx;
+    border-radius: $radius-md;
+    background: rgba($color-text-primary, 0.06);
+    animation: profile-archive-sheet-breathe 2400ms ease-in-out infinite;
+
+    &--short {
+      width: 56%;
+      animation-delay: 200ms;
+    }
+  }
+
+  &__skeleton-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+  }
+
+  &__skeleton-chip {
+    width: 128rpx;
+    height: 56rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-text-primary, 0.05);
+    animation: profile-archive-sheet-breathe 2400ms ease-in-out infinite;
+
+    &:nth-child(2) {
+      width: 96rpx;
+      animation-delay: 160ms;
+    }
+
+    &:nth-child(3) {
+      width: 152rpx;
+      animation-delay: 320ms;
+    }
+  }
+
+  // ── error / empty ───────────────────────────────────────────────
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__state-text {
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__retry {
+    display: inline-flex;
+    align-items: flex-start; // text sits at the top of the 88rpx tap box
+    box-sizing: border-box;
+    min-height: $cta-min-tap;
+    padding-top: $spacing-xs;
+    padding-right: $spacing-md;
+    transition: opacity 120ms ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  &__retry-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-display;
+    color: $color-primary;
+  }
+}
+
+@keyframes profile-archive-sheet-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+// Reduced motion (prop-driven, from useReduceMotion on the page). Must stay
+// after the `--visible` rules: all selectors here are 0,2,0 and last wins.
+// The closed state keeps its static translateY(100%) — that is layout, not
+// motion — so opening/closing simply becomes an instant state change.
+.profile-archive-sheet--reduce-motion {
+  .profile-archive-sheet__panel,
+  .profile-archive-sheet__scrim {
+    transition: none;
+  }
+
+  .profile-archive-sheet__close,
+  .profile-archive-sheet__retry {
+    transition: none;
+  }
+
+  .profile-archive-sheet__skeleton-line,
+  .profile-archive-sheet__skeleton-chip {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+// System-level accessibility setting — same static contract, no JS needed.
+@media (prefers-reduced-motion: reduce) {
+  .profile-archive-sheet {
+    &__panel,
+    &__scrim {
+      transition: none;
+    }
+
+    &__skeleton-line,
+    &__skeleton-chip {
+      animation: none;
+      opacity: 0.75;
+    }
+  }
+}

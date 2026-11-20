@@ -51,8 +51,8 @@ describe('WelcomeGiftCard expiry caption (audit F5)', () => {
 })
 
 describe('WelcomeGiftCard compact grant status', () => {
-  it('is read-only and describes the coupon actually placed in 权益', () => {
-    render(
+  it('is read-only and leads with the coupon face value', () => {
+    const { container } = render(
       <WelcomeGiftCard
         compact
         discountValue={2000}
@@ -61,10 +61,32 @@ describe('WelcomeGiftCard compact grant status', () => {
       />,
     )
 
+    // Still a status row — no tap target, no button, no fake urgency.
     expect(screen.getByRole('status', { name: /见面礼已放入权益，20元/ })).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.getByText('见面礼已放入权益')).toBeInTheDocument()
-    expect(screen.getByText(/20元 · 报名可用 · 有效期至/)).toBeInTheDocument()
+
+    // 20元 is its own prominent line, no longer buried inside the caption.
+    const amount = container.querySelector('.welcome-gift-card__compact-amount')
+    expect(amount).not.toBeNull()
+    expect(amount?.textContent).toBe('20')
+    expect(container.querySelector('.welcome-gift-card__compact-amount-unit')?.textContent).toBe('元')
+
+    // The title steps back beside the amount instead of above it.
+    expect(container.querySelector('.welcome-gift-card__compact-title')?.textContent).toBe(
+      '见面礼已放入权益',
+    )
+
+    // Availability + expiry move to the secondary line, which no longer repeats the award.
+    const body = container.querySelector('.welcome-gift-card__compact-body')
+    expect(body?.textContent).toContain('首场报名可用')
+    expect(body?.textContent).toMatch(/有效期至/)
+    expect(body?.textContent).not.toContain('20元')
+
+    // One quiet physical-reward cue closes the row.
+    expect(container.querySelector('.welcome-gift-card__compact-stamp')?.textContent).toBe('已入账')
+
+    // The old status-row shape (amount + terms as one caption) is gone.
+    expect(screen.queryByText(/20元 · 首场报名可用/)).not.toBeInTheDocument()
   })
 
   it('keeps compact loading honest without claiming a grant', () => {
