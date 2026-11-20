@@ -194,17 +194,6 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     },
-    "postgres": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-postgres"
-      ],
-      "args": [
-        "{env:MCP_DATABASE_URL}"
-      ]
-    },
     "sequential-thinking": {
       "type": "local",
       "command": [
