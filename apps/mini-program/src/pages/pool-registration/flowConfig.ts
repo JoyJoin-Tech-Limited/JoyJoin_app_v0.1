@@ -152,7 +152,7 @@ export function buildFallbackBrief(input: {
  * details stay optional, so the intro keeps the intent ask front and center.
  */
 export function getMascotStepIntro(step: number): string {
-  if (step === 2) return '这次最想收获什么？可以多选，选全了就交给悦仔'
+  if (step === 2) return '这次最想收获什么？可以多选，都感兴趣就选随缘'
   return '先定个预算区间，悦仔帮你挑合拍的桌友'
 }
 

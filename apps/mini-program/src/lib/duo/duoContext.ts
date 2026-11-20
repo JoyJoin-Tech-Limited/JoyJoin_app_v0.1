@@ -87,6 +87,11 @@ function readPendingDuoContext(): PendingDuoContext | null {
   }
 }
 
+/** Read the pending context without consuming it (experiment assignment, etc.). */
+export function peekPendingDuoContext(): PendingDuoContext | null {
+  return readPendingDuoContext()
+}
+
 /** Read and clear the pending context so it replays exactly once. */
 export function consumePendingDuoContext(): PendingDuoContext | null {
   const context = readPendingDuoContext()

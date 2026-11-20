@@ -318,24 +318,19 @@ export default function EditProfilePage() {
   }, [interestLevels, selectedInterests])
 
   const toggleIntent = useCallback((value: string) => {
-    let collapsedToFlexible = false
     let didChange = false
     setIntent((current) => {
-      // No selection cap: every explicit intent stays selectable; picking all
-      // six auto-collapses to 随缘 (toggleIntentValue contract).
+      // No selection cap: every explicit intent stays selectable; 随缘 remains
+      // a deliberate choice, never an automatic collapse.
       const next = toggleIntentValue(current, value)
       if (!next) {
         return current
       }
-      collapsedToFlexible =
-        value !== INTENT_FLEXIBLE_OPTION.value &&
-        next.length === 1 &&
-        next[0] === INTENT_FLEXIBLE_OPTION.value
       didChange = true
       return next
     })
     if (didChange) {
-      haptics(collapsedToFlexible ? 'medium' : 'light')
+      haptics('light')
       setChangedFields((prev) => ({ ...prev, intent: true }))
     }
   }, [])

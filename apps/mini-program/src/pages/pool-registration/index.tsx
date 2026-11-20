@@ -756,8 +756,8 @@ export default function PoolRegistrationPage() {
 
   const handleIntentToggle = useCallback((value: string) => {
     const currentIntent = formState.eventIntent
-    // No selection cap: every explicit intent is selectable; picking them
-    // all auto-collapses to 随缘 (toggleIntentValue contract).
+    // No selection cap: every explicit intent is selectable; 随缘 is a
+    // deliberate choice, never an automatic collapse.
     const nextIntent = toggleIntentValue(currentIntent, value)
     if (!nextIntent) return
 
