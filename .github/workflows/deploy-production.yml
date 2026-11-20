@@ -128,10 +128,10 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: production
-    # 2026-10-22: deploys were being killed at 45m mid-switch (GHCR pull is the
-    # long pole; a killed switch left a half-applied release). 90m covers the
-    # worst-case pull budget with headroom instead of aborting a healthy deploy.
-    timeout-minutes: 90
+    # 2026-11-20: raised from 90m. The pre-warm step above may legitimately need
+    # up to 180 minutes to move ~515 MB across the Pacific; a 90m ceiling aborted
+    # a healthy release mid-pull on 2026-11-17.
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
 
@@ -233,6 +233,60 @@ jobs:
           echo "::add-mask::$PLATFORM_CERT_B64"
           echo "WECHAT_PAY_PRIVATE_KEY_B64=$PRIVATE_KEY_B64" >> "$GITHUB_ENV"
           echo "WECHAT_PAY_PLATFORM_CERT_B64=$PLATFORM_CERT_B64" >> "$GITHUB_ENV"
+
+      # 2026-11-20: the remote script pulls each image with `retry_command 5 15
+      # timeout 12m docker pull`, i.e. up to 60 minutes per image, while this job
+      # had a 90 minute ceiling — arithmetically impossible to satisfy when the
+      # cross-Pacific transfer is slow, which is exactly what happened on
+      # 2026-11-17: five attempts, all killed at 12m (exit 124), production left
+      # on the previous healthy image.
+      #
+      # Warming the two images here first turns the script's own pull into a
+      # layer-cache hit (seconds). This step is a no-op when the run did not
+      # publish images, so the legacy on-box build path is unaffected. It holds
+      # no deploy lock: it only writes to the local Docker layer store, and the
+      # script's `image prune --filter until=24h` cannot touch images this fresh.
+      - name: Pre-warm production images on the CVM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
+          timeout: 120s
+          # Generous on purpose: a single unwrapped pull that is allowed to
+          # finish is worth far more than five 12-minute attempts that are
+          # guaranteed to be killed.
+          command_timeout: 180m
+          envs: PROD_API_IMAGE,PROD_ADMIN_IMAGE,PROD_IMAGES_READY,GHCR_TOKEN
+          script: |
+            set -euo pipefail
+
+            if [ "${PROD_IMAGES_READY:-}" != "true" ] || [ -z "${PROD_API_IMAGE:-}" ] || [ -z "${PROD_ADMIN_IMAGE:-}" ]; then
+              echo "No registry images published by this run; the deploy will use the on-box build. Skipping pre-warm."
+              exit 0
+            fi
+            if [ -z "${GHCR_TOKEN:-}" ]; then
+              echo "GHCR_TOKEN unavailable; the deploy will fall back to the on-box build. Skipping pre-warm."
+              exit 0
+            fi
+
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-x-access-token}" --password-stdin
+
+            echo "Warming $PROD_API_IMAGE"
+            docker pull "$PROD_API_IMAGE"
+
+            echo "Warming $PROD_ADMIN_IMAGE"
+            docker pull "$PROD_ADMIN_IMAGE"
+
+            docker image inspect --format '{{index .RepoTags 0}} {{.Size}}' "$PROD_API_IMAGE" "$PROD_ADMIN_IMAGE"
+            echo "Pre-warm complete; the deploy pull is now a cache hit."
+        env:
+          PROD_API_IMAGE: ${{ needs.build-images.outputs.api_image }}
+          PROD_ADMIN_IMAGE: ${{ needs.build-images.outputs.admin_image }}
+          PROD_IMAGES_READY: ${{ needs.build-images.outputs.images_ready }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
       - name: SSH Remote Production Deployment
         env:
