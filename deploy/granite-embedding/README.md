@@ -37,7 +37,7 @@ machine with SSH access:
 
 ```bash
 # 1. Tunnel to the staging Granite container
-ssh -i ~/.ssh/OpenCode.pem -f -N -L 8001:127.0.0.1:8001 root@1.12.243.104
+ssh -i ~/.ssh/OpenCode.pem -f -N -L 8001:127.0.0.1:8001 root@43.138.185.90
 
 # 2. Regenerate (run from apps/server)
 EMBEDDING_BASE_URL=http://localhost:8001/v1 npx tsx scripts/build-occupation-vectors.mts

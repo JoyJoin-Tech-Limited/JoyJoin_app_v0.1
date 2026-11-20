@@ -363,7 +363,7 @@ jobs:
             echo "::error::WECHAT_PRIVATE_KEY secret is required for the WeChat upload"
             exit 1
           fi
-          if [ "$SERVER_IP" != "1.12.243.104" ]; then
+          if [ "$SERVER_IP" != "43.138.185.90" ]; then
             echo "::error::SERVER_IP does not match the pinned JoyJoin CVM host"
             exit 1
           fi
@@ -409,7 +409,7 @@ jobs:
           printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
           chmod 600 "$WX_KEY_FILE"
           printf '%s\n' \
-            '1.12.243.104 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa6ZQ6p9Lcy/G4jco+PbBR0vhdAd9Upg9HIkN8+M/hf' \
+            '43.138.185.90 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAYzz3j8ECoBBxvAUCs1DVMa0RjZtILnSje7m+FWjqKh' \
             > "$KNOWN_HOSTS_FILE"
           chmod 600 "$KNOWN_HOSTS_FILE"
 

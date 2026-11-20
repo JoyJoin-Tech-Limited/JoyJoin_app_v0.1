@@ -12,7 +12,7 @@ set -Eeuo pipefail
 # STAGING_IMAGE_BUNDLE=/path/to/images.tar.gz).
 #
 # SSH in first (adjust key path if yours is different):
-#   ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
+#   ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@43.138.185.90
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

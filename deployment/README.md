@@ -111,7 +111,7 @@ DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=re
 
 ## 域名与入口
 
-为当前自管服务器部署（新服务器 IP: 1.12.243.104），确保以下 **A 记录** 都直接指向远程服务器公网 IP `1.12.243.104`：
+为当前自管服务器部署（新服务器 IP: 43.138.185.90），确保以下 **A 记录** 都直接指向远程服务器公网 IP `43.138.185.90`：
 
 ```text
 joyjoinapp.com
@@ -277,7 +277,7 @@ GHCR 跨太平洋拉取不稳定时，把 staging 镜像同时推送到腾讯云
 
 **一次性开通步骤（需腾讯云控制台，仓库代码已就绪）：**
 
-1. 腾讯云控制台 → 容器镜像服务 TCR，在 **CVM 同地域**（CVM IP `1.12.243.104` 所在区域）创建实例（个人版 `ccr.ccs.tencentcloud.com` 或企业版实例域名）
+1. 腾讯云控制台 → 容器镜像服务 TCR，在 **服务器同地域**（Lighthouse IP `43.138.185.90` 所在区域）创建实例（个人版 `ccr.ccs.tencentcloud.com` 或企业版实例域名）
 2. 创建命名空间 `joyjoin`
 3. 创建长期访问凭证（访问凭证 → 新建），得到「用户名」（通常为长数字 ID）与「密码」
 4. 在 GitHub repo 设置：
@@ -292,7 +292,7 @@ GHCR 跨太平洋拉取不稳定时，把 staging 镜像同时推送到腾讯云
 如需绕过 CI，从本机 SSH 到远程服务器（示例，使用你保存的 key）：
 
 ```bash
-ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
+ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@43.138.185.90
 ```
 
 在服务器内执行：

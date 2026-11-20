@@ -13,7 +13,7 @@
  *   node scripts/upload-cdn-assets.mjs --dry-run
  *
  *   # Upload via rsync (default)
- *   CDN_BACKEND=rsync CDN_RSYNC_HOST=1.12.243.104 CDN_RSYNC_PATH=/var/www/cdn \
+ *   CDN_BACKEND=rsync CDN_RSYNC_HOST=43.138.185.90 CDN_RSYNC_PATH=/var/www/cdn \
  *     node scripts/upload-cdn-assets.mjs
  *
  *   # Upload via S3

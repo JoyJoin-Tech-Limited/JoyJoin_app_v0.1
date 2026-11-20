@@ -33,8 +33,8 @@ runs:
       run: |
         set -euo pipefail
 
-        readonly PINNED_CVM_HOST='1.12.243.104'
-        readonly PINNED_ED25519_KEY='AAAAC3NzaC1lZDI1NTE5AAAAINa6ZQ6p9Lcy/G4jco+PbBR0vhdAd9Upg9HIkN8+M/hf'
+        readonly PINNED_CVM_HOST='43.138.185.90'
+        readonly PINNED_ED25519_KEY='AAAAC3NzaC1lZDI1NTE5AAAAIAYzz3j8ECoBBxvAUCs1DVMa0RjZtILnSje7m+FWjqKh'
         SSH_KEY_FILE=$(mktemp)
         KNOWN_HOSTS_FILE=$(mktemp)
         SSH_PASSPHRASE_FILE=""

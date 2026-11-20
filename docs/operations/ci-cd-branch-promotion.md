@@ -53,7 +53,7 @@ Staging reuses production secrets for WeChat (`WECHAT_APPID`, `WECHAT_SECRET`), 
 If CI is unavailable, run the same scripts on the server:
 
 ```bash
-ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
+ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@43.138.185.90
 cd ~/JoyJoin
 
 # Staging requires an image bundle built outside the CVM
