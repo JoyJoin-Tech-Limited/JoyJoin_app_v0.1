@@ -50,6 +50,16 @@ const MIN_INTERESTS = 3
 // No maximum selection count (product decision 2026-08-03): users may select
 // as many interests as they like. The server likewise enforces only the min.
 
+// Local-only draft: interest tapping is the longest onboarding interaction (up
+// to 144 taps), so a dropped page or a failed submit must not erase it. This is
+// preference data, not the server checkpoint; it never leaves the device.
+const EXTENDED_DATA_DRAFT_KEY = 'joyjoin_extended_data_draft'
+const EXTENDED_DATA_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
+type ExtendedDataDraft = {
+  levelsById: Record<string, InterestSelectionLevel>
+  timestamp: number
+}
+
 // Footer thermometer fill — $color-primary as a resolved hex (WeChat resolves
 // inline var() unreliably). The bar is unlock progress (3 neutral ticks), NOT
 // heat: `selectedCount >= level` fills it at 3 plain taps, so heat colours
@@ -315,8 +325,64 @@ export default function ExtendedDataPage() {
   const [shellFading, setShellFading] = useState(false)
   const [shellDismissed, setShellDismissed] = useState(false)
   const shellRenderedRef = useRef(false)
+  const draftReadyRef = useRef(false)
 
   useResetOnShow(setIsPageExiting, setIsSubmitting, setShellFading)
+
+  // Restore a local draft before the user starts tapping. The guard keeps a
+  // fast first tap from being overwritten by a slower storage read.
+  useEffect(() => {
+    let cancelled = false
+    const restoreDraft = async () => {
+      try {
+        const result = await Taro.getStorage({ key: EXTENDED_DATA_DRAFT_KEY })
+        if (cancelled || !result.data) return
+        const draft = result.data as ExtendedDataDraft
+        if (!draft.levelsById || typeof draft.levelsById !== 'object') return
+        if (typeof draft.timestamp === 'number' && Date.now() - draft.timestamp > EXTENDED_DATA_DRAFT_TTL_MS) {
+          void Taro.removeStorage({ key: EXTENDED_DATA_DRAFT_KEY }).catch(() => {})
+          return
+        }
+        const validIds = new Set(INTEREST_TAXONOMY.map((item) => item.id))
+        const restored: Record<string, InterestSelectionLevel> = {}
+        for (const [topicId, level] of Object.entries(draft.levelsById)) {
+          if (!validIds.has(topicId)) continue
+          const numericLevel = Number(level)
+          if (numericLevel === 1 || numericLevel === 2 || numericLevel === 3) {
+            restored[topicId] = numericLevel as InterestSelectionLevel
+          }
+        }
+        if (Object.keys(restored).length === 0) return
+        setLevelsById((current) => (Object.keys(current).length > 0 ? current : restored))
+        logInfo('[ExtendedData] Restored local interest draft', { count: Object.keys(restored).length })
+      } catch {
+        // A missing or unreadable draft is the normal first-visit path.
+      } finally {
+        if (!cancelled) draftReadyRef.current = true
+      }
+    }
+    void restoreDraft()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Debounced write: save after the tap burst settles, never during submit.
+  useEffect(() => {
+    if (!draftReadyRef.current || isSubmitting || isPageExiting) return
+    const timer = setTimeout(() => {
+      if (Object.keys(levelsById).length === 0) {
+        void Taro.removeStorage({ key: EXTENDED_DATA_DRAFT_KEY }).catch(() => {})
+        return
+      }
+      void Taro.setStorage({
+        key: EXTENDED_DATA_DRAFT_KEY,
+        data: { levelsById, timestamp: Date.now() } as ExtendedDataDraft,
+      }).catch(() => {})
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [levelsById, isSubmitting, isPageExiting])
+
   const [tapHint, setTapHint] = useState<{ topicId: string; level: InterestSelectionLevel; message: string } | null>(null)
   // Set on the first real tap anywhere — permanently ends the ghost-tap demo
   // for this session (the user has started interacting, demo has done its job).
@@ -677,6 +743,9 @@ export default function ExtendedDataPage() {
 
       const submitResponse = await submitInterests(apiRequest, { interests: selectionDrafts })
 
+      // The draft's job is done once the server accepts the selection.
+      void Taro.removeStorage({ key: EXTENDED_DATA_DRAFT_KEY }).catch(() => {})
+
       // Checkpoint + auth refresh are fire-and-forget: the submit response
       // already carries the server-computed nextStep, and the background
       // invalidateAuth() keeps the Infinity-stale auth cache fresh.
@@ -703,8 +772,9 @@ export default function ExtendedDataPage() {
       })
     } catch (err) {
       setIsPageExiting(false)
-      // Offline branch: inline banner with unified copy (no 暂存 promise —
-      // selection drafts here are session-local, so only re-submit is promised).
+      // Offline branch: inline banner with unified copy. The local draft is
+      // retained on failure, but the copy still promises only a retry — never
+      // a server-side hold.
       // Inline banner only — no toast duplicating the same failure message.
       if (looksLikeOfflineError(err)) {
         const offlineMessage = getErrorForSurface('offline-preflight', 'inline-error')
@@ -736,7 +806,7 @@ export default function ExtendedDataPage() {
   if (isLoading || (shellRenderedRef.current && !shellDismissed)) {
     return (
       <OnboardingLoadingShell
-        stepLabel='装盒中 · 第 2 格'
+        stepLabel='装盒中'
         title={`${DEFAULT_MASCOT_DISPLAY_NAME}在点亮你的兴趣热度`}
         subtitle='把这一步准备好后，资料预览就会更有你的味道。'
         continuity
@@ -780,35 +850,6 @@ export default function ExtendedDataPage() {
         />
       </View>
 
-      <View className='extended-data__heat-guide extended-data__stage extended-data__stage--3'>
-        {INTEREST_LEVEL_META.map((item, index) => (
-          <View key={item.level} className='extended-data__heat-guide-step'>
-            <View
-              className='extended-data__heat-guide-dot'
-              style={{
-                backgroundColor: item.color,
-                borderColor: item.borderColor,
-              }}
-            >
-              <Text
-                className='extended-data__heat-guide-dot-num'
-                style={{ color: HEAT_NUM_COLORS[item.level] }}
-              >
-                {item.level}
-              </Text>
-            </View>
-            <View className='extended-data__heat-guide-text'>
-              <Text className='extended-data__heat-guide-label'>{item.legendLabel}</Text>
-              <Text className='extended-data__heat-guide-desc'>{item.description}</Text>
-            </View>
-            {index < INTEREST_LEVEL_META.length - 1 && (
-              <View className='extended-data__heat-guide-arrow'>
-                <Text className='extended-data__heat-guide-arrow-text'>&rarr;</Text>
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
 
       <ScrollView className='extended-data__scroll' scrollY enhanced showScrollbar={false}>
         <View className='extended-data__content'>
@@ -839,13 +880,6 @@ export default function ExtendedDataPage() {
                         </Text>
                         <Text className='extended-data__category-description'>
                           {CATEGORY_META[category]?.description}
-                        </Text>
-                        {/* R3-9 人格在场: archetype-voiced per-category hint
-                            (Tier A when the archetype is known, Tier B
-                            fallback otherwise) — the section's own hint line,
-                            no new surface. */}
-                        <Text className='extended-data__category-hint'>
-                          {getOnboardingVoiceLine(CATEGORY_VOICE_STEP_IDS[category], userArchetype)}
                         </Text>
                       </View>
                     </View>

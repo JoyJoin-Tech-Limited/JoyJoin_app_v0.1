@@ -1,5 +1,5 @@
 export default definePageConfig({
-  navigationBarTitleText: '原型揭晓',
+  navigationBarTitleText: '气场揭晓',
   disableScroll: true,
   enableShareAppMessage: true,
   enableShareTimeline: true,

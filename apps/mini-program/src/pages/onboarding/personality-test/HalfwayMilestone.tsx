@@ -7,7 +7,7 @@ import type { Phase } from './types'
 import './HalfwayMilestone.scss'
 
 // How long the milestone overlay stays visible before it fades out and unmounts.
-const HALFWAY_DISPLAY_MS = 2600
+const HALFWAY_DISPLAY_MS = 1200
 // Fade-out duration — keep in sync with `halfway-veil-exit` in the SCSS.
 const HALFWAY_EXIT_MS = 280
 
@@ -106,9 +106,6 @@ export function HalfwayMilestone({
           </View>
         </View>
       </View>
-      <Text className='halfway-milestone__dismiss-hint' aria-hidden='true'>
-        轻触任意处继续
-      </Text>
     </View>
   )
 }

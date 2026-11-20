@@ -23,7 +23,7 @@ describe('FinalStage Xiaoyue fallback notice', () => {
     expect(
       shouldShowXiaoyueUnavailableNotice({
         xiaoyueAnalysis: {
-          headline: '这个命格为什么像你',
+          headline: '这个气场为什么像你',
           analysis: '你带来的稳定感很强。',
           socialRole: '',
           bestScene: '',

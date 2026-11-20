@@ -77,28 +77,10 @@ describe('PersonalityTestAnswerArea slider hint', () => {
     )
   }
 
-  it('shows the first-time hint initially and dismisses it on drag (onChanging)', async () => {
-    const { getByText, queryByText } = await renderSliderModule()
-    expect(getByText('拖动滑块，选择最符合你的程度')).toBeTruthy()
-
-    const slider = document.querySelector('[data-testid="slider"]') as HTMLInputElement
-    fireEvent.input(slider, { target: { value: 60 } })
-
-    await waitFor(() => {
-      expect(queryByText('拖动滑块，选择最符合你的程度')).toBeNull()
-    })
-  })
-
-  it('dismisses the hint on a tap that only fires onChange (no onChanging)', async () => {
-    const { getByText, queryByText } = await renderSliderModule()
-    expect(getByText('拖动滑块，选择最符合你的程度')).toBeTruthy()
-
-    const slider = document.querySelector('[data-testid="slider"]') as HTMLInputElement
-    fireEvent.change(slider, { target: { value: 70 } })
-
-    await waitFor(() => {
-      expect(queryByText('拖动滑块，选择最符合你的程度')).toBeNull()
-    })
+  it('renders exactly one inline slider hint (the live badge)', async () => {
+    const { getAllByText, container } = await renderSliderModule()
+    expect(getAllByText('拖一拖，选一个程度')).toHaveLength(1)
+    expect(container.querySelector('.answer-area__slider-hint')).toBeNull()
   })
 })
 

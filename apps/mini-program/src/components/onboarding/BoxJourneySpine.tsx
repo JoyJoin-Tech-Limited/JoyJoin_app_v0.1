@@ -28,8 +28,8 @@ interface BoxJourneySpineProps {
 }
 
 const SPINE_COPY: Record<BoxJourneyStep, { status: string; fraction: string }> = {
-  1: { status: '装盒中 · ', fraction: '第 1 格' },
-  2: { status: '装盒中 · ', fraction: '第 2 格' },
+  1: { status: '装盒中', fraction: '' },
+  2: { status: '装盒中', fraction: '' },
   3: { status: '装盒完成 · ', fraction: '等你确认' },
 }
 

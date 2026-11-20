@@ -101,7 +101,7 @@ export default function WelcomeBackPage() {
 
     void Taro.showModal({
       title: '确定要重新开始吗？',
-      content: `你已填写的资料将被清空，这将消耗 1 次重新开始机会（还剩 ${restartsRemaining} 次）`,
+      content: `你已填写的资料将被清空，这将消耗 1 次重新开始机会（还剩 ${restartsRemaining} 次）。每人共 5 次，重启会重新答题。`,
       cancelText: '再想想',
       confirmText: '确认清空并重新开始',
       confirmColor: '#EF4444',

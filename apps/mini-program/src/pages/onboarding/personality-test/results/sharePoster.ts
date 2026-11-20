@@ -416,7 +416,7 @@ function drawFriendCtaBand(
   const bandX = LEFT_EDGE
   const bandW = CONTENT_WIDTH
   const bandH = CTA_BAND_HEIGHT
-  const headline = '12 种氛围命格，你是哪一种？'
+  const headline = '12 种聚会气场，你是哪一种？'
 
   const drawBandShell = (): void => {
     // Dimensional purple: lighter top edge → deeper base, plus a hairline
@@ -494,7 +494,7 @@ function drawFriendCtaBand(
   ctx.fillText(headline, textX, bandY + 84)
   ctx.setFillStyle(COLOR_CTA_TEXT_SOFT)
   ctx.setFontSize(21)
-  ctx.fillText('长按识别小程序码，3 分钟测出你的命格', textX, bandY + 138)
+  ctx.fillText('长按识别小程序码，3 分钟测出你的聚会气场', textX, bandY + 138)
   ctx.restore()
 }
 
@@ -954,7 +954,7 @@ function drawFooterBand(ctx: Taro.CanvasContext, shareLine: string): void {
   fillRoundedRect(ctx, POSTER_WIDTH / 2 - 60, FOOTER_DIVIDER_Y, 120, 3, 1.5, dividerGrad)
 
   drawMeasuredTextBlock(ctx, {
-    text: shareLine || '来悦聚测测你的氛围命格，看看默契会带你去哪里',
+    text: shareLine || '来悦聚测测你的聚会气场，看看默契会带你去哪里',
     x: POSTER_WIDTH / 2,
     y: FOOTER_SHARELINE_Y,
     maxCharsPerLine: 30,
@@ -971,7 +971,7 @@ function drawFooterBand(ctx: Taro.CanvasContext, shareLine: string): void {
   ctx.setFontSize(18)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText('JOYJOIN · 悦聚 — 测测你的氛围命格，找到同频的人', POSTER_WIDTH / 2, FOOTER_LOCKUP_Y)
+  ctx.fillText('JOYJOIN · 悦聚 — 测测你的聚会气场，找到同频的人', POSTER_WIDTH / 2, FOOTER_LOCKUP_Y)
   ctx.restore()
 }
 

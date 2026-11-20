@@ -1329,7 +1329,7 @@ export default function PersonalityTestPage() {
     return (
       <OnboardingLoadingShell
         stepLabel='氛围测试'
-        title={`${DEFAULT_MASCOT_DISPLAY_NAME}在准备你的命格测试`}
+        title={`${DEFAULT_MASCOT_DISPLAY_NAME}在准备你的聚会气场测试`}
         subtitle='先对齐好你的进度，马上带你进入测试。'
         hint='上次答到一半？我会帮你接上。'
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.introHero}
@@ -1384,7 +1384,7 @@ export default function PersonalityTestPage() {
     }
     return (
       <OnboardingLoadingShell
-        stepLabel='氛围命格'
+        stepLabel='聚会气场'
         title={`${DEFAULT_MASCOT_DISPLAY_NAME}在整理你的命格卡`}
         subtitle='把你的回答整理成专属命格卡，马上揭晓。'
         hint='我会把轮廓、关键词和后面的分享卡一起整理好。'
@@ -1436,14 +1436,6 @@ export default function PersonalityTestPage() {
           onCommentaryComplete={handleCommentaryTypingComplete}
           onCommentaryBubbleTap={handleCommentaryBubbleTap}
           onIdleWhisperTap={handleIdleWhisperTap}
-          onSliderAdvanceBlocked={() => {
-            // P1 polish validation: user tried to advance a slider question
-            // without touching the slider (gate blocked the tap).
-            analytics.interaction('slider_advance_blocked', {
-              questionId: question?.id,
-              questionIndex: progress?.answered ?? 0,
-            })
-          }}
           onNext={handleNext}
           onPrevious={handlePrevious}
           onSkip={handleSkip}

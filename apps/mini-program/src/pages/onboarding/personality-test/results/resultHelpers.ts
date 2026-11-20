@@ -256,7 +256,7 @@ export function trimSentence(text: string | undefined): string {
 export function buildShareLine(archetype: string, tagline: string, summary: string): string {
   const detail = trimSentence(tagline) || trimSentence(summary)
   if (!detail) {
-    return `在 JoyJoin 解锁了 ${archetype} 氛围命格，来看看你的。`
+    return `在 JoyJoin 解锁了 ${archetype} 聚会气场，来看看你的。`
   }
 
   return `${archetype}：${detail}。`

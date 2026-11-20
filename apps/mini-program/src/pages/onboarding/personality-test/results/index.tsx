@@ -9,13 +9,15 @@ import { useAuth } from '../../../../hooks/useAuth'
 import { useUnload } from '../../../../hooks/useUnload'
 import { useSpriteReadiness } from '../../../../hooks/useSpriteReadiness'
 import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
-import { resolveExperimentMarker } from '../../../../lib/experiments'
+import { bucketForSubject, resolveExperimentMarker } from '../../../../lib/experiments'
 import { onboardingAnalytics } from '../../../../lib/onboarding/onboardingAnalytics'
 import {
   readAnonymousAssessmentSession,
 } from '../../../../lib/auth/anonymousOnboarding'
 import { persistPendingReferralCode } from '../../../../lib/auth/pendingReferralCode'
 import { apiRequest } from '../../../../lib/api/api'
+import { getPublicFeatureFlags } from '../../../../lib/api/publicFeatures'
+import { peekPendingDuoContext } from '../../../../lib/duo/duoContext'
 import {
   buildPersonalityResultSharePath,
   buildPersonalityResultTimelineQuery,
@@ -421,6 +423,80 @@ export default function PersonalityTestResultsPage() {
     displayArchetypeName,
   })
 
+  const { data: publicFlags } = useQuery({
+    queryKey: ['public-features'],
+    queryFn: getPublicFeatureFlags,
+    staleTime: 60_000,
+    retry: 1,
+  })
+
+  const m2Enabled = Boolean(
+    publicFlags?.onboardingLoginTimingExperiment
+      ?? auth.user?.features?.onboardingLoginTimingExperiment
+      ?? (process.env.TARO_APP_ONBOARDING_LOGIN_TIMING_EXPERIMENT === '1'),
+  )
+
+  const m2Bucket = useMemo(() => {
+    if (!m2Enabled || auth.isAuthenticated) return null
+    const duoCode = peekPendingDuoContext()?.invitationCode
+    const subject = duoCode ? `duo:${duoCode}` : onboardingAnalytics.getAnonymousId()
+    return bucketForSubject('onboardingLoginTimingExperiment', subject)
+  }, [m2Enabled, auth.isAuthenticated])
+
+  const pageMountedAtRef = useRef(Date.now())
+  const m2RevealTrackedRef = useRef(false)
+  const m2PromptShownRef = useRef(false)
+  const m2DismissedRef = useRef(false)
+  const m2LoginSuccessRef = useRef(false)
+
+  useEffect(() => {
+    if (flowStage !== 'reveal' || m2RevealTrackedRef.current) return
+    m2RevealTrackedRef.current = true
+    if (!m2Bucket) return
+    analytics.interaction('results_reveal_first_screen', { variant: m2Bucket })
+    analytics.interaction('result_page_performance', {
+      variant: m2Bucket,
+      readyMs: Date.now() - pageMountedAtRef.current,
+    })
+  }, [analytics, flowStage, m2Bucket])
+
+  useEffect(() => {
+    if (!(m2Bucket === 'B' && flowStage === 'reveal' && !auth.isAuthenticated)) return
+    if (m2PromptShownRef.current) return
+    m2PromptShownRef.current = true
+    analytics.interaction('login_handoff_shown', {
+      variant: 'B',
+      stage: 'first_result_before_reveal',
+      resultStage: flowStage,
+    })
+  }, [analytics, auth.isAuthenticated, flowStage, m2Bucket])
+
+  useEffect(() => {
+    if (!m2Bucket || !m2PromptShownRef.current || auth.isAuthenticated) return
+    if (flowStage === 'reveal' || m2DismissedRef.current) return
+    m2DismissedRef.current = true
+    analytics.interaction('login_handoff_dismissed', {
+      variant: m2Bucket,
+      stage: 'first_result_before_reveal',
+      resultStage: flowStage,
+    })
+    analytics.interaction('login_cancel_then_continue', {
+      variant: m2Bucket,
+      resultsReadable: true,
+      resultStage: flowStage,
+    })
+  }, [analytics, auth.isAuthenticated, flowStage, m2Bucket])
+
+  useEffect(() => {
+    if (!m2Bucket || !auth.isAuthenticated || m2LoginSuccessRef.current) return
+    m2LoginSuccessRef.current = true
+    analytics.interaction('login_success', {
+      variant: m2Bucket,
+      source: 'results',
+      stage: m2PromptShownRef.current ? 'first_result_before_reveal' : 'after_reveal',
+    })
+  }, [analytics, auth.isAuthenticated, m2Bucket])
+
   // WeChat share requires a network URL or temp file path. Local bundled
   // paths don't work for share preview images. Fall back to CDN URL.
   const shareImageUrl = sharePosterPath || visual.asset || displayAsset
@@ -543,6 +619,11 @@ export default function PersonalityTestResultsPage() {
             displayAsset={displayAsset}
             visual={visual}
             revealPhase={revealPhase}
+            showLoginPrompt={m2Bucket === 'B' && !auth.isAuthenticated}
+            loginPromptLabel='微信登录，保存这张入场卡'
+            onLoginPrompt={handleContinue}
+            isLoggingIn={isLoggingIn}
+            loginError={loginError}
           />
         )
       case 'bridge':

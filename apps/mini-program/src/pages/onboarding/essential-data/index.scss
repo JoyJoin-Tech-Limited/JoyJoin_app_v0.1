@@ -38,7 +38,7 @@
     padding: 0 $container-padding;
     margin-bottom: $spacing-xs;
     @include safe-area-inline($container-padding);
-    // P3 fix: keep the 「装盒中 · 第 1 格」 pill clear of the native top
+    // P3 fix: keep the 「装盒中」 pill clear of the native top
     // bar / capsule. Mirrors extended-data's header rhythm ($spacing-xl above
     // the spine). env(safe-area-inset-top) resolves to 0 under the native
     // nav bar, so devices whose webview already starts below the bar are NOT

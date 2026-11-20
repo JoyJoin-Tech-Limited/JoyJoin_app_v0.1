@@ -2242,6 +2242,16 @@ $color-skill-cool: #7c3aed;
     }
   }
 
+  &__detail-reading-toggle {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-top: $spacing-xs;
+    padding: 8rpx 0;
+    font-size: $font-size-sm;
+    color: $color-primary;
+    line-height: 1.5;
+  }
+
   &__detail-reading-beat-text {
     display: block;
     font-size: $font-size-base;
@@ -3484,4 +3494,30 @@ $color-skill-cool: #7c3aed;
   line-height: 1.6;
   color: rgba(76, 39, 146, 0.62);
   margin-bottom: 20rpx;
+}
+
+.personality-results__reveal-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 32rpx;
+}
+
+.personality-results__reveal-login-link {
+  padding: 16rpx 24rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+  color: #8b5cf6;
+}
+
+.personality-results__reveal-login-hint,
+.personality-results__reveal-login-error {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: rgba(31, 41, 55, 0.55);
+}
+
+.personality-results__reveal-login-error {
+  color: $color-error;
 }

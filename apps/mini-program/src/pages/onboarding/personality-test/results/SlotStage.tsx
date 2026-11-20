@@ -344,7 +344,7 @@ export default function SlotStage({
 
   return (
     <View className='personality-results__immersive-shell' role='status' aria-live='polite' aria-label={slotAriaLabel}>
-      <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
+      <Text className='personality-results__immersive-eyebrow'>JoyJoin 气场揭晓</Text>
       <Text className='personality-results__immersive-title'>你的答案正在凝成命格卡</Text>
       <Text className='personality-results__immersive-copy'>
         你写下的每个选择，都在锁定真正属于你的那一张牌。

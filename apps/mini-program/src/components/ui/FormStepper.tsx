@@ -29,7 +29,7 @@ export interface FormStepperProps {
  * - Back button anchored to the left at 32rpx
  * - Each segment represents one step for tangible progress feel
  *
- * The macro journey fraction ("装盒中 · 第 N 格") is owned by
+ * The macro journey status ("装盒中") is owned by
  * BoxJourneySpine — FormStepper intentionally renders no step-count text
  * so the two indicators never duplicate each other.
  */

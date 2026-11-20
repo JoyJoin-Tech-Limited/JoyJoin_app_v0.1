@@ -427,13 +427,8 @@ export default memo(function PersonalityTestAnswerArea({
 
     return (
       <View className='answer-area__slider-shell'>
-        {/* First-time hint for slider usability */}
-        {showSliderHint ? (
-          <View className='answer-area__slider-hint' aria-hidden='true'>
-            <Text className='answer-area__slider-hint-text'>拖动滑块，选择最符合你的程度</Text>
-            <View className='answer-area__slider-hint-arrow' />
-          </View>
-        ) : null}
+        {/* Slider guidance is intentionally singular: the live badge below is
+            the only inline hint above the track. */}
 
         {/* Live semantic label that tracks the thumb — announced politely to
             screen readers. Until the first drag it stays neutral so the

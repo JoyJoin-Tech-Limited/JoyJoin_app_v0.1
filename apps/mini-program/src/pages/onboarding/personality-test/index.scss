@@ -474,7 +474,7 @@
     max-width: 100%;
   }
 
-  // 12-archetype icon stack (2026-09-02): makes 「氛围命格」 concrete — the
+  // 12-archetype icon stack (2026-09-02): makes 「聚会气场」 concrete — the
   // tease card previously had copy only and tested as too abstract. Icons
   // reuse the bundled subpackage archetype WebPs (zero new package bytes).
   &__intro-tease-icons {
@@ -818,6 +818,17 @@
   // Tap-observer wrapper around the 下一题 button (catches taps the disabled
   // button swallows) — mirrors the button's own flex-item rules so layout is
   // unchanged.
+  &__nav-skip-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 92rpx;
+    padding: 16rpx 24rpx;
+    font-size: 28rpx;
+    color: $color-primary;
+    line-height: 1.5;
+  }
+
   &__nav-next-wrap {
     flex: 1 1 0;
     min-width: 0;

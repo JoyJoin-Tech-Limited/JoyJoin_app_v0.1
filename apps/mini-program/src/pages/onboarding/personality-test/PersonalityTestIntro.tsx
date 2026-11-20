@@ -5,26 +5,7 @@ import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import {
   getIntroStaticAsset,
   getIntroStaticFallbackAsset,
-  ASSET_BASE_WEBP_LOCAL,
-  ARCHETYPE_ASSET_MAP,
 } from './visuals'
-
-// Lead with fox/owl — corgi double-casts as the hero mascot 200rpx above,
-// which blurred "mascot vs archetype" for first-time users (2026-09-02 audit).
-const TEASE_ARCHETYPE_IDS = [
-  'fox',
-  'owl',
-  'hamster_praise',
-  'rooster',
-  'dolphin_calm',
-  'spider',
-  'corgi',
-  'koala',
-  'octopus',
-  'elephant',
-  'turtle',
-  'cat',
-] as const
 
 /** Single source for the duration promise — used by BOTH the intro title and
  *  the first trust point so the two can never contradict each other again
@@ -90,7 +71,6 @@ export default function PersonalityTestIntro({
     : '没有标准答案，凭直觉选就好。我会帮你整理出最真实的那一面。'
   // Bundled tease icons that failed on device swap to their CDN twin
   // (2026-09-07: packOptions upload filtering left empty circles).
-  const [cdnFallbackIds, setCdnFallbackIds] = useState<ReadonlySet<string>>(new Set())
   const introPrimaryLabel = isSubmitting
     ? '准备中…'
     : error
@@ -118,13 +98,7 @@ export default function PersonalityTestIntro({
             <Text className='personality-test__intro-title'>{`${INTRO_DURATION_COPY}，读懂你的`}</Text>
             <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
             <Text className='personality-test__intro-subtitle'>
-              找到你的氛围命格，让后面的遇见都更对味。
-            </Text>
-            {/* 承接句（2026-09-01 重叙事）：landing CTA「测测我的聚会气场」与上方
-                标题逐字接力（气场 → 读懂气场），本句把答题往后接到攒一桌的结果
-                （盲盒意象由 landing hero/headline 与 squad-unboxing 承接）。 */}
-            <Text className='personality-test__intro-bridge'>
-              这几道小题，就是攒一桌的第一拍。
+              答完这几题，悦仔会为你攒一张入场卡。
             </Text>
           </View>
 
@@ -170,33 +144,12 @@ export default function PersonalityTestIntro({
           </View>
 
           <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
-            <Text className='personality-test__intro-tease-title'>完成后，你会看到自己的氛围命格</Text>
+            <Text className='personality-test__intro-tease-title'>完成后，你会拿到自己的入场卡</Text>
             <Text className='personality-test__intro-tease-subtitle'>
               不是贴标签，而是帮你找到最对味的人。
             </Text>
-            <View className='personality-test__intro-tease-icons' aria-hidden='true'>
-              {TEASE_ARCHETYPE_IDS.map((id) => (
-                <View key={id} className='personality-test__intro-tease-icon'>
-                  <Image
-                    src={
-                      cdnFallbackIds.has(id)
-                        ? ARCHETYPE_ASSET_MAP[id]?.webp
-                        : `${ASSET_BASE_WEBP_LOCAL}/archetype-${id}.webp`
-                    }
-                    mode='aspectFit'
-                    className='personality-test__intro-tease-icon-img'
-                    lazyLoad={false}
-                    onError={() =>
-                      setCdnFallbackIds((prev) =>
-                        prev.has(id) ? prev : new Set(prev).add(id),
-                      )
-                    }
-                  />
-                </View>
-              ))}
-            </View>
             <Text className='personality-test__intro-tease-line'>
-              12 种氛围命格，答完就知道你是哪一种。
+              12 种聚会气场，答完就知道你是哪一种。
             </Text>
           </View>
         </View>

@@ -1,5 +1,5 @@
 import { View, Text, Input, Picker, ScrollView } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CURRENT_CITY_OPTIONS,
@@ -135,6 +135,15 @@ const FIELD_TO_STEP_ID: Record<string, EssentialDataStepId> = {
 
 const TOTAL_STEPS = STEP_CONFIG.length
 
+// One-line predictability for the pinned CTA: the next micro-step's topic is
+// named in the button, so the wizard never feels like an open-ended form.
+const STEP_PREVIEW_LABELS: Record<string, string> = {
+  displayName: '聚会偏好',
+  intent: '基本情况',
+  aboutYou: '职业身份',
+  professionalProfile: '所在城市',
+}
+
 const ESSENTIAL_DATA_CACHE_KEY = 'joyjoin_essential_data_progress'
 
 interface CachedProgress {
@@ -213,7 +222,15 @@ function saveCachedProgress(data: CachedProgress) {
 
 export default function EssentialDataPage() {
   const { shouldReduceMotion } = useMiniRevealMotion()
-  const [currentStep, setCurrentStep] = useState(0)
+  const router = useRouter()
+  const isEditingFromReview = router.params.from === 'review'
+  const requestedStepId = router.params.step
+  const [currentStep, setCurrentStep] = useState(() => {
+    const requestedIndex = requestedStepId
+      ? ESSENTIAL_DATA_STEP_IDS.indexOf(requestedStepId as (typeof ESSENTIAL_DATA_STEP_IDS)[number])
+      : -1
+    return requestedIndex >= 0 ? requestedIndex : 0
+  })
   const [displayName, setDisplayName] = useState('')
   // True only when the displayName value was prefilled from the user's stored
   // WeChat nickname (no typed value, no cache, no server displayName). Drives
@@ -267,7 +284,7 @@ export default function EssentialDataPage() {
   const mascotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { user, isLoading } = useAuthGuard({
-    suspendOnboardingRedirect: isSubmitting || isPageExiting,
+    suspendOnboardingRedirect: isSubmitting || isPageExiting || isEditingFromReview,
   })
 
   // Pre-warm bundled intent icons so the onboarding intent grid renders
@@ -608,12 +625,14 @@ export default function EssentialDataPage() {
       // predates the nextStep field.
       const nextStep = submitResponse.nextStep ?? (await getUserState()).nextStep
 
-      analytics.stepCompleted({
-        fieldsCompleted: Object.keys(payload).length,
-        nextStep: nextStep ?? 'extended-data',
-      })
-      // Submit succeeded — the onward navigation must not count as abandonment.
-      markWizardCompleted()
+      if (!isEditingFromReview) {
+        analytics.stepCompleted({
+          fieldsCompleted: Object.keys(payload).length,
+          nextStep: nextStep ?? 'extended-data',
+        })
+        // Submit succeeded — the onward navigation must not count as abandonment.
+        markWizardCompleted()
+      }
 
       // Branded completion beat (2026-08-18): the system success toast is
       // replaced by the coach bubble speaking the archetype-voice
@@ -623,6 +642,11 @@ export default function EssentialDataPage() {
       haptics('success')
       triggerMascotReaction(getOnboardingVoiceLine('essential-submit-success', userArchetype))
       await waitFor(CELEBRATE_HOLD_MS)
+      if (isEditingFromReview) {
+        setIsPageExiting(true)
+        await Taro.navigateBack()
+        return
+      }
       await navigateToMiniProgramNextStep(nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
@@ -671,7 +695,7 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, markWizardCompleted, professionText, professionClassification, relationshipStatus, saveCheckpoint, lifeStage, currentStep, triggerMascotReaction, userArchetype, jumpToStep])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isEditingFromReview, isSubmitting, markWizardCompleted, professionText, professionClassification, relationshipStatus, saveCheckpoint, lifeStage, currentStep, triggerMascotReaction, userArchetype, jumpToStep])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
     const quality = evaluateProfessionInputQuality(value)
@@ -727,22 +751,14 @@ export default function EssentialDataPage() {
   const toggleIntent = useCallback(
     (value: string) => {
       setIntent((current) => {
-        // No selection cap: every explicit intent stays selectable; picking
-        // all six auto-collapses to 随缘 (toggleIntentValue contract).
+        // No selection cap: every explicit intent stays selectable, and
+        // selecting all of them no longer collapses to 随缘.
         const next = toggleIntentValue(current, value)
         if (!next) {
           return current
         }
 
-        const collapsedToFlexible =
-          value !== INTENT_FLEXIBLE_OPTION.value &&
-          next.length === 1 &&
-          next[0] === INTENT_FLEXIBLE_OPTION.value
-
-        if (collapsedToFlexible) {
-          haptics('medium')
-          triggerMascotReaction('都想要？那这一局就交给悦仔安排！')
-        } else if (value === INTENT_FLEXIBLE_OPTION.value && next.length === 1) {
+        if (value === INTENT_FLEXIBLE_OPTION.value && next.length === 1) {
           haptics('light')
           triggerMascotReaction(INTENT_REACTIONS.flexible)
         } else if (next.length < current.length) {
@@ -803,7 +819,7 @@ export default function EssentialDataPage() {
   if (isLoading || (shellRenderedRef.current && !shellDismissed)) {
     return (
       <OnboardingLoadingShell
-        stepLabel='装盒中 · 第 1 格'
+        stepLabel='装盒中'
         title={`${getMascotDisplayName(user)}在整理你的入场名片`}
         subtitle='把这一步铺好后，后面的兴趣热度和资料预览都会顺滑接上。'
         continuity
@@ -907,7 +923,7 @@ export default function EssentialDataPage() {
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>这次更想收获什么</Text>
                 {intentGrid}
-                <Text className='essential-data__hint'>可以多选，全选了就交给悦仔安排。</Text>
+                <Text className='essential-data__hint'>可以多选；都感兴趣就选随缘。</Text>
               </View>
             </Card>
           )}
@@ -1194,14 +1210,24 @@ export default function EssentialDataPage() {
             跳过
           </Button>
         )}
-        {currentStep < TOTAL_STEPS - 1 ? (
+        {isEditingFromReview ? (
+          <Button
+            variant='brand'
+            className='essential-data__submit'
+            onClick={handleSubmit}
+            disabled={!isStepValid || isSubmitting || isCelebrating}
+            loading={isSubmitting && !isCelebrating}
+          >
+            {isCelebrating ? '已保存' : isSubmitting ? '保存中…' : '保存修改'}
+          </Button>
+        ) : currentStep < TOTAL_STEPS - 1 ? (
           <Button
             variant='brand'
             className='essential-data__submit'
             onClick={handleNext}
             disabled={!isStepValid}
           >
-            下一步
+            下一步 · {STEP_PREVIEW_LABELS[stepConfig.id]}
           </Button>
         ) : (
           <Button

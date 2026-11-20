@@ -52,7 +52,7 @@ export default function PersonalityTestReturnInterstitial({
             }
           />
         </View>
-        <Text className='personality-test__return-title'>你已经解锁了氛围命格</Text>
+        <Text className='personality-test__return-title'>你已经解锁了聚会气场</Text>
         <Text className='personality-test__return-body'>
           可以直接回看结果，也可以重新测一次。
         </Text>

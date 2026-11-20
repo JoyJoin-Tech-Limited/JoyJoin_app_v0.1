@@ -122,7 +122,7 @@ function buildInput(overrides: Partial<PersonalitySharePosterInput> = {}): Perso
   return {
     archetype: '开心柯基',
     tagline: '把热闹带给每一桌',
-    shareLine: '来悦聚测测你的氛围命格',
+    shareLine: '来悦聚测测你的聚会气场',
     accentColor: '#8b5cf6',
     accentSoft: '#f4f0ff',
     archetypeAsset: 'https://cdn.example.com/corgi.webp',
@@ -179,7 +179,7 @@ describe('personality portrait poster — AC-03 QR and export lifecycle', () => 
     expect(output).toBe('tmp://personality-portrait.png')
     expect(texts.map((call) => call.text)).toContain('微信搜索「悦聚」小程序，3 分钟开测')
     expect(texts.some((call) => call.text.includes('长按识别'))).toBe(false)
-    expect(texts.find((call) => call.text === '12 种氛围命格，你是哪一种？')?.align).toBe('center')
+    expect(texts.find((call) => call.text === '12 种聚会气场，你是哪一种？')?.align).toBe('center')
 
     // Canvas commands are queued, so the opaque second band paint is the
     // actual rollback: no chip command may survive after that final paint.
@@ -285,7 +285,7 @@ describe('personality portrait poster — AC-03 optional flow and bounds', () =>
 
   it('bounds empty, maximum CJK, unbroken ASCII and over-cap text without overlap', async () => {
     const { texts } = await render({
-      archetype: '超长氛围命格'.repeat(24),
+      archetype: '超长聚会气场'.repeat(24),
       confidenceLabel: '典型'.repeat(100),
       rarityLabel: `稀有度 ${'12%'.repeat(100)}`,
       tagline: 'CJK'.repeat(200),
@@ -329,7 +329,7 @@ describe('personality portrait poster — AC-03 optional flow and bounds', () =>
       '开心柯基',
       '气氛点火器',
       '快乐接收站',
-      '长按识别小程序码，3 分钟测出你的命格',
+      '长按识别小程序码，3 分钟测出你的聚会气场',
     ]))
     expect(findRect(rects, CONTENT_WIDTH, 48).y).toBe(1036)
     expect(findRect(rects, CONTENT_WIDTH, 216).y).toBe(1136)

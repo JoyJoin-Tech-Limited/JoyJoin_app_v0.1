@@ -129,13 +129,6 @@ interface PersonalityTestQuestionProps {
   /** WS-1: idle whisper bubble tapped (analytics; typing fast-forwards locally). */
   onIdleWhisperTap?: () => void
   onNext: () => void
-  /**
-   * Analytics-only: fires when the user taps 下一题 while the slider gate is
-   * blocking (slider question, not yet touched). The disabled native Button
-   * swallows its own tap, so the page wraps the button and observes the
-   * bubbled tap instead.
-   */
-  onSliderAdvanceBlocked?: () => void
   onPrevious: () => void
   onSkip: () => void
   onRetry: () => void
@@ -175,7 +168,6 @@ export default function PersonalityTestQuestion({
   onCommentaryBubbleTap,
   onIdleWhisperTap,
   onNext,
-  onSliderAdvanceBlocked,
   onPrevious,
   onSkip,
   onRetry,
@@ -230,7 +222,7 @@ export default function PersonalityTestQuestion({
       <View className='personality-test__progress-bar-shell'>
         <SegmentedProgress
           progress={progressPercent}
-          totalSegments={10}
+          totalSegments={Math.max(1, ((progress?.answered ?? 0) + (progress?.estimatedRemaining ?? 0)) || 10)}
           variant='duolingo'
         />
       </View>
@@ -418,36 +410,38 @@ export default function PersonalityTestQuestion({
         >
           上一题
         </Button>
-        {/* Wrapper observes taps that the disabled next Button swallows
-            (slider-gated advance) — analytics only, no visual role. The flex
-            styling mirrors the button's own flex-item rules so the layout is
-            unchanged. */}
-        <View
-          className='personality-test__nav-next-wrap'
-          onClick={() => {
-            if (isNextLocked || canGoNext) return
-            if (questionType === 'slider' && !sliderTouched) {
-              onSliderAdvanceBlocked?.()
-            }
-          }}
-        >
-          <Button
-            variant='brand'
-            className={[
-              'personality-test__nav-btn',
-              'personality-test__nav-btn--next',
-              !canGoNext || isNextLocked ? 'personality-test__nav-btn--disabled' : '',
-            ].filter(Boolean).join(' ')}
-            onClick={() => {
-              if (isNextLocked || !canGoNext) return
-              onNext()
-            }}
-            disabled={isNextLocked || !canGoNext}
-            loading={isSubmitting}
-            hoverClass='personality-test__nav-btn--active'
-          >
-            {isSubmitting ? '提交中…' : isAdvancePending ? '下一题 →' : '下一题'}
-          </Button>
+        {/* The next Button owns its disabled state; no tap handler here, so a
+            disabled control is genuinely inert. */}
+        <View className='personality-test__nav-next-wrap'>
+          {isAdvancePending && !isSubmitting ? (
+            <Text
+              className='personality-test__nav-skip-link'
+              onClick={() => {
+                if (isNextLocked || !canGoNext) return
+                onNext()
+              }}
+            >
+              先走一步 →
+            </Text>
+          ) : (
+            <Button
+              variant='brand'
+              className={[
+                'personality-test__nav-btn',
+                'personality-test__nav-btn--next',
+                !canGoNext || isNextLocked ? 'personality-test__nav-btn--disabled' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => {
+                if (isNextLocked || !canGoNext) return
+                onNext()
+              }}
+              disabled={isNextLocked || !canGoNext}
+              loading={isSubmitting}
+              hoverClass='personality-test__nav-btn--active'
+            >
+              {isSubmitting ? '提交中…' : '下一题'}
+            </Button>
+          )}
         </View>
       </View>
 

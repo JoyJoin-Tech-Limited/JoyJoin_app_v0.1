@@ -66,7 +66,7 @@ interface OnboardingLoadingShellProps {
   exiting?: boolean
 }
 
-const CELEBRATE_TITLE = '全部收到啦 — 让我开始翻你的命格'
+const CELEBRATE_TITLE = '全部收到啦 — 让我开始看你的聚会气场'
 const CELEBRATE_SUBTITLE = '看到的只是最近的自己，不是标签。'
 
 export default function OnboardingLoadingShell({

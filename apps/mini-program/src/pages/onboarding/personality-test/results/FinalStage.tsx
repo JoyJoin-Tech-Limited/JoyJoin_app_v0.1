@@ -210,6 +210,7 @@ export default function FinalStage({
   // sentences instantly (no opacity-0 replay).
   const detailHasOpenedRef = useRef(false)
   const [detailDeferEntrance, setDetailDeferEntrance] = useState(false)
+  const [isDetailExpanded, setIsDetailExpanded] = useState(false)
   const [isCardPressed, setIsCardPressed] = useState(false)
   const [badgesVisible, setBadgesVisible] = useState(false)
   const touchActiveRef = useRef(false)
@@ -337,6 +338,7 @@ export default function FinalStage({
     const isFirstOpen = !detailHasOpenedRef.current
     detailHasOpenedRef.current = true
     setDetailDeferEntrance(isFirstOpen)
+    setIsDetailExpanded(false)
     setIsDetailOpen(true)
   }, [])
 
@@ -471,7 +473,7 @@ export default function FinalStage({
         >
           <View className='personality-results__hero-copy'>
             <Text className='personality-results__hero-eyebrow'>解锁成功</Text>
-            <Text className='personality-results__hero-title'>你的氛围命格是</Text>
+            <Text className='personality-results__hero-title'>你的聚会气场是</Text>
             <Text className='personality-results__hero-name' aria-label={displayArchetypeName}>
               {/* Slice 5 (2026-07-19): letter-by-letter reveal; suppressed under reduce-motion */}
               {[...displayArchetypeName].map((ch, i) => (
@@ -494,7 +496,7 @@ export default function FinalStage({
               className='personality-results__hero-art'
               mode='aspectFit'
               src={heroSrc}
-              ariaLabel={`你的氛围命格形象：${displayArchetypeName}`}
+              ariaLabel={`你的聚会气场形象：${displayArchetypeName}`}
               onError={() => setHeroImgError(true)}
             />
             {/* No text overlay on archetype image — clean art only */}
@@ -600,7 +602,7 @@ export default function FinalStage({
                     src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
                   />
                   <View className='personality-results__xiaoyue-bubble'>
-                    <Text className='personality-results__xiaoyue-bubble-headline'>这个命格为什么像你</Text>
+                    <Text className='personality-results__xiaoyue-bubble-headline'>这个气场为什么像你</Text>
                     <Text className='personality-results__xiaoyue-bubble-analysis'>{summary}</Text>
                     <Text className='personality-results__xiaoyue-bubble-analysis'>
                       {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
@@ -761,7 +763,7 @@ export default function FinalStage({
         {/* Collect-them-all teaser */}
         <Card className='personality-results__section-card personality-results__stagger--5'>
           <View className='personality-results__collect-header'>
-            <Text className='personality-results__section-label'>命格图鉴</Text>
+            <Text className='personality-results__section-label'>气场图鉴</Text>
             <Text className='personality-results__collect-count'>
               已解锁 {unlockedCount}/12
             </Text>
@@ -792,7 +794,7 @@ export default function FinalStage({
             })}
           </View>
           <Text className='personality-results__collect-hint'>
-            邀请朋友来测，一起解锁全部 12 种命格
+            邀请朋友来测，一起解锁全部 12 种聚会气场
           </Text>
         </Card>
 
@@ -869,7 +871,7 @@ export default function FinalStage({
                       the hairline closes the head so the reading below starts
                       on a clean edge. ── */}
                   <View className='personality-results__detail-header'>
-                    <Text className='personality-results__detail-eyebrow'>原型揭晓</Text>
+                    <Text className='personality-results__detail-eyebrow'>你的聚会气场</Text>
                     <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
                     <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
                   </View>
@@ -912,7 +914,15 @@ export default function FinalStage({
                         >
                           {readingBeats[0]}
                         </Text>
-                        {readingBeats.slice(1).map((beat, index) => (
+                        {readingBeats.length > 3 ? (
+                          <Text
+                            className='personality-results__detail-reading-toggle'
+                            onClick={() => setIsDetailExpanded((expanded) => !expanded)}
+                          >
+                            {isDetailExpanded ? '收起' : '展开全文'}
+                          </Text>
+                        ) : null}
+                        {readingBeats.slice(1, isDetailExpanded ? undefined : 3).map((beat, index) => (
                           <View
                             key={`reading-beat-${index}`}
                             className='personality-results__detail-reading-beat'

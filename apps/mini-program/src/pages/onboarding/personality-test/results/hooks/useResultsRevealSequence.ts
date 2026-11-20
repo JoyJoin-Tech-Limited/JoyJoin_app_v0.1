@@ -445,7 +445,7 @@ export function useResultsRevealSequence({
       // P1-3: differentiated from the completing-phase title to avoid
       // same-line-twice fatigue. The `好——` opener signals continuation
       // rather than repetition.
-      setPhaseText('好——让我把命格翻到最后一页。')
+      setPhaseText('好——让我把入场卡翻到最后一页。')
 
       // Skip control is available immediately (accessibility + impatient
       // users) — no artificial delay before it appears.
