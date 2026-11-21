@@ -58,7 +58,9 @@ jobs:
     needs: [check-prior-gates]
     if: needs.check-prior-gates.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # 2026-11-21: raised from 35m. The build now streams the images directly
+    # to the CVM in this job (GHCR pull from the CVM proved unusably slow).
+    timeout-minutes: 60
     outputs:
       api_image: ${{ steps.refs.outputs.api_image }}
       admin_image: ${{ steps.refs.outputs.admin_image }}
@@ -99,6 +101,7 @@ jobs:
           context: .
           file: apps/server/Dockerfile
           push: true
+          load: true
           tags: ghcr.io/joyjoin-tech-limited/joyjoin-api:${{ github.sha }}
           cache-from: type=gha,scope=joyjoin-prod-api
           cache-to: type=gha,mode=max,scope=joyjoin-prod-api
@@ -110,9 +113,48 @@ jobs:
           context: .
           file: apps/admin-client/Dockerfile
           push: true
+          load: true
           tags: ghcr.io/joyjoin-tech-limited/joyjoin-admin:${{ github.sha }}
           cache-from: type=gha,scope=joyjoin-prod-admin
           cache-to: type=gha,mode=max,scope=joyjoin-prod-admin
+
+      # GHCR pulls from the Lighthouse host took >3h and timed out (2026-11-21).
+      # Stream the freshly built images over SSH instead. The deploy job then
+      # finds them in the local Docker store and skips its GHCR pull.
+      - name: Stream production images to the CVM
+        if: steps.refs.outputs.images_ready == 'true'
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          PROD_API_IMAGE: ${{ steps.refs.outputs.api_image }}
+          PROD_ADMIN_IMAGE: ${{ steps.refs.outputs.admin_image }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          KEY_FILE="$HOME/.ssh/joyjoin_deploy"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          printf '%s ssh-ed25519 %s\n' \
+            "$SERVER_IP" \
+            'AAAAC3NzaC1lZDI1NTE5AAAAIAYzz3j8ECoBBxvAUCs1DVMa0RjZtILnSje7m+FWjqKh' \
+            > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          SSH_OPTS=(
+            -i "$KEY_FILE"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$HOME/.ssh/known_hosts"
+            -o ConnectTimeout=20
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+          )
+          echo "Streaming $PROD_API_IMAGE and $PROD_ADMIN_IMAGE to $SERVER_IP"
+          docker save "$PROD_API_IMAGE" "$PROD_ADMIN_IMAGE" \
+            | gzip -1 \
+            | ssh "${SSH_OPTS[@]}" "$SERVER_USER@$SERVER_IP" 'gunzip | docker load'
+          echo "Image stream complete."
 
   deploy-production:
     name: Production Deployment
@@ -246,7 +288,7 @@ jobs:
       # publish images, so the legacy on-box build path is unaffected. It holds
       # no deploy lock: it only writes to the local Docker layer store, and the
       # script's `image prune --filter until=24h` cannot touch images this fresh.
-      - name: Pre-warm production images on the CVM
+      - name: Verify streamed production images on the CVM
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -255,38 +297,26 @@ jobs:
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           timeout: 120s
-          # Generous on purpose: a single unwrapped pull that is allowed to
-          # finish is worth far more than five 12-minute attempts that are
-          # guaranteed to be killed.
-          command_timeout: 180m
-          envs: PROD_API_IMAGE,PROD_ADMIN_IMAGE,PROD_IMAGES_READY,GHCR_TOKEN
+          command_timeout: 5m
+          envs: PROD_API_IMAGE,PROD_ADMIN_IMAGE,PROD_IMAGES_READY
           script: |
             set -euo pipefail
 
-            if [ "${PROD_IMAGES_READY:-}" != "true" ] || [ -z "${PROD_API_IMAGE:-}" ] || [ -z "${PROD_ADMIN_IMAGE:-}" ]; then
-              echo "No registry images published by this run; the deploy will use the on-box build. Skipping pre-warm."
+            if [ "${PROD_IMAGES_READY:-}" != "true" ]; then
+              echo "No registry images published by this run; the deploy will use the on-box build."
               exit 0
             fi
-            if [ -z "${GHCR_TOKEN:-}" ]; then
-              echo "GHCR_TOKEN unavailable; the deploy will fall back to the on-box build. Skipping pre-warm."
-              exit 0
-            fi
-
-            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-x-access-token}" --password-stdin
-
-            echo "Warming $PROD_API_IMAGE"
-            docker pull "$PROD_API_IMAGE"
-
-            echo "Warming $PROD_ADMIN_IMAGE"
-            docker pull "$PROD_ADMIN_IMAGE"
-
-            docker image inspect --format '{{index .RepoTags 0}} {{.Size}}' "$PROD_API_IMAGE" "$PROD_ADMIN_IMAGE"
-            echo "Pre-warm complete; the deploy pull is now a cache hit."
+            for ref in "$PROD_API_IMAGE" "$PROD_ADMIN_IMAGE"; do
+              if ! docker image inspect "$ref" >/dev/null 2>&1; then
+                echo "Streamed image missing on the CVM: $ref"
+                exit 1
+              fi
+            done
+            echo "Streamed production images are present on the CVM."
         env:
           PROD_API_IMAGE: ${{ needs.build-images.outputs.api_image }}
           PROD_ADMIN_IMAGE: ${{ needs.build-images.outputs.admin_image }}
           PROD_IMAGES_READY: ${{ needs.build-images.outputs.images_ready }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
       - name: SSH Remote Production Deployment
         env:

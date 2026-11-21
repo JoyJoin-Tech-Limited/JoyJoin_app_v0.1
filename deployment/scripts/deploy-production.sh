@@ -464,9 +464,6 @@ disk_guard
 # registry refs/token (e.g. GHCR_TOKEN unavailable for the prod environment).
 if [[ "${PROD_IMAGES_READY:-false}" == "true" \
       && -n "${PROD_API_IMAGE:-}" && -n "${PROD_ADMIN_IMAGE:-}" && -n "${GHCR_TOKEN:-}" ]]; then
-  echo "📦 Registry delivery: pulling production images from GHCR..."
-  printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-x-access-token}" --password-stdin
-
   # Resolve the exact compose image refs (implicit <project>-<service> tags)
   # instead of hardcoding them, so a compose rename cannot silently diverge.
   mapfile -t COMPOSE_IMAGES < <(docker compose -f docker-compose.nginx.yml config --images)
@@ -479,8 +476,18 @@ if [[ "${PROD_IMAGES_READY:-false}" == "true" \
   echo "   API image   → $PROD_API_REF ($PROD_API_IMAGE)"
   echo "   Admin image → $PROD_ADMIN_REF ($PROD_ADMIN_IMAGE)"
 
-  retry_command 5 15 timeout --signal=TERM --kill-after=30s 12m docker pull "$PROD_API_IMAGE"
-  retry_command 5 15 timeout --signal=TERM --kill-after=30s 12m docker pull "$PROD_ADMIN_IMAGE"
+  # 2026-11-21: the build job streams these images directly to this host over
+  # SSH (GHCR pulls took >3h and timed out). If both refs are already local,
+  # skip the registry pull entirely; otherwise fall back to GHCR.
+  if docker image inspect "$PROD_API_IMAGE" >/dev/null 2>&1 \
+      && docker image inspect "$PROD_ADMIN_IMAGE" >/dev/null 2>&1; then
+    echo "📦 Registry images already present on this host; skipping GHCR pull."
+  else
+    echo "📦 Registry delivery: pulling production images from GHCR..."
+    printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-x-access-token}" --password-stdin
+    retry_command 5 15 timeout --signal=TERM --kill-after=30s 12m docker pull "$PROD_API_IMAGE"
+    retry_command 5 15 timeout --signal=TERM --kill-after=30s 12m docker pull "$PROD_ADMIN_IMAGE"
+  fi
   if [[ "$PROD_API_IMAGE" != "$PROD_API_REF" ]]; then
     docker image tag "$PROD_API_IMAGE" "$PROD_API_REF"
   fi
