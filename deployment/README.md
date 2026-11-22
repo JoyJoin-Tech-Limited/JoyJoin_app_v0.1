@@ -9,7 +9,7 @@
    - `release` → 经过 `production` 环境审批后自动部署到 **production**
 2. 通过 SSH 连接远程应用服务器（`SERVER_IP` / `SERVER_USER`）
 3. 在远程服务器的 `~/JoyJoin` 目录执行代码同步
-4. 在 `~/JoyJoin/deployment` 下运行 `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`
+4. 在 `~/JoyJoin/deployment` 下由 `deploy-production.sh` 顺序构建 API/Admin 镜像（`cache_from` 复用当前镜像层），再执行 `docker compose -f docker-compose.nginx.yml up -d --no-deps joyjoin-api joyjoin-admin`
 5. 由宿主机 `Nginx`（配置见 `deployment/nginx/joyjoin.conf`）统一处理 HTTPS、域名入口和反向代理
 
 > 结论：当前运行时是**自管远程服务器 + Docker Compose + Nginx**。
