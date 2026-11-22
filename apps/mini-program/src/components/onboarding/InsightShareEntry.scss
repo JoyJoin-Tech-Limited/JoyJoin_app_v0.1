@@ -37,6 +37,36 @@
     line-height: 1.4;
   }
 
+  // Inline variant: the entry-card footer owns the row, so the action loses its
+  // pill chrome and reads as a plain text action. Still 88rpx tall for touch.
+  &--inline {
+    justify-content: flex-start;
+
+    .insight-share-entry__button {
+      display: flex;
+      justify-content: flex-start;
+      width: 100%;
+      min-height: 88rpx;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      transition: opacity 0.12s ease;
+
+      &--pressed {
+        background: transparent;
+        transform: none;
+        opacity: 0.64;
+      }
+    }
+
+    .insight-share-entry__text {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+    }
+  }
+
   // Busy indicator: GPU-safe opacity pulse while generating…
   &__button--busy &__text {
     animation: insight-share-entry-pulse 1.5s ease-in-out infinite;

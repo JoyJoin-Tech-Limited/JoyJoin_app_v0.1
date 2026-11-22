@@ -15,10 +15,11 @@
     align-items: stretch;
     gap: $spacing-sm;
     padding: $spacing-sm $spacing-md;
-    // AC-21②: white island nests under the poster's 40rpx radius on its own
-    // layer — no border, no inset shadow (removed; they re-outlined the card).
-    border-radius: $card-radius;
-    background: rgba($color-surface, 0.86);
+    // The island is a paper annotation, not a second card: it sinks into the
+    // poster with a smaller radius and a translucent fill — no border, no
+    // inset shadow (removed; they re-outlined the card).
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.72);
   }
 
   &__row {
@@ -150,7 +151,7 @@
     display: block;
     margin-bottom: 8rpx;
     font-size: $font-size-2xs;
-    color: $color-text-muted;
+    color: $color-text-secondary-on-light;
     line-height: 1.4;
     text-align: left;
   }

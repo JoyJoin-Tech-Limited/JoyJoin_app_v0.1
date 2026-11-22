@@ -11,7 +11,11 @@ import {
   type UserInterestsResponse,
 } from '@shared/api'
 import { getIntentLabel } from '@shared/constants'
-import { MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
+import {
+  INTEREST_LEVEL_LABELS,
+  MACRO_CATEGORY_LABELS,
+  type MacroCategory,
+} from '@shared/interests'
 import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
 import { getIndustryDisplayLabel, getOccupationDisplayLabel } from '@shared/occupations'
 import { STALE_TIME_PROFILE_TAGLINE_MS } from '../../../lib/utils/uiConstants'
@@ -53,12 +57,27 @@ import { resolveGiftRevealDelayMs, GIFT_REVEAL_CAP_MS } from '../../../lib/onboa
 import { PROFILE_REVIEW_SUCCESS_DWELL_MS, useProfileReviewCompletion } from './useProfileReviewCompletion'
 import { useWelcomeGiftClaim } from './useWelcomeGiftClaim'
 import { buildInterestHeatConclusion } from '../../../lib/onboarding/profileFieldAnnotations'
+import { buildEntryCardInterestFacts } from '../../../lib/onboarding/entryCardFacts'
+import {
+  buildEntryCardPersonalityLine,
+  type EntryCardTraitScores,
+} from '../../../lib/onboarding/entryCardPersonality'
 import ProfileArchiveSheet from '../../../components/onboarding/ProfileArchiveSheet'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import { getDeepContrastArchetypeColor } from '@shared/archetypeColors'
 import './index.scss'
 
 const QUERY_TIMEOUT_MS = 12_000
+
+interface EntryCardAssessmentResult {
+  affinityScore?: number
+  opennessScore?: number
+  conscientiousnessScore?: number
+  emotionalStabilityScore?: number
+  extraversionScore?: number
+  positivityScore?: number
+  completedAt?: string | null
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -467,6 +486,32 @@ export default function ProfileReviewPage() {
     },
   })
 
+  const { data: assessmentResult } = useQuery<EntryCardAssessmentResult | null>({
+    queryKey: ['mini-program', 'entry-card-assessment'],
+    enabled: !isLoading && Boolean(user),
+    retry: 0,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      try {
+        return await withTimeout(
+          apiRequest<EntryCardAssessmentResult>({ path: '/api/assessment/result' }),
+          QUERY_TIMEOUT_MS,
+        )
+      } catch (queryError) {
+        const statusCode =
+          typeof queryError === 'object' && queryError !== null && 'statusCode' in queryError
+            ? Number((queryError as { statusCode?: unknown }).statusCode)
+            : undefined
+
+        if (statusCode === 404) {
+          return null
+        }
+
+        throw queryError
+      }
+    },
+  })
+
   const displayName = (user?.displayName as string) || (user?.nickname as string) || '悦聚用户'
   const ageLabel = getAgeLabel(user as Record<string, unknown> | undefined)
   const archetype = (user?.archetype as string) || (user?.primaryArchetype as string) || ''
@@ -518,11 +563,52 @@ export default function ProfileReviewPage() {
     user?.occupationId as string | undefined,
     typeof user?.industryCategoryLabel === 'string' ? user.industryCategoryLabel : '',
   )
-  // Never render the raw gender enum ('female') on the entry card — map to
-  // the canonical Chinese chip label; unknown/undisclosed drops out.
-  const profileTags = [getGenderLabel(user?.gender as string | undefined), ageLabel, currentCity].filter(
-    (item): item is string => Boolean(item),
+  const lifeStage = typeof user?.lifeStage === 'string' ? user.lifeStage : ''
+  const industryNicheLabel =
+    typeof user?.industryNicheLabel === 'string' ? user.industryNicheLabel : ''
+  const profileIndustryLabel = industryNicheLabel || industryLabel
+  // The card face is screenshot-safe: it may carry the public-facing role +
+  // industry line, but never the hometown/education/relationship values. Those
+  // stay on the card back (ProfileArchiveSheet).
+  const identityMeta = [
+    getGenderLabel(user?.gender as string | undefined),
+    ageLabel,
+    currentCity,
+  ].filter((item): item is string => Boolean(item))
+  const isStudentProfile = occupationLabel === '学生' || lifeStage === '学生党'
+  const profileRolePrimary =
+    occupationLabel || (isStudentProfile ? '' : profileIndustryLabel) || lifeStage
+  const profileRoleSecondary =
+    occupationLabel && !isStudentProfile ? profileIndustryLabel : ''
+  const profileMeta = lifeStage && lifeStage !== profileRolePrimary ? lifeStage : ''
+  const entryCardTraits = useMemo<EntryCardTraitScores | null>(() => {
+    if (!assessmentResult) {
+      return null
+    }
+    return {
+      A: assessmentResult.affinityScore,
+      O: assessmentResult.opennessScore,
+      C: assessmentResult.conscientiousnessScore,
+      E: assessmentResult.emotionalStabilityScore,
+      X: assessmentResult.extraversionScore,
+      P: assessmentResult.positivityScore,
+    }
+  }, [assessmentResult])
+
+  const personalityLine = useMemo(
+    () => buildEntryCardPersonalityLine(entryCardTraits),
+    [entryCardTraits],
   )
+
+  const hasProfileChapter = Boolean(
+    profileRolePrimary || profileRoleSecondary || profileMeta || personalityLine,
+  )
+  const archiveHint = [
+    hometownRegionCity ? '家乡' : '',
+    educationLevel ? '学历' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
   const intentLabels = Array.isArray(user?.intent)
     ? user.intent
         .filter((item): item is string => typeof item === 'string')
@@ -531,51 +617,23 @@ export default function ProfileReviewPage() {
         .slice(0, 3)
     : []
 
-  const topInterestItems = useMemo(() => {
-    if (!interestsData) {
-      return [] as Array<{ id: string; label: string }>
-    }
-
-    if (Array.isArray(interestsData.topPriorities) && interestsData.topPriorities.length > 0) {
-      return interestsData.topPriorities
-        .map((item) => ({ id: item.topicId, label: item.label }))
-        .filter((item) => item.id)
-        .slice(0, 4)
-    }
-
-    if (!Array.isArray(interestsData.selections)) {
-      return [] as Array<{ id: string; label: string }>
-    }
-
-    return [...interestsData.selections]
-      .sort((left, right) => right.level - left.level || right.heat - left.heat)
-      .slice(0, 4)
-      .map((item) => ({ id: item.topicId, label: item.label }))
-  }, [interestsData])
+  const entryCardInterestFacts = useMemo(
+    () => buildEntryCardInterestFacts(interestsData),
+    [interestsData],
+  )
 
   const topInterestLabels = useMemo(
-    () => topInterestItems.map((item) => item.label),
-    [topInterestItems],
+    () => entryCardInterestFacts.all.map((item) => item.label),
+    [entryCardInterestFacts],
   )
 
   const interestLevels = useMemo(() => {
     const map: Record<string, 1 | 2 | 3> = {}
-    if (Array.isArray(interestsData?.selections)) {
-      for (const item of interestsData.selections) {
-        if (item?.label) {
-          map[item.label] = item.level
-        }
-      }
-    }
-    if (Array.isArray(interestsData?.topPriorities)) {
-      for (const item of interestsData.topPriorities) {
-        if (item?.label && map[item.label] === undefined) {
-          map[item.label] = 3
-        }
-      }
+    for (const item of entryCardInterestFacts.all) {
+      map[item.label] = item.level
     }
     return Object.keys(map).length > 0 ? map : undefined
-  }, [interestsData?.selections, interestsData?.topPriorities])
+  }, [entryCardInterestFacts])
 
   const dominantCategories = useMemo(() => {
     if (!interestsData?.categoryHeat) {
@@ -587,6 +645,14 @@ export default function ProfileReviewPage() {
       .slice(0, 3)
       .map(([categoryId]) => categoryId as MacroCategory)
   }, [interestsData?.categoryHeat])
+
+  const interestCategoryLine = useMemo(() => {
+    const labels = dominantCategories
+      .map((category) => MACRO_CATEGORY_LABELS[category])
+      .filter((label): label is string => Boolean(label))
+      .slice(0, 2)
+    return labels.length > 0 ? `热量集中在 ${labels.join(' · ')}` : ''
+  }, [dominantCategories])
 
   const heatConclusion = useMemo(
     () => buildInterestHeatConclusion(topInterestLabels),
@@ -684,9 +750,10 @@ export default function ProfileReviewPage() {
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'profile-review-interests'] })
   }, [queryClient])
 
-  const stampText = visual?.rarityPercentage
-    ? `稀有度 前${visual.rarityPercentage}%`
-    : 'JOYJOIN ORIGINAL'
+  const rarityText =
+    typeof visual?.rarityPercentage === 'number' && visual.rarityPercentage > 0
+      ? `前${Math.round(visual.rarityPercentage)}%`
+      : ''
 
   if (isLoading || (shellRenderedRef.current && !shellDismissed)) {
     return (
@@ -769,45 +836,199 @@ export default function ProfileReviewPage() {
           >
             {!shouldReduceMotion ? <View className='profile-review__poster-shimmer' /> : null}
 
-            <View className='profile-review__stamp'>
-              <Text className='profile-review__stamp-text'>{stampText}</Text>
+            {/* Identity: name, one quiet meta run, archetype seal + rarity. */}
+            <View className='profile-review__identity'>
+              <Text className='profile-review__poster-name'>{displayName}</Text>
+              {identityMeta.length > 0 ? (
+                <Text className='profile-review__identity-meta'>
+                  {identityMeta.join(' · ')}
+                </Text>
+              ) : null}
+              {(archetype && visual) || rarityText ? (
+                <View className='profile-review__identity-strip'>
+                  {archetype && visual ? (
+                    <View
+                      className='profile-review__archetype-seal'
+                      aria-label={`原型 ${visual.name}`}
+                      style={{
+                        background: visual.accentSoft,
+                        borderColor: visual.accentBorder,
+                      }}
+                    >
+                      <Text
+                        className='profile-review__archetype-seal-text'
+                        style={{ color: visual.accentText }}
+                      >
+                        {visual.name}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {rarityText ? (
+                    <View
+                      className='profile-review__rarity'
+                      aria-label={`稀有度 ${rarityText}`}
+                    >
+                      <Text className='profile-review__rarity-label'>稀有度</Text>
+                      <Text className='profile-review__rarity-value'>{rarityText}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
 
-            {/* Header: name + archetype + basic tags */}
-            <View className='profile-review__poster-header'>
-              <View className='profile-review__poster-header-row'>
-                <Text className='profile-review__poster-name'>{displayName}</Text>
-                {archetype && visual ? (
+            {hasProfileChapter ? (
+              <View
+                className={`profile-review__chapter ${getStageClassName(4)}`}
+                role='group'
+                aria-label='小档案'
+              >
+                <View className='profile-review__chapter-head'>
                   <View
-                    className='profile-review__poster-archetype'
-                    style={{
-                      background: visual.accentSoft,
-                      borderColor: visual.accentBorder,
-                    }}
+                    className='profile-review__chapter-tick'
+                    aria-hidden='true'
+                    style={{ backgroundColor: archiveAccentText }}
+                  />
+                  <Text className='profile-review__chapter-title'>小档案</Text>
+                  <View
+                    className='profile-review__chapter-action'
+                    role='button'
+                    aria-label='去修改入场卡上的资料'
+                    hoverClass='profile-review__chapter-action--pressed'
+                    onClick={() => openEssentialEdit('professionalProfile')}
                   >
-                    <Text
-                      className='profile-review__poster-archetype-text'
-                      style={{ color: visual.accentText }}
-                    >
-                      {visual.name}
-                    </Text>
+                    <Text className='profile-review__chapter-action-text'>修改资料</Text>
+                  </View>
+                </View>
+                {profileRolePrimary || profileRoleSecondary ? (
+                  <View className='profile-review__role-line'>
+                    {profileRolePrimary ? (
+                      <Text className='profile-review__role-primary'>{profileRolePrimary}</Text>
+                    ) : null}
+                    {profileRolePrimary && profileRoleSecondary ? (
+                      <Text className='profile-review__role-divider'>·</Text>
+                    ) : null}
+                    {profileRoleSecondary ? (
+                      <Text className='profile-review__role-secondary'>
+                        {profileRoleSecondary}
+                      </Text>
+                    ) : null}
                   </View>
                 ) : null}
+                {profileMeta ? (
+                  <Text className='profile-review__profile-meta'>{profileMeta}</Text>
+                ) : null}
+                {personalityLine ? (
+                  <Text className='profile-review__personality-line'>{personalityLine}</Text>
+                ) : null}
               </View>
-              {profileTags.length > 0 ? (
-                <View className='profile-review__poster-tags'>
-                  {profileTags.map((item) => (
-                    <View key={item} className='profile-review__poster-tag'>
-                      <Text className='profile-review__poster-tag-text'>{item}</Text>
+            ) : null}
+
+            {intentLabels.length > 0 ? (
+              <View
+                className={`profile-review__chapter ${getStageClassName(5)}`}
+                role='group'
+                aria-label='想找'
+              >
+                <View className='profile-review__chapter-head'>
+                  <View
+                    className='profile-review__chapter-tick'
+                    aria-hidden='true'
+                    style={{ backgroundColor: archiveAccentText }}
+                  />
+                  <Text className='profile-review__chapter-title'>想找</Text>
+                </View>
+                <Text className='profile-review__intent-line'>
+                  {intentLabels.map((item) => item.label).join(' · ')}
+                </Text>
+              </View>
+            ) : null}
+
+            <View
+              className={`profile-review__chapter ${getStageClassName(6)}`}
+              role='group'
+              aria-label='兴趣热量'
+            >
+              <View className='profile-review__chapter-head'>
+                <View
+                  className='profile-review__chapter-tick'
+                  aria-hidden='true'
+                  style={{ backgroundColor: archiveAccentText }}
+                />
+                <Text className='profile-review__chapter-title'>兴趣热量</Text>
+                {entryCardInterestFacts.total > entryCardInterestFacts.items.length ? (
+                  <Text className='profile-review__chapter-meta'>
+                    共 {entryCardInterestFacts.total} 个
+                  </Text>
+                ) : null}
+              </View>
+
+              {showInterestSkeleton ? (
+                <View
+                  className='profile-review__heat-skeleton'
+                  role='status'
+                  aria-live='polite'
+                  aria-busy='true'
+                  aria-label='兴趣数据加载中'
+                >
+                  {[0, 1].map((row) => (
+                    <View
+                      key={row}
+                      className='profile-review__heat-skeleton-row'
+                      aria-hidden='true'
+                    >
+                      <View className='profile-review__heat-skeleton-label' />
+                      <View className='profile-review__heat-skeleton-track' />
                     </View>
                   ))}
                 </View>
+              ) : isInterestsError ? (
+                <View className='profile-review__heat-state' role='alert'>
+                  <Text className='profile-review__heat-state-text'>兴趣暂时没读到</Text>
+                  <View
+                    className='profile-review__heat-retry'
+                    role='button'
+                    aria-label='重试加载兴趣'
+                    hoverClass='profile-review__heat-retry--pressed'
+                    onClick={handleArchiveInterestRetry}
+                  >
+                    <Text className='profile-review__heat-retry-text'>重试</Text>
+                  </View>
+                </View>
+              ) : entryCardInterestFacts.items.length > 0 ? (
+                <View className='profile-review__heat-list' role='list'>
+                  {entryCardInterestFacts.items.map((item, index) => (
+                    <View
+                      key={item.topicId}
+                      className='profile-review__heat-row'
+                      role='listitem'
+                      aria-label={`${item.label}，${INTEREST_LEVEL_LABELS[item.level]}`}
+                    >
+                      <Text className='profile-review__heat-label'>{item.label}</Text>
+                      <View className='profile-review__heat-track' aria-hidden='true'>
+                        <View
+                          className={`profile-review__heat-fill profile-review__heat-fill--level-${item.level}${shouldReduceMotion ? ' profile-review__heat-fill--static' : ''}`}
+                          style={{ animationDelay: `${index * 60}ms` }}
+                        />
+                      </View>
+                      <Text className='profile-review__heat-level'>
+                        {INTEREST_LEVEL_LABELS[item.level]}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text className='profile-review__heat-empty'>
+                  兴趣还没标，之后可以在「我的」补充
+                </Text>
+              )}
+              {entryCardInterestFacts.items.length > 0 && interestCategoryLine ? (
+                <Text className='profile-review__heat-category'>{interestCategoryLine}</Text>
               ) : null}
             </View>
 
             {/* AI Social Tag — the first wow moment (v2: staged 3-row reveal
                 + evidence pills; legacy shape renders the single-line UI) */}
-            <View className={`profile-review__section ${getStageClassName(4)}`}>
+            <View className={`profile-review__insight-chapter ${getStageClassName(7)}`}>
               <InsightRevealCard
                 tagline={taglineV2}
                 isLoading={isTaglineLoading}
@@ -830,100 +1051,38 @@ export default function ProfileReviewPage() {
               />
             </View>
 
-          {/* Quiet secondary sharing stays inside the single entry card. */}
-          <InsightShareEntry
-            visible={insightShareVisible}
-            isGenerating={insightPosterShare.isGenerating}
-            reduceMotion={shouldReduceMotion}
-            onPress={() => {
-              void insightPosterShare.handleShare()
-            }}
-            className='profile-review__insight-share-entry'
-          />
-
-          {/* Compact profile strip (2026-11-19): the poster is a keepsake,
-              not a form. Three rows carry the strongest personal signals; the
-              full profile is one fold away in the card-back sheet
-              (ProfileArchiveSheet). Removing the old inline accordion also
-              removed the content that pushed the CTA out of the viewport. */}
-          <View className={`profile-review__summary ${getStageClassName(5)}`}>
-            <View className='profile-review__summary-row'>
-              <Text className='profile-review__summary-label'>小档案</Text>
-              <Text className='profile-review__summary-value'>
-                {[occupationLabel, currentCity].filter(Boolean).join(' · ') || '资料待补充'}
-              </Text>
+            <View className={`profile-review__card-footer ${getStageClassName(8)}`}>
+              <InsightShareEntry
+                visible={insightShareVisible}
+                variant='inline'
+                isGenerating={insightPosterShare.isGenerating}
+                reduceMotion={shouldReduceMotion}
+                onPress={() => {
+                  void insightPosterShare.handleShare()
+                }}
+                className='profile-review__share-action'
+              />
               <View
-                className='profile-review__summary-edit'
-                onClick={() => openEssentialEdit('professionalProfile')}
+                className='profile-review__archive-entry'
+                onClick={handleArchiveOpen}
+                hoverClass='profile-review__archive-entry--pressed'
                 role='button'
-                aria-label='修改小档案'
+                aria-label='翻看完整小档案'
               >
-                <Text>修改</Text>
-              </View>
-            </View>
-
-            {intentLabels.length > 0 ? (
-              <View className='profile-review__summary-row'>
-                <Text className='profile-review__summary-label'>想找</Text>
-                <View className='profile-review__summary-chips'>
-                  {intentLabels.map((item) => (
-                    <View key={item.value} className='profile-review__summary-chip'>
-                      <Text className='profile-review__summary-chip-text'>{item.label}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View
-                  className='profile-review__summary-edit'
-                  onClick={() => openEssentialEdit('intent')}
-                  role='button'
-                  aria-label='修改想找'
-                >
-                  <Text>修改</Text>
-                </View>
-              </View>
-            ) : null}
-
-            <View className='profile-review__summary-row'>
-              <Text className='profile-review__summary-label'>兴趣</Text>
-              <View className='profile-review__summary-chips'>
-                {topInterestLabels.length > 0 ? (
-                  topInterestLabels.slice(0, 3).map((label) => (
-                    <View
-                      key={label}
-                      className='profile-review__summary-chip profile-review__summary-chip--accent'
-                    >
-                      <Text className='profile-review__summary-chip-text'>{label}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text className='profile-review__summary-placeholder'>
-                    {isInterestsError
-                      ? '兴趣标签暂时不可用'
-                      : showInterestSkeleton
-                        ? '兴趣摘要整理中…'
-                        : '兴趣标签待补充，之后可在「我的」补充'}
+                <View className='profile-review__archive-entry-copy'>
+                  <Text
+                    className='profile-review__archive-entry-text'
+                    style={{ color: archiveAccentText }}
+                  >
+                    完整小档案
                   </Text>
-                )}
+                  {archiveHint ? (
+                    <Text className='profile-review__archive-hint'>{archiveHint}</Text>
+                  ) : null}
+                </View>
+                <View className='profile-review__archive-entry-fold' aria-hidden='true' />
               </View>
             </View>
-
-            {/* Dog-ear entry: a quiet paper fold, not a settings row. */}
-            <View
-              className='profile-review__archive-entry'
-              onClick={handleArchiveOpen}
-              hoverClass='profile-review__archive-entry--pressed'
-              role='button'
-              aria-label='翻看完整小档案'
-            >
-              <Text
-                className='profile-review__archive-entry-text'
-                style={{ color: archiveAccentText }}
-              >
-                完整小档案
-              </Text>
-              <View className='profile-review__archive-entry-fold' aria-hidden='true' />
-            </View>
-          </View>
 
           {isCelebrating ? (
             <View className='profile-review__completion' role='status' aria-live='polite'>
@@ -933,6 +1092,23 @@ export default function ProfileReviewPage() {
             </View>
           ) : null}
           </Card>
+
+          <View
+            className={`profile-review__purpose ${getStageClassName(8)}`}
+            role='note'
+            aria-label='入场卡用途'
+          >
+            <View className='profile-review__purpose-rule' aria-hidden='true' />
+            <View className='profile-review__purpose-copy'>
+              <Text className='profile-review__purpose-kicker'>排桌参考</Text>
+              <Text className='profile-review__purpose-text'>
+                兴趣、性格和想找，会用来帮你找到同频的一桌
+              </Text>
+              <Text className='profile-review__purpose-note'>
+                职业和背景，会用来把不同圈子的人搭在一起
+              </Text>
+            </View>
+          </View>
 
           <View className='profile-review__gift-region'>
             {welcomeCoupon ? (
@@ -1028,7 +1204,7 @@ export default function ProfileReviewPage() {
           className={[
             'profile-review__cta',
             isScrolled ? 'profile-review__cta--scrolled' : '',
-            getStageClassName(6),
+            getStageClassName(9),
           ]
             .filter(Boolean)
             .join(' ')}

@@ -7,6 +7,11 @@ export interface InsightShareEntryProps {
   isGenerating: boolean
   /** Reduced-motion: kills the busy indicator's pulse. */
   reduceMotion?: boolean
+  /**
+   * `pill` is the standalone quiet action; `inline` is a plain text action for
+   * the entry card footer (no border, no fill, flex-owned by the footer row).
+   */
+  variant?: 'pill' | 'inline'
   onPress: () => void
   className?: string
 }
@@ -24,6 +29,7 @@ export default function InsightShareEntry({
   visible,
   isGenerating,
   reduceMotion = false,
+  variant = 'pill',
   onPress,
   className = '',
 }: InsightShareEntryProps) {
@@ -33,6 +39,7 @@ export default function InsightShareEntry({
 
   const rootClass = [
     'insight-share-entry',
+    variant === 'inline' ? 'insight-share-entry--inline' : '',
     reduceMotion ? 'insight-share-entry--reduced-motion' : '',
     className,
   ]

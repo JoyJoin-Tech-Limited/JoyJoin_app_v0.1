@@ -857,4 +857,119 @@ describe('native custom tab bar behavior', () => {
       )
     })
   })
+
+  /**
+   * WeChat's documented component-creation order is
+   *   component created → component attached → component pageLifetimes.show
+   *   → Page.onLoad → Page.onShow
+   * and a hidden tab page is kept as a dangling page (outside the stack). So the
+   * tab bar's own `getCurrentPages()` read happens BEFORE the incoming page
+   * exists in the stack — it reports the tab the user is leaving. Attach/show
+   * therefore paint the OUTGOING highlight and the only remaining corrector is
+   * the page hook's bounded push. These lock the converge-after-settle backstop
+   * so a lost push cannot leave the wrong tab lit until the next re-entry.
+   */
+  describe('route-truth settle re-check', () => {
+    it('converges to the visible route when the attach read was the outgoing tab', async () => {
+      setupMocks()
+      // Mid-transition: the events page's bar mounts while the stack still
+      // reports 连接 (what the user is leaving).
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+
+      component.attached()
+      expect(component.data.selected).toBe(2)
+
+      // The page hook's publish is a bounded retry chain; when it never reaches
+      // this instance (getTabBar() late / push landed on the outgoing instance)
+      // nothing used to read the route again.
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await vi.advanceTimersByTimeAsync(400)
+
+      expect(component.data.selected).toBe(1)
+      expect(component._confirmedSelected).toBe(1)
+      expect(component.data.hidden).toBe(false)
+    })
+
+    it('converges after a mid-transition show() too (re-show, settled stack)', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      const component = await loadComponent()
+      component.attached()
+      expect(component.data.selected).toBe(1)
+
+      // Re-entry mid-transition: show() reads the tab being left and paints it.
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      component.show()
+      expect(component.data.selected).toBe(2)
+
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await vi.advanceTimersByTimeAsync(400)
+
+      expect(component.data.selected).toBe(1)
+    })
+
+    it('never lets the settle re-check overwrite a push that landed after it was armed', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      // The page hook publishes route truth while the re-check is pending.
+      component.setSelected(1)
+      // The stack is still mid-transition; a second read must not win.
+      await vi.advanceTimersByTimeAsync(400)
+
+      expect(component.data.selected).toBe(1)
+    })
+
+    it('cancels the pending settle re-check when the user taps a tab', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+      component.attached()
+      expect(component._routeRecheckTimer).not.toBeNull()
+
+      global.wx.switchTab = vi.fn()
+      component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+
+      // A tap is newer intent than the armed read; the switch's own settle path
+      // owns the highlight from here.
+      expect(component._routeRecheckTimer).toBeNull()
+    })
+
+    it('drops the pending settle re-check on detach', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      component.detached()
+      expect(component._routeRecheckTimer).toBeNull()
+
+      const setDataSpy = vi.spyOn(component, 'setData')
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await vi.advanceTimersByTimeAsync(1000)
+
+      expect(setDataSpy).not.toHaveBeenCalled()
+    })
+
+    it('drops the pending settle re-check while the page is hidden', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      component.hide()
+      expect(component._routeRecheckTimer).toBeNull()
+
+      // The stack now reports the tab the user moved TO; a hidden instance must
+      // not paint it. Its own `show` reconciles when it comes back.
+      const setDataSpy = vi.spyOn(component, 'setData')
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await vi.advanceTimersByTimeAsync(400)
+
+      expect(setDataSpy).not.toHaveBeenCalled()
+    })
+  })
 })

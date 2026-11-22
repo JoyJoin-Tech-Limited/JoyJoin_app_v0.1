@@ -5,6 +5,27 @@
 // and can read a stale `getCurrentPages()`; inside this window it defers.
 var PUSH_SETTLE_MS = 400
 
+// Settle delay before the single route re-read this component schedules after
+// its own `getCurrentPages()` read (see `_armRouteRecheck`).
+//
+// WeChat's documented creation order is: component created → component
+// attached → component `pageLifetimes.show` → Page.onLoad → Page.onShow, and a
+// hidden tab page is kept as a dangling page OUTSIDE the page stack. So both of
+// this component's own route reads run BEFORE the incoming page exists in the
+// stack, and report the tab the user is leaving — the outgoing highlight. Both
+// fire once, at the start of the transition, and never again.
+//
+// That makes the page hook's push (useCustomTabBarSync) the only corrector, and
+// that push is a bounded retry chain that can legitimately go missing (late
+// `getTabBar()`, or the platform resolving the outgoing page's instance). The
+// route therefore has to be read once more after the transition settles, which
+// is what this delay is for. Only one re-read is armed at a time, a tap or a
+// push disarms it, and it is always cleared on detach.
+//
+// 400 ms is the same transition bound PUSH_SETTLE_MS encodes; the two stay
+// separate constants because they answer different questions.
+var ROUTE_RECHECK_MS = 400
+
 // The logo settle is an app-entry brand moment, not a per-tab-page one. Each
 // tab page builds its own tab-bar instance, so without this flag the animation
 // replayed on every first visit.
@@ -56,6 +77,8 @@ Component({
   // The page owns what a re-tap means; the chrome only guarantees feedback.
   _retapHandler: null,
   _settleTimer: null,
+  // Armed by attached/show, disarmed by a tap, a route-truth push, or detach.
+  _routeRecheckTimer: null,
   // Screen-reader announcement timer
   _announcementTimer: null,
   _routeToIndex: {
@@ -188,11 +211,13 @@ Component({
       // tab page never renders an invisible bar waiting for a later callback.
       // `data.hidden` stays `true` by default, so this cannot leak the bar onto
       // non-tab routes: reconcile hides it there and leaves an unresolvable
-      // stack untouched. Trade-off vs. the old hide-only attach: this reads the
-      // same `getCurrentPages()` that can be mid-transition, so a switch may
-      // paint the outgoing tab for a frame — the page's own publish (and
-      // `pageLifetimes.show`) correct it immediately afterwards.
+      // stack untouched. Trade-off vs. the old hide-only attach: attach runs
+      // BEFORE the page's own onLoad/onShow (see ROUTE_RECHECK_MS), so this read
+      // reports the tab the user is leaving and paints it for one transition.
+      // The page's own publish is the fast correction; `_armRouteRecheck` is the
+      // one that still lands when that publish never reaches this instance.
       this._reconcileSelection()
+      this._armRouteRecheck()
 
       // Brand moment: first tab-bar instance of the session only.
       if (!hasPlayedLogoEntrance) {
@@ -234,6 +259,8 @@ Component({
       clearTimeout(this._announcementTimer)
       clearTimeout(this._switchTimer)
       clearTimeout(this._settleTimer)
+      clearTimeout(this._routeRecheckTimer)
+      this._routeRecheckTimer = null
       this._switchRequestId += 1
       this._activeSwitchRequestId = 0
       this._pendingSwitch = null
@@ -252,6 +279,16 @@ Component({
     show: function () {
       if (Date.now() - (this._lastPushAt || 0) < PUSH_SETTLE_MS) return
       this._reconcileSelection()
+      // `show` also runs BEFORE the page's onShow, and a hidden tab page is a
+      // dangling page outside the stack, so this read can belong to the
+      // transition too. Re-read once it has settled.
+      this._armRouteRecheck()
+    },
+    hide: function () {
+      // A pending settle re-read must not land while this page is hidden: by
+      // then the stack reports the tab the user moved to, and painting it here
+      // would only poison this instance's fallback selection.
+      this._disarmRouteRecheck()
     },
   },
 
@@ -366,6 +403,10 @@ Component({
       // Marks route truth as fresh for this instance: `pageLifetimes.show`
       // defers to it instead of re-reading a possibly-stale page stack.
       this._lastPushAt = Date.now()
+      // A push IS route truth, so it supersedes any settle re-read armed before
+      // it — the armed read would only re-sample a stack this push already
+      // answered.
+      this._disarmRouteRecheck()
       // No-op guard: tab switches already set selected optimistically in
       // handleTabTap/handleCenterTap. Skipping the redundant setData avoids
       // an extra native re-render (icon flicker) on every switch.
@@ -497,6 +538,11 @@ Component({
 
     _switchToIndex: function (index, url, meta) {
       if (!url || !Number.isFinite(index)) return
+
+      // A tap is newer intent than any armed settle re-read: that read would
+      // sample the tab the user is leaving while this switch is in flight. The
+      // switch's own success/watchdog path reconciles afterwards.
+      this._disarmRouteRecheck()
 
       var currentRouteIndex = this._routeToIndex[this._getCurrentRoute()]
       if (currentRouteIndex === index && !this._switchInFlight) {
@@ -677,6 +723,43 @@ Component({
       this._settleTimer = null
       if (this._isDetached) return
       this.setData({ settle: false })
+    },
+
+    /**
+     * Cancels a pending settle re-read.
+     *
+     * Called by every writer whose intent is newer than the armed read (a route
+     * push, a tab tap) and on detach, so no timer can outlive the instance or
+     * repaint a route the user has already left.
+     */
+    _disarmRouteRecheck: function () {
+      clearTimeout(this._routeRecheckTimer)
+      this._routeRecheckTimer = null
+    },
+
+    /**
+     * Arms exactly one deferred route re-read (see ROUTE_RECHECK_MS).
+     *
+     * `attached` and `pageLifetimes.show` both run before their page's onShow,
+     * so their `getCurrentPages()` read can still report the outgoing tab. The
+     * page hook's push normally corrects that immediately; this is what still
+     * converges when the push never lands on this instance.
+     *
+     * The push timestamp captured at arm time is the "no push since" token: if
+     * `_lastPushAt` moved, a push landed after this read was scheduled and is
+     * fresher than it, so the re-read is skipped instead of overwriting route
+     * truth.
+     */
+    _armRouteRecheck: function () {
+      var self = this
+      this._disarmRouteRecheck()
+      var pushToken = this._lastPushAt || 0
+      this._routeRecheckTimer = setTimeout(function () {
+        self._routeRecheckTimer = null
+        if (self._isDetached) return
+        if ((self._lastPushAt || 0) !== pushToken) return
+        self._reconcileSelection()
+      }, ROUTE_RECHECK_MS)
     },
 
     /**

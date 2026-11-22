@@ -83,10 +83,12 @@ describe('mini-program onboarding page transitions', () => {
 
     // The action bar must be a sibling after the ScrollView, never inside it.
     expect(view.indexOf('</ScrollView>')).toBeLessThan(view.indexOf('profile-review__cta'))
-    // The old inline accordion is gone; the compact strip is always visible,
-    // with a dog-ear entry into the card-back archive sheet.
+    // The old inline accordion and the flat summary strip are gone; the card
+    // face is now chapter-based (小档案 / 想找 / 兴趣热量), with a dog-ear
+    // entry into the card-back archive sheet.
     expect(view).not.toContain('isSummaryExpanded')
-    expect(view).toContain('profile-review__summary-row')
+    expect(view).toContain('profile-review__chapter-title')
+    expect(view).toContain('profile-review__heat-list')
     expect(view).toContain('profile-review__archive-entry')
     expect(view).toContain('ProfileArchiveSheet')
     expect(style).toContain('profile-review__archive-entry')

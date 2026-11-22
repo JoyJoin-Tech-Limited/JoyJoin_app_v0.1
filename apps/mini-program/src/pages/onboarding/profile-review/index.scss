@@ -91,6 +91,18 @@
     &--6.profile-review__stage--visible {
       animation-delay: 0.32s;
     }
+
+    &--7.profile-review__stage--visible {
+      animation-delay: 0.38s;
+    }
+
+    &--8.profile-review__stage--visible {
+      animation-delay: 0.44s;
+    }
+
+    &--9.profile-review__stage--visible {
+      animation-delay: 0.5s;
+    }
   }
 
   &__welcome-illustration {
@@ -241,133 +253,365 @@
     animation-delay: 2.6s;
   }
 
-  &__stamp {
-    position: absolute;
-    top: $spacing-md;
-    right: $spacing-md;
-    z-index: 3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    // AC-21①: vanity metric demoted — 96rpx and the tertiary ink family, so
-    // it is no longer the page's highest-chroma element. Rotation kept.
-    width: 96rpx;
-    height: 96rpx;
-    border-radius: 50%;
-    background: rgba($color-text-tertiary, 0.08);
-    border: 2rpx dashed rgba($color-text-tertiary, 0.34);
-    transform: rotate(12deg);
-  }
-
-  &__stamp-text {
-    display: block;
-    width: 80rpx;
-    padding: 0 $spacing-xs;
-    font-size: $font-size-2xs;
-    font-weight: $font-weight-bold;
-    color: $color-text-tertiary;
-    line-height: 1.4;
-    text-align: center;
-    word-break: keep-all;
-    overflow-wrap: break-word;
-  }
-
-  &__poster-header {
+  // ─── Identity (name, one meta run, archetype seal + rarity) ───────────────
+  &__identity {
     position: relative;
     z-index: 2;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
     padding: $spacing-md $spacing-md $spacing-sm;
-    padding-right: 140rpx; // keep poster text clear of the absolute 96rpx stamp
     text-align: left;
-  }
-
-  &__poster-header-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $spacing-sm;
-    width: 100%;
   }
 
   &__poster-name {
     display: block;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-black;
+    font-family: $font-cn-display;
+    font-size: 48rpx;
+    font-weight: $font-weight-bold;
     color: $color-text-primary;
-    line-height: 1.4;
+    line-height: 1.3;
     word-break: keep-all;
     overflow-wrap: break-word;
   }
 
-  &__poster-archetype {
+  &__identity-meta {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.5;
+  }
+
+  &__identity-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    min-height: 40rpx;
+    margin-top: $spacing-sm;
+  }
+
+  &__archetype-seal {
     display: inline-flex;
     align-items: center;
+    max-width: 60%;
     padding: 4rpx $spacing-sm;
     border-radius: $radius-pill;
     border: 2rpx solid transparent;
-    flex-shrink: 0;
-  }
-
-  &__poster-archetype-text {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__poster-tags {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: $spacing-xs;
-    margin-top: $spacing-xs;
-    width: 100%;
-  }
-
-  &__poster-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 4rpx $spacing-sm;
-    border-radius: $radius-pill;
-    background: rgba($color-primary-light, 0.5);
-    border: 2rpx solid rgba($color-secondary, 0.12);
-    max-width: 100%;
     overflow: hidden;
   }
 
-  &__poster-tag-text {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
+  &__archetype-seal-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  &__section {
+  &__rarity {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6rpx;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  &__rarity-label {
+    font-size: $font-size-2xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.4;
+  }
+
+  &__rarity-value {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary-on-light;
+    line-height: 1.4;
+  }
+
+  // ─── Chapters (小档案 / 想找 / 兴趣热量) ─────────────────────────────────
+  // Facts before inference: the self-declared profile is the first thing a
+  // reader sees, and 悦仔的观察 follows it. One 32rpx accent tick marks each
+  // chapter; no full-width rules inside the card.
+  &__chapter {
     position: relative;
     z-index: 2;
-    padding: $spacing-sm $spacing-md;
+    padding: $spacing-lg $spacing-md 0;
     text-align: left;
+  }
 
-    & + & {
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: $spacing-md;
-        right: $spacing-md;
-        height: 0;
-        border-top: 2rpx dashed rgba($color-border, 0.6);
-      }
+  &__chapter-head {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 40rpx;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__chapter-tick {
+    width: 24rpx;
+    height: 24rpx;
+    padding-right: 20rpx;
+    box-sizing: border-box;
+    background-clip: content-box;
+    flex-shrink: 0;
+    border-radius: 2rpx;
+  }
+
+  &__chapter-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.4;
+  }
+
+  &__chapter-action {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 88rpx;
+    min-height: 88rpx;
+    margin: (-$spacing-md) 0 (-$spacing-md) auto;
+    padding-left: $spacing-sm;
+    transition: opacity 0.16s ease;
+
+    &--pressed {
+      opacity: 0.64;
     }
   }
 
+  &__chapter-action-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.4;
+  }
+
+  &__chapter-meta {
+    margin-left: auto;
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.4;
+  }
+
+  &__role-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8rpx;
+  }
+
+  &__role-primary {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+  }
+
+  &__role-divider {
+    font-size: $font-size-base;
+    color: $color-text-secondary-on-light;
+    line-height: 1.4;
+  }
+
+  &__role-secondary {
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-on-light;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+  }
+
+  &__profile-meta {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.5;
+  }
+
+  &__intent-line {
+    display: -webkit-box;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  // ─── Interest heat ────────────────────────────────────────────────────────
+  &__heat-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__heat-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 48rpx;
+  }
+
+  &__heat-label {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__heat-track {
+    position: relative;
+    width: 120rpx;
+    height: 8rpx;
+    flex-shrink: 0;
+    border-radius: 4rpx;
+    background: rgba($color-text-primary, 0.08);
+    overflow: hidden;
+  }
+
+  &__heat-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: 4rpx;
+    transform-origin: left center;
+    animation: profile-review-heat-grow 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--level-1 {
+      width: 33.333%;
+      background: #a78bfa;
+    }
+
+    &--level-2 {
+      width: 66.666%;
+      background: #8b5cf6;
+    }
+
+    &--level-3 {
+      width: 100%;
+      background: #f97316;
+    }
+
+    &--static {
+      animation: none;
+      transform: none;
+    }
+  }
+
+  &__heat-level {
+    flex: 0 0 88rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.4;
+    text-align: right;
+  }
+
+  &__heat-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__heat-skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 48rpx;
+  }
+
+  &__heat-skeleton-label {
+    width: 160rpx;
+    height: 24rpx;
+    border-radius: 4rpx;
+    background: rgba($color-text-primary, 0.06);
+  }
+
+  &__heat-skeleton-track {
+    width: 120rpx;
+    height: 8rpx;
+    border-radius: 4rpx;
+    background: rgba($color-text-primary, 0.06);
+  }
+
+  &__heat-state {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 88rpx;
+  }
+
+  &__heat-state-text {
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.5;
+  }
+
+  &__heat-retry {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 88rpx;
+    min-height: 88rpx;
+    transition: opacity 0.16s ease;
+
+    &--pressed {
+      opacity: 0.64;
+    }
+  }
+
+  &__heat-retry-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    line-height: 1.4;
+  }
+
+  &__heat-empty {
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.5;
+  }
+
+  // ─── Insight chapter (the card's one white island) ───────────────────────
+  &__personality-line {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__heat-category {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__insight-chapter {
+    position: relative;
+    z-index: 2;
+    padding: $spacing-lg $spacing-md 0;
+    text-align: left;
+  }
+
+  // Still rendered by InsightRevealCard (legacy + v2 share this section head).
   &__section-label {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
     flex-wrap: wrap;
-    margin-bottom: $spacing-xs;
+    min-height: 40rpx;
+    margin-bottom: $spacing-sm;
     color: $color-primary;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
@@ -392,111 +636,72 @@
     line-height: 1.4;
   }
 
-  // ─── Compact profile strip (2026-11-19) ──────────────────────────────────
-  // Three rows of the strongest personal signals; the full profile remains in
-  // 「我的」 after completion. The old inline accordion competed with the CTA
-  // and pushed it out of the viewport on short screens.
-  &__summary {
+  // ─── Card footer: save the card + the fold into its back side ────────────
+  &__card-footer {
     display: flex;
-    flex-direction: column;
-    padding: $spacing-xs $spacing-md 0;
-    margin: 0;
-    border-top: 2rpx dashed rgba($color-border, 0.6);
-    background: transparent;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    padding: $spacing-lg $spacing-md $spacing-md;
   }
 
-  &__summary-row {
+  &__share-action {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__purpose {
     display: flex;
     align-items: flex-start;
-    gap: $spacing-sm;
-    min-height: 88rpx;
-    padding: $spacing-xs 0;
-
-    & + & {
-      border-top: 1rpx solid rgba($color-border, 0.5);
-    }
+    gap: $spacing-xs;
+    margin: 0 0 $spacing-sm;
+    padding: 0 0 0 $spacing-sm;
   }
 
-  &__summary-label {
-    flex: 0 0 88rpx;
-    padding-top: 4rpx;
+  &__purpose-rule {
+    width: 4rpx;
+    align-self: stretch;
+    border-radius: 2rpx;
+    background: rgba($color-primary, 0.32);
+  }
+
+  &__purpose-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__purpose-kicker {
+    display: block;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
-    color: $color-text-tertiary-on-light;
-    line-height: 1.5;
-  }
-
-  &__summary-value {
-    flex: 1;
-    min-width: 0;
-    font-size: $font-size-sm;
-    color: $color-text-primary;
-    line-height: 1.5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__summary-edit {
-    display: flex;
-    flex: 0 0 auto;
-    align-self: stretch;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 88rpx;
-    min-height: 88rpx;
-    padding-left: $spacing-xs;
-    font-size: $font-size-xs;
-    color: $color-text-tertiary-on-light;
-    line-height: 1.5;
-  }
-
-  &__summary-chips {
-    display: flex;
-    flex: 1;
-    flex-wrap: wrap;
-    gap: $spacing-xs;
-    min-width: 0;
-  }
-
-  &__summary-chip {
-    display: inline-flex;
-    align-items: center;
-    min-height: 48rpx;
-    padding: 0 $spacing-sm;
-    border-radius: $radius-pill;
-    background: rgba($color-primary, 0.06);
-  }
-
-  &__summary-chip--accent {
-    background: rgba($color-primary, 0.1);
-  }
-
-  &__summary-chip-text {
-    font-size: $font-size-xs;
-    color: $color-text-primary;
+    color: $color-text-secondary-on-light;
     line-height: 1.4;
   }
 
-  &__summary-placeholder {
-    padding-top: 4rpx;
+  &__purpose-text {
+    display: block;
+    margin-top: 4rpx;
     font-size: $font-size-xs;
-    color: $color-text-tertiary-on-light;
+    color: $color-text-primary;
     line-height: 1.5;
   }
 
-  // Quiet dog-ear entry into the card-back archive. The fold is a clipped
-  // triangle, not a pill: the card physically has another side. The negative
-  // right margin pulls the fold to the poster's actual edge so the rounded
-  // corner clips it into a real paper corner.
+  &__purpose-note {
+    display: block;
+    margin-top: 4rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.5;
+  }
+
   &__archive-entry {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: flex-end;
     gap: 8rpx;
     min-height: 88rpx;
     margin-right: -$spacing-md;
-    padding: $spacing-xs 0 0;
+    padding-left: $spacing-sm;
     border-radius: 0 0 $card-radius-lg 0;
     transition: background-color 0.16s ease;
 
@@ -514,14 +719,26 @@
     }
   }
 
+  &__archive-entry-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4rpx;
+  }
+
   &__archive-entry-text {
-    font-size: 26rpx;
-    font-weight: $font-weight-semibold;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
     // Inline archiveAccentText overrides this to inherit the card's accent.
-    color: $color-text-tertiary-on-light;
+    color: $color-text-secondary-on-light;
     line-height: 1.4;
-    padding-bottom: 4rpx;
     transition: opacity 0.16s ease, color 0.16s ease;
+  }
+
+  &__archive-hint {
+    font-size: $font-size-xs;
+    color: $color-text-secondary-on-light;
+    line-height: 1.4;
   }
 
   &__archive-entry-fold {
@@ -1141,6 +1358,16 @@
 
   100% {
     transform: translateX(150%);
+  }
+}
+
+@keyframes profile-review-heat-grow {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
   }
 }
 
