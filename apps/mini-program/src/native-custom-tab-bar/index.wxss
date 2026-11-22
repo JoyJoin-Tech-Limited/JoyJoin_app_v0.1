@@ -104,28 +104,10 @@
 }
 
 .joy-custom-tab-bar__item-icon {
-  width: 42rpx;
-  height: 42rpx;
+  width: 48rpx;
+  height: 48rpx;
   /* No opacity multiplier: the *_inactive.png artwork is already muted. Stacking
      a 0.5 multiply on it dropped primary navigation below the 3:1 floor. */
-}
-
-/* Selected variant is stacked on top of the inactive icon and revealed via
-   opacity only — no src swap, no image re-decode on tab switch. */
-.joy-custom-tab-bar__item-icon--overlay {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-}
-
-.joy-custom-tab-bar__item-icon--off {
-  opacity: 0;
-}
-
-.joy-custom-tab-bar__item-icon--on {
-  opacity: 1;
 }
 
 .joy-custom-tab-bar__item-label {
@@ -399,8 +381,8 @@
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center-badge {
   animation: none !important;
 }
-/* Scoped to non-stacked images only: a blanket `image { opacity: 1 }` would
-   reveal both stacked tab icons at once and break the crossfade overlay. */
+/* Scoped to non-icon images only: a blanket `image { opacity: 1 }` would
+   override the reduced-state artwork the icon art already encodes. */
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__bg,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center-logo {
   animation: none !important;
@@ -447,9 +429,8 @@
   .joy-custom-tab-bar__center-button {
     transition: none !important;
   }
-  /* Kill the crossfade ANIMATION only — never force opacity here. Each tab
-     mounts two stacked icons (base + --overlay) and toggles visibility via
-     opacity; forcing opacity: 1 renders both variants at once. */
+  /* Reduced motion: never touch opacity here. Selection is a src swap, and a
+     forced opacity would flatten the press-feedback dimming above. */
   .joy-custom-tab-bar__item-icon,
   .joy-custom-tab-bar__center-logo {
     animation: none !important;

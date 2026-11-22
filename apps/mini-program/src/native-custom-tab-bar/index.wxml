@@ -28,16 +28,14 @@
           aria-pressed="{{selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
-            <!-- Dual-icon crossfade: both icons stay mounted so selection
-                 toggles opacity instead of swapping src (no PNG re-decode flash). -->
+            <!-- Single icon, src swapped on selection. The previous dual-icon
+                 opacity crossfade left the selected tab showing the muted
+                 artwork on real devices (the stacked, absolutely positioned
+                 overlay never painted), so selection is expressed by the src
+                 itself — the one thing the WeChat renderer has always honoured. -->
             <image
-              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--off' : ''}}"
-              src="{{item.icon}}"
-              mode="aspectFit"
-            />
-            <image
-              class="joy-custom-tab-bar__item-icon joy-custom-tab-bar__item-icon--overlay {{selected === item.index ? 'joy-custom-tab-bar__item-icon--on' : ''}}"
-              src="{{item.selectedIcon}}"
+              class="joy-custom-tab-bar__item-icon"
+              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
             />
             <view
@@ -84,13 +82,8 @@
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
             <image
-              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--off' : ''}}"
-              src="{{item.icon}}"
-              mode="aspectFit"
-            />
-            <image
-              class="joy-custom-tab-bar__item-icon joy-custom-tab-bar__item-icon--overlay {{selected === item.index ? 'joy-custom-tab-bar__item-icon--on' : ''}}"
-              src="{{item.selectedIcon}}"
+              class="joy-custom-tab-bar__item-icon"
+              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
             />
             <view

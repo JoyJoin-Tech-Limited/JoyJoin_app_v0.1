@@ -76,14 +76,15 @@ describe('native custom tab bar structure', () => {
     expect(wxml).toContain('aria-pressed="{{selected === 4}}"')
   })
 
-  it('uses stacked dual icons with opacity toggle (no src swap on selection)', () => {
-    // Swapping <image src> on selection forces a PNG re-decode and visibly
-    // flickers on every tab switch. Both icons must stay mounted; selection
-    // toggles opacity via the overlay modifier classes.
-    expect(wxml).not.toContain('selected === item.index ? item.selectedIcon : item.icon')
-    expect(wxml).toContain('joy-custom-tab-bar__item-icon--overlay')
-    expect(wxml).toContain("src=\"{{item.icon}}\"")
-    expect(wxml).toContain("src=\"{{item.selectedIcon}}\"")
+  it('renders one icon per tab and swaps its src on selection', () => {
+    // 2026-11-22: the stacked dual-icon opacity crossfade left the selected
+    // tab showing the muted artwork on real devices — the absolutely
+    // positioned overlay variant never painted. Selection is expressed by the
+    // src binding alone now; one icon per tab, no overlay layer.
+    expect(wxml).toContain('selected === item.index ? item.selectedIcon : item.icon')
+    expect(wxml).not.toContain('joy-custom-tab-bar__item-icon--overlay')
+    expect(wxml).not.toContain('joy-custom-tab-bar__item-icon--off')
+    expect(wxml).not.toContain('joy-custom-tab-bar__item-icon--on')
   })
 })
 

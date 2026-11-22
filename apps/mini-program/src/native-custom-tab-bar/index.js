@@ -277,8 +277,13 @@ Component({
     // recent push wins. With no recent push this covers swipe-back, deep links,
     // and re-attach, where no hook runs at all.
     show: function () {
-      if (Date.now() - (this._lastPushAt || 0) < PUSH_SETTLE_MS) return
-      this._reconcileSelection()
+      // A recent push proves SOME instance was published, not that this one was:
+      // the hook resolves its tab bar from a page that may still be
+      // mid-transition. So it skips the immediate read only — never the settle
+      // re-read, which is what converges an instance the push missed.
+      if (Date.now() - (this._lastPushAt || 0) >= PUSH_SETTLE_MS) {
+        this._reconcileSelection()
+      }
       // `show` also runs BEFORE the page's onShow, and a hidden tab page is a
       // dangling page outside the stack, so this read can belong to the
       // transition too. Re-read once it has settled.
@@ -403,10 +408,14 @@ Component({
       // Marks route truth as fresh for this instance: `pageLifetimes.show`
       // defers to it instead of re-reading a possibly-stale page stack.
       this._lastPushAt = Date.now()
-      // A push IS route truth, so it supersedes any settle re-read armed before
-      // it — the armed read would only re-sample a stack this push already
-      // answered.
-      this._disarmRouteRecheck()
+      // A push usually IS route truth, but the hook resolves its tab bar from a
+      // page that can still be mid-transition, so the index that lands here can
+      // be stale for this instance. Cancelling the settle re-read made that
+      // stale index permanent — the icon stayed unlit on the page the user was
+      // already sitting on until they tapped that tab again (2026-11-22).
+      // Re-arming keeps the read: it is derived from the route, so it can only
+      // be as stale as the page stack, never staler than the push.
+      this._armRouteRecheck()
       // No-op guard: tab switches already set selected optimistically in
       // handleTabTap/handleCenterTap. Skipping the redundant setData avoids
       // an extra native re-render (icon flicker) on every switch.
@@ -745,19 +754,18 @@ Component({
      * page hook's push normally corrects that immediately; this is what still
      * converges when the push never lands on this instance.
      *
-     * The push timestamp captured at arm time is the "no push since" token: if
-     * `_lastPushAt` moved, a push landed after this read was scheduled and is
-     * fresher than it, so the re-read is skipped instead of overwriting route
-     * truth.
+     * Always re-read, even if a push landed after this was armed: `selected` is
+     * derived from the route, so this read can never be older truth than a push.
+     * Skipping it let a stale push become permanent — the icon stayed unlit on a
+     * page the user was already sitting on until they tapped that tab again
+     * (2026-11-22 report).
      */
     _armRouteRecheck: function () {
       var self = this
       this._disarmRouteRecheck()
-      var pushToken = this._lastPushAt || 0
       this._routeRecheckTimer = setTimeout(function () {
         self._routeRecheckTimer = null
         if (self._isDetached) return
-        if ((self._lastPushAt || 0) !== pushToken) return
         self._reconcileSelection()
       }, ROUTE_RECHECK_MS)
     },

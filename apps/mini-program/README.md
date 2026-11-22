@@ -353,7 +353,7 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 | **Accessibility** | Hidden `aria-live="polite"` region announces tab switches ("已切换到发现"). Tab items use `role="button"`, `aria-label`, `aria-pressed` |
 | **Offline resilience** | `wx.getNetworkType` initial read + `wx.onNetworkStatusChange` listener; `syncState` skipped when offline to avoid stale badge counts and replayed on reconnect |
 | **setSelected no-op guard (2026-07-24)** | `setSelected` skips `setData` when already selected + visible, preventing redundant re-renders on same-tab taps |
-| **Dual-icon crossfade (2026-07-24)** | Each tab mounts both icons; opacity toggles instead of `src` swap, eliminating the PNG re-decode flash from WeChat's image cache |
+| **Single-icon src swap (2026-11-22)** | Each tab mounts ONE `<image>`; `src` switches between `icon` and `selectedIcon`. Replaced the 2026-07-24 dual-icon opacity crossfade, whose stacked overlay never painted on device |
 
 ---
 

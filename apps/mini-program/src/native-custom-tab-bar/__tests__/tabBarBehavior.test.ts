@@ -909,15 +909,42 @@ describe('native custom tab bar behavior', () => {
       expect(component.data.selected).toBe(1)
     })
 
-    it('never lets the settle re-check overwrite a push that landed after it was armed', async () => {
+    it('heals a stale push at settle instead of letting it become permanent', async () => {
       setupMocks()
       global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
       const component = await loadComponent()
       component.attached()
 
-      // The page hook publishes route truth while the re-check is pending.
-      component.setSelected(1)
-      // The stack is still mid-transition; a second read must not win.
+      // The stack has already settled on 足迹, but the hook resolved its tab bar
+      // from a page still mid-transition and published 发现 for this instance.
+      // Cancelling the settle read here (2026-11-22 report) made that stale
+      // index permanent — the icon stayed unlit on the page the user was
+      // already sitting on until they tapped the tab a second time.
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      component.setSelected(0)
+      expect(component.data.selected).toBe(0)
+      expect(component._routeRecheckTimer).not.toBeNull()
+
+      await vi.advanceTimersByTimeAsync(400)
+
+      expect(component.data.selected).toBe(1)
+      expect(component._confirmedSelected).toBe(1)
+    })
+
+    it('still arms the settle re-check when show() is inside the push window', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      // A recent push only justifies skipping the IMMEDIATE read: it proves
+      // some instance was published, not that this one was.
+      component.setSelected(2)
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      component.show()
+      expect(component.data.selected).toBe(2)
+      expect(component._routeRecheckTimer).not.toBeNull()
+
       await vi.advanceTimersByTimeAsync(400)
 
       expect(component.data.selected).toBe(1)
