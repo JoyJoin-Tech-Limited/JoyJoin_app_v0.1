@@ -40,6 +40,14 @@ services:
     build:
       context: ..
       dockerfile: apps/server/Dockerfile
+      # Reuse the base/deps layers already present in the running image. The
+      # first on-host build pays for apk + npm ci; later releases only rebuild
+      # the small server dist layer.
+      cache_from:
+        - deployment-joyjoin-api:latest
+      args:
+        # On-host builds run in Guangzhou; the upstream Alpine CDN is slow there.
+        APK_MIRROR: ${APK_MIRROR:-mirrors.tencent.com}
     container_name: joyjoin-api
     restart: unless-stopped
     depends_on:
@@ -69,6 +77,10 @@ services:
     build:
       context: ..
       dockerfile: apps/admin-client/Dockerfile
+      # Admin's final image is nginx + dist; reuse it when the builder output
+      # is unchanged so a release does not re-run a full Vite build needlessly.
+      cache_from:
+        - deployment-joyjoin-admin:latest
     container_name: joyjoin-admin
     restart: unless-stopped
     ports:

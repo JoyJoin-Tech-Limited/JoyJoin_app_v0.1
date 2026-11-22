@@ -457,28 +457,27 @@ echo "🐳 Restarting application containers (database remains untouched)..."
 cd ~/JoyJoin/deployment
 disk_guard
 
-# 2026-08-20: registry-image delivery — production API/Admin images are built
-# and pushed to GHCR on the GitHub runner (deploy-production.yml build-images),
-# pulled here, and retagged to the compose refs. The CVM never compiles.
-# Falls back to the legacy on-box `--build` when the workflow did not supply
-# registry refs/token (e.g. GHCR_TOKEN unavailable for the prod environment).
+# Resolve the exact compose image refs (implicit <project>-<service> tags)
+# instead of hardcoding them, so a compose rename cannot silently diverge.
+mapfile -t COMPOSE_IMAGES < <(docker compose -f docker-compose.nginx.yml config --images)
+PROD_API_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | grep 'joyjoin-api$' | head -1)"
+PROD_ADMIN_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | grep 'joyjoin-admin$' | head -1)"
+if [[ -z "${PROD_API_REF:-}" || -z "${PROD_ADMIN_REF:-}" ]]; then
+  echo "❌ Could not resolve compose image refs for production delivery."
+  exit 1
+fi
+
+# 2026-11-22: production images are built on this host. CI used to build and
+# push to GHCR, but cross-Pacific pulls timed out (>3h) and a direct SSH image
+# stream exceeded the build-job budget. Compose cache_from reuses the running
+# image's base/deps layers, so a release normally only compiles the changed
+# server/admin layer. A registry-delivery path remains for manual/emergency
+# use when PROD_IMAGES_READY=true and image refs/token are supplied.
 if [[ "${PROD_IMAGES_READY:-false}" == "true" \
       && -n "${PROD_API_IMAGE:-}" && -n "${PROD_ADMIN_IMAGE:-}" && -n "${GHCR_TOKEN:-}" ]]; then
-  # Resolve the exact compose image refs (implicit <project>-<service> tags)
-  # instead of hardcoding them, so a compose rename cannot silently diverge.
-  mapfile -t COMPOSE_IMAGES < <(docker compose -f docker-compose.nginx.yml config --images)
-  PROD_API_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | grep 'joyjoin-api$' | head -1)"
-  PROD_ADMIN_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | grep 'joyjoin-admin$' | head -1)"
-  if [[ -z "${PROD_API_REF:-}" || -z "${PROD_ADMIN_REF:-}" ]]; then
-    echo "❌ Could not resolve compose image refs for registry delivery."
-    exit 1
-  fi
   echo "   API image   → $PROD_API_REF ($PROD_API_IMAGE)"
   echo "   Admin image → $PROD_ADMIN_REF ($PROD_ADMIN_IMAGE)"
 
-  # 2026-11-21: the build job streams these images directly to this host over
-  # SSH (GHCR pulls took >3h and timed out). If both refs are already local,
-  # skip the registry pull entirely; otherwise fall back to GHCR.
   if docker image inspect "$PROD_API_IMAGE" >/dev/null 2>&1 \
       && docker image inspect "$PROD_ADMIN_IMAGE" >/dev/null 2>&1; then
     echo "📦 Registry images already present on this host; skipping GHCR pull."
@@ -514,8 +513,29 @@ if [[ "${PROD_IMAGES_READY:-false}" == "true" \
 
   retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --no-deps joyjoin-api joyjoin-admin
 else
-  echo "🏗️ Legacy delivery: building production images on-box..."
-  retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --no-deps joyjoin-api joyjoin-admin
+  echo "🏗️ On-host build: building production API image (incremental)..."
+  if ! retry_command 3 15 docker compose -f docker-compose.nginx.yml build joyjoin-api; then
+    echo "❌ API image build failed; the previous release keeps serving traffic."
+    exit 1
+  fi
+  echo "🏗️ On-host build: building production Admin image..."
+  if ! retry_command 3 15 docker compose -f docker-compose.nginx.yml build joyjoin-admin; then
+    echo "❌ Admin image build failed; the previous release keeps serving traffic."
+    exit 1
+  fi
+
+  # Same runtime dependency guard as the registry path. Building on-host does
+  # not make the image structurally safer; check before switching traffic.
+  if ! docker run --rm -w /app/apps/server --entrypoint node "$PROD_API_REF" \
+      --input-type=module -e "await import('drizzle-orm');" >/dev/null 2>&1; then
+    echo "❌ New API image cannot resolve its runtime dependencies (drizzle-orm)."
+    echo "   Refusing to switch: the previous release keeps serving traffic."
+    echo "   Image: $PROD_API_REF"
+    exit 1
+  fi
+  echo "   ✅ New API image passed the runtime import check"
+
+  retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --no-deps joyjoin-api joyjoin-admin
 fi
 
 # granite-embedding only changes when deploy/granite-embedding/** changes, but rebuilding it on

@@ -21,6 +21,13 @@ FROM node:20-alpine AS base
 ENV NODE_ENV=production
 ENV PORT=5000
 
+# In-region builds (Lighthouse) use a nearby Alpine mirror; the default keeps
+# GitHub-hosted builds on the upstream CDN. `apk add` fetches 100+ packages for
+# font-noto-cjk/ffmpeg, so the mirror choice is the difference between ~10s and
+# a multi-minute stall.
+ARG APK_MIRROR=dl-cdn.alpinelinux.org
+RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories
+
 # CJK fonts for headless canvas rendering (moment-card PNG). Without these,
 # Chinese text renders as boxes (see lib/momentCardRenderer.ts font scan).
 # ffmpeg for the animated share-clip composition (lib/shareClipRenderer.ts,

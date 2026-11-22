@@ -11,9 +11,6 @@ concurrency:
 
 permissions:
   contents: read
-  # build-images pushes the production API/Admin images to GHCR from the runner.
-  # The CVM only pulls completed images, mirroring the staging delivery model.
-  packages: write
 
 jobs:
   # When production releases the same commit that already passed the full
@@ -50,129 +47,22 @@ jobs:
     uses: ./.github/workflows/quality-gates.yml
     secrets: inherit
 
-  # Build production images on the GitHub runner and push to GHCR (same model
-  # as staging). The CVM never compiles. Falls back to the legacy on-box build
-  # when GHCR_TOKEN is unavailable for the production environment.
-  build-images:
-    name: Build Production Images
-    needs: [check-prior-gates]
-    if: needs.check-prior-gates.result == 'success'
-    runs-on: ubuntu-latest
-    # 2026-11-21: raised from 35m. The build now streams the images directly
-    # to the CVM in this job (GHCR pull from the CVM proved unusably slow).
-    timeout-minutes: 60
-    outputs:
-      api_image: ${{ steps.refs.outputs.api_image }}
-      admin_image: ${{ steps.refs.outputs.admin_image }}
-      images_ready: ${{ steps.refs.outputs.images_ready }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Compute image refs and registry readiness
-        id: refs
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${GHCR_TOKEN:-}" ]; then
-            echo "::warning::GHCR_TOKEN is unavailable for this environment; falling back to the legacy on-box build."
-            echo "images_ready=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "images_ready=true" >> "$GITHUB_OUTPUT"
-          echo "api_image=ghcr.io/joyjoin-tech-limited/joyjoin-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          echo "admin_image=ghcr.io/joyjoin-tech-limited/joyjoin-admin:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to GitHub Container Registry
-        if: steps.refs.outputs.images_ready == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push production API image
-        if: steps.refs.outputs.images_ready == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/server/Dockerfile
-          push: true
-          load: true
-          tags: ghcr.io/joyjoin-tech-limited/joyjoin-api:${{ github.sha }}
-          cache-from: type=gha,scope=joyjoin-prod-api
-          cache-to: type=gha,mode=max,scope=joyjoin-prod-api
-
-      - name: Build and push production Admin image
-        if: steps.refs.outputs.images_ready == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/admin-client/Dockerfile
-          push: true
-          load: true
-          tags: ghcr.io/joyjoin-tech-limited/joyjoin-admin:${{ github.sha }}
-          cache-from: type=gha,scope=joyjoin-prod-admin
-          cache-to: type=gha,mode=max,scope=joyjoin-prod-admin
-
-      # GHCR pulls from the Lighthouse host took >3h and timed out (2026-11-21).
-      # Stream the freshly built images over SSH instead. The deploy job then
-      # finds them in the local Docker store and skips its GHCR pull.
-      - name: Stream production images to the CVM
-        if: steps.refs.outputs.images_ready == 'true'
-        env:
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          PROD_API_IMAGE: ${{ steps.refs.outputs.api_image }}
-          PROD_ADMIN_IMAGE: ${{ steps.refs.outputs.admin_image }}
-        run: |
-          set -euo pipefail
-          install -m 700 -d "$HOME/.ssh"
-          KEY_FILE="$HOME/.ssh/joyjoin_deploy"
-          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_FILE"
-          chmod 600 "$KEY_FILE"
-          printf '%s ssh-ed25519 %s\n' \
-            "$SERVER_IP" \
-            'AAAAC3NzaC1lZDI1NTE5AAAAIAYzz3j8ECoBBxvAUCs1DVMa0RjZtILnSje7m+FWjqKh' \
-            > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/known_hosts"
-          SSH_OPTS=(
-            -i "$KEY_FILE"
-            -o BatchMode=yes
-            -o IdentitiesOnly=yes
-            -o StrictHostKeyChecking=yes
-            -o "UserKnownHostsFile=$HOME/.ssh/known_hosts"
-            -o ConnectTimeout=20
-            -o ServerAliveInterval=15
-            -o ServerAliveCountMax=4
-          )
-          echo "Streaming $PROD_API_IMAGE and $PROD_ADMIN_IMAGE to $SERVER_IP"
-          docker save "$PROD_API_IMAGE" "$PROD_ADMIN_IMAGE" \
-            | gzip -1 \
-            | ssh "${SSH_OPTS[@]}" "$SERVER_USER@$SERVER_IP" 'gunzip | docker load'
-          echo "Image stream complete."
-
   deploy-production:
     name: Production Deployment
-    needs: [check-prior-gates, quality-gates, build-images]
+    needs: [check-prior-gates, quality-gates]
     if: >-
       always() &&
       needs.check-prior-gates.result == 'success' &&
-      (needs.quality-gates.result == 'success' || needs.quality-gates.result == 'skipped') &&
-      needs.build-images.result == 'success'
+      (needs.quality-gates.result == 'success' || needs.quality-gates.result == 'skipped')
     concurrency:
       group: joyjoin-cvm-remote
       queue: max
       cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: production
-    # 2026-11-20: raised from 90m. The pre-warm step above may legitimately need
-    # up to 180 minutes to move ~515 MB across the Pacific; a 90m ceiling aborted
-    # a healthy release mid-pull on 2026-11-17.
+    # 2026-11-22: production images are built on the host with compose cache_from.
+    # Keep this ceiling generous for a cold build (first release after a base or
+    # dependency change), but normal incremental builds finish in ~2-3 minutes.
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
@@ -276,56 +166,10 @@ jobs:
           echo "WECHAT_PAY_PRIVATE_KEY_B64=$PRIVATE_KEY_B64" >> "$GITHUB_ENV"
           echo "WECHAT_PAY_PLATFORM_CERT_B64=$PLATFORM_CERT_B64" >> "$GITHUB_ENV"
 
-      # 2026-11-20: the remote script pulls each image with `retry_command 5 15
-      # timeout 12m docker pull`, i.e. up to 60 minutes per image, while this job
-      # had a 90 minute ceiling — arithmetically impossible to satisfy when the
-      # cross-Pacific transfer is slow, which is exactly what happened on
-      # 2026-11-17: five attempts, all killed at 12m (exit 124), production left
-      # on the previous healthy image.
-      #
-      # Warming the two images here first turns the script's own pull into a
-      # layer-cache hit (seconds). This step is a no-op when the run did not
-      # publish images, so the legacy on-box build path is unaffected. It holds
-      # no deploy lock: it only writes to the local Docker layer store, and the
-      # script's `image prune --filter until=24h` cannot touch images this fresh.
-      - name: Verify streamed production images on the CVM
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
-          timeout: 120s
-          command_timeout: 5m
-          envs: PROD_API_IMAGE,PROD_ADMIN_IMAGE,PROD_IMAGES_READY
-          script: |
-            set -euo pipefail
-
-            if [ "${PROD_IMAGES_READY:-}" != "true" ]; then
-              echo "No registry images published by this run; the deploy will use the on-box build."
-              exit 0
-            fi
-            for ref in "$PROD_API_IMAGE" "$PROD_ADMIN_IMAGE"; do
-              if ! docker image inspect "$ref" >/dev/null 2>&1; then
-                echo "Streamed image missing on the CVM: $ref"
-                exit 1
-              fi
-            done
-            echo "Streamed production images are present on the CVM."
-        env:
-          PROD_API_IMAGE: ${{ needs.build-images.outputs.api_image }}
-          PROD_ADMIN_IMAGE: ${{ needs.build-images.outputs.admin_image }}
-          PROD_IMAGES_READY: ${{ needs.build-images.outputs.images_ready }}
-
       - name: SSH Remote Production Deployment
         env:
-          # ── Registry-image delivery (built on the runner, pulled on CVM) ─
-          # Empty strings when images_ready=false => legacy on-box build.
-          PROD_API_IMAGE: ${{ needs.build-images.outputs.api_image }}
-          PROD_ADMIN_IMAGE: ${{ needs.build-images.outputs.admin_image }}
-          PROD_IMAGES_READY: ${{ needs.build-images.outputs.images_ready }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          # On-host build path: deploy-production.sh builds API then Admin with
+          # compose cache_from, validates the runtime import, and switches.
           # ── Required secrets (production API startup) ─────────────────────
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -411,11 +255,11 @@ jobs:
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           timeout: 120s
-          # 90m: must cover the full remote script. Two GHCR pulls (5 x 12m budget each) plus the
-          # API/Admin switch and health checks can legitimately approach an hour; a 60m bound once
-          # killed the session mid-deploy (2026-10-22) and left a half-applied release.
+          # 90m: covers a cold on-host build plus the API/Admin switch, nginx reload,
+          # and health checks. A 60m bound once killed the session mid-deploy
+          # (2026-10-22) and left a half-applied release.
           command_timeout: 90m
-          envs: PROD_API_IMAGE,PROD_ADMIN_IMAGE,PROD_IMAGES_READY,GHCR_TOKEN,DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,GITHUB_TOKEN,WECHAT_SUBSCRIBE_TMPL_MATCH_SUCCESS,WECHAT_SUBSCRIBE_TMPL_EVENT_REMINDER,WECHAT_SUBSCRIBE_TMPL_RECAP
+          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,GITHUB_TOKEN,WECHAT_SUBSCRIBE_TMPL_MATCH_SUCCESS,WECHAT_SUBSCRIBE_TMPL_EVENT_REMINDER,WECHAT_SUBSCRIBE_TMPL_RECAP
           script: |
             set -euo pipefail
             cd ~/JoyJoin
