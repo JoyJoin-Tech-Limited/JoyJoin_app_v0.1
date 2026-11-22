@@ -471,6 +471,7 @@ jobs:
             --exclude=.staging-deployed-sha
             --exclude=.staging-deployed-sha.tmp
             --exclude=.staging-runtime-base.json
+            --exclude=.staging-runtime-base.json.tmp
             --exclude=.staging-delta.tar.gz
             --exclude=.staging-images.tar.gz
             --exclude=.staging-images-*.tar.gz.part

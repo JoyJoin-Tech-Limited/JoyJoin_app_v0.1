@@ -691,22 +691,20 @@ fi
 # The base keeps the base+deps layers the next COPY-only build inherits, and the
 # lock hash gates a stale base out instead of silently mixing dependency trees.
 if [[ "$USED_BUNDLE_DELIVERY" == "true" ]]; then
-    if docker image tag "$API_IMAGE_REF" "$RUNTIME_API_BASE" >/dev/null 2>&1 && \
-       docker image tag "$ADMIN_IMAGE_REF" "$RUNTIME_ADMIN_BASE" >/dev/null 2>&1; then
-        printf '{"lock":"%s","sha":"%s","updatedAt":"%s"}\n' \
-            "${STAGING_LOCK12:-unknown}" "${DEPLOY_SOURCE_SHA:-unknown}" \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RUNTIME_BASE_MARKER"
-        # Anchor each base to a never-started container so the age-filtered
-        # `docker image prune --filter until=24h` (there for the parallel
-        # production deploys) cannot delete a base that no container references.
-        for base_pair in "api:$RUNTIME_API_BASE" "admin:$RUNTIME_ADMIN_BASE"; do
-            keepalive_name="joyjoin-runtime-base-keepalive-${base_pair%%:*}"
-            docker rm -f "$keepalive_name" >/dev/null 2>&1 || true
-            docker create --name "$keepalive_name" "${base_pair#*:}" true >/dev/null 2>&1 || true
-        done
-        echo "  Pinned runtime base images for delta deploys (lock ${STAGING_LOCK12:-unknown})."
+    PIN_HELPER="$SCRIPT_DIR/pin-runtime-base.sh"
+    if [[ -x "$PIN_HELPER" ]]; then
+        "$PIN_HELPER" \
+            --api-image "$API_IMAGE_REF" \
+            --admin-image "$ADMIN_IMAGE_REF" \
+            --lock-file "$REPO_ROOT/package-lock.json" \
+            --lock "${STAGING_LOCK12:-}" \
+            --marker "$RUNTIME_BASE_MARKER" \
+            --api-base "$RUNTIME_API_BASE" \
+            --admin-base "$RUNTIME_ADMIN_BASE" \
+            --sha "${DEPLOY_SOURCE_SHA:-unknown}" \
+            --source staging-bundle-delivery || true
     else
-        echo "  WARNING: could not pin runtime base images; the next deploy uses the full bundle again."
+        echo "  WARNING: ${PIN_HELPER} is missing; the next deploy uses the full bundle again."
     fi
 fi
 new_api_image_id="$(docker image inspect --format '{{.Id}}' "$API_IMAGE_REF")"

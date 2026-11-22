@@ -254,10 +254,15 @@ cp deployment/.env.production.example deployment/.env.production
 | Build job | `Export staging app delta` 用 `docker create` + `docker cp` 把 dist / data / shared src / manifests 导出成 ~13 MiB tar（超过 64 MiB 直接失败——说明「只差 app 层」的前提被破坏） |
 | Deploy job | 在既有 SSH 控制连接上读 `~/JoyJoin/deployment/.staging-runtime-base.json`，lock 与本地 `package-lock.json` 前 12 位一致 → `STAGING_DELIVERY_MODE=delta`，否则回落 bundle（决策在**上传前**完成，远端不猜） |
 | 远端脚本 | `docker build --network=none`：`FROM` 固定底座 + `RUN rm -rf` + `COPY`，无 npm、无编译器、无网络；CMD/ENTRYPOINT/ENV 全部继承（实测 API 2.4s、Admin 0.7s、镜像 +9.8 MB） |
-| 底座钉定 | 一次成功的 bundle 部署后把当次镜像 `docker tag` 成 `joyjoin-api-runtime-base:api` / `joyjoin-admin-runtime-base:admin` 并写入 marker（含 lock hash） |
+| 底座钉定 | **任何**产出镜像的路径成功后都调用 `deployment/scripts/pin-runtime-base.sh`：把当次镜像 `docker tag` 成 `joyjoin-api-runtime-base:api` / `joyjoin-admin-runtime-base:admin` 并写入 marker（含 lock hash）。CI bundle 部署与宿主侧 `deploy.sh` 共用同一实现 |
 | 防误删 | 底座被一个**从不启动**的 keepalive 容器引用，因此按年龄过滤的 `docker image prune`（为并行生产部署保留）删不掉它 |
+| 自愈 | `deploy.sh` 构建后重新钉定底座，带外部署不再把 delta 路径打回 bundle（2026-11-22 事故） |
 
 **关键安全性质**：lock hash 不匹配时底座不可用 → 自动回落 bundle。所以 lockfile 变更（如 zod 4 升级）仍会走一次 48 分钟全量，之后所有部署恢复分钟级。回滚逻辑、readiness 门、GHCR/TCR 路径均未改动。
+
+**2026-11-22 事故（底座丢失 → 每次都退化成整包）**：宿主上 `.staging-runtime-base.json`、两个 `joyjoin-*-runtime-base:*` 镜像与 keepalive 容器全部不存在。原因是 05:12Z 一次**带外**宿主侧构建（`deploy.sh` 路径）重建了 prod/staging 容器，而该路径当时不参与钉定；钉定只在 CI bundle 部署成功后发生，而那次 bundle 上传又因链路吞吐降到 ~4.5 MB/min 在 75 分钟 job 超时前无法完成，于是形成「永远退化成整包」的死循环（`Remote runtime base is missing or built for a different lockfile; shipping the full image bundle this run`）。
+
+修复：钉定逻辑抽成 `deployment/scripts/pin-runtime-base.sh`，CI bundle 分支与 `deploy.sh` 都调用它；后者在 compose 构建后用 `docker compose ps -q` + `docker inspect --format '{{.Image}}'` 取真实镜像 ID 再钉定。判定仍然只依赖 `package-lock.json` 前 12 位，所以带外构建只有在依赖树一致时才自愈，不一致时安全回落 bundle。helper 全程 fail-open：任何运行时失败只打印 `WARNING`，绝不让部署失败。
 
 **实测（CI artifact，run `40339605632`，head `f1502566d`）**：`joyjoin-staging-delta` = **2,738,875 B（2.6 MiB）**，`joyjoin-staging-images`（整包）= **276,929,422 B（264 MiB）**，即 **小 101 倍**，且远低于 64 MiB 护栏。本地 13 MB 是 `du` 未压缩口径，gzip 后 2.6 MiB 合理。按实测 ~0.1 MB/s 跨境带宽，上传从 ~44 分钟降到 **~30 秒**。
 

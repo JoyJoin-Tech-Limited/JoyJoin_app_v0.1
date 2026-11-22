@@ -106,6 +106,32 @@ echo "🧹 Removing stale joyjoin-api container if present..."
 docker rm -f joyjoin-api || true
 retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
 
+# Re-pin the delta runtime base for staging. This path rebuilds the images on
+# the host outside CI, so without this call the next staging deploy finds no
+# base and ships the full ~640 MiB bundle (~1 h). Fail-open: see the helper.
+echo "📌 Step 2b: Re-pin staging delta runtime base..."
+pin_api_ref="$(docker compose -f docker-compose.nginx.yml ps -q joyjoin-api 2>/dev/null | head -n1 || true)"
+pin_admin_ref="$(docker compose -f docker-compose.nginx.yml ps -q joyjoin-admin 2>/dev/null | head -n1 || true)"
+pin_api_image=""
+pin_admin_image=""
+if [[ -n "$pin_api_ref" ]]; then
+    pin_api_image="$(docker inspect --format '{{.Image}}' "$pin_api_ref" 2>/dev/null || true)"
+fi
+if [[ -n "$pin_admin_ref" ]]; then
+    pin_admin_image="$(docker inspect --format '{{.Image}}' "$pin_admin_ref" 2>/dev/null || true)"
+fi
+if [[ -n "$pin_api_image" && -n "$pin_admin_image" && -x "$SCRIPT_DIR/pin-runtime-base.sh" ]]; then
+    "$SCRIPT_DIR/pin-runtime-base.sh" \
+        --api-image "$pin_api_image" \
+        --admin-image "$pin_admin_image" \
+        --lock-file "$REPO_ROOT/package-lock.json" \
+        --marker "$DEPLOY_DIR/.staging-runtime-base.json" \
+        --sha "$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --source on-host-production-build || true
+else
+    echo "  ⚠️ Skipped runtime base pin: could not resolve the rebuilt images."
+fi
+
 echo "🗄️  Step 3: Run idempotent migrations and schema push..."
 cd "$REPO_ROOT"
 
