@@ -74,3 +74,47 @@ describe('ArchetypeHeadRenderer onAssetError (2026-10-16)', () => {
     expect(onAssetError).not.toHaveBeenCalled()
   })
 })
+
+// 2026-11-22: the 我的 page identity avatar rendered as an empty white disc.
+// Every code path was verified correct (asset present + packaged, base styles
+// shipped, inline px size emitted), leaving only the failure this layer closes:
+// an image that fires neither `load` nor `error` (decode stall, hanging CDN
+// request) rendered NOTHING and the initial fallback never ran because it only
+// triggers on an error. The disc now always carries a visible mark.
+describe('ArchetypeHeadRenderer never-blank placeholder (2026-11-22)', () => {
+  it('paints the initial before the artwork loads', () => {
+    const { container } = render(
+      <ArchetypeHeadRenderer archetype='spider' fallbackText='Vincent' />,
+    )
+
+    const pending = container.querySelector('.archetype-head__pending')
+    expect(pending).toBeTruthy()
+    expect(pending?.textContent).toBe('V')
+  })
+
+  it('keeps the initial when the image neither loads nor errors', () => {
+    const { container } = render(
+      <ArchetypeHeadRenderer archetype='spider' fallbackText='Vincent' />,
+    )
+
+    expect(container.querySelector('.archetype-head__pending')).toBeTruthy()
+  })
+
+  it('drops the initial once the artwork reports load', () => {
+    const { container } = render(
+      <ArchetypeHeadRenderer archetype='spider' fallbackText='Vincent' />,
+    )
+
+    fireEvent.load(container.querySelector('.archetype-head__image') as Element)
+
+    expect(container.querySelector('.archetype-head__pending')).toBeNull()
+  })
+
+  it('never renders the placeholder when the caller opts out of a fallback', () => {
+    const { container } = render(
+      <ArchetypeHeadRenderer archetype='spider' fallback='none' fallbackText='Vincent' />,
+    )
+
+    expect(container.querySelector('.archetype-head__pending')).toBeNull()
+  })
+})

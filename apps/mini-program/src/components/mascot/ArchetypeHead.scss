@@ -9,6 +9,8 @@
   overflow: hidden;
   flex-shrink: 0;
   line-height: 1;
+  /* Anchors the __pending initial so it can sit behind the artwork. */
+  position: relative;
 
   &__inner {
     width: 100%;
@@ -17,11 +19,43 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    /* Paints above __pending; both are 100% so layout is unchanged. */
+    position: relative;
+    z-index: 1;
   }
 
   &__image {
     display: block;
     flex-shrink: 0;
+  }
+
+  /**
+   * Placeholder initial, painted only until the artwork reports `load`.
+   *
+   * 2026-11-22: the device report "我的 页 vincent lai 左边的 icon 没有图案"
+   * was an empty white disc — every code path was verified correct (asset
+   * present + packaged, base rules shipped, inline px size emitted), which
+   * left only the failure mode this layer closes: an image that never fires
+   * `load` (a decode stall or a hanging CDN request) renders nothing and its
+   * `error` never fires either, so the ring stayed blank forever with no
+   * fallback. Now the disc always carries a visible mark; the artwork covers
+   * and then replaces it the moment `load` lands.
+   */
+  &__pending {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-primary, 0.1);
+    color: $color-primary;
+    font-family: $font-cn-display;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+    z-index: 0;
   }
 
   &--fallback {

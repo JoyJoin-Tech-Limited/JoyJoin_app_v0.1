@@ -117,6 +117,10 @@ export default function ArchetypeHeadRenderer({
   const imageSizeStr = `${rpxToPx(imageSize)}px`
   const [hasLocalError, setHasLocalError] = useState(false)
   const [hasCdnError, setHasCdnError] = useState(false)
+  // Which src actually reported `load`. Tracked as a value (not a boolean) so
+  // the local → CDN tier switch re-arms the placeholder: the CDN image has its
+  // own load, and a boolean would leave the disc blank while it fetches.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
 
   const handleLocalError = useCallback(() => {
     setHasLocalError(true)
@@ -130,6 +134,16 @@ export default function ArchetypeHeadRenderer({
     onAssetError?.()
   }, [onAssetError])
 
+  const getCdnPath = variant === 'grid' ? getCdnGridPath : getCdnHeadPath
+  // `string | undefined` here only because it is computed above the fallback
+  // guard (hooks must run before it); the guard below proves it is set.
+  const resolvedSrc = hasLocalError && archetype ? getCdnPath(archetype) : localSrc
+  const onError = hasLocalError ? handleCdnError : handleLocalError
+
+  const handleLoad = useCallback(() => {
+    setLoadedSrc(resolvedSrc ?? null)
+  }, [resolvedSrc])
+
   if (!localSrc || (hasLocalError && hasCdnError)) {
     if (fallback === 'none') return null
     return (
@@ -142,9 +156,10 @@ export default function ArchetypeHeadRenderer({
     )
   }
 
-  const getCdnPath = variant === 'grid' ? getCdnGridPath : getCdnHeadPath
-  const src = hasLocalError && archetype ? getCdnPath(archetype) : localSrc
-  const onError = hasLocalError ? handleCdnError : handleLocalError
+  // Shown until THIS src loads. Without it a stalled decode or a hanging CDN
+  // request renders an empty circle forever (2026-11-22 我的 page report).
+  const src = resolvedSrc as string
+  const showPendingInitial = fallback !== 'none' && loadedSrc !== src
 
   const correction = variant === 'head' && archetype ? VISUAL_CENTRE_SOURCE_OFFSET[archetype] : undefined
   const scale = imageSize / 240
@@ -153,6 +168,11 @@ export default function ArchetypeHeadRenderer({
 
   return (
     <View className={`archetype-head ${className}`} style={{ width: sizeStr, height: sizeStr }}>
+      {showPendingInitial ? (
+        <View className='archetype-head__pending'>
+          <Text style={{ fontSize: `${rpxToPx(size * 0.4)}px` }}>{getFallbackInitial(fallbackText)}</Text>
+        </View>
+      ) : null}
       <View
         className='archetype-head__inner'
         style={{ transform: `translateX(${rpxToPx(tx)}px) translateY(${rpxToPx(ty)}px)` }}
@@ -163,6 +183,7 @@ export default function ArchetypeHeadRenderer({
           mode='aspectFit'
           style={{ width: imageSizeStr, height: imageSizeStr }}
           lazyLoad={false}
+          onLoad={handleLoad}
           onError={onError}
         />
       </View>

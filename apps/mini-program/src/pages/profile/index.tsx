@@ -961,7 +961,22 @@ export default function ProfilePage() {
                       </Text>
                     )}
                     {!showBioPrompt && (
-                      <View className='profile-page__identity-affordance' aria-hidden='true'>
+                      <View
+                        className='profile-page__identity-affordance'
+                        role='button'
+                        aria-label={archetypeName ? '回看报告' : '测测你的氛围原型'}
+                        onClick={(event) => {
+                          // 2026-11-22: 「按回看报告也没有反应」. The line used to
+                          // rely entirely on bubbling to the card's handler, so
+                          // one swallowed ancestor tap killed the only route to
+                          // the report with no toast (the catch below never ran).
+                          // It now owns the tap; stopPropagation keeps a single
+                          // navigation when the card's handler also fires.
+                          event.stopPropagation()
+                          void handleOpenPersonalityType('v17_card')
+                        }}
+                        data-testid='profile-identity-affordance'
+                      >
                         <Text className='profile-page__identity-affordance-text'>
                           {archetypeName ? '回看报告' : '测测你的氛围原型'}
                         </Text>
