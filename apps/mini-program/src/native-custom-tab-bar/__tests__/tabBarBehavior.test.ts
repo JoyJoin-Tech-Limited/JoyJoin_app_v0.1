@@ -1059,5 +1059,60 @@ describe('native custom tab bar behavior', () => {
       await vi.advanceTimersByTimeAsync(1000)
       expect(setDataSpy).not.toHaveBeenCalled()
     })
+
+    it('keeps up with 连接 → 足迹 → 连接 → 足迹 and settles on the last route', async () => {
+      setupMocks({ switchTabResult: 'success' })
+      const component = await loadComponent()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      component.attached()
+      expect(component.data.selected).toBe(2)
+
+      // Back-to-back taps with the highlight asserted before each switch
+      // resolves — the rhythm the 2026-11-22 report described ("每次点一下就该
+      // 立刻亮，不该出现要点两次"). Each tap must light its own tab, and the
+      // interleaved settle rounds must not resurrect an intermediate one.
+      component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+      expect(component.data.selected).toBe(1)
+      await vi.advanceTimersByTimeAsync(0)
+
+      component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+      expect(component.data.selected).toBe(2)
+      await vi.advanceTimersByTimeAsync(0)
+
+      component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+      expect(component.data.selected).toBe(1)
+      await vi.advanceTimersByTimeAsync(0)
+
+      component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+      expect(component.data.selected).toBe(2)
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(global.wx.switchTab).toHaveBeenCalledTimes(4)
+
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(component.data.selected).toBe(2)
+      expect(component._confirmedSelected).toBe(2)
+      expect(component.data.hidden).toBe(false)
+    })
+
+    it('re-reads past a mid-transition non-tab route instead of staying hidden', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      component.attached()
+      expect(component.data.hidden).toBe(false)
+
+      // A stack read can land on a route the tab map does not know while a
+      // transition is still running. Hiding is correct for that instant, but it
+      // must not be the last word.
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/pool-group-detail/index' }])
+      await vi.advanceTimersByTimeAsync(400)
+      expect(component.data.hidden).toBe(true)
+
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/profile/index' }])
+      await vi.advanceTimersByTimeAsync(800)
+      expect(component.data.hidden).toBe(false)
+      expect(component.data.selected).toBe(3)
+    })
   })
 })
