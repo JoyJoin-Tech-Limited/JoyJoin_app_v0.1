@@ -5,8 +5,8 @@
 // and can read a stale `getCurrentPages()`; inside this window it defers.
 var PUSH_SETTLE_MS = 400
 
-// Settle delay before the single route re-read this component schedules after
-// its own `getCurrentPages()` read (see `_armRouteRecheck`).
+// Settle delay before each route re-read in the chain this component schedules
+// after its own `getCurrentPages()` read (see `_armRouteRecheck`).
 //
 // WeChat's documented creation order is: component created → component
 // attached → component `pageLifetimes.show` → Page.onLoad → Page.onShow, and a
@@ -18,13 +18,24 @@ var PUSH_SETTLE_MS = 400
 // That makes the page hook's push (useCustomTabBarSync) the only corrector, and
 // that push is a bounded retry chain that can legitimately go missing (late
 // `getTabBar()`, or the platform resolving the outgoing page's instance). The
-// route therefore has to be read once more after the transition settles, which
-// is what this delay is for. Only one re-read is armed at a time, a tap or a
-// push disarms it, and it is always cleared on detach.
+// route therefore has to be re-read after the transition settles, which is what
+// this delay is for. Only one read is pending at a time, a tap or a push
+// restarts the chain, and it is always cleared on detach.
 //
 // 400 ms is the same transition bound PUSH_SETTLE_MS encodes; the two stay
 // separate constants because they answer different questions.
 var ROUTE_RECHECK_MS = 400
+
+// Rounds in the settle re-read chain (400 ms, then 800 ms).
+//
+// One round is not provably enough. A read that lands while the transition is
+// still running reports the outgoing tab, and that result is indistinguishable
+// from a settled read — same index, same 'tab' outcome — so a single round can
+// commit the wrong highlight and go quiet, which is the "tap it twice" symptom
+// again, just rarer. A later round turns an early read into an intermediate
+// state instead of the last word. `_reconcileSelection` is idempotent, so the
+// extra rounds cost a sync read and no setData when nothing moved.
+var ROUTE_RECHECK_MAX_ATTEMPTS = 2
 
 // The logo settle is an app-entry brand moment, not a per-tab-page one. Each
 // tab page builds its own tab-bar instance, so without this flag the animation
@@ -747,7 +758,7 @@ Component({
     },
 
     /**
-     * Arms exactly one deferred route re-read (see ROUTE_RECHECK_MS).
+     * Arms the bounded settle re-read chain (see ROUTE_RECHECK_MS).
      *
      * `attached` and `pageLifetimes.show` both run before their page's onShow,
      * so their `getCurrentPages()` read can still report the outgoing tab. The
@@ -759,15 +770,27 @@ Component({
      * Skipping it let a stale push become permanent — the icon stayed unlit on a
      * page the user was already sitting on until they tapped that tab again
      * (2026-11-22 report).
+     *
+     * `attempt` is the 0-based round index. One round is not provably enough: a
+     * read that lands mid-transition reports the outgoing tab, which looks
+     * identical to steady state, so it can commit the wrong highlight and go
+     * quiet. Each round re-arms once more with a doubled wait, making an early
+     * read an intermediate state rather than the last word.
+     * `_reconcileSelection` is idempotent, so extra rounds are free when the
+     * selection has already converged.
      */
-    _armRouteRecheck: function () {
+    _armRouteRecheck: function (attempt) {
       var self = this
+      var round = attempt || 0
       this._disarmRouteRecheck()
       this._routeRecheckTimer = setTimeout(function () {
         self._routeRecheckTimer = null
         if (self._isDetached) return
         self._reconcileSelection()
-      }, ROUTE_RECHECK_MS)
+        if (round < ROUTE_RECHECK_MAX_ATTEMPTS - 1) {
+          self._armRouteRecheck(round + 1)
+        }
+      }, ROUTE_RECHECK_MS * (round + 1))
     },
 
     /**

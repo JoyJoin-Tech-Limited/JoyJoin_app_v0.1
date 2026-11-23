@@ -998,5 +998,66 @@ describe('native custom tab bar behavior', () => {
 
       expect(setDataSpy).not.toHaveBeenCalled()
     })
+
+    it('re-reads once more so an early settle read cannot be the last word', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+
+      component.attached()
+      expect(component.data.selected).toBe(2)
+
+      // Round 1 lands while the transition is still running: the stack still
+      // reports the tab being left. That result is indistinguishable from a
+      // settled read (same index, same 'tab' outcome), which is exactly why a
+      // single-shot read could commit the wrong highlight and go quiet — the
+      // 2026-11-22 "tap it twice" symptom.
+      await vi.advanceTimersByTimeAsync(400)
+      expect(component.data.selected).toBe(2)
+      expect(component._routeRecheckTimer).not.toBeNull()
+
+      // The transition finishes after round 1. Only round 2 can still correct
+      // the highlight now.
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await vi.advanceTimersByTimeAsync(800)
+
+      expect(component.data.selected).toBe(1)
+      expect(component._confirmedSelected).toBe(1)
+    })
+
+    it('stops after the bounded rounds instead of re-arming forever', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      await vi.advanceTimersByTimeAsync(400 + 800)
+      expect(component._routeRecheckTimer).toBeNull()
+
+      const setDataSpy = vi.spyOn(component, 'setData')
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(setDataSpy).not.toHaveBeenCalled()
+    })
+
+    it('breaks the re-read chain when the page hides between rounds', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const component = await loadComponent()
+      component.attached()
+
+      // Round 1 has run and armed round 2. Advance past the logo settle timer
+      // (450 ms) too, so the spy below only sees route-driven setData: hide must
+      // cancel the rest of the chain.
+      await vi.advanceTimersByTimeAsync(500)
+      expect(component._routeRecheckTimer).not.toBeNull()
+
+      const setDataSpy = vi.spyOn(component, 'setData')
+      component.hide()
+      expect(component._routeRecheckTimer).toBeNull()
+
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/profile/index' }])
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(setDataSpy).not.toHaveBeenCalled()
+    })
   })
 })
