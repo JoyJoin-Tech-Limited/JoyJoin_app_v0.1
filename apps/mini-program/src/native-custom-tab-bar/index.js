@@ -265,7 +265,16 @@ Component({
       // reports the tab the user is leaving and paints it for one transition.
       // The page's own publish is the fast correction; `_armRouteRecheck` is the
       // one that still lands when that publish never reaches this instance.
-      this._reconcileSelection()
+      //
+      // If the user tapped a tab moments ago, that tap is newer truth than this
+      // read: painting the route here would flash the tab they just left while
+      // the destination mounts (the "点不亮 / 乱套" report). Keep the tapped tab
+      // lit and let the settle re-read confirm it.
+      if (pendingIntentIndex !== null && Date.now() - pendingIntentAt < TRANSITION_MS) {
+        this.setData({ selected: pendingIntentIndex, hidden: false, resolved: true })
+      } else {
+        this._reconcileSelection()
+      }
       this._armRouteRecheck()
 
       // Brand moment: first tab-bar instance of the session only.
@@ -308,6 +317,8 @@ Component({
       clearTimeout(this._announcementTimer)
       clearTimeout(this._switchTimer)
       clearTimeout(this._settleTimer)
+      clearTimeout(this._pendingFlushTimer)
+      this._pendingFlushTimer = null
       clearTimeout(this._routeRecheckTimer)
       this._routeRecheckTimer = null
       this._switchRequestId += 1
@@ -692,7 +703,11 @@ Component({
               self._setAnnouncement(isCenter ? '已切换到中心入口' : self._getTabAnnouncement(index))
             }
           }
-          self._flushPendingSwitch()
+          // Re-read the route even when nothing is queued: a hop that was
+          // silently dropped leaves the screen on a page the bar may not be
+          // showing, and this is the only read that can notice.
+          self._armRouteRecheck()
+          self._schedulePendingFlush()
         },
         fail: function (err) {
           var isLatest = requestId === self._switchRequestId
@@ -724,7 +739,7 @@ Component({
               wx.showToast({ title: '切换失败，请重试', icon: 'none' })
             }
           }
-          self._flushPendingSwitch()
+          self._schedulePendingFlush()
         },
       })
     },
@@ -736,6 +751,26 @@ Component({
       this._activeSwitchRequestId = 0
       this._switchInFlight = false
       return true
+    },
+
+    /**
+     * Starts the queued tab hop a beat after the previous one reported back.
+     *
+     * Issuing `switchTab` while WeChat is still running the previous tab
+     * transition is silently dropped (measured on device: four rapid taps park
+     * on the second-to-last tab, with the highlight correctly matching that
+     * page — the last hop simply never happened). Waiting one animation frame
+     * plus a margin lets the transition finish before the next request, which
+     * is what makes rapid back-and-forth tapping land on the last tap.
+     */
+    _schedulePendingFlush: function () {
+      var self = this
+      clearTimeout(this._pendingFlushTimer)
+      this._pendingFlushTimer = setTimeout(function () {
+        self._pendingFlushTimer = null
+        if (self._isDetached) return
+        self._flushPendingSwitch()
+      }, 150)
     },
 
     _flushPendingSwitch: function () {

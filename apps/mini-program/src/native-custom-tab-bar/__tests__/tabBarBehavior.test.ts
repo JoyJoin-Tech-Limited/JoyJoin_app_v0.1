@@ -341,6 +341,9 @@ describe('native custom tab bar behavior', () => {
 
     global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
     callbacks[0].success?.({})
+    // The next hop waits one transition beat so WeChat does not silently drop
+    // a switchTab issued while the previous transition is still running.
+    await vi.advanceTimersByTimeAsync(150)
     expect(global.wx.switchTab).toHaveBeenCalledTimes(2)
     expect(global.wx.switchTab).toHaveBeenLastCalledWith(
       expect.objectContaining({ url: '/pages/profile/index' })
