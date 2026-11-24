@@ -1114,5 +1114,72 @@ describe('native custom tab bar behavior', () => {
       expect(component.data.hidden).toBe(false)
       expect(component.data.selected).toBe(3)
     })
+
+    it('paints the tapped destination on a fresh instance, not the tab being left', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await loadComponent()
+      const eventsBar = createMockInstance(lastComponentConfig!)
+      eventsBar.attached()
+      eventsBar.show()
+      eventsBar.setSelected(1)
+      expect(eventsBar.data.selected).toBe(1)
+
+      // Tap 连接. The destination's bar mounts while the stack still reports
+      // 足迹, because attach runs before the incoming page's onLoad/onShow.
+      eventsBar.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+
+      const connectionsBar = createMockInstance(lastComponentConfig!)
+      connectionsBar.attached()
+      expect(connectionsBar.data.selected).toBe(2)
+      connectionsBar.show()
+      expect(connectionsBar.data.selected).toBe(2)
+
+      // Route truth agrees once the stack settles, and keeps it.
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      await vi.advanceTimersByTimeAsync(400)
+      expect(connectionsBar.data.selected).toBe(2)
+    })
+
+    it('does not repaint an already-visited instance with the tab being left', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await loadComponent()
+      const eventsBar = createMockInstance(lastComponentConfig!)
+      eventsBar.attached()
+      // Let the attach chain finish while the stack still reports 足迹, so this
+      // assertion cannot be masked by a stale push window.
+      await vi.advanceTimersByTimeAsync(1300)
+      expect(eventsBar.data.selected).toBe(1)
+
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/connections/index' }])
+      const connectionsBar = createMockInstance(lastComponentConfig!)
+      connectionsBar.attached()
+      expect(connectionsBar.data.selected).toBe(2)
+
+      // 连接 taps 足迹. The 足迹 instance already exists and already holds the
+      // correct index; showing it must not overwrite that with 连接.
+      connectionsBar.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+      eventsBar.show()
+      expect(eventsBar.data.selected).toBe(1)
+    })
+
+    it('falls back to route truth when a switch never resolves', async () => {
+      setupMocks()
+      global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+      await loadComponent()
+      const component = createMockInstance(lastComponentConfig!)
+      component.attached()
+      expect(component.data.selected).toBe(1)
+
+      // Some runtimes never invoke either switchTab callback. The optimistic
+      // paint must not survive that: at the watchdog the route is the answer.
+      global.wx.switchTab = vi.fn()
+      component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
+      expect(component.data.selected).toBe(2)
+
+      await vi.advanceTimersByTimeAsync(400)
+      expect(component.data.selected).toBe(1)
+    })
   })
 })

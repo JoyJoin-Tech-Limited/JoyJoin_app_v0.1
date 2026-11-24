@@ -37,6 +37,39 @@ var ROUTE_RECHECK_MS = 400
 // extra rounds cost a sync read and no setData when nothing moved.
 var ROUTE_RECHECK_MAX_ATTEMPTS = 2
 
+// Window (ms) during which the destination of an accepted tab tap outranks a
+// route read.
+//
+// Every route read this component can take at the start of a switch happens
+// before the incoming page exists in the page stack (see ROUTE_RECHECK_MS), so
+// it reports the tab the user is LEAVING. Painting that index lights a foreign
+// slot on the instance that is about to become the visible bar — the "I tapped
+// A and B lit up" report — and it stays wrong until the destination page mounts
+// and its own publish lands. The tap is the only synchronous statement of where
+// the user is going, so inside this window it wins; a resolved switch (success
+// or failure) clears it immediately, and after it expires the route is the sole
+// authority again.
+var TRANSITION_MS = 1200
+var pendingIntentIndex = null
+var pendingIntentAt = 0
+
+function recordIntent(index) {
+  pendingIntentIndex = index
+  pendingIntentAt = Date.now()
+}
+
+function clearIntent() {
+  pendingIntentIndex = null
+}
+
+function intentOverridesRoute(nextSelected) {
+  return (
+    pendingIntentIndex !== null &&
+    Date.now() - pendingIntentAt < TRANSITION_MS &&
+    nextSelected !== pendingIntentIndex
+  )
+}
+
 // The logo settle is an app-entry brand moment, not a per-tab-page one. Each
 // tab page builds its own tab-bar instance, so without this flag the animation
 // replayed on every first visit.
@@ -522,11 +555,6 @@ Component({
       })
     },
 
-    /** Registered by useCustomTabBarSync; see _retapHandler. */
-    setRetapHandler: function (handler) {
-      this._retapHandler = typeof handler === 'function' ? handler : null
-    },
-
     /**
      * Re-tap of the tab the user is already on. The page owns the outcome
      * (scroll to top / silent refresh); the chrome guarantees a haptic and a
@@ -590,6 +618,10 @@ Component({
 
       // Every tap updates the intended color immediately, but native requests
       // are bounded: only the newest destination waits behind the active one.
+      // Record the intent first: every route read taken during the switch still
+      // describes the page being left, so the tap has to outrank it for one
+      // bounded window (see TRANSITION_MS).
+      recordIntent(index)
       this.setData({ selected: index, hidden: false })
       this.trackTabBarEvent(
         isCenter ? 'mini_program_center_button_tap' : 'mini_program_tab_bar_tap',
@@ -631,7 +663,9 @@ Component({
         if (self._pendingSwitch) {
           self._flushPendingSwitch()
         } else {
-          self._reconcileSelection()
+          // The platform never answered, so this is not a resolved switch: let
+          // route truth win instead of leaving the tapped index painted forever.
+          self._reconcileSelection({ resolved: true })
         }
       }, 400)
 
@@ -639,6 +673,7 @@ Component({
         url: request.url,
         success: function () {
           if (!self._settleSwitch(requestId) || self._isDetached) return
+          if (requestId === self._switchRequestId) clearIntent()
           if (requestId === self._switchRequestId) {
             self._reconcileSelection()
             if (self._routeToIndex[self._getCurrentRoute()] === index) {
@@ -661,6 +696,7 @@ Component({
               : { tab: tabKey || 'unknown', index: index, stale: !isLatest }
           )
           if (!self._settleSwitch(requestId) || self._isDetached) return
+          if (requestId === self._switchRequestId) clearIntent()
 
           if (isLatest) {
             // Route truth first: a failed switch normally means the user never
@@ -805,7 +841,7 @@ Component({
      *   'hidden'  — a mapped non-tab route; the bar must not exist here
      *   'unknown' — empty/unreadable page stack; nothing was changed
      */
-    _reconcileSelection: function () {
+    _reconcileSelection: function (options) {
       var pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
       if (!pages || pages.length === 0) return 'unknown'
 
@@ -816,6 +852,14 @@ Component({
           this.setData({ hidden: true })
         }
         return 'hidden'
+      }
+
+      // A read taken while a tap is still landing reports the page being left.
+      // Hold the tapped destination until the switch resolves or the window
+      // expires; `{ resolved: true }` marks a read that must win regardless
+      // (the platform-watchdog path, where the switch never resolved).
+      if (!(options && options.resolved) && intentOverridesRoute(nextSelected)) {
+        nextSelected = pendingIntentIndex
       }
 
       this._confirmedSelected = nextSelected
