@@ -1194,3 +1194,22 @@ describe('native custom tab bar behavior', () => {
     })
   })
 })
+
+describe('setSelected resolution (2026-11-24)', () => {
+  it('enables the highlight when the index already matches but the bar is unresolved', async () => {
+    await loadComponent()
+    const component = createMockInstance(lastComponentConfig!)
+    // Fresh instances default to selected:0 with resolved:false, and the
+    // attach-time route read can be unreadable mid-transition. Publishing the
+    // matching index used to no-op, leaving the current tab permanently unlit
+    // until another tap.
+    component.data.selected = 1
+    component.data.hidden = false
+    component.data.resolved = false
+
+    component.setSelected(1)
+
+    expect(component.data.selected).toBe(1)
+    expect(component.data.resolved).toBe(true)
+  })
+})

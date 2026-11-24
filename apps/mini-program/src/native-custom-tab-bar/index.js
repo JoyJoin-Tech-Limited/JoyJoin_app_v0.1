@@ -479,7 +479,14 @@ Component({
       // No-op guard: tab switches already set selected optimistically in
       // handleTabTap/handleCenterTap. Skipping the redundant setData avoids
       // an extra native re-render (icon flicker) on every switch.
-      if (this.data.selected === n && !this.data.hidden) return
+      //
+      // `resolved` is part of the guard on purpose. A bar can hold the right
+      // index while still unresolved (fresh instance default is 0, and the
+      // attach-time route read can be unreadable), and every WXML highlight
+      // is gated on `resolved`. Returning early there left the page the user
+      // is sitting on permanently unlit — it only came back after another tap
+      // (2026-11-24 device report).
+      if (this.data.selected === n && !this.data.hidden && this.data.resolved) return
       this.setData({ selected: n, hidden: false, resolved: true })
     },
 
