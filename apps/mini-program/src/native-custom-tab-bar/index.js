@@ -890,7 +890,22 @@ Component({
      */
     _reconcileSelection: function () {
       var pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
-      if (!pages || pages.length === 0) return 'unknown'
+      if (!pages || pages.length === 0) {
+        // Mid-transition the page stack can be unreadable for a frame or two.
+        // Returning 'unknown' there left the destination bar unresolved, so its
+        // page was already on screen with nothing lit until the 400ms re-read
+        // (2026-11-24 report: 点「我的」时 screen 先转、tab 后亮). A fresh tap is
+        // newer truth than a stack we cannot read, so paint it and let the
+        // bounded re-read correct it if the tap never lands.
+        if (pendingIntentIndex !== null && Date.now() - pendingIntentAt < TRANSITION_MS) {
+          this._confirmedSelected = pendingIntentIndex
+          if (this.data.selected !== pendingIntentIndex || this.data.hidden || !this.data.resolved) {
+            this.setData({ selected: pendingIntentIndex, hidden: false, resolved: true })
+          }
+          return 'tab'
+        }
+        return 'unknown'
+      }
 
       var route = this._getCurrentRoute()
       var nextSelected = this._routeToIndex[route]
