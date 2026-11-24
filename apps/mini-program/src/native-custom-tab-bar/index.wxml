@@ -15,7 +15,7 @@
         <view
           wx:for="{{leftTabs}}"
           wx:key="key"
-          class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
+          class="joy-custom-tab-bar__item {{resolved && selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
           data-tab="{{item.key}}"
@@ -25,7 +25,7 @@
           hover-stay-time="100"
           role="button"
           aria-label="{{item.text}}"
-          aria-pressed="{{selected === item.index}}"
+          aria-pressed="{{resolved && selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
             <!-- Single icon, src swapped on selection. The previous dual-icon
@@ -35,7 +35,7 @@
                  itself — the one thing the WeChat renderer has always honoured. -->
             <image
               class="joy-custom-tab-bar__item-icon"
-              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              src="{{resolved && selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
             />
             <view
@@ -54,7 +54,7 @@
             ></view>
           </view>
           <view
-            class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
+            class="joy-custom-tab-bar__item-label {{resolved && selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
           >
             {{item.text}}
           </view>
@@ -68,7 +68,7 @@
         <view
           wx:for="{{rightTabs}}"
           wx:key="key"
-          class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
+          class="joy-custom-tab-bar__item {{resolved && selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
           data-tab="{{item.key}}"
@@ -78,12 +78,12 @@
           hover-stay-time="100"
           role="button"
           aria-label="{{item.text}}"
-          aria-pressed="{{selected === item.index}}"
+          aria-pressed="{{resolved && selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
             <image
               class="joy-custom-tab-bar__item-icon"
-              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              src="{{resolved && selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
             />
             <view
@@ -102,7 +102,7 @@
             ></view>
           </view>
           <view
-            class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
+            class="joy-custom-tab-bar__item-label {{resolved && selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
           >
             {{item.text}}
           </view>
@@ -114,14 +114,14 @@
   <!-- Semi-raised center CTA -->
   <view class="joy-custom-tab-bar__center-wrap">
     <view
-      class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
+      class="joy-custom-tab-bar__center {{resolved && selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
       bindtap="handleCenterTap"
       hover-class="joy-custom-tab-bar__center--pressed"
       hover-start-time="0"
       hover-stay-time="100"
       role="button"
       aria-label="{{center.label || 'JoyJoin 中心入口'}}"
-      aria-pressed="{{selected === 4}}"
+      aria-pressed="{{resolved && selected === 4}}"
     >
       <view class="joy-custom-tab-bar__center-outer-ring">
         <view class="joy-custom-tab-bar__center-button">

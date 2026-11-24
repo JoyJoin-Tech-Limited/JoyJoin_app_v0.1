@@ -381,6 +381,12 @@ describe('native custom tab bar behavior', () => {
 
     await vi.advanceTimersByTimeAsync(400)
     expect(component._switchInFlight).toBe(false)
+    // The tap intent still holds: a slow switch can still land, and reverting
+    // to the visible route here repainted the tab the user just left.
+    expect(component.data.selected).toBe(1)
+
+    // Once the window lapses the armed re-read converges on the visible route.
+    await vi.advanceTimersByTimeAsync(2400)
     expect(component.data.selected).toBe(0)
     expect(component._confirmedSelected).toBe(0)
 
@@ -1178,7 +1184,9 @@ describe('native custom tab bar behavior', () => {
       component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
       expect(component.data.selected).toBe(2)
 
-      await vi.advanceTimersByTimeAsync(400)
+      // The intent window lapses, then the armed re-read converges on the
+      // route the user is actually looking at.
+      await vi.advanceTimersByTimeAsync(2400)
       expect(component.data.selected).toBe(1)
     })
   })

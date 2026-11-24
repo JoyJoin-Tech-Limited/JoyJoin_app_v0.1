@@ -73,7 +73,7 @@ describe('native custom tab bar structure', () => {
     expect(wxml).toContain('{{announcement}}')
     expect(wxml).toContain('aria-atomic="true"')
     // Center hub is index 4; side tabs already expose aria-pressed.
-    expect(wxml).toContain('aria-pressed="{{selected === 4}}"')
+    expect(wxml).toContain('aria-pressed="{{resolved && selected === 4}}"')
   })
 
   it('renders one icon per tab and swaps its src on selection', () => {
@@ -81,7 +81,7 @@ describe('native custom tab bar structure', () => {
     // tab showing the muted artwork on real devices — the absolutely
     // positioned overlay variant never painted. Selection is expressed by the
     // src binding alone now; one icon per tab, no overlay layer.
-    expect(wxml).toContain('selected === item.index ? item.selectedIcon : item.icon')
+    expect(wxml).toContain('resolved && selected === item.index ? item.selectedIcon : item.icon')
     expect(wxml).not.toContain('joy-custom-tab-bar__item-icon--overlay')
     expect(wxml).not.toContain('joy-custom-tab-bar__item-icon--off')
     expect(wxml).not.toContain('joy-custom-tab-bar__item-icon--on')

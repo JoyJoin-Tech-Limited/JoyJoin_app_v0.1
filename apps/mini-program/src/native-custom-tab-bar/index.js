@@ -136,6 +136,11 @@ Component({
 
   data: {
     selected: 0,
+    // False until selection has a source. The WXML gates every highlight on it,
+    // because a fresh instance paints `selected: 0` for the frames between mount
+    // and the first reconcile — which lit 发现 on the way into any other tab.
+    // Nothing lit is correct; the wrong tab lit is the 2026-11-24 report.
+    resolved: false,
     lowEnd: false,
     hidden: true,
     // Logo settle plays once per app session (see hasPlayedLogoEntrance).
@@ -464,7 +469,7 @@ Component({
       // handleTabTap/handleCenterTap. Skipping the redundant setData avoids
       // an extra native re-render (icon flicker) on every switch.
       if (this.data.selected === n && !this.data.hidden) return
-      this.setData({ selected: n, hidden: false })
+      this.setData({ selected: n, hidden: false, resolved: true })
     },
 
     /**
@@ -622,7 +627,7 @@ Component({
       // describes the page being left, so the tap has to outrank it for one
       // bounded window (see TRANSITION_MS).
       recordIntent(index)
-      this.setData({ selected: index, hidden: false })
+      this.setData({ selected: index, hidden: false, resolved: true })
       this.trackTabBarEvent(
         isCenter ? 'mini_program_center_button_tap' : 'mini_program_tab_bar_tap',
         isCenter
@@ -663,9 +668,12 @@ Component({
         if (self._pendingSwitch) {
           self._flushPendingSwitch()
         } else {
-          // The platform never answered, so this is not a resolved switch: let
-          // route truth win instead of leaving the tapped index painted forever.
-          self._reconcileSelection({ resolved: true })
+          // The platform never answered, but that is not proof of failure: a
+          // slow switch can still land. Keep the tap intent (which expires on
+          // its own) and re-read once the transition has settled, so a silent
+          // failure still converges on the visible route.
+          self._reconcileSelection()
+          self._armRouteRecheck()
         }
       }, 400)
 
@@ -673,8 +681,12 @@ Component({
         url: request.url,
         success: function () {
           if (!self._settleSwitch(requestId) || self._isDetached) return
-          if (requestId === self._switchRequestId) clearIntent()
           if (requestId === self._switchRequestId) {
+            // Only drop the tap intent once the route agrees with it. A
+            // switchTab success can land before the page stack flips, and
+            // reconciling against the not-yet-updated stack would repaint the
+            // tab the user just left (measured: 1 → 2 at +400ms in DevTools).
+            if (self._routeToIndex[self._getCurrentRoute()] === index) clearIntent()
             self._reconcileSelection()
             if (self._routeToIndex[self._getCurrentRoute()] === index) {
               self._setAnnouncement(isCenter ? '已切换到中心入口' : self._getTabAnnouncement(index))
@@ -706,7 +718,7 @@ Component({
               // Unreadable stack: fall back to where we came from rather than
               // leaving the optimistic highlight on a page we never reached.
               self._confirmedSelected = request.previousSelected
-              self.setData({ selected: request.previousSelected, hidden: false })
+              self.setData({ selected: request.previousSelected, hidden: false, resolved: true })
             }
             if (wx.showToast) {
               wx.showToast({ title: '切换失败，请重试', icon: 'none' })
@@ -841,7 +853,7 @@ Component({
      *   'hidden'  — a mapped non-tab route; the bar must not exist here
      *   'unknown' — empty/unreadable page stack; nothing was changed
      */
-    _reconcileSelection: function (options) {
+    _reconcileSelection: function () {
       var pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
       if (!pages || pages.length === 0) return 'unknown'
 
@@ -856,15 +868,14 @@ Component({
 
       // A read taken while a tap is still landing reports the page being left.
       // Hold the tapped destination until the switch resolves or the window
-      // expires; `{ resolved: true }` marks a read that must win regardless
-      // (the platform-watchdog path, where the switch never resolved).
-      if (!(options && options.resolved) && intentOverridesRoute(nextSelected)) {
+      // expires.
+      if (intentOverridesRoute(nextSelected)) {
         nextSelected = pendingIntentIndex
       }
 
       this._confirmedSelected = nextSelected
-      if (this.data.selected !== nextSelected || this.data.hidden) {
-        this.setData({ selected: nextSelected, hidden: false })
+      if (this.data.selected !== nextSelected || this.data.hidden || !this.data.resolved) {
+        this.setData({ selected: nextSelected, hidden: false, resolved: true })
       }
       return 'tab'
     },
