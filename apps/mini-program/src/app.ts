@@ -1,4 +1,8 @@
 /* eslint-disable import/first */
+// zod's JIT parser is unusable on device (WeChat returns a non-callable object
+// from `new Function` instead of throwing, so zod's probe passes and the first
+// `z.object().safeParse()` throws). Must load before any schema is constructed.
+import "./lib/utils/zodJitless"
 // Polyfill must execute before any library imports that may rely on AbortController.
 import "./lib/wechat/abortControllerPolyfill"
 import { PropsWithChildren, createElement, useCallback, useEffect, useRef } from 'react'

@@ -1,3 +1,5 @@
+// Import first: zod's JIT parser cannot run on device (see zodJitless.ts).
+import '../utils/zodJitless'
 import { z } from 'zod'
 import type { JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../api/api'
