@@ -133,6 +133,14 @@ vi.mock('../../lib/mascot/xiaoyueExpressions', () => ({
 vi.mock('../../lib/alang/alangAccess', () => ({ isStreetBlindBoxLive: () => false }))
 vi.mock('../../lib/utils/systemInfo', () => ({
   getSystemInfoCompat: () => ({ windowWidth: 375, reduceMotion: false, benchmarkLevel: 20 }),
+  getWindowInfoCompat: () => ({
+    windowWidth: 375,
+    windowHeight: 667,
+    screenWidth: 375,
+    screenHeight: 667,
+    pixelRatio: 2,
+    statusBarHeight: 44,
+  }),
 }))
 vi.mock('../../lib/utils/discoverCounts', () => ({
   buildDiscoverCounts: () => ({ weekCountsByCluster: {}, weekTotal: 0, nextEventByCluster: {} }),
@@ -257,5 +265,11 @@ describe('DiscoverPage editorial empty states', () => {
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['mini-program', 'event-pools'] })
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['mini-program', 'my-pool-registrations'] })
     expect(mocks.evictPersistedQuery).toHaveBeenCalledWith(['mini-program', 'event-pools'])
+  })
+
+  it('renders the shared tab title bar in the brand display font', () => {
+    render(<DiscoverPage />)
+
+    expect(document.querySelector('.tab-page-nav__title')?.textContent).toBe('去发现')
   })
 })

@@ -186,4 +186,10 @@ describe('ConnectionsPage editorial empty state', () => {
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
     expect(mocks.queryState.refetch).toHaveBeenCalledTimes(1)
   })
+
+  it('renders the shared tab title bar in the brand display font', () => {
+    render(<ConnectionsPage />)
+
+    expect(document.querySelector('.tab-page-nav__title')?.textContent).toBe('我的连接')
+  })
 })

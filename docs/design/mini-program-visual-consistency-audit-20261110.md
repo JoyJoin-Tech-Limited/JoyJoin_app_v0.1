@@ -20,6 +20,7 @@
 5. Loading preserves useful geometry; empty/error states remain honest, branded and recoverable.
 6. Identical 进行中 / 待开始 / 已结束 semantics use one shared segmented-control implementation.
 7. Primary CTAs remain solid brand purple; metadata and selection chrome do not become competing CTAs.
+8. Tab pages own one shared title bar (`TabPageNav`, `navigationStyle: 'custom'`): Alimama 36rpx centered page name in an 88rpx row below the measured status bar. Right-side actions use the capsule-safe slot (`getMenuButtonBoundingClientRect()`), never a raw right offset.
 
 ## Intentional differences — no forced unification
 

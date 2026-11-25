@@ -26,10 +26,14 @@
 .discover-auth {
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
   min-height: 100vh;
   min-height: 100dvh;
   background: $color-bg-gradient;
+  // The fixed TabPageNav covers the top of the page-level scroll. The inline
+  // style writes the measured status-bar height; this is the H5 fallback.
+  padding-top: calc(env(safe-area-inset-top) + 88rpx);
 
   // ── Hero ──────────────────────────────────────────────────────
   &__hero {

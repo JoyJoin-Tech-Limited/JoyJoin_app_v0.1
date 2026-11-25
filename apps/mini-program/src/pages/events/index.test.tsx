@@ -461,4 +461,10 @@ describe('EventsPage three-bucket IA', () => {
       },
     })
   })
+
+  it('renders the shared tab title bar in the brand display font', () => {
+    render(<EventsPage />)
+
+    expect(document.querySelector('.tab-page-nav__title')?.textContent).toBe('我的足迹')
+  })
 })

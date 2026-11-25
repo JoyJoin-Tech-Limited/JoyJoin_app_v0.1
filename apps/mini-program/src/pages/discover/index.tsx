@@ -47,6 +47,7 @@ import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import HeroPromoBanner, { type PromoBannerVariant } from '../../components/HeroPromoBanner'
 import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import TabPageNav, { getTabPageNavHeightPx } from '../../components/ui/TabPageNav'
 import OracleCard from '../../components/discover/OracleCard'
 import LocationFilterDrawer from '../../components/discover/LocationFilterDrawer'
 import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
@@ -512,6 +513,7 @@ function AuthenticatedDiscover({
   // so Taro.pageScrollTo with a selector works; a selector-query fallback
   // covers runtimes where the selector form is unsupported.
   const scrollPoolsIntoView = useCallback(() => {
+    const navOffset = getTabPageNavHeightPx() + 12
     const fallback = () => {
       try {
         const query = Taro.createSelectorQuery()
@@ -523,7 +525,7 @@ function AuthenticatedDiscover({
           if (!rect || typeof rect.top !== 'number') return
           const current = typeof viewport?.scrollTop === 'number' ? viewport.scrollTop : 0
           Taro.pageScrollTo({
-            scrollTop: Math.max(0, current + rect.top - 12),
+            scrollTop: Math.max(0, current + rect.top - navOffset),
             duration: 250,
           }).catch(() => undefined)
         })
@@ -531,7 +533,7 @@ function AuthenticatedDiscover({
         // Scroll assist is best-effort; the feed is already visible below.
       }
     }
-    Taro.pageScrollTo({ selector: '.discover-auth__section', offsetTop: -12, duration: 250 }).catch(fallback)
+    Taro.pageScrollTo({ selector: '.discover-auth__section', offsetTop: -navOffset, duration: 250 }).catch(fallback)
   }, [])
 
   // Row-key type is the shared union (GuidanceTipCardRowKey); this surface
@@ -732,7 +734,12 @@ function AuthenticatedDiscover({
 
   // ── Render ──
   return (
-    <View className={`discover-auth ${tabEntranceClass}`}>
+    <View
+      className={`discover-auth ${tabEntranceClass}`}
+      // The shared tab nav is viewport-fixed (page-level scroll), so the
+      // document reserves its measured height instead of a layout slot.
+      style={{ paddingTop: `${getTabPageNavHeightPx()}px` }}
+    >
       {/* Test mode banner — APP_MODE=test only */}
       {(user as any)?.appMode === 'test' && (
         <SingleTestBanner className='discover-auth__test-banner' />
@@ -1051,6 +1058,7 @@ export default function DiscoverPage() {
 
   return (
     <>
+      {isAuthenticated && !isLoading ? <TabPageNav title='去发现' fixed /> : null}
       <PageMorphWrapper
         isLoading={isLoading}
         loading={<LoadingScreen message='正在探索附近的氛围聚会…' />}

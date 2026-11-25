@@ -156,7 +156,7 @@ function renderCenterHub(events: JoinedEventSummary[]) {
 }
 
 function getTab(label: string): HTMLElement {
-  const tab = screen.getByText(label).closest('.event-status-tabs__tab')
+  const tab = screen.getByRole('tab', { name: label })
   if (!tab) throw new Error(`Missing Center Hub tab: ${label}`)
   return tab as HTMLElement
 }
@@ -334,5 +334,11 @@ describe('CenterHubPage three-bucket IA', () => {
     expect(haptics).toHaveBeenCalledTimes(2)
     expect(eventsAnalytics.track).toHaveBeenCalledWith('events_tab_switch', { tab: 'ongoing' })
     expect(eventsAnalytics.track).toHaveBeenCalledWith('events_tab_switch', { tab: 'upcoming' })
+  })
+
+  it('renders the shared tab title bar in the brand display font', () => {
+    renderCenterHub([])
+
+    expect(document.querySelector('.tab-page-nav__title')?.textContent).toBe('进行中')
   })
 })

@@ -122,7 +122,7 @@ Settings row = chrome, **no entrance motion** (static). Last completion: 240+350
 - Collapse: large title `opacity 1→0; translateY 0→-8rpx; 180ms ease` on page-root `--scrolled`; nav title `我的` (existing 36rpx, `index.scss:59-65`) fades `opacity 0→1` same window. Both transform/opacity only.
 - `useProfileScroll` contract: `onScroll` throttled via rAF-or-33ms floor on the existing ScrollView; returns `{ scrolled: boolean }`; class toggled at crossings only (no per-frame re-render — plan Must NOT).
 
-**BEM classes.** `profile-page__large-title` · `profile-page__large-title-text` · `profile-page__large-title-sub` · page modifier `profile-page--scrolled` (shared by P0-8 + P2-5).
+**BEM classes.** `profile-page__large-title` · `profile-page__large-title-text` · `profile-page__large-title-sub` · page modifier `profile-page--scrolled` (shared by P0-8 + P2-5). **Superseded 2026-11-17 / 2026-11-25:** the 48rpx in-scroll title and `profile-page--scrolled` are retired; the page name is the shared `TabPageNav` title (36rpx Alimama in the fixed bar) and `condensed` now owns the scroll-state chrome.
 
 **Risks.** (a) ScrollView `onScroll` fires per frame — the hook must not `setState` per frame (threshold-crossing latch only). (b) `env(safe-area-inset-top)` is already inside nav height — the 96rpx enter threshold is measured from `scrollTop`, safe-area-independent. (c) Sub-line with greeting can overflow 1 line → `white-space: nowrap; overflow: hidden; text-overflow: ellipsis` (mirrors `&__identity-bio`, `index.scss:649-659`).
 

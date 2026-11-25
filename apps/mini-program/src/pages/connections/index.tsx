@@ -18,6 +18,7 @@ import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Card from '../../components/ui/Card'
+import TabPageNav from '../../components/ui/TabPageNav'
 import ConnectionPendingCard, { formatConnectionRevealLabel } from './components/ConnectionPendingCard'
 import './index.scss'
 
@@ -108,6 +109,7 @@ export default function ConnectionsPage() {
 
   return renderGate(
     <View className={`connections-page ${tabEntranceClass}`}>
+      <TabPageNav title='我的连接' />
 
       <ScrollView
         className='connections-page__list'

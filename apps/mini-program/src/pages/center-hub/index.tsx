@@ -13,6 +13,7 @@ import Button from '../../components/ui/Button'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
+import TabPageNav from '../../components/ui/TabPageNav'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
 import EventStatusTabs, { type EventStatusTabKey } from '../../components/events/EventStatusTabs'
 import { CountdownTickProvider } from '../../hooks/useCountdownTick'
@@ -196,6 +197,7 @@ export default function CenterHubPage() {
       loading={<LoadingScreen message='正在加载你的活动…' />}
       content={
         <View className={`center-hub ${tabEntranceClass}`}>
+          <TabPageNav title='进行中' />
           <EventStatusTabs activeTab={activeTab} onChange={handleTabChange} />
           <CenterHubContent
             events={displayEvents}

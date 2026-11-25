@@ -755,7 +755,7 @@ describe('Profile approved V4 layout', () => {
     const { getByTestId } = render(<ProfilePage />)
     // Page name is permanent chrome, like the native bar on Discover/Events.
     const nav = getByTestId('profile-top-navigation')
-    expect(nav.querySelector('.profile-page__nav-title')?.textContent).toBe('我的')
+    expect(nav.querySelector('.tab-page-nav__title')?.textContent).toBe('我的')
     // No duplicated in-scroll hero title.
     expect(document.querySelector('.profile-page__large-title')).toBeNull()
     // Mock user has no bio → meta line is date + weekday only (greeting

@@ -21,6 +21,7 @@ import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import IdentityStageScene from '../../components/profile/IdentityStageScene'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import TabPageNav from '../../components/ui/TabPageNav'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useTabRetapScroll } from '../../hooks/navigation/useTabRetap'
@@ -75,6 +76,7 @@ import {
 import { useProfileScroll } from './useProfileScroll'
 import ProfilePartnerVisual, { EquipmentPreviewArtwork } from './ProfilePartnerVisual'
 import ProfileGrowthCard from './ProfileGrowthCard'
+import ProfileNavBell from './ProfileNavBell'
 import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 
 // P1-3 (UIUX memo §9): the four profile numbers count 0→N once on first
@@ -841,38 +843,13 @@ export default function ProfilePage() {
   }, [equipmentGuidanceEligible, pendingEntitlementCount])
 
   return renderGate(
-    <View className={`profile-page ${tabEntranceClass}${navCondensed ? ' profile-page--scrolled' : ''}`}>
-      <View
-        className='profile-page__nav'
-        data-testid='profile-top-navigation'
-      >
-        <Text className='profile-page__nav-title'>我的</Text>
-        {/* P0-2 notification bell — mirrors Discover's anatomy (72rpx circle,
-            primary badge pill, 9+ cap); absolute so the centered title is
-            untouched. Badge hidden at 0 unread. */}
-        <View
-          className='profile-page__nav-bell'
-          hoverClass='profile-page__nav-bell--active'
-          onClick={() => {
-            haptics('light')
-            Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.notifications }).catch(() => {})
-          }}
-          role='button'
-          aria-label={notificationUnread > 0 ? `通知，${notificationUnread} 条未读` : '通知'}
-          data-testid='profile-notification-bell'
-        >
-          <JoyJoinIcon emoji='🔔' tier='semantic' size={22} />
-          {/* UIUX memo §7: cap is deliberately 「9+」 (>9), NOT Discover's
-              99+ — pre-flagged divergence, do not "fix" back. */}
-          {notificationUnread > 0 ? (
-            <View className='profile-page__nav-bell-badge' aria-hidden='true'>
-              <Text className='profile-page__nav-bell-badge-text'>
-                {notificationUnread > 9 ? '9+' : notificationUnread}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
+    <View className={`profile-page ${tabEntranceClass}`}>
+      <TabPageNav
+        title='我的'
+        condensed={navCondensed}
+        testId='profile-top-navigation'
+        right={<ProfileNavBell unread={notificationUnread} />}
+      />
       <ScrollView
         className='profile-page__scroll'
         scrollY

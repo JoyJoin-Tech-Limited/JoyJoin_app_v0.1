@@ -74,31 +74,6 @@
 
   background: var(--profile-bg);
 
-  &__nav {
-    position: relative;
-    flex-shrink: 0;
-    height: calc(env(safe-area-inset-top) + 88rpx);
-    padding-top: env(safe-area-inset-top);
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba($color-bg, 0.94);
-    z-index: 20;
-    // P0-8: the scrolled state lives on the PAGE ROOT (one shared state
-    // machine — useProfileScroll's 96/64rpx hysteresis band). 2026-11-17
-    // title parity: the page name is permanent in this bar (same placement
-    // as the native bar on Discover/Events), so condensation only firms up
-    // the chrome — it never hides the title.
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  &--scrolled &__nav {
-    background: rgba($color-bg, 0.98);
-    box-shadow: 0 1rpx 0 var(--profile-divider),
-      0 8rpx 24rpx rgba($color-text-primary, 0.06);
-  }
-
   // 2026-11-17: quiet meta line under the fixed nav title (date + weekday).
   // Secondary, not tertiary: the tertiary token lands ~3:1 on the warm page
   // tint here, which fails AA for 22rpx copy.
@@ -117,22 +92,12 @@
     text-overflow: ellipsis;
   }
 
-  &__nav-title {
-    font-family: $font-cn-display;
-    font-size: $font-size-lg;
-    line-height: 1.4;
-    font-weight: $font-weight-bold;
-    color: var(--profile-text-primary);
-  }
-
   // P0-2 notification bell (2026-10-22): mirrors discover-auth__bell anatomy
-  // (72rpx circle, primary badge pill, 99+ cap). Absolutely positioned so the
-  // centered title layout is untouched; sits in the 88rpx band below the
-  // safe-area inset.
+  // (72rpx circle, primary badge pill, 99+ cap). 2026-11-25: the shared
+  // TabPageNav right slot owns positioning + capsule clearance, so this is a
+  // plain flex child rather than an absolutely-placed circle.
   &__nav-bell {
-    position: absolute;
-    right: $container-padding;
-    top: calc(env(safe-area-inset-top) + 8rpx);
+    position: relative;
     width: 72rpx;
     height: 72rpx;
     display: flex;
