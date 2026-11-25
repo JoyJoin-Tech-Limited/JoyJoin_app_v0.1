@@ -18,6 +18,7 @@ import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/rou
 import { CountdownTickProvider } from '../../hooks/useCountdownTick'
 import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
+import TabPageNav from '../../components/ui/TabPageNav'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
 import EventStatusTabs, { type EventStatusTabKey } from '../../components/events/EventStatusTabs'
@@ -134,6 +135,21 @@ export default function EventsPage() {
     enabled: !authLoading,
   })
 
+  // Escape hatch: a wedged in-flight request must not park the page on
+  // skeletons forever with no way out (2026-11-25 device report: three
+  // skeletons, every control dead, because the webview stopped committing
+  // updates). After 12 s surface the normal error card, whose 重试 is
+  // recoverable without leaving the tab.
+  const [isStalled, setIsStalled] = useState(false)
+  useEffect(() => {
+    if (!isLoading) {
+      setIsStalled(false)
+      return
+    }
+    const timer = setTimeout(() => setIsStalled(true), 12_000)
+    return () => clearTimeout(timer)
+  }, [isLoading])
+
   const handleRefresh = useCallback(() => {
     haptics('light')
     eventsAnalytics.track('events_pull_refresh')
@@ -144,11 +160,26 @@ export default function EventsPage() {
 
   const pullDownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   usePullDownRefresh(() => {
-    handleRefresh()
+    // Release WeChat's NATIVE pull-down header before running the refresh, not
+    // after it returns. `enablePullDownRefresh` draws that header over the top
+    // of this webview, exactly where the segmented control sits; a synchronous
+    // throw in handleRefresh (analytics / apiRequest) previously skipped the
+    // only stopPullDownRefresh call and left the header pinned over the page
+    // with taps eaten at the top (2026-11-25 device report).
+    if (pullDownTimerRef.current) {
+      clearTimeout(pullDownTimerRef.current)
+    }
     pullDownTimerRef.current = setTimeout(() => {
       Taro.stopPullDownRefresh()
       pullDownTimerRef.current = null
     }, 800)
+    try {
+      handleRefresh()
+    } catch (error) {
+      logWarn('[Events] pull refresh failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   })
   useEffect(() => {
     return () => {
@@ -246,6 +277,7 @@ export default function EventsPage() {
 
   return renderGate(
     <View className={`events-page ${tabEntranceClass}`}>
+      <TabPageNav title='我的足迹' />
       <EventStatusTabs activeTab={resolvedActiveTab} onChange={handleTabChange} />
 
       {/* D1 — First event celebration hero (Batch D): only for an active first event. */}
@@ -276,13 +308,13 @@ export default function EventsPage() {
           {isFetching && !isLoading && (
             <View className='events-page__refresh-indicator' />
           )}
-          {isLoading ? (
+          {isLoading && !isStalled ? (
             <>
               <EventCardSkeleton />
               <EventCardSkeleton />
               <EventCardSkeleton />
             </>
-          ) : isError ? (
+          ) : isError || isStalled ? (
             <StatusCard
               className='events-page__empty-state'
               tone='error'
