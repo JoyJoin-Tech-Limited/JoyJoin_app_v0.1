@@ -1,0 +1,70 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+// Shared tab-page title bar (2026-11-25). Profile owned this treatment first;
+// every tab page now uses it so the page name renders in Alimama instead of
+// the native WeChat system font. Geometry matches the old native bar: one
+// 88rpx row below the status bar.
+.tab-page-nav {
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  // H5/older-runtime fallback. The TSX writes the measured status-bar height
+  // inline when available (Android can report env() = 0).
+  padding-top: env(safe-area-inset-top);
+  background: rgba($color-bg, 0.94);
+  z-index: 20;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+
+  // Scroll condensation only firms up the chrome; the title is permanent.
+  &--condensed {
+    background: rgba($color-bg, 0.98);
+    box-shadow: 0 1rpx 0 rgba($color-text-primary, 0.08),
+      0 8rpx 24rpx rgba($color-text-primary, 0.06);
+  }
+
+  // Discover scrolls at page level (PageMorphWrapper's absolute content layer
+  // defeats position: sticky), so its bar floats above the document scroll.
+  &--fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba($color-bg, 0.97);
+    z-index: 20;
+  }
+
+  &__content {
+    position: relative;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__title {
+    @include font-cn-display;
+    font-size: $font-size-lg;
+    line-height: 1.4;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  // Optional right affordance (notification bell). The 208rpx fallback keeps
+  // it clear of the capsule on WeChat when measurement is unavailable; the
+  // TSX overrides `right` in px from getMenuButtonBoundingClientRect().
+  &__right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 208rpx;
+    display: flex;
+    align-items: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-page-nav {
+    transition: none;
+  }
+}
