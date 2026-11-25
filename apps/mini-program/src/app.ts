@@ -25,6 +25,7 @@ import { loadBrandFonts } from './lib/utils/brandFont'
 import { useProfessionRetry } from './hooks/useProfessionRetry'
 import { preloadCdnAssets, ARCHETYPE_GLYPH_ASSETS } from './hooks/usePreloadCdnIcons'
 import { preloadOnboardingAssets } from './lib/utils/onboardingPreload'
+import { scheduleTabShellWarmup } from './lib/api/tabShellWarmup'
 
 function AutoLoginBridge() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -206,6 +207,11 @@ function App({ children }: PropsWithChildren<any>) {
     // personality emoji icons, archetype images, sprite sheets, ceremony hero)
     // is warm before first entrance. Weak networks are skipped automatically.
     void preloadOnboardingAssets()
+
+    // Warm the four tab shells once per launch (idle, fire-and-forget) so the
+    // first visit to each tab paints cached content instead of a skeleton.
+    // Gated internally on auth + network; cancelled on app hide.
+    scheduleTabShellWarmup()
   })
 
   return createElement(

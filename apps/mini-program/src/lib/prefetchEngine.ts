@@ -41,7 +41,7 @@ const NOTIFICATION_COUNTS_QUERY_KEY = ['mini-program', 'notification-counts'] as
 export const CONNECTIONS_SHELL_QUERY_KEY = ['mini-program', 'shell/connections'] as const
 
 /** Query key that existing Connections hooks read from. */
-const CONNECTIONS_QUERY_KEY = ['mini-program', 'connections'] as const
+export const CONNECTIONS_QUERY_KEY = ['mini-program', 'connections'] as const
 
 /** Device/network gate thresholds (AC-07). */
 const MIN_BENCHMARK_LEVEL = 20
