@@ -247,6 +247,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  derived-chemistry comparison arm (AC-10.5).
    *  Env fallback: DERIVED_CHEMISTRY_ENABLED (default: false). */
   derivedChemistryEnabled: "DERIVED_CHEMISTRY_ENABLED",
+  /** 街头盲盒用户入口开关（2026-11-26 暂时收起）。When false, hides every
+   * user-facing Flash entry (Discover card, teaser hero banner, arrival
+   * coachmark street row) and renders Flash pages in their closed state,
+   * without touching the master switch or the subpackage. Env fallback:
+   * ALANG_ENTRY_ENABLED (default: false). */
+  alangEntryEnabled: "ALANG_ENTRY_ENABLED",
   /** Alang/Flash digital-NPC kill-switch. When false, hides the legacy Alang
    * prototype and all formal Flash routes. Env fallback: ALANG_ENABLED
    * (default: false). */
@@ -833,6 +839,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  「AI 生成」标识是微信对 AIGC 的强制要求，关闭等于裸奔。渲染仍是
    *  fail-closed：只有内容确实由模型生成时才出角标，纯模板/兜底内容不打标。 */
   aigcLabelsEnabled: true,
+  /** 街头盲盒用户入口 — 调用点 false（暂时收起未完成的功能）。 */
+  alangEntryEnabled: false,
   /** 街头盲盒总开关 — 调用点 false；生产另有深圳定位硬门。 */
   alangEnabled: false,
   /** 街头盲盒上线预热横幅 — 调用点 false（alangEnabled 开启后自动失效）。 */

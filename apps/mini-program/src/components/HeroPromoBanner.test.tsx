@@ -86,6 +86,23 @@ describe('HeroPromoBanner variant D (flash teaser takeover)', () => {
     expect(screen.getByText('内测中')).toBeInTheDocument()
   })
 
+  it('falls back to variant A when the teaser entry is shelved', () => {
+    render(
+      <HeroPromoBanner variant='D' hasArchetype teaserEnabled={false} onTeaserTap={vi.fn()} />,
+    )
+
+    expect(screen.queryByText('内测中')).not.toBeInTheDocument()
+    expect(screen.getByText('这周末，会遇见谁？')).toBeInTheDocument()
+  })
+
+  it('blocks the ?promo=D staff override while the teaser entry is shelved', () => {
+    mocks.routerParams = { params: { promo: 'D' } }
+    render(<HeroPromoBanner hasArchetype teaserEnabled={false} onTeaserTap={vi.fn()} />)
+
+    expect(screen.queryByText('内测中')).not.toBeInTheDocument()
+    expect(screen.getByText('这周末，会遇见谁？')).toBeInTheDocument()
+  })
+
   it('ignores unknown promo URL params', () => {
     mocks.routerParams = { params: { promo: 'Z' } }
     render(<HeroPromoBanner hasArchetype onCtaTap={vi.fn()} />)

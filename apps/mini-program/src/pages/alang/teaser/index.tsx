@@ -4,8 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { useAuth } from '../../../hooks/useAuth'
+import { FlashFeatureClosed } from '../../../components/alang/FlashUi'
+import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { haptics } from '../../../lib/utils/haptics'
+import '../flash.scss'
 import './index.scss'
 
 // Lovart dusk-city hero (brief: docs/design/lovart-brief-flash-teaser-20261009.md).
@@ -20,6 +24,7 @@ const FLASH_TEASER_HERO_CDN = cdnAsset('/assets/alang/flash-teaser-hero-v1.webp'
  * requests, no API calls — the teaser must never look like a dead link.
  */
 export default function FlashTeaserPage() {
+  const { user } = useAuth()
   const { shouldReduceMotion } = useMiniRevealMotion()
   const { isDegradation } = useDeviceTier()
   const [heroLoaded, setHeroLoaded] = useState(false)
@@ -63,6 +68,10 @@ export default function FlashTeaserPage() {
     },
     [],
   )
+
+  // Shelved feature: render the closed state instead of a live teaser.
+  // Keep this after every hook so the rules-of-hooks order is stable.
+  if (!shouldShowStreetBlindBoxEntry(user)) return <FlashFeatureClosed />
 
   const handleBack = async () => {
     haptics('light')

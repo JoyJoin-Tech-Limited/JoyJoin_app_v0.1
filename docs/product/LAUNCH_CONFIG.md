@@ -263,6 +263,14 @@ and coordinate overrides. Those capabilities are hard-disabled when
 `APP_MODE=production`. To roll back immediately, set the DB flag (preferred) or
 `ALANG_ENABLED=false`; the server and mini-program entry points fail closed.
 
+`ALANG_ENTRY_ENABLED` is the environment fallback for the DB-backed
+`alangEntryEnabled` flag (safe default `false`). Added 2026-11-26, it is the
+outer user-facing entry gate: when off, the Discover card (live and teaser), the
+teaser hero banner (including `?promo=D`) and the arrival-coachmark street row
+are hidden, and the alang subpackage pages render their closed state.
+`ALANG_ENABLED`, the subpackage and the API routes are unchanged, so reopening
+is a DB toggle with no release.
+
 `TENCENT_MAP_KEY` stays server-only. Do not reuse `TENCENT_MAP_JS_KEY` in the
 mini-program: Alang renders the native WeChat Map and calls the existing
 `/api/geo` proxy. If Tencent POI/routes are unavailable, search GPS and the

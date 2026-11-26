@@ -58,7 +58,7 @@ const home = {
 describe('formal Street Blind Box home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useAuth.mockReturnValue({ user: { appMode: 'production', singleTestMode: false, features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { appMode: 'production', singleTestMode: false, features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.getStorage.mockReturnValue(undefined)
     mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isFetching: false, isError: false, refetch: mocks.refetch })
     mocks.useFlashStoryFragments.mockReturnValue({ data: [{
@@ -230,7 +230,7 @@ describe('formal Street Blind Box home', () => {
   it('shows completed-story replay only in single-test mode', async () => {
     mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
     mocks.useAuth.mockReturnValue({ user: {
-      appMode: 'test', singleTestMode: true, features: { alangEnabled: true },
+      appMode: 'test', singleTestMode: true, features: { alangEntryEnabled: true, alangEnabled: true },
     } })
     render(<FlashHomePage />)
 

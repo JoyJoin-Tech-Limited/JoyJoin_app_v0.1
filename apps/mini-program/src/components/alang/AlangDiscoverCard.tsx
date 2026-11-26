@@ -43,6 +43,7 @@ export default function AlangDiscoverCard() {
 
   const mode = resolveStreetBlindBoxMode(user, { authPending: authLoading })
   const isTeaser = mode === 'teaser'
+  const entryVisible = shouldShowStreetBlindBoxEntry(user)
 
   // Teaser idle motion (halo breath + sheen sweep) runs only while the card is
   // in the viewport — the Discover hero banner owns the top-of-screen peak.
@@ -93,12 +94,12 @@ export default function AlangDiscoverCard() {
       lastLoggedModeRef.current = mode
       logInfo('[FlashTeaser] mode resolved', { mode })
     }
-    if (!isTeaser || teaserImpressionFiredRef.current) return
+    if (!entryVisible || !isTeaser || teaserImpressionFiredRef.current) return
     teaserImpressionFiredRef.current = true
     discoverAnalytics.track('flash_teaser_impression', undefined, { surface: 'card' })
-  }, [mode, isTeaser])
+  }, [mode, isTeaser, entryVisible])
 
-  if (!shouldShowStreetBlindBoxEntry()) return null
+  if (!entryVisible) return null
 
   // Never paint the teaser for an unresolved gate: that is what made a live
   // feature look "closed" during auth hydration / a partial cached payload.

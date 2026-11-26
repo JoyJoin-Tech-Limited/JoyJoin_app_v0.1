@@ -24,4 +24,6 @@
 - 所有改动尊重 `prefers-reduced-motion`；CTA 保持纯紫无渐变；不引入 emoji；WeChat WXSS 不使用 `min()` / `max()` / `clamp()`（用 rpx + media query 做响应式）。
 - Canonical plan: `docs/deliberations/2026-08-26-flash-polish-strategy.md`。
 
+**2026-11-26 暂时收起：** `alangEntryEnabled`（env `ALANG_ENTRY_ENABLED`，默认 false）是外层入口开关。关闭时发现页卡片（正式与预告）、Hero 变体 D（含 `?promo=D` 调试参数）与到店引导街巷行全部隐藏，`pages/alang/teaser` 及正式子包页面渲染未开放态；`alangEnabled`、子包与 API 路由保持不变，重新开放只需在 `/admin/feature-flags` 打开入口开关，零发版。
+
 **街头盲盒 teaser 模式（2026-10-09，sprint_20261009_flash_teaser_mode）：** `alangEnabled` 保持关闭期间，Discover 入口渲染为「未拆的盒子」teaser 卡（dusk 渐变 + halo 呼吸 + 8s sheen，in-view 门控），点击进入静态 teaser 页（CDN hero + CSS dusk 兜底、承诺文案、点盒 glow 脉冲）。新增 `flashTeaserHeroEnabled`（变体 D，仅原型，与 `alangEnabled` 硬互斥、与卡互斥 XOR）；全部切换走 `/admin/feature-flags` 手工——`alangEnabled` 打开即全量转 live，零发版。门禁 `alangAccess: isStreetBlindBoxLive`（fail-closed）统一服务端与 6 个 alang 子包页面；埋点 `flash_teaser_impression/tap` 已入白名单；素材为 CDN-only Lovart teaser hero/icon（manifest 登记，dist 清理）；截图工具 `generators-flash-teaser.mjs` + env 门控 mock（`MOCK_FLASH_TEASER`/`MOCK_FLASH_TEASER_HERO`）。Brief: `docs/design/lovart-brief-flash-teaser-20261009.md`。

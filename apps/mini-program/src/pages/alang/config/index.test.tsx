@@ -150,7 +150,7 @@ describe('AlangConfigPage production access gate', () => {
     mocks.useAuth.mockReturnValue({
       user: {
         appMode: 'production',
-        features: { alangEnabled: true },
+        features: { alangEntryEnabled: true, alangEnabled: true },
       },
       isLoading: false,
     })
@@ -251,7 +251,7 @@ describe('AlangConfigPage test-point start flow', () => {
     mocks.distanceMeters.current = 150
     mocks.currentRoute.current = 'pages/alang/config/index'
     mocks.useAuth.mockReturnValue({
-      user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
+      user: { appMode: 'test', singleTestMode: true, features: { alangEntryEnabled: true, alangEnabled: true } },
       isLoading: false,
     })
     const mission = defaultMission()

@@ -107,6 +107,11 @@ interface HeroPromoBannerProps {
    *  and no analytics fire. Use for kill-switch, onboarding, or hidden
    *  tabs. Defaults to true when not provided. */
   enabled?: boolean
+  /** Server-driven kill switch for the Variant D flash teaser. When false the
+   *  resolved variant falls back to A/C even if `?promo=D` is present, so a
+   *  shelved feature cannot reappear through the staff URL override.
+   *  Defaults to true. */
+  teaserEnabled?: boolean
   onCtaTap?: () => void
   /** Variant D (flash teaser) tap target — the banner body routes to the
    *  static teaser page. Only wired by discover when the teaser interlock
@@ -120,6 +125,7 @@ export default function HeroPromoBanner({
   variant,
   hasArchetype = false,
   enabled = true,
+  teaserEnabled = true,
   onCtaTap,
   onTeaserTap,
 }: HeroPromoBannerProps) {
@@ -137,15 +143,16 @@ export default function HeroPromoBanner({
   // user toward the personality test when they don't yet have an archetype.
   // Variant D (flash teaser) is only ever passed explicitly by discover when
   // its teaser interlock holds (or via ?promo=D staff debug).
-  const effectiveVariant: PromoBannerVariant = useMemo(
-    () =>
-      resolveVariant(
-        variant,
-        router?.params?.promo as string | undefined,
-        hasArchetype,
-      ),
-    [variant, router?.params?.promo, hasArchetype],
-  )
+  const effectiveVariant: PromoBannerVariant = useMemo(() => {
+    const resolved = resolveVariant(
+      variant,
+      router?.params?.promo as string | undefined,
+      hasArchetype,
+    )
+    // Shelved feature: block both the discover interlock and ?promo=D.
+    if (resolved === 'D' && !teaserEnabled) return hasArchetype ? 'A' : 'C'
+    return resolved
+  }, [variant, router?.params?.promo, hasArchetype, teaserEnabled])
 
   const isTeaserVariant = effectiveVariant === 'D'
   const heroImageSrc = isTeaserVariant ? TEASER_HERO_IMAGE_CDN : HERO_IMAGE_CDN

@@ -142,6 +142,7 @@ const [
     matchingPuzzlePreludeEnabled,
     aigcLabelsEnabled,
     matchingOperatorReviewEnabled,
+    alangEntryEnabled,
     alangEnabled,
     flashTeaserHeroEnabled,
     flashTaskRetryTestEnabledFlag,
@@ -212,6 +213,7 @@ const [
     getFeatureFlag('matchingPuzzlePreludeEnabled', false),
     getFeatureFlag('aigcLabelsEnabled', true),
     getFeatureFlag('matchingOperatorReviewEnabled', false),
+    getFeatureFlag('alangEntryEnabled', false),
     getFeatureFlag('alangEnabled', false),
     getFeatureFlag('flashTeaserHeroEnabled', false),
     getFeatureFlag('flashTaskRetryTestEnabled', false),
@@ -364,6 +366,7 @@ const [
       matchingPuzzlePreludeEnabled,
       aigcLabelsEnabled,
       matchingOperatorReviewEnabled,
+      alangEntryEnabled,
       alangEnabled,
       /** Flash teaser hero takeover (ships dark; interlocked to !alangEnabled). */
       flashTeaserHeroEnabled,

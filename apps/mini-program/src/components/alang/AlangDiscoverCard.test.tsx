@@ -33,7 +33,9 @@ vi.mock('@tarojs/components', () => ({
 describe('AlangDiscoverCard formal entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({
+      user: { features: { alangEntryEnabled: true, alangEnabled: true } },
+    })
   })
 
   it('renders a static Shenzhen entry without reading mission or location data', () => {
@@ -69,18 +71,23 @@ describe('AlangDiscoverCard formal entry', () => {
     })
   })
 
-  it('remains visible when the legacy Alang flag is disabled', () => {
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+  it('downgrades to the teaser card when the legacy Alang flag is disabled', () => {
+    mocks.useAuth.mockReturnValue({
+      user: { features: { alangEntryEnabled: true, alangEnabled: false } },
+    })
     render(<AlangDiscoverCard />)
 
     expect(screen.getByText('街头盲盒')).toBeInTheDocument()
+    expect(screen.getByText('内测中')).toBeInTheDocument()
   })
 })
 
 describe('AlangDiscoverCard teaser mode (alangEnabled=false)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    mocks.useAuth.mockReturnValue({
+      user: { features: { alangEntryEnabled: true, alangEnabled: false } },
+    })
   })
 
   it('renders the 内测中 teaser variant instead of the live entry copy', () => {
@@ -112,11 +119,12 @@ describe('AlangDiscoverCard teaser mode (alangEnabled=false)', () => {
     expect(mocks.cardTap).not.toHaveBeenCalled()
   })
 
-  it('fails closed to teaser mode when the features map is missing', () => {
-    mocks.useAuth.mockReturnValue({ user: null })
-    render(<AlangDiscoverCard />)
+  it('hides the card when the auth payload has no entry switch', () => {
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    const { container } = render(<AlangDiscoverCard />)
 
-    expect(screen.getByText('内测中')).toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
+    expect(mocks.track).not.toHaveBeenCalled()
   })
 
   it('surfaces a visible recovery message when the teaser page cannot open', async () => {
@@ -149,6 +157,30 @@ describe('AlangDiscoverCard unresolved gate', () => {
 
   it('does not read an authenticated payload without features as "feature off"', () => {
     mocks.useAuth.mockReturnValue({ user: { id: 'user-1' } })
+    const { container } = render(<AlangDiscoverCard />)
+
+    expect(container).toBeEmptyDOMElement()
+    expect(mocks.track).not.toHaveBeenCalled()
+  })
+})
+
+describe('AlangDiscoverCard shelved entry (alangEntryEnabled=false)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders nothing even when the master switch is on', () => {
+    mocks.useAuth.mockReturnValue({
+      user: { features: { alangEntryEnabled: false, alangEnabled: true } },
+    })
+    const { container } = render(<AlangDiscoverCard />)
+
+    expect(container).toBeEmptyDOMElement()
+    expect(mocks.track).not.toHaveBeenCalled()
+  })
+
+  it('renders nothing for a guest', () => {
+    mocks.useAuth.mockReturnValue({ user: null })
     const { container } = render(<AlangDiscoverCard />)
 
     expect(container).toBeEmptyDOMElement()

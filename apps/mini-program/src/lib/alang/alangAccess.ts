@@ -2,7 +2,7 @@ import type { AuthUserResponse } from '@shared/api'
 
 type AlangFeatureFlags = Pick<
   NonNullable<AuthUserResponse['features']>,
-  'alangEnabled'
+  'alangEnabled' | 'alangEntryEnabled'
 >
 
 export type AlangAccessUser = {
@@ -11,10 +11,12 @@ export type AlangAccessUser = {
   features?: AlangFeatureFlags
 }
 
-/** 街头盲盒入口恒可见，但有两种模式：alangEnabled=false 时是「内测中」预告
- *  态（预告卡 + 静态预告页），true 时是正式功能。模式判定用 isStreetBlindBoxLive。 */
-export function shouldShowStreetBlindBoxEntry(): boolean {
-  return true
+/** 街头盲盒用户入口开关：关闭时发现页卡片、悬念横幅与到店引导街巷行全部隐藏，
+ *  Flash 页面渲染未开放态。与总开关独立，便于暂时收起未完成的功能。 */
+export function shouldShowStreetBlindBoxEntry(
+  user: AlangAccessUser | null | undefined,
+): boolean {
+  return user?.features?.alangEntryEnabled === true
 }
 
 /** 入口三态。`unresolved` = 还没有权威答案（auth 未回来 / features 未携带），
@@ -40,29 +42,39 @@ export function resolveStreetBlindBoxMode(
 ): StreetBlindBoxMode {
   if (options.authPending) return 'unresolved'
 
-  const flag = user?.features?.alangEnabled
+  const features = user?.features
+  if (!features) {
+    // 没有权威 flag：已确认的游客维持 fail-closed；已登录但 features 缺失的
+    // 载荷（本地/旧版本缓存、部分响应）视为未知，不能断言功能关闭。
+    return user ? 'unresolved' : 'teaser'
+  }
+
+  // 入口开关是最外层闸门：明确关闭时整个玩法收起，页面渲染未开放态。
+  // 旧载荷没有这个字段时视为未知，而不是已关闭。
+  if (features.alangEntryEnabled === false) return 'teaser'
+  if (features.alangEntryEnabled !== true) return 'unresolved'
+
+  const flag = features.alangEnabled
   if (flag === true) return 'live'
   if (flag === false) return 'teaser'
 
-  // 没有权威 flag：已确认的游客维持 fail-closed；已登录但 features 缺失的
-  // 载荷（本地/旧版本缓存、部分响应）视为未知，不能断言功能关闭。
-  return user ? 'unresolved' : 'teaser'
+  return 'unresolved'
 }
 
-/** 街头盲盒正式功能是否上线（alangEnabled=true）。false = 预告态。
- *  Fail-closed：features 缺失/未加载一律视为预告态。
- *  注意：UI 模式请优先用 resolveStreetBlindBoxMode，避免把「未加载」当成关闭。 */
+/** 街头盲盒正式功能是否上线（入口开关与 alangEnabled 同时为 true）。
+ *  Fail-closed：任一 flag 缺失/未加载一律视为未上线。 */
 export function isStreetBlindBoxLive(
   user: AlangAccessUser | null | undefined,
 ): boolean {
-  return user?.features?.alangEnabled === true
+  return user?.features?.alangEntryEnabled === true
+    && user?.features?.alangEnabled === true
 }
 
-/** Legacy Alang prototype entry points remain controlled by the old flag. */
+/** Legacy Alang prototype entry points require the entry switch and the old flag. */
 export function shouldShowAlangEntry(
   user: AlangAccessUser | null | undefined,
 ): boolean {
-  return user?.features?.alangEnabled === true
+  return isStreetBlindBoxLive(user)
 }
 
 /** Debug controls additionally require the server-provided single-test marker. */

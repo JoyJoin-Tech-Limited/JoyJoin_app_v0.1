@@ -86,7 +86,7 @@ describe('formal Flash map navigation', () => {
     vi.clearAllMocks()
     mocks.locationChange.current = null
     mocks.didHide.current = null
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.permission.mockResolvedValue('granted')
     mocks.openSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
     mocks.openLocation.mockResolvedValue({ errMsg: 'openLocation:ok' })
@@ -374,7 +374,7 @@ describe('formal Flash map navigation', () => {
   // Teaser-mode contract (sprint_20261009_flash_teaser_mode): flag off =
   // closed state; the page never reaches the GPS consent prompt.
   it('shows the closed state and never touches location when alangEnabled is false', async () => {
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: false } } })
     render(<FlashMapPage />)
     expect(await screen.findByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.startLocationUpdate).not.toHaveBeenCalled()

@@ -59,7 +59,7 @@ const assignment = {
 describe('formal Flash task detail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.useAssignment.mockReturnValue({ data: assignment, isLoading: false, isError: false, error: null, refetch: mocks.refetch })
     mocks.location.mockResolvedValue({ latitude: 22.5381, longitude: 113.9231, accuracy: 9 })
     mocks.arrive.mockResolvedValue({ canonicalScreen: 'task', assignmentId: 'assignment-1', withinRange: false, distanceMeters: 71 })
@@ -101,7 +101,7 @@ describe('formal Flash task detail', () => {
   })
 
   it('does not fetch or locate a disabled deep link', () => {
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: false } } })
     render(<FlashTaskPage />)
     expect(mocks.useAssignment).toHaveBeenCalledWith('assignment-1', false)
     expect(mocks.location).not.toHaveBeenCalled()

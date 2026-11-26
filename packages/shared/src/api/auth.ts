@@ -195,6 +195,12 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** When true, formed matching groups are held for operator approval
      *  before users are notified and venues are assigned. Default false. */
     matchingOperatorReviewEnabled?: boolean
+    /** User-facing 街头盲盒 entry kill switch. When false, hides the Discover
+     *  card, the teaser hero banner and the arrival-coachmark street row, and
+     *  Flash pages render their closed state. Does not touch the master
+     *  switch, so the feature can be re-opened without a release.
+     *  Default: false. */
+    alangEntryEnabled?: boolean
     /** When true, enables the Alang NPC prototype system. Default: false. */
     alangEnabled?: boolean
     /** Flash teaser hero takeover: while alangEnabled is false, the Discover

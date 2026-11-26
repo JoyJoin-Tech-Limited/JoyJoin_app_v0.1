@@ -92,7 +92,7 @@ describe('FlashStoryArchivePage (谜案档案台)', () => {
     mocks.getStorageSync.mockReturnValue(null)
     // Teaser-mode gate (sprint_20261009): pages render live content only when
     // alangEnabled=true; these tests exercise the live surface.
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.useArchive.mockReturnValue({ data: emptyArchive, isLoading: false, isError: false, refetch: mocks.refetch })
   })
 

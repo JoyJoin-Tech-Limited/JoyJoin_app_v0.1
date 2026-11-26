@@ -54,7 +54,7 @@ import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import SingleTestBanner from '../../components/dev/SingleTestBanner'
 import AlangDiscoverCard from '../../components/alang/AlangDiscoverCard'
-import { isStreetBlindBoxLive } from '../../lib/alang/alangAccess'
+import { isStreetBlindBoxLive, shouldShowStreetBlindBoxEntry } from '../../lib/alang/alangAccess'
 import GuidanceTipCard, { type GuidanceTipCardRowKey } from '../../components/guidance/GuidanceTipCard'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
@@ -72,15 +72,16 @@ const DISCOVER_CARD_HEIGHT_RPX = 560
 
 // ─── Promo banner variant assignment ──────────────────────────────
 // Flash teaser interlock (sprint_20261009_flash_teaser_mode): the hero slot
-// becomes the「未拆的盒子」teaser ONLY while ops has enabled the takeover flag
-// AND the feature itself is still dark AND the user already holds an
-// archetype (no-archetype users keep the personality-test funnel C-path).
+// becomes the「未拆的盒子」teaser ONLY while the user-facing entry switch is on
+// AND ops has enabled the takeover flag AND the feature itself is still dark
+// AND the user already holds an archetype (no-archetype users keep the
+// personality-test funnel C-path).
 function resolveVariant(
   userId: string | undefined,
   hasArchetype: boolean,
-  teaser?: { flashTeaserHeroEnabled: boolean; alangLive: boolean },
+  teaser?: { flashTeaserHeroEnabled: boolean; alangLive: boolean; alangEntry: boolean },
 ): PromoBannerVariant {
-  if (teaser?.flashTeaserHeroEnabled && !teaser.alangLive && hasArchetype) return 'D'
+  if (teaser?.alangEntry && teaser.flashTeaserHeroEnabled && !teaser.alangLive && hasArchetype) return 'D'
   if (!hasArchetype) return 'C'
   if (!userId) return 'A'
   const hash = userId.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
@@ -252,7 +253,13 @@ function AuthenticatedDiscover({
     exiting: guidanceTipExiting,
     dismiss: dismissGuidanceTip,
   } = useGuidanceQueue({ surface: 'discover', user })
-  const guidanceTipCopy = useMemo(() => getGuidanceTipCopy('discover_arrival'), [])
+  const showStreetBlindBoxEntry = shouldShowStreetBlindBoxEntry(user)
+  const guidanceTipCopy = useMemo(() => {
+    const copy = getGuidanceTipCopy('discover_arrival')
+    if (showStreetBlindBoxEntry) return copy
+    // Feature shelved: drop the street row rather than shipping a dead tap target.
+    return { ...copy, rows: copy.rows.filter((row) => row.key !== 'street') }
+  }, [showStreetBlindBoxEntry])
   const arrivalTipShowing = guidanceQueueEnabled && guidanceTip?.id === 'discover_arrival'
   // E1 day-scoped tagline yield, reproduced under the flag-on path: the
   // server-persisted seen timestamp doubles as the "arrival day" stamp (the
@@ -470,8 +477,9 @@ function AuthenticatedDiscover({
       resolveVariant(userId, !!userArchetype, {
         flashTeaserHeroEnabled: (user as any)?.features?.flashTeaserHeroEnabled === true,
         alangLive: (user as any)?.features?.alangEnabled === true,
+        alangEntry: showStreetBlindBoxEntry,
       }),
-    [userId, userArchetype, user],
+    [userId, userArchetype, user, showStreetBlindBoxEntry],
   )
 
   // PR-9 funnel-tail close/tap-through events. `auto` fires from the 6s timer
@@ -754,6 +762,7 @@ function AuthenticatedDiscover({
         // (banner shown) when the flag is missing or the user object
         // hasn't loaded yet.
         enabled={(user as any)?.features?.promoBannerEnabled ?? true}
+        teaserEnabled={showStreetBlindBoxEntry}
         onCtaTap={handleBannerCtaTap}
         onTeaserTap={handleFlashTeaserTap}
       />
@@ -794,7 +803,7 @@ function AuthenticatedDiscover({
           mascotSrc={avatarError ? localFallback : xiaoyueAsset}
           onMascotError={() => setAvatarError(true)}
           exiting={arrivalExiting}
-          ariaLabel={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局，${FLOW1_ENTRY_COPY.street.title}一个人也能玩。${guidanceTipCopy.dismissHint}`}
+          ariaLabel={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局${showStreetBlindBoxEntry ? `，${FLOW1_ENTRY_COPY.street.title}一个人也能玩` : ''}。${guidanceTipCopy.dismissHint}`}
           onDismiss={(reason) => handleArrivalCoachmarkClosed(reason)}
           onRowTap={handleLegacyArrivalRowTap}
         />
@@ -810,7 +819,7 @@ function AuthenticatedDiscover({
           mascotSrc={avatarError ? localFallback : xiaoyueAsset}
           onMascotError={() => setAvatarError(true)}
           exiting={guidanceTipExiting}
-          ariaLabel={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局，${FLOW1_ENTRY_COPY.street.title}一个人也能玩。${guidanceTipCopy.dismissHint}`}
+          ariaLabel={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局${showStreetBlindBoxEntry ? `，${FLOW1_ENTRY_COPY.street.title}一个人也能玩` : ''}。${guidanceTipCopy.dismissHint}`}
           onDismiss={(reason) => {
             onboardingAnalytics.interaction(
               'discover',
@@ -857,7 +866,8 @@ function AuthenticatedDiscover({
 
       {/* 街头盲盒 entry — XOR with banner variant D (sprint_20261009): when the
           hero takeover is active it carries the teaser story alone; repeating
-          the card below would spend two prime slots on one unusable feature. */}
+          the card below would spend two prime slots on one unusable feature.
+          The card also self-hides when alangEntryEnabled is off. */}
       {bannerVariant !== 'D' && <AlangDiscoverCard />}
 
       {/* Pool listing */}

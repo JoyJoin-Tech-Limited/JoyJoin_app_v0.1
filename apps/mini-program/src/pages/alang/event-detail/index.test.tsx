@@ -15,7 +15,7 @@ vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
 describe('legacy Flash detail redirect', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.redirectTo.mockResolvedValue({})
   })
 
@@ -26,7 +26,7 @@ describe('legacy Flash detail redirect', () => {
   })
 
   it('fails closed without navigating when the feature is disabled', () => {
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: false } } })
     render(<LegacyFlashDetailRedirect />)
     expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.redirectTo).not.toHaveBeenCalled()

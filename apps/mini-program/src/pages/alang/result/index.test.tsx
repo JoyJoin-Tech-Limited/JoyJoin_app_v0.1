@@ -59,7 +59,7 @@ const assignment = {
 describe('formal Flash feedback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.useAssignment.mockReturnValue({ data: assignment, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.submit.mockResolvedValue({ canonicalScreen: 'delivery', assignmentId: 'assignment-1' })
     mocks.canonicalRedirect.mockResolvedValue(false)
@@ -93,7 +93,7 @@ describe('formal Flash feedback', () => {
   })
 
   it('does not fetch a disabled deep link', () => {
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: false } } })
     render(<FlashFeedbackPage />)
     expect(mocks.useAssignment).toHaveBeenCalledWith('assignment-1', false)
     expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()

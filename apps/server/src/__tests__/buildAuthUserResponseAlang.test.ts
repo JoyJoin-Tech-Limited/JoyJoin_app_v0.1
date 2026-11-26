@@ -111,6 +111,21 @@ describe("buildAuthUserResponse Alang feature exposure", () => {
     }
   );
 
+  it.each([true, false])(
+    "exposes alangEntryEnabled=%s with a default-false fallback",
+    async (alangEntryEnabled) => {
+      mockGetFeatureFlag.mockImplementation(
+        async (key: string, defaultValue: boolean) =>
+          key === "alangEntryEnabled" ? alangEntryEnabled : defaultValue
+      );
+
+      const response = await buildAuthUserResponse(mockUser.id);
+
+      expect(response?.features?.alangEntryEnabled).toBe(alangEntryEnabled);
+      expect(mockGetFeatureFlag).toHaveBeenCalledWith("alangEntryEnabled", false);
+    }
+  );
+
   it("fails client debug mode closed in production even when the single-test flag is stale", async () => {
     process.env.APP_MODE = "production";
     process.env.ENABLE_SINGLE_TEST_MODE = "true";

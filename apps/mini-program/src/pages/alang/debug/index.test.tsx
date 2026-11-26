@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   callDebugMockGps: vi.fn(),
   callDebugForceNode: vi.fn(),
   authUser: {
-    current: { appMode: 'production', features: { alangEnabled: true } } as any,
+    current: { appMode: 'production', features: { alangEntryEnabled: true, alangEnabled: true } } as any,
   },
   mission: {
     current: null as any,
@@ -104,7 +104,7 @@ describe('AlangDebugPage', () => {
     vi.clearAllMocks()
     mocks.authUser.current = {
       appMode: 'production',
-      features: { alangEnabled: true },
+      features: { alangEntryEnabled: true, alangEnabled: true },
     }
     mocks.mission.current = completedMission()
     mocks.archives.current = [{ id: 'archive-1', missionId: 'mission-1' }]
@@ -130,7 +130,7 @@ describe('AlangDebugPage', () => {
     mocks.authUser.current = {
       appMode: 'test',
       singleTestMode: true,
-      features: { alangEnabled: true },
+      features: { alangEntryEnabled: true, alangEnabled: true },
     }
 
     const { getByText, queryByText } = render(<AlangDebugPage />)
@@ -144,7 +144,7 @@ describe('AlangDebugPage', () => {
     mocks.authUser.current = {
       appMode: 'test',
       singleTestMode: true,
-      features: { alangEnabled: true },
+      features: { alangEntryEnabled: true, alangEnabled: true },
     }
     mocks.resetMission.mockResolvedValue({
       reset: true,
@@ -175,7 +175,7 @@ describe('AlangDebugPage', () => {
     mocks.authUser.current = {
       appMode: 'test',
       singleTestMode: true,
-      features: { alangEnabled: true },
+      features: { alangEntryEnabled: true, alangEnabled: true },
     }
     mocks.showModal.mockResolvedValue({ confirm: false, cancel: true })
 
@@ -193,7 +193,7 @@ describe('AlangDebugPage', () => {
     mocks.authUser.current = {
       appMode: 'test',
       singleTestMode: true,
-      features: { alangEnabled: true },
+      features: { alangEntryEnabled: true, alangEnabled: true },
     }
     mocks.resetMission.mockRejectedValue(new Error('RESET_FAILED'))
 

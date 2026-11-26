@@ -25,7 +25,7 @@ vi.mock('../../../components/alang/FlashUi', () => ({
 describe('Flash parallel-universe finale', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({
       isLoading: false,
       isError: false,

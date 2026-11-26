@@ -129,7 +129,7 @@ describe('formal Flash dialogue', () => {
     mocks.didHide = null
     mocks.didUnload = null
     mocks.getStorageSync.mockReturnValue(undefined)
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: questionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.answer.mockResolvedValue(questionEncounter)
     mocks.advance.mockResolvedValue(questionEncounter)
@@ -418,7 +418,7 @@ describe('formal Flash dialogue', () => {
   // now the master switch for the formal feature — flag off = closed state,
   // no encounter fetch.
   it('shows the closed state without fetching when alangEnabled is false', () => {
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: false } } })
     render(<FlashDialoguePage />)
     expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', false, false)
@@ -812,7 +812,7 @@ describe('formal Flash dialogue — 叙事动作层 interaction 节点', () => {
     mocks.didHide = null
     mocks.didUnload = null
     mocks.getStorageSync.mockReturnValue(undefined)
-    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEntryEnabled: true, alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: interactionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.interaction.mockResolvedValue(interactionCallbackEncounter)
     mocks.canonicalRedirect.mockResolvedValue(false)

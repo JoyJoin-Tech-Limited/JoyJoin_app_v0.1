@@ -147,6 +147,7 @@ export const FEATURE_FLAG_SECTION_BY_KEY: Record<string, string> = {
   personalStoryEnabled: 'profile',
 
   // 街头盲盒
+  alangEntryEnabled: 'alang-flash',
   alangEnabled: 'alang-flash',
   flashShenzhenLocationGateEnabled: 'alang-flash',
   flashTaskRetryTestEnabled: 'alang-flash',
@@ -273,6 +274,7 @@ export const FEATURE_FLAG_LABELS: Record<string, string> = {
   personalStoryEnabled: '个人故事',
 
   // ── 街头盲盒 ──────────────────────────────────────
+  alangEntryEnabled: '街头盲盒入口',
   alangEnabled: '街头盲盒总开关',
   flashShenzhenLocationGateEnabled: '街头盲盒深圳定位限制',
   flashTaskRetryTestEnabled: '街头盲盒任务复测',
@@ -463,6 +465,8 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<string, string> = {
   personalStoryEnabled: '默认关闭。开启后，启用私密个人故事的生成与阅读功能，仅本人可见；关闭时入口隐藏。',
 
   // ── 街头盲盒 ──────────────────────────────────────
+  alangEntryEnabled:
+    '默认关闭。关闭时隐藏所有用户可见入口（发现页卡片、悬念横幅、到店引导街巷行），街头盲盒页面显示暂未开放；开启后按总开关决定正式态或预告态。用于暂时收起未完成的功能，不必改动总开关。',
   alangEnabled:
     '默认关闭，为街头盲盒总开关。开启后，街头盲盒全部正式链路（地图探索、NPC 相遇、剧情任务）对用户可见；关闭时整个玩法隐藏。',
   flashShenzhenLocationGateEnabled:

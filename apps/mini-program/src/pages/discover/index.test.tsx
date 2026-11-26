@@ -130,7 +130,10 @@ vi.mock('../../lib/utils/logger', () => ({ logInfo: vi.fn(), logWarn: vi.fn() })
 vi.mock('../../lib/mascot/xiaoyueExpressions', () => ({
   getXiaoyueExpressionAsset: () => '/xiaoyue.webp',
 }))
-vi.mock('../../lib/alang/alangAccess', () => ({ isStreetBlindBoxLive: () => false }))
+vi.mock('../../lib/alang/alangAccess', () => ({
+  isStreetBlindBoxLive: () => false,
+  shouldShowStreetBlindBoxEntry: () => true,
+}))
 vi.mock('../../lib/utils/systemInfo', () => ({
   getSystemInfoCompat: () => ({ windowWidth: 375, reduceMotion: false, benchmarkLevel: 20 }),
   getWindowInfoCompat: () => ({
