@@ -123,3 +123,26 @@ describe('tab bar config component icon format (kept in sync with index.js)', ()
     }
   })
 })
+
+/**
+ * The highlight had six independent writers (page publish, optimistic tap,
+ * switch rollback, two route-truth paints, attach-time intent paint). Every
+ * 2026-11-22 → 11-24 regression was two of them disagreeing about one instant:
+ * attaching painted the outgoing tab, a push no-op'd while `resolved` was
+ * false, the watchdog forced route truth mid-transition. One writer removes
+ * that whole class, so a second write site must fail here rather than ship.
+ */
+describe('single writer for the tab highlight (2026-11-26)', () => {
+  const js = read('index.js')
+
+  it('commits `selected` from exactly one place', () => {
+    const writes = js.match(/setData\(\{ selected/g) ?? []
+    expect(writes).toHaveLength(1)
+  })
+
+  it('routes every decision point through _commitSelected', () => {
+    expect(js).toContain('_commitSelected: function (index)')
+    const calls = js.match(/(?:this|self)\._commitSelected\(/g) ?? []
+    expect(calls.length).toBeGreaterThanOrEqual(6)
+  })
+})

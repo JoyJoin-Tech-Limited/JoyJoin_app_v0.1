@@ -271,7 +271,7 @@ Component({
       // the destination mounts (the "点不亮 / 乱套" report). Keep the tapped tab
       // lit and let the settle re-read confirm it.
       if (pendingIntentIndex !== null && Date.now() - pendingIntentAt < TRANSITION_MS) {
-        this.setData({ selected: pendingIntentIndex, hidden: false, resolved: true })
+        this._commitSelected(pendingIntentIndex)
       } else {
         this._reconcileSelection()
       }
@@ -487,7 +487,7 @@ Component({
       // is sitting on permanently unlit — it only came back after another tap
       // (2026-11-24 device report).
       if (this.data.selected === n && !this.data.hidden && this.data.resolved) return
-      this.setData({ selected: n, hidden: false, resolved: true })
+      this._commitSelected(n)
     },
 
     /**
@@ -645,7 +645,7 @@ Component({
       // describes the page being left, so the tap has to outrank it for one
       // bounded window (see TRANSITION_MS).
       recordIntent(index)
-      this.setData({ selected: index, hidden: false, resolved: true })
+      this._commitSelected(index)
       this.trackTabBarEvent(
         isCenter ? 'mini_program_center_button_tap' : 'mini_program_tab_bar_tap',
         isCenter
@@ -740,7 +740,7 @@ Component({
               // Unreadable stack: fall back to where we came from rather than
               // leaving the optimistic highlight on a page we never reached.
               self._confirmedSelected = request.previousSelected
-              self.setData({ selected: request.previousSelected, hidden: false, resolved: true })
+              self._commitSelected(request.previousSelected)
             }
             if (wx.showToast) {
               wx.showToast({ title: '切换失败，请重试', icon: 'none' })
@@ -884,9 +884,28 @@ Component({
     },
 
     /**
+     * THE single writer of the highlight (`selected` / `hidden` / `resolved`).
+     *
+     * Page publish, tap intent, switch rollback, route truth and the attach-time
+     * intent paint all decide *which* tab is lit, but only this commits it.
+     *
+     * Why it is one function: the 2026-11-22 → 11-24 rounds were all the same
+     * failure — two writers disagreeing about one instant, where each new guard
+     * fixed one ordering and broke another (`attached` painting the outgoing
+     * tab, a push no-op'ing while `resolved` was false, the watchdog forcing
+     * route truth mid-transition). With a single write site there is one place
+     * to reason about, and `tabBarStructure.test.ts` fails if a second
+     * highlight commit appears in this file.
+     */
+    _commitSelected: function (index) {
+      this.setData({ selected: index, hidden: false, resolved: true })
+    },
+
+    /**
      * Resolves selection + visibility from the visible route.
      *
-     * The ONLY writer of `selected`/`hidden` that is derived from routing.
+     * The route-truth decision point; it commits through `_commitSelected`, the
+     * single writer of the highlight.
      * Idempotent: when the instance already matches the route it performs no
      * setData at all, so calling it on every show is free.
      *
@@ -907,7 +926,7 @@ Component({
         if (pendingIntentIndex !== null && Date.now() - pendingIntentAt < TRANSITION_MS) {
           this._confirmedSelected = pendingIntentIndex
           if (this.data.selected !== pendingIntentIndex || this.data.hidden || !this.data.resolved) {
-            this.setData({ selected: pendingIntentIndex, hidden: false, resolved: true })
+            this._commitSelected(pendingIntentIndex)
           }
           return 'tab'
         }
@@ -932,7 +951,7 @@ Component({
 
       this._confirmedSelected = nextSelected
       if (this.data.selected !== nextSelected || this.data.hidden || !this.data.resolved) {
-        this.setData({ selected: nextSelected, hidden: false, resolved: true })
+        this._commitSelected(nextSelected)
       }
       return 'tab'
     },
