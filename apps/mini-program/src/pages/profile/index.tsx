@@ -525,15 +525,15 @@ export default function ProfilePage() {
   }, [pendingEntitlementCount])
 
   // P0-1 entitlement strip (PM memo 2026-10-22 §1): factual readout pills —
-  // pass (subscription days / 局票 credits) → coupons → 悦币. All three data
-  // sources are already on-device (shell entitlement/coupons + gamification
-  // joyCoins). Zero-asset state (null mode + 0券 + 0币) hides the whole
-  // strip — no empty-wallet CTA pill (deleted alternative, memo §1c).
+  // pass (subscription days / 局票 credits) → coupons. Both data sources are
+  // already on-device (shell entitlement/coupons). Zero-asset state (null mode
+  // + 0券) hides the whole strip — no empty-wallet CTA pill (deleted
+  // alternative, memo §1c). The 悦币 pill was removed 2026-11-26: the currency
+  // has no spend surface, so the pill promised a wallet the user could not open.
   const shellEntitlement = profileShellQuery.data?.entitlement ?? null
   const availableCouponCount = profileShellQuery.data?.coupons?.availableCount ?? 0
-  const joyCoinCount = gamificationQuery.data?.joyCoins ?? 0
   const entitlementPills = useMemo(() => {
-    const pills: Array<{ key: 'pass' | 'coupon' | 'coins'; label: string; value: string }> = []
+    const pills: Array<{ key: 'pass' | 'coupon'; label: string; value: string }> = []
     const mode = shellEntitlement?.mode ?? null
     if (mode === 'subscription' && shellEntitlement?.subscription) {
       const sub = shellEntitlement.subscription
@@ -548,13 +548,10 @@ export default function ProfilePage() {
     if (availableCouponCount > 0) {
       pills.push({ key: 'coupon', label: '优惠券', value: `${availableCouponCount} 张可用` })
     }
-    if (joyCoinCount > 0) {
-      pills.push({ key: 'coins', label: '悦币', value: `${joyCoinCount}` })
-    }
     return pills
-  }, [shellEntitlement, availableCouponCount, joyCoinCount])
+  }, [shellEntitlement, availableCouponCount])
 
-  const handleEntitlementPillTap = useCallback((pill: 'pass' | 'coupon' | 'coins') => {
+  const handleEntitlementPillTap = useCallback((pill: 'pass' | 'coupon') => {
     haptics('light')
     profileAnalytics.track('profile_entitlement_pill_tap', { pill })
     if (pill === 'pass') {
@@ -1285,18 +1282,12 @@ export default function ProfilePage() {
                 aria-label={`${pill.label} ${pill.value}`}
                 data-testid={`profile-entitlement-pill-${pill.key}`}
               >
-                {pill.key === 'coins' ? (
-                  <View className='profile-page__entitlement-pill-icon profile-page__entitlement-pill-icon--coin' aria-hidden='true'>
-                    <View className='profile-page__entitlement-pill-coin-dot' />
-                  </View>
-                ) : (
-                  <JoyJoinIcon
-                    emoji={pill.key === 'pass' ? '🎫' : '🎟️'}
-                    tier='ui'
-                    size={36}
-                    className='profile-page__entitlement-pill-icon'
-                  />
-                )}
+                <JoyJoinIcon
+                  emoji={pill.key === 'pass' ? '🎫' : '🎟️'}
+                  tier='ui'
+                  size={36}
+                  className='profile-page__entitlement-pill-icon'
+                />
                 <View className='profile-page__entitlement-pill-text'>
                   <Text className='profile-page__entitlement-pill-label'>{pill.label}</Text>
                   <Text className='profile-page__entitlement-pill-value'>{pill.value}</Text>

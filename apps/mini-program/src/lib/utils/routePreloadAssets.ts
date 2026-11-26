@@ -165,8 +165,6 @@ const POOL_REGISTRATION_PRELOADS = [
 
 const REWARDS_PRELOADS = [
   cdnAsset('/assets/lovart/lovart-rewards-empty-20260423-v1.webp'),
-  cdnAsset('/assets/lovart/lovart-rewards-shop-20260423-v1.webp'),
-  cdnAsset('/assets/lovart/lovart-rewards-history-20260423-v1.webp'),
 ]
 
 /** Landing blind-box hero set (2026-07-26) — preloaded during the

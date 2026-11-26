@@ -13,6 +13,19 @@ export function getCouponDisplayName(code?: string | null): string {
   if (normalized.startsWith('WELCOME')) return '见面礼券'
   if (normalized.startsWith('INVITE')) return '邀请奖励券'
   if (normalized.startsWith('REFERRAL')) return '推荐奖励券'
+  // Redeemed catalog codes: the server writes `code: item.id`, so without these
+  // the raw token (coupon_10_off) reached the wallet and the checkout list.
+  // Discount-bearing codes use a neutral name because every surface renders the
+  // actual value next to it — "5折 / 5折优惠券" read as a duplicated label.
+  const redeemedCodeNames: Record<string, string> = {
+    COUPON_10_OFF: '活动折扣券',
+    COUPON_20_OFF: '活动折扣券',
+    COUPON_30_OFF: '活动折扣券',
+    COUPON_50_OFF: '活动折扣券',
+    FREE_EVENT_TICKET: '免费活动名额',
+    PRIORITY_ACCESS: '优先报名通行证',
+  }
+  if (redeemedCodeNames[normalized]) return redeemedCodeNames[normalized]
   return code?.trim() ?? '优惠券'
 }
 

@@ -611,7 +611,7 @@ export default function MyImagePage() {
           ) : (
             <View className='my-image__section'>
               <View className='my-image__shop-heading'>
-                <View><Text className='my-image__section-title'>通用碎片商店</Text><Text className='my-image__section-copy'>所有地点装备都可兑换，不使用现金或悦币。</Text></View>
+                <View><Text className='my-image__section-title'>通用碎片商店</Text><Text className='my-image__section-copy'>所有地点装备都可用碎片兑换，不使用现金。</Text></View>
                 <Text className='my-image__shop-balance'>{shopQuery.data?.fragmentBalance ?? data.wallet.fragmentBalance} 碎片</Text>
               </View>
               {shopQuery.isError && shopQuery.data && (

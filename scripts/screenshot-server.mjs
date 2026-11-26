@@ -9,6 +9,7 @@ import { registerEventFeedbackGenerators } from './screenshot/generators-event-f
 import { registerEventDetailGenerators } from './screenshot/generators-event-detail.mjs'
 import { registerCheckoutConversionGenerators } from './screenshot/generators-checkout-conversion.mjs'
 import { registerSubtractionPoolRegistrationGenerators } from './screenshot/generators-subtraction-pool-registration.mjs'
+import { registerRewardsGenerators } from './screenshot/generators-rewards.mjs'
 
 const app = express()
 const PORT = process.env.SCREENSHOT_PORT || 9000
@@ -169,6 +170,7 @@ registerEventFeedbackGenerators(generatorCtx)
 registerEventDetailGenerators(generatorCtx)
 registerCheckoutConversionGenerators(generatorCtx)
 registerSubtractionPoolRegistrationGenerators(generatorCtx)
+registerRewardsGenerators(generatorCtx)
 
 // ─── Generators ──────────────────────────────────────────────────
 

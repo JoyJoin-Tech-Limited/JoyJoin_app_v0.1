@@ -76,6 +76,20 @@
     }
   }
 
+  // Secondary had no disabled colour re-assert. WeChat's
+  // `button[disabled]:not([type])` (0,2,1) outranks `.joy-button--secondary`
+  // (0,1,0), so a disabled secondary CTA rendered near-white on white — the
+  // six empty ovals on the old rewards catalog. 0,3,0 wins.
+  &--secondary {
+    &[disabled]:not(.joy-button--loading),
+    &.joy-button--disabled {
+      background: $color-divider;
+      border-color: $color-divider;
+      color: $color-text-secondary;
+      opacity: 1;
+    }
+  }
+
   &--sm {
     min-height: max($button-height-sm, $cta-min-tap);
     height: $button-height-sm;

@@ -3,10 +3,10 @@ import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
 import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { MASCOT_SIZE } from '../../lib/mascot/mascotSizes'
-// NOTE: the stylesheet is NOT imported here. XiaoyueChatBubble is used by seven
+// NOTE: the stylesheet is NOT imported here. XiaoyueChatBubble is used by six
 // page entries (icebreaker-session, profile-linked/edit-profile,
-// profile-linked/rewards, onboarding/{profile-review,extended-data,
-// essential-data}, onboarding/personality-test/results), and a CSS module
+// onboarding/{profile-review,extended-data,essential-data},
+// onboarding/personality-test/results), and a CSS module
 // reached by more than one page entry is hoisted into the root common.wxss —
 // i.e. charged against the 2 MB MAIN package budget. Each consuming page
 // `@use`s XiaoyueChatBubble.scss so the rules compile into that page's own

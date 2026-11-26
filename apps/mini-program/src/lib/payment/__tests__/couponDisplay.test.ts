@@ -12,6 +12,13 @@ describe('getCouponDisplayName (S-7: no raw codes in brand surfaces)', () => {
     expect(getCouponDisplayName('REFERRAL10')).toBe('推荐奖励券')
   })
 
+  it('maps redeemed catalog codes (server writes code: item.id)', () => {
+    expect(getCouponDisplayName('coupon_10_off')).toBe('活动折扣券')
+    expect(getCouponDisplayName('COUPON_50_OFF')).toBe('活动折扣券')
+    expect(getCouponDisplayName('free_event_ticket')).toBe('免费活动名额')
+    expect(getCouponDisplayName('priority_access')).toBe('优先报名通行证')
+  })
+
   it('passes unknown codes through and falls back for empty input', () => {
     expect(getCouponDisplayName('SUMMER2026')).toBe('SUMMER2026')
     expect(getCouponDisplayName(undefined)).toBe('优惠券')

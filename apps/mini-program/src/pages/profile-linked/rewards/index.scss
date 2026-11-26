@@ -1,431 +1,429 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
-// Subpackage WXSS guard (AGENTS §15): XiaoyueChatBubble renders on this page.
-// The component no longer side-effect-imports its SCSS — a module reached by
-// two page entries is hoisted into the main-package common.wxss.
-@use '../../../components/mascot/XiaoyueChatBubble.scss' as *;
 
+// 「我的奖励」 — a coupon wallet, not a dashboard.
+// White is reserved for money (the coupon card); everything else sits on the
+// warm page background. Purple appears only in the denomination and the two
+// actions that lead to a booking.
 .rewards-page {
-  @include page-gradient-bg;
+  box-sizing: border-box;
+  // dvh only: a runtime that does not support it drops the declaration and the
+  // scroll-view grows to content, which still scrolls at page level. A `100vh`
+  // fallback would pin the height to the wrong number on iOS WKWebView.
+  height: 100dvh;
+  @include page-warm-bg;
 
-  &--error {
-    @include flex-center;
-  }
-
-  &__error {
-    width: 100%;
+  // WeChat drops padding on the native scroll-view, so the page gutter lives on
+  // an inner wrapper (same pattern as pool-group-detail / terms / event-detail).
+  &__scroll-inner {
     box-sizing: border-box;
-    padding: 0 $container-padding;
+    padding: 32rpx 32rpx 0;
   }
 
-  &__hero {
-    text-align: center;
-    padding: $spacing-2xl $container-padding $spacing-lg;
-  }
-
-  &__coach {
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
-  }
-
-  &__hero-icon {
-    display: block;
-    width: 96rpx;
-    height: 96rpx;
-    margin: 0 auto $spacing-md;
-  }
-
-  &__hero-title {
-    @include type-title;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__hero-subtitle {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    line-height: $line-height-relaxed;
-  }
-
-  &__stats {
-    display: flex;
-    gap: $spacing-md;
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
-  }
-
-  &__stat {
-    flex: 1;
-    @include card;
-    padding: $spacing-lg;
-    text-align: center;
-  }
-
-  &__stat-value {
-    display: block;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-black;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__stat-label {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-  }
-
-  &__level-card {
-    @include card;
-    margin: 0 $container-padding $spacing-lg;
-    padding: $spacing-xl;
-    background: linear-gradient(135deg, rgba($color-secondary, 0.08), rgba($color-primary, 0.12));
-    border: 2rpx solid rgba($color-primary, 0.12);
-  }
-
-  &__level-header {
-    display: flex;
-    justify-content: space-between;
-    gap: $spacing-md;
-    margin-bottom: $spacing-md;
-  }
-
-  &__level-title {
-    display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-black;
-    color: $color-text-primary;
-  }
-
-  &__level-name {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-primary;
-    margin-top: 4rpx;
-  }
-
-  &__level-summary {
-    text-align: right;
-  }
-
-  &__level-xp {
-    display: block;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-
-  &__level-hint {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    margin-top: 4rpx;
-  }
-
-  &__chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-  }
-
-  &__chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 999rpx;
-    background: rgba($color-surface, 0.85);
-    color: $color-text-secondary;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
+  &__spacer {
+    @include safe-area-bottom-padding(padding-bottom, 48rpx);
   }
 
   &__section {
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: 20rpx;
   }
 
   &__section-title {
-    @include type-heading;
-    margin-bottom: $spacing-md;
-  }
-
-  &__coupon-card {
-    @include card;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-  }
-
-  &__coupon-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: $spacing-md;
-    margin-bottom: $spacing-md;
-  }
-
-  &__coupon-title {
-    display: block;
     font-size: $font-size-base;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__coupon-source {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    margin-top: 4rpx;
-  }
-
-  &__coupon-status {
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 999rpx;
-    flex-shrink: 0;
-
-    &--available {
-      background: rgba($color-success, 0.12);
-      color: $color-success;
-    }
-
-    &--used {
-      background: rgba($color-text-muted, 0.18);
-      color: $color-text-muted;
-    }
-
-    &--expired {
-      background: rgba($color-warning, 0.14);
-      color: $color-warning;
-    }
-  }
-
-  &__coupon-status-text {
-    display: block;
-    font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__section-count {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-warm;
+    line-height: 1.4;
+  }
+
+  // ── Wallet ─────────────────────────────────────────────
+  &__wallet {
+    background: $color-surface;
+    border: 1rpx solid rgba($color-border, 0.9);
+    border-radius: $card-radius-sm;
+    overflow: hidden;
+  }
+
+  &__coupon {
+    display: flex;
+    align-items: center;
+    min-height: 176rpx;
+    padding: 0 32rpx;
+    box-sizing: border-box;
+
+    &--divided {
+      border-top: 1rpx solid $color-divider;
+    }
+  }
+
+  &__coupon-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 168rpx;
+    flex-shrink: 0;
+    padding-right: 20rpx;
+    box-sizing: border-box;
+    border-right: 1rpx dashed $color-border;
+    color: $color-primary-dark;
+  }
+
+  // Prefix/suffix are nested inside the figure Text so they share one inline
+  // baseline. A flex row of three Texts centred each box instead, which left
+  // 「¥」 floating above the digits and 「折」 riding high beside them.
+  &__coupon-figure {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-black;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  &__coupon-unit {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1;
   }
 
   &__coupon-body {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: $spacing-md;
-  }
-
-  &__coupon-value {
-    display: block;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-black;
-    color: $color-primary;
-  }
-
-  &__coupon-expiry {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    text-align: right;
-  }
-
-  &__catalog-card {
-    @include card;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-  }
-
-  &__catalog-top {
-    display: flex;
-    gap: $spacing-md;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: $spacing-md;
-  }
-
-  &__catalog-copy {
+    flex-direction: column;
+    gap: $spacing-xs;
     flex: 1;
+    min-width: 0;
+    padding-left: 28rpx;
   }
 
-  &__catalog-title {
-    display: block;
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__catalog-desc {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.6;
-    margin-top: 4rpx;
-  }
-
-  &__catalog-tag {
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.1);
-    flex-shrink: 0;
-  }
-
-  &__catalog-tag-text {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-primary;
+  &__coupon-name {
+    font-size: $font-size-md;
     font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
   }
 
-  &__catalog-footer {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: $spacing-md;
-  }
-
-  &__catalog-price {
-    display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-black;
-    color: $color-secondary;
-  }
-
-  &__catalog-meta {
-    display: block;
+  &__coupon-meta {
     font-size: $font-size-xs;
-    color: $color-text-secondary;
-    margin-top: 4rpx;
-  }
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-warm;
+    line-height: 1.4;
 
-  &__catalog-btn {
-    min-width: 200rpx;
-
-    &--disabled {
-      opacity: 0.75;
+    &--urgent {
+      color: $color-text-primary-warm;
+      font-weight: $font-weight-semibold;
     }
   }
 
-  &__history-card {
-    @include card;
-    padding: 0 $spacing-lg;
+  // ── Empty / error ──────────────────────────────────────
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 40rpx 32rpx;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-border, 0.9);
+    border-radius: $card-radius-sm;
+    box-sizing: border-box;
   }
 
-  &__history-row {
+  &__empty-art {
+    width: 200rpx;
+    height: 200rpx;
+  }
+
+  &__empty-title {
+    margin-top: $spacing-md;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__empty-body {
+    margin-top: $spacing-xs;
+    max-width: 480rpx;
+    font-size: $font-size-base;
+    font-weight: $font-weight-normal;
+    color: $color-text-secondary-on-light;
+    line-height: 1.6;
+  }
+
+  &__empty-btn {
+    width: 100%;
+    margin-top: $spacing-lg;
+  }
+
+  &__notice {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 32rpx;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-border, 0.9);
+    border-radius: $card-radius-sm;
+    box-sizing: border-box;
+  }
+
+  &__notice-title {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__notice-body {
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
+    color: $color-text-secondary-on-light;
+    line-height: 1.6;
+  }
+
+  &__notice-btn {
+    margin-top: $spacing-md;
+    align-self: flex-start;
+  }
+
+  // ── Quiet CTA ──────────────────────────────────────────
+  &__quiet-cta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $spacing-xs;
+    min-height: 88rpx;
+    margin-top: $spacing-xs;
+    padding: 0 8rpx;
+    border-radius: 16rpx;
+    color: $color-primary-dark;
+
+    &--pressed {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__quiet-cta-label {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+  }
+
+  &__quiet-cta-chevron {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+  }
+
+  // ── Account (growth + dormant coins) ───────────────────
+  &__account {
+    margin-top: $spacing-lg;
+    padding-top: 32rpx;
+    border-top: 1rpx solid rgba($color-border, 0.7);
+  }
+
+  &__account-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: $spacing-md;
-    padding: $spacing-lg 0;
-    border-bottom: 1rpx solid $color-divider;
+    gap: $spacing-sm;
+  }
+
+  &__account-level {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__account-value {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary-warm;
+    line-height: 1.4;
+  }
+
+  &__account-hint {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-warm;
+    line-height: 1.5;
+
+    &--soft {
+      display: block;
+      margin-top: 4rpx;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-normal;
+      color: $color-text-secondary-warm;
+    }
+  }
+
+  &__coins {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-warm;
+    line-height: 1.5;
+  }
+
+  // ── Growth history (XP only) ───────────────────────────
+  &__growth {
+    margin-top: $spacing-lg;
+  }
+
+  &__growth-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 64rpx;
+    border-bottom: 1rpx solid rgba($color-border, 0.7);
 
     &:last-child {
       border-bottom: none;
     }
   }
 
-  &__history-copy {
+  &__growth-date {
+    width: 96rpx;
+    flex-shrink: 0;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-warm;
+    line-height: 1.4;
+  }
+
+  &__growth-label {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__growth-delta {
+    flex-shrink: 0;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  // ── Used / expired disclosure ──────────────────────────
+  &__history {
+    margin-top: $spacing-lg;
+    background: $color-bg-clean;
+    border: 1rpx solid rgba($color-border, 0.9);
+    border-radius: $card-radius-sm;
+    overflow: hidden;
+  }
+
+  &__history-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    min-height: 88rpx;
+    padding: 0 28rpx;
+    box-sizing: border-box;
+
+    &--pressed {
+      background: rgba($color-primary, 0.05);
+    }
   }
 
   &__history-title {
-    display: block;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
   }
 
-  &__history-date {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    margin-top: 4rpx;
-  }
-
-  &__history-values {
+  &__history-summary {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4rpx;
-    flex-shrink: 0;
+    align-items: center;
+    gap: $spacing-xs;
   }
 
-  &__history-delta {
-    display: block;
+  &__history-count {
     font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-
-    &--coins {
-      color: $color-secondary;
-    }
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-warm;
+    line-height: 1.4;
   }
 
-  &__invite-card {
-    @include card;
-    padding: $spacing-xl;
-    text-align: center;
-  }
-
-  &__invite-title {
-    display: block;
+  &__history-chevron {
     font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary-warm;
+    line-height: 1;
+    transition: transform 0.2s ease;
+
+    &--open {
+      transform: rotate(90deg);
+    }
   }
 
-  &__invite-text {
-    display: block;
+  &__history-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 80rpx;
+    padding: 0 28rpx;
+    box-sizing: border-box;
+    border-top: 1rpx solid $color-divider;
+  }
+
+  &__history-name {
+    width: 200rpx;
+    flex-shrink: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__history-meta {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-normal;
     color: $color-text-secondary;
-    line-height: $line-height-relaxed;
-    margin-bottom: $spacing-lg;
+    line-height: 1.4;
   }
 
-  &__invite-btn {
-    width: 100%;
-  }
-
-  &__empty-card {
-    @include card;
-    padding: $spacing-xl;
-    text-align: center;
-
-    &--compact {
-      padding: $spacing-lg;
-    }
-  }
-
-  &__empty-hero {
-    width: 240rpx;
-    height: auto;
-    margin-bottom: $spacing-sm;
-
-    &--compact {
-      width: 180rpx;
-      height: auto;
-    }
-  }
-
-  &__empty-title {
-    display: block;
-    font-size: $font-size-base;
+  &__history-value {
+    flex-shrink: 0;
+    font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
+    color: $color-text-secondary-warm;
+    line-height: 1.4;
   }
+}
 
-  &__empty-text {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.6;
-  }
-
-  &__back-btn {
-    width: 100%;
-    margin-top: $spacing-sm;
-  }
-
-  &__spacer {
-    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-lg);
-    height: 0;
+@media (prefers-reduced-motion: reduce) {
+  .rewards-page__history-chevron {
+    transition: none;
   }
 }
