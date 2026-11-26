@@ -1010,15 +1010,16 @@ $color-skill-cool: #7c3aed;
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: $spacing-md;
-    padding: $spacing-lg;
+    gap: 0;
+    padding: 0 $spacing-lg $spacing-lg;
     border-radius: 40rpx;
-    border: 2rpx solid rgba($color-primary, 0.14);
+    border: none;
+    background: $color-surface;
     overflow: hidden;
   }
 
   &__hero-copy {
-    flex: 1;
+    flex: 1 1 100%;
     min-width: 0;
   }
 
@@ -1027,15 +1028,8 @@ $color-skill-cool: #7c3aed;
     font-size: $font-size-xs;
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.84);
-    letter-spacing: 2rpx;
-    margin-bottom: 12rpx;
-  }
-
-  &__hero-title {
-    display: block;
-    font-size: $font-size-md;
-    color: $color-text-secondary;
-    margin-bottom: 12rpx;
+    letter-spacing: 4rpx;
+    margin-bottom: $spacing-sm;
   }
 
   &__hero-name {
@@ -1043,241 +1037,241 @@ $color-skill-cool: #7c3aed;
     font-size: $font-size-3xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    line-height: 1.4;
-    margin-bottom: $spacing-sm;
+    line-height: 1.25;
+    letter-spacing: 2rpx;
     word-break: keep-all;
     font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
+  }
+
+  &__hero-name-rule {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin: $spacing-sm 0 $spacing-md;
+  }
+
+  &__hero-name-rule-head {
+    width: 40rpx;
+    height: 3rpx;
+    border-radius: 2rpx;
+    flex: 0 0 auto;
+  }
+
+  &__hero-name-rule-line {
+    flex: 1;
+    height: 1rpx;
+    background: rgba($color-text-primary, 0.1);
   }
 
   &__hero-summary {
     display: block;
     font-size: $font-size-base;
-    line-height: 1.7;
-    color: $color-text-secondary;
+    line-height: 1.8;
+    color: $color-text-secondary-on-light;
   }
 
-  &__hero-badges {
+  &__hero-specs {
     display: flex;
     flex: 0 0 100%;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    gap: $spacing-xs;
+    justify-content: flex-start;
+    gap: 8rpx 16rpx;
+    margin-top: $spacing-md;
     min-width: 0;
   }
 
-  &__hero-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 24rpx;
-    line-height: 1.4;
-    border-radius: 999rpx;
-    font-weight: $font-weight-semibold;
-    justify-content: center;
-    min-width: 0;
-    white-space: nowrap;
+  &__hero-spec {
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
     opacity: 0;
-    transform: translateY(12rpx) scale(0.96);
+    transform: translateY(8rpx);
     transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
                 transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 
-    &:nth-child(1) { transition-delay: 80ms; }
-    &:nth-child(2) { transition-delay: 160ms; }
-    &:nth-child(3) { transition-delay: 240ms; }
-
-    &--visible {
-      opacity: 1;
-      transform: translateY(0) scale(1);
+    &:not(:last-child)::after {
+      content: '·';
+      margin-left: 12rpx;
+      color: rgba($color-text-primary, 0.3);
     }
 
-    // --- Typicality: soft brand tint with archetype-coloured name ---
-    &--typicality {
-      padding: 8rpx 16rpx;
-      background: rgba($color-primary, 0.07);
-      border: 1rpx solid rgba($color-primary, 0.16);
-      color: $color-text-secondary;
-      gap: 4rpx;
-    }
-
-    // --- Rarity: warm exclusive amber ---
     &--rarity {
-      padding: 8rpx 16rpx;
-      background: rgba($color-amber, 0.08);
-      border: 1rpx solid rgba($color-amber, 0.22);
       color: $color-amber-700;
-      box-shadow: 0 2rpx 10rpx rgba($color-amber, 0.06);
+      font-weight: $font-weight-semibold;
 
-      &::before {
-        content: '';
-        display: block;
-        width: 8rpx;
-        height: 8rpx;
-        border-radius: 50%;
-        background: $color-amber;
-        margin-right: 10rpx;
-        box-shadow: 0 0 6rpx rgba($color-amber, 0.4);
+      &::after {
+        color: $color-amber;
       }
     }
 
-    // --- Phase 3 rare variant: 闪光命定 gold badge ---
     &--rare {
-      padding: 8rpx 16rpx;
-      background: linear-gradient(135deg, rgba($color-slot-gold, 0.2) 0%, rgba($color-slot-gold, 0.1) 100%);
-      border: 1rpx solid rgba($color-slot-gold, 0.65);
       color: $color-slot-warm;
-      box-shadow: 0 2rpx 14rpx rgba($color-slot-gold, 0.3);
+      font-weight: $font-weight-semibold;
 
-      &::before {
-        content: '';
-        display: block;
-        width: 10rpx;
-        height: 10rpx;
-        margin-right: 8rpx;
-        background: radial-gradient(circle, $color-text-white 0%, $color-slot-gold 60%, rgba($color-slot-gold, 0) 100%);
-        border-radius: 50%;
-        box-shadow: 0 0 10rpx rgba($color-slot-gold, 0.9);
+      &::after {
+        color: $color-slot-gold;
       }
     }
 
-    // --- Nickname: hero gradient trophy ---
     &--nickname {
-      background: linear-gradient(135deg, $color-primary-dark 0%, $color-primary 100%);
-      color: $color-text-white;
-      font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
-      font-size: 24rpx;
-      font-weight: 600;
-      padding: 8rpx 16rpx;
-      box-shadow: 0 6rpx 24rpx rgba($color-primary-dark, 0.22);
-      text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.08);
-      border: none;
-      letter-spacing: 1rpx;
+      color: $color-text-primary;
+      font-weight: $font-weight-semibold;
     }
+  }
+
+  &__hero-specs--visible {
+    .personality-results__hero-spec {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .personality-results__hero-spec:nth-child(1) { transition-delay: 80ms; }
+    .personality-results__hero-spec:nth-child(2) { transition-delay: 160ms; }
+    .personality-results__hero-spec:nth-child(3) { transition-delay: 240ms; }
+    .personality-results__hero-spec:nth-child(4) { transition-delay: 320ms; }
   }
 
   &__hero-blend {
     display: block;
     flex: 0 0 100%;
-    margin-top: -$spacing-xs;
+    margin-top: $spacing-xs;
     font-size: $font-size-xs;
     line-height: 1.6;
-    color: $color-text-tertiary;
-    opacity: 0.75;
+    color: $color-text-tertiary-on-light;
   }
 
   &__hero-art-shell {
     position: relative;
-    width: 240rpx;
-    height: 240rpx;
+    order: -1;
     flex: 0 0 auto;
+    width: calc(100% + #{$spacing-lg * 2});
+    height: 280rpx;
+    margin: 0 (-$spacing-lg) $spacing-lg;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  &__hero-art-bg {
-    position: absolute;
-    top: 0; right: 0; bottom: 0; left: 0;
-    border-radius: 999rpx;
+    border-bottom: 1rpx solid transparent;
+    overflow: hidden;
   }
 
   &__hero-art {
     position: relative;
     z-index: 1;
-    width: 100%;
-    height: 100%;
+    width: 260rpx;
+    height: 260rpx;
+    flex: 0 0 auto;
     animation: hero-art-settle 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
-  }
-
-  &__hero-art-fallback {
-    position: absolute;
-    z-index: 2;
-    font-size: 80rpx;
-    font-weight: $font-weight-black;
-    color: rgba($color-primary, 0.25);
-    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__hero-xiaoyue {
     width: 100%;
     margin-top: $spacing-sm;
     padding-top: $spacing-md;
-    border-top: 2rpx solid rgba($color-primary, 0.08);
   }
 
-  // ── Xiaoyue speech bubble layout ──
-  &__xiaoyue-bubble-row {
+  // ── Xiaoyue editorial quote (no bubble chrome) ──
+  &__hero-quote {
+    width: 100%;
+  }
+
+  &__hero-quote-head {
     display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
+    align-items: center;
+    gap: 12rpx;
+    margin-bottom: $spacing-sm;
   }
 
-  &__xiaoyue-avatar {
-    width: 64rpx;
-    height: 64rpx;
+  &__hero-quote-avatar {
+    width: 48rpx;
+    height: 48rpx;
     border-radius: 50%;
     flex-shrink: 0;
     border: 2rpx solid rgba($color-primary, 0.12);
     background: $color-surface;
   }
 
-  &__xiaoyue-bubble {
-    flex: 1;
-    min-width: 0;
-    padding: $spacing-sm $spacing-md;
-    border-radius: 20rpx;
-    background: $color-bg-clean;
-    border: 1rpx solid rgba($color-border, 0.5);
-    border-left: 3rpx solid rgba($color-primary, 0.25);
-    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.035);
-    position: relative;
-
-    // Speech bubble tail pointing to avatar
-    &::before {
-      content: '';
-      position: absolute;
-      left: -10rpx;
-      top: 20rpx;
-      width: 0;
-      height: 0;
-      border-top: 8rpx solid transparent;
-      border-bottom: 8rpx solid transparent;
-      border-right: 10rpx solid rgba($color-border, 0.5);
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      left: -8rpx;
-      top: 21rpx;
-      width: 0;
-      height: 0;
-      border-top: 7rpx solid transparent;
-      border-bottom: 7rpx solid transparent;
-      border-right: 8rpx solid $color-bg-clean;
-    }
-  }
-
-  &__xiaoyue-bubble-headline {
-    display: block;
-    font-size: $font-size-md;
+  &__hero-quote-label {
+    font-size: $font-size-xs;
     font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: 1.5;
+    letter-spacing: 2rpx;
+    color: rgba($color-primary-dark, 0.78);
   }
 
-  &__xiaoyue-bubble-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-xs;
-    margin-bottom: 8rpx;
+  &__hero-quote-rule {
+    flex: 1;
+    height: 1rpx;
+    background: rgba($color-text-primary, 0.1);
   }
 
-  &__xiaoyue-bubble-analysis {
+  &__hero-quote-aigc,
+  &__detail-reading-aigc {
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+
+    .aigc-label__text {
+      font-size: $font-size-xs;
+      line-height: 1.5;
+      color: $color-text-tertiary-on-light;
+    }
+  }
+
+  // Keep the quiet disclosure from losing to AIGCLabel.scss at equal
+  // specificity if import order ever changes.
+  &__hero-quote &__hero-quote-aigc,
+  &__detail-reading &__detail-reading-aigc {
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
+
+  &__hero-quote-text {
     display: block;
-    font-size: $font-size-sm;
-    line-height: 1.75;
-    color: $color-text-secondary;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
+    font-size: $font-size-md;
+    font-weight: 600;
+    line-height: 1.5;
+    color: $color-text-primary;
+    word-break: keep-all;
+
+    &--long {
+      font-size: $font-size-base;
+      line-height: 1.7;
+    }
+
+    &--fallback {
+      margin-bottom: $spacing-sm;
+    }
+  }
+
+  &__hero-quote-tags {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    line-height: 1.8;
+    color: $color-text-tertiary-on-light;
+    word-break: keep-all;
+  }
+
+  &__hero-quote-body {
+    display: block;
+    font-size: $font-size-base;
+    line-height: 1.8;
+    color: $color-text-secondary-on-light;
+
+    & + & {
+      margin-top: 12rpx;
+    }
+  }
+
+  &__hero-quote-note {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-warning;
   }
 
   // ── Xiaoyue skeleton loading ──
@@ -1288,8 +1282,8 @@ $color-skill-cool: #7c3aed;
   }
 
   &__xiaoyue-skeleton-avatar {
-    width: 64rpx;
-    height: 64rpx;
+    width: 48rpx;
+    height: 48rpx;
     border-radius: 50%;
     flex-shrink: 0;
     background: $color-divider;
@@ -1309,10 +1303,10 @@ $color-skill-cool: #7c3aed;
   &__xiaoyue-skeleton-bubble {
     flex: 1;
     min-width: 0;
-    padding: $spacing-sm $spacing-md;
-    border-radius: 20rpx;
-    background: rgba($color-primary, 0.04);
-    border: 1rpx solid rgba($color-primary, 0.08);
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
     display: flex;
     flex-direction: column;
     gap: 10rpx;
@@ -1382,58 +1376,42 @@ $color-skill-cool: #7c3aed;
     line-height: 1.4;
   }
 
-  &__hero-xiaoyue-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10rpx;
-    margin-top: $spacing-sm;
-    margin-bottom: $spacing-md;
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  &__hero-xiaoyue-tag {
-    padding: 6rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__hero-xiaoyue-tag-text {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
-  }
-
-  &__hero-xiaoyue-cta {
+  &__hero-cta {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8rpx;
-    padding: 18rpx 32rpx;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 96rpx;
+    padding: 0 $spacing-lg;
     margin-top: $spacing-md;
-    border-radius: 999rpx;
-    min-height: $cta-min-tap;
+    border-radius: 24rpx;
+    background: $color-primary;
+    box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.22);
     -webkit-tap-highlight-color: transparent;
     transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s ease;
-    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.2);
 
     &:active,
     &--active {
-      transform: scale(0.97);
-      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.15);
+      transform: scale(0.98);
+      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.16);
     }
   }
 
-  &__hero-xiaoyue-cta-text {
+  &__hero-cta-text {
     font-size: $font-size-base;
     font-weight: $font-weight-bold;
     color: $color-text-white;
     letter-spacing: 1rpx;
-    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
+  }
+
+  &__hero-cta-chevron {
+    width: 14rpx;
+    height: 14rpx;
+    border-top: 3rpx solid rgba($color-text-white, 0.92);
+    border-right: 3rpx solid rgba($color-text-white, 0.92);
+    transform: rotate(45deg);
+    margin-right: 4rpx;
+    flex: 0 0 auto;
   }
 
   &__bridge {
@@ -1681,7 +1659,7 @@ $color-skill-cool: #7c3aed;
     will-change: transform;
   }
 
-  // ── Detail sheet: section head with mini mascot avatar ──
+  // ── Detail sheet: section head ──
   &__detail-section-head {
     display: flex;
     align-items: center;
@@ -1693,26 +1671,10 @@ $color-skill-cool: #7c3aed;
     }
   }
 
-  &__detail-section-avatar {
-    flex-shrink: 0;
-    width: 36rpx;
-    height: 36rpx;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-
-  &__detail-section-avatar-img {
-    width: 100%;
-    height: 100%;
-  }
-
   &__detail-section-hint {
     margin-left: auto;
     font-size: $font-size-2xs;
-    color: $color-text-tertiary;
+    color: $color-text-tertiary-on-light;
     letter-spacing: 1rpx;
   }
 
@@ -2119,36 +2081,37 @@ $color-skill-cool: #7c3aed;
     margin-bottom: $spacing-md;
   }
 
+  &__detail-header-top {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-bottom: 12rpx;
+  }
+
   &__detail-eyebrow {
     display: block;
     font-size: $font-size-xs;
     font-weight: $font-weight-bold;
     letter-spacing: 4rpx;
     color: rgba($color-primary-dark, 0.62);
-    margin-bottom: $spacing-xs;
   }
 
   &__detail-title {
     display: block;
-    font-size: $font-size-xl;
+    font-size: $font-size-md;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    margin-bottom: $spacing-xs;
+    line-height: 1.2;
     font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__detail-subtitle {
     display: block;
-    font-size: $font-size-sm;
-    line-height: 1.6;
-    color: $color-text-secondary;
+    font-size: $font-size-base;
+    line-height: 1.7;
+    color: $color-text-secondary-on-light;
     word-break: keep-all;
-  }
-
-  &__detail-rule {
-    height: 1rpx;
-    background: rgba($color-primary, 0.12);
-    margin-bottom: $spacing-lg;
   }
 
   // ── The reading page (悦仔的完整解读) ──
@@ -2185,8 +2148,8 @@ $color-skill-cool: #7c3aed;
 
   &__detail-reading-avatar {
     flex: 0 0 auto;
-    width: 88rpx;
-    height: 88rpx;
+    width: 56rpx;
+    height: 56rpx;
     border-radius: 50%;
     overflow: hidden;
     background: rgba($color-primary, 0.06);
@@ -2198,20 +2161,35 @@ $color-skill-cool: #7c3aed;
   }
 
   &__detail-reading-byline {
+    flex: 0 0 auto;
     font-size: $font-size-xs;
     font-weight: $font-weight-bold;
     letter-spacing: 2rpx;
     color: rgba($color-primary-dark, 0.78);
   }
 
-  &__detail-reading-badge {
-    margin-left: auto;
+  &__detail-reading-rule {
+    flex: 1;
+    height: 1rpx;
+    background: rgba($color-text-primary, 0.1);
+  }
+
+  &__detail-reading-time {
     flex: 0 0 auto;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-tertiary-on-light;
   }
 
   &__detail-reading-body {
     display: flex;
     flex-direction: column;
+    // The rail is decorative, so compensate its width with an equal negative
+    // margin: lead and body text stay on the 40rpx container edge instead of
+    // inheriting a 2rpx indent from the chrome.
+    margin-left: calc(-#{$spacing-md} - 2rpx);
+    padding-left: $spacing-md;
+    border-left: 2rpx solid transparent;
   }
 
   &__detail-reading-lead {
@@ -2223,51 +2201,93 @@ $color-skill-cool: #7c3aed;
     color: $color-text-primary;
     margin-bottom: $spacing-md;
 
-    // A 40-character lead at 36rpx would run five lines and eat the first
-    // screen; drop one step so the display line still reads as one thought.
+    // Only a genuinely long lead steps down; 32rpx keeps it above body copy
+    // while avoiding a five-line display block on narrow screens.
     &--compact {
       font-size: $font-size-md;
+      line-height: 1.55;
     }
   }
 
   &__detail-reading-beat {
-    // Rail colour is per-archetype (inline style); 2rpx + 24rpx inset keeps
-    // the text on the same left axis as the lead while marking the beat.
-    border-left: 2rpx solid transparent;
-    padding-left: $spacing-md;
-    margin-bottom: $spacing-md;
+    display: block;
+    font-size: $font-size-base;
+    line-height: 1.85;
+    color: $color-text-secondary-on-light;
+    word-break: keep-all;
 
-    &:last-child {
-      margin-bottom: 0;
+    & + & {
+      margin-top: $spacing-md;
     }
   }
 
   &__detail-reading-toggle {
-    display: inline-flex;
-    align-self: flex-start;
-    margin-top: $spacing-xs;
-    padding: 8rpx 0;
-    font-size: $font-size-sm;
-    color: $color-primary;
-    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: $cta-min-tap;
+    margin-top: $spacing-sm;
+    padding: 0;
+    border-top: 1rpx solid rgba($color-text-primary, 0.1);
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.04);
+    }
   }
 
-  &__detail-reading-beat-text {
-    display: block;
-    font-size: $font-size-base;
-    line-height: 1.78;
+  &__detail-reading-toggle-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
     color: $color-text-secondary-on-light;
-    word-break: keep-all;
+  }
+
+  &__detail-reading-toggle-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    border-right: 2rpx solid rgba($color-text-primary, 0.5);
+    border-bottom: 2rpx solid rgba($color-text-primary, 0.5);
+    transform: rotate(45deg) translateY(-3rpx);
+    margin-right: 6rpx;
+    flex: 0 0 auto;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+    .personality-results__detail-reading-toggle--expanded & {
+      transform: rotate(-135deg) translateY(-3rpx);
+    }
   }
 
   // ── The quiet lift that closes the reading (悦仔的关键洞察) ──
   &__detail-insight {
-    border-left: 4rpx solid rgba($color-primary, 0.24);
-    padding-left: $spacing-md;
+    position: relative;
     margin-bottom: $spacing-lg;
+    padding: $spacing-md $spacing-md $spacing-md $spacing-md;
+    border-radius: 24rpx;
+    border: 1rpx solid transparent;
+    background-color: rgba($color-text-primary, 0.035);
+    overflow: hidden;
     opacity: 0;
     transform: translateY(8rpx);
     animation: detail-insight-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+  }
+
+  &__detail-insight-bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4rpx;
+  }
+
+  &__detail-insight-label {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    letter-spacing: 2rpx;
+    color: rgba($color-primary-dark, 0.78);
+    margin-bottom: 12rpx;
   }
 
   @keyframes detail-insight-in {
@@ -2280,17 +2300,26 @@ $color-skill-cool: #7c3aed;
   &__detail-insight-text {
     display: block;
     font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
-    font-size: $font-size-md;
-    line-height: 1.6;
+    font-size: 36rpx;
+    line-height: 1.5;
     color: $color-text-primary;
+  }
+
+  &__detail-insight-footer-wrap {
+    margin-top: $spacing-md;
+  }
+
+  &__detail-insight-footer-rule {
+    height: 1rpx;
+    background: rgba($color-text-primary, 0.1);
+    margin-bottom: 12rpx;
   }
 
   &__detail-insight-footer {
     display: block;
-    margin-top: $spacing-xs;
     font-size: $font-size-xs;
     line-height: 1.6;
-    color: $color-text-tertiary;
+    color: $color-text-tertiary-on-light;
   }
 
   &__detail-section {
@@ -2433,13 +2462,26 @@ $color-skill-cool: #7c3aed;
     justify-content: space-between;
     gap: $spacing-sm;
     padding-top: $spacing-sm;
-    border-top: 1rpx solid rgba($color-text-primary, 0.06);
+    border-top: 1rpx solid rgba($color-text-primary, 0.1);
     @include safe-area-bottom-padding(padding-bottom, $spacing-sm);
   }
 
-  &__detail-footer-report {
+  &__detail-footer-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__detail-footer &__detail-footer-report {
     flex: 0 1 auto;
     min-width: 0;
+
+    .aigc-report-button__text {
+      color: $color-text-tertiary-on-light;
+    }
   }
 
   &__detail-footer-close {
@@ -2602,7 +2644,7 @@ $color-skill-cool: #7c3aed;
       transform: none;
     }
 
-    &__hero-badge {
+    &__hero-spec {
       transition: none !important;
       opacity: 1;
       transform: none;
@@ -2674,7 +2716,7 @@ $color-skill-cool: #7c3aed;
       transform: none;
     }
 
-    .personality-results__hero-badge {
+    .personality-results__hero-spec {
       transition: none !important;
       opacity: 1;
       transform: none;
@@ -3196,21 +3238,7 @@ $color-skill-cool: #7c3aed;
   justify-content: center;
 }
 
-/* ── delight: badge pop-in ──────────────────────────────────────────── */
-@keyframes badge-pop-in {
-  0% { opacity: 0; transform: scale(0.6); }
-  60% { transform: scale(1.08); }
-  100% { opacity: 1; transform: scale(1); }
-}
 
-.personality-results__hero-badge {
-  animation: badge-pop-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-
-  &:nth-child(1) { animation-delay: 0.1s; }
-  &:nth-child(2) { animation-delay: 0.2s; }
-}
-
-/* ── delight: card entrance stagger enhancement ─────────────────────── */
 .personality-results__section-card {
   animation: section-card-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER } from '@shared/personality/archetypeNames'
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
-import type { AIGCMeta } from '@joyjoin/shared/api'
+import { shouldShowAIGCLabel, type AIGCMeta } from '@joyjoin/shared/api'
 import Button from '../../../../components/ui/Button'
 import Card from '../../../../components/ui/Card'
 import type { ArchetypeVisual } from '../visuals'
@@ -448,11 +448,18 @@ export default function FinalStage({
       raw.match(/[^。！？]+[。！？]?/g)?.map((part) => part.trim()).filter(Boolean) ?? []
     return bySentence.length > 1 ? bySentence : [raw]
   }, [xiaoyueAnalysis])
+  // Honest reading estimate: the sheet shows ~23 CJK characters per line at
+  // 670rpx, and this is a slow, reflective read — 400 chars/minute is a
+  // deliberately conservative pace, never a fake precision claim.
+  const readingMinutes = Math.max(1, Math.round(readingBeats.join('').length / 400))
   const showXiaoyueUnavailableNotice = shouldShowXiaoyueUnavailableNotice({
     xiaoyueAnalysis,
     summary,
     hiddenStrength: visual.hiddenStrength,
   })
+  // The fallback quote already prints `summary`, so the hero summary above it
+  // would repeat the same paragraph verbatim.
+  const isHeroFallback = !isLoadingAnalysis && !xiaoyueAnalysis
   const posterCta = getPosterCtaState({
     isGeneratingPoster,
     generationPhase,
@@ -466,14 +473,11 @@ export default function FinalStage({
         <View
           className='personality-results__hero-card personality-results__stagger--1'
           style={{
-            background: visual.accentSurface,
-            borderColor: visual.accentBorder,
             boxShadow: `0 22rpx 72rpx ${visual.accentGlow}`,
           }}
         >
           <View className='personality-results__hero-copy'>
-            <Text className='personality-results__hero-eyebrow'>解锁成功</Text>
-            <Text className='personality-results__hero-title'>你的聚会气场是</Text>
+            <Text className='personality-results__hero-eyebrow'>你的聚会气场</Text>
             <Text className='personality-results__hero-name' aria-label={displayArchetypeName}>
               {/* Slice 5 (2026-07-19): letter-by-letter reveal; suppressed under reduce-motion */}
               {[...displayArchetypeName].map((ch, i) => (
@@ -487,11 +491,25 @@ export default function FinalStage({
                 </Text>
               ))}
             </Text>
-            <Text className='personality-results__hero-summary'>{summary}</Text>
+            <View className='personality-results__hero-name-rule' aria-hidden='true'>
+              <View
+                className='personality-results__hero-name-rule-head'
+                style={{ background: visual.accent }}
+              />
+              <View className='personality-results__hero-name-rule-line' />
+            </View>
+            {!isHeroFallback && (
+              <Text className='personality-results__hero-summary'>{summary}</Text>
+            )}
           </View>
 
-          <View className='personality-results__hero-art-shell'>
-            <View className='personality-results__hero-art-bg' style={{ background: visual.accentSoft }} />
+          <View
+            className='personality-results__hero-art-shell'
+            style={{
+              backgroundImage: visual.accentSurface,
+              borderBottomColor: visual.accentBorder,
+            }}
+          >
             <Image
               className='personality-results__hero-art'
               mode='aspectFit'
@@ -502,29 +520,35 @@ export default function FinalStage({
             {/* No text overlay on archetype image — clean art only */}
           </View>
 
-          <View className='personality-results__hero-badges'>
+          <View
+            className={`personality-results__hero-specs ${badgesVisible ? 'personality-results__hero-specs--visible' : ''}`}
+          >
             {typicalityLabel ? (
               <Text
-                className={`personality-results__hero-badge personality-results__hero-badge--typicality ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}
-                aria-label={`${typicalityLabel.prefix}${typicalityLabel.name}`}
+                className='personality-results__hero-spec'
+                aria-label={`${typicalityLabel.prefix} ${typicalityLabel.name}`}
               >
-                <Text aria-hidden='true'>{typicalityLabel.prefix}</Text>
+                <Text aria-hidden='true'>{typicalityLabel.prefix} </Text>
                 <Text style={{ color: typicalityLabel.accent }} aria-hidden='true'>{typicalityLabel.name}</Text>
               </Text>
             ) : null}
             {typeof visual.rarityPercentage === 'number' ? (
-              <Text className={`personality-results__hero-badge personality-results__hero-badge--rarity ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
+              <Text className='personality-results__hero-spec personality-results__hero-spec--rarity'>
+                稀有度 {Math.round(visual.rarityPercentage)}%
+              </Text>
             ) : null}
             {isRareVariant ? (
               <Text
-                className={`personality-results__hero-badge personality-results__hero-badge--rare ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}
+                className='personality-results__hero-spec personality-results__hero-spec--rare'
                 aria-label='闪光命定'
               >
                 闪光命定
               </Text>
             ) : null}
             {visual.nickname ? (
-              <Text className={`personality-results__hero-badge personality-results__hero-badge--nickname ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{visual.nickname}</Text>
+              <Text className='personality-results__hero-spec personality-results__hero-spec--nickname'>
+                {visual.nickname}
+              </Text>
             ) : null}
           </View>
 
@@ -549,73 +573,81 @@ export default function FinalStage({
               </View>
             ) : xiaoyueAnalysis ? (
               <>
-                <View className='personality-results__xiaoyue-bubble-row'>
-                  <Image
-                    className='personality-results__xiaoyue-avatar'
-                    mode='aspectFit'
-                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-                  />
-                  <View className='personality-results__xiaoyue-bubble'>
-                    <View className='personality-results__xiaoyue-bubble-head'>
-                      <Text className='personality-results__xiaoyue-bubble-headline'>
-                        「{xiaoyueAnalysis.headline}」
-                      </Text>
-                      <AIGCLabel meta={xiaoyueAnalysis.meta?.aigc} />
-                    </View>
-                    {/* 2026-11-19: the bubble used to echo the first two beats
-                        here, so the verdict and the archetype note were read
-                        twice — once in the hero, once at the top of the sheet.
-                        The hero is the hook; the reading lives behind the CTA. */}
+                <View className='personality-results__hero-quote'>
+                  <View className='personality-results__hero-quote-head'>
+                    <Image
+                      className='personality-results__hero-quote-avatar'
+                      mode='aspectFit'
+                      src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+                    />
+                    <Text className='personality-results__hero-quote-label'>悦仔说</Text>
+                    <View className='personality-results__hero-quote-rule' />
+                    <AIGCLabel
+                      meta={xiaoyueAnalysis.meta?.aigc}
+                      className='personality-results__hero-quote-aigc'
+                    />
                   </View>
+                  <Text
+                    className={`personality-results__hero-quote-text ${xiaoyueAnalysis.headline.length > 40 ? 'personality-results__hero-quote-text--long' : ''}`}
+                  >
+                    「{xiaoyueAnalysis.headline}」
+                  </Text>
+                  {xiaoyueAnalysis.expressionTags?.length > 0 && (
+                    <Text className='personality-results__hero-quote-tags'>
+                      {xiaoyueAnalysis.expressionTags.join(' · ')}
+                    </Text>
+                  )}
                 </View>
-                {xiaoyueAnalysis.expressionTags?.length > 0 && (
-                  <View className='personality-results__hero-xiaoyue-tags'>
-                    {xiaoyueAnalysis.expressionTags.map((tag) => (
-                      <View key={tag} className='personality-results__hero-xiaoyue-tag'>
-                        <Text className='personality-results__hero-xiaoyue-tag-text'>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
                 <View
-                  className='personality-results__hero-xiaoyue-cta'
-                  style={{
-                    background: visual.accentStrong,
-                    boxShadow: `0 4rpx 16rpx ${visual.accentGlow}`,
-                  }}
+                  className='personality-results__hero-cta'
                   onClick={handleCardTap}
-                  hoverClass='personality-results__hero-xiaoyue-cta--active'
+                  hoverClass='personality-results__hero-cta--active'
                   role='button'
                   aria-label='查看悦仔完整解读'
                 >
-                  <Text className='personality-results__hero-xiaoyue-cta-text'>
+                  <Text className='personality-results__hero-cta-text'>
                     查看悦仔完整解读
                   </Text>
+                  <View className='personality-results__hero-cta-chevron' aria-hidden='true' />
                 </View>
               </>
             ) : (
               <>
-                <View className='personality-results__xiaoyue-bubble-row'>
-                  <Image
-                    className='personality-results__xiaoyue-avatar'
-                    mode='aspectFit'
-                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-                  />
-                  <View className='personality-results__xiaoyue-bubble'>
-                    <Text className='personality-results__xiaoyue-bubble-headline'>这个气场为什么像你</Text>
-                    <Text className='personality-results__xiaoyue-bubble-analysis'>{summary}</Text>
-                    <Text className='personality-results__xiaoyue-bubble-analysis'>
-                      {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
-                    </Text>
+                <View className='personality-results__hero-quote'>
+                  <View className='personality-results__hero-quote-head'>
+                    <Image
+                      className='personality-results__hero-quote-avatar'
+                      mode='aspectFit'
+                      src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+                    />
+                    <Text className='personality-results__hero-quote-label'>悦仔说</Text>
+                    <View className='personality-results__hero-quote-rule' />
                   </View>
-                </View>
-                {showXiaoyueUnavailableNotice ? (
-                  <View className='personality-results__xiaoyue-fallback-indicator'>
-                    <Text className='personality-results__xiaoyue-fallback-indicator-text'>
+                  <Text className='personality-results__hero-quote-text personality-results__hero-quote-text--fallback'>
+                    这个气场为什么像你
+                  </Text>
+                  <Text className='personality-results__hero-quote-body'>{summary}</Text>
+                  <Text className='personality-results__hero-quote-body'>
+                    {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
+                  </Text>
+                  {showXiaoyueUnavailableNotice ? (
+                    <Text className='personality-results__hero-quote-note'>
                       悦仔的解读暂时不可用，先看看你的氛围卡吧
                     </Text>
-                  </View>
-                ) : null}
+                  ) : null}
+                </View>
+                <View
+                  className='personality-results__hero-cta'
+                  onClick={handleCardTap}
+                  hoverClass='personality-results__hero-cta--active'
+                  role='button'
+                  aria-label='查看氛围画像'
+                >
+                  <Text className='personality-results__hero-cta-text'>
+                    查看氛围画像
+                  </Text>
+                  <View className='personality-results__hero-cta-chevron' aria-hidden='true' />
+                </View>
               </>
             )}
           </View>
@@ -871,11 +903,12 @@ export default function FinalStage({
                       the hairline closes the head so the reading below starts
                       on a clean edge. ── */}
                   <View className='personality-results__detail-header'>
-                    <Text className='personality-results__detail-eyebrow'>你的聚会气场</Text>
-                    <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
+                    <View className='personality-results__detail-header-top'>
+                      <Text className='personality-results__detail-eyebrow'>你的聚会气场</Text>
+                      <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
+                    </View>
                     <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
                   </View>
-                  <View className='personality-results__detail-rule' />
 
                   {/* ── 悦仔的完整解读 — one reading page, signed by Xiaoyue.
                       Five beats: the verdict (「你是那种…的人」), what others
@@ -903,35 +936,49 @@ export default function FinalStage({
                           />
                         </View>
                         <Text className='personality-results__detail-reading-byline'>悦仔 · 为你读</Text>
-                        <View className='personality-results__detail-reading-badge'>
-                          <AIGCLabel meta={xiaoyueAnalysis?.meta?.aigc} />
-                        </View>
+                        <Text className='personality-results__detail-reading-time'>约 {readingMinutes} 分钟</Text>
+                        <View className='personality-results__detail-reading-rule' />
+                        <AIGCLabel
+                          meta={xiaoyueAnalysis?.meta?.aigc}
+                          className='personality-results__detail-reading-aigc'
+                        />
                       </View>
 
-                      <View className='personality-results__detail-reading-body'>
+                      <View
+                        className='personality-results__detail-reading-body'
+                        style={{ borderLeftColor: visual.accentBorder }}
+                      >
                         <Text
-                          className={`personality-results__detail-reading-lead ${readingBeats[0].length > 36 ? 'personality-results__detail-reading-lead--compact' : ''}`}
+                          className={`personality-results__detail-reading-lead ${readingBeats[0].length > 56 ? 'personality-results__detail-reading-lead--compact' : ''}`}
                         >
                           {readingBeats[0]}
                         </Text>
-                        {readingBeats.length > 3 ? (
+                        {readingBeats.slice(1, isDetailExpanded ? undefined : 4).map((beat, index) => (
                           <Text
-                            className='personality-results__detail-reading-toggle'
-                            onClick={() => setIsDetailExpanded((expanded) => !expanded)}
-                          >
-                            {isDetailExpanded ? '收起' : '展开全文'}
-                          </Text>
-                        ) : null}
-                        {readingBeats.slice(1, isDetailExpanded ? undefined : 3).map((beat, index) => (
-                          <View
                             key={`reading-beat-${index}`}
                             className='personality-results__detail-reading-beat'
-                            style={{ borderLeftColor: visual.accentBorder }}
                           >
-                            <Text className='personality-results__detail-reading-beat-text'>{beat}</Text>
-                          </View>
+                            {beat}
+                          </Text>
                         ))}
                       </View>
+                      {readingBeats.length > 4 ? (
+                        <View
+                          className={`personality-results__detail-reading-toggle ${isDetailExpanded ? 'personality-results__detail-reading-toggle--expanded' : ''}`}
+                          onClick={() => setIsDetailExpanded((expanded) => !expanded)}
+                          hoverClass='personality-results__detail-reading-toggle--active'
+                          role='button'
+                          aria-label={isDetailExpanded ? '收起完整解读' : '展开全文'}
+                        >
+                          <Text className='personality-results__detail-reading-toggle-text'>
+                            {isDetailExpanded ? '收起' : '展开全文'}
+                          </Text>
+                          <View
+                            className='personality-results__detail-reading-toggle-chevron'
+                            aria-hidden='true'
+                          />
+                        </View>
+                      ) : null}
                     </View>
                   )}
 
@@ -942,11 +989,23 @@ export default function FinalStage({
               {pullQuote && (
                 <View
                   className='personality-results__detail-insight'
-                  style={{ borderLeftColor: visual.accentBorder }}
+                  style={{
+                    backgroundImage: visual.accentSurface,
+                    borderColor: visual.accentBorder,
+                  }}
                 >
+                  <View
+                    className='personality-results__detail-insight-bar'
+                    style={{ background: visual.accent }}
+                    aria-hidden='true'
+                  />
+                  <Text className='personality-results__detail-insight-label'>悦仔的关键洞察</Text>
                   <Text className='personality-results__detail-insight-text'>{pullQuote}</Text>
                   {pullQuoteFooter && (
-                    <Text className='personality-results__detail-insight-footer'>{pullQuoteFooter}</Text>
+                    <View className='personality-results__detail-insight-footer-wrap'>
+                      <View className='personality-results__detail-insight-footer-rule' />
+                      <Text className='personality-results__detail-insight-footer'>{pullQuoteFooter}</Text>
+                    </View>
                   )}
                 </View>
               )}
@@ -955,16 +1014,6 @@ export default function FinalStage({
               {traitEntries.length > 0 && (
                 <View className='personality-results__detail-section'>
                   <View className='personality-results__detail-section-head'>
-                    <View
-                      className='personality-results__detail-section-avatar'
-                      style={{ background: visual.accentSoft }}
-                    >
-                      <Image
-                        className='personality-results__detail-section-avatar-img'
-                        mode='aspectFit'
-                        src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-                      />
-                    </View>
                     <Text className='personality-results__detail-section-label'>氛围画像</Text>
                     <Text className='personality-results__detail-section-hint'>分数越高越突出</Text>
                   </View>
@@ -1104,15 +1153,17 @@ export default function FinalStage({
                 disabled button) and the orphaned grey 收起 300rpx below the
                 last section (which read as a dead zone). */}
             <View className='personality-results__detail-footer'>
-              {aigcLabelsEnabled && readingBeats.length > 0 && (
-                <AIContentReportButton
-                  variant='text'
-                  className='personality-results__detail-footer-report'
-                  options={{
-                    reason: '举报“人格测试结果解读”AI 生成内容',
-                  }}
-                />
-              )}
+              <View className='personality-results__detail-footer-meta'>
+                {aigcLabelsEnabled && readingBeats.length > 0 && shouldShowAIGCLabel(xiaoyueAnalysis?.meta?.aigc) && (
+                  <AIContentReportButton
+                    variant='text'
+                    className='personality-results__detail-footer-report'
+                    options={{
+                      reason: '举报“人格测试结果解读”AI 生成内容',
+                    }}
+                  />
+                )}
+              </View>
               <View
                 className='personality-results__detail-footer-close'
                 onClick={handleCloseDetail}
