@@ -2295,7 +2295,7 @@ async function captureRewardsPage() {
       await clearAndSeedStorage(page)
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
-      await page.waitForSelector('.rewards-page__coupon-card', { timeout: 10000 })
+      await page.waitForSelector('.rewards-page__wallet', { timeout: 10000 })
       await page.waitForTimeout(800)
 
       return page.screenshot({ fullPage: true })
