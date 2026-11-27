@@ -333,6 +333,15 @@ jobs:
       queue: max
       cancel-in-progress: false
     steps:
+      # This job never checked out the repo before (it only restored the cached
+      # dist), but the uploader now lives in scripts/ci. Checkout must run
+      # BEFORE the cache restore: checkout's clean step would delete a dist
+      # restored earlier. Sparse keeps it to the one script.
+      - name: Checkout uploader script
+        uses: actions/checkout@v4.3.1
+        with:
+          sparse-checkout: scripts/ci
+
       # Restore the dist cached by the push build of this commit (already
       # compiled-output verified there). `fail-on-cache-miss` keeps a missing
       # package from silently uploading yesterday's build.
