@@ -516,6 +516,23 @@ jobs:
           run_transport_with_backoff 10m rsync -avz --delete --timeout=180 -e "$RSYNC_SSH" \
             apps/mini-program/dist/ "$CVM:$REMOTE_DIR/dist/"
 
+          # The uploader is a script rather than `npx miniprogram-ci upload`.
+          # miniprogram-ci's CLI declares `--use-cos` but never forwards it to
+          # ci.upload(), so for packages over 5 MiB it always takes the async
+          # COS path — which never reads the response errCode. The direct path
+          # does. See scripts/ci/wechat-upload.cjs for the full evidence.
+          run_transport_with_backoff 2m rsync -avz --timeout=180 -e "$RSYNC_SSH" \
+            scripts/ci/wechat-upload.cjs "$CVM:$REMOTE_DIR/wechat-upload.cjs"
+
+          # Installed into REMOTE_DIR so `require('miniprogram-ci')` resolves
+          # from REMOTE_DIR/node_modules. Same download cost as the previous
+          # `npx --yes miniprogram-ci@2.1.31` (its cache also lived here).
+          run_transport_with_backoff 6m ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "cd '$REMOTE_DIR' && \
+             printf '{\"name\":\"wechat-upload\",\"private\":true}\n' > package.json && \
+             timeout --signal=TERM --kill-after=30s 5m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' \
+               npm install --no-save --no-package-lock --omit=dev --no-audit --no-fund miniprogram-ci@2.1.31"
+
           # SSH + upload. Retry once on transient SSH disconnect (exit 255) only,
           # because a dropped return channel may leave an incomplete upload.
           # The remote cleanup trap keeps retries safe.
@@ -526,11 +543,12 @@ jobs:
           # WeChat; it never touches Docker or the deployment workspace, so it no
           # longer takes that lock.
           #
-          # --use-cos=false forces synchronous HTTP upload. This prevents the
-          # silent-success case where miniprogram-ci returns 0 after an async
-          # COS transfer but WeChat's backend later drops/rejects the package.
-          # Full output is captured in UPLOAD_LOG so we can grep for warnings
-          # and surface them in GitHub Actions.
+          # --use-cos is NOT usable: the CLI parses it and drops it, so the
+          # upload silently runs through COS, whose response body is stored
+          # without checking errCode. The script passes useCOS: false directly
+          # to ci.upload(), which keeps us on the direct HTTP path that throws
+          # on a non-zero errCode. The assertions below prove that path ran.
+          # Full output is captured in UPLOAD_LOG so we can grep it.
           UPLOAD_LOG="$REMOTE_DIR/miniprogram-ci.log"
           miniprogram_ci_upload() {
             base64 -w0 "$WX_KEY_FILE" | \
@@ -542,16 +560,14 @@ jobs:
                trap 'exit 143' HUP INT TERM && \
                base64 -d > private.key && \
                command -v unzip >/dev/null && \
-               timeout --signal=TERM --kill-after=30s 14m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
-                 --appid wx5a038ee6dee12032 \
-                 --pp dist \
-                 --pkp private.key \
-                 --uv '$VERSION' \
-                 --ud '$DESCRIPTION' \
-                 --rp 1 \
-                 --use-project-config true \
-                 --use-cos=false \
-                 --verbose 2>&1 | tee -a '$UPLOAD_LOG'"
+               timeout --signal=TERM --kill-after=30s 14m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' \
+                 node wechat-upload.cjs \
+                   --appid wx5a038ee6dee12032 \
+                   --project dist \
+                   --private-key private.key \
+                   --version '$VERSION' \
+                   --desc '$DESCRIPTION' \
+                   --robot 1 2>&1 | tee -a '$UPLOAD_LOG'"
           }
           miniprogram_ci_upload || { rc=$?; [ "$rc" -eq 255 ] && { echo "::warning::SSH disconnect during upload; retrying once"; sleep 5; miniprogram_ci_upload; } || exit "$rc"; }
 
@@ -559,21 +575,29 @@ jobs:
           ssh "${SSH_OPTIONS[@]}" "$CVM" "cat '$UPLOAD_LOG'"
           echo "----- end miniprogram-ci output -----"
 
-          # Fail the job if the captured log contains known failure/warning patterns
-          # that did not cause a non-zero exit code.
-          if ssh "${SSH_OPTIONS[@]}" "$CVM" "grep -Ei '\\[error\\]|upload failed|errcode|fail' '$UPLOAD_LOG'" >/dev/null 2>&1; then
-            echo "::error::miniprogram-ci output contains failure indicators; treating upload as failed"
+          fail_upload() {
+            echo "::error::$1"
             {
               echo "### WeChat mini-program upload"
               echo "- Commit: \`${SOURCE_SHA:0:7}\`"
               echo "- Version: \`$VERSION\`"
               echo "- API target: \`$API_TARGET\`"
-              echo "- Result: **failed (see miniprogram-ci output)**"
+              echo "- Result: **failed ($1)**"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
+          }
+
+          # Two log assertions on top of the script's exit code: prove the
+          # direct path actually ran, then scan for error markers a swallowed
+          # response could hide. A regression back to the COS path fails here.
+          if ! ssh "${SSH_OPTIONS[@]}" "$CVM" "grep -Eq 'useCOS parameter:[[:space:]]+false' '$UPLOAD_LOG'"; then
+            fail_upload "upload did not run the direct (useCOS=false) path"
+          fi
+          if ssh "${SSH_OPTIONS[@]}" "$CVM" "grep -Eq 'upload by COS:[[:space:]]+true|\\[error\\]|upload failed' '$UPLOAD_LOG'" >/dev/null 2>&1; then
+            fail_upload "miniprogram-ci output contains failure indicators"
           fi
 
-          echo "✅ WeChat upload complete (synchronous, output verified)"
+          echo "✅ WeChat upload complete (direct HTTP path, response errCode checked)"
           {
             echo "### WeChat mini-program upload"
             echo "- Commit: \`${SOURCE_SHA:0:7}\`"

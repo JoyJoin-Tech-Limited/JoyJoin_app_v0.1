@@ -182,11 +182,16 @@ npm run simulate:table -w @joyjoin/server -- --fixture=corgi-mix --rounds=3  # D
 #     --pkp <private-key-file> --uv "1.0.$(date +%Y%m%d).$(date +%H%M)" \
 #     --ud "dev build" --rp 1
 #
-# WeChat upload gotchas (2026-07-22):
-#   - Synchronous upload: .github/workflows/taro-weapp-build.yml uses
-#     --use-cos=false so miniprogram-ci waits for WeChat backend validation.
-#     Without this, async COS upload returns exit 0 before WeChat scans the
-#     package, so rejected uploads look like successes in CI.
+# WeChat upload gotchas (2026-07-22, corrected 2026-11-27):
+#   - The `--use-cos=false` CLI flag is a NO-OP. Every miniprogram-ci release
+#     through 2.1.48 declares `use-cos` in yargs but never forwards `useCOS`
+#     into `ci.upload()`, so a package over 5 MiB silently takes the async COS
+#     path — and that branch never inspects `errCode`, so a WeChat rejection
+#     still exits 0. The workflow therefore uploads through
+#     `scripts/ci/wechat-upload.cjs` (JS API, explicit `useCOS: false`, direct
+#     HTTP path which throws on non-zero `errCode`) and asserts the log
+#     contains `useCOS parameter:  false` and no `upload by COS: true`.
+#     Keep that assertion if the upload step is ever rewritten.
 #   - scope.* permission descriptions must be <= 30 characters.
 #     Exceeding this causes errcode 80058 and an invisible upload.
 #     Guardrail: npm run validate:wechat-app-config -w mini-program

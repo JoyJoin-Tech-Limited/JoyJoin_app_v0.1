@@ -235,6 +235,8 @@ Then push and read `[compiled-package-size] main source …` from the `build-wea
 The 80200 rejection (WeChat reported 2182 KB) is cleared, and the 开发版 uploaded:
 `version 1.0.20261029.0653`, `desc Auto-deploy (staging): a727ca9`, upload zip 6,512,804 B,
 `✅ WeChat upload complete (synchronous, output verified)`.
+（2026-11-27 起该成功行改为 `✅ WeChat upload complete (direct HTTP path, response errCode checked)`：
+`--use-cos=false` 在 miniprogram-ci ≤2.1.48 是无效参数，上传已改走 JS API 直连路径，见 AGENTS.md。）
 
 Two things this leaves open:
 

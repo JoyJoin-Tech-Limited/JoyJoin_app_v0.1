@@ -64,7 +64,7 @@
 
 ## 7. 相关文件
 
-- 上传流水线:`.github/workflows/taro-weapp-build.yml`(staging 部署成功后才上传开发版;`--use-cos=false` 同步校验)
+- 上传流水线:`.github/workflows/taro-weapp-build.yml`(push 到 main 的构建成功后即上传开发版,经 CVM 调 `scripts/ci/wechat-upload.cjs` 走直连 HTTP 路径并校验 `errCode`;`--use-cos=false` 在 miniprogram-ci ≤2.1.48 是无效参数)
 - 上传白名单:`apps/mini-program/project.config.json` `packOptions.include`(新增捆绑资源目录必须同步加正则,否则静默丢弃)
 - 权限声明校验:`npm run validate:wechat-app-config -w mini-program`(scope.* ≤30 字)
 - 包体检查:`npm run check:package-size -w mini-program`(2MB 上限)
